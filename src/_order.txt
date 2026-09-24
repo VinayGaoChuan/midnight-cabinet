@@ -44,6 +44,7 @@ mc-mouse.js
 mc-bring.js
 mc-lvup.js
 mc-save.js
+mc-guide.js
 mc-px16.js
 mc-px16-hum.js
 mc-px16-rigs.js

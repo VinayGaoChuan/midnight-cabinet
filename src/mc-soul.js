@@ -70,6 +70,9 @@ G.startRaid = function () {
   if (pr) R.ents = R.ents.filter(e => !e.hero || pr.sel[e.hero.id]);
   R.portal0 = R.portal.hp; R.defenders = R.ents.filter(e => e.hero).length;
 };
+// setting off needs the loadout panel (the raid prep, or anything else, may have kept it from opening)
+const oLaunch = G.launch;
+G.launch = function () { if (!this.panel || this.panel.kind !== 'loadout') return; return oLaunch.apply(this, arguments); };
 G.raidLaunch = function () { if (!this.raidPrep) return; M.Sfx.click(); this.raidGo = true; this.panel = null; this.startRaid(); };
 G.raidToggle = function (id) { const pr = this.raidPrep; if (!pr) return; pr.sel[id] = !pr.sel[id]; M.Sfx.click(); };
 // nothing else happens while the defenders are being chosen

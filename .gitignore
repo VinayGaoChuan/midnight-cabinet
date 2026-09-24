@@ -2,3 +2,12 @@ build/
 .ai/
 __pycache__/
 .DS_Store
+# 玩家存档与日志只留在各自设备上，不进仓库
+save/
+*.save.json
+save.json
+*存档*.json
+*-日志-*.txt
+mc-tele*.json
+tele-*.json
+收到的日志/

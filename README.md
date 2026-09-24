@@ -5,6 +5,10 @@
 - 在线游玩：https://vinaygaochuan.github.io/midnight-cabinet/
 - 本地游玩：下载 `index.html`，双击打开。
 
+## 设计文档
+
+玩法、系统、数值和界面规范都在 [`docs/design.md`](docs/design.md)。改设计时和代码一起改它（规则见 [`AGENTS.md`](AGENTS.md)）。
+
 ## 目录结构
 
 | 路径 | 内容 |
@@ -23,6 +27,8 @@
 | `tools/artifact.py` | 把 `index.html` 转成 Claude Artifact 页面（数据自动上传版） |
 | `tools/gen-prompts.js` | 从角色 / 技能数据生成 `docs/prompts/characters.md` 与 `docs/prompts/skills.md`（每个角色、每个技能一段 16-bit 像素动画 prompt） |
 | `tools/p16view.js` | 开发用精灵网格查看器：`__p16view(keys, states, opts)` |
+| `tools/textaudit.js` | 界面文字审计：`__textAudit('标签')` 统计当前画面的常驻文字 |
+| `tools/designcheck.js` | 设计文档自检：`await __designCheck()` 列出游戏里有、文档没写的内容 |
 
 ## 开发流程
 
@@ -62,6 +68,7 @@ python3 -m http.server 8000    # 本地起服务，打开 http://localhost:8000/
 | `mc-bring.js` | 出征带回的“改造”：流浪领袖、矿工、工匠、修门石、启示卷轴、淬火石、安神香、迷踪粉、引荐信、蓄能核心、行军包 |
 | `mc-lvup.js` | 领袖升级按钮、LEVEL UP 与战斗力仪式、每天给经验 / 提升领袖战斗力的建筑 |
 | `mc-save.js` | 启动时的存档检测：不兼容的部分单独清掉，整份不能用就删除，并播放撕碎存档的效果 |
+| `mc-guide.js` | 文字分层与说明：按住 Shift 看详情、每个设计元素的初见说明卡、玩法说明页（F1 / 右下角「？」） |
 | `mc-px16.js` | 16-bit 像素引擎：固定调色板色阶、材质缓冲 → 自动两色明暗 / 选择性描边 / 1px 轮廓光烘焙，逐状态姿势（待机、行走、攻击、蓄力、施法、收招、受击、死亡），帧缓存，池化粒子 |
 | `mc-px16-hum.js` | 人形骨架：体型、头部、发型、帽子、衣服、翅膀、尾巴、全部武器和盾 |
 | `mc-px16-rigs.js` | 非人形骨架：野兽、龙、鸟、飞行物、蜘蛛、螃蟹、蠕虫、机甲、攻城器、塔、树、宝箱怪、半人马等 |
@@ -78,7 +85,7 @@ python3 -m http.server 8000    # 本地起服务，打开 http://localhost:8000/
 
 - 界面文字用中文。
 - 新美术统一走像素管线：在 1920×1080 逻辑坐标里画，按半分辨率渲染后放大。
-- 存档键：`midnight-cabinet-meta-v3`（一局）、`midnight-cabinet-profile-v1`（局外）、`midnight-cabinet-settings-v1`（设置）。存档结构不兼容时换新键名。
+- 存档只在玩家自己的设备上（浏览器 localStorage；Steam 版另镜像到用户数据目录的 `save/save.json`），不进仓库。键：`midnight-cabinet-meta-v4`（一局）、`midnight-cabinet-profile-v1`（局外）、`midnight-cabinet-settings-v1`（设置）、`midnight-cabinet-guide-v1`（看过的说明卡）。存档结构不兼容时换新键名。
 
 ## 测试
 
