@@ -122,7 +122,7 @@ M.makeBattleCfg = function (run, node) {
 // ───────── items keep; quality shown ─────────
 // ───────── buildings: tavern + day rules ─────────
 const B = M.BUILDINGS;
-B.tavern = { n:'酒馆', q:0, cat:'recruit', style:'medieval', pw:-1, cost:60, days:1, recruit:{}, d:'用灵魂碎片招募新领袖。领袖越多，能同时经营的出征越多。' };
+B.tavern = { n:'酒馆', q:0, cat:'recruit', style:'medieval', pw:-1, cost:60, days:1, recruit:{}, d:'花物资招募新领袖。领袖越多，出征和守城的选择越多。' };
 Object.keys(B).forEach(k => { if (!B[k].fixed && !B[k].specialDays) B[k].days = B[k].q + 1; });
 M.LIGHT_R = (m, x) => x.b === 'core' ? 3 : x.b ? [1, 2, 2, 3][M.BUILDINGS[x.b].q] : x.dug ? 1 : 0;
 // ───────── heroes scaled to the new stat range ─────────
@@ -130,7 +130,7 @@ Object.keys(M.HEROES).forEach(k => { const H = M.HEROES[k]; if (!H._s) { H._s = 
 // ───────── meta v4 ─────────
 const KEY = 'midnight-cabinet-meta-v4';
 M.defaultMeta3 = function () {
-  const m = { v: 4, day: 1, supplies: 200, shards: 100, orbs: 0, inv: {}, relics: [], heroes: [], graveyard: [], cleared: {}, seenWorlds: {}, runs: 0, tutDone: false, baseTut: 0, portal: { hp: 1000 }, raids: 0, log: [], seenB: {} };
+  const m = { v: 4, day: 1, supplies: 200, shards: 30, orbs: 0, inv: {}, relics: [], heroes: [], graveyard: [], cleared: {}, seenWorlds: {}, runs: 0, tutDone: false, baseTut: 0, portal: { hp: 1000 }, raids: 0, log: [], seenB: {} };
   m.base = M.newBase(); m.base.cells[M.CORE.r][M.CORE.c - 1].dug = true; m.base.cells[M.CORE.r][M.CORE.c + 1].dug = true;
   m.base.cells[M.CORE.r][M.CORE.c - 1].tile = null; m.base.cells[M.CORE.r][M.CORE.c + 1].tile = null;
   m.heroes.push(M.newHero(m, 'watchman', 1));

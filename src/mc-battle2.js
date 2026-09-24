@@ -87,8 +87,7 @@ class Battle {
     this.float(560, 200, '领袖上场！', C.candle, 60);
     this.pending.push({ t: this.t + 0.6, fn: () => { this.shake = 24; this.ring(560, 380, 20, 260, C.candle, 12, 0.5); Sfx.boom(); this.ents.forEach(o => { if (o.alive && o.side === 'E' && Math.hypot(o.x - 560, o.y - 380) < 260) o.stun = Math.max(o.stun, 1); }); } });
     if (this.mods.rage) this.rage = this.t + 6.7;
-    // taking the field is the leader's one free cast
-    this.pending.push({ t: this.t + 0.9, fn: () => { if (!this.over && this.hero.alive) this.castSkill(true); } });
+    // taking the field no longer fires the legion skill; the leader's personal skill (mc-pskill.js) takes over
   }
   // the leader's skill is cast from the sidelines; once the leader takes the field the skill is folded away for this battle
   canCast() { return this.hero.alive && this.hero.bench && !this.over && !this.skillUsed && (this.run.skillCd || 0) <= 0 && this.t > this.entryEnd * 0.5; }

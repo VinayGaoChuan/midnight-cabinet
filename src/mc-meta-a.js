@@ -83,10 +83,10 @@ M.ACH = [
   { k: 'hunter', n: '猎头', d: '一局里击败 8 个精英', r: '精英必掉图纸', fx: { eliteBp: 1 }, ok: (m) => (m.st.elite || 0) >= 8 },
   { k: 'adventurer', n: '奇遇达人', d: '一局里完成 15 次奇遇', r: '奇遇出现得更多，事件好运 +10%', fx: { eventRate: 0.12, eventLuck: 0.1 }, ok: (m) => (m.st.minis || 0) >= 15 },
   { k: 'collector', n: '收藏家', d: '一局里带回 12 张图纸', r: '宝箱开出图纸的概率翻倍', fx: { chestBp: 1 }, ok: (m) => (m.st.bp || 0) >= 12 },
-  { k: 'survivor', n: '不死', d: '活到第 12 天，并且没有领袖阵亡', r: '每局初始领袖再 +2 级', fx: { startHeroLv: 2 }, ok: (m) => m.day >= 12 && !m.graveyard.length },
+  { k: 'survivor', n: '不死', d: '活到第 12 天，并且没有领袖在出征中阵亡', r: '每局初始领袖再 +2 级', fx: { startHeroLv: 2 }, ok: (m) => m.day >= 12 && !m.graveyard.some(g => !g.raid) },
   { k: 'abyss', n: '深渊归来', d: '通关「地狱」', r: '首领多掉一张图纸', fx: { bossBp: 1 }, ok: (m) => !!m.cleared.hell },
   { k: 'hauler', n: '满载而归', d: '一次出征带回 300 物资', r: '物资收益 +15%', fx: { lootSup: 0.15 }, ok: (m) => (m.st.bestHaul || 0) >= 300 },
-  { k: 'family', n: '一大家子', d: '同时拥有 5 名领袖', r: '招魂只要 75 灵魂碎片', fx: { recruitCost: -25 }, ok: (m) => m.heroes.length >= 5 },
+  { k: 'family', n: '一大家子', d: '同时拥有 5 名领袖', r: '招募只要 90 物资', fx: { recruitCost: -30 }, ok: (m) => m.heroes.length >= 5 },
   { k: 'clawgod', n: '娃娃机之神', d: '累计抓到 3 个娃娃', r: '抓娃娃的爪子更紧（成功率 +20%）', fx: { clawBonus: 0.2 }, ok: (m, p) => (p.stats.claws || 0) >= 3 },
   { k: 'centurion', n: '百战', d: '累计赢下 60 场战斗', r: '部队生命 +10%', fx: { unitHp: 0.1 }, ok: (m, p) => (p.stats.battles || 0) >= 60 },
 ];
@@ -206,11 +206,11 @@ if (M.MINI && M.MINI.claw) { const D = M.MINI.claw, oDrop = D.drop, oTick = D.ti
 // recruiting: cost and minimum rarity from perks
 const oRec = G.recruit;
 G.recruit = function () {
-  const P = M.perks(), m = this.meta, cost = 100 + (P.recruitCost || 0); this._recN0 = m.heroes.length;
-  if (!P.recruitCost && !P.recruitMinRar) { const r = oRec.call(this); this.afterRecruit(); return r; }
+  // recruiting costs supplies (soul shards are the high-end material now)
+  const P = M.perks(), m = this.meta, cost = M.recruitCost ? M.recruitCost(m) : 120; this._recN0 = m.heroes.length;
   if (m.heroes.length >= M.heroCap(m)) { this.toast('领袖已满（上限 ' + M.heroCap(m) + '）', '#d0453c'); return; }
-  if (m.shards < cost) { this.toast('灵魂碎片不足', '#d0453c'); return; }
-  this.hold('msh', m.shards); m.shards -= cost; this.release('msh');
+  if (m.supplies < cost) { this.toast('物资不足：招募要 ' + cost + ' 物资', '#d0453c'); return; }
+  this.hold('msup', m.supplies); m.supplies -= cost; this.release('msup');
   let rar = M.RARITY.indexOf(M.wpick(M.RARITY, r => r.w)); if (M.hasBuilt(m, B => B.recruit && B.recruit.qUp) || P.recruitMinRar) rar = Math.max(1, rar); rar = Math.max(rar, M.baseMods(m).recruitMin || 0);
   this.startReel({ title: '招魂', iconKey: 'candle', itemMode: true, land: 0, ups: rar, tease: rar < 3, tiles: M.RARITY.map(r => ({ n: r.n, sub: '领袖', c: r.c })), onDone: () => {
     const h = M.newHero(m, null, rar); m.heroes.push(h); this.save(); const col = M.RARITY[rar].c;

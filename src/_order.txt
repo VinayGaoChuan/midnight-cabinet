@@ -38,4 +38,6 @@ mc-meta-b.js
 mc-names.js
 mc-bp.js
 mc-terrain.js
+mc-pskill.js
+mc-soul.js
 mc-tele.js

@@ -991,6 +991,7 @@
         </sc-if>
         <sc-if value="{{pn.isForge}}">
           <div style="font-size:24px;color:#a89ca8">{{pn.forgeCost}}</div>
+          <sc-if value="{{pn.fineOn}}" hint-placeholder-val="{{false}}"><div sc-camel-on-click="{{pn.fineToggle}}" style="display:flex;align-items:center;gap:12px;padding:8px 14px;border:2px solid {{pn.fineBorder}};background:{{pn.fineBg}};cursor:pointer;transition:transform .08s" style-hover="filter:brightness(1.15)" style-active="transform:scale(0.98)"><span style="font-size:28px;color:{{pn.fineC}}">{{pn.fineMark}}</span><span style="font-size:22px;line-height:1.35;color:#e8dcc4">{{pn.fineTxt}}</span></div></sc-if>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;overflow-y:auto;max-height:520px">
             <sc-for list="{{pn.forge}}" as="fg" hint-placeholder-count="0">
               <div sc-camel-on-click="{{fg.onClick}}" sc-camel-on-mouse-enter="{{fg.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border:2px solid {{fg.border}};background:#15111a;opacity:{{fg.op}};cursor:pointer;transition:transform .08s" style-hover="transform:translateX(4px);background:#221a2a" style-active="transform:scale(0.97)">
@@ -1060,6 +1061,19 @@
         <div style="font-size:26px;line-height:1.45;color:#cfc6b8">{{pn.jobTxt}}</div>
       </sc-if>
 
+      <sc-if value="{{pn.isRaidPrep}}" hint-placeholder-val="{{false}}">
+        <div style="font-size:24px;line-height:1.45;color:#cfc6b8">{{pn.rpTxt}}</div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:10px;overflow-y:auto;min-height:0;padding-right:4px">
+          <sc-for list="{{pn.rpHeroes}}" as="rh" hint-placeholder-count="0">
+            <div sc-camel-on-click="{{rh.onClick}}" sc-camel-on-mouse-enter="{{rh.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:{{rh.bg}};border:2px solid {{rh.border}};cursor:pointer;transition:transform .08s" style-hover="transform:translateX(4px);filter:brightness(1.12)" style-active="transform:scale(0.98)">
+              <div style="width:64px;display:flex;justify-content:center"><m-img src="{{rh.img}}"></m-img></div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:3px"><span style="font-size:28px;color:{{rh.c}}">{{rh.n}}</span><span style="font-size:19px;color:#a89ca8">{{rh.sub}}</span><span style="font-size:19px;color:#d8a0ff">{{rh.sh}}</span></div>
+              <div style="min-width:84px;text-align:center;padding:6px 10px;border:2px solid {{rh.markC}};color:{{rh.markC}};font-size:26px">{{rh.mark}}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div sc-camel-on-click="{{pn.rpGo}}" style="padding:18px 0;text-align:center;font-size:34px;background:linear-gradient(180deg,#ff8a6a,#b02a20);color:#1a0806;border:2px solid #ffd0c0;box-shadow:0 5px 0 #4a0a08,0 0 30px rgba(255,90,60,0.4);cursor:pointer;transition:transform .08s" style-hover="filter:brightness(1.12);transform:translateY(-2px)" style-active="transform:translateY(3px) scale(0.97)">{{pn.rpBtn}}</div>
+      </sc-if>
       <sc-if value="{{pn.isWorlds}}" hint-placeholder-val="{{false}}">
         <div style="display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-height:560px;padding-right:6px">
           <sc-for list="{{pn.worlds}}" as="wc" hint-placeholder-count="1">
@@ -1208,7 +1222,7 @@
       </sc-for>
     </div>
     <div sc-camel-on-click="{{castSkill}}" sc-camel-on-mouse-enter="{{skillTip}}" sc-camel-on-mouse-leave="{{tipOff}}" style="position:absolute;left:450px;top:{{h.skTop}}px;width:360px;height:{{h.skH}}px;overflow:hidden;box-sizing:border-box;border:3px solid {{h.skillBorder}};background:{{h.skillBg}};box-shadow:{{h.skillGlow}};display:flex;align-items:center;gap:14px;padding:0 16px;cursor:pointer;transition:transform .08s" style-hover="filter:brightness(1.15)" style-active="transform:scale(0.95)">
-      <sc-if value="{{h.skFoldOn}}" hint-placeholder-val="{{false}}"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:10px;font-size:22px;color:#8d8496;letter-spacing:1px;opacity:{{h.skFoldOp}};pointer-events:none"><span style="font-size:16px">▼</span>领袖已上场 · 技能收起</div></sc-if>
+      <sc-if value="{{h.skFoldOn}}" hint-placeholder-val="{{false}}"><div style="position:absolute;inset:0;display:flex;align-items:center;gap:10px;padding:0 14px;opacity:{{h.skFoldOp}};pointer-events:none"><span style="font-size:15px;color:#6b6570;white-space:nowrap">▼ 军团技能收起</span><sc-if value="{{h.psOn}}" hint-placeholder-val="{{false}}"><span style="font-size:22px;color:{{h.psC}};white-space:nowrap">{{h.psName}}</span><div style="flex:1;height:10px;background:#000;border:1px solid #3a3040"><div style="height:100%;width:{{h.psW}};background:{{h.psC}}"></div></div><span style="font-size:16px;color:#a89ca8;white-space:nowrap">{{h.psRes}}</span></sc-if></div></sc-if>
       <sc-if value="{{h.skOpenOn}}" hint-placeholder-val="{{true}}"><div style="opacity:{{h.skOp}}"><m-img src="{{h.skillImg}}"></m-img></div></sc-if>
       <div style="display:flex;flex-direction:column;gap:4px;opacity:{{h.skOp}}"><div style="font-size:40px;color:{{h.skillColor}}">{{h.skillName}} <sc-if value="{{h.skillKeyOn}}"><span style="font-size:20px;padding:2px 8px;border:2px solid {{h.skillColor}};vertical-align:middle">{{h.skillKey}}</span></sc-if></div><div style="font-size:20px;color:#cfc6b8;line-height:1.3">{{h.skillSub}}</div></div>
     </div>

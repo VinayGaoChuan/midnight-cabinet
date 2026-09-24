@@ -82,7 +82,7 @@ const BUILDINGS = {
   generator:{ n:'发电机', q:0, cat:'power', style:'steam', pw:4, cost:80, days:1, d:'提供 4 点电力。' },
   smithy:{ n:'铁匠铺', q:0, cat:'forge', style:'medieval', pw:-1, cost:100, days:2, forge:{}, d:'用宝物图纸打造宝物，品质随机。' },
   hospital:{ n:'医院', q:0, cat:'med', style:'scifi', pw:-1, cost:100, days:2, fx:{ heal:0.35 }, d:'领袖每天回复 35% 生命。' },
-  altar:{ n:'招魂台', q:0, cat:'recruit', style:'magic', pw:-1, cost:120, days:2, recruit:{}, d:'用灵魂碎片招募新领袖。' },
+  altar:{ n:'招魂台', q:0, cat:'recruit', style:'magic', pw:-1, cost:120, days:2, recruit:{}, d:'花物资招募新领袖。' },
   training:{ n:'训练场', q:0, cat:'train', style:'medieval', pw:-1, cost:90, days:1, train:{}, fx:{ orbMul:0.5 }, d:'把经验球灌给领袖，效率 +50%。' },
   storage:{ n:'储藏室', q:0, cat:'store', style:'cartoon', pw:0, cost:60, days:1, fx:{ startItem:1 }, d:'每次出征开局多带 1 个支援道具。' },
   farm:{ n:'水培农场', q:0, cat:'store', style:'nature', pw:-1, cost:80, days:1, fx:{ supplyDaily:15 }, d:'每天产出 15 物资。' },
@@ -163,7 +163,7 @@ M.itemInfo = function (key) {
   return { n: key, icon: 'question', c: '#fff', kind: '' };
 };
 M.invList = function (m) {
-  const out = [ { key:'supplies', n:'物资', icon:'sack', c:'#caa84a', count:m.supplies, kind:'资源', d:'挖掘、建造、打造都需要物资。' }, { key:'shards', n:'灵魂碎片', icon:'shard', c:'#b86bff', count:m.shards, kind:'资源', d:'招募领袖用。领袖死亡时会留下碎片。' }, { key:'orbs', n:'经验球', icon:'orb', c:'#9cff7a', count:m.orbs, kind:'资源', d:'在训练建筑里灌给领袖。' } ];
+  const out = [ { key:'supplies', n:'物资', icon:'sack', c:'#caa84a', count:m.supplies, kind:'资源', d:'挖掘、建造、打造、招募领袖都需要物资。' }, { key:'shards', n:'灵魂碎片', icon:'shard', c:'#b86bff', count:m.shards, kind:'资源', d:'高端材料：建造史诗 / 传说建筑、精铸宝物时消耗。主要来自领袖阵亡。' }, { key:'orbs', n:'经验球', icon:'orb', c:'#9cff7a', count:m.orbs, kind:'资源', d:'在训练建筑里灌给领袖。' } ];
   Object.keys(m.inv).sort().forEach(k => { const I = M.itemInfo(k); out.push(Object.assign({ key: k, count: m.inv[k] }, I)); });
   m.relics.forEach(r => { const R = RELICS[r.key]; out.push({ key: 'relic:' + r.id, rid: r.id, n: R.n, icon: R.icon, c: QUALITY[r.q].c, q: r.q, count: 1, kind: '宝物 · ' + QUALITY[r.q].n, d: R.d, lines: M.relicText(r) }); });
   return out;

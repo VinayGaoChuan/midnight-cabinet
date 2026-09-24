@@ -89,7 +89,7 @@ G.arrive = function (n) {
   return oldArrive.call(this, n);
 };
 const oldWin = G.runWin;
-G.runWin = function (kind) { const tut = this.run && this.run.region.tut; if (tut) { M.invAdd(this.meta, 'bbp:tavern', 1); this.meta.shards = Math.max(this.meta.shards, 100); } oldWin.call(this, kind); if (tut) this.endInfo.tiles.push({ img: M.spriteURL('scroll', 7), n: '酒馆图纸', v: '建筑图纸', c: Q[0].c, icon: 'scroll' }); };
+G.runWin = function (kind) { const tut = this.run && this.run.region.tut; if (tut) { M.invAdd(this.meta, 'bbp:tavern', 1); this.meta.supplies = Math.max(this.meta.supplies, 200); } oldWin.call(this, kind); if (tut) this.endInfo.tiles.push({ img: M.spriteURL('scroll', 7), n: '酒馆图纸', v: '建筑图纸', c: Q[0].c, icon: 'scroll' }); };
 // ───────── base tutorial ─────────
 G.baseTutStep = function () {
   const m = this.meta; if (this.screen !== 'base') return;
@@ -108,7 +108,7 @@ const oldDig = G.doDig;
 G.doDig = function (c, r) { const m = this.meta, before = m.baseTut; oldDig.call(this, c, r); if (before === 4 && M.cell(m, c, r).job) { m.baseTut = 5; this.save(); setTimeout(() => { this.closePanel(); setTimeout(() => this.baseTutStep(), 750); }, 900); } };
 const oldOpenW = G.openWorlds;
 G.openWorlds = function () { if (this.meta.baseTut === 5) { this.meta.baseTut = 99; this.coachData = null; } oldOpenW.call(this); };
-const GUIDE = { recruit: '酒馆建好了！点击它，用灵魂碎片招募新领袖。每个领袖的天赋树都不一样。', forge: '锻造建筑建好了！点击它，用宝物图纸打造宝物。品质随机，越高能力越多。', train: '训练建筑建好了！点击它，把经验球灌给领袖。', med: '医疗建筑建好了！受伤的领袖每天会自动回血，也可以花物资急救。', defense: '武器房间建好了！基地遭袭时它会向地面开火。点击它能看到红色的射程范围，越深覆盖越窄。', power: '电力建筑建好了！顶部的电力数字变多了，可以建更多耗电的房间。', store: '后勤建筑建好了！它会每天产出物资或提供出征补给。', luck: '这座建筑会在出征时给你好运。', misc: '特殊建筑建好了！悬浮在它上面看看效果。' };
+const GUIDE = { recruit: '酒馆建好了！点击它，花物资招募新领袖。每个领袖的天赋树都不一样。', forge: '锻造建筑建好了！点击它，用宝物图纸打造宝物。品质随机，越高能力越多。', train: '训练建筑建好了！点击它，把经验球灌给领袖。', med: '医疗建筑建好了！受伤的领袖每天会自动回血，也可以花物资急救。', defense: '武器房间建好了！基地遭袭时它会向地面开火。点击它能看到红色的射程范围，越深覆盖越窄。', power: '电力建筑建好了！顶部的电力数字变多了，可以建更多耗电的房间。', store: '后勤建筑建好了！它会每天产出物资或提供出征补给。', luck: '这座建筑会在出征时给你好运。', misc: '特殊建筑建好了！悬浮在它上面看看效果。' };
 const oldPass = G.passDay;
 G.passDay = function () { const logs = oldPass.call(this), m = this.meta; m.seenB = m.seenB || {}; const nb = logs.filter(l => l.key && !m.seenB[M.BUILDINGS[l.key].cat]); if (nb.length) { const l = nb[0], cat = M.BUILDINGS[l.key].cat; m.seenB[cat] = 1; this.save(); setTimeout(() => { const p = this.cellPos(l.c, l.r); this.coach(GUIDE[cat] || GUIDE.misc, p.x, p.y + 230, p.x, p.y); }, 2200); } return logs; };
 // ───────── raid uses the new enemies ─────────

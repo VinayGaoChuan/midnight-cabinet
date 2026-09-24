@@ -45,7 +45,7 @@ const DEF = {
   mole:    { n: '松软土层', q: 0, hue: '#b89a70', any: { digCost: -0.3 }, anyD: '挖掘费用 -30%', fitN: '特殊', fit: cat('misc'), fitFx: () => ({ buildDays: -1 }), fitD: '所有建造少花 1 天' },
   // ── 稀有
   crystal: { n: '晶簇', q: 1, hue: '#7fe0ff', any: { noPw: 1 }, anyD: '这个房间不耗电', fitN: '科幻', fit: st('scifi'), fitFx: () => ({ pw: 3 }), fitD: '反过来发电 +3' },
-  ley:     { n: '灵脉', q: 1, hue: '#b86bff', any: { shardDaily: 10 }, anyD: '基地每天 +10 灵魂碎片', fitN: '招募 / 魔法', fit: (B) => B.cat === 'recruit' || B.style === 'magic' || B.style === 'fantasy', fitFx: (B) => Object.assign({ recruitMin: 1 }, noPw(B)), fitD: '不耗电；招募的领袖至少为「稀有」' },
+  ley:     { n: '灵脉', q: 1, hue: '#b86bff', any: { shardDaily: 3 }, anyD: '基地每天 +3 灵魂碎片', fitN: '招募 / 魔法', fit: (B) => B.cat === 'recruit' || B.style === 'magic' || B.style === 'fantasy', fitFx: (B) => Object.assign({ recruitMin: 1 }, noPw(B)), fitD: '不耗电；招募的领袖至少为「稀有」' },
   amber:   { n: '琥珀层', q: 1, hue: '#ffb03a', any: { orbDaily: 25 }, anyD: '基地每天 +25 经验球', fitN: '训练', fit: cat('train'), fitFx: () => ({ orbMul: 0.8 }), fitD: '经验球效率 +80%' },
   mint:    { n: '金脉', q: 1, hue: '#ffd650', any: { lootSup: 0.2 }, anyD: '出征带回的物资 +20%', fitN: '运势', fit: cat('luck'), fitFx: () => ({ lootSup: 0.3, startMult: 0.2 }), fitD: '物资再 +30%，每场战斗初始倍率 +0.2' },
   rift:    { n: '裂隙', q: 1, hue: '#9cff7a', any: { defDmg: 0.15 }, anyD: '所有武器房间伤害 +15%', fitN: '武器', fit: isW, fitFx: () => ({ range: 1, wcd: 0.4 }), fitD: '射程 +1，攻速 +40%' },
@@ -60,7 +60,7 @@ const DEF = {
   // ── 传说: the deepest rock
   hourglass: { n: '时之沙', q: 3, hue: '#ffe08a', any: { skillNodeCd: -1 }, anyD: '所有领袖技能冷却 -1 个节点', fitN: '运势', fit: cat('luck'), fitFx: () => ({ startItemQ: 1, startMult: 0.3 }), fitD: '出征开局多带 1 个「史诗」道具，初始倍率再 +0.3' },
   dream:   { n: '梦境裂隙', q: 3, hue: '#ff3aa0', any: { bpLuck: 0.6 }, anyD: '图纸掉率 +60%', fitN: '锻造', fit: (B) => !!B.forge, fitFx: () => ({ forgeTwice: 0.5, forgeQUp: 1 }), fitD: '打造品质 +1，50% 概率多得一件' },
-  ygg:     { n: '世界树根', q: 3, hue: '#7aff9a', any: { supplyDaily: 40, shardDaily: 8, orbDaily: 20 }, anyD: '基地每天 +40 物资、+8 碎片、+20 经验球', fitN: '后勤 / 自然', fit: (B) => (B.cat === 'store' || B.style === 'nature') && !!B.fx, fitFx: () => ({ prodMul: 2 }), fitD: '这个房间自己的效果 ×3' },
+  ygg:     { n: '世界树根', q: 3, hue: '#7aff9a', any: { supplyDaily: 40, shardDaily: 3, orbDaily: 20 }, anyD: '基地每天 +40 物资、+3 碎片、+20 经验球', fitN: '后勤 / 自然', fit: (B) => (B.cat === 'store' || B.style === 'nature') && !!B.fx, fitFx: () => ({ prodMul: 2 }), fitD: '这个房间自己的效果 ×3' },
   crown:   { n: '王座遗骸', q: 3, hue: '#ffcc33', any: { relicSlot: 1 }, anyD: '每名领袖出征多带 1 件宝物', fitN: '防守', fit: cat('defense'), fitFx: (B) => (B.weapon ? { dmg: 0.6, xSplash: 130, xSlow: 1 } : { defArmy: 3 }), fitD: '武器：伤害 +60%，命中溅射并减速；其它：再多 3 名守卫' },
 };
 // room-local keys; everything else is a base-wide modifier summed over the whole base

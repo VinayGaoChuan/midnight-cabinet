@@ -122,8 +122,8 @@ wrap(G, 'quickHeal', null, function () { T.ev('quick_heal', {}); });
 wrap(G, 'sanit', function (id, q) { return q; }, function (q) { T.ev('sanit', { quirk: q }); });
 wrap(G, 'takeTalent', function (id, b) { const h = this.meta.heroes.find(x => x.id === id); return h ? { cls: h.cls, b, i: h.taken[b], lv: h.lv, pts: h.points } : null; }, function (c) { if (c) T.ev('talent', c); });
 wrap(G, 'talUp', function () { const c = this.talCharge; return c ? (Date.now() / 1000 - c.t0) : null; }, function (held) { if (held != null && held < 0.75) T.ev('talent_short', { held: r2(held) }); });
-wrap(G, 'startRaid', null, function () { const r = this.raid; T.ev('raid_start', { foes: r ? r.list.length : 0, portal: r ? Math.round(r.portal.hp) : 0, heroes: this.meta.heroes.map(h => heroS(h, this.meta)), weapons: r ? r.turrets.length : 0 }); if (r) r._t0 = Date.now(); });
-wrap(G, 'raidEnd', function () { const r = this.raid; return r ? { res: r.over, portal: r2(r.portal.hp / Math.max(1, r.portal.max)), kills: r.kills, dur: r2(r.t) } : null; }, function (c) { if (c) { T.ev('raid_end', c); T.flush('raid_end'); } });
+wrap(G, 'startRaid', null, function () { const r = this.raid; if (!r || r._t0) return; T.ev('raid_start', { foes: r.list.length, portal: Math.round(r.portal.hp), heroes: r.ents.filter(e => e.hero).map(e => heroS(e.hero, this.meta)), bench: this.meta.heroes.length - r.ents.filter(e => e.hero).length, weapons: r.turrets.length }); r._t0 = Date.now(); });
+wrap(G, 'raidEnd', function () { const r = this.raid; return r ? { res: r.over, portal: r2(r.portal.hp / Math.max(1, r.portal.max)), kills: r.kills, total: r.total, dur: r2(r.t) } : null; }, function (c) { if (c) { const R = this.raid && this.raid.result; if (R) Object.assign(c, R); T.ev('raid_end', c); T.flush('raid_end'); } });
 
 // ───────── meta ─────────
 wrap(G, 'buyFurn', function (k) { return { k, lv: (this.prof.furn || {})[k] || 0, tok: this.prof.tokens }; }, function (c) { const lv = (this.prof.furn || {})[c.k] || 0; if (lv > c.lv) T.ev('furn', { k: c.k, lv, cost: c.tok - this.prof.tokens }); });

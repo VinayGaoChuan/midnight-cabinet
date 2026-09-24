@@ -175,7 +175,7 @@ Object.assign(G, {
   runFail() {
     const m = this.meta, run = this.run, h = run.hero, md = M.heroMods(h, m);
     let invested = h.exp; for (let l = 1; l < h.lv; l++) invested += M.expNeed(l);
-    const shards = Math.round((20 + h.lv * 15) * (1 + (md.deathShards || 0) + (M.baseMods(m).deathShards || 0))), orbs = Math.round(invested * 0.4 * (1 + (md.deathOrbs || 0)));
+    const shards = M.deathShards ? M.deathShards(h, m) : Math.round((20 + h.lv * 15) * (1 + (md.deathShards || 0) + (M.baseMods(m).deathShards || 0))), orbs = Math.round(invested * 0.4 * (1 + (md.deathOrbs || 0)));
     const keep = (M.baseMods(m).bank || 0) + (md.bank || 0), kept = h.relics.slice(0, keep), lost = h.relics.slice(keep);
     m.relics = m.relics.filter(r => !lost.includes(r.id)); m.heroes = m.heroes.filter(x => x !== h); m.graveyard.push({ name: h.name, cls: h.cls, lv: h.lv, day: m.day });
     m.shards += shards; m.orbs += orbs; m.runs++;

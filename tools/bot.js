@@ -1,6 +1,6 @@
 // headless-ish play bot: drives the Game through menus, map, battles, shops, events, chests, settlement
 window.__bot = async function (secs, opts = {}) {
-  const g = window.__mcg, M = window.MC, log = [], T0 = performance.now(); const minis = {}; let games = 0, steps = 0, battles = 0, shops = 0, events = 0, chests = 0, settles = 0, nodes = 0;
+  const g = window.__mcg, M = window.MC, log = [], T0 = performance.now(); const minis = {}; let games = 0, raids = 0, steps = 0, battles = 0, shops = 0, events = 0, chests = 0, settles = 0, nodes = 0;
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   while (performance.now() - T0 < secs * 1000) {
     steps++;
@@ -15,10 +15,11 @@ window.__bot = async function (secs, opts = {}) {
       else if (s === 'over') { log.push('over'); break; }
       else if (s === 'base') {
         if (opts.stopAtBase && nodes > 2) break;
-        if (!g.panel) { g.openWorlds(); } else if (g.panel.kind === 'worlds') { const w = M.worldsOpen(g.meta)[0]; g.pickWorld(w); } else if (g.panel.kind === 'loadout') g.launch(); else g.closePanel();
+        if (!g.panel) { g.openWorlds(); } else if (g.panel.kind === 'worlds') { const w = M.worldsOpen(g.meta)[0]; g.pickWorld(w); } else if (g.panel.kind === 'loadout') g.launch(); else if (g.panel.kind === 'raidPrep') { raids++; g.raidLaunch(); } else g.closePanel();
         await sleep(900);
       }
       else if (s === 'raid') { for (let i = 0; i < 60; i++) g.tick(1 / 30); }
+      if (g.modal && g.modal.raidRes) g.modal.choices[0].fn();
       else if (s === 'shop') { shops++; g.leaveShop(); }
       else if (s === 'world') {
         if (g.mini && !g.reel) { const mg = g.mini; mg.botN = (mg.botN || 0) + 1; minis[mg.kind] = (minis[mg.kind] || 0) + 1; const bs = (mg.D.btns ? mg.D.btns.call(g, mg) : []) || []; const play = bs.filter(b => !b.dis && !b.leave), lv = bs.find(b => b.leave && !b.dis);
@@ -37,5 +38,5 @@ window.__bot = async function (secs, opts = {}) {
     } catch (e) { log.push('ERR ' + s + ': ' + (e.stack || e).toString().slice(0, 300)); break; }
     await sleep(opts.sleep || 5);
   }
-  return { games, tokens: g.prof && g.prof.tokens, minis, steps, battles, settles, shops, events, chests, screen: g.screen, day: g.meta.day, heroes: g.meta.heroes.length, errs: (window.__mcErrs || []).slice(0, 5), log: log.slice(0, 10) };
+  return { games, raids, tokens: g.prof && g.prof.tokens, minis, steps, battles, settles, shops, events, chests, screen: g.screen, day: g.meta.day, heroes: g.meta.heroes.length, errs: (window.__mcErrs || []).slice(0, 5), log: log.slice(0, 10) };
 };

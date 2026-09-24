@@ -87,10 +87,10 @@ Object.assign(G, {
     } });
   },
   recruit() {
-    const m = this.meta, cost = 100;
+    const m = this.meta, cost = M.recruitCost ? M.recruitCost(m) : 120;
     if (m.heroes.length >= M.heroCap(m)) { this.toast('领袖已满（上限 ' + M.heroCap(m) + '）', '#d0453c'); return; }
-    if (m.shards < cost) { this.toast('灵魂碎片不足', '#d0453c'); return; }
-    this.hold('msh', m.shards); m.shards -= cost; this.release('msh');
+    if (m.supplies < cost) { this.toast('物资不足：招募要 ' + cost + ' 物资', '#d0453c'); return; }
+    this.hold('msup', m.supplies); m.supplies -= cost; this.release('msup');
     let rar = M.RARITY.indexOf(M.wpick(M.RARITY, r => r.w)); if (M.hasBuilt(m, B => B.recruit && B.recruit.qUp)) rar = Math.max(1, rar); rar = Math.max(rar, M.baseMods(m).recruitMin || 0);
     this.startReel({ title: '招魂', iconKey: 'candle', itemMode: true, land: 0, ups: rar, tease: rar < 3, tiles: M.RARITY.map(r => ({ n: r.n, sub: '领袖', c: r.c })), onDone: () => {
       const h = M.newHero(m, null, rar); m.heroes.push(h); this.save(); const col = M.RARITY[rar].c;
@@ -142,7 +142,7 @@ Object.assign(G, {
   },
   startRaid() {
     this.panel = null; this.coachData = null; this.bv.raidCam(); this.raid = new M.Raid(this.meta); this.go('raid'); M.Sfx.alarm();
-    this.banner({ kind: 'win', text: '袭击！', col: '#ff5a4a', col2: '#6a0a0a', sub: '第 ' + this.meta.day + ' 天夜里，怪物朝传送门涌来。所有领袖参战。', life: 2.4, y: 440 });
+    this.banner({ kind: 'win', text: '袭击！', col: '#ff5a4a', col2: '#6a0a0a', sub: '第 ' + this.meta.day + ' 天夜里，怪物朝传送门涌来。', life: 2.4, y: 440 });
   },
   raidEnd() {
     const r = this.raid, m = this.meta; r.done = true;

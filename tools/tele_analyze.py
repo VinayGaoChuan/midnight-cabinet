@@ -208,6 +208,8 @@ def analyse(batches, events):
     rs = by['raid_end']
     if rs:
         R.table(['指标', '数值'], [['袭击次数', len(rs)], ['守住', pct(sum(1 for e in rs if e['res'] == 'win'), len(rs))], ['传送门剩余耐久 平均', f1(avg([e['portal'] for e in rs]))]])
+        gr = Counter(e.get('grade') for e in rs if e.get('grade'))
+        if gr: R.p('守城评价：' + '，'.join('%s %d' % kv for kv in sorted(gr.items())) + '；平均出战 %s 名领袖，平均阵亡 %s 名，阵亡换来的碎片 平均 %s。' % (f1(avg([e.get('defenders') for e in rs])), f1(avg([e.get('fallen') for e in rs])), f1(avg([e.get('sh') for e in rs]))))
         if avg([e['res'] == 'win' for e in rs]) < 0.7: R.flag('警告', '袭击守住率 %s，低于 70%%。' % pct(sum(1 for e in rs if e['res'] == 'win'), len(rs)))
     # terrain: which veins get dug toward and occupied, and whether the fitting room goes on them
     QN = ['普通', '稀有', '史诗', '传说']
