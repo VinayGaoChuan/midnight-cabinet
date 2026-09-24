@@ -3,13 +3,35 @@
 const M = window.MC;
 const { SP, C, UNITS, SUMMONS, ENEMIES, TIERS, spriteCanvas, spriteDims, synergies, hpS, atkS, baseS, fmt, pick, Sfx, drawBolt, HEROES } = M;
 const FW = 1920, FH = 720;
-const CNF = "'Noto Serif SC', serif", NUMF = "'Cinzel', 'Noto Serif SC', serif";
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const eo = (t) => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
 const ei = (t) => Math.pow(clamp(t, 0, 1), 3);
 const rnd = (i) => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 const ENTRY = { nail:'march', wick:'fade', hound:'leap', dice:'spin', doll:'descend', grave:'rise', lantern:'descend', rat:'march', priest:'flash', clock:'spin', furnace:'drop', mirror:'flash', butcher:'leap', bride:'fade' };
 const HERO_POS = { x: 90, y: 400 };
+// ───────── 战场界面小件（docs/design.md §11.5）：战场画在半分辨率像素层上，1 格 = 2 舞台像素 ─────────
+// 坐标、宽高一律吸附到 2px 网格（3px 在这层上会落在半格、出虚边）：小件墨框 2px，面板 / 标题牌墨框 4px
+const PL = (M.PJ && M.PJ.PAL) || {}, g2 = (v) => Math.round(v / 2) * 2;
+const pal = (c) => (M.UI && typeof c === 'string' ? M.UI.pal(c) : c);
+const hx = (c) => { c = pal(c); return typeof c === 'string' && /^#[0-9a-f]{6}/i.test(c) ? c.slice(0, 7) : PL.cream; };   // 像素字只吃 #rrggbb
+const hiOf = (c) => (M.PJ && M.PJ.shades ? M.PJ.shades(c).hi : PL.white);
+const BU = M.bUI = {
+  P: PL, g2, pal, hx,
+  R(ctx, a, b, w, h, c) { ctx.fillStyle = c; ctx.fillRect(g2(a), g2(b), g2(w), g2(h)); },
+  // 墨框实心块：u = 框宽
+  box(ctx, a, b, w, h, fill, u, ink) { u = u || 2; BU.R(ctx, a - u, b - u, w + 2 * u, h + 2 * u, ink || PL.ink); BU.R(ctx, a, b, w, h, fill); },
+  // 像素字 + 1 格墨描边；o.drop = 往下再压一道墨影（大字）
+  text(ctx, s, x, y, size, col, o = {}) {
+    s = String(s); const c = M.pxTextCanvas(s, size, hx(col), { ink: PL.ink }), w = c.width, h = c.height, X = g2(x - (o.align === 'left' ? 0 : o.align === 'right' ? w : w / 2)), Y = g2(y - h / 2);
+    if (o.drop) ctx.drawImage(M.pxTextCanvas(s, size, PL.ink, { ink: PL.ink }), X, Y + o.drop, w, h);
+    ctx.drawImage(c, X, Y, w, h); return w;
+  },
+  // 机台数码（5×7 点阵）：顶两行亮一阶，墨描边
+  num(ctx, s, x, y, col, sc, o = {}) {
+    col = hx(col); const c = M.pxNumCanvas(String(s), col, { ink: PL.ink, hl: o.hl || hiOf(col) }), w = c.width * sc, h = c.height * sc;
+    ctx.drawImage(c, g2(x - (o.align === 'left' ? 0 : o.align === 'right' ? w : w / 2)), g2(y - h / 2), w, h); return w;
+  }
+};
 
 class Battle {
   constructor(run, cfg) {
@@ -331,9 +353,9 @@ class Battle {
     for (const f of this.fx) drawFx(ctx, f, T);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.imageSmoothingEnabled = false;
-    if (opts.slow) { ctx.globalAlpha = 0.55 * opts.slow; ctx.fillStyle = '#07050a'; ctx.fillRect(0, 0, FW, FH); ctx.globalAlpha = 1; }
+    if (opts.slow) { ctx.globalAlpha = 0.55 * opts.slow; ctx.fillStyle = PL.ink; ctx.fillRect(0, 0, FW, FH); ctx.globalAlpha = 1; }
     if (this.flash > 0) { ctx.globalAlpha = clamp(this.flash, 0, 1) * 0.8; ctx.fillStyle = this.flashCol; ctx.fillRect(0, 0, FW, FH); ctx.globalAlpha = 1; }
-    if (T < 0.6) { ctx.globalAlpha = 1 - T / 0.6; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, FW, FH); ctx.globalAlpha = 1; }
+    if (T < 0.6) { ctx.globalAlpha = 1 - T / 0.6; ctx.fillStyle = PL.ink; ctx.fillRect(0, 0, FW, FH); ctx.globalAlpha = 1; }
   }
 }
 const floors = {};
@@ -358,10 +380,11 @@ function drawFloor(ctx, region) {
   ctx.drawImage(floors[key], -40, -40);
 }
 function drawPodium(ctx) {
-  ctx.fillStyle = '#0b090e'; ctx.fillRect(20, HERO_POS.y - 6, 150, 40);
-  ctx.fillStyle = '#2a2230'; ctx.fillRect(20, HERO_POS.y - 6, 150, 6);
-  ctx.fillStyle = '#e8dcc4'; ctx.fillRect(30, HERO_POS.y - 30, 8, 24); ctx.fillStyle = '#ffb03a'; ctx.fillRect(31, HERO_POS.y - 40, 6, 10);
-  ctx.font = `24px ${CNF}`; ctx.textAlign = 'center'; ctx.fillStyle = '#8d8496'; ctx.fillText('指挥位', 95, HERO_POS.y + 64);
+  // 指挥位：硬边台面（深渊底、靛蓝台沿、4px 墨框），标签用像素字
+  const y = HERO_POS.y - 6;
+  BU.box(ctx, 20, y, 150, 40, PL.abyss, 4); BU.R(ctx, 20, y, 150, 6, PL.indigo); BU.R(ctx, 20, y, 150, 2, PL.dusk);
+  BU.R(ctx, 30, HERO_POS.y - 30, 8, 24, PL.cream); BU.R(ctx, 32, HERO_POS.y - 40, 4, 10, PL.gold);
+  BU.text(ctx, '指挥位', 95, HERO_POS.y + 56, 24, PL.lavender);
 }
 function entryOffset(e, T) {
   if (e.isHero) {
@@ -390,7 +413,7 @@ function drawEnt(ctx, e, T, b) {
   const off = entryOffset(e, T);
   if (off) {
     x += off.x; y += off.y; a = off.a; rot = off.rot || 0; clip = off.clip == null ? 1 : off.clip;
-    if (off.string) { ctx.fillStyle = '#8d8496'; ctx.fillRect(x - 1, 0, 2, y - img.height); }
+    if (off.string) { ctx.fillStyle = PL.lavender; ctx.fillRect(x - 1, 0, 2, y - img.height); }
     if (off.col) { ctx.globalAlpha = clamp(off.colA, 0, 1); ctx.fillStyle = e.kind === 'mirror' ? '#cfe0ff' : '#fff2a0'; ctx.fillRect(x - 30, 0, 60, e.y); ctx.globalAlpha = 1; }
   }
   if (e.lunge != null) { const d = T - e.lunge; if (d < 0.15) x += (e.side === 'A' ? 1 : -1) * 18 * Math.sin(d / 0.15 * Math.PI); }
@@ -398,7 +421,7 @@ function drawEnt(ctx, e, T, b) {
   if (e.castT != null && T - e.castT < 0.5) y -= 14 * Math.sin((T - e.castT) / 0.5 * Math.PI);
   y -= (Math.floor(T * 5 + e.id) % 2) * 3;
   ctx.globalAlpha = a;
-  ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(e.x - img.width * 0.38, e.y - 6, img.width * 0.76, 12);
+  ctx.fillStyle = 'rgba(7,6,15,0.45)'; ctx.fillRect(e.x - img.width * 0.38, e.y - 6, img.width * 0.76, 12);
   if (e.isHero && e.bench) { ctx.globalAlpha = a * (0.25 + 0.15 * Math.sin(T * 3)); ctx.fillStyle = C.candle; ctx.fillRect(x - img.width / 2 - 10, y - img.height - 10, img.width + 20, img.height + 16); ctx.globalAlpha = a; }
   ctx.save(); ctx.translate(x, y);
   if (rot) ctx.rotate(rot * Math.PI / 180);
@@ -406,40 +429,38 @@ function drawEnt(ctx, e, T, b) {
   if (clip < 1) { const h = img.height * clip; ctx.drawImage(img, 0, 0, img.width, h, -img.width / 2, -h, img.width, h); }
   else ctx.drawImage(img, -img.width / 2, -img.height);
   ctx.restore();
-  if (e.shield > 0) { ctx.strokeStyle = 'rgba(143,200,255,0.8)'; ctx.lineWidth = 4; ctx.strokeRect(x - img.width / 2 - 6, y - img.height - 6, img.width + 12, img.height + 12); }
+  if (e.shield > 0) { ctx.strokeStyle = 'rgba(191,247,240,0.8)'; ctx.lineWidth = 4; ctx.strokeRect(x - img.width / 2 - 6, y - img.height - 6, img.width + 12, img.height + 12); }
   if (e.burn) { const f = spriteCanvas(Math.floor(T * 10) % 2 ? 'flame' : 'flame2', 6); ctx.drawImage(f, x - 4, y - img.height - 18); }
   const top = y - img.height - 14;
   if (!off) {
-    const bw = Math.max(44, img.width * 0.7);
-    ctx.fillStyle = '#000'; ctx.fillRect(x - bw / 2 - 2, top - 2, bw + 4, e.isHero ? 14 : 10);
-    ctx.fillStyle = e.isHero ? C.candle : e.side === 'A' ? (e.summon ? '#b86bff' : '#9ccc6a') : '#d0453c';
-    ctx.fillRect(x - bw / 2, top, bw * clamp(e.hp / e.maxHp, 0, 1), e.isHero ? 10 : 6);
+    // 血条：墨槽墨框，填充上亮一阶
+    const bw = Math.max(44, img.width * 0.7), bh = e.isHero ? 10 : 6, fw = bw * clamp(e.hp / e.maxHp, 0, 1), [fc, fh] = e.isHero ? [PL.gold, PL.butter] : e.side === 'A' ? (e.summon ? [PL.violet, PL.magenta] : [PL.green, PL.lime]) : [PL.red, PL.pink];
+    BU.box(ctx, x - bw / 2, top, bw, bh, PL.ink); if (fw > 0) { BU.R(ctx, x - bw / 2, top, fw, bh, fc); BU.R(ctx, x - bw / 2, top, fw, 2, fh); }
   }
-  if (e.side === 'A' && !e.summon && !e.isHero) for (let i = 0; i < e.star; i++) { ctx.fillStyle = C.gold; ctx.fillRect(x - e.star * 8 + i * 16 + 2, top - 16, 10, 10); }
-  if (e.elite || e.boss) { ctx.font = `26px ${CNF}`; ctx.textAlign = 'center'; ctx.fillStyle = '#1a120a'; ctx.fillRect(x - 40, top - 44, 80, 32); ctx.strokeStyle = C.gold; ctx.lineWidth = 3; ctx.strokeRect(x - 40, top - 44, 80, 32); ctx.fillStyle = C.gold; ctx.fillText(e.boss ? '首领' : '精英', x, top - 19); }
-  if (e.isHero) { ctx.font = `24px ${CNF}`; ctx.textAlign = 'center'; ctx.fillStyle = C.candle; ctx.fillText(b.run.hero.name, x, top - 12); }
+  if (e.side === 'A' && !e.summon && !e.isHero) for (let i = 0; i < e.star; i++) BU.box(ctx, x - e.star * 8 + i * 16 + 2, top - 16, 10, 10, PL.gold);
+  // 首领 / 精英名牌：酒红 / 靛蓝硬边小牌，金字
+  if (e.elite || e.boss) { BU.box(ctx, x - 40, top - 44, 80, 32, e.boss ? PL.wine : PL.indigo, 4); BU.R(ctx, x - 40, top - 44, 80, 4, e.boss ? PL.red : PL.dusk); BU.text(ctx, e.boss ? '首领' : '精英', x, top - 28, 24, PL.gold); }
+  if (e.isHero) BU.text(ctx, b.run.hero.name, x, top - 22, 24, PL.gold);
   ctx.globalAlpha = 1;
 }
 function drawFx(ctx, f, T) {
   const d = T - f.t0; if (d < 0 || f.k === 'grave') return; const p = d / f.life;
   if (f.k === 'pt') { const x = f.x + f.vx * d, y = f.y + f.vy * d + 400 * d * d, c0 = f.col.length === 7 ? f.col : '#ffffff', c = c0 === '#6a1f2b' ? '#ff5a3a' : c0; M.glow(ctx, x, y, 34 * (1 - p * 0.5), c, 0.45 * (1 - p)); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1 - p; ctx.fillStyle = c; ctx.fillRect(Math.round(x / 6) * 6 - 6, Math.round(y / 6) * 6 - 6, 12, 12); ctx.fillStyle = '#ffffff'; ctx.globalAlpha = (1 - p) * 0.8; ctx.fillRect(Math.round(x / 6) * 6 - 3, Math.round(y / 6) * 6 - 3, 6, 6); ctx.restore(); }
-  else if (f.k === 'float') { if (d < 0.25) M.glow(ctx, f.x, f.y - 70 * eo(p) - f.size * 0.3, f.size * 2, f.col.length === 7 ? f.col : '#ffffff', 0.5 * (1 - d / 0.25));
+  else if (f.k === 'float') {   // 飘字：像素字 + 墨描边，按阶放大回落，不发光（像素模式下由 mc-battle4 drawFloat 接管）
     const sc = d < 0.12 ? 0.6 + 0.7 * (d / 0.12) : 1.3 - 0.3 * clamp((d - 0.12) / 0.2, 0, 1);
-    ctx.globalAlpha = p < 0.7 ? 1 : 1 - (p - 0.7) / 0.3;
-    ctx.font = `${Math.round(f.size * sc)}px ${f.num ? NUMF : CNF}`; ctx.textAlign = 'center';
-    const y = f.y - 70 * eo(p);
-    ctx.fillStyle = '#000'; ctx.fillText(f.text, f.x + 4, y + 4); ctx.fillStyle = f.col; ctx.fillText(f.text, f.x, y);
+    ctx.globalAlpha = p < 0.7 ? 1 : Math.ceil((1 - (p - 0.7) / 0.3) * 4) / 4;
+    BU.text(ctx, f.text, f.x, f.y - 70 * eo(p), Math.max(12, Math.round(f.size * sc / 4) * 4), f.col);
     ctx.globalAlpha = 1;
   } else if (f.k === 'slash') { M.glow(ctx, f.x, f.y, f.big ? 120 : 70, '#fff2c0', 0.6 * (1 - p)); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(f.x, f.y); ctx.rotate(-0.6); ctx.fillStyle = '#fff'; ctx.globalAlpha = 1 - p; const w = (f.big ? 140 : 90) * (1 - p * 0.5); ctx.fillRect(-w / 2, -4, w, f.big ? 12 : 8); ctx.restore(); ctx.globalAlpha = 1; }
-  else if (f.k === 'ring') { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.shadowColor = f.col; ctx.shadowBlur = 24; ctx.globalAlpha = 1 - p; ctx.strokeStyle = f.col; ctx.lineWidth = f.w; ctx.beginPath(); ctx.arc(f.x, f.y, f.r0 + (f.r1 - f.r0) * eo(p), 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
+  else if (f.k === 'ring') { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1 - p; ctx.strokeStyle = f.col; ctx.lineWidth = f.w; ctx.beginPath(); ctx.arc(f.x, f.y, f.r0 + (f.r1 - f.r0) * eo(p), 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
   else if (f.k === 'boom') { M.glow(ctx, f.x, f.y, 260 * (1 - p * 0.4), '#ff9a3a', 0.8 * (1 - p)); M.glow(ctx, f.x, f.y, 90, '#ffffff', 0.9 * Math.max(0, 1 - p * 3)); const r = 20 + 150 * eo(p); ctx.globalAlpha = (1 - p) * 0.4; ctx.fillStyle = '#ff7a2a'; ctx.beginPath(); ctx.arc(f.x, f.y, r, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1 - p; ctx.strokeStyle = '#ffb03a'; ctx.lineWidth = 14 * (1 - p) + 2; ctx.stroke(); ctx.globalAlpha = 1; }
-  else if (f.k === 'plus') { M.glow(ctx, f.x, f.y - 60 * p, 30, '#9cff7a', 0.5 * (1 - p)); ctx.globalAlpha = 1 - p; ctx.fillStyle = '#9ccc6a'; const y = f.y - 60 * p; ctx.fillRect(f.x - 3, y - 9, 6, 18); ctx.fillRect(f.x - 9, y - 3, 18, 6); ctx.globalAlpha = 1; }
+  else if (f.k === 'plus') { M.pxGlow(ctx, f.x, f.y - 60 * p, 30, PL.lime, 0.5 * (1 - p)); ctx.globalAlpha = 1 - p; ctx.fillStyle = PL.lime; const y = f.y - 60 * p; ctx.fillRect(f.x - 3, y - 9, 6, 18); ctx.fillRect(f.x - 9, y - 3, 18, 6); ctx.globalAlpha = 1; }
   else if (f.k === 'chain') { ctx.globalAlpha = 1 - p; ctx.strokeStyle = C.blue; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(f.x1, f.y1); for (let i = 1; i < 6; i++) { const t = i / 6; ctx.lineTo(f.x1 + (f.x2 - f.x1) * t + (Math.random() - 0.5) * 30, f.y1 + (f.y2 - f.y1) * t + (Math.random() - 0.5) * 30); } ctx.lineTo(f.x2, f.y2); ctx.stroke(); ctx.globalAlpha = 1; }
   else if (f.k === 'beam') { ctx.globalAlpha = 1 - p; ctx.strokeStyle = f.col; ctx.lineWidth = 18 * (1 - p) + 4; ctx.beginPath(); ctx.moveTo(f.x1, f.y1); ctx.lineTo(f.x1 + (f.x2 - f.x1) * eo(p * 2), f.y1 + (f.y2 - f.y1) * eo(p * 2)); ctx.stroke(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.stroke(); ctx.globalAlpha = 1; }
   else if (f.k === 'bolt') drawBolt(ctx, f.x, f.y, -20, f.seed, f.tier, d, f.life);
-  else if (f.k === 'pillar') { const a = p < 0.2 ? p / 0.2 : 1 - (p - 0.2) / 0.8; ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createLinearGradient(f.x - f.w, 0, f.x + f.w, 0); g.addColorStop(0, f.col + '00'); g.addColorStop(0.5, f.col + 'ff'); g.addColorStop(1, f.col + '00'); ctx.globalAlpha = a * 0.8; ctx.fillStyle = g; ctx.fillRect(f.x - f.w, 0, f.w * 2, FH); ctx.globalAlpha = a; ctx.fillStyle = '#ffffff'; ctx.fillRect(f.x - 3, 0, 6, FH); ctx.restore(); }
+  else if (f.k === 'pillar') { const a = p < 0.2 ? p / 0.2 : 1 - (p - 0.2) / 0.8; ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = M.UI.lg(ctx, f.x - f.w, 0, f.x + f.w, 0, [[0, f.col + '00'], [0.5, f.col + 'ff'], [1, f.col + '00']], 7); ctx.globalAlpha = a * 0.8; ctx.fillStyle = g; ctx.fillRect(f.x - f.w, 0, f.w * 2, FH); ctx.globalAlpha = a; ctx.fillStyle = '#ffffff'; ctx.fillRect(f.x - 3, 0, 6, FH); ctx.restore(); }
   else if (f.k === 'charge') { M.glow(ctx, f.x + (f.tx - f.x) * eo(p), f.y + (f.ty - f.y) * eo(p), 30, f.col, 0.6); const q = eo(p), x = f.x + (f.tx - f.x) * q, y = f.y + (f.ty - f.y) * q; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1 - p * 0.5; ctx.fillStyle = f.col; ctx.fillRect(x - 6, y - 6, 12, 12); ctx.restore(); }
-  else if (f.k === 'coin') { const y = f.y + f.vy * d; ctx.globalAlpha = p > 0.8 ? (1 - p) / 0.2 : 1; const w = Math.abs(Math.cos(d * 10 + f.x)) * 18 + 3; ctx.fillStyle = '#ffcc33'; ctx.fillRect(f.x - w / 2, y - 9, w, 18); ctx.fillStyle = '#fff6c0'; ctx.fillRect(f.x - w / 4, y - 6, Math.max(1, w / 4), 6); ctx.globalAlpha = 1; }
+  else if (f.k === 'coin') { const y = f.y + f.vy * d; ctx.globalAlpha = p > 0.8 ? (1 - p) / 0.2 : 1; const w = Math.abs(Math.cos(d * 10 + f.x)) * 18 + 3; BU.box(ctx, f.x - w / 2, y - 9, w, 18, PL.gold); BU.R(ctx, f.x - w / 2, y - 9, w, 4, PL.butter); BU.R(ctx, f.x - w / 2, y + 5, w, 4, PL.amber); ctx.globalAlpha = 1; }   // 金币：金面、奶油上沿、琥珀下沿、墨框
   else if (f.k === 'feather') { const x = f.x + Math.sin(d * 3 + f.ph) * 40, y = f.y + 260 * d; ctx.save(); ctx.globalAlpha = 1 - p; ctx.translate(x, y); ctx.rotate(Math.sin(d * 3 + f.ph) * 0.8); ctx.fillStyle = '#fffbe8'; ctx.fillRect(-4, -14, 8, 28); ctx.fillStyle = '#d8ffd0'; ctx.fillRect(-1, -14, 2, 28); ctx.restore(); }
   else if (f.k === 'clock') { const a = p < 0.2 ? p / 0.2 : 1 - (p - 0.2) / 0.8, r = 220 + 60 * eo(p); ctx.save(); ctx.globalAlpha = a * 0.85; ctx.translate(f.x, f.y); ctx.strokeStyle = '#9fd8c8'; ctx.lineWidth = 10; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke(); for (let i = 0; i < 12; i++) { ctx.save(); ctx.rotate(i * Math.PI / 6); ctx.fillStyle = '#e0fff5'; ctx.fillRect(-4, -r + 12, 8, 26); ctx.restore(); } ctx.rotate(-d * 14); ctx.fillStyle = '#e0fff5'; ctx.fillRect(-5, -r * 0.8, 10, r * 0.8); ctx.rotate(d * 10); ctx.fillRect(-7, -r * 0.5, 14, r * 0.5); ctx.restore(); }
 }

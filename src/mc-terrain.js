@@ -29,7 +29,10 @@ IC.l_hourglass = (x) => { rect(x, 7, 3, 18, 3, '#caa84a'); rect(x, 7, 26, 18, 3,
 IC.l_dream = (x) => { poly(x, [[14, 2], [19, 11], [15, 14], [20, 22], [16, 30], [12, 21], [16, 17], [11, 9]], '#ff3aa0'); circ(x, 23, 8, 3, '#ffd0f0'); circ(x, 8, 22, 2.4, '#ffd0f0'); rect(x, 21, 20, 6, 8, '#e8d8b0'); rect(x, 22, 22, 4, 1.4, '#8a6a3a'); };
 IC.l_ygg = (x) => { circ(x, 16, 11, 9, '#4aa84a'); circ(x, 10, 13, 5, '#7aff9a'); circ(x, 22, 12, 5, '#6ad07a'); rect(x, 14, 16, 4, 8, '#8a5a30'); line(x, 16, 24, 6, 30, 2.6, '#8a5a30'); line(x, 16, 24, 26, 30, 2.6, '#8a5a30'); line(x, 16, 24, 16, 31, 2.6, '#8a5a30'); };
 IC.l_crown = (x) => { poly(x, [[4, 12], [10, 18], [16, 6], [22, 18], [28, 12], [25, 26], [7, 26]], '#ffcc33'); rect(x, 7, 23, 18, 3, '#b08a20'); circ(x, 16, 17, 2.4, '#ff4a6a'); circ(x, 10, 21, 1.6, '#6fa8dc'); circ(x, 22, 21, 1.6, '#6fa8dc'); };
-IC.l_unknown = (x) => { poly(x, [[4, 26], [8, 10], [18, 4], [28, 12], [27, 27]], '#4a4050'); C(x, '#ffffff'); x.font = 'bold 20px serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('?', 16, 17); };
+// 未勘明：墨框暮紫硬方块（上亮下暗一阶）+ 奶油色像素「？」（逐格拼，图标只有 16 格宽，用字体会糊）
+const QM = ['.####.', '##..##', '....##', '...##.', '..##..', '......', '..##..'];
+IC.l_unknown = (x) => { const P = (M.PJ && M.PJ.PAL) || {}; rect(x, 2, 2, 28, 28, P.ink || '#07060f'); rect(x, 4, 4, 24, 24, P.dusk || '#3d3a8c'); rect(x, 4, 4, 24, 2, P.haze || '#6a6394'); rect(x, 4, 24, 24, 4, P.indigo || '#2b2461');
+  [[2, P.ink || '#07060f'], [0, P.cream || '#f4efe0']].forEach(([o, col]) => QM.forEach((row, r) => [...row].forEach((ch, c) => { if (ch === '#') rect(x, 10 + c * 2 + o, 8 + r * 2 + o, 2, 2, col); }))); };
 
 // ───────── the table ─────────
 // fit(B, key) says whether this room type "fits" the vein; fitFx(B) is what it adds on top of the "any room" effect.

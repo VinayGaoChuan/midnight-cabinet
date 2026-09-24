@@ -5,7 +5,8 @@ const {C,SP,spriteDims,spriteCanvas,spriteURL,TAGS,UNITS,BASE_UNITS,SUMMONS,ENEM
 
 
 const FW = 1920, FH = 720;
-const CNF = "'Noto Serif SC', serif", NUMF = "'Cinzel', 'Noto Serif SC', serif";
+// 画布文字一律走 M.UI（mc-pj-ui.js）：像素字 / Silkscreen、墨影、调色板色（docs/design.md §11.5）
+const PP = (window.MC.PJ && window.MC.PJ.PAL) || {}, XU = window.MC.UI;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const eo = (t) => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
 const rnd = (i) => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
@@ -287,7 +288,7 @@ class Battle {
     }
     for (const f of this.fx) drawFx(ctx, f, T);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    if (opts.slow) { ctx.globalAlpha = 0.55 * opts.slow; ctx.fillStyle = '#07050a'; ctx.fillRect(0, 0, FW, FH); ctx.globalAlpha = 1; }
+    if (opts.slow) { ctx.globalAlpha = 0.55 * opts.slow; ctx.fillStyle = PP.ink; ctx.fillRect(0, 0, FW, FH); ctx.globalAlpha = 1; }
     if (this.flash > 0) { ctx.globalAlpha = clamp(this.flash, 0, 1) * 0.8; ctx.fillStyle = this.flashCol; ctx.fillRect(0, 0, FW, FH); ctx.globalAlpha = 1; }
   }
 }
@@ -310,10 +311,10 @@ function drawGrid(ctx, opts) {
   for (let c = 0; c < GRID.cols; c++) for (let r = 0; r < GRID.rows; r++) {
     const p = cellXY(c, r);
     const hov = opts.hoverCell && opts.hoverCell[0] === c && opts.hoverCell[1] === r;
-    ctx.strokeStyle = hov ? C.candle : 'rgba(232,220,196,0.12)'; ctx.lineWidth = hov ? 5 : 3;
+    ctx.strokeStyle = hov ? C.candle : 'rgba(244,239,224,0.12)'; ctx.lineWidth = hov ? 5 : 3;
     ctx.strokeRect(p.x - 60, p.y - 100, 120, 110);
   }
-  ctx.fillStyle = 'rgba(242,193,78,0.06)'; ctx.fillRect(GRID.x0 - 70, GRID.y0 - 110, GRID.dx * GRID.cols, GRID.dy * GRID.rows);
+  ctx.fillStyle = 'rgba(255,207,74,0.06)'; ctx.fillRect(GRID.x0 - 70, GRID.y0 - 110, GRID.dx * GRID.cols, GRID.dy * GRID.rows);
 }
 function drawEnt(ctx, e, T, opts) {
   const flipNeed = (e.side === 'A' ? 'R' : 'L') !== (SP[e.sprite].face || 'R');
@@ -330,27 +331,26 @@ function drawEnt(ctx, e, T, opts) {
   if (opts.selUid && e.uid === opts.selUid) { ctx.strokeStyle = C.candle; ctx.lineWidth = 4; ctx.strokeRect(e.x - img.width / 2 - 8, e.y - img.height - 8, img.width + 16, img.height + 16); }
   if (flipNeed) { ctx.save(); ctx.translate(x, 0); ctx.scale(-1, 1); ctx.drawImage(img, -img.width / 2, y - img.height); ctx.restore(); }
   else ctx.drawImage(img, x - img.width / 2, y - img.height);
-  if (e.shield > 0) { ctx.strokeStyle = 'rgba(143,200,255,0.8)'; ctx.lineWidth = 4; ctx.strokeRect(x - img.width / 2 - 6, y - img.height - 6, img.width + 12, img.height + 12); }
+  if (e.shield > 0) { ctx.strokeStyle = 'rgba(191,247,240,0.8)'; ctx.lineWidth = 4; ctx.strokeRect(x - img.width / 2 - 6, y - img.height - 6, img.width + 12, img.height + 12); }
   if (e.burn) { const f = spriteCanvas(Math.floor(T * 10) % 2 ? 'flame' : 'flame2', 6); ctx.drawImage(f, x - 4, y - img.height - 18); }
   const top = y - img.height - 14;
   if (!opts.deploy || e.side === 'E') {
     const bw = Math.max(44, img.width * 0.7);
-    ctx.fillStyle = '#000'; ctx.fillRect(x - bw / 2 - 2, top - 2, bw + 4, 10);
-    ctx.fillStyle = e.side === 'A' ? (e.summon ? '#b86bff' : '#9ccc6a') : '#d0453c';
+    XU.box(ctx, x - bw / 2, top, bw, 6, PP.ink);
+    ctx.fillStyle = e.side === 'A' ? (e.summon ? PP.violet : PP.green) : PP.red;
     ctx.fillRect(x - bw / 2, top, bw * clamp(e.hp / e.maxHp, 0, 1), 6);
   }
-  if (e.side === 'A' && !e.summon) for (let i = 0; i < e.star; i++) { ctx.fillStyle = C.gold; ctx.fillRect(x - e.star * 8 + i * 16 + 2, top - 16, 10, 10); }
-  if (e.elite || e.boss) { ctx.font = `26px ${CNF}`; ctx.textAlign = 'center'; ctx.fillStyle = '#1a120a'; ctx.fillRect(x - 40, top - 44, 80, 32); ctx.strokeStyle = C.gold; ctx.lineWidth = 3; ctx.strokeRect(x - 40, top - 44, 80, 32); ctx.fillStyle = C.gold; ctx.fillText(e.boss ? '首领' : '精英', x, top - 19); }
+  if (e.side === 'A' && !e.summon) for (let i = 0; i < e.star; i++) XU.box(ctx, x - e.star * 8 + i * 16 + 2, top - 16, 10, 10, PP.gold);
+  // 首领 / 精英名牌：酒红 / 靛蓝硬边小牌、3px 墨框，金字墨影
+  if (e.elite || e.boss) { XU.box(ctx, x - 40, top - 44, 80, 32, e.boss ? PP.wine : PP.indigo); XU.R(ctx, x - 40, top - 44, 80, 3, e.boss ? PP.red : PP.dusk); XU.text(ctx, e.boss ? '首领' : '精英', x, top - 28, XU.T.body, PP.gold); }
 }
 function drawFx(ctx, f, T) {
   const d = T - f.t0; if (d < 0) return; const p = d / f.life;
   if (f.k === 'pt') { const x = f.x + f.vx * d, y = f.y + f.vy * d + 400 * d * d; ctx.globalAlpha = 1 - p; ctx.fillStyle = f.col; ctx.fillRect(Math.round(x / 6) * 6, Math.round(y / 6) * 6, 12, 12); ctx.globalAlpha = 1; }
   else if (f.k === 'float') {
     const sc = d < 0.12 ? 0.6 + 0.7 * (d / 0.12) : 1.3 - 0.3 * clamp((d - 0.12) / 0.2, 0, 1);
-    ctx.globalAlpha = p < 0.7 ? 1 : 1 - (p - 0.7) / 0.3;
-    ctx.font = `${Math.round(f.size * sc)}px ${f.num ? NUMF : CNF}`; ctx.textAlign = 'center';
-    const y = f.y - 70 * eo(p);
-    ctx.fillStyle = '#000'; ctx.fillText(f.text, f.x + 4, y + 4); ctx.fillStyle = f.col; ctx.fillText(f.text, f.x, y);
+    ctx.globalAlpha = p < 0.7 ? 1 : Math.ceil((1 - (p - 0.7) / 0.3) * 4) / 4;
+    XU.text(ctx, f.text, f.x, f.y - 70 * eo(p), Math.max(12, Math.round(f.size * sc / 4) * 4), f.col, { num: f.num });   // 像素字 + 墨影，字号按 4px 一阶
     ctx.globalAlpha = 1;
   } else if (f.k === 'slash') { ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(-0.6); ctx.fillStyle = '#fff'; ctx.globalAlpha = 1 - p; const w = (f.big ? 140 : 90) * (1 - p * 0.5); ctx.fillRect(-w / 2, -4, w, f.big ? 12 : 8); ctx.restore(); ctx.globalAlpha = 1; }
   else if (f.k === 'ring') { ctx.globalAlpha = 1 - p; ctx.strokeStyle = f.col; ctx.lineWidth = f.w; ctx.beginPath(); ctx.arc(f.x, f.y, f.r0 + (f.r1 - f.r0) * eo(p), 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }
@@ -390,13 +390,14 @@ const SIDE = [[0, 0, 320, 140, '#141118'], ...stripes, [0, 136, 320, 4, '#0c0a0e
   [84, 78, 12, 13, '#0b090d'], [96, 83, 2, 3, '#0b090d'], [86, 91, 7, 4, '#0b090d'], [80, 95, 16, 24, '#0b090d'], [92, 104, 22, 5, '#0b090d'], [84, 112, 40, 9, '#0b090d'], [118, 118, 8, 22, '#0b090d'], [118, 138, 12, 3, '#0b090d'],
   [96, 80, 1, 3, '#c95b8a'], [98, 84, 1, 2, '#c95b8a'], [96, 95, 1, 9, '#c95b8a'], [113, 104, 1, 5, '#7fe0d0'], [123, 112, 1, 6, '#7fe0d0'], [125, 118, 1, 20, '#7fe0d0']];
 const FRONT = [[0, 0, 320, 180, '#141118'], ...stripes.map(s => [s[0], 0, 2, 138, '#1a1620']), [0, 138, 320, 42, '#241a14'], [0, 138, 320, 3, '#33261c'], [0, 152, 320, 1, '#1c140f'], [0, 166, 320, 1, '#1c140f'],
-  [96, 16, 128, 126, '#0e0c11'], [100, 20, 120, 122, '#2a2430'], [98, 18, 124, 4, '#3b3242'], [108, 24, 104, 18, '#4a1c33'], [114, 46, 92, 55, '#0c0b0f'],
-  [108, 104, 104, 20, '#3a3142'], [120, 110, 10, 6, '#c2413a'], [134, 110, 10, 6, '#cfae3a'], [148, 110, 10, 6, '#3aa88c'], [186, 108, 12, 10, '#1a171d'], [191, 110, 2, 6, '#caa84a'],
+  [96, 16, 128, 126, '#0e0c11'], [100, 20, 120, 122, '#2a2430'], [98, 18, 124, 4, '#3b3242'], [107, 23, 106, 20, '#07060f'], [108, 24, 104, 18, '#8c1f3a'], [108, 24, 104, 1, '#e8434f'], [108, 41, 104, 1, '#4f2f22'], [114, 46, 92, 55, '#0c0b0f'],
+  [108, 104, 104, 20, '#3a3142'], [119, 109, 12, 8, '#07060f'], [120, 110, 10, 6, '#e8434f'], [120, 115, 10, 1, '#8c1f3a'], [133, 109, 12, 8, '#07060f'], [134, 110, 10, 6, '#ffcf4a'], [134, 115, 10, 1, '#e0781f'], [147, 109, 12, 8, '#07060f'], [148, 110, 10, 6, '#47d6c1'], [148, 115, 10, 1, '#1f8f8a'], [186, 108, 12, 10, '#1a171d'], [191, 110, 2, 6, '#ffcf4a'],
   [120, 128, 80, 10, '#1a171d'], [130, 133, 6, 3, '#caa84a'], [140, 134, 6, 2, '#a88a3a'], [222, 60, 4, 42, '#8a8a8a'], [219, 54, 10, 10, '#b3372f'], [221, 56, 3, 3, '#e06a60'],
   [36, 128, 16, 12, '#4d3f2a'], [40, 112, 8, 16, '#e8dcc4'], [268, 128, 16, 12, '#4d3f2a'], [272, 116, 8, 12, '#e8dcc4'],
   [60, 168, 34, 12, '#b9a58c'], [90, 164, 6, 8, '#b9a58c'], [226, 168, 34, 12, '#b9a58c'], [224, 164, 6, 8, '#b9a58c']];
 function rects(ctx, list) { list.forEach(([x, y, w, h, c, o]) => { ctx.globalAlpha = o == null ? 1 : o; ctx.fillStyle = c; ctx.fillRect(x * 6, y * 6, w * 6, h * 6); }); ctx.globalAlpha = 1; }
-function glow(ctx, x, y, r, col, a) { const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.globalAlpha = a; ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2); ctx.globalAlpha = 1; }
+// 光晕：硬边色带（5 阶，调色板取色、同色渐隐），不用柔和渐变
+function glow(ctx, x, y, r, col, a) { const c1 = String(col).replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]*\)/, 'rgba($1,$2,$3,0)'); ctx.globalAlpha = a; ctx.fillStyle = XU ? XU.rg(ctx, x, y, 0, r, [[0, col], [1, c1]], 5) : col; ctx.fillRect(x - r, y - r, r * 2, r * 2); ctx.globalAlpha = 1; }
 const INTRO_LEN = 6.2;
 // where the camera rests on the cabinet's face once the intro is over: the title menu is drawn on its screen (mc-flow.js)
 const CAB = { z: 1.7, fy: 458.5 };
@@ -404,38 +405,43 @@ const SCR = { x: 720, y: 300, w: 480, h: 270 };   // the glass, in intro-world p
 const ease = (a) => a < 0.5 ? 4 * a * a * a : 1 - Math.pow(-2 * a + 2, 3) / 2;
 // the cabinet seen from the front. k: 0 = attract screen (title + 投币开始), 1 = menu screen (title moved up, room for the buttons)
 function drawFront(ctx, t, z, fy, k) {
-  const W = 1920, H = 1080;
+  const W = 1920, H = 1080, still = !!(window.MC.PJ && window.MC.PJ.reduced), st = still ? 0 : t;
   ctx.setTransform(z, 0, 0, z, W / 2 - 960 * z, H / 2 - fy * z);
   glow(ctx, 960, 430, 900, 'rgba(127,224,208,0.22)', 1);
   rects(ctx, FRONT);
-  const bl = []; for (let i = 0; i < 13; i++) { const on = (Math.floor(t * 4) + i) % 2 === 0; bl.push([110 + i * 8, 25, 2, 2, '#ffb0d0', on ? 1 : 0.25], [110 + i * 8, 39, 2, 2, '#ffb0d0', on ? 0.25 : 1]); }
+  // 招牌灯珠：两排方灯（亮：奶油 / 粉，灭：棕），亮二灭一，上排往右、下排往左追，不发光
+  const ph = Math.floor(st * 8), bl = []; for (let i = 0; i < 26; i++) { const c = i % 2 ? PP.pink : PP.butter; bl.push([110 + i * 4, 25, 2, 2, (i - ph) % 3 ? c : PP.umber], [110 + i * 4, 39, 2, 2, (i + ph) % 3 ? c : PP.umber]); }
   rects(ctx, bl);
   const f1 = Math.round(Math.sin(t * 11)), f2 = Math.round(Math.sin(t * 9 + 2));
   rects(ctx, [[43 + f1, 106, 3, 6, '#ffb03a'], [44 + f1, 104, 1, 3, '#fff2a0'], [275 + f2, 110, 3, 6, '#ffb03a'], [276 + f2, 108, 1, 3, '#fff2a0']]);
   glow(ctx, 264, 660, 180, 'rgba(255,176,58,0.3)', 1); glow(ctx, 1656, 684, 180, 'rgba(255,176,58,0.3)', 1);
-  ctx.fillStyle = '#0c0a10'; ctx.fillRect(SCR.x, SCR.y, SCR.w, SCR.h);
-  glow(ctx, 960, 435, 300, 'rgba(127,224,208,0.10)', 0.8 + 0.2 * Math.sin(t * 3));
-  const ty = 430 - 80 * k, fs = Math.round(66 - 26 * k);
-  ctx.textAlign = 'center'; ctx.fillStyle = '#5a1c30'; ctx.font = `${fs}px ${CNF}`; ctx.fillText('午夜机台', 963, ty + 3); ctx.fillStyle = C.candle; ctx.fillText('午夜机台', 960, ty);
-  ctx.font = `12px ${NUMF}`; ctx.fillStyle = '#c95b8a'; ctx.fillText('MIDNIGHT CABINET', 960, ty + 32 - 10 * k);
-  if (k < 1) { ctx.globalAlpha = (1 - k) * (Math.floor(t * 2) % 2 ? 1 : 0.2); ctx.font = `24px ${CNF}`; ctx.fillStyle = C.bone; ctx.fillText('— 投币开始 —', 960, 520); ctx.globalAlpha = 1; }
-  // scan lines on the glass
-  ctx.globalAlpha = 0.22; ctx.fillStyle = '#000'; for (let y = SCR.y; y < SCR.y + SCR.h; y += 3) ctx.fillRect(SCR.x, y, SCR.w, 1); ctx.globalAlpha = 1;
-  ctx.font = `36px ${CNF}`; ctx.fillStyle = '#ffb0d0'; ctx.fillText('MIDNIGHT', 960, 200);
+  ctx.fillStyle = PP.ink; ctx.fillRect(SCR.x, SCR.y, SCR.w, SCR.h);
+  glow(ctx, 960, 435, 300, 'rgba(127,224,208,0.10)', still ? 0.8 : 0.8 + 0.2 * Math.round(Math.sin(t * 3)));
+  // 屏幕上的招牌字：果汁色带 + 八向墨描边，逐字跳；字号按阶 64 → 52 → 40 收小，给菜单让位
+  const ty = 430 - Math.round(20 * k) * 4, fs = [64, 52, 40][Math.min(2, Math.floor(k * 3))], ym = ty - Math.round(fs * 0.38), ch = [...'午夜机台'], cw = ch.map(c => XU.measure(ctx, c, fs)), gap = 4;
+  let px = 960 - (cw.reduce((a, b) => a + b, 0) + gap * (ch.length - 1)) / 2;
+  ch.forEach((c, i) => { const q = (st * 1.25 + (ch.length - i) * 0.12) % 1, dy = still ? 0 : [0, -0.14, 0, 0.05][Math.floor(q * 4)] * fs; XU.text(ctx, c, px + cw[i] / 2, ym + dy, fs, PP.gold, { ramp: true, outline: true }); px += cw[i] + gap; });
+  spaced(ctx, 'MIDNIGHT CABINET', 960, ty + 36 - 12 * k, XU.T.tag, PP.magenta, 3);
+  if (k < 1 && (still || Math.floor(t * 2) % 2)) { ctx.globalAlpha = Math.ceil((1 - k) * 4) / 4; XU.text(ctx, '— 投币开始 —', 960, 511, XU.T.body, PP.butter); ctx.globalAlpha = 1; }
+  // 玻璃扫描线：墨色 3px、每 6px 一道，两步滚动
+  ctx.globalAlpha = 0.22; ctx.fillStyle = PP.ink; for (let y = SCR.y + (still ? 0 : (Math.floor(t * 5) % 2) * 3); y < SCR.y + SCR.h; y += 6) ctx.fillRect(SCR.x, y, SCR.w, Math.min(3, SCR.y + SCR.h - y)); ctx.globalAlpha = 1;
+  XU.text(ctx, 'MIDNIGHT', 960, 198, XU.T.title, PP.pink, { num: true, outline: true });
 }
+// Silkscreen 拉开字距（招牌下的英文小字）
+function spaced(ctx, s, cx, y, size, col, gap) { const cs = [...s], w = cs.map(c => XU.measure(ctx, c, size, true)); let px = cx - (w.reduce((a, b) => a + b, 0) + gap * (cs.length - 1)) / 2; cs.forEach((c, i) => { XU.text(ctx, c, px + w[i] / 2, y, size, col, { num: true }); px += w[i] + gap; }); }
 // the glass on screen (1920×1080 stage pixels) while the camera rests on the cabinet
 const cabScreen = () => ({ x: Math.round(960 + (SCR.x - 960) * CAB.z), y: Math.round(540 + (SCR.y - CAB.fy) * CAB.z), w: Math.round(SCR.w * CAB.z), h: Math.round(SCR.h * CAB.z) });
 // the title menu scene; dive 0..1 pushes the camera into the screen after 开始游戏
 function drawCabinet(ctx, t, dive) {
   const W = 1920, H = 1080, e = dive * dive * dive, z = CAB.z + (9 - CAB.z) * e, fy = CAB.fy + (435 - CAB.fy) * Math.min(1, dive * 1.5);
-  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = PP.ink; ctx.fillRect(0, 0, W, H);
   drawFront(ctx, t, z, fy, 1);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  const dip = clamp((dive - 0.72) / 0.28, 0, 1); if (dip > 0) { ctx.globalAlpha = dip; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
+  const dip = clamp((dive - 0.72) / 0.28, 0, 1); if (dip > 0) { ctx.globalAlpha = dip; ctx.fillStyle = PP.ink; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
 }
 function drawIntro(ctx, t) {
   const W = 1920, H = 1080;
-  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = PP.ink; ctx.fillRect(0, 0, W, H);
   const fl = 0.8 + 0.2 * Math.sin(t * 13) * Math.sin(t * 5.3);
   if (t < 3.6) {
     const q = ease(clamp(t / 3.6, 0, 1)), z = 1.3 + 0.25 * q, fx = 740 + 540 * q, fy = 620 - 60 * q;
@@ -451,7 +457,7 @@ function drawIntro(ctx, t) {
   }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   const dip = Math.max(1 - clamp(t / 0.8, 0, 1), 1 - clamp(Math.abs(t - 3.6) / 0.4, 0, 1));
-  if (dip > 0) { ctx.globalAlpha = dip; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
+  if (dip > 0) { ctx.globalAlpha = dip; ctx.fillStyle = PP.ink; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
 }
 
 window.MC=Object.assign(window.MC,{FW,Sfx,Battle,drawBolt,INTRO_LEN,drawIntro,drawCabinet,cabScreen});

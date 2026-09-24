@@ -3,6 +3,7 @@
 // Event icons + 弹球 / 世界树 / 塔罗 / 砸金蛋 / 骰子对决 / 命运之轮.
 const M = window.MC, S = M.Sfx, K = M.MK, MINI = M.MINI, IC = M.IC;
 const { SX, SY, SW, SH, CX, FLOOR, cl, eo, eio, eb, rnd } = K;
+const U = M.UI, C = M.PJ.PAL, T = U.T; // 画面内界面件按设计稿 §11.5（调色板色、字号阶梯）
 // ───────── icons for the new event nodes (32x32 vector space) ─────────
 const c = (x, a, b, r, col) => { x.fillStyle = col; x.beginPath(); x.arc(a, b, r, 0, 7); x.fill(); };
 const r = (x, a, b, w, h, col) => { x.fillStyle = col; x.fillRect(a, b, w, h); };
@@ -35,8 +36,8 @@ IC.e_path = (x) => { for (let i = 0; i < 4; i++) { e(x, 10 + (i % 2) * 10, 27 - 
 
 // ═════════════════════ 弹球 · pachinko ═════════════════════
 const PB = { L: SX + 300, R: SX + SW - 300, T: SY + 110, B: FLOOR - 10 };
-const SLOTS = [{ n: '图纸', ic: 'scroll', c: '#ffe08a' }, { n: '空', ic: '', c: '#4a4050' }, { n: '积分', ic: 'coin', c: '#ffcc33' }, { n: '物资', ic: 'sack', c: '#caa84a' }, { n: '积分', ic: 'coin', c: '#ffcc33' }, { n: '空', ic: '', c: '#4a4050' }, { n: '道具', ic: 'gem', c: '#c890ff' }];
-MINI.pachinko = { title: '弹珠台', img: 'e_pachinko', col: '#ffcc33', text: '钢珠弹过一排排钉子，落进底下的格子里。两边的格子最值钱。',
+const SLOTS = [{ n: '图纸', ic: 'scroll', c: C.butter }, { n: '空', ic: '', c: C.slate }, { n: '积分', ic: 'coin', c: C.gold }, { n: '物资', ic: 'sack', c: C.tan }, { n: '积分', ic: 'coin', c: C.gold }, { n: '空', ic: '', c: C.slate }, { n: '道具', ic: 'gem', c: C.violet }];
+MINI.pachinko = { title: '弹珠台', img: 'e_pachinko', col: C.gold, text: '钢珠弹过一排排钉子，落进底下的格子里。两边的格子最值钱。',
   init(mg) { mg.pegs = []; const rows = 8, W = PB.R - PB.L; for (let i = 0; i < rows; i++) { const n = i % 2 ? 9 : 10; for (let j = 0; j < n; j++) mg.pegs.push({ x: PB.L + 30 + j * (W - 60) / 9 + (i % 2 ? (W - 60) / 18 : 0), y: PB.T + 90 + i * 46, f: 0 }); }
     mg.balls = []; mg.queue = 0; mg.buys = 0; mg.won = []; mg.slotF = SLOTS.map(() => 0); mg.spawnT = 0; },
   buy(mg, n, cost) { if (!this.miniPay(cost)) return; mg.buys++; mg.queue += n; S.lever(); },
@@ -62,29 +63,29 @@ MINI.pachinko = { title: '弹珠台', img: 'e_pachinko', col: '#ffcc33', text: '
   draw(x, mg) {
     const t = mg.t, W = PB.R - PB.L, sw = W / SLOTS.length;
     x.fillStyle = K.RG(x, CX, SY + 350, 50, 700, [[0, '#2a1a3a'], [1, '#0a0610']]); x.fillRect(SX, SY, SW, SH);
-    K.RR(x, PB.L - 30, PB.T - 30, W + 60, PB.B - PB.T + 50, 24, '#caa84a'); K.RR(x, PB.L - 18, PB.T - 18, W + 36, PB.B - PB.T + 28, 18, K.LG(x, 0, PB.T, 0, PB.B, [[0, '#3a1a5a'], [1, '#1a0a2a']]));
-    K.bulbs(x, PB.L - 24, PB.T - 24, W + 48, PB.B - PB.T + 38, t, '#ffcc33', 36);
-    K.PT(x, 'PACHINKO', CX, PB.T + 30, 34, '#ffcc33');
-    mg.pegs.forEach(q => { K.CI(x, q.x, q.y + 2, 7, 'rgba(0,0,0,0.5)'); K.CI(x, q.x, q.y, 7, q.f ? '#fff6c0' : '#caa84a'); K.CI(x, q.x - 2, q.y - 2, 2.4, '#fff'); if (q.f) K.GL(x, q.x, q.y, 24, '#ffcc33', q.f * 0.8); });
-    SLOTS.forEach((s, i) => { const x0 = PB.L + i * sw; K.R(x, x0 + 2, PB.B - 70, sw - 4, 70, s.ic ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.6)'); if (mg.slotF[i]) K.R(x, x0 + 2, PB.B - 70, sw - 4, 70, 'rgba(255,230,140,' + mg.slotF[i] * 0.5 + ')'); if (i) K.R(x, x0 - 3, PB.B - 70, 6, 70, '#caa84a'); if (s.ic) K.IC(x, s.ic, x0 + sw / 2, PB.B - 40, 44); else K.PT(x, '空', x0 + sw / 2, PB.B - 40, 26, '#6b6570'); });
-    mg.balls.forEach(b => { K.CI(x, b.x, b.y + 3, 10, 'rgba(0,0,0,0.5)'); K.CI(x, b.x, b.y, 10, K.RG(x, b.x - 3, b.y - 3, 1, 12, [[0, '#ffffff'], [0.5, '#c8d0dc'], [1, '#5a6070']])); });
+    U.box(x, PB.L - 30, PB.T - 30, W + 60, PB.B - PB.T + 50, C.gold); K.R(x, PB.L - 18, PB.T - 18, W + 36, PB.B - PB.T + 28, K.LG(x, 0, PB.T, 0, PB.B, [[0, '#3a1a5a'], [1, '#1a0a2a']]));
+    K.bulbs(x, PB.L - 24, PB.T - 24, W + 48, PB.B - PB.T + 38, t, C.gold, 36);
+    K.sign(x, 'PACHINKO', CX, PB.T + 30, { kind: 'gold', size: T.btn, num: true });
+    mg.pegs.forEach(q => { K.CI(x, q.x, q.y + 2, 7, 'rgba(0,0,0,0.5)'); K.CI(x, q.x, q.y, 7, q.f ? C.butter : C.gold); K.CI(x, q.x - 2, q.y - 2, 2.4, C.white); if (q.f) K.GL(x, q.x, q.y, 24, C.gold, q.f * 0.8); });
+    SLOTS.forEach((s, i) => { const x0 = PB.L + i * sw; K.R(x, x0 + 2, PB.B - 70, sw - 4, 70, s.ic ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.6)'); if (mg.slotF[i]) K.R(x, x0 + 2, PB.B - 70, sw - 4, 70, 'rgba(255,230,140,' + mg.slotF[i] * 0.5 + ')'); if (i) K.R(x, x0 - 3, PB.B - 70, 6, 70, C.gold); if (s.ic) K.IC(x, s.ic, x0 + sw / 2, PB.B - 40, 44); else U.text(x, '空', x0 + sw / 2, PB.B - 40, T.body, C.haze); });
+    mg.balls.forEach(b => { K.CI(x, b.x, b.y + 3, 10, 'rgba(0,0,0,0.5)'); K.CI(x, b.x, b.y, 10, K.RG(x, b.x - 3, b.y - 3, 1, 12, [[0, C.white], [0.5, C.silver], [1, C.slate]])); });
     // launcher & queue
-    K.RR(x, CX - 40, PB.T - 50, 80, 40, 8, '#1a0a2a', '#caa84a', 3); for (let i = 0; i < Math.min(8, mg.queue); i++) K.CI(x, PB.R + 70, PB.B - 40 - i * 26, 10, '#c8d0dc');
-    K.PT(x, '待发 ' + mg.queue, PB.R + 70, PB.B + 10, 22, '#e8dcc4');
-    mg.won.slice(-8).forEach((w, i) => K.TX(x, w, SX + 150, SY + 170 + i * 40, 22, '#ffe08a'));
+    K.RR(x, CX - 40, PB.T - 50, 80, 40, 8, C.abyss, C.gold, 3); for (let i = 0; i < Math.min(8, mg.queue); i++) K.CI(x, PB.R + 70, PB.B - 40 - i * 26, 10, C.silver);
+    U.text(x, '待发 ' + mg.queue, PB.R + 70, PB.B + 10, T.cap, C.cream);
+    mg.won.slice(-8).forEach((w, i) => U.text(x, w, SX + 150, SY + 170 + i * 40, T.cap, C.lime));
   } };
 
 // ═════════════════════ 世界树 · pick fruit, water, or cut ═════════════════════
 const FRUITS = [
-  { n: '生命果', c: '#ff6a8a', ic: 't_heart', d: '领袖回复 40% 生命', f(g) { return '回复 ' + g.heroHeal(0.4) + ' 生命'; } },
-  { n: '力量果', c: '#ff8a3a', ic: 't_sword', d: '本局部队攻击 +12%', f(g) { return g.buffRun('unitAtk', 0.12, '部队攻击 +12%', '#ff8a3a'); } },
-  { n: '坚韧果', c: '#6fa8dc', ic: 't_shieldHeart', d: '本局部队生命 +15%', f(g) { return g.buffRun('unitHp', 0.15, '部队生命 +15%', '#6fa8dc'); } },
-  { n: '智慧果', c: '#9cff7a', ic: 't_orb', d: '经验 +70', f(g, mg) { return g.giveExp(70, mg.from); } },
-  { n: '灵魂果', c: '#c890ff', ic: 't_shard', d: '灵魂碎片 +25', f(g, mg) { return g.giveShards(25, mg.from); } },
-  { n: '黄金果', c: '#ffcc33', ic: 't_coin', d: '积分 +', f(g, mg) { g.award([{ k: 'wallet', v: M.nice(mg.P * 10) }], mg.from); return '积分 +' + M.nice(mg.P * 10); } },
-  { n: '幸运果', c: '#7fe060', ic: 't_clover', d: '本局事件好运 +10%，道具升品 +5%', f(g) { g.run.mods.tier = (g.run.mods.tier || 0) + 0.05; return g.buffRun('eventLuck', 0.1, '好运 +10%', '#7fe060'); } },
-  { n: '地脉种子', c: '#8fe0ff', ic: 'l_ley', d: '一颗特殊地格的种子', f(g, mg) { g.award([{ k: 'bp', key: 'tile:' + M.dropTile() }], mg.from); return '地格种子'; } }];
-MINI.tree = { title: '世界树', img: 'e_tree', col: '#9cdc6a', text: '树根扎进每一个世界。它结的果子，只允许你摘一个。',
+  { n: '生命果', c: C.pink, ic: 't_heart', d: '领袖回复 40% 生命', f(g) { return '回复 ' + g.heroHeal(0.4) + ' 生命'; } },
+  { n: '力量果', c: C.amber, ic: 't_sword', d: '本局部队攻击 +12%', f(g) { return g.buffRun('unitAtk', 0.12, '部队攻击 +12%', C.amber); } },
+  { n: '坚韧果', c: C.blue, ic: 't_shieldHeart', d: '本局部队生命 +15%', f(g) { return g.buffRun('unitHp', 0.15, '部队生命 +15%', C.blue); } },
+  { n: '智慧果', c: C.lime, ic: 't_orb', d: '经验 +70', f(g, mg) { return g.giveExp(70, mg.from); } },
+  { n: '灵魂果', c: C.violet, ic: 't_shard', d: '灵魂碎片 +25', f(g, mg) { return g.giveShards(25, mg.from); } },
+  { n: '黄金果', c: C.gold, ic: 't_coin', d: '积分 +', f(g, mg) { g.award([{ k: 'wallet', v: M.nice(mg.P * 10) }], mg.from); return '积分 +' + M.nice(mg.P * 10); } },
+  { n: '幸运果', c: C.green, ic: 't_clover', d: '本局事件好运 +10%，道具升品 +5%', f(g) { g.run.mods.tier = (g.run.mods.tier || 0) + 0.05; return g.buffRun('eventLuck', 0.1, '好运 +10%', C.green); } },
+  { n: '地脉种子', c: C.ice, ic: 'l_ley', d: '一颗特殊地格的种子', f(g, mg) { g.award([{ k: 'bp', key: 'tile:' + M.dropTile() }], mg.from); return '地格种子'; } }];
+MINI.tree = { title: '世界树', img: 'e_tree', col: C.green, text: '树根扎进每一个世界。它结的果子，只允许你摘一个。',
   init(mg) { const pool = FRUITS.slice().sort(() => rnd() - 0.5); mg.fr = pool.slice(0, 3).map((f, i) => ({ f, x: CX - 220 + i * 220, y: SY + 250 + (i === 1 ? -60 : 0), gone: false, vy: 0, fy: 0 })); mg.spare = pool[3]; mg.picks = 0; mg.allow = 1; mg.got = []; mg.watered = false; mg.bugs = [...Array(24)].map(() => ({ x: SX + rnd() * SW, y: SY + 100 + rnd() * 500, p: rnd() * 6 })); },
   pick(mg, i) { const F = mg.fr[i]; if (F.gone || mg.phase !== 'idle') return; F.gone = true; F.falling = true; mg.pickI = i; this.miniSet('fall'); S.whoosh(0.2); },
   btns(mg) { if (mg.phase !== 'idle') return []; const b = mg.fr.map((F, i) => ({ t: '摘 ' + F.f.n, sub: F.f.d, dis: F.gone, why: '已经摘了', fn: () => MINI.tree.pick.call(this, mg, i) }));
@@ -103,18 +104,18 @@ MINI.tree = { title: '世界树', img: 'e_tree', col: '#9cdc6a', text: '树根�
     x.fillStyle = K.LG(x, 0, SY, 0, SY + SH, [[0, '#0a1a2a'], [0.6, '#10281e'], [1, '#081410']]); x.fillRect(SX, SY, SW, SH);
     K.GL(x, CX, SY + 260, 520, '#6affb0', 0.25);
     // trunk & roots
-    x.fillStyle = K.LG(x, CX - 70, 0, CX + 70, 0, [[0, '#2a1a10'], [0.5, '#5a3a22'], [1, '#2a1a10']]); x.beginPath(); x.moveTo(CX - 60, FLOOR); x.quadraticCurveTo(CX - 40, SY + 400, CX - 30, SY + 280); x.lineTo(CX + 30, SY + 280); x.quadraticCurveTo(CX + 40, SY + 400, CX + 60, FLOOR); x.fill();
-    for (let i = 0; i < 6; i++) { const s = i < 3 ? -1 : 1, k = i % 3; x.strokeStyle = '#3a2616'; x.lineWidth = 14 - k * 3; x.beginPath(); x.moveTo(CX + s * 40, FLOOR - 20); x.quadraticCurveTo(CX + s * (100 + k * 60), FLOOR - 10, CX + s * (160 + k * 110), FLOOR + 20); x.stroke(); }
+    x.fillStyle = K.LG(x, CX - 70, 0, CX + 70, 0, [[0, C.umber], [0.5, C.brown], [1, C.umber]]); x.beginPath(); x.moveTo(CX - 60, FLOOR); x.quadraticCurveTo(CX - 40, SY + 400, CX - 30, SY + 280); x.lineTo(CX + 30, SY + 280); x.quadraticCurveTo(CX + 40, SY + 400, CX + 60, FLOOR); x.fill();
+    for (let i = 0; i < 6; i++) { const s = i < 3 ? -1 : 1, k = i % 3; x.strokeStyle = C.umber; x.lineWidth = 14 - k * 3; x.beginPath(); x.moveTo(CX + s * 40, FLOOR - 20); x.quadraticCurveTo(CX + s * (100 + k * 60), FLOOR - 10, CX + s * (160 + k * 110), FLOOR + 20); x.stroke(); }
     for (let i = 0; i < 5; i++) { const y = SY + 320 + i * 60; K.GL(x, CX, y, 26, '#8fffb0', 0.4 + 0.4 * Math.sin(t * 2 + i)); K.R(x, CX - 4, y - 8, 8, 16, '#bfffd0'); }
     // canopy
-    const L = [[CX, SY + 180, 260, '#123a22'], [CX - 190, SY + 230, 170, '#16482a'], [CX + 190, SY + 230, 170, '#16482a'], [CX - 90, SY + 150, 170, '#1e5a32'], [CX + 100, SY + 150, 170, '#1e5a32'], [CX, SY + 110, 150, '#2a7040']];
+    const L = [[CX, SY + 180, 260, C.tealDeep], [CX - 190, SY + 230, 170, C.tealDeep], [CX + 190, SY + 230, 170, C.tealDeep], [CX - 90, SY + 150, 170, C.greenDeep], [CX + 100, SY + 150, 170, C.greenDeep], [CX, SY + 110, 150, C.greenDeep]]; // 树冠：调色板里的深青在后、深绿在前
     L.forEach(([a, b, rr, col], i) => K.EL(x, a + sway * (i % 2 ? 1 : -1), b, rr, rr * 0.55, col));
     for (let i = 0; i < 60; i++) { const a = i * 2.4, rr = (i * 37) % 260; K.R(x, CX + Math.cos(a) * rr * 1.1 + sway, SY + 180 + Math.sin(a) * rr * 0.4, 4, 4, i % 3 ? 'rgba(160,255,190,0.25)' : 'rgba(255,255,200,0.3)'); }
     // fruit
     mg.fr.forEach(F => { if (F.gone && !F.falling && mg.phase !== 'fall') { if (F.fy) { K.GL(x, F.x, F.y + F.fy, 50, F.f.c, 0.4); } return; } const g = F.grow == null ? 1 : F.grow, yy = F.y + (F.fy || 0), bob = F.falling ? 0 : Math.sin(t * 2 + F.x) * 5;
       if (!F.falling) K.LN(x, F.x, yy - 70, F.x, yy - 36 + bob, 3, '#3a6a2a');
       K.GL(x, F.x, yy + bob, 90 * g, F.f.c, 0.7); K.CI(x, F.x, yy + bob, 34 * g, F.f.c); K.CI(x, F.x - 10 * g, yy + bob - 10 * g, 10 * g, 'rgba(255,255,255,0.55)'); K.IC(x, F.f.ic, F.x, yy + bob, 40 * g);
-      if (!F.falling && mg.phase === 'idle') K.TX(x, F.f.n, F.x, yy + 60, 24, F.f.c); });
+      if (!F.falling && mg.phase === 'idle') K.chipC(x, F.f.n, F.x, yy + 66, F.f.c); });
     mg.bugs.forEach(b => { K.GL(x, b.x, b.y, 14, '#d8ff8a', 0.5 + 0.5 * Math.sin(b.p * 3)); K.R(x, b.x - 1, b.y - 1, 3, 3, '#f0ffb0'); });
     if (mg.phase === 'cut') { const a = mg.pt < 0.5 ? -1.4 + mg.pt * 4 : 0.6; x.save(); x.translate(CX + 190, SY + 340); x.rotate(a); K.R(x, -6, -10, 12, 120, '#6a4a2a'); K.PL(x, [[6, -10], [46, -30], [46, 30], [6, 10]], '#c8d0dc'); x.restore(); }
     if (mg.phase === 'water') { for (let i = 0; i < 20; i++) { const q = (mg.pt * 2 + i / 20) % 1; K.R(x, CX - 120 + i * 12, SY + 120 + q * 400, 3, 10, 'rgba(140,220,255,0.7)'); } }
@@ -122,18 +123,18 @@ MINI.tree = { title: '世界树', img: 'e_tree', col: '#9cdc6a', text: '树根�
 
 // ═════════════════════ 塔罗 / 砸金蛋 · pick from covered things ═════════════════════
 const TAROT = [
-  { n: '太阳', c: '#ffcc33', ic: 'u_star', good: 1, f(g) { return g.buffRun('mult', 0.3, '倍率 +0.3', '#ffcc33'); } },
-  { n: '月亮', c: '#8fb0ff', ic: 't_eye', good: 1, f(g) { return g.buffRun('eventLuck', 0.15, '事件好运 +15%', '#8fb0ff'); } },
-  { n: '星星', c: '#c890ff', ic: 'gem', good: 1, f(g, mg) { const got = g.award([K.item(g.run, mg.P)], mg.from); return got.join(''); } },
-  { n: '力量', c: '#ff8a3a', ic: 't_sword', good: 1, f(g) { return g.buffRun('unitAtk', 0.1, '部队攻击 +10%', '#ff8a3a'); } },
-  { n: '隐者', c: '#9cff7a', ic: 't_orb', good: 1, f(g, mg) { return g.giveExp(50, mg.from); } },
-  { n: '魔术师', c: '#d8a0ff', ic: 't_shard', good: 1, f(g, mg) { return g.giveShards(20, mg.from); } },
-  { n: '命运之轮', c: '#ffe08a', ic: 'e_wheel', good: 1, f(g, mg) { const v = M.nice(mg.P * 9); g.award([{ k: 'wallet', v }], mg.from); return '积分 +' + v; } },
-  { n: '恋人', c: '#ff7ab0', ic: 't_heart', good: 1, f(g, mg) { const u = M.pick(g.run.roster); if (!u || !M.canAdd(g.run, u.type)) return '没有人可以相爱'; g.award([{ k: 'unit', type: u.type }], mg.from); return M.DB[u.type].n + ' 多了一个伴'; } },
-  { n: '高塔', c: '#ff5a4a', ic: 'r_demon', good: 0, f(g) { return '领袖受伤 ' + g.heroHurt(0.15); } },
-  { n: '死神', c: '#a8a0b0', ic: 'r_skel', good: 0, f(g, mg) { const u = M.pick(g.run.roster); if (u) g.run.roster = g.run.roster.filter(x => x !== u); g.award([K.bp()], mg.from); return (u ? M.DB[u.type].n + ' 被带走了，' : '') + '留下一张图纸'; } }];
+  { n: '太阳', c: C.gold, ic: 'u_star', good: 1, f(g) { return g.buffRun('mult', 0.3, '倍率 +0.3', C.magenta); } },
+  { n: '月亮', c: C.ice, ic: 't_eye', good: 1, f(g) { return g.buffRun('eventLuck', 0.15, '事件好运 +15%', C.ice); } },
+  { n: '星星', c: C.violet, ic: 'gem', good: 1, f(g, mg) { const got = g.award([K.item(g.run, mg.P)], mg.from); return got.join(''); } },
+  { n: '力量', c: C.amber, ic: 't_sword', good: 1, f(g) { return g.buffRun('unitAtk', 0.1, '部队攻击 +10%', C.amber); } },
+  { n: '隐者', c: C.lime, ic: 't_orb', good: 1, f(g, mg) { return g.giveExp(50, mg.from); } },
+  { n: '魔术师', c: C.magenta, ic: 't_shard', good: 1, f(g, mg) { return g.giveShards(20, mg.from); } },
+  { n: '命运之轮', c: C.butter, ic: 'e_wheel', good: 1, f(g, mg) { const v = M.nice(mg.P * 9); g.award([{ k: 'wallet', v }], mg.from); return '积分 +' + v; } },
+  { n: '恋人', c: C.pink, ic: 't_heart', good: 1, f(g, mg) { const u = M.pick(g.run.roster); if (!u || !M.canAdd(g.run, u.type)) return '没有人可以相爱'; g.award([{ k: 'unit', type: u.type }], mg.from); return M.DB[u.type].n + ' 多了一个伴'; } },
+  { n: '高塔', c: C.red, ic: 'r_demon', good: 0, f(g) { return '领袖受伤 ' + g.heroHurt(0.15); } },
+  { n: '死神', c: C.steel, ic: 'r_skel', good: 0, f(g, mg) { const u = M.pick(g.run.roster); if (u) g.run.roster = g.run.roster.filter(x => x !== u); g.award([K.bp()], mg.from); return (u ? M.DB[u.type].n + ' 被带走了，' : '') + '留下一张图纸'; } }];
 function pickInit(mg, pool, n) { const s = pool.slice().sort(() => rnd() - 0.5); mg.items = s.slice(0, n).map((f, i) => ({ f, x: CX - (n - 1) * 150 + i * 300, y: SY + 330, open: 0, picked: false })); mg.done = 0; mg.got = []; }
-MINI.tarot = { title: '占卜摊', img: 'e_card', col: '#c890ff', text: '蒙着眼的占卜师把三张牌扣在桌上。「只能翻一张。」',
+MINI.tarot = { title: '占卜摊', img: 'e_card', col: C.violet, text: '蒙着眼的占卜师把三张牌扣在桌上。「只能翻一张。」',
   init(mg) { pickInit(mg, TAROT, 3); this.miniSet('deal'); },
   choose(mg, i) { if (mg.phase !== 'idle') return; const it = mg.items[i]; it.picked = true; mg.cur = i; this.miniSet('flip'); S.whoosh(0.25); },
   btns(mg) { if (mg.phase === 'idle') return mg.items.map((it, i) => ({ t: ['左边', '中间', '右边'][i], sub: '翻开这张', fn: () => MINI.tarot.choose.call(this, mg, i) })); if (mg.phase === 'shown') return [{ t: '离开', leave: 1, gold: 1, fn: () => this.miniFinish('你翻开了「' + mg.items[mg.cur].f.n + '」：' + mg.got[0] + '。另外两张是「' + mg.items.filter((_, i) => i !== mg.cur).map(o => o.f.n).join('」「') + '」。', mg.items[mg.cur].f.c) }]; return []; },
@@ -149,20 +150,21 @@ MINI.tarot = { title: '占卜摊', img: 'e_card', col: '#c890ff', text: '蒙着�
     for (let i = 0; i < 3; i++) { const cx0 = [SX + 110, SX + SW - 110, CX][i]; K.GL(x, cx0, FLOOR - 120, 60, '#ffb060', 0.6 + 0.2 * Math.sin(t * 7 + i)); K.R(x, cx0 - 8, FLOOR - 110, 16, 60, '#e8dcc4'); K.EL(x, cx0, FLOOR - 124 + Math.sin(t * 9 + i), 6, 12, '#ffcc33'); }
     K.SP(x, 'old', CX, SY + 190, 150); K.GL(x, CX, SY + 120, 120, '#c890ff', 0.3);
     mg.items.forEach((it, i) => { const q = mg.phase === 'deal' ? eb((mg.pt - i * 0.15) / 0.5) : 1; const ax = CX + (it.x - CX) * q, ay = it.y + (1 - q) * 300, sx = Math.abs(Math.cos(it.open * Math.PI)), face = it.open > 0.5, hov = mg.phase === 'idle' && Math.abs(mg.mx - it.x) < 110 && Math.abs(mg.my - it.y) < 160;
-      x.save(); x.translate(ax, ay - (hov ? 16 : 0) + Math.sin(t * 2 + i) * 4); x.scale(Math.max(0.02, sx), 1); if (hov) K.GL(x, 0, 0, 200, '#c890ff', 0.5);
-      K.RR(x, -100, -150, 200, 300, 12, '#caa84a'); K.RR(x, -92, -142, 184, 284, 8, face ? K.LG(x, 0, -142, 0, 142, [[0, '#f5ead4'], [1, '#d8c8a0']]) : '#2a1450');
-      if (face) { K.GL(x, 0, -20, 110, it.f.c, 0.5); K.IC(x, it.f.ic, 0, -30, 110); K.PT(x, it.f.n, 0, 100, 38, it.f.good ? '#6a3a1a' : '#8a1a1a'); if (it.picked) { x.strokeStyle = '#ffcc33'; x.lineWidth = 6; x.strokeRect(-96, -146, 192, 292); } else { x.fillStyle = 'rgba(20,10,30,0.45)'; x.fillRect(-92, -142, 184, 284); } }
-      else { for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4 + t * 0.3; K.LN(x, Math.cos(a) * 30, Math.sin(a) * 30, Math.cos(a) * 70, Math.sin(a) * 70, 3, '#caa84a'); } K.CI(x, 0, 0, 26, '#caa84a'); K.CI(x, 0, 0, 14, '#2a1450'); K.CI(x, 0, 0, 7, '#ffe08a'); }
+      x.save(); x.translate(ax, ay - (hov ? 16 : 0) + Math.sin(t * 2 + i) * 4); x.scale(Math.max(0.02, sx), 1); if (hov) K.GL(x, 0, 0, 200, C.violet, 0.5);
+      // 牌：金框 + 3px 墨边 + 9px 硬投影；牌面米色，牌背靛蓝
+      K.R(x, -94, -144, 206, 306, C.ink); U.box(x, -100, -150, 200, 300, C.gold); K.R(x, -92, -142, 184, 284, face ? K.LG(x, 0, -142, 0, 142, [[0, C.cream], [1, C.butter]]) : C.indigo);
+      if (face) { K.GL(x, 0, -20, 110, it.f.c, 0.5); K.IC(x, it.f.ic, 0, -30, 110); U.text(x, it.f.n, 0, 100, T.title, it.f.good ? C.umber : C.wine, { shadow: false }); if (it.picked) K.RR(x, -99, -149, 198, 298, 0, null, C.gold, 6); else K.R(x, -92, -142, 184, 284, 'rgba(7,6,15,0.45)'); }
+      else { for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4 + t * 0.3; K.LN(x, Math.cos(a) * 30, Math.sin(a) * 30, Math.cos(a) * 70, Math.sin(a) * 70, 3, C.gold); } K.CI(x, 0, 0, 26, C.gold); K.CI(x, 0, 0, 14, C.indigo); K.CI(x, 0, 0, 7, C.butter); }
       x.restore(); });
   } };
 const EGGS = [
-  { n: '满满的积分', c: '#ffcc33', ic: 'e_coin', f(g, mg) { const v = M.nice(mg.P * 12); g.award([{ k: 'wallet', v }], mg.from); return '积分 +' + v; } },
-  { n: '一个道具', c: '#c890ff', ic: 'gem', f(g, mg) { return g.award([K.item(g.run, mg.P)], mg.from).join(''); } },
-  { n: '一张图纸', c: '#ffe08a', ic: 'scroll', f(g, mg) { return g.award([K.bp()], mg.from).join(''); } },
-  { n: '一只雏鸟', c: '#9cdc6a', ic: 'r_beast', f(g, mg) { const t = M.pickUnitQ(g.run); if (!M.canAdd(g.run, t)) return '它飞走了'; g.award([{ k: 'unit', type: t }], mg.from); return M.DB[t].n + ' 认你做了主人'; } },
-  { n: '空的', c: '#8d8496', ic: 'u_mask', f() { return '什么也没有'; } },
-  { n: '一条蛇', c: '#ff5a4a', ic: 'r_demon', f(g) { return '咬了领袖一口 ' + g.heroHurt(0.08); } }];
-MINI.eggs = { title: '砸金蛋', img: 'e_egg', col: '#ffcc33', text: '三只金蛋在台子上微微发烫。第一锤要钱，第二锤要双倍。',
+  { n: '满满的积分', c: C.gold, ic: 'e_coin', f(g, mg) { const v = M.nice(mg.P * 12); g.award([{ k: 'wallet', v }], mg.from); return '积分 +' + v; } },
+  { n: '一个道具', c: C.violet, ic: 'gem', f(g, mg) { return g.award([K.item(g.run, mg.P)], mg.from).join(''); } },
+  { n: '一张图纸', c: C.butter, ic: 'scroll', f(g, mg) { return g.award([K.bp()], mg.from).join(''); } },
+  { n: '一只雏鸟', c: C.green, ic: 'r_beast', f(g, mg) { const t = M.pickUnitQ(g.run); if (!M.canAdd(g.run, t)) return '它飞走了'; g.award([{ k: 'unit', type: t }], mg.from); return M.DB[t].n + ' 认你做了主人'; } },
+  { n: '空的', c: C.lavender, ic: 'u_mask', f() { return '什么也没有'; } },
+  { n: '一条蛇', c: C.red, ic: 'r_demon', f(g) { return '咬了领袖一口 ' + g.heroHurt(0.08); } }];
+MINI.eggs = { title: '砸金蛋', img: 'e_egg', col: C.gold, text: '三只金蛋在台子上微微发烫。第一锤要钱，第二锤要双倍。',
   init(mg) { pickInit(mg, EGGS, 3); mg.smash = 0; mg.hammer = null; },
   cost(mg) { return mg.smash ? mg.pay * 2 : mg.pay; },
   hit(mg, i) { const it = mg.items[i]; if (mg.phase !== 'idle' || it.picked || mg.smash >= 2) return; if (!this.miniPay(MINI.eggs.cost(mg))) return; mg.smash++; it.picked = true; mg.cur = i; this.miniSet('smash'); },
@@ -176,19 +178,19 @@ MINI.eggs = { title: '砸金蛋', img: 'e_egg', col: '#ffcc33', text: '三只金
   },
   draw(x, mg) {
     const t = mg.t; x.fillStyle = K.RG(x, CX, SY + 360, 40, 700, [[0, '#4a1a10'], [1, '#100604']]); x.fillRect(SX, SY, SW, SH);
-    for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2 + t * 0.1; x.fillStyle = 'rgba(255,200,80,0.05)'; x.beginPath(); x.moveTo(CX, SY + 330); x.arc(CX, SY + 330, 900, a, a + 0.12); x.fill(); }
-    mg.items.forEach((it, i) => { K.RR(x, it.x - 90, it.y + 110, 180, 40, 6, '#8a1a1a', '#ffcc33', 3); K.RR(x, it.x - 70, it.y + 90, 140, 24, 6, '#b02a2a');
+    for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2 + t * 0.1; x.fillStyle = U.pal('rgba(255,200,80,0.05)'); x.beginPath(); x.moveTo(CX, SY + 330); x.arc(CX, SY + 330, 900, a, a + 0.12); x.fill(); }
+    mg.items.forEach((it, i) => { K.RR(x, it.x - 90, it.y + 110, 180, 40, 6, C.wine, C.gold, 3); U.box(x, it.x - 70, it.y + 90, 140, 24, C.red);
       const hov = mg.phase === 'idle' && !it.picked && Math.abs(mg.mx - it.x) < 110 && Math.abs(mg.my - it.y) < 150, wob = hov ? Math.sin(t * 20) * 0.05 : Math.sin(t * 2 + i) * 0.02;
       if (!it.open) { x.save(); x.translate(it.x, it.y + 20); x.rotate(wob); K.GL(x, 0, 0, 160, '#ffcc33', hov ? 0.7 : 0.35); K.EL(x, 0, 0, 72, 92, '#c8900a'); K.EL(x, -4, -4, 66, 86, K.RG(x, -20, -30, 5, 90, [[0, '#fff2a0'], [0.4, '#ffcc33'], [1, '#b87a10']])); K.EL(x, -22, -34, 14, 24, 'rgba(255,255,255,0.55)', -0.3); for (let k = 0; k < 5; k++) K.CI(x, -40 + k * 20, 20 + (k % 2) * 8, 4, '#e04040'); x.restore(); }
-      else { K.GL(x, it.x, it.y, 160, it.f.c, 0.6); K.EL(x, it.x, it.y + 70, 72, 30, '#c8900a'); K.PL(x, [[it.x - 72, it.y + 60], [it.x - 50, it.y + 40], [it.x - 30, it.y + 62], [it.x - 10, it.y + 38], [it.x + 12, it.y + 62], [it.x + 32, it.y + 40], [it.x + 50, it.y + 62], [it.x + 72, it.y + 60], [it.x + 60, it.y + 96], [it.x - 60, it.y + 96]], '#ffcc33'); K.IC(x, it.f.ic, it.x, it.y - 20 - Math.sin(t * 3) * 6, 100); K.TX(x, it.f.n, it.x, it.y - 110, 26, it.f.c); }
+      else { K.GL(x, it.x, it.y, 160, it.f.c, 0.6); K.EL(x, it.x, it.y + 70, 72, 30, '#c8900a'); K.PL(x, [[it.x - 72, it.y + 60], [it.x - 50, it.y + 40], [it.x - 30, it.y + 62], [it.x - 10, it.y + 38], [it.x + 12, it.y + 62], [it.x + 32, it.y + 40], [it.x + 50, it.y + 62], [it.x + 72, it.y + 60], [it.x + 60, it.y + 96], [it.x - 60, it.y + 96]], '#ffcc33'); K.IC(x, it.f.ic, it.x, it.y - 20 - Math.sin(t * 3) * 6, 100); K.chipC(x, it.f.n, it.x, it.y - 110, it.f.c); }
       (it.shards || []).forEach(s => { x.save(); x.translate(s.x, s.y); x.rotate(s.r); K.PL(x, [[-10, -8], [12, -4], [4, 10]], '#ffcc33'); x.restore(); }); });
     if (mg.phase === 'smash') { const it = mg.items[mg.cur], a = mg.pt < 0.3 ? -1.6 + mg.pt / 0.3 * 2.2 : 0.6; x.save(); x.translate(it.x + 140, it.y - 130); x.rotate(a); K.R(x, -8, 0, 16, 150, '#8a5a2a'); K.RR(x, -50, -30, 100, 50, 8, '#c8d0dc', '#4a4a55', 3); x.restore(); }
   } };
 
 // ═════════════════════ 骰子对决 ═════════════════════
 const pips = { 1: [[0, 0]], 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]], 4: [[-1, -1], [1, -1], [-1, 1], [1, 1]], 5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], 6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]] };
-K.die = (x, a, b, s, v, rot, col) => { x.save(); x.translate(a, b); x.rotate(rot || 0); K.RR(x, -s / 2, -s / 2, s, s, s * 0.18, col || '#f5f0e8', '#1a1418', 3); (pips[v] || []).forEach(([i, j]) => K.CI(x, i * s * 0.26, j * s * 0.26, s * 0.09, v === 1 ? '#d0202a' : '#1a1418')); x.restore(); };
-MINI.dice = { title: '骰子对决', img: 't_dice', col: '#e8dcc4', text: '一个戴高帽的影子把两颗骨骰推到你面前。「比大小，三局。」',
+K.die = (x, a, b, s, v, rot, col) => { x.save(); x.translate(a, b); x.rotate(rot || 0); K.RR(x, -s / 2, -s / 2, s, s, s * 0.18, col || C.cream, C.ink, 3); (pips[v] || []).forEach(([i, j]) => K.CI(x, i * s * 0.26, j * s * 0.26, s * 0.09, v === 1 ? C.red : C.ink)); x.restore(); };
+MINI.dice = { title: '骰子对决', img: 't_dice', col: C.cream, text: '一个戴高帽的影子把两颗骨骰推到你面前。「比大小，三局。」',
   init(mg) { mg.round = 0; mg.max = 3; mg.net = 0; mg.me = [3, 4]; mg.him = [5, 2]; mg.dice = []; },
   roll(mg, big) { const stake = big ? M.nice(mg.pay * 2.5) : mg.pay; if (!this.miniPay(stake)) return; mg.stake = stake; mg.round++; mg.net -= stake;
     const r = () => 1 + Math.floor(rnd() * 6); mg.me = [r(), r()]; mg.him = [r(), r()]; if (mg.luck && rnd() < mg.luck && mg.me[0] + mg.me[1] <= mg.him[0] + mg.him[1]) mg.me = [r(), r()];
@@ -204,22 +206,23 @@ MINI.dice = { title: '骰子对决', img: 't_dice', col: '#e8dcc4', text: '一�
   },
   draw(x, mg) {
     const t = mg.t; x.fillStyle = K.RG(x, CX, SY + 380, 40, 700, [[0, '#1a3a2a'], [1, '#06100a']]); x.fillRect(SX, SY, SW, SH);
-    K.EL(x, CX, SY + 390, 470, 230, '#4a2a18'); K.EL(x, CX, SY + 385, 450, 212, K.RG(x, CX, SY + 380, 30, 450, [[0, '#2a6a3a'], [1, '#12301a']]));
+    K.EL(x, CX, SY + 390, 470, 230, C.umber); K.EL(x, CX, SY + 385, 450, 212, K.RG(x, CX, SY + 380, 30, 450, [[0, '#2a6a3a'], [1, '#12301a']]));
     K.SP(x, 'musician', CX, SY + 190, 150); K.GL(x, CX - 20, SY + 90, 40, '#ff4a4a', 0.5 + 0.3 * Math.sin(t * 3)); K.GL(x, CX + 20, SY + 90, 40, '#ff4a4a', 0.5 + 0.3 * Math.sin(t * 3));
     const show = mg.dice.length ? mg.dice : [{ x: CX - 60, y: SY + 480, face: mg.me[0] }, { x: CX + 60, y: SY + 480, face: mg.me[1] }, { x: CX - 60, y: SY + 290, face: mg.him[0] }, { x: CX + 60, y: SY + 290, face: mg.him[1] }];
-    show.forEach((d, i) => K.die(x, d.x, d.y, 76, d.face, d.rot || 0, i < 2 ? '#f5f0e8' : '#e8d8d0'));
-    if (mg.phase !== 'roll' && mg.round) { K.PT(x, String(mg.me[0] + mg.me[1]), CX + 170, SY + 480, 50, '#ffe08a'); K.PT(x, String(mg.him[0] + mg.him[1]), CX + 170, SY + 290, 50, '#ff8a8a'); }
-    K.PT(x, '你', CX - 170, SY + 480, 34, '#ffe08a'); K.PT(x, '他', CX - 170, SY + 290, 34, '#ff8a8a');
-    K.PT(x, '第 ' + Math.min(mg.max, Math.max(1, mg.round)) + ' / ' + mg.max + ' 局', SX + 150, SY + 150, 30, '#e8dcc4'); K.PT(x, (mg.net >= 0 ? '+' : '') + M.fmt(mg.net), SX + SW - 150, SY + 150, 36, mg.net >= 0 ? '#ffcc33' : '#ff6a5a');
+    show.forEach((d, i) => K.die(x, d.x, d.y, 76, d.face, d.rot || 0, i < 2 ? C.cream : C.silver));
+    // 点数：大号数码，揭晓时弹一下；你 / 他 是签；局数小牌；盈亏金色，亏了红色
+    if (mg.phase !== 'roll' && mg.round) { K.big(x, String(mg.me[0] + mg.me[1]), CX + 170, SY + 480, T.num, C.gold, mg.pt, { num: true }); K.big(x, String(mg.him[0] + mg.him[1]), CX + 170, SY + 290, T.num, C.pink, mg.pt, { num: true }); }
+    K.chipC(x, '你', CX - 170, SY + 480, C.gold, T.item); K.chipC(x, '他', CX - 170, SY + 290, C.pink, T.item);
+    K.sign(x, '第 ' + Math.min(mg.max, Math.max(1, mg.round)) + ' / ' + mg.max + ' 局', SX + 150, SY + 150, { kind: 'indigo', size: T.body }); U.text(x, (mg.net >= 0 ? '+' : '') + M.fmt(mg.net), SX + SW - 150, SY + 150, T.title, mg.net >= 0 ? C.gold : C.red, { num: true });
   } };
 
 // ═════════════════════ 命运之轮 · pay in blood, spin the reel ═════════════════════
-MINI.fate = { title: '命运之轮', img: 'e_fate', col: '#d0453c', text: '石头做的轮盘上刻满了名字。转动它的代价，是血。',
+MINI.fate = { title: '命运之轮', img: 'e_fate', col: C.red, text: '石头做的轮盘上刻满了名字。转动它的代价，是血。',
   init(mg) { mg.ang = 0; },
   btns(mg) { if (mg.phase !== 'idle') return []; return [{ t: '以血转动', sub: '领袖 -12% 生命', danger: 1, fn: () => MINI.fate.spin.call(this, mg) }, { t: '离开', leave: 1, fn: () => this.miniFinish('你没有碰它。石轮自己转了半圈。', '#8d8496') }]; },
   spin(mg) {
     this.heroHurt(0.12); this.miniSet('spin'); const run = this.run;
-    const outs = [{ n: '空', c: '#6b6570', w: 16 }, { n: '倍率 +0.4', c: '#ffcc33', w: 16 }, { n: '部队', c: '#6fa8dc', w: 16 }, { n: '道具', c: '#b86bff', w: 14 }, { n: '图纸', c: '#e0904a', w: 12 }, { n: '积分 ×', c: '#ffe08a', w: 16 }, { n: '诅咒', c: '#d0453c', w: 10 }];
+    const outs = [{ n: '空', c: C.haze, w: 16 }, { n: '倍率 +0.4', c: C.magenta, w: 16 }, { n: '部队', c: C.blue, w: 16 }, { n: '道具', c: C.violet, w: 14 }, { n: '图纸', c: C.tan, w: 12 }, { n: '积分 ×', c: C.gold, w: 16 }, { n: '诅咒', c: C.red, w: 10 }];
     const idx = outs.indexOf(M.wpick(outs, o => o.w)), P = mg.P, C0 = { x: 960, y: 520 };
     setTimeout(() => this.mini === mg && this.startReel({ title: '命运之轮', iconKey: 'e_fate', tiles: outs.map(o => ({ n: o.n, sub: '', c: o.c })), land: idx, ups: 0, onDone: () => {
       let tx = '', col = outs[idx].c, g = [];
@@ -235,10 +238,10 @@ MINI.fate = { title: '命运之轮', img: 'e_fate', col: '#d0453c', text: '石�
   tick(mg, dt) { mg.ang += dt * (mg.phase === 'spin' ? 4 : 0.2); },
   draw(x, mg) {
     const t = mg.t; x.fillStyle = K.RG(x, CX, SY + 380, 40, 700, [[0, '#3a1010'], [1, '#0a0404']]); x.fillRect(SX, SY, SW, SH);
-    const wx = CX, wy = SY + 380, R = 240; K.CI(x, wx, wy + 16, R + 30, 'rgba(0,0,0,0.5)'); K.CI(x, wx, wy, R + 24, '#4a4048'); K.CI(x, wx, wy, R, '#6a6070');
-    x.save(); x.translate(wx, wy); x.rotate(mg.ang); for (let i = 0; i < 12; i++) { x.rotate(Math.PI / 6); K.LN(x, 0, 0, 0, -R, 6, '#4a4050'); K.IC(x, ['r_skel', 'u_star', 't_heart', 'gem', 'scroll', 'e_coin'][i % 6], 0, -R * 0.72, 48); } K.CI(x, 0, 0, 50, '#3a3040'); K.CI(x, 0, 0, 26, '#d0453c'); x.restore();
+    const wx = CX, wy = SY + 380, R = 240; K.CI(x, wx, wy + 16, R + 30, 'rgba(0,0,0,0.5)'); K.CI(x, wx, wy, R + 24, C.slate); K.CI(x, wx, wy, R, C.steel);
+    x.save(); x.translate(wx, wy); x.rotate(mg.ang); for (let i = 0; i < 12; i++) { x.rotate(Math.PI / 6); K.LN(x, 0, 0, 0, -R, 6, C.slate); K.IC(x, ['r_skel', 'u_star', 't_heart', 'gem', 'scroll', 'e_coin'][i % 6], 0, -R * 0.72, 48); } K.CI(x, 0, 0, 50, C.dusk); K.CI(x, 0, 0, 26, C.red); x.restore();
     for (let i = 0; i < 8; i++) { const q = (t * 0.4 + i / 8) % 1; K.CI(x, wx - 300 + i * 80, SY + 120 + q * 500, 4, 'rgba(208,69,60,' + (1 - q) + ')'); }
-    K.PL(x, [[wx - 20, wy - R - 40], [wx + 20, wy - R - 40], [wx, wy - R + 4]], '#d0453c');
+    K.PL(x, [[wx - 26, wy - R - 44], [wx + 26, wy - R - 44], [wx, wy - R + 10]], C.ink); K.PL(x, [[wx - 20, wy - R - 40], [wx + 20, wy - R - 40], [wx, wy - R + 4]], C.red);
   } };
 })();
 

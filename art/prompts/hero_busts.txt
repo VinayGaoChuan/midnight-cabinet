@@ -14,4 +14,4 @@ an elderly clockmaker with round brass magnifying goggles pushed up on his foreh
 cremator 焚尸人（技能「火葬」）:
 a hooded cremator in a soot-black cloak and a leather plague-style half mask, glowing orange ember eyes, holding a long iron poker whose tip is white-hot, sparks and ash drifting around, burn scars on the exposed chin.
 
-生成后放进 art/tmp/style/<id>_bust/，用 tools/pj-bust（K=18 色、64×64、墨色外描边）像素化到 art/busts/<id>.png。
+生成后放进 art/tmp/style/<id>_bust/，再运行 `node tools/pj-bust.js <id> <图>`（18 色、64×64、透明底 + 墨色外描边）像素化到 art/busts/<id>.png 并打包进 src/mc-pj-art.js。

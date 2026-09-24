@@ -3,12 +3,13 @@
 // 温泉 / 地雷阵 / 招财猫 / 黑市 / 特训 / 古像 / 斗兽场 / 营火 / 招募旗, plus routing every non-battle node into its game.
 const M = window.MC, G = M.Game.prototype, S = M.Sfx, K = M.MK, MINI = M.MINI;
 const { SX, SY, SW, SH, CX, FLOOR, cl, eo, eio, eb, rnd } = K;
+const U = M.UI, C = M.PJ.PAL, T = U.T; // 画面内界面件按设计稿 §11.5（调色板色、字号阶梯）
 const heroSp = (g) => M.HEROES[g.run.hero.cls].sprite;
 const bgv = (x, top, bot) => { x.fillStyle = K.LG(x, 0, SY, 0, SY + SH, [[0, top], [1, bot]]); x.fillRect(SX, SY, SW, SH); };
 const PENTA = [392, 440, 523, 587, 659, 784, 880, 1047];
 
 // ═════════════════════ 温泉 · hold to soak, release in the sweet spot ═════════════════════
-MINI.spring = { title: '地下温泉', img: 'e_spring', col: '#6fd0ff', text: '泉水冒着热气。泡到刚刚好最舒服——泡过头会晕。',
+MINI.spring = { title: '地下温泉', img: 'e_spring', col: C.teal, text: '泉水冒着热气。泡到刚刚好最舒服——泡过头会晕。',
   init(mg) { mg.heat = 0; mg.band = [0.55, 0.78]; mg.soaks = 0; },
   down(mg) { if (mg.phase === 'ready') this.miniSet('soak'); },
   up(mg) { if (mg.phase === 'soak') MINI.spring.judge.call(this, mg); },
@@ -22,16 +23,20 @@ MINI.spring = { title: '地下温泉', img: 'e_spring', col: '#6fd0ff', text: '�
   tick(mg, dt) { if (mg.phase === 'soak') { mg.heat = cl(mg.heat + dt * (0.22 + mg.heat * 0.25), 0, 1); if (mg.heat >= 1) MINI.spring.judge.call(this, mg); if (Math.floor(mg.heat * 10) !== mg.tk) { mg.tk = Math.floor(mg.heat * 10); S.tick(mg.tk); } } },
   draw(x, mg) {
     const t = mg.t; bgv(x, '#12202a', '#060a0e'); for (let i = 0; i < 16; i++) K.EL(x, SX + (i * 83) % SW, SY + 80 + (i % 4) * 30, 90, 40, 'rgba(40,50,60,0.6)');
-    K.EL(x, CX, FLOOR - 40, 460, 110, '#3a3a44'); K.EL(x, CX, FLOOR - 50, 430, 90, K.RG(x, CX, FLOOR - 50, 20, 430, [[0, '#8fe0ff'], [1, '#2a7ab0']]));
+    K.EL(x, CX, FLOOR - 40, 460, 110, '#3a3a44'); K.EL(x, CX, FLOOR - 50, 430, 90, K.RG(x, CX, FLOOR - 50, 20, 430, [[0, C.ice], [0.5, C.teal], [1, C.tealDeep]]));
     const inW = mg.phase === 'soak' || mg.phase === 'done' || mg.phase === 'troops'; x.save(); x.beginPath(); x.rect(SX, SY, SW, FLOOR - 70 - SY); x.clip(); if (mg.phase === 'troops') { this.run.roster.slice(0, 5).forEach((u, i) => K.SP(x, u.type, CX - 240 + i * 120, FLOOR - 20 + Math.sin(t * 3 + i) * 4, 110)); } else K.SP(x, heroSp(this), CX, FLOOR + (inW ? 40 : -40), 180); x.restore();
     for (let i = 0; i < 26; i++) { const q = (t * 0.3 + i / 26) % 1; x.globalAlpha = (1 - q) * (0.2 + mg.heat * 0.5); K.CI(x, CX - 400 + (i * 37) % 800 + Math.sin(q * 6 + i) * 20, FLOOR - 80 - q * 380, 20 + q * 40, '#e8f4ff'); } x.globalAlpha = 1;
-    if (mg.phase !== 'idle' && mg.phase !== 'troops') { const gx = SX + SW - 140, gy = SY + 130, gh = 400; K.RR(x, gx - 30, gy - 10, 60, gh + 20, 30, '#0a080c'); K.R(x, gx - 14, gy + gh * (1 - mg.band[1]), 28, gh * (mg.band[1] - mg.band[0]), 'rgba(111,255,160,0.5)'); K.R(x, gx - 14, gy + gh * (1 - mg.heat), 28, gh * mg.heat, K.LG(x, 0, gy + gh, 0, gy, [[0, '#6fd0ff'], [0.6, '#ffcc33'], [1, '#ff3a2a']])); K.CI(x, gx, gy + gh + 30, 34, mg.heat > mg.band[1] ? '#ff3a2a' : '#6fd0ff'); K.PT(x, Math.round(30 + mg.heat * 40) + '°', gx, gy + gh + 30, 26, '#0a080c'); }
-    if (mg.phase === 'ready') K.PT(x, '按住下水', CX, SY + 170, 44, '#8fe0ff');
+    // 温度计：夜色外壳 + 墨槽，绿色是该松手的区域；底部方形温度泡，过热变红
+    if (mg.phase !== 'idle' && mg.phase !== 'troops') { const gx = SX + SW - 140, gy = SY + 130, gh = 400, ht = Math.round(gh * mg.heat), b0 = Math.round(gy + gh * (1 - mg.band[1])), b1 = Math.round(gy + gh * (1 - mg.band[0])), hot = mg.heat > mg.band[1];
+      U.box(x, gx - 24, gy - 9, 48, gh + 18, C.night); K.R(x, gx - 14, gy, 28, gh, C.ink); K.R(x, gx - 14, b0, 28, b1 - b0, C.greenDeep); K.R(x, gx - 14, b0, 28, 3, C.green); K.R(x, gx - 14, b1 - 3, 28, 3, C.green);
+      if (ht > 0) { K.R(x, gx - 14, gy + gh - ht, 28, ht, K.LG(x, 0, gy + gh, 0, gy, [[0, C.teal], [0.6, C.gold], [1, C.red]])); K.R(x, gx - 14, gy + gh - ht, 28, 3, C.white); }
+      U.box(x, gx - 30, gy + gh + 2, 60, 56, hot ? C.red : C.teal); K.R(x, gx - 30, gy + gh + 2, 60, 3, hot ? C.pink : C.ice); U.text(x, Math.round(30 + mg.heat * 40) + '°', gx, gy + gh + 30, T.body, C.ink, { shadow: false }); }
+    if (mg.phase === 'ready') K.sign(x, '按住下水', CX, SY + 170, { kind: 'teal', size: T.btn });
   } };
 
 // ═════════════════════ 地雷阵 · minesweeper crossing ═════════════════════
 const TC = 6, TR = 3, TW = 150, TH = 130;
-MINI.trap = { title: '地雷阵', img: 'e_trap', col: '#ff9a4a', text: '对面有个箱子。地上的数字告诉你周围埋了几颗雷。一次走一格。',
+MINI.trap = { title: '地雷阵', img: 'e_trap', col: C.amber, text: '对面有个箱子。地上的数字告诉你周围埋了几颗雷。一次走一格。',
   init(mg) { mg.mine = [...Array(TR)].map(() => Array(TC).fill(0)); let n = 0; while (n < 5) { const r = Math.floor(rnd() * TR), c = 1 + Math.floor(rnd() * (TC - 2)); if (!mg.mine[r][c]) { mg.mine[r][c] = 1; n++; } }
     mg.open = [...Array(TR)].map(() => Array(TC).fill(0)); mg.at = null; mg.hp = 0; mg.x0 = CX - TC * TW / 2; mg.y0 = SY + 170; mg.booms = []; },
   cnt(mg, r, c) { let n = 0; for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) { const rr = r + dr, cc = c + dc; if ((dr || dc) && rr >= 0 && rr < TR && cc >= 0 && cc < TC && mg.mine[rr][cc]) n++; } return n; },
@@ -49,17 +54,18 @@ MINI.trap = { title: '地雷阵', img: 'e_trap', col: '#ff9a4a', text: '对面�
   draw(x, mg) {
     const t = mg.t; bgv(x, '#2a2218', '#0e0a06');
     for (let r = 0; r < TR; r++) for (let c = 0; c < TC; c++) { const px = mg.x0 + c * TW, py = mg.y0 + r * TH, op = mg.open[r][c], can = mg.phase === 'idle' && MINI.trap.adj(mg, r, c), hov = can && mg.mx > px && mg.mx < px + TW && mg.my > py && mg.my < py + TH;
-      K.RR(x, px + 4, py + 4, TW - 8, TH - 8, 8, op ? '#3a3024' : '#5a4a34', can ? (hov ? '#ffe08a' : 'rgba(255,224,138,0.5)') : '#2a2218', can ? 3 : 2);
+      // 地砖：没翻开的是凸起的棕砖（上沿亮一道），翻开的是凹下去的夜色；能走的格子描琥珀框，悬停变金
+      U.box(x, px + 6, py + 6, TW - 12, TH - 12, op ? C.night : C.umber); if (!op) K.R(x, px + 6, py + 6, TW - 12, 3, C.brown); if (can) K.RR(x, px + 6, py + 6, TW - 12, TH - 12, 0, null, hov ? C.gold : C.amber, 3);
       if (!op) { for (let i = 0; i < 3; i++) K.R(x, px + 20 + i * 38, py + 30 + (i % 2) * 40, 18, 6, 'rgba(0,0,0,0.2)'); }
-      else if (mg.mine[r][c]) { K.CI(x, px + TW / 2, py + TH / 2, 26, '#2a2a33'); K.CI(x, px + TW / 2, py + TH / 2, 8, '#ff3a2a'); }
-      else { const n = MINI.trap.cnt(mg, r, c); K.PT(x, n ? String(n) : '·', px + TW / 2, py + TH / 2, 54, ['#9cff7a', '#ffe08a', '#ff9a4a', '#ff4a3a', '#ff4a3a'][n] || '#fff'); } }
-    K.PT(x, '起点', mg.x0 - 60, mg.y0 + TR * TH / 2, 28, '#e8dcc4'); K.IC(x, 'chest', mg.x0 + TC * TW + 70, mg.y0 + TR * TH / 2, 90); K.GL(x, mg.x0 + TC * TW + 70, mg.y0 + TR * TH / 2, 90, '#ffcc33', 0.4 + 0.2 * Math.sin(t * 3));
+      else if (mg.mine[r][c]) { K.CI(x, px + TW / 2, py + TH / 2, 26, C.slate); K.CI(x, px + TW / 2, py + TH / 2, 8, C.red); }
+      else { const n = MINI.trap.cnt(mg, r, c); U.text(x, n ? String(n) : '·', px + TW / 2, py + TH / 2, T.num, [C.lime, C.gold, C.amber, C.red, C.red][n] || C.white, { num: true, outline: true }); } }
+    K.chipC(x, '起点', mg.x0 - 60, mg.y0 + TR * TH / 2, C.cream); K.IC(x, 'chest', mg.x0 + TC * TW + 70, mg.y0 + TR * TH / 2, 90); K.GL(x, mg.x0 + TC * TW + 70, mg.y0 + TR * TH / 2, 90, C.gold, 0.4 + 0.2 * Math.sin(t * 3));
     const hp = mg.at ? { x: mg.x0 + mg.at.c * TW + TW / 2, y: mg.y0 + mg.at.r * TH + TH - 10 } : { x: mg.x0 - 60, y: mg.y0 + TR * TH / 2 + 80 }; K.SP(x, heroSp(this), hp.x, hp.y, 110);
     for (let i = 0; i < 3; i++) K.IC(x, 't_heart', SX + 90 + i * 50, SY + 130, 40 * (i < 3 - mg.hp ? 1 : 0.4));
   } };
 
 // ═════════════════════ 招财猫 · catch the coin rain ═════════════════════
-MINI.cat = { title: '招财猫', img: 'e_cat', col: '#ffcc33', text: '猫爪一招，天上就下钱。接住金币和金条，躲开炸弹。',
+MINI.cat = { title: '招财猫', img: 'e_cat', col: C.gold, text: '猫爪一招，天上就下钱。接住金币和金条，躲开炸弹。',
   init(mg) { mg.px = CX; mg.items = []; mg.sum = 0; mg.spawn = 0; mg.left = 8; mg.bombs = 0; },
   btns(mg) { if (mg.phase === 'idle') return [{ t: '摸摸猫爪', sub: mg.pay + ' 积分 · 8 秒接钱（鼠标 / ← →）', gold: 1, dis: this.run.wallet < mg.pay, why: '积分不够', fn: () => { if (!this.miniPay(mg.pay)) return; this.miniSet('rain'); } }, { t: '给猫鞠个躬', sub: '免费 · 本局事件好运 +5%', fn: () => { this.buffRun('eventLuck', 0.05, '好运 +5%', '#ffcc33'); this.miniFinish('猫眯起了眼睛。你觉得运气好了一点。', '#ffcc33'); } }, { t: '离开', leave: 1, fn: () => this.miniFinish('猫爪还在一下一下地招。', '#8d8496') }]; return []; },
   tick(mg, dt) {
@@ -77,12 +83,12 @@ MINI.cat = { title: '招财猫', img: 'e_cat', col: '#ffcc33', text: '猫爪一�
     x.save(); x.translate(cx0 + 100, cy0 - 20); x.rotate(-0.4 + paw); K.RR(x, -20, -100, 40, 100, 20, '#f5f0e8'); K.CI(x, 0, -100, 26, '#f5f0e8'); x.restore();
     mg.items.forEach(it => { x.save(); x.translate(it.x, it.y); if (it.k === 'coin') { x.scale(Math.abs(Math.cos(it.rot)) * 0.8 + 0.2, 1); K.IC(x, 'e_coin', 0, 0, 44); } else if (it.k === 'bar') { x.rotate(Math.sin(it.rot) * 0.3); K.PL(x, [[-30, 12], [30, 12], [22, -12], [-22, -12]], '#e8b830'); K.R(x, -18, -10, 36, 4, '#fff2a0'); } else { K.CI(x, 0, 0, 22, '#2a2a33'); K.R(x, -4, -32, 8, 12, '#6a6a78'); K.CI(x, 6, -34, 5, Math.floor(t * 12) % 2 ? '#ffcc33' : '#ff3a2a'); } x.restore(); });
     if (mg.phase === 'rain') { const px = mg.px, py = FLOOR - 40; K.EL(x, px, py + 20, 90, 30, '#6a3a1a'); K.PL(x, [[px - 90, py + 20], [px + 90, py + 20], [px + 70, py - 20], [px - 70, py - 20]], '#8a5a2a'); K.R(x, px - 70, py - 24, 140, 8, '#caa84a');
-      K.PT(x, mg.sum + ' 份', SX + 170, SY + 140, 40, '#ffcc33'); K.R(x, CX - 200, SY + 60, 400 * cl(mg.left / 8, 0, 1), 12, '#ffcc33'); }
+      U.coin(x, SX + 70, SY + 119, 42); U.text(x, mg.sum + ' 份', SX + 128, SY + 140, T.num, C.gold, { align: 'left' }); U.bar(x, SX + SW - 380, SY + 134, 300, 12, cl(mg.left / 8, 0, 1), { col: C.gold }); } // 剩余时间条放在右上，不压说明文字
     else K.SP(x, heroSp(this), CX - 330, FLOOR, 170);
   } };
 
 // ═════════════════════ 黑市 · stop the price needle ═════════════════════
-MINI.market = { title: '黑市', img: 'e_market', col: '#9a8aff', text: '斗篷底下的人亮出一张高级图纸。「价钱？看你手快不快。」',
+MINI.market = { title: '黑市', img: 'e_market', col: C.violet, text: '斗篷底下的人亮出一张高级图纸。「价钱？看你手快不快。」',
   init(mg) { mg.base = M.nice(mg.P * 14); mg.needle = 0; mg.price = 0; mg.tries = 0; },
   stop(mg) { if (mg.phase !== 'swing') return; const k = 0.4 + mg.needle * 1.4; mg.mul = k; mg.price = M.nice(mg.base * k); this.miniSet('offer'); S.stamp(); this.fx.kick(5); },
   key(mg, k, down) { if (k === 'act' && down && mg.phase === 'swing') { MINI.market.stop.call(this, mg); return true; } },
@@ -92,16 +98,18 @@ MINI.market = { title: '黑市', img: 'e_market', col: '#9a8aff', text: '斗篷�
     if (mg.phase === 'offer') return [{ t: '成交', sub: mg.price + ' 积分', gold: 1, dis: this.run.wallet < mg.price, why: '积分不够', fn: () => { if (!this.miniPay(mg.price)) return; this.miniFinish('你用 ' + mg.price + ' 积分买下了图纸（原价 ' + mg.base + '）。', '#9a8aff', [K.bp(null, 2)]); } }, { t: '再砍一次', sub: '他会更不耐烦', dis: mg.tries >= 2, why: '他不跟你砍了', fn: () => { mg.tries++; this.miniSet('swing'); } }, { t: '算了', leave: 1, fn: () => this.miniFinish('你把图纸推了回去。', '#8d8496') }]; return []; },
   tick(mg) { if (mg.phase === 'swing') { const sp = 1.3 + mg.tries * 0.6, q = (mg.pt * sp) % 2; mg.needle = q < 1 ? q : 2 - q; } },
   draw(x, mg) {
-    const t = mg.t; bgv(x, '#141228', '#06050c'); K.SP(x, 'stall', CX + 300, FLOOR - 40, 180); K.GL(x, CX + 300, FLOOR - 200, 160, '#9a8aff', 0.25);
-    K.RR(x, CX - 460, SY + 150, 300, 380, 10, '#f5ead4'); K.R(x, CX - 440, SY + 170, 260, 340, '#2a4a8a'); for (let i = 0; i < 6; i++) K.R(x, CX - 420, SY + 200 + i * 44, 220 - (i % 3) * 40, 4, 'rgba(255,255,255,0.5)'); K.IC(x, 'scroll', CX - 310, SY + 420, 90); K.PT(x, '高级图纸', CX - 310, SY + 480, 28, '#ffe08a');
-    const gx = CX + 20, gy = SY + 420, R = 200; x.lineWidth = 36; [[Math.PI, Math.PI * 1.33, '#9cff7a'], [Math.PI * 1.33, Math.PI * 1.66, '#ffcc33'], [Math.PI * 1.66, Math.PI * 2, '#ff5a4a']].forEach(([a, b, c]) => { x.strokeStyle = c; x.beginPath(); x.arc(gx, gy, R, a, b); x.stroke(); });
-    [0.4, 1, 1.8].forEach((k, i) => K.TX(x, '×' + k, gx + Math.cos(Math.PI + i * Math.PI / 2) * (R + 50), gy + Math.sin(Math.PI + i * Math.PI / 2) * (R + 50), 22, '#e8dcc4'));
-    const a = Math.PI + mg.needle * Math.PI; K.LN(x, gx, gy, gx + Math.cos(a) * (R - 10), gy + Math.sin(a) * (R - 10), 6, '#fff'); K.CI(x, gx, gy, 16, '#caa84a');
-    if (mg.phase === 'offer') { K.PT(x, mg.price + ' 积分', gx, gy + 70, 48, mg.mul < 0.8 ? '#9cff7a' : mg.mul < 1.3 ? '#ffcc33' : '#ff6a5a'); K.TX(x, '原价 ' + mg.base, gx, gy + 120, 22, '#a89ca8'); }
+    const t = mg.t; bgv(x, '#141228', '#06050c'); K.SP(x, 'stall', CX + 300, FLOOR - 40, 180); K.GL(x, CX + 300, FLOOR - 200, 160, C.violet, 0.25);
+    // 图纸：米色纸 + 墨边 + 9px 硬投影，名字是金色小签
+    K.R(x, CX - 454, SY + 156, 306, 386, C.ink); U.box(x, CX - 460, SY + 150, 300, 380, C.cream); K.R(x, CX - 440, SY + 170, 260, 340, C.blueDeep); for (let i = 0; i < 6; i++) K.R(x, CX - 420, SY + 200 + i * 44, 220 - (i % 3) * 40, 4, 'rgba(255,255,255,0.5)'); K.IC(x, 'scroll', CX - 310, SY + 420, 90); K.chipC(x, '高级图纸', CX - 310, SY + 480, C.gold);
+    // 价格表盘：墨底弧 + 绿 / 金 / 红三段，倍数品红
+    const gx = CX + 20, gy = SY + 420, R = 200; x.lineCap = 'butt'; x.lineWidth = 42; x.strokeStyle = C.ink; x.beginPath(); x.arc(gx, gy, R, Math.PI, Math.PI * 2); x.stroke(); x.lineWidth = 36; [[Math.PI, Math.PI * 1.33, C.green], [Math.PI * 1.33, Math.PI * 1.66, C.gold], [Math.PI * 1.66, Math.PI * 2, C.red]].forEach(([a, b, c]) => { x.strokeStyle = c; x.beginPath(); x.arc(gx, gy, R, a, b); x.stroke(); });
+    [0.4, 1, 1.8].forEach((k, i) => U.text(x, '×' + k, gx + Math.cos(Math.PI + i * Math.PI / 2) * (R + 50), gy + Math.sin(Math.PI + i * Math.PI / 2) * (R + 50), T.cap, C.magenta));
+    const a = Math.PI + mg.needle * Math.PI; K.LN(x, gx, gy, gx + Math.cos(a) * (R - 10), gy + Math.sin(a) * (R - 10), 12, C.ink); K.LN(x, gx, gy, gx + Math.cos(a) * (R - 10), gy + Math.sin(a) * (R - 10), 6, C.white); U.box(x, gx - 12, gy - 12, 24, 24, C.gold);
+    if (mg.phase === 'offer') { K.big(x, mg.price + ' 积分', gx, gy + 70, T.num, mg.mul < 0.8 ? C.lime : mg.mul < 1.3 ? C.gold : C.red, mg.pt); U.text(x, '原价 ' + mg.base, gx, gy + 120, T.cap, C.lavender); }
   } };
 
 // ═════════════════════ 特训 · mash to train a soldier ═════════════════════
-MINI.trainer = { title: '地下拳馆', img: 'e_trainer', col: '#ff8a3a', text: '教练叼着烟：「交钱，挑个人，打沙袋。打得越狠，练得越壮。」',
+MINI.trainer = { title: '地下拳馆', img: 'e_trainer', col: C.amber, text: '教练叼着烟：「交钱，挑个人，打沙袋。打得越狠，练得越壮。」',
   init(mg) { mg.hits = 0; mg.bag = 0; },
   cards(mg) { const R = this.run.roster.slice(0, 8), n = R.length, w = 120; return R.map((u, i) => ({ u, x: CX - (n - 1) * (w + 14) / 2 + i * (w + 14), y: SY + 380 })); },
   punch(mg) { if (mg.phase !== 'mash') return; mg.hits++; mg.bag = 1; S.hit(); this.fx.kick(2 + Math.min(8, mg.hits / 4)); this.fx.spark(CX + 170, SY + 330, '#ffe08a', 4, { dir: 0, spread: 1, v: 400 }); },
@@ -113,15 +121,16 @@ MINI.trainer = { title: '地下拳馆', img: 'e_trainer', col: '#ff8a3a', text: 
     if (mg.phase === 'mash' && mg.pt > 4 && !mg.fin) { mg.fin = true; const u = mg.u, k = Math.min(0.6, mg.hits * 0.018), D = M.DB[u.type]; u.bHp = (u.bHp || 0) + Math.round(D.hp * k); u.bAtk = (u.bAtk || 0) + Math.round(D.atk * k); if (mg.hits >= 26) u.lv = (u.lv || 1) + 1; S.up(3); this.miniFinish(mg.hits + ' 拳！' + D.n + ' 生命、攻击各 +' + Math.round(k * 100) + '%' + (mg.hits >= 26 ? '，等级 +1' : '') + '。', '#ff8a3a'); } },
   draw(x, mg) {
     const t = mg.t; bgv(x, '#2a1a10', '#0c0806'); K.GL(x, CX, SY + 120, 300, '#ffd080', 0.3); K.LN(x, CX, SY, CX, SY + 120, 3, '#8a8a9a');
-    if (mg.phase === 'select' || mg.phase === 'idle') { MINI.trainer.cards.call(this, mg).forEach(c => { const hov = mg.phase === 'select' && Math.abs(mg.mx - c.x) < 60 && Math.abs(mg.my - c.y) < 80; K.RR(x, c.x - 60, c.y - 80 - (hov ? 12 : 0), 120, 160, 8, 'rgba(10,8,14,0.9)', M.QUALITY[M.DB[c.u.type].q].c, hov ? 5 : 2); K.SP(x, c.u.type, c.x, c.y + 60 - (hov ? 12 : 0), 110); }); if (mg.phase === 'select') K.PT(x, '选一名部队', CX, SY + 200, 40, '#ff8a3a'); return; }
-    const bx = CX + 170, sw = Math.sin(mg.bag * Math.PI) * 0.3; K.LN(x, bx, SY + 90, bx + Math.sin(sw) * 200, SY + 200, 4, '#8a8a9a'); x.save(); x.translate(bx, SY + 90); x.rotate(-sw); K.RR(x, -50, 110, 100, 240, 40, '#8a2a1a'); K.R(x, -50, 150, 100, 10, '#5a1a10'); K.R(x, -50, 300, 100, 10, '#5a1a10'); x.restore();
+    if (mg.phase === 'select' || mg.phase === 'idle') { MINI.trainer.cards.call(this, mg).forEach(c => { const hov = mg.phase === 'select' && Math.abs(mg.mx - c.x) < 60 && Math.abs(mg.my - c.y) < 80; K.card(x, c.x - 60, c.y - 80 - (hov ? 12 : 0), 120, 160, M.QUALITY[M.DB[c.u.type].q].c, hov, C.abyss); K.SP(x, c.u.type, c.x, c.y + 60 - (hov ? 12 : 0), 110); }); if (mg.phase === 'select') K.sign(x, '选一名部队', CX, SY + 200, { kind: 'wine', size: T.title }); return; }
+    const bx = CX + 170, sw = Math.sin(mg.bag * Math.PI) * 0.3; K.LN(x, bx, SY + 90, bx + Math.sin(sw) * 200, SY + 200, 4, '#8a8a9a'); x.save(); x.translate(bx, SY + 90); x.rotate(-sw); U.box(x, -50, 110, 100, 240, C.wine); K.R(x, -50, 150, 100, 10, C.umber); K.R(x, -50, 300, 100, 10, C.umber); x.restore();
     K.SP(x, mg.u.type, CX - 80 + mg.bag * 30, FLOOR, 200);
-    if (mg.phase === 'count') K.PT(x, String(Math.max(1, 3 - Math.floor(mg.pt * 2))), CX, SY + 250, 120, '#ffe08a');
-    if (mg.phase === 'mash') { K.PT(x, mg.hits + ' 拳', CX - 300, SY + 200, 70, '#ffe08a'); K.R(x, CX - 200, SY + 80, 400 * cl(1 - mg.pt / 4, 0, 1), 14, '#ff8a3a'); K.R(x, CX - 200 + 400 * 26 / 40, SY + 70, 3, 34, '#fff'); }
+    // 倒数每跳一个数弹一下；出拳数每打一拳弹一下
+    if (mg.phase === 'count') K.big(x, String(Math.max(1, 3 - Math.floor(mg.pt * 2))), CX, SY + 250, 120, C.gold, mg.pt % 0.5, { num: true });
+    if (mg.phase === 'mash') { K.big(x, mg.hits + ' 拳', CX - 300, SY + 200, T.hero, C.gold, mg.bag > 0 ? (1 - mg.bag) / 6 : 9); U.bar(x, CX - 450, SY + 262, 300, 14, cl(1 - mg.pt / 4, 0, 1), { col: C.amber }); K.R(x, CX - 450 + 300 * 26 / 40, SY + 252, 3, 34, C.white); } // 时间条放在拳数下面，不压说明文字
   } };
 
 // ═════════════════════ 古像 · rotate the rings to wake the statue ═════════════════════
-MINI.statue = { title: '沉睡的古像', img: 'e_statue', col: '#8fe0ff', text: '石像胸口有三圈刻纹。把图案转正，它就会醒过来。只能转八次。',
+MINI.statue = { title: '沉睡的古像', img: 'e_statue', col: C.teal, text: '石像胸口有三圈刻纹。把图案转正，它就会醒过来。只能转八次。',
   init(mg) { mg.rot = [1 + Math.floor(rnd() * 3), 1 + Math.floor(rnd() * 3), Math.floor(rnd() * 4)]; if (mg.rot.every(v => v % 4 === 0)) mg.rot[0] = 2; mg.moves = 8; mg.anim = [0, 0, 0]; },
   turn(mg, i) { if (mg.phase !== 'idle' || mg.moves <= 0) return; mg.rot[i] = (mg.rot[i] + 1) % 4; if (i < 2) mg.rot[i + 1] = (mg.rot[i + 1] + (i === 0 ? 0 : 1)) % 4; mg.moves--; mg.anim[i] = 1; S.creak(); S.tick(i * 3);
     if (mg.rot.every(v => v === 0)) { this.miniSet('wake'); S.portal(); } else if (mg.moves <= 0) this.miniSet('sleep'); },
@@ -131,15 +140,15 @@ MINI.statue = { title: '沉睡的古像', img: 'e_statue', col: '#8fe0ff', text:
     if (mg.phase === 'wake' && mg.pt > 1.6 && !mg.fin) { mg.fin = true; this.buffRun('unitAtk', 0.1, '部队攻击 +10%', '#8fe0ff'); this.run.mods.unitHp = (this.run.mods.unitHp || 0) + 0.1; this.miniFinish('石像睁开了眼睛，向你的部队点了点头。本局部队攻击、生命各 +10%。', '#8fe0ff'); }
     if (mg.phase === 'sleep' && mg.pt > 0.8 && !mg.fin) { mg.fin = true; this.miniFinish('刻纹卡住了。石像没有醒。', '#8d8496'); } },
   draw(x, mg) {
-    const t = mg.t, cy = SY + 350; bgv(x, '#1a2230', '#06080c'); K.PL(x, [[CX - 240, FLOOR], [CX + 240, FLOOR], [CX + 180, SY + 110], [CX - 180, SY + 110]], '#4a4a55'); K.CI(x, CX, SY + 90, 90, '#5a5a66'); const eye = mg.phase === 'wake' ? cl(mg.pt, 0, 1) : 0; K.CI(x, CX - 34, SY + 90, 12, eye ? '#4af0ff' : '#2a2a33'); K.CI(x, CX + 34, SY + 90, 12, eye ? '#4af0ff' : '#2a2a33'); if (eye) K.GL(x, CX, SY + 90, 200, '#4af0ff', eye * 0.6);
-    [[180, 0], [120, 1], [60, 2]].forEach(([rr, i]) => { const a = (mg.rot[i] - mg.anim[i] * 1) * Math.PI / 2; K.CI(x, CX, cy, rr, ['#6a6a78', '#7a7a88', '#8a8a98'][i]); x.strokeStyle = '#2a2a33'; x.lineWidth = 4; x.beginPath(); x.arc(CX, cy, rr, 0, 7); x.stroke();
-      x.save(); x.translate(CX, cy); x.rotate(a); const w = rr - (i === 2 ? 0 : 60) * 0.5; x.fillStyle = mg.phase === 'wake' ? '#4af0ff' : '#caa84a'; if (i === 2) { K.PL(x, [[0, -44], [14, -10], [-14, -10]], x.fillStyle); K.CI(x, 0, 10, 12, x.fillStyle); } else { K.PL(x, [[-12, -rr + 6], [12, -rr + 6], [0, -rr + 50]], x.fillStyle); K.R(x, -4, rr - 50, 8, 40, x.fillStyle); } x.restore(); });
-    K.PL(x, [[CX - 14, cy - 200], [CX + 14, cy - 200], [CX, cy - 180]], '#ffe08a');
-    for (let i = 0; i < 8; i++) K.CI(x, SX + 90 + i * 34, SY + 130, 10, i < mg.moves ? '#8fe0ff' : '#2a3040');
+    const t = mg.t, cy = SY + 350; bgv(x, '#1a2230', '#06080c'); K.PL(x, [[CX - 240, FLOOR], [CX + 240, FLOOR], [CX + 180, SY + 110], [CX - 180, SY + 110]], '#4a4a55'); K.CI(x, CX, SY + 90, 90, '#5a5a66'); const eye = mg.phase === 'wake' ? cl(mg.pt, 0, 1) : 0; K.CI(x, CX - 34, SY + 90, 12, eye ? C.teal : '#2a2a33'); K.CI(x, CX + 34, SY + 90, 12, eye ? C.teal : '#2a2a33'); if (eye) K.GL(x, CX, SY + 90, 200, C.teal, eye * 0.6);
+    [[180, 0], [120, 1], [60, 2]].forEach(([rr, i]) => { const a = (mg.rot[i] - mg.anim[i] * 1) * Math.PI / 2; K.CI(x, CX, cy, rr, [C.haze, C.steel, C.silver][i]); x.strokeStyle = C.ink; x.lineWidth = 6; x.beginPath(); x.arc(CX, cy, rr, 0, 7); x.stroke();
+      x.save(); x.translate(CX, cy); x.rotate(a); const w = rr - (i === 2 ? 0 : 60) * 0.5, gc = mg.phase === 'wake' ? C.teal : C.gold; if (i === 2) { K.PL(x, [[0, -44], [14, -10], [-14, -10]], gc); K.CI(x, 0, 10, 12, gc); } else { K.PL(x, [[-12, -rr + 6], [12, -rr + 6], [0, -rr + 50]], gc); K.R(x, -4, rr - 50, 8, 40, gc); } x.restore(); });
+    K.PL(x, [[CX - 18, cy - 204], [CX + 18, cy - 204], [CX, cy - 176]], C.ink); K.PL(x, [[CX - 14, cy - 200], [CX + 14, cy - 200], [CX, cy - 180]], C.gold);
+    for (let i = 0; i < 8; i++) K.pip(x, SX + 90 + i * 34, SY + 130, 18, i < mg.moves ? C.teal : null);
   } };
 
 // ═════════════════════ 斗兽场 · bet, then cheer ═════════════════════
-MINI.arena = { title: '斗兽场', img: 'e_arena', col: '#ff6a5a', text: '两头怪物被推进场子。押一边，然后给它加油——喊得越响它打得越狠。',
+MINI.arena = { title: '斗兽场', img: 'e_arena', col: C.red, text: '两头怪物被推进场子。押一边，然后给它加油——喊得越响它打得越狠。',
   init(mg) { const a = M.pickUnitQ(this.run); let b = M.pickUnitQ(this.run); for (let i = 0; i < 8 && b === a; i++) b = M.pickUnitQ(this.run); mg.b = [a, b].map((k, i) => ({ k, hp: 1, x: i ? CX + 260 : CX - 260, hit: 0, pw: 0.8 + rnd() * 0.4 })); mg.cheer = 0; },
   bet(mg, i) { if (!this.miniPay(mg.pay)) return; mg.side = i; this.miniSet('fight'); S.alarm(); },
   down(mg) { if (mg.phase === 'fight') { mg.cheer = Math.min(1, mg.cheer + 0.12); S.tone(600 + mg.cheer * 400, 0.05, 'square', 0.04); } },
@@ -155,12 +164,12 @@ MINI.arena = { title: '斗兽场', img: 'e_arena', col: '#ff6a5a', text: '两头
     const t = mg.t; bgv(x, '#2a1a10', '#0a0604'); for (let r = 0; r < 3; r++) for (let i = 0; i < 26; i++) { const j = mg.phase === 'fight' ? Math.abs(Math.sin(t * 8 + i + r)) * 6 * (0.4 + mg.cheer) : 0; K.CI(x, SX + 30 + i * 46, SY + 110 + r * 40 - j, 12, ['#4a3a30', '#5a4a3a', '#3a2e26'][(i + r) % 3]); }
     K.EL(x, CX, FLOOR + 10, 560, 90, '#8a6a3a'); K.EL(x, CX, FLOOR, 540, 76, '#b08a50');
     mg.b.forEach((b, i) => { const lunge = mg.phase === 'fight' ? Math.sin(t * 9 + i * 3) * 8 : 0; x.save(); if (b.hit) x.globalAlpha = 0.6 + 0.4 * Math.sin(t * 60); K.SP(x, b.k, b.x + (i ? -lunge : lunge), FLOOR, 180, i === 1); x.restore();
-      K.R(x, b.x - 70, FLOOR - 230, 140, 14, '#1a1418'); K.R(x, b.x - 70, FLOOR - 230, 140 * cl(b.hp, 0, 1), 14, i === mg.side ? '#ffcc33' : '#ff5a4a'); K.TX(x, M.DB[b.k].n, b.x, FLOOR - 256, 22, i === mg.side ? '#ffcc33' : '#e8dcc4'); });
-    if (mg.phase === 'fight') { K.R(x, CX - 150, SY + 250, 300, 16, '#1a1418'); K.R(x, CX - 150, SY + 250, 300 * mg.cheer, 16, '#ffcc33'); K.PT(x, '加油', CX, SY + 222, 30, '#ffe08a'); }
+      U.bar(x, b.x - 70, FLOOR - 230, 140, 14, cl(b.hp, 0, 1), { col: i === mg.side ? C.gold : C.red }); K.chipC(x, M.DB[b.k].n, b.x, FLOOR - 256, i === mg.side ? C.gold : C.silver); });
+    if (mg.phase === 'fight') { U.bar(x, CX - 150, SY + 250, 300, 16, mg.cheer, { col: C.gold }); K.chipC(x, '加油', CX, SY + 222, C.gold); }
   } };
 
 // ═════════════════════ 营火 · rest through the night, or sharpen on the beat ═════════════════════
-MINI.camp = { title: '营火', img: 'e_camp', col: '#ffb03a', text: '火堆还温着。歇一夜，或者就着火光把刀磨快。',
+MINI.camp = { title: '营火', img: 'e_camp', col: C.amber, text: '火堆还温着。歇一夜，或者就着火光把刀磨快。',
   init(mg) { mg.hits = 0; mg.strokes = 0; mg.spark = 0; },
   stroke(mg) { if (mg.phase !== 'sharpen') return; const q = (mg.pt * 1.1) % 1, ok = Math.abs(q - 0.5) < 0.09; mg.strokes++; mg.spark = 1; if (ok) { mg.hits++; S.tone(1800, 0.12, 'triangle', 0.1); this.fx.spark(CX + 80, SY + 250, '#ffe08a', 14, { dir: -Math.PI / 2, spread: 2, v: 700 }); } else S.tone(300, 0.08, 'square', 0.05); if (mg.strokes >= 5) this.miniSet('sharpDone'); },
   down(mg) { MINI.camp.stroke.call(this, mg); },
@@ -173,17 +182,19 @@ MINI.camp = { title: '营火', img: 'e_camp', col: '#ffb03a', text: '火堆还�
   draw(x, mg) {
     const t = mg.t, rest = mg.phase === 'rest', nq = rest ? cl(mg.pt / 2.6, 0, 1) : 0; bgv(x, rest ? '#0a0c20' : '#12101e', '#040306');
     const ma = Math.PI + nq * Math.PI; K.CI(x, CX + Math.cos(ma) * 480, SY + 330 + Math.sin(ma) * 220, 34, '#f5e8c0'); for (let i = 0; i < 30; i++) K.R(x, SX + (i * 97) % SW, SY + 70 + (i * 53) % 260, 2, 2, 'rgba(255,255,255,' + (0.3 + 0.3 * Math.sin(t * 2 + i)) + ')');
-    K.R(x, SX, FLOOR, SW, SH, '#141008'); const fx0 = CX, fy0 = FLOOR - 10; K.GL(x, fx0, fy0 - 60, 360, '#ff8a3a', 0.5 + 0.1 * Math.sin(t * 9)); K.LN(x, fx0 - 60, fy0 + 10, fx0 + 60, fy0 - 10, 12, '#5a3a22'); K.LN(x, fx0 - 60, fy0 - 10, fx0 + 60, fy0 + 10, 12, '#4a2e1a');
-    for (let i = 0; i < 3; i++) { const f = 0.8 + 0.25 * Math.sin(t * 13 + i * 2); x.fillStyle = ['#ff5a1a', '#ffb030', '#fff2a0'][i]; x.beginPath(); x.moveTo(fx0 - 40 + i * 12, fy0); x.quadraticCurveTo(fx0 - 30 + i * 10, fy0 - 60 * f, fx0 + Math.sin(t * 7 + i) * 8, fy0 - (120 - i * 30) * f); x.quadraticCurveTo(fx0 + 30 - i * 10, fy0 - 60 * f, fx0 + 40 - i * 12, fy0); x.fill(); }
+    K.R(x, SX, FLOOR, SW, SH, '#141008'); const fx0 = CX, fy0 = FLOOR - 10; K.GL(x, fx0, fy0 - 60, 360, '#ff8a3a', 0.5 + 0.1 * Math.sin(t * 9)); K.LN(x, fx0 - 60, fy0 + 10, fx0 + 60, fy0 - 10, 12, C.brown); K.LN(x, fx0 - 60, fy0 - 10, fx0 + 60, fy0 + 10, 12, C.umber);
+    for (let i = 0; i < 3; i++) { const f = 0.8 + 0.25 * Math.sin(t * 13 + i * 2); x.fillStyle = [C.amber, C.gold, C.butter][i]; x.beginPath(); x.moveTo(fx0 - 40 + i * 12, fy0); x.quadraticCurveTo(fx0 - 30 + i * 10, fy0 - 60 * f, fx0 + Math.sin(t * 7 + i) * 8, fy0 - (120 - i * 30) * f); x.quadraticCurveTo(fx0 + 30 - i * 10, fy0 - 60 * f, fx0 + 40 - i * 12, fy0); x.fill(); }
     for (let i = 0; i < 10; i++) { const q = (t * 0.6 + i / 10) % 1; K.R(x, fx0 + Math.sin(i * 3 + q * 5) * 40, fy0 - 60 - q * 300, 3, 3, 'rgba(255,200,90,' + (1 - q) + ')'); }
-    if (rest) { K.SP(x, heroSp(this), CX - 220, FLOOR + 10, 150); for (let i = 0; i < 3; i++) { const q = (t * 0.5 + i / 3) % 1; K.PT(x, 'Z', CX - 200 + q * 60, FLOOR - 170 - q * 90, 24 + i * 8, 'rgba(200,220,255,' + (1 - q) + ')'); } }
+    // 睡觉的 Z：冰蓝像素字，按 6px 一格往上飘、分四档变淡
+    if (rest) { K.SP(x, heroSp(this), CX - 220, FLOOR + 10, 150); for (let i = 0; i < 3; i++) { const q = (t * 0.5 + i / 3) % 1; x.save(); x.globalAlpha *= Math.ceil((1 - q) * 4) / 4; U.text(x, 'Z', Math.round((CX - 200 + q * 60) / 6) * 6, Math.round((FLOOR - 170 - q * 90) / 6) * 6, [T.cap, T.btn, T.title][i], C.ice, { num: true }); x.restore(); } }
     else { K.SP(x, heroSp(this), CX - 230, FLOOR, 180); }
-    if (mg.phase === 'sharpen' || mg.phase === 'sharpDone') { const q = (mg.pt * 1.1) % 1, bx = CX - 260 + q * 520; K.RR(x, CX - 280, SY + 300, 560, 40, 8, '#5a5a66'); K.R(x, CX - 42, SY + 300, 84, 40, 'rgba(255,224,138,0.35)'); K.R(x, CX - 3, SY + 296, 6, 48, '#ffe08a');
-      if (mg.phase === 'sharpen') { K.GL(x, bx, SY + 320, 40, '#ffe08a', 0.8); K.CI(x, bx, SY + 320, 10, '#fff6c0'); } x.save(); x.translate(CX + 80, SY + 250); x.rotate(-0.3 - mg.spark * 0.3); K.PL(x, [[-160, -8], [60, -14], [80, 0], [60, 14], [-160, 8]], '#dfe6f0'); K.R(x, -200, -10, 40, 20, '#6a4a2a'); x.restore(); K.PT(x, mg.hits + ' / ' + mg.strokes, CX, SY + 390, 40, '#ffe08a'); }
+    // 磨刀条：石板槽 + 琥珀目标区 + 奶油中线，火星是方块
+    if (mg.phase === 'sharpen' || mg.phase === 'sharpDone') { const q = (mg.pt * 1.1) % 1, bx = Math.round(CX - 260 + q * 520); U.box(x, CX - 280, SY + 300, 560, 40, C.slate); K.R(x, CX - 42, SY + 300, 84, 40, C.amber); K.R(x, CX - 3, SY + 296, 6, 48, C.butter);
+      if (mg.phase === 'sharpen') { K.GL(x, bx, SY + 320, 40, C.butter, 0.8); U.box(x, bx - 9, SY + 311, 18, 18, C.white); } x.save(); x.translate(CX + 80, SY + 250); x.rotate(-0.3 - mg.spark * 0.3); K.PL(x, [[-160, -8], [60, -14], [80, 0], [60, 14], [-160, 8]], C.silver); K.R(x, -200, -10, 40, 20, C.brown); x.restore(); U.text(x, mg.hits + ' / ' + mg.strokes, CX, SY + 390, T.title, C.gold, { num: true }); }
   } };
 
 // ═════════════════════ 招募旗 · curtains lift one by one ═════════════════════
-MINI.recruit = { title: '招募旗', img: 'e_flag', col: '#6fa8dc', text: '旗子下面站着三个人影。帘子一掀开，只有一个能跟你走。',
+MINI.recruit = { title: '招募旗', img: 'e_flag', col: C.blue, text: '旗子下面站着三个人影。帘子一掀开，只有一个能跟你走。',
   init(mg) { const run = this.run; if (this.node) run.lastL = M.levelAt(run, this.node); mg.pool = []; for (let i = 0; i < 16 && mg.pool.length < 3; i++) { const t = M.pickUnitQ(run); if (!mg.pool.includes(t)) mg.pool.push(t); } mg.cards = mg.pool.map((k, i) => ({ k, x: CX - 330 + i * 330, y: SY + 380, lift: 0 })); },
   take(mg, i) { if (mg.phase !== 'idle') return; const c = mg.cards[i], run = this.run; if (!M.canAdd(run, c.k)) { this.toast('队伍满了', '#d0453c'); return; } mg.cur = i; this.miniSet('take'); S.up(2); this.fx.rays(c.x, c.y - 60, M.QUALITY[M.DB[c.k].q].c, 1, { r: 260 }); },
   down(mg, px, py) { mg.cards.forEach((c, i) => { if (Math.abs(px - c.x) < 130 && Math.abs(py - c.y) < 190) MINI.recruit.take.call(this, mg, i); }); },
@@ -194,10 +205,11 @@ MINI.recruit = { title: '招募旗', img: 'e_flag', col: '#6fa8dc', text: '旗�
     const t = mg.t; bgv(x, '#141a2a', '#06080e'); K.R(x, SX, FLOOR - 20, SW, 140, '#2a2018');
     mg.cards.forEach((c, i) => { const D = M.DB[c.k], Q = M.QUALITY[D.q], hov = mg.phase === 'idle' && Math.abs(mg.mx - c.x) < 130 && Math.abs(mg.my - c.y) < 190, sel = mg.phase === 'take' && mg.cur === i, dim = mg.phase === 'take' && mg.cur !== i;
       x.save(); if (dim) x.globalAlpha = 0.35; const y = c.y - (hov || sel ? 16 : 0);
-      K.RR(x, c.x - 130, y - 200, 260, 380, 10, '#0c0a10', Q.c, hov || sel ? 6 : 3); K.GL(x, c.x, y + 20, 200, Q.c, 0.3 * c.lift); K.SP(x, c.k, c.x, y + 110, 210);
+      // 卡：品质色框 + 墨边 + 9px 硬投影；名字是品质色签；帘子酒红，杆子金色
+      K.card(x, c.x - 130, y - 200, 260, 380, Q.c, hov || sel, C.abyss); K.GL(x, c.x, y + 20, 200, Q.c, 0.3 * c.lift); K.SP(x, c.k, c.x, y + 110, 210);
       const tg = M.TAG.race(D.race), tv = M.TAG.voc(D.voc); if (tg) K.IC(x, tg.icon, c.x - 100, y - 170, 44); if (tv) K.IC(x, tv.icon, c.x + 100, y - 170, 44);
-      K.PT(x, D.n, c.x, y + 150, 30, Q.c);
-      const cu = 1 - c.lift; if (cu > 0) { K.R(x, c.x - 126, y - 196, 252, 372 * cu, K.LG(x, c.x - 126, 0, c.x + 126, 0, [[0, '#5a1a2a'], [0.5, '#8a2a3a'], [1, '#5a1a2a']])); for (let k = 0; k < 6; k++) K.R(x, c.x - 120 + k * 42, y - 196, 4, 372 * cu, 'rgba(0,0,0,0.25)'); K.R(x, c.x - 130, y - 206, 260, 14, '#caa84a'); }
+      K.chipC(x, D.n, c.x, y + 150, Q.c, T.body);
+      const cu = 1 - c.lift; if (cu > 0) { K.R(x, c.x - 126, y - 196, 252, Math.round(372 * cu), K.LG(x, c.x - 126, 0, c.x + 126, 0, [[0, C.umber], [0.5, C.wine], [1, C.umber]])); for (let k = 0; k < 6; k++) K.R(x, c.x - 120 + k * 42, y - 196, 4, Math.round(372 * cu), 'rgba(0,0,0,0.25)'); U.box(x, c.x - 130, y - 206, 260, 14, C.gold); }
       x.restore(); });
   } };
 

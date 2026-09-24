@@ -41,7 +41,9 @@ function nearest(r, g, b) {
   for (const [h, R, G, B] of set) { const d = 2 * (r - R) ** 2 + 4 * (g - G) ** 2 + 3 * (b - B) ** 2; if (d < bd) { bd = d; best = h; } }
   return best;
 }
-function palHex(r, g, b) { const h = rgbHex(r, g, b); return FIX[h] || nearest(r, g, b); }
+const INPAL = new Set(Object.values(PAL));
+// 已经是调色板色就原样返回（棕、深蓝这类暗色不能被「暗色就近」规则改走）
+function palHex(r, g, b) { const h = rgbHex(r, g, b); return FIX[h] || (INPAL.has(h) ? h : nearest(r, g, b)); }
 function parseColor(s) {
   s = s.trim().toLowerCase();
   let m = s.match(/^#([0-9a-f]{3})$/); if (m) { const t = m[1]; return [parseInt(t[0] + t[0], 16), parseInt(t[1] + t[1], 16), parseInt(t[2] + t[2], 16), 1]; }
@@ -101,17 +103,19 @@ function mapFontFamily(v) {
     .replace(/(^|,\s*|px\s+)(['"]?)Noto Serif SC\2/, '$1' + FONT_PX + ",'Noto Serif SC'");
 }
 
-const PJ = M.PJ = { __loaded: true, on: true, PAL, FIX, mapCss, mapOne, palHex, pixelBoxShadow, pixelTextShadow, outlineShadow, flatGradient, mapFontFamily, RAMP, inkFilter, FONT_PX, FONT_NUM, noBlur: true };
+const PJ = M.PJ = { __loaded: true, on: true, PAL, FIX, mapCss, mapOne, palHex, parseColor, pixelBoxShadow, pixelTextShadow, outlineShadow, flatGradient, mapFontFamily, RAMP, inkFilter, FONT_PX, FONT_NUM, noBlur: true };
 try { if (W.localStorage && W.localStorage.getItem('mc-pj-off') === '1') PJ.on = false; } catch (e) {}
 
 // ───────── JS 视图里的颜色（稀有度、按钮底色、发光）也过一遍调色板 ─────────
-const cache = new Map();
+const cache = new Map(), NOGLOW = '0 0 0 0 transparent';
 function mapVal(key, v) {
   const ck = (/glow/i.test(key) ? 'g|' : '') + v; let r = cache.get(ck); if (r !== undefined) return r;
   r = v;
+  // 发光值会拼在别的阴影后面（模板里「墨框,{{glow}}」），空值要换成合法的透明阴影
+  if (/glow/i.test(key) && (v === 'none' || !v.trim())) { cache.set(ck, NOGLOW); return NOGLOW; }
   if (/#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(v)) {
     if (/^\s*(linear|radial|conic)-gradient\(/.test(v) && v.indexOf('{{') < 0) r = flatGradient(v);
-    else if (/\d+px/.test(v) && /(^|,)\s*(inset\s+)?-?\d/.test(v)) r = pixelBoxShadow(v, /glow/i.test(key)) || 'none';
+    else if (/\d+px/.test(v) && /(^|,)\s*(inset\s+)?-?\d/.test(v)) r = pixelBoxShadow(v, /glow/i.test(key)) || (/glow/i.test(key) ? NOGLOW : 'none');
     else r = mapCss(v);
   }
   if (cache.size > 8000) cache.clear(); cache.set(ck, r); return r;
@@ -258,6 +262,8 @@ if (W.customElements && !W.customElements.get('mc-num')) {
 // ───────── 界面打击感：按下形变 + 像素迸发 + 硬边冲击框 ─────────
 PJ.reduced = !!(W.matchMedia && W.matchMedia('(prefers-reduced-motion: reduce)').matches);
 const stageEl = () => document.querySelector('[data-pj-stage]');
+// 舞台是 overflow:hidden，但 scrollIntoView / 焦点仍会把它卷走一截：有位移就归零
+document.addEventListener('scroll', (ev) => { const st = ev.target; if (st && st.nodeType === 1 && st.hasAttribute && st.hasAttribute('data-pj-stage') && (st.scrollLeft || st.scrollTop)) st.scrollTo(0, 0); }, true);
 let layer = null;
 function fxLayer(st) {
   if (layer && layer.parentNode === st) return layer;
@@ -326,6 +332,46 @@ const CSS = `
 [data-pj~=ticket]::after{content:'';position:absolute;left:0;right:0;bottom:-18px;height:18px;pointer-events:none;background:repeating-linear-gradient(135deg,#f4efe0 0 9px,transparent 9px 18px),repeating-linear-gradient(45deg,#f4efe0 0 9px,transparent 9px 18px)}
 [data-pj~=choice]:hover::before{content:'\\25B6';color:#ffcf4a;display:inline-block;animation:pjHop .6s steps(2) infinite}
 [data-pj~=bob]{animation:pjBob 1s steps(2) infinite}
+@keyframes pjPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}
+@keyframes pjPop{0%{transform:scale(0.4) rotate(-14deg)}40%{transform:scale(1.3) rotate(-10deg)}70%{transform:scale(0.92) rotate(-12deg)}100%{transform:scale(1) rotate(-12deg)}}
+@keyframes pjRise{0%{transform:translateY(0);opacity:1}100%{transform:translateY(-60px);opacity:0}}
+/* —— 设计稿组件（docs/design.md §11.5）：只管外观，位置和大小留在各自的 style 里 —— */
+[data-pj~=panel]{background:#1a1640!important;border:0!important;border-radius:0!important;box-shadow:0 -3px 0 0 #07060f,0 3px 0 0 #07060f,-3px 0 0 0 #07060f,3px 0 0 0 #07060f,inset 0 3px 0 0 #3d3a8c,inset 3px 0 0 0 #3d3a8c,inset 0 -6px 0 0 #0d0b1e,inset -3px 0 0 0 #0d0b1e,12px 12px 0 0 #07060f!important}
+[data-pj~=card]{border:0!important;box-shadow:0 -3px 0 0 #07060f,0 3px 0 0 #07060f,-3px 0 0 0 #07060f,3px 0 0 0 #07060f,inset 0 0 0 3px var(--q,#3d3a8c),9px 9px 0 0 #07060f!important}
+[data-pj~=tab]{position:absolute;left:36px;top:-27px;z-index:2;display:flex;align-items:center;gap:14px;padding:8px 24px 10px;background:#8c1f3a;color:#fff3b0;box-shadow:0 -3px 0 0 #07060f,0 3px 0 0 #07060f,-3px 0 0 0 #07060f,3px 0 0 0 #07060f,inset 0 3px 0 0 #e8434f,inset 0 -6px 0 0 #4f2f22;text-shadow:3px 3px 0 #07060f;white-space:nowrap}
+[data-pj~=subtab]{position:absolute;left:24px;top:-21px;z-index:2;padding:6px 18px;font-size:28px;color:#fff3b0;background:#2b2461;box-shadow:0 0 0 3px #07060f,inset 0 3px 0 0 #3d3a8c;text-shadow:3px 3px 0 #07060f;white-space:nowrap}
+[data-pj~=chip]{padding:2px 10px;font-size:20px;color:#07060f!important;text-shadow:none!important;border:0!important;box-shadow:0 -3px 0 0 #07060f,0 3px 0 0 #07060f,-3px 0 0 0 #07060f,3px 0 0 0 #07060f,inset 0 -3px 0 0 rgba(7,6,15,.35)}
+[data-pj~=close]{width:42px;height:42px;display:flex;align-items:center;justify-content:center;font-size:28px;color:#a9a3c9;background:#2b2461;box-shadow:0 0 0 3px #07060f;cursor:pointer}
+[data-pj~=close]:hover{color:#fff3b0;background:#3d3a8c;box-shadow:0 0 0 3px #ffcf4a}
+[data-pj~=well]{background:#0d0b1e!important;border:0!important;box-shadow:0 0 0 3px var(--q,#3d3a8c),inset 0 -9px 0 0 #07060f!important}
+[data-pj~=ink]{background:#07060f!important;border:0!important;box-shadow:0 0 0 3px var(--q,#3d3a8c)!important}
+[data-pj~=opt]{background:#0d0b1e!important;border:0!important;box-shadow:0 0 0 3px var(--q,#3d3a8c)!important;cursor:pointer}
+[data-pj~=opt]:hover,[data-pj~=opt][data-on=true]{background:#2b2461!important;box-shadow:0 0 0 3px #ffcf4a,6px 6px 0 3px #07060f!important;translate:-3px -3px;filter:none!important}
+[data-pj~=ring]{border:0!important;box-shadow:0 0 0 3px var(--q,#3d3a8c)!important;cursor:pointer}
+[data-pj~=ring]:hover{box-shadow:0 0 0 3px #ffcf4a,6px 6px 0 3px #07060f!important;translate:-3px -3px}
+[data-pj~=div]{height:3px!important;background:repeating-linear-gradient(90deg,#3d3a8c 0 6px,transparent 6px 12px)!important;border:0!important}
+[data-pj~=key]{position:relative;overflow:hidden;cursor:pointer;border:0!important;text-shadow:none!important;background:var(--kf)!important;color:var(--kt,#07060f)!important;box-shadow:0 -3px 0 0 #07060f,0 3px 0 0 #07060f,-3px 0 0 0 #07060f,3px 0 0 0 #07060f,inset 0 6px 0 0 var(--kh),inset 0 -9px 0 0 var(--kl),0 9px 0 0 #07060f!important;transition:none!important}
+[data-pj~=key]:hover{translate:0 -3px;filter:none!important}
+[data-pj~=key]:active{translate:0 9px;box-shadow:0 -3px 0 0 #07060f,0 3px 0 0 #07060f,-3px 0 0 0 #07060f,3px 0 0 0 #07060f,inset 0 6px 0 0 rgba(7,6,15,.45)!important}
+[data-pj~=gold]{--kf:#ffcf4a;--kh:#fff3b0;--kl:#e0781f;--kt:#07060f}
+[data-pj~=teal]{--kf:#47d6c1;--kh:#bff7f0;--kl:#1f8f8a;--kt:#07060f}
+[data-pj~=red]{--kf:#e8434f;--kh:#ff9aa8;--kl:#8c1f3a;--kt:#07060f}
+[data-pj~=violet]{--kf:#b86bff;--kh:#ff6bd6;--kl:#6a2fbf;--kt:#07060f}
+[data-pj~=dark]{--kf:#2b2461;--kh:#3d3a8c;--kl:#1a1640;--kt:#f4efe0}
+[data-pj~=dis]{--kf:#1a1640;--kh:#2b2461;--kl:#0d0b1e;--kt:#6a6394}
+[data-pj~=dark][data-pj~=key]{box-shadow:0 -3px 0 0 #07060f,0 3px 0 0 #07060f,-3px 0 0 0 #07060f,3px 0 0 0 #07060f,inset 0 3px 0 0 #3d3a8c,inset 0 -9px 0 0 #1a1640,0 9px 0 0 #07060f!important;text-shadow:3px 3px 0 #07060f!important}
+[data-pj~=dark][data-pj~=key]:hover{--kf:#3d3a8c;--kt:#fff3b0;box-shadow:0 -3px 0 0 #ffcf4a,0 3px 0 0 #ffcf4a,-3px 0 0 0 #ffcf4a,3px 0 0 0 #ffcf4a,inset 0 3px 0 0 #6a6394,inset 0 -9px 0 0 #2b2461,0 9px 0 0 #07060f!important}
+[data-pj~=key]:active{--kf:#1a1640;--kt:#a9a3c9}
+[data-pj~=pulse]{animation:pjPulse 1s steps(2) infinite}
+[data-pj~=coin]{display:inline-block;flex:none;width:var(--s,30px);height:var(--s,30px);background:#ffcf4a;box-shadow:inset 6px 6px 0 0 #fff3b0,inset -6px -6px 0 0 #e0781f,0 0 0 3px #07060f}
+[data-pj~=hop]{display:inline-block;animation:pjHop .6s steps(2) infinite}
+[data-pj~=blink]{animation:pjBlink 1s steps(1) infinite}
+[data-pj~=pop]{animation:pjPop .5s steps(5) both}
+[data-pj~=dither]{background:repeating-conic-gradient(#1a1640 0 25%,#0d0b1e 0 50%) 0 0/6px 6px!important}
+[data-pj~=paper]{background:#f4efe0!important;color:#07060f;box-shadow:inset 6px 0 0 0 #a9a3c9,12px 12px 0 0 #07060f!important;border:0!important}
+[data-pj~=opt]:hover [data-pj~=cur],[data-pj~=opt][data-on=true] [data-pj~=cur]{color:#ffcf4a!important;text-shadow:3px 3px 0 #07060f!important;animation:pjHop .6s steps(2) infinite}
+[data-pj~=cur]{display:inline-block;color:transparent;text-shadow:none!important}
+[data-pj~=lnk]{cursor:pointer}[data-pj~=lnk]:hover{color:#fff3b0!important}[data-pj~=lnk]:hover [data-pj~=cur]{color:#ffcf4a!important;text-shadow:3px 3px 0 #07060f!important;animation:pjHop .6s steps(2) infinite}
 `;
 if (PJ.on) { const st = document.createElement('style'); st.id = 'pj-css'; st.textContent = PJ.reduced ? CSS.replace(/animation:[^;}]+/g, 'animation:none') : CSS; (document.head || document.documentElement).appendChild(st); }
 

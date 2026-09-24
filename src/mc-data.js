@@ -1,7 +1,8 @@
 // ==== mc-data.js ====
 (function(){
 // 午夜机台 — data, sprites, meta, run/shop helpers
-const C = { ink:'#0b090e', bg:'#0e0c12', bone:'#e8dcc4', dim:'#8d8496', candle:'#f2c14e', blood:'#d0453c', gold:'#ffcc33', silver:'#cfd8e3', bronze:'#c07a45', purple:'#b86bff', teal:'#7fe0d0', green:'#9ccc6a', line:'#2a2230', blue:'#8fc8ff', panel:'#15111a' };
+// 颜色令牌 = Pixel Juice 调色板（docs/design.md §11.5）
+const C = { ink:'#07060f', bg:'#0d0b1e', bone:'#f4efe0', dim:'#a9a3c9', candle:'#ffcf4a', blood:'#e8434f', gold:'#ffcf4a', silver:'#c4ccd9', bronze:'#c98f5a', purple:'#b86bff', teal:'#47d6c1', green:'#6fd46a', line:'#2b2461', blue:'#4f8fff', panel:'#1a1640' };
 
 const SP = {
   nail:{face:'R',pal:{h:'#7d828c',d:'#454852',s:'#d9c3a0',e:'#e8e070',r:'#a0522d'},rows:["....hhhh....","...hhhhhh..r","...hhdddd..r","...hhdede..r","....ssss...r","...dddddd.rr","..dhhhhhhdr.","..dhhrrhhd..","...dddddd...","...dd..dd...","...dd..dd...","..ddd..ddd.."]},
@@ -131,7 +132,7 @@ const FIELDS = {
   cemetery:{ name:'墓地', desc:'敌人死亡时 20% 爬起为你作战的骷髅', icon:'tomb' },
 };
 const TIERS = [
-  { n:'青铜', c:'#c07a45' }, { n:'白银', c:'#cfd8e3' }, { n:'黄金', c:'#ffcc33' }, { n:'传说', c:'#b86bff' },
+  { n:'青铜', c:'#c98f5a' }, { n:'白银', c:'#c4ccd9' }, { n:'黄金', c:'#ffcf4a' }, { n:'传说', c:'#b86bff' },
 ];
 const ITEMS = {
   bolt:{ name:'闪电风暴', icon:'bolt', desc:'召唤落雷。品质越高，雷越多越粗', tiers:['2 道细雷','5 道分叉连锁','8 道粗雷 + 冲击波','12 道紫色雷暴'] },

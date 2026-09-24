@@ -4,7 +4,7 @@ const M = window.MC;
 const { SP, UNITS, pick, wpick, nice, baseS, ENEMIES, TIERS, HEROES, TALENTS, STATS } = M;
 
 // ───────── unified quality: 普通（白）/ 稀有（蓝）/ 史诗（紫）/ 传说（金）; names always show as 名字（品质） in the quality colour ─────────
-const QUALITY = [ { n:'普通', c:'#e4e4ec', m:1 }, { n:'稀有', c:'#4aa0ff', m:1.5 }, { n:'史诗', c:'#b86bff', m:2.2 }, { n:'传说', c:'#ffcc33', m:3.2 } ];
+const QUALITY = [ { n:'普通', c:'#c4ccd9', m:1 }, { n:'稀有', c:'#47d6c1', m:1.5 }, { n:'史诗', c:'#b86bff', m:2.2 }, { n:'传说', c:'#ffcf4a', m:3.2 } ];
 TIERS.splice(0, TIERS.length, ...QUALITY.map(q => ({ n: q.n, c: q.c })));
 const RARITY = [ { n:'普通', c:QUALITY[0].c, w:55, tiers:3, stat:1 }, { n:'稀有', c:QUALITY[1].c, w:30, tiers:3, stat:1.08 }, { n:'史诗', c:QUALITY[2].c, w:12, tiers:4, stat:1.18 }, { n:'传说', c:QUALITY[3].c, w:3, tiers:4, stat:1.3 } ];
 Object.assign(STATS, {

@@ -117,20 +117,44 @@ P.float = function (x, y, text, col, size, num) {
 const add = (ctx, fn) => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; fn(); ctx.restore(); };
 const sq = (ctx, x, y, s, col) => { ctx.fillStyle = col; const z = Math.max(PX, Math.round(s / PX) * PX); ctx.fillRect(Math.round(x / PX) * PX - z / 2, Math.round(y / PX) * PX - z / 2, z, z); };
 const lighten = (c, f) => M.shade(c.slice(0, 7), f);
+// 字号阶梯（docs/design.md §11.5）：飘字按最近一阶取，等距取大
+const TS = [18, 22, 26, 30, 32, 40, 52, 64], snapT = (v) => TS.reduce((a, b) => (Math.abs(b - v) <= Math.abs(a - v) ? b : a));
+// 招牌字：果汁色带（白 → 奶油 → 金 → 琥珀 → 酒红，硬分段）填进像素字形，1 格墨描边；按字 + 字号缓存
+const rcache = new Map();
+function rampChar(ch, size) {
+  const key = ch + '|' + size; let c = rcache.get(key); if (c) return c;
+  const P = M.bUI.P, src = M.pxTextCanvas(ch, size, P.white, { ink: P.ink }), bw = src.bw, bh = src.bh, o = M.pxCanvas(bw, bh), x = o.getContext('2d');
+  x.drawImage(src, 0, 0, bw, bh); const im = x.getImageData(0, 0, bw, bh), d = im.data, fill = (i) => d[i + 3] && d[i] === 255 && d[i + 1] === 255 && d[i + 2] === 255;
+  let y0 = bh, y1 = -1; for (let yy = 0; yy < bh; yy++) for (let xx = 0; xx < bw; xx++) if (fill((yy * bw + xx) * 4)) { y0 = Math.min(y0, yy); y1 = Math.max(y1, yy); }
+  const RB = [[0.22, P.white], [0.4, P.butter], [0.58, P.gold], [0.78, P.amber], [2, P.wine]].map(([t, h]) => [t, M.hexRgb(h)]);
+  for (let yy = y0; yy <= y1; yy++) { const c3 = RB.find(r => (yy - y0 + 0.5) / (y1 - y0 + 1) <= r[0])[1]; for (let xx = 0; xx < bw; xx++) { const i = (yy * bw + xx) * 4; if (fill(i)) { d[i] = c3[0]; d[i + 1] = c3[1]; d[i + 2] = c3[2]; } } }
+  x.putImageData(im, 0, 0); c = M.asPx(o);
+  if (rcache.size > 120) rcache.delete(rcache.keys().next().value);
+  rcache.set(key, c); return c;
+}
 function drawTitle(ctx, f, T, p) {
-  const e = f.ent, big = f.tier >= 2, pop = p < 0.12 ? 0.7 + p / 0.12 * 0.3 : 1, a = p > 0.8 ? (1 - p) / 0.2 : 1;
-  ctx.save(); ctx.globalAlpha *= a;
+  const e = f.ent, big = f.tier >= 2, U = M.bUI, PL = U.P, g2 = U.g2, still = M.PJ && M.PJ.reduced, a = p > 0.8 ? (1 - p) / 0.2 : 1;
+  // 出场按 4 步弹一下（1.45 → 0.9 → 1.06 → 1），淡出也按阶
+  const pop = p < 0.12 && !still ? [1.45, 0.9, 1.06, 1][Math.min(3, Math.floor(p / 0.03))] : 1, Tq = still ? 0 : Math.floor(T * 12) / 12;
+  ctx.save(); ctx.globalAlpha *= Math.ceil(a * 4) / 4;
   if (big) {
-    const y = 96, size = f.tier >= 3 ? 64 : 50, col = f.side === 'E' ? '#ff6a5a' : '#ffe08a';
-    const w = M.pxText(ctx, f.text, 960, y, size * pop, col, { bold: 1, ink: '#1a0806' });
-    const lw = 120 + f.tier * 30, gx = w / 2 + 26;
-    ctx.fillStyle = col; ctx.fillRect(960 - gx - lw, y - 3, lw, 6); ctx.fillRect(960 + gx, y - 3, lw, 6);
-    ctx.fillStyle = lighten(f.col, 0.3); ctx.fillRect(960 - gx - lw * 0.4, y - 3, lw * 0.4, 6); ctx.fillRect(960 + gx, y - 3, lw * 0.4, 6);
-    for (let i = 0; i < 6; i++) { const q = (T * 1.4 + i / 6) % 1, sx = 960 + (i % 2 ? 1 : -1) * (gx + lw * q), sy = y - 18 + Math.sin(i * 2 + T * 6) * 14; sq(ctx, sx, sy, 4, i % 2 ? '#ffffff' : f.col); }
-    M.pxGlow(ctx, 960, y, w * 0.7, f.col, 0.35 * a);
+    // 招牌横条：我方酒红（上沿红、下沿棕）、敌方红底（上沿粉、下沿酒红），4px 墨框，上下跑马灯；字逐个跳，我方果汁色带、敌方奶油色
+    const y = 96, S = f.tier >= 3 ? 72 : 48, foe = f.side === 'E', size = g2(S * pop), chars = [...String(f.text)];
+    const glyph = (ch, sz) => (foe ? M.pxTextCanvas(ch, sz, PL.butter, { ink: PL.ink }) : rampChar(ch, sz));
+    const tw = chars.reduce((w, ch) => w + glyph(ch, S).width, 0), pw = g2((tw + S) * pop), ph = g2(S + 28), X = g2(960 - pw / 2), Y = g2(y - ph / 2);
+    const [bg, hi, lo, rule] = foe ? [PL.red, PL.pink, PL.wine, PL.red] : [PL.wine, PL.red, PL.umber, PL.gold], sk = U.hx(f.col);
+    M.pxGlow(ctx, 960, y, pw * 0.7, sk, 0.35 * a);
+    const lw = 120 + f.tier * 30, gx = pw / 2 + 12;
+    [-1, 1].forEach(sd => { const x0 = sd < 0 ? 960 - gx - lw : 960 + gx; U.box(ctx, x0, y - 3, lw, 6, rule); U.R(ctx, sd < 0 ? 960 - gx - lw * 0.4 : 960 + gx, y - 3, lw * 0.4, 6, sk); });
+    U.box(ctx, X, Y, pw, ph, bg, 4); U.R(ctx, X, Y, pw, 6, hi); U.R(ctx, X, Y + ph - 6, pw, 6, lo);
+    M.UI.chase(ctx, X + 8, Y - 16, pw - 16, Tq); M.UI.chase(ctx, X + 8, Y + ph + 10, pw - 16, Tq, true);
+    let px = 960 - chars.reduce((w, ch) => w + glyph(ch, size).width, 0) / 2;
+    chars.forEach((ch, i) => { const c = glyph(ch, size), ink = M.pxTextCanvas(ch, size, PL.ink, { ink: PL.ink }), ph2 = (Tq * 1.25 + (chars.length - i) * 0.12) % 1, dy = still ? 0 : [0, -0.14, 0, 0.05][Math.floor(ph2 * 4)] * size, cy = g2(y + dy - c.height / 2); ctx.drawImage(ink, g2(px), cy + 4, c.width, c.height); ctx.drawImage(c, g2(px), cy, c.width, c.height); px += c.width; });
+    for (let i = 0; i < 6; i++) { const q = (Tq * 1.4 + i / 6) % 1, sx = 960 + (i % 2 ? 1 : -1) * (gx + lw * q), sy = y - 18 + Math.sin(i * 2 + Tq * 6) * 14; U.R(ctx, sx - 3, sy - 3, 6, 6, i % 2 ? PL.butter : sk); }
   } else if (e) {
+    // 头顶小字：像素字 + 墨描边，调色板色
     const y = e.y - 88 * e.sz - 40 - p * 20;
-    M.pxText(ctx, f.text, e.x, y, (24 + f.tier * 6) * pop, lighten(f.col, 0.25), { bold: 1 });
+    U.text(ctx, f.text, e.x, y, g2((f.tier >= 1 ? 30 : 26) * pop), lighten(f.col, 0.25));
   }
   ctx.restore();
 }
@@ -219,12 +243,13 @@ function drawRing(ctx, f, T) {
   ctx.save(); ctx.globalAlpha *= 1 - p; add(ctx, () => M.pxRing(ctx, f.x, f.y, r, r * 0.9, f.col && f.col.length >= 7 ? f.col : '#ffffff', { dense: 0.7, w: Math.max(1, Math.round((f.w || 6) / 5)) })); ctx.restore();
 }
 function drawFloat(ctx, f, T) {
-  const d = T - f.t0; if (d < 0) return; const p = clamp(d / f.life, 0, 1), y = f.y - 70 * eo(p);
+  // 飘字：颜色落到调色板；数字用机台数码（顶两行亮一阶、墨描边），文字用像素字，字号吸附到字号阶梯
+  const d = T - f.t0; if (d < 0) return; const p = clamp(d / f.life, 0, 1), y = f.y - 70 * eo(p), U = M.bUI;
   const col = f.col && f.col.length >= 7 ? f.col : '#ffffff';
-  ctx.save(); ctx.globalAlpha *= p < 0.7 ? 1 : 1 - (p - 0.7) / 0.3;
+  ctx.save(); ctx.globalAlpha *= p < 0.7 ? 1 : Math.ceil((1 - (p - 0.7) / 0.3) * 4) / 4;
   const isNum = f.num || /^[+\-]?[\d,.KMB%×]+$/.test(String(f.text));
-  if (isNum) { const s = (f.size >= 46 ? 3 : f.size >= 30 ? 2 : 1) + (d < 0.1 ? 1 : 0); M.pxNum(ctx, String(f.text), f.x, y, col, s); }
-  else M.pxText(ctx, String(f.text), f.x, y, f.size * (d < 0.1 ? 1.25 : 1), col, { bold: 1 });
+  if (isNum) { const s = (f.size >= 46 ? 3 : f.size >= 30 ? 2 : 1) + (d < 0.1 ? 1 : 0); U.num(ctx, String(f.text), f.x, y, col, s); }
+  else U.text(ctx, String(f.text), f.x, y, U.g2(snapT(f.size) * (d < 0.1 ? 1.25 : 1)), col);
   ctx.restore();
 }
 M.drawFxPx = function (ctx, f, T, b) {
@@ -253,8 +278,17 @@ M.drawFxPx = function (ctx, f, T, b) {
 // HUD inside the field: skill focus vignette + running skill-damage counter (top right)
 M.drawBattleHudPx = function (ctx, b, T) {
   if (!M.pixelMode) return;
-  const fo = b.focus; if (fo && T < fo.until && fo.ent.alive) { const e = fo.ent, k = clamp(Math.min(T - fo.t0, fo.until - T) / 0.15, 0, 1); const g = ctx.createRadialGradient(e.x, e.y - 50, 80, e.x, e.y - 50, 900); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(6,2,12,' + (0.55 * k) + ')'); ctx.fillStyle = g; ctx.fillRect(0, 0, FW, FH); }
-  const m = b.meter; if (m && m.total > 0 && T - m.last < 1.6) { const a = clamp((1.6 - (T - m.last)) / 0.4, 0, 1), pop = T - m.last < 0.1 ? 1 : 0; ctx.save(); ctx.globalAlpha *= a; M.pxNum(ctx, '+' + fmt(m.total), 1880, 44, '#ff5a6a', 3 + pop, { align: 'right', hl: '#ffd0d8' }); ctx.restore(); }
+  const U = M.bUI, PL = U.P;
+  // 技能聚焦：墨色硬边色带暗角，按 3 阶渐入渐出
+  const fo = b.focus; if (fo && T < fo.until && fo.ent.alive) { const e = fo.ent, k = Math.ceil(clamp(Math.min(T - fo.t0, fo.until - T) / 0.15, 0, 1) * 3) / 3; if (k > 0) { ctx.fillStyle = M.UI.rg(ctx, e.x, e.y - 50, 80, 900, [[0, 'rgba(7,6,15,0)'], [1, 'rgba(7,6,15,' + (0.55 * k).toFixed(2) + ')']], 5); ctx.fillRect(0, 0, FW, FH); } }
+  // 技能伤害计：夜蓝机箱小面板（4px 墨框、斜面、8px 硬投影），红字机台数码，按阶淡出（不加文字标签，数字自己说明）
+  const m = b.meter; if (m && m.total > 0 && T - m.last < 1.6) {
+    const a = Math.ceil(clamp((1.6 - (T - m.last)) / 0.4, 0, 1) * 4) / 4, pop = T - m.last < 0.1 && !(M.PJ && M.PJ.reduced) ? 1 : 0, str = '+' + fmt(m.total);
+    const dw = M.pxNumCanvas(str, PL.red, { ink: PL.ink, hl: PL.pink }).width * 3, W = U.g2(dw + 32), H = 76, X = 1888 - W, Y = 36;
+    ctx.save(); ctx.globalAlpha *= a;
+    U.R(ctx, X + 4, Y + 4, W + 8, H + 8, PL.ink); U.box(ctx, X, Y, W, H, PL.night, 4); U.R(ctx, X, Y, W, 2, PL.dusk); U.R(ctx, X, Y, 2, H, PL.dusk); U.R(ctx, X, Y + H - 4, W, 4, PL.abyss); U.R(ctx, X + W - 2, Y, 2, H, PL.abyss);
+    U.num(ctx, str, 1872, Y + H / 2 + 6, PL.red, 3 + pop, { align: 'right', hl: PL.pink });
+    ctx.restore(); }
 };
 
 // ───────── post-process: keep pixels crisp ─────────

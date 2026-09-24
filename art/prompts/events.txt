@@ -1,0 +1,28 @@
+# 奇遇插画（26 张）：每行「图片 key|画面」，共用前缀见 PREFIX；生成后用 tools/pj-bust.js 的 --event 模式像素化到 art/events/<key>.png
+PREFIX|Pixel art illustration for a dark-fantasy midnight arcade roguelike game event. Single centered subject, fully visible, three-quarter view, dramatic warm rim light, deep shadows, rich saturated accents, crisp dark outline, limited palette, no anti-aliasing, still readable when shrunk to 96x120 pixels. Plain flat pure white background, no text, no frame, no border. Subject:
+musician|a faceless wandering violinist in a tattered long coat and wide-brimmed hat, his face a smooth blank void, holding his violin bow out toward the viewer, faint glowing music notes drifting
+old|a hunched old seamstress granny with round spectacles and a knitted shawl, holding a giant silver needle trailing glowing red thread, a pincushion on her wrist
+well|an old mossy stone wishing well with a small wooden roof and a hanging bucket, a faint golden glow and shimmering coins deep inside
+child|a lost little girl in a hooded coat holding a small glowing lantern, looking back over her shoulder, a trail of faintly glowing footprints behind her
+tomb|a nameless weathered tombstone on a mound of freshly dug earth, a shovel stuck in the soil, a half-melted candle burning on top of the stone
+gurney|an abandoned hospital medicine cabinet with six small glass bottles, two labels smeared with dried blood, a rusty gurney beside it
+mirror|a tall ornate standing mirror in a tarnished gilded frame, the reflection inside is a dark shadowy figure moving on its own
+candle|a dark stone blood altar with a silver chalice overflowing with blood and tall red candles dripping wax around it
+stall|a sly travelling peddler with a huge backpack lifting a cloth off three potion bottles on a small wooden cart
+u_pick|an abandoned mine entrance with wooden support beams, a pickaxe leaning against glowing crystal ore, loose rocks hanging above
+e_wheel|a faceless croupier in a black tuxedo behind a red and black roulette wheel, a white ball bouncing on the wheel
+e_fruit|an old slot machine with three reels showing lucky sevens, a coin slot and a pull lever, flickering neon lights
+e_claw|a glowing arcade claw crane machine packed with plush toys that look like tiny monsters and soldiers
+e_pachinko|an upright pachinko machine with rows of brass pins and silver balls bouncing down, colorful pockets at the bottom
+e_tree|the colossal ancient world tree whose roots wrap around small floating worlds, a single glowing golden fruit hanging from a branch
+e_card|a blindfolded fortune teller in a violet hood sitting at a small round table with three face-down tarot cards and a candle
+e_egg|three large golden eggs glowing hot on a red velvet stand with a small golden hammer lying beside them
+t_dice|a tall shadowy figure in a top hat with glowing eyes pushing two bone dice forward with a gloved hand
+e_fate|a massive stone wheel of fate carved with countless names, blood running along the carved grooves, heavy chains on its side
+e_spring|an underground hot spring pool inside a cave, rising steam, glowing mineral rocks around the rim, warm orange light
+e_trap|a small treasure chest at the far side of a grid of stone floor tiles, some tiles marked with numbers, a half-buried landmine with a blinking red light
+e_cat|a golden lucky cat maneki-neko beckoning with its raised paw, gold coins and gold bars raining around it, one black bomb falling among them
+e_market|a black-market dealer in a dark hooded cloak revealing a glowing blueprint scroll from inside the cloak, only a sly grin visible under the hood
+e_trainer|a tough underground boxing coach with a cigarette in his mouth, taped fists and a tank top, a heavy punching bag hanging behind him
+e_statue|an ancient sleeping stone statue of a giant seated figure with three carved concentric rings on its chest, moss and cracks, eyes closed
+e_arena|two monsters facing off in a small gladiator arena pit, a snarling horned beast and an armored brute, crowd silhouettes behind the wall

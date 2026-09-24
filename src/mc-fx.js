@@ -6,7 +6,23 @@ const eo = (t) => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
 const eback = (t) => { t = clamp(t, 0, 1); const c = 1.9; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
 const eel = (t) => { t = clamp(t, 0, 1); if (t === 0 || t === 1) return t; return Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * (2 * Math.PI / 3)) + 1; };
 M.ease = { eo, eback, eel, clamp };
-const CNF = "'Noto Serif SC', serif", NUMF = "'Cinzel', 'Noto Serif SC', serif";
+// ───────── Pixel Juice 画布工具（docs/design.md §11.5）：调色板、按帧步进、字号阶梯 ─────────
+const U = M.UI, P = (M.PJ && M.PJ.PAL) || {};
+const PC = new Map(), palC = (c) => { if (typeof c !== 'string') return c; let r = PC.get(c); if (r === undefined) { r = U.pal(c); if (PC.size > 600) PC.clear(); PC.set(c, r); } return r; };
+const RM = () => !!(M.PJ && M.PJ.reduced);
+const stepT = (t, fps) => (RM() ? t : Math.floor(t * fps) / fps);             // 动效按 fps 取样，一格一格地动
+const st4 = (v) => Math.round(clamp(v, 0, 1) * 4) / 4;                           // 透明度分 4 档
+const seq = (A, d, dt) => (RM() || d >= A.length * dt ? A[A.length - 1] : A[Math.max(0, Math.floor(d / dt))]); // 按格播放的数值序列
+const POP = [1.45, 0.9, 1.06, 1], SLAM = [3.2, 2.2, 1.4, 0.92, 1.08, 1];
+const TS = [18, 22, 26, 30, 32, 40, 52, 64], snapSz = (s) => (s > 64 ? Math.round(s / 4) * 4 : TS.reduce((b, v) => (Math.abs(v - s) <= Math.abs(b - s) ? v : b), TS[0]));
+const R = (x, a, b, w, h, c) => U.R(x, a, b, w, h, c);
+// 压暗：和 U.dim 一样（墨色 + 6px 夜色棋盘网点），网点用一张 12px 图案一次铺满（U.dim 逐格画，一次要几毫秒）
+let DP = null;
+M.fxDim = function (x, al) {
+  al = al == null ? 1 : al; if (!(al > 0)) return;
+  if (!DP) { DP = document.createElement('canvas'); DP.width = DP.height = 12; const c = DP.getContext('2d'); c.fillStyle = P.night; c.fillRect(0, 0, 6, 6); c.fillRect(6, 6, 6, 6); }
+  x.save(); x.imageSmoothingEnabled = false; x.globalAlpha = al * 0.82; R(x, 0, 0, 1920, 1080, P.ink); x.globalAlpha = al * 0.35; x.fillStyle = x.createPattern(DP, 'repeat'); x.fillRect(0, 0, 1920, 1080); x.restore();
+};
 
 // ───────── audio: layered synth + reverb + compressor ─────────
 let AC = null, OUT = null, DRY = null, REVG = null, pad = null;
@@ -172,28 +188,39 @@ M.Ambient = class {
 };
 
 // ───────── UI fx layer (flyers, bursts, confetti, text pops) ─────────
+// 发光 → 4 段硬边色带（叠加、低透明度）
+function bglow(ctx, x, y, r, col, a) {
+  const c = palC(col); if (!(a > 0) || !(r > 1) || typeof c !== 'string' || c[0] !== '#') return;
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(1, a); ctx.fillStyle = U.rg(ctx, x, y, 0, r, [[0, c], [0.35, c + '66'], [1, c + '00']], 4); ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+}
+// 光芒 → 纯色楔形，内外两段（叠加后内段更亮）；alt = 隔一道暗一点
+function hardRays(ctx, x, y, n, r, hw, col, a, rot, alt) {
+  if (!(a > 0)) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(x, y); ctx.rotate(rot || 0); ctx.fillStyle = palC(col);
+  for (let i = 0; i < n; i++) { ctx.rotate(Math.PI * 2 / n); ctx.globalAlpha = a * (alt && i % 2 === 0 ? 0.6 : 1); [1, 0.5].forEach(k => { ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(r * k, -hw * k); ctx.lineTo(r * k, hw * k); ctx.closePath(); ctx.fill(); }); }
+  ctx.restore();
+}
 M.FxLayer = class {
-  constructor() { this.items = []; this.t = 0; this.shake = 0; this.trauma = 0; this.sx = 0; this.sy = 0; this.sr = 0; this.flashA = 0; this.flashC = '#fff'; this.freezeUntil = 0; }
+  constructor() { this.items = []; this.t = 0; this.shake = 0; this.trauma = 0; this.sx = 0; this.sy = 0; this.sr = 0; this.flashA = 0; this.flashC = P.white; this.freezeUntil = 0; }
   get busy() { return this.items.length > 0 || this.trauma > 0.01 || this.flashA > 0.01; }
   get frozen() { return performance.now() < this.freezeUntil; }
   freeze(ms) { this.freezeUntil = Math.max(this.freezeUntil, performance.now() + ms); }
-  spark(x, y, col, n, o = {}) { for (let i = 0; i < n; i++) { const a = o.dir != null ? o.dir + (Math.random() - 0.5) * (o.spread || 1) : Math.random() * Math.PI * 2, v = (o.v || 900) * (0.3 + Math.random() * 0.9); this.add({ k: 'spark', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, col: Math.random() < 0.3 ? '#ffffff' : col, w: (o.w || 5) * (0.5 + Math.random()), life: (o.life || 0.45) * (0.5 + Math.random() * 0.8), g: o.g == null ? 600 : o.g, delay: o.delay }); } }
-  shock(x, y, r, col, life, delay) { this.add({ k: 'shock', x, y, r: r || 400, col: col || '#ffffff', life: life || 0.45, delay }); }
-  flare(x, y, r, col, life, delay) { this.add({ k: 'flare', x, y, r: r || 200, col: col || '#ffffff', life: life || 0.25, delay }); }
-  explode(x, y, col, p = 1) { this.flare(x, y, 160 + 120 * p, '#ffffff', 0.22 + 0.06 * p); this.flare(x, y, 260 + 200 * p, col, 0.4 + 0.1 * p); this.shock(x, y, 260 + 260 * p, col, 0.42 + 0.08 * p); this.shock(x, y, 180 + 200 * p, '#ffffff', 0.32, 0.06); if (p >= 2) this.shock(x, y, 500 + 300 * p, col, 0.7, 0.12); this.spark(x, y, col, Math.round(26 * p), { v: 700 + 300 * p, w: 4 + p * 2 }); this.burst(x, y, col, Math.round(14 * p), { v: 420 + 120 * p, s: 10 + 4 * p }); this.kick(5 + 7 * p); this.flash(col, 0.12 + 0.12 * p); this.freeze(30 + 35 * p); }
-  clickBurst(x, y, col) { this.flare(x, y, 60, '#ffffff', 0.14); this.ring(x, y, 6, 70, col || '#ffe08a', 5, 0.28); this.spark(x, y, col || '#ffe08a', 9, { v: 520, w: 3, life: 0.3, g: 300 }); this.kick(1.6); }
+  spark(x, y, col, n, o = {}) { for (let i = 0; i < n; i++) { const a = o.dir != null ? o.dir + (Math.random() - 0.5) * (o.spread || 1) : Math.random() * Math.PI * 2, v = (o.v || 900) * (0.3 + Math.random() * 0.9); this.add({ k: 'spark', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, col: Math.random() < 0.3 ? P.white : col, w: (o.w || 5) * (0.5 + Math.random()), life: (o.life || 0.45) * (0.5 + Math.random() * 0.8), g: o.g == null ? 600 : o.g, delay: o.delay }); } }
+  shock(x, y, r, col, life, delay) { this.add({ k: 'shock', x, y, r: r || 400, col: col || P.white, life: life || 0.45, delay }); }
+  flare(x, y, r, col, life, delay) { this.add({ k: 'flare', x, y, r: r || 200, col: col || P.white, life: life || 0.25, delay }); }
+  explode(x, y, col, p = 1) { this.flare(x, y, 160 + 120 * p, P.white, 0.22 + 0.06 * p); this.flare(x, y, 260 + 200 * p, col, 0.4 + 0.1 * p); this.shock(x, y, 260 + 260 * p, col, 0.42 + 0.08 * p); this.shock(x, y, 180 + 200 * p, P.white, 0.32, 0.06); if (p >= 2) this.shock(x, y, 500 + 300 * p, col, 0.7, 0.12); this.spark(x, y, col, Math.round(26 * p), { v: 700 + 300 * p, w: 4 + p * 2 }); this.burst(x, y, col, Math.round(14 * p), { v: 420 + 120 * p, s: 10 + 4 * p }); this.kick(5 + 7 * p); this.flash(col, 0.12 + 0.12 * p); this.freeze(30 + 35 * p); }
+  clickBurst(x, y, col) { this.flare(x, y, 60, P.white, 0.14); this.ring(x, y, 6, 70, col || P.gold, 5, 0.28); this.spark(x, y, col || P.gold, 9, { v: 520, w: 3, life: 0.3, g: 300 }); this.kick(1.6); }
   coins(x, y, n, o = {}) { for (let i = 0; i < n; i++) { const a = -Math.PI / 2 + (Math.random() - 0.5) * (o.spread || 1.3), v = (o.v || 900) * (0.5 + Math.random() * 0.6); this.add({ k: 'coin', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, ph: Math.random() * 6, life: 1.4 + Math.random() * 0.6, delay: (o.delay || 0) + Math.random() * (o.spreadT || 0.4) }); } }
-  add(o) { o.t0 = this.t + (o.delay || 0); this.items.push(o); return o; }
+  add(o) { o.t0 = this.t + (o.delay || 0); if (typeof o.col === 'string') o.col = palC(o.col); this.items.push(o); return o; } // 颜色一进来就贴到调色板
   fly(img, from, to, o = {}) {
     const cx = (from.x + to.x) / 2 + (o.curve == null ? (Math.random() - 0.5) * 300 : o.curve), cy = Math.min(from.y, to.y) - (o.arc == null ? 260 : o.arc);
-    return this.add({ k: 'fly', img, from, to, cx, cy, life: o.dur || 0.75, s0: o.s0 || 1, s1: o.s1 == null ? 0.45 : o.s1, col: o.col || '#ffe08a', onLand: o.onLand, delay: o.delay, landed: false, trail: [] });
+    return this.add({ k: 'fly', img, from, to, cx, cy, life: o.dur || 0.75, s0: o.s0 || 1, s1: o.s1 == null ? 0.45 : o.s1, col: o.col || P.gold, onLand: o.onLand, delay: o.delay, landed: false, trail: [] });
   }
-  burst(x, y, col, n, o = {}) { for (let i = 0; i < (n || 16); i++) { const a = Math.random() * Math.PI * 2, v = (o.v || 380) * (0.35 + Math.random() * 0.8); this.add({ k: 'pt', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - (o.up || 120), g: o.g == null ? 900 : o.g, col: i % 4 === 0 ? '#ffffff' : col, s: (o.s || 10) * (0.5 + Math.random()), life: (o.life || 0.7) * (0.6 + Math.random() * 0.6), delay: o.delay }); } }
-  confetti(n, o = {}) { const cols = o.cols || ['#ffcc33', '#ff5a7a', '#6fe0ff', '#9cff7a', '#ffffff', '#c78aff']; for (let i = 0; i < n; i++) this.add({ k: 'conf', x: o.x == null ? Math.random() * 1920 : o.x + (Math.random() - 0.5) * 200, y: o.y == null ? -30 - Math.random() * 300 : o.y, vx: (Math.random() - 0.5) * (o.x == null ? 200 : 1400), vy: o.y == null ? 120 + Math.random() * 200 : -600 - Math.random() * 700, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 14, col: cols[i % cols.length], w: 10 + Math.random() * 10, h: 6 + Math.random() * 6, life: 2.6 + Math.random(), delay: (o.delay || 0) + Math.random() * 0.2 }); }
+  burst(x, y, col, n, o = {}) { for (let i = 0; i < (n || 16); i++) { const a = Math.random() * Math.PI * 2, v = (o.v || 380) * (0.35 + Math.random() * 0.8); this.add({ k: 'pt', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - (o.up || 120), g: o.g == null ? 900 : o.g, col: i % 4 === 0 ? P.white : col, s: (o.s || 10) * (0.5 + Math.random()), life: (o.life || 0.7) * (0.6 + Math.random() * 0.6), delay: o.delay }); } }
+  confetti(n, o = {}) { const cols = o.cols || [P.gold, P.red, P.teal, P.lime, P.white, P.violet]; for (let i = 0; i < n; i++) this.add({ k: 'conf', x: o.x == null ? Math.random() * 1920 : o.x + (Math.random() - 0.5) * 200, y: o.y == null ? -30 - Math.random() * 300 : o.y, vx: (Math.random() - 0.5) * (o.x == null ? 200 : 1400), vy: o.y == null ? 120 + Math.random() * 200 : -600 - Math.random() * 700, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 14, col: cols[i % cols.length], w: 10 + Math.random() * 10, h: 6 + Math.random() * 6, life: 2.6 + Math.random(), delay: (o.delay || 0) + Math.random() * 0.2 }); }
   ring(x, y, r0, r1, col, w, life, delay) { this.add({ k: 'ring', x, y, r0, r1, col, w, life: life || 0.5, delay }); }
   rays(x, y, col, life, o = {}) { return this.add({ k: 'rays', x, y, col, life: life || 1.5, n: o.n || 14, r: o.r || 520, delay: o.delay, spin: o.spin || 0.4 }); }
   pop(x, y, text, col, size, o = {}) { this.add({ k: 'pop', x, y, text, col, size: size || 60, life: o.life || 1.1, rise: o.rise == null ? 80 : o.rise, num: o.num, delay: o.delay, slam: o.slam }); }
-  flash(col, a) { this.flashC = col; this.flashA = Math.max(this.flashA, a); }
+  flash(col, a) { this.flashC = palC(col); this.flashA = Math.max(this.flashA, a); }
   kick(v) { this.trauma = Math.min(1, this.trauma + v / 34); }
   update(dt) {
     this.t += dt; this.trauma = Math.max(0, this.trauma - dt * 1.9); const tr = this.trauma * this.trauma, T = this.t; this.shake = tr * 30; this.sx = tr * 34 * (Math.sin(T * 61) * 0.6 + Math.sin(T * 97 + 1) * 0.4); this.sy = tr * 30 * (Math.sin(T * 71 + 2) * 0.6 + Math.sin(T * 113 + 3) * 0.4); this.sr = tr * 1.1 * Math.sin(T * 53 + 5); this.flashA = Math.max(0, this.flashA - dt * 3);
@@ -213,42 +240,53 @@ M.FxLayer = class {
     for (const it of this.items) {
       const d = this.t - it.t0; if (d < 0) continue; const p = clamp(d / it.life, 0, 1);
       if (it.k === 'fly') {
-        const P = this.pos(it, p); it.trail.unshift(P); if (it.trail.length > 10) it.trail.pop();
-        ctx.save(); ctx.globalCompositeOperation = 'lighter';
-        it.trail.forEach((q, i) => { ctx.globalAlpha = 0.35 * (1 - i / 10); ctx.fillStyle = it.col; const s = 16 * (1 - i / 10); ctx.fillRect(q.x - s / 2, q.y - s / 2, s, s); });
+        const Q = this.pos(it, p); it.trail.unshift(Q); if (it.trail.length > 10) it.trail.pop();
+        // 拖尾：3px 网格上的方块
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = it.col;
+        it.trail.forEach((q, i) => { ctx.globalAlpha = 0.35 * (1 - i / 10); const s = Math.max(3, Math.round(16 * (1 - i / 10) / 3) * 3); ctx.fillRect(Math.round(q.x - s / 2), Math.round(q.y - s / 2), s, s); });
         ctx.restore();
-        M.glow(ctx, P.x, P.y, 70, it.col, 0.5);
+        bglow(ctx, Q.x, Q.y, 70, it.col, 0.5);
         const pop = p < 0.18 ? eback(p / 0.18) : 1, sc = (it.s0 + (it.s1 - it.s0) * eo(p)) * pop * (p < 0.18 ? 1.15 : 1);
-        if (it.img) { const w = it.img.width * sc, h = it.img.height * sc; ctx.imageSmoothingEnabled = false; ctx.save(); ctx.translate(P.x, P.y); ctx.rotate(Math.sin(p * 9) * 0.15 * (1 - p)); ctx.drawImage(it.img, -w / 2, -h / 2, w, h); ctx.restore(); }
-        else if (it.text) { ctx.font = `${Math.round(44 * sc)}px ${CNF}`; ctx.textAlign = 'center'; ctx.fillStyle = '#000'; ctx.fillText(it.text, P.x + 3, P.y + 3); ctx.fillStyle = it.col; ctx.fillText(it.text, P.x, P.y); }
+        if (it.img) { const w = it.img.width * sc, h = it.img.height * sc; ctx.imageSmoothingEnabled = false; ctx.save(); ctx.translate(Q.x, Q.y); ctx.rotate(Math.sin(p * 9) * 0.15 * (1 - p)); ctx.drawImage(it.img, -w / 2, -h / 2, w, h); ctx.restore(); }
+        else if (it.text) U.text(ctx, it.text, Q.x, Q.y, snapSz(44 * sc), it.col);
       } else if (it.k === 'pt') {
-        const x = it.x + it.vx * d, y = it.y + it.vy * d + 0.5 * it.g * d * d; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1 - p; ctx.fillStyle = it.col; const s = it.s * (1 - p * 0.5); ctx.fillRect(x - s / 2, y - s / 2, s, s); ctx.restore();
+        const x = it.x + it.vx * d, y = it.y + it.vy * d + 0.5 * it.g * d * d; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = st4(1 - p); ctx.fillStyle = it.col; const s = Math.max(3, Math.round(it.s * (1 - p * 0.5) / 3) * 3); ctx.fillRect(Math.round(x - s / 2), Math.round(y - s / 2), s, s); ctx.restore();
       } else if (it.k === 'conf') {
         const x = it.x + it.vx * d * (it.vy < 0 ? Math.max(0.2, 1 - d * 0.5) : 1), y = it.y + it.vy * d + (it.vy < 0 ? 700 * d * d : 0), r = it.rot + it.vr * d;
-        ctx.save(); ctx.globalAlpha = p > 0.8 ? (1 - p) / 0.2 : 1; ctx.translate(x + Math.sin(d * 4 + it.rot) * 30, y); ctx.rotate(r); ctx.scale(1, Math.abs(Math.cos(d * 6 + it.rot))); ctx.fillStyle = it.col; ctx.fillRect(-it.w / 2, -it.h / 2, it.w, it.h); ctx.restore();
+        ctx.save(); ctx.globalAlpha = p > 0.8 ? st4((1 - p) / 0.2) : 1; ctx.translate(x + Math.sin(d * 4 + it.rot) * 30, y); ctx.rotate(r); ctx.scale(1, Math.abs(Math.cos(d * 6 + it.rot))); ctx.fillStyle = it.col; ctx.fillRect(-it.w / 2, -it.h / 2, it.w, it.h); ctx.restore();
       } else if (it.k === 'ring') {
-        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1 - p; ctx.strokeStyle = it.col; ctx.lineWidth = it.w * (1 - p * 0.6); ctx.beginPath(); ctx.arc(it.x, it.y, it.r0 + (it.r1 - it.r0) * eo(p), 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+        // 硬边圈：6px → 3px，半径按 3px 取整，透明度分 4 档
+        const r = Math.max(2, Math.round((it.r0 + (it.r1 - it.r0) * eo(p)) / 3) * 3);
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = st4(1 - p); ctx.strokeStyle = it.col; ctx.lineWidth = (it.w || 3) >= 5 && p < 0.5 ? 6 : 3; ctx.beginPath(); ctx.arc(it.x, it.y, r, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
       } else if (it.k === 'rays') {
-        const a = p < 0.15 ? p / 0.15 : p > 0.8 ? (1 - p) / 0.2 : 1; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(it.x, it.y); ctx.rotate(d * it.spin);
-        for (let i = 0; i < it.n; i++) { ctx.rotate(Math.PI * 2 / it.n); const g = ctx.createLinearGradient(0, 0, it.r, 0); g.addColorStop(0, it.col + 'aa'); g.addColorStop(1, it.col + '00'); ctx.globalAlpha = a * 0.55; ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(it.r, -it.r * 0.12); ctx.lineTo(it.r, it.r * 0.12); ctx.closePath(); ctx.fill(); }
-        ctx.restore(); M.glow(ctx, it.x, it.y, it.r * 0.5, it.col, a * 0.5);
+        const a = st4(p < 0.15 ? p / 0.15 : p > 0.8 ? (1 - p) / 0.2 : 1);
+        hardRays(ctx, it.x, it.y, it.n, it.r, it.r * 0.12, it.col, a * 0.2, stepT(d, 8) * it.spin); bglow(ctx, it.x, it.y, it.r * 0.5, it.col, a * 0.5);
       } else if (it.k === 'spark') {
         const dd = d, dr = Math.exp(-dd * 3), x = it.x + it.vx * (1 - dr) / 3, y = it.y + it.vy * (1 - dr) / 3 + 0.5 * it.g * dd * dd, vx = it.vx * dr, vy = it.vy * dr + it.g * dd, L = 0.035;
-        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1 - p; ctx.strokeStyle = it.col; ctx.lineCap = 'round'; ctx.lineWidth = it.w * (1 - p * 0.7); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - vx * L, y - vy * L); ctx.stroke(); ctx.restore();
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = st4(1 - p); ctx.strokeStyle = it.col; ctx.lineCap = 'butt'; ctx.lineWidth = Math.max(3, Math.round(it.w * (1 - p * 0.7) / 3) * 3); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - vx * L, y - vy * L); ctx.stroke(); ctx.restore();
       } else if (it.k === 'shock') {
-        const r = it.r * eo(p), w = Math.max(2, 70 * (1 - p)); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = (1 - p) * 0.9;
-        const g = ctx.createRadialGradient(it.x, it.y, Math.max(0, r - w), it.x, it.y, r + 2); g.addColorStop(0, it.col + '00'); g.addColorStop(0.75, it.col + '88'); g.addColorStop(1, '#ffffffcc'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(it.x, it.y, r + 2, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+        // 冲击波：外圈 3px 白 + 内圈 6px 本色，拖一道半透明 3px 余波
+        const r = Math.round(it.r * eo(p) / 3) * 3, w = Math.max(2, 70 * (1 - p)); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = st4((1 - p) * 0.9);
+        if (r > 9) { ctx.lineWidth = 6; ctx.strokeStyle = it.col; ctx.beginPath(); ctx.arc(it.x, it.y, r - 6, 0, Math.PI * 2); ctx.stroke(); }
+        ctx.lineWidth = 3; ctx.strokeStyle = P.white; ctx.beginPath(); ctx.arc(it.x, it.y, Math.max(2, r), 0, Math.PI * 2); ctx.stroke();
+        const r2 = r - Math.round(w * 0.6 / 3) * 3; if (w > 18 && r2 > 3) { ctx.globalAlpha *= 0.5; ctx.strokeStyle = it.col; ctx.beginPath(); ctx.arc(it.x, it.y, r2, 0, Math.PI * 2); ctx.stroke(); }
+        ctx.restore();
       } else if (it.k === 'flare') {
-        const r = it.r * (0.4 + 0.6 * eo(p)); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.pow(1 - p, 1.5); const g = ctx.createRadialGradient(it.x, it.y, 0, it.x, it.y, r); g.addColorStop(0, '#ffffff'); g.addColorStop(0.25, it.col + 'ee'); g.addColorStop(1, it.col + '00'); ctx.fillStyle = g; ctx.fillRect(it.x - r, it.y - r, r * 2, r * 2); ctx.restore();
+        // 闪光：4 段硬边色带
+        const r = it.r * (0.4 + 0.6 * eo(p)); if (r > 1) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = st4(Math.pow(1 - p, 1.5)); ctx.fillStyle = U.rg(ctx, it.x, it.y, 0, r, [[0, P.white], [0.25, it.col + 'ee'], [1, it.col + '00']], 4); ctx.beginPath(); ctx.arc(it.x, it.y, r, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
       } else if (it.k === 'coin') {
-        const x = it.x + it.vx * d, y = it.y + it.vy * d + 1100 * d * d, w = Math.abs(Math.cos(d * 12 + it.ph)) * 22 + 4; ctx.save(); ctx.globalAlpha = p > 0.8 ? (1 - p) / 0.2 : 1; ctx.fillStyle = '#8a5a10'; ctx.fillRect(x - w / 2, y - 12, w, 26); ctx.fillStyle = '#ffcc33'; ctx.fillRect(x - w / 2, y - 13, w, 22); ctx.fillStyle = '#fff6c0'; ctx.fillRect(x - w / 4, y - 9, Math.max(2, w / 4), 8); ctx.restore(); M.glow(ctx, x, y, 30, '#ffcc33', 0.3);
+        // 金币：方块币（奶油左上亮边、琥珀右下暗边、3px 墨框），翻面时只剩窄条
+        const x = it.x + it.vx * d, y = it.y + it.vy * d + 1100 * d * d, w = Math.max(6, Math.round((Math.abs(Math.cos(d * 12 + it.ph)) * 22 + 4) / 3) * 3), X = Math.round(x - w / 2), Y = Math.round(y - 12);
+        ctx.save(); ctx.globalAlpha = p > 0.8 ? st4((1 - p) / 0.2) : 1; R(ctx, X - 3, Y - 3, w + 6, 30, P.ink); R(ctx, X, Y, w, 24, P.gold); R(ctx, X, Y + 18, w, 6, P.amber); R(ctx, X, Y, w, 3, P.butter);
+        if (w > 9) { R(ctx, X + w - 3, Y, 3, 24, P.amber); R(ctx, X, Y, 3, 21, P.butter); } ctx.restore(); bglow(ctx, x, y, 30, P.gold, 0.3);
       } else if (it.k === 'pop') {
-        const sc = it.slam ? (p < 0.1 ? 3.2 - 2.2 * eo(p / 0.1) : 1 + 0.12 * Math.exp(-(p - 0.1) * 14) * Math.cos((p - 0.1) * 60)) : (p < 0.15 ? 0.3 + eback(p / 0.15) * 0.9 : 1.2 - 0.2 * eo((p - 0.15) / 0.25)), y = it.y - it.rise * eo(p);
-        ctx.save(); ctx.globalAlpha = p > 0.75 ? (1 - p) / 0.25 : 1; ctx.translate(it.x, y); ctx.scale(sc, sc); ctx.font = `${it.size}px ${it.num ? NUMF : CNF}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.lineWidth = it.size * 0.16; ctx.strokeStyle = '#140c10'; ctx.strokeText(it.text, 0, 0); ctx.fillStyle = it.col; ctx.fillText(it.text, 0, 0); ctx.restore();
+        // 飘字：像素字 + 3px 八向墨描边；弹 4 格（砸下来 6 格），上浮按 6px 一格
+        const sc = seq(it.slam ? SLAM : POP, d, it.slam ? 0.04 : 0.06), y = it.y - Math.round(it.rise * eo(p) / 6) * 6;
+        ctx.save(); ctx.globalAlpha = p > 0.75 ? st4((1 - p) / 0.25) : 1; ctx.translate(Math.round(it.x), Math.round(y)); ctx.scale(sc, sc);
+        U.text(ctx, it.text, 0, 0, snapSz(it.size), it.col, { outline: true, num: !!it.num }); ctx.restore();
       }
     }
-    if (this.flashA > 0) { ctx.globalAlpha = this.flashA; ctx.fillStyle = this.flashC; ctx.fillRect(0, 0, 1920, 1080); ctx.globalAlpha = 1; }
+    if (this.flashA > 0) { const a = Math.round(this.flashA * 10) / 10; if (a > 0) { ctx.globalAlpha = a; ctx.fillStyle = this.flashC; ctx.fillRect(0, 0, 1920, 1080); ctx.globalAlpha = 1; } }
   }
 };
 
@@ -262,149 +300,177 @@ M.reelP = function (r) {
 };
 M.reelLock = (r) => 2.55 + r.ups * 0.95 + (r.tease ? 0.75 : 0);
 M.reelDur = (r) => M.reelLock(r) + 1.5;
-function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 function bolt(ctx, x1, y1, x2, y2, col, w, seed) { let s = seed; const rnd = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; }; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(x1, y1); const n = 9; for (let i = 1; i < n; i++) { const t = i / n; ctx.lineTo(x1 + (x2 - x1) * t + (rnd() - 0.5) * 60, y1 + (y2 - y1) * t + (rnd() - 0.5) * 60); } ctx.lineTo(x2, y2); ctx.stroke(); ctx.strokeStyle = '#fff'; ctx.lineWidth = w * 0.35; ctx.stroke(); ctx.restore(); }
 M.bolt = bolt;
+// 四边框 / 像素箭头（dir 1 朝右、-1 朝左：一列一列缩短，3px 墨边）
+const frame = (x, a, b, w, h, k, c) => { R(x, a, b, w, k, c); R(x, a, b + h - k, w, k, c); R(x, a, b, k, h, c); R(x, a + w - k, b, k, h, c); };
+function parrow(x, bx, cy, dir, col) { const H = [48, 36, 24, 12], cw = 9, cx0 = (i) => (dir > 0 ? bx + i * cw : bx - (i + 1) * cw); H.forEach((h, i) => R(x, cx0(i) - 3, cy - h / 2 - 3, cw + 6, h + 6, P.ink)); H.forEach((h, i) => R(x, cx0(i), cy - h / 2, cw, h, col)); }
 M.drawReel = function (ctx, r, fx) {
   const t = r.t, N = r.tiles.length, p = M.reelP(r), lockT = M.reelLock(r), dur = M.reelDur(r);
   const vel = Math.abs(M.reelP(Object.assign({}, r, { t: t + 0.02 })) - p) / 0.02;
-  const cur = r.tiles[((Math.round(p) % N) + N) % N];
-  const inA = eback(t / 0.35), outA = clamp((dur - t) / 0.25, 0, 1);
+  const cur = r.tiles[((Math.round(p) % N) + N) % N], cc = palC(cur.c);
+  // 机箱的弹入、冲击、升品放大都按 15 帧取样
+  const ts = stepT(t, 15), inA = eback(ts / 0.35), outA = st4(clamp((dur - t) / 0.25, 0, 1));
   const X = 960, Y = 540;
   ctx.save();
-  ctx.globalAlpha = 0.72 * Math.min(1, t / 0.2) * outA; ctx.fillStyle = '#05030a'; ctx.fillRect(0, 0, 1920, 1080); ctx.globalAlpha = outA;
-  if (t > lockT) { const q = t - lockT; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(X, Y); ctx.rotate(q * 0.5); for (let i = 0; i < 16; i++) { ctx.rotate(Math.PI / 8); const g = ctx.createLinearGradient(0, 0, 900, 0); g.addColorStop(0, cur.c + 'cc'); g.addColorStop(1, cur.c + '00'); ctx.globalAlpha = 0.35 * Math.min(1, q * 3) * outA; ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(900, -80); ctx.lineTo(900, 80); ctx.fill(); } ctx.restore(); }
+  M.fxDim(ctx, 0.88 * st4(Math.min(1, t / 0.2)) * outA); ctx.globalAlpha = outA;
+  if (t > lockT) { const q = t - lockT; hardRays(ctx, X, Y, 16, 900, 80, cc, 0.12 * st4(q * 3) * outA, stepT(q, 8) * 0.5); }
   const upIdx = r.ups ? [...Array(r.ups)].map((_, i) => 2.55 + i * 0.95).findIndex(a => t >= a && t < a + 0.45) : -1;
   const sh = upIdx >= 0 ? (1 - (t - (2.55 + upIdx * 0.95)) / 0.45) * 16 : t > lockT && t < lockT + 0.3 ? (1 - (t - lockT) / 0.3) * 20 : 0;
-  const ant = t < lockT ? clamp((t - (lockT - 0.9)) / 0.9, 0, 1) : 0, punch = t >= lockT ? 1 + 0.16 * Math.exp(-(t - lockT) * 9) * Math.cos((t - lockT) * 30) : 1, upP = upIdx >= 0 ? 1 + 0.07 * (1 - (t - (2.55 + upIdx * 0.95)) / 0.45) : 1;
-  if (ant > 0) { ctx.globalAlpha = 0.35 * ant * outA; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 1920, 1080); ctx.globalAlpha = outA; }
-  const SC = inA * (0.85 + 0.15 * outA) * (1 + 0.08 * ant * ant) * punch * upP;
-  ctx.translate(X + (Math.random() - 0.5) * (sh + ant * 5), Y + (Math.random() - 0.5) * (sh + ant * 5)); ctx.scale(SC, SC);
-  const W = 820, H = 640;
-  // cabinet
-  const cg = ctx.createLinearGradient(0, -H / 2, 0, H / 2); cg.addColorStop(0, '#3a1224'); cg.addColorStop(0.5, '#1c0a14'); cg.addColorStop(1, '#2a0c18');
-  ctx.shadowColor = t > lockT ? cur.c : '#ff3a6a'; ctx.shadowBlur = 60; rr(ctx, -W / 2, -H / 2, W, H, 36); ctx.fillStyle = cg; ctx.fill(); ctx.shadowBlur = 0;
-  ctx.lineWidth = 14; const fg = ctx.createLinearGradient(-W / 2, -H / 2, W / 2, H / 2); fg.addColorStop(0, '#fff2b0'); fg.addColorStop(0.3, '#d9a53a'); fg.addColorStop(0.6, '#8a5a18'); fg.addColorStop(1, '#ffd970'); ctx.strokeStyle = fg; ctx.stroke();
-  // chasing bulbs
-  const per = 2 * (W + H) - 80, nb = 34, speed = vel > 0.5 ? 18 : t > lockT ? 10 : 4;
+  const ant = t < lockT ? clamp((ts - (lockT - 0.9)) / 0.9, 0, 1) : 0, punch = ts >= lockT ? 1 + 0.16 * Math.exp(-(ts - lockT) * 9) * Math.cos((ts - lockT) * 30) : 1, upP = upIdx >= 0 ? 1 + 0.07 * (1 - clamp((ts - (2.55 + upIdx * 0.95)) / 0.45, 0, 1)) : 1;
+  if (ant > 0) { ctx.globalAlpha = st4(0.35 * ant) * outA; R(ctx, 0, 0, 1920, 1080, P.ink); ctx.globalAlpha = outA; }
+  const SC = inA * (0.85 + 0.15 * outA) * (1 + 0.08 * ant * ant) * punch * upP, jig = () => Math.round((Math.random() - 0.5) * (sh + ant * 5) / 3) * 3;
+  ctx.translate(X + jig(), Y + jig()); ctx.scale(SC, SC);
+  const W = 820, H = 640, hw = W / 2, hh = H / 2;
+  // 机箱：酒红铁皮面板（墨框、斜面、铆钉、12px 硬投影）；锁定后外面多一圈 3px 品质色
+  U.plate(ctx, -hw, -hh, W, H, { fill: P.wine, hi: P.red, lo: P.umber });
+  if (t > lockT) frame(ctx, -hw - 9, -hh - 9, W + 18, H + 18, 3, cc);
+  // 跑马灯泡：12px 方灯 + 3px 墨框；亮 = 奶油（锁定后 = 品质色），灭 = 赭，不发光
+  const w2 = hw - 36, h2 = hh - 36, per = 4 * (w2 + h2), nb = 34, speed = vel > 0.5 ? 18 : t > lockT ? 10 : 4, lit = t > lockT ? cc : P.butter;
   for (let i = 0; i < nb; i++) {
-    let d = (i / nb) * per, bx, by; const w2 = W / 2 - 22, h2 = H / 2 - 22;
+    let d = (i / nb) * per, bx, by;
     if (d < 2 * w2) { bx = -w2 + d; by = -h2; } else if ((d -= 2 * w2) < 2 * h2) { bx = w2; by = -h2 + d; } else if ((d -= 2 * h2) < 2 * w2) { bx = w2 - d; by = h2; } else { d -= 2 * w2; bx = -w2; by = h2 - d; }
-    const on = (Math.floor(t * speed) + i) % 3 === 0;
-    ctx.fillStyle = on ? '#fff6c0' : '#5a3a18'; ctx.beginPath(); ctx.arc(bx, by, 7, 0, Math.PI * 2); ctx.fill();
-    if (on) M.glow(ctx, bx, by, 26, t > lockT ? cur.c : '#ffd060', 0.7);
+    const on = (Math.floor(t * speed) + i) % 3 === 0, qx = Math.round(bx / 3) * 3 - 6, qy = Math.round(by / 3) * 3 - 6;
+    R(ctx, qx - 3, qy - 3, 18, 18, P.ink); R(ctx, qx, qy, 12, 12, on ? lit : P.umber); if (on) R(ctx, qx, qy, 3, 3, P.white);
   }
-  // marquee
-  rr(ctx, -300, -H / 2 + 34, 600, 84, 18); ctx.fillStyle = '#0c0508'; ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = '#d9a53a'; ctx.stroke();
-  ctx.font = `56px ${CNF}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ffe08a'; ctx.shadowColor = '#ff9a3c'; ctx.shadowBlur = 20; ctx.fillText(r.title, 0, -H / 2 + 78); ctx.shadowBlur = 0;
-  if (r.icon) { ctx.imageSmoothingEnabled = false; ctx.drawImage(r.icon, -290, -H / 2 + 44, 64, 64); }
-  // window with cylinder
+  // 招牌灯箱压在机箱上沿，图标放在灯箱左头
+  const tw = U.measure(ctx, r.title, 60) + 4 * ([...String(r.title)].length - 1), mq = U.marquee(ctx, r.title, 0, -hh, { size: 60, t, minW: Math.max(560, tw + 180) });
+  if (r.icon) { ctx.imageSmoothingEnabled = false; ctx.drawImage(r.icon, Math.round(mq.x + 18), -hh - 32, 64, 64); }
+  // 窗口：深渊色凹槽 + 3px 暮色内圈，里面是滚筒
   const WX = -300, WY = -150, WW = 600, WH = 330;
-  ctx.save(); rr(ctx, WX, WY, WW, WH, 20); ctx.clip();
-  const bgw = ctx.createLinearGradient(0, WY, 0, WY + WH); bgw.addColorStop(0, '#050307'); bgw.addColorStop(0.5, '#1a1420'); bgw.addColorStop(1, '#050307'); ctx.fillStyle = bgw; ctx.fillRect(WX, WY, WW, WH);
-  const base = Math.floor(p), cy = WY + WH / 2, R = 190;
+  R(ctx, WX - 9, WY - 9, WW + 18, WH + 18, P.ink); R(ctx, WX - 3, WY - 3, WW + 6, WH + 6, P.dusk); R(ctx, WX, WY, WW, WH, P.abyss);
+  ctx.save(); ctx.beginPath(); ctx.rect(WX, WY, WW, WH); ctx.clip();
+  const base = Math.floor(p), cy = WY + WH / 2, RR = 190;
   for (let o = -3; o <= 3; o++) {
     const idx = base + o, tile = r.tiles[((idx % N) + N) % N], off = idx - p, ang = off * 0.62;
+    // 滚带上的 3px 分隔线
+    const da = ang - 0.31; if (Math.abs(da) < 1.5) { ctx.globalAlpha = outA * st4(Math.pow(Math.cos(da), 2)); R(ctx, WX, cy + Math.sin(da) * RR - 1, WW, 3, P.dusk); ctx.globalAlpha = outA; }
     if (Math.abs(ang) > 1.5) continue;
-    const y = cy + Math.sin(ang) * R, sy = Math.cos(ang), br = Math.pow(Math.cos(ang), 2);
+    const y = cy + Math.sin(ang) * RR, sy = Math.cos(ang), br = Math.pow(Math.cos(ang), 2), tc = palC(tile.c);
     const blurN = vel > 3 ? 3 : 1;
     for (let b = 0; b < blurN; b++) {
-      ctx.save(); ctx.globalAlpha = (blurN > 1 ? 0.4 : 1) * br; ctx.translate(0, y + (b - 1) * (blurN > 1 ? vel * 1.6 : 0)); ctx.scale(1, sy);
-      if (Math.abs(off) < 0.5 && t > 1.2) { ctx.shadowColor = tile.c; ctx.shadowBlur = 30; }
-      ctx.font = `92px ${CNF}`; ctx.fillStyle = tile.c; ctx.fillText(tile.n, 0, -18);
-      ctx.shadowBlur = 0; if (tile.sub) { ctx.font = `30px ${CNF}`; ctx.fillStyle = '#e8dcc4'; ctx.fillText(tile.sub, 0, 50); }
+      ctx.save(); ctx.globalAlpha = outA * (blurN > 1 ? 0.4 : 1) * br; ctx.translate(0, y + (b - 1) * (blurN > 1 ? vel * 1.6 : 0)); ctx.scale(1, sy);
+      // 品质色硬边签：左右各一块
+      [-WW / 2 + 15, WW / 2 - 33].forEach(sx => { R(ctx, sx - 3, -42, 24, 84, P.ink); R(ctx, sx, -39, 18, 78, tc); });
+      const ghost = blurN > 1 && b !== 1; // 拖影副本不描边，省一点
+      U.text(ctx, tile.n, 0, tile.sub ? -18 : 0, 88, tc, ghost ? { shadow: false } : { outline: true });
+      if (tile.sub) U.text(ctx, tile.sub, 0, 50, 30, P.cream, { shadow: !ghost });
       ctx.restore();
     }
   }
-  const sg = ctx.createLinearGradient(0, WY, 0, WY + WH); sg.addColorStop(0, 'rgba(0,0,0,0.95)'); sg.addColorStop(0.3, 'rgba(0,0,0,0)'); sg.addColorStop(0.7, 'rgba(0,0,0,0)'); sg.addColorStop(1, 'rgba(0,0,0,0.95)'); ctx.fillStyle = sg; ctx.fillRect(WX, WY, WW, WH);
-  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.08; ctx.fillStyle = '#fff'; ctx.fillRect(WX, WY + 20, WW, 40);
-  if (t >= lockT && t < lockT + 0.45) { const q = (t - lockT) / 0.45; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = (1 - q); ctx.fillStyle = '#ffffff'; ctx.fillRect(WX, WY, WW, WH); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
-  if (upIdx >= 0) { const q = (t - (2.55 + upIdx * 0.95)) / 0.45; ctx.globalAlpha = (1 - q) * 0.7; ctx.fillStyle = cur.c; ctx.fillRect(WX, WY, WW, WH); for (let k = 0; k < 3; k++) bolt(ctx, WX + Math.random() * WW, WY, WX + Math.random() * WW, WY + WH, cur.c, 6, Math.floor(t * 30) + k * 7); }
+  // 滚筒上下压暗：4 段硬边墨色
+  [0.85, 0.6, 0.35, 0.15].forEach((a, k) => { ctx.globalAlpha = outA * a; R(ctx, WX, WY + k * 24, WW, 24, P.ink); R(ctx, WX, WY + WH - (k + 1) * 24, WW, 24, P.ink); });
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.06 * outA; R(ctx, WX, WY + 24, WW, 36, P.white);
+  if (t >= lockT && t < lockT + 0.45) { ctx.globalAlpha = st4(1 - (t - lockT) / 0.45); R(ctx, WX, WY, WW, WH, P.white); }
+  ctx.globalCompositeOperation = 'source-over';
+  if (upIdx >= 0) { const q = (t - (2.55 + upIdx * 0.95)) / 0.45; ctx.globalAlpha = st4((1 - q) * 0.7); R(ctx, WX, WY, WW, WH, cc); for (let k = 0; k < 3; k++) bolt(ctx, WX + Math.random() * WW, WY, WX + Math.random() * WW, WY + WH, cc, 6, Math.floor(t * 30) + k * 7); }
   ctx.restore();
-  // payline
-  ctx.lineWidth = 5; ctx.strokeStyle = t > 1.2 ? cur.c : '#6b5a70'; ctx.globalAlpha = outA * (0.6 + 0.4 * Math.sin(t * 12)); rr(ctx, WX - 8, cy - 85, WW + 16, 170, 14); ctx.stroke(); ctx.globalAlpha = outA;
-  ctx.fillStyle = t > 1.2 ? cur.c : '#d9a53a'; [[-1, WX - 14], [1, WX + WW + 14]].forEach(([s, x]) => { ctx.beginPath(); ctx.moveTo(x, cy); ctx.lineTo(x - s * 30, cy - 24); ctx.lineTo(x - s * 30, cy + 24); ctx.fill(); });
-  rr(ctx, WX, WY, WW, WH, 20); ctx.lineWidth = 8; ctx.strokeStyle = '#8a5a18'; ctx.stroke();
-  // lever
-  const lp = t < 0.45 ? Math.sin(t / 0.45 * Math.PI) : 0, la = -0.9 + lp * 1.8;
-  ctx.save(); ctx.translate(W / 2 + 24, -20); ctx.fillStyle = '#2a1a10'; ctx.fillRect(-10, -30, 34, 60); ctx.rotate(la * 0.6); ctx.fillStyle = '#b8b0a0'; ctx.fillRect(0, -200, 12, 200); ctx.fillStyle = '#e03a4a'; ctx.beginPath(); ctx.arc(6, -206, 26, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#ff9aa0'; ctx.beginPath(); ctx.arc(-2, -214, 8, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-  // message
-  let msg = '', mc = '#8d8496';
+  // 中奖线：两条 6px 金色硬轨（按拍闪）+ 两侧像素箭头（滚起来后换成当前格的颜色）
+  ctx.globalAlpha = outA * (RM() || Math.floor(t * 6) % 2 ? 1 : 0.6);
+  U.box(ctx, WX - 12, Math.round(cy - 88), WW + 24, 6, P.gold); U.box(ctx, WX - 12, Math.round(cy + 82), WW + 24, 6, P.gold);
+  ctx.globalAlpha = outA; const ac = t > 1.2 ? cc : P.gold; parrow(ctx, WX - 54, cy, 1, ac); parrow(ctx, WX + WW + 54, cy, -1, ac);
+  // 拉杆：像素方块（钢杆 + 红球 + 粉高光），角度按 5 档跳
+  const lp = t < 0.45 ? Math.sin(t / 0.45 * Math.PI) : 0, la = -0.9 + lp * 1.8, lq = RM() ? la : Math.round(la * 2) / 2;
+  ctx.save(); ctx.translate(hw + 30, -20);
+  U.box(ctx, -12, -36, 36, 72, P.slate); R(ctx, -12, -36, 36, 3, P.steel); R(ctx, -12, 30, 36, 6, P.abyss);
+  ctx.rotate(lq * 0.6);
+  U.box(ctx, 0, -200, 12, 200, P.steel); R(ctx, 0, -200, 3, 200, P.silver);
+  U.box(ctx, -18, -236, 48, 48, P.red); R(ctx, -18, -197, 48, 9, P.wine); R(ctx, -12, -230, 12, 12, P.pink);
+  ctx.restore();
+  // 信息屏：深渊色凹槽里的墨描边字，锁定时按 4 格弹
+  let msg = '', mc = P.lavender;
   if (t < 0.5) msg = '拉杆！'; else if (t < 1.9) msg = '滚动中……';
-  else if (upIdx >= 0) { msg = '升品！'; mc = cur.c; }
-  else if (r.tease && t >= lockT - 0.75 && t < lockT) { msg = '还能再升……？'; mc = '#e8dcc4'; }
-  else if (t >= lockT) { msg = r.itemMode ? '锁定 · ' + cur.n : cur.n; mc = cur.c; }
-  else { msg = cur.n + '……'; mc = cur.c; }
-  const ms = t >= lockT ? 1 + 0.5 * (1 - eo((t - lockT) / 0.3)) : upIdx >= 0 ? 1.2 : 1;
-  ctx.save(); ctx.translate(0, H / 2 - 80); ctx.scale(ms, ms); ctx.font = `62px ${CNF}`; ctx.lineWidth = 10; ctx.strokeStyle = '#0c0508'; ctx.strokeText(msg, 0, 0); ctx.fillStyle = mc; ctx.shadowColor = mc; ctx.shadowBlur = t >= lockT ? 30 : 0; ctx.fillText(msg, 0, 0); ctx.restore();
+  else if (upIdx >= 0) { msg = '升品！'; mc = cc; }
+  else if (r.tease && t >= lockT - 0.75 && t < lockT) { msg = '还能再升……？'; mc = P.cream; }
+  else if (t >= lockT) { msg = r.itemMode ? '锁定 · ' + cur.n : cur.n; mc = cc; }
+  else { msg = cur.n + '……'; mc = cc; }
+  const ms = t >= lockT ? seq(POP, t - lockT, 0.075) : upIdx >= 0 ? 1.2 : 1, MY = hh - 88;
+  U.box(ctx, -330, MY - 32, 660, 64, P.abyss); R(ctx, -330, MY - 32, 660, 6, P.ink);
+  ctx.save(); ctx.translate(0, MY); ctx.scale(ms, ms); U.text(ctx, msg, 0, 0, 52, mc, { outline: true }); ctx.restore();
   ctx.restore();
 };
 
 // ───────── treasure chest opening ─────────
+const ISC = [0.35, 0.7, 1.2, 0.94, 1.04, 1];
 M.drawChest = function (ctx, st) {
-  const t = st.t, X = 960, Y = 600, col = st.col || '#ffcc33';
+  const t = st.t, X = 960, Y = 600, col = palC(st.col || P.gold), ts = stepT(t, 12);
   ctx.save();
-  ctx.globalAlpha = Math.min(1, t / 0.25) * 0.82; ctx.fillStyle = '#05030a'; ctx.fillRect(0, 0, 1920, 1080); ctx.globalAlpha = 1;
-  const drop = t < 0.5 ? -700 * (1 - eo(t / 0.5)) : 0, land = t >= 0.5 && t < 0.7 ? Math.sin((t - 0.5) / 0.2 * Math.PI) * 30 : 0;
-  const open = t >= 1.5, q = t - 1.5;
-  if (t > 0.9) { const k = open ? 1 : (t - 0.9) / 0.6; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(X, Y - 60); ctx.rotate(t * 0.35); const n = 18; for (let i = 0; i < n; i++) { ctx.rotate(Math.PI * 2 / n); const g = ctx.createLinearGradient(0, 0, 1100, 0); g.addColorStop(0, col + 'ff'); g.addColorStop(1, col + '00'); ctx.globalAlpha = (open ? 0.5 : 0.15 * k) * (i % 2 ? 1 : 0.6); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(1100, -90); ctx.lineTo(1100, 90); ctx.fill(); } ctx.restore(); M.glow(ctx, X, Y - 60, open ? 420 : 200 * k, col, open ? 0.8 : 0.5 * k); }
-  const shake = t > 0.8 && t < 1.5 ? (t - 0.8) / 0.7 * 14 : 0;
-  ctx.save(); ctx.translate(X + (Math.random() - 0.5) * shake, Y + drop + land + (Math.random() - 0.5) * shake * 0.5);
-  const sq = t >= 0.5 && t < 0.7 ? 1 - Math.sin((t - 0.5) / 0.2 * Math.PI) * 0.15 : open && q < 0.2 ? 1 - Math.sin(q / 0.2 * Math.PI) * 0.12 : 1;
+  M.fxDim(ctx, st4(Math.min(1, t / 0.25)));
+  const drop = t < 0.5 ? -Math.round(700 * (1 - eo(ts / 0.5)) / 6) * 6 : 0, land = t >= 0.5 && t < 0.7 ? Math.round(Math.sin(clamp((ts - 0.5) / 0.2, 0, 1) * Math.PI) * 10) * 3 : 0;
+  const open = t >= 1.5, q = t - 1.5, qs = stepT(q, 12);
+  // 光芒：纯色楔形（内外两段），转角一格一格走；光晕 = 硬边色带
+  if (t > 0.9) { const k = open ? 1 : (t - 0.9) / 0.6; hardRays(ctx, X, Y - 60, 18, 1100, 90, col, open ? 0.12 : 0.05 * st4(k), stepT(t, 6) * 0.35, true); bglow(ctx, X, Y - 60, open ? 420 : 200 * k, col, open ? 0.6 : 0.4 * st4(k)); }
+  const shake = t > 0.8 && t < 1.5 ? (t - 0.8) / 0.7 * 14 : 0, jig = (v) => Math.round((Math.random() - 0.5) * v / 3) * 3;
+  ctx.save(); ctx.translate(X + jig(shake), Y + drop + land + jig(shake * 0.5));
+  const sq = t >= 0.5 && t < 0.7 ? 1 - Math.sin(clamp((ts - 0.5) / 0.2, 0, 1) * Math.PI) * 0.15 : open && q < 0.2 ? 1 - Math.sin(qs / 0.2 * Math.PI) * 0.12 : 1;
   ctx.scale(1 / sq, sq);
   const s = 18, img = M.spriteCanvas('chest', s), w = img.width, h = img.height;
   ctx.imageSmoothingEnabled = false;
-  ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.beginPath(); ctx.ellipse(0, 6, w * 0.6, 26, 0, 0, Math.PI * 2); ctx.fill();
+  // 落地影子：两块硬边墨色
+  ctx.globalAlpha = 0.5; ctx.fillStyle = P.ink; ctx.beginPath(); ctx.rect(Math.round(-w * 0.6), -6, Math.round(w * 1.2), 24); ctx.rect(Math.round(-w * 0.45), -15, Math.round(w * 0.9), 42); ctx.fill(); ctx.globalAlpha = 1;
   const lidH = s * 3;
   ctx.drawImage(img, 0, lidH, w, h - lidH, -w / 2, -h + lidH, w, h - lidH);
-  if (!open) { ctx.drawImage(img, 0, 0, w, lidH, -w / 2, -h, w, lidH); if (t > 0.9) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5 + 0.5 * Math.sin(t * 40); ctx.fillStyle = col; ctx.fillRect(-w / 2, -h + lidH - 6, w, 8); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; } }
-  else { const lq = eo(q / 0.5); ctx.save(); ctx.translate(-w / 2 - lq * 160, -h - lq * 420); ctx.rotate(-lq * 2.4); ctx.drawImage(img, 0, 0, w, lidH, 0, 0, w, lidH); ctx.restore(); }
+  if (!open) { ctx.drawImage(img, 0, 0, w, lidH, -w / 2, -h, w, lidH); if (t > 0.9) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = RM() || Math.floor(t * 12) % 2 ? 1 : 0.4; ctx.fillStyle = col; ctx.fillRect(-w / 2, -h + lidH - 6, w, 6); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; } }
+  else { const lq = eo(qs / 0.5); ctx.save(); ctx.translate(-w / 2 - lq * 160, -h - lq * 420); ctx.rotate(-lq * 2.4); ctx.drawImage(img, 0, 0, w, lidH, 0, 0, w, lidH); ctx.restore(); }
   ctx.restore();
   // items
   if (open) {
     const n = st.items.length, gap = Math.min(260, 1500 / Math.max(1, n));
     st.items.forEach((it, i) => {
       const d = q - 0.25 - i * 0.28; if (d < 0) return;
-      const tx = X + (i - (n - 1) / 2) * gap, ty = 380, e = eback(d / 0.55), x = X + (tx - X) * e, y = (Y - 120) + (ty - (Y - 120)) * e - Math.sin(clamp(d / 0.55, 0, 1) * Math.PI) * 200;
+      const dq = stepT(d, 15), tx = X + (i - (n - 1) / 2) * gap, ty = 380, e = eback(dq / 0.55), x = Math.round(X + (tx - X) * e), y = Math.round((Y - 120) + (ty - (Y - 120)) * e - Math.sin(clamp(dq / 0.55, 0, 1) * Math.PI) * 200);
       if (!it.popped) { it.popped = true; st.onPop && st.onPop(it, tx, ty); }
       it.x = tx; it.y = ty;
-      M.glow(ctx, x, y, 140, it.c, 0.7);
-      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(x, y); ctx.rotate(t * 1.4 + i); ctx.globalAlpha = 0.35; ctx.fillStyle = it.c; for (let k = 0; k < 6; k++) { ctx.rotate(Math.PI / 3); ctx.fillRect(0, -3, 110, 6); } ctx.restore();
-      const bob = Math.sin(t * 3 + i) * 6, sc = Math.min(1, d / 0.3) * (1 + 0.25 * Math.max(0, 1 - d / 0.3));
-      if (it.img) { const iw = it.img.width * sc, ih = it.img.height * sc; ctx.imageSmoothingEnabled = false; ctx.drawImage(it.img, x - iw / 2, y - ih / 2 + bob, iw, ih); }
-      if (d > 0.4) { ctx.globalAlpha = Math.min(1, (d - 0.4) / 0.2); ctx.font = `38px ${CNF}`; ctx.textAlign = 'center'; ctx.lineWidth = 8; ctx.strokeStyle = '#0c0508'; ctx.strokeText(it.n, x, y + 110); ctx.fillStyle = it.c; ctx.fillText(it.n, x, y + 110); if (it.sub) { ctx.font = `26px ${CNF}`; ctx.strokeText(it.sub, x, y + 148); ctx.fillStyle = '#e8dcc4'; ctx.fillText(it.sub, x, y + 148); } ctx.globalAlpha = 1; }
+      const ic = palC(it.c);
+      bglow(ctx, x, y, 140, ic, 0.6);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(x, y); ctx.rotate(stepT(t, 8) * 1.4 + i); ctx.globalAlpha = 0.35; ctx.fillStyle = ic; for (let k = 0; k < 6; k++) { ctx.rotate(Math.PI / 3); ctx.fillRect(0, -3, 110, 6); } ctx.restore();
+      const bob = RM() ? 0 : (Math.floor(t * 2.5 + i) % 2) * -6, sc = seq(ISC, d, 0.07);
+      if (it.img) { const iw = Math.round(it.img.width * sc), ih = Math.round(it.img.height * sc); ctx.imageSmoothingEnabled = false; ctx.drawImage(it.img, Math.round(x - iw / 2), Math.round(y - ih / 2 + bob), iw, ih); }
+      // 名字：品质色像素字 + 墨描边；副行薰衣草色
+      if (d > 0.4) { ctx.globalAlpha = d > 0.5 ? 1 : 0.5; U.text(ctx, it.n, x, y + 110, 40, ic, { outline: true }); if (it.sub) U.text(ctx, it.sub, x, y + 150, 26, P.lavender); ctx.globalAlpha = 1; }
     });
-    if (q > 0.6 + n * 0.28) { ctx.globalAlpha = 0.6 + 0.4 * Math.sin(t * 4); ctx.font = `40px ${CNF}`; ctx.textAlign = 'center'; ctx.fillStyle = '#e8dcc4'; ctx.fillText('点击任意处收下', X, 1000); ctx.globalAlpha = 1; }
-  } else if (t > 0.7) { ctx.globalAlpha = 0.5 + 0.5 * Math.sin(t * 8); ctx.font = `44px ${CNF}`; ctx.textAlign = 'center'; ctx.fillStyle = col; ctx.fillText('……', X, Y + 110); ctx.globalAlpha = 1; }
+    if (q > 0.6 + n * 0.28 && (RM() || Math.floor(t * 2) % 2 === 0)) U.text(ctx, '点击任意处收下', X, 1000, 32, P.butter);
+  } else if (t > 0.7 && (RM() || Math.floor(t * 4) % 2 === 0)) U.text(ctx, '……', X, Y + 110, 40, col);
   ctx.restore();
 };
 
-// ───────── big banners (victory / defeat / skill cut-in) ─────────
+// ───────── big banners (announcements / skill cut-in) ─────────
+// 通告横幅按意思分色：日常 = 酒红，好消息 = 金，撤离 = 青，危险 = 红（b.band 可以直接指定）
+const BAND = { wine: [P.wine, P.red, P.umber], gold: [P.amber, P.gold, P.brown], teal: [P.tealDeep, P.teal, P.night], red: [P.red, P.pink, P.wine] };
+const bandOf = (b) => { if (BAND[b.band]) return b.band; const c = palC(b.col || ''); return [P.red, P.pink, P.wine].includes(c) ? 'red' : [P.teal, P.tealDeep, P.ice].includes(c) ? 'teal' : [P.gold, P.amber, P.butter].includes(c) ? 'gold' : 'wine'; };
+const SLAMB = [2.4, 1.7, 1.2, 0.92, 1.06, 1];
 M.drawBanner = function (ctx, b) {
   const t = b.t, X = 960, Y = b.y || 470;
   ctx.save();
   if (b.kind === 'skill') {
-    const inq = eo(t / 0.25), out = clamp((b.life - t) / 0.25, 0, 1), a = Math.min(inq, out);
-    ctx.globalAlpha = a * 0.55; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 1920, 1080);
+    // 技能切入：技能色硬边斜带（墨边、上亮下暗）+ 6px 速度线 + 墨描边大字，分 3 格滑进来
+    const inq = seq([0.35, 0.75, 1], t, 0.08), a = Math.min(inq, st4(clamp((b.life - t) / 0.25, 0, 1))), tq = stepT(t, 12) / b.life;
+    M.fxDim(ctx, a * 0.7);
+    const col = palC(b.col || P.gold), sh = M.PJ && M.PJ.shades && /^#[0-9a-f]{6}$/i.test(col) ? M.PJ.shades(col) : { hi: P.white, lo: P.ink };
     ctx.globalAlpha = a; ctx.save(); ctx.translate(0, Y); ctx.transform(1, -0.08, 0, 1, 0, 0);
-    const bx = -1920 * (1 - inq) + (1920 * 0.2) * (t / b.life);
-    const g = ctx.createLinearGradient(0, -130, 0, 130); g.addColorStop(0, b.col + '00'); g.addColorStop(0.2, b.col + 'dd'); g.addColorStop(0.8, b.col + 'dd'); g.addColorStop(1, b.col + '00'); ctx.fillStyle = g; ctx.fillRect(bx - 200, -130, 2400, 260);
-    ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 14; i++) { ctx.globalAlpha = a * 0.4; ctx.fillStyle = '#fff'; const ly = -120 + ((i * 37) % 240), lx = ((t * 3200 + i * 400) % 2600) - 300; ctx.fillRect(lx, ly, 200 + (i % 3) * 120, 3); }
-    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = a;
-    if (b.img) { ctx.imageSmoothingEnabled = false; const s = 1.0 + 0.08 * (t / b.life); const iw = b.img.width * s, ih = b.img.height * s; ctx.drawImage(b.img, 300 + bx * 0.3, 110 - ih, iw, ih); }
-    ctx.font = `140px ${CNF}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.lineWidth = 16; ctx.strokeStyle = '#0c0508'; const tx = 760 - (1 - inq) * 600 + 60 * (t / b.life); ctx.strokeText(b.text, tx, -10); ctx.fillStyle = '#fff'; ctx.shadowColor = b.col; ctx.shadowBlur = 40; ctx.fillText(b.text, tx, -10); ctx.shadowBlur = 0;
-    if (b.sub) { ctx.font = `40px ${CNF}`; ctx.lineWidth = 8; ctx.strokeText(b.sub, tx + 10, 90); ctx.fillStyle = '#ffe8b0'; ctx.fillText(b.sub, tx + 10, 90); }
+    const bx = Math.round((-1920 * (1 - inq) + (1920 * 0.2) * tq) / 6) * 6;
+    R(ctx, bx - 200, -138, 2400, 276, P.ink); R(ctx, bx - 200, -132, 2400, 264, col); R(ctx, bx - 200, -132, 2400, 6, sh.hi); R(ctx, bx - 200, 123, 2400, 9, sh.lo);
+    const tl = stepT(t, 24); ctx.globalAlpha = a * 0.45; for (let i = 0; i < 14; i++) { const ly = -120 + ((i * 37) % 240), lx = Math.round((((tl * 3200 + i * 400) % 2600) - 300) / 6) * 6; R(ctx, lx, Math.round(ly / 6) * 6, 200 + (i % 3) * 120, 6, i % 3 ? P.white : P.butter); }
+    ctx.globalAlpha = a;
+    if (b.img) { ctx.imageSmoothingEnabled = false; const s = 1.0 + 0.08 * tq; const iw = b.img.width * s, ih = b.img.height * s; ctx.drawImage(b.img, Math.round(300 + bx * 0.3), Math.round(110 - ih), iw, ih); }
+    const w128 = U.measure(ctx, b.text, 128), size = w128 > 1040 ? Math.max(64, Math.floor(128 * 1040 / w128 / 4) * 4) : 128, tx = Math.round(760 - (1 - inq) * 600 + 60 * tq);
+    U.text(ctx, b.text, tx, -10, size, P.white, { align: 'left', outline: true });
+    if (b.sub) U.text(ctx, b.sub, tx + 10, 90, 40, P.butter, { align: 'left', outline: true });
     ctx.restore();
   } else {
-    const s = t < 0.22 ? 3.2 - 2.2 * eo(t / 0.22) : 1 + 0.06 * Math.sin((t - 0.22) * 3) * Math.max(0, 1 - (t - 0.22) / 1.5);
-    const a = Math.min(1, t / 0.12) * clamp((b.life - t) / 0.3, 0, 1);
-    ctx.globalAlpha = a; ctx.translate(X, Y); ctx.scale(s, s);
-    ctx.font = `230px ${CNF}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.lineWidth = 26; ctx.strokeStyle = '#140810'; ctx.strokeText(b.text, 0, 0);
-    const g = ctx.createLinearGradient(0, -110, 0, 110); g.addColorStop(0, '#ffffff'); g.addColorStop(0.45, b.col); g.addColorStop(1, b.col2 || '#8a4a10');
-    ctx.fillStyle = g; ctx.shadowColor = b.col; ctx.shadowBlur = 60; ctx.fillText(b.text, 0, 0); ctx.shadowBlur = 0;
-    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a * 0.6 * Math.max(0, 1 - t * 2); ctx.fillStyle = '#fff'; ctx.fillText(b.text, 0, 0);
-    if (b.sub) { ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = a * clamp((t - 0.3) / 0.3, 0, 1); ctx.font = `52px ${CNF}`; ctx.lineWidth = 10; ctx.strokeText(b.sub, 0, 150); ctx.fillStyle = '#f5ead4'; ctx.fillText(b.sub, 0, 150); }
+    // 通告：整条色带 + 上下跑马灯 + 果汁色带大字（墨描边）；色带分 3 格张开，字分 6 格砸下来，站稳后逐字跳
+    const kind = bandOf(b), C = BAND[kind], sub = !!b.sub, out = Math.ceil(clamp((b.life - t) / 0.3, 0, 1) * 3) / 3;
+    const hk = Math.min(seq([0.25, 0.6, 1], t, 0.05), out); if (hk <= 0) { ctx.restore(); return; }
+    const h = Math.max(6, Math.round((sub ? 252 : 204) * hk / 6) * 6), top = Math.round(Y + (sub ? 2 : 0) - h / 2);
+    R(ctx, 0, top - 6, 1920, h + 12, P.ink); R(ctx, 0, top, 1920, h, C[0]); R(ctx, 0, top, 1920, 6, C[1]); R(ctx, 0, top + h - 9, 1920, 9, C[2]);
+    U.chase(ctx, 0, top - 18, 1920, t); U.chase(ctx, 0, top + h + 12, 1920, t, true);
+    const w0 = U.measure(ctx, b.text, 128), size = w0 > 1680 ? Math.max(64, Math.floor(128 * 1680 / w0 / 4) * 4) : 128;
+    const s = seq(SLAMB, t, 0.0733), flashW = t < 0.1 && !RM(), ramp = kind !== 'teal' && !flashW, settled = t > 0.44 && !RM();
+    ctx.save(); ctx.globalAlpha = out; ctx.translate(X, sub ? Y - 26 : Y); ctx.scale(s, s);
+    const chars = [...String(b.text)], cw = chars.map(ch => U.measure(ctx, ch, size)), tw = cw.reduce((q, c) => q + c, 0) + 4 * (chars.length - 1);
+    let px = -tw / 2; chars.forEach((ch, i) => { const ph = (t * 1.25 + (chars.length - i) * 0.12) % 1, dy = settled ? [0, -9, 0, 3][Math.floor(ph * 4)] : 0; U.text(ctx, ch, px + cw[i] / 2, dy, size, flashW ? P.white : P.gold, { ramp, outline: true }); px += cw[i] + 4; });
+    ctx.restore();
+    if (sub && t > 0.3) { ctx.globalAlpha = (t > 0.4 ? 1 : 0.5) * out; U.text(ctx, b.sub, X, Y + 80, 40, P.butter); }
   }
   ctx.restore();
 };

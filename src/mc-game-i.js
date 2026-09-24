@@ -137,7 +137,7 @@ G.resetBindings = function () { M.settings.keys = JSON.parse(JSON.stringify(M.DE
 G.setInputMode = function (m) { M.settings.input = m; M.saveSettings(M.settings); M.Sfx.click(); this.bump(); };
 G.settingsView = function () {
   const S = M.settings, md = M.inputMode(this), plat = { pc: '电脑', deck: 'Steam 掌机', mobile: '手机 / 平板' }[M.platform];
-  const modes = (M.platform === 'mobile' ? [['auto', '触屏'], ['pad', '手柄']] : [['auto', '自动'], ['kbm', '键鼠'], ['pad', '手柄']]).map(([k, n]) => ({ n, on: S.input === k, border: S.input === k ? '#f2c14e' : '#4a3a2a', color: S.input === k ? '#ffe08a' : '#a89ca8', onClick: () => this.setInputMode(k) }));
+  const modes = (M.platform === 'mobile' ? [['auto', '触屏'], ['pad', '手柄']] : [['auto', '自动'], ['kbm', '键鼠'], ['pad', '手柄']]).map(([k, n]) => ({ n, on: S.input === k, border: S.input === k ? '#47d6c1' : '#1f8f8a', bg: S.input === k ? '#47d6c1' : 'transparent', color: S.input === k ? '#07060f' : '#a89ca8', onClick: () => this.setInputMode(k) }));
   const kacts = ['up', 'down', 'right', 'item1', 'item2', 'item3', 'skill', 'pause', 'speed', 'back'];
   const pacts = ['confirm', 'back', 'item1', 'item2', 'item3', 'skill', 'pause', 'speed'];
   return { set: { plat, cur: { kbm: '键鼠', pad: '手柄', touch: '触屏' }[md], modes, showKeys: M.platform !== 'mobile',
