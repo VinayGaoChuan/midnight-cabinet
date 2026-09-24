@@ -159,7 +159,7 @@ M.itemInfo = function (key) {
   const [kind, id] = key.split(':');
   if (kind === 'bbp') { const B = BUILDINGS[id]; return { n: B.n + '图纸', icon: 'scroll', c: QUALITY[B.q].c, q: B.q, kind: '建筑图纸', d: B.d, sub: QUALITY[B.q].n + ' · ' + STYLE[B.style] + ' · ' + CAT[B.cat] }; }
   if (kind === 'rbp') { const R = RELICS[id]; return { n: R.n + '图纸', icon: R.icon, c: '#e8d8b0', q: 0, kind: '宝物图纸', d: '在锻造建筑里打造「' + R.n + '」。打造时品质随机，消耗这张图纸。', sub: '宝物图纸', rel: id }; }
-  if (kind === 'tile') { const T = TILES[id]; return { n: '地脉结晶·' + T.n, icon: 'gem', c: T.c, q: 1, kind: '地脉结晶', d: '带回基地后，一块随机普通地格会变成「' + T.n + '」：' + T.d }; }
+  if (kind === 'tile') { const T = TILES[id]; return { n: '地脉结晶·' + T.n, icon: 'gem', c: T.c, q: 1, kind: '地脉结晶', d: '带回基地后，改造一块没有建筑的地块（优先空房间），变成「' + T.n + '」：' + T.d }; }
   return { n: key, icon: 'question', c: '#fff', kind: '' };
 };
 M.invList = function (m) {

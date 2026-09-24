@@ -16,7 +16,7 @@ G.worldTick = function (dt) {
     if (this.trans.kind === 'out') { zoom = 1 + 0.6 * q * q; fade = q; if (this.trans.t >= 0.75) { const n = this.trans.node; this.trans = null; this.beginBattle(n); return; } }
     else { zoom = 1.25 - 0.25 * (1 - Math.pow(1 - q, 3)); fade = 1 - q; if (q >= 1) this.trans = null; } }
   else if (!this.modal && !this.reel && !this.chest) w.update(dt, this.keys, (n) => this.arrive(n)); else w.follow(dt);
-  if (run.tut && !w.edge && !this.modal && M.nodeAhead(run.map, w.node).length > 1) this.coachOnce('fork', '岔路！按 ↑ 或 ↓ 选择要走的路。另一条路会就此关闭。', 960, 880);
+  if (run.tut && !w.edge && !this.modal && M.nodeAhead(run.map, w.node).length > 1) this.coachOnce('fork', '岔路！点击 ↑ 或 ↓ 箭头（或按键）选择要走的路。另一条路会就此关闭。', 960, 880);
   const c = this.ui.cv('world'); if (c) M.pxRender(c, 1920, 1080, (x) => M.drawWorld2(x, run, w, { zoom, fade, dt }), 'world');
 };
 })();

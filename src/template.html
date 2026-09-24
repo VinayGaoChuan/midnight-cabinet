@@ -1120,6 +1120,10 @@
             <sc-for list="{{pn.stats}}" as="hs" hint-placeholder-count="4"><div data-tip="{{hs.tip}}" style="display:flex;align-items:center;gap:10px;padding:4px 12px 4px 6px;background:#15111a;border:1px solid #3a3040"><m-img src="{{hs.ic}}" style="width:36px;height:36px"></m-img><span style="font-family:'Cinzel','Noto Serif SC',serif;font-size:28px;color:{{hs.c}}">{{hs.v}}</span></div></sc-for>
           </div>
         </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div data-tip="hs-power" style="flex:1;display:flex;align-items:center;gap:12px;padding:6px 14px;background:#15111a;border:1px solid #5a4428"><span style="font-size:22px;color:#a89ca8">战斗力</span><span style="font-family:'Cinzel','Noto Serif SC',serif;font-size:36px;color:{{pn.powerC}};display:inline-block;transform:scale({{pn.powerSc}});transform-origin:left center">{{pn.powerTxt}}</span></div>
+          <div data-tip="hs-lvup" sc-camel-on-click="{{pn.lvUp}}" style="padding:10px 16px;min-width:250px;text-align:center;font-size:24px;border:2px solid {{pn.lvBorder}};background:{{pn.lvBg}};color:{{pn.lvColor}};cursor:pointer;animation:{{pn.lvAnim}};transition:transform .08s" style-hover="filter:brightness(1.15)" style-active="transform:scale(0.96)">{{pn.lvTxt}}</div>
+        </div>
         <div style="position:relative;height:500px;flex:none;background:radial-gradient(ellipse at 50% 92%,rgba(255,200,120,0.16),transparent 55%),linear-gradient(180deg,rgba(6,4,10,0.35),rgba(6,4,10,0.7));border:1px solid #3a3040;overflow:hidden">
           <div style="position:absolute;left:258px;top:448px;width:120px;height:60px;background:radial-gradient(ellipse at 50% 100%,#3a2616,transparent 70%)"></div>
           <sc-for list="{{pn.links}}" as="tk" hint-placeholder-count="0"><div style="position:absolute;left:{{tk.x}}px;top:{{tk.y}}px;width:{{tk.w}}px;height:{{tk.h}}px;border-radius:5px;background:{{tk.c}};box-shadow:{{tk.glow}};transform-origin:0 50%;transform:rotate({{tk.a}}rad);pointer-events:none"></div></sc-for>
@@ -1145,7 +1149,7 @@
 </sc-if>
 
 <sc-if value="{{isWorld}}" hint-placeholder-val="{{false}}">
-  <canvas ref="{{worldRef}}" width="1920" height="1080" sc-camel-on-click="{{worldClick}}" sc-camel-on-mouse-move="{{worldMove}}" sc-camel-on-mouse-leave="{{tipOff}}" style="position:absolute;left:0;top:0;width:1920px;height:1080px"></canvas>
+  <canvas ref="{{worldRef}}" width="1920" height="1080" sc-camel-on-click="{{worldClick}}" sc-camel-on-mouse-move="{{worldMove}}" sc-camel-on-mouse-leave="{{tipOff}}" style="position:absolute;left:0;top:0;width:1920px;height:1080px;cursor:{{worldCursor}}"></canvas>
 </sc-if>
 
 <sc-if value="{{w}}" hint-placeholder-val="{{false}}">

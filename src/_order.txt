@@ -40,4 +40,8 @@ mc-bp.js
 mc-terrain.js
 mc-pskill.js
 mc-soul.js
+mc-mouse.js
+mc-bring.js
+mc-lvup.js
+mc-save.js
 mc-tele.js

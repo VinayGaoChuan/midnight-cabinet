@@ -408,7 +408,7 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
       } else lights.push({ x: X + CW / 2, y: Y + CH / 2, r: 1.6 * CW, c: '#e8d8b8', f: 0.95, cell: 1 });
     } else {
       ctx.drawImage(rock((c * 5 + r * 3) % 3), X, Y);
-      if (x.tile) { const T = TILES[x.tile]; const pu = 0.5 + 0.5 * Math.sin(t * 2 + c + r), nq = 5 + (T.q || 0) * 3; ctx.fillStyle = T.c; for (let k = 0; k < nq; k++) { const cx2 = X + 70 + rnd(k + c * 7 + r * 13) * 160, cy2 = Y + 50 + rnd(k + 20 + c * 3 + r) * 110; ctx.globalAlpha = 0.6 + 0.4 * pu; ctx.fillRect(cx2, cy2, 10, 18); ctx.fillRect(cx2 - 6, cy2 + 8, 22, 6); } ctx.globalAlpha = 1; lights.push({ x: X + CW / 2, y: Y + CH / 2, r: 150 + (T.q || 0) * 45, c: T.c, f: 0.6 + 0.3 * pu }); }
+      if (x.tile) { const T = TILES[x.tile]; const pu = 0.5 + 0.5 * Math.sin(t * 2 + c + r), nq = 9; ctx.fillStyle = T.c; for (let k = 0; k < nq; k++) { const cx2 = X + 70 + rnd(k + c * 7 + r * 13) * 160, cy2 = Y + 50 + rnd(k + 20 + c * 3 + r) * 110; ctx.globalAlpha = 0.6 + 0.4 * pu; ctx.fillRect(cx2, cy2, 10, 18); ctx.fillRect(cx2 - 6, cy2 + 8, 22, 6); } ctx.globalAlpha = 1; lights.push({ x: X + CW / 2, y: Y + CH / 2, r: 200, c: T.c, f: 0.6 + 0.3 * pu }); }
       if (x.job && x.job.kind === 'dig') {
         const q = 1 - x.job.days / x.job.total; ctx.fillStyle = '#0b090e'; ctx.fillRect(X + 20, Y + 20, CW * 0.4, CH - 40);
         ctx.save(); ctx.translate(X + 20 + CW * 0.4, Y + CH / 2); ctx.fillStyle = '#b0b8c4'; ctx.beginPath(); ctx.moveTo(0, -24); ctx.lineTo(40 + Math.sin(t * 40) * 3, 0); ctx.lineTo(0, 24); ctx.fill(); ctx.restore();

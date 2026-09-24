@@ -196,8 +196,12 @@ M.drawWorld2 = function (ctx, run, walker, opts = {}) {
     outs.forEach(e => {
       const k = e.dir === 'up' ? '↑' : e.dir === 'down' ? '↓' : '→';
       const hx = e.dir === 'right' ? n.x + 270 : n.x + STUB, hy = e.dir === 'right' ? n.y - 4 : n.y + (e.dir === 'up' ? -150 : 150);
-      const p = toS(hx, hy); ctx.save(); ctx.translate(p.x, p.y); ctx.scale(pulse, pulse);
-      ctx.fillStyle = '#0b090e'; ctx.fillRect(-34, -30, 68, 68); ctx.fillStyle = '#f2c14e'; ctx.fillRect(-34, -34, 68, 64); ctx.fillStyle = '#0e0c12'; ctx.font = `44px ${CNF}`; ctx.textBaseline = 'middle'; ctx.fillText(k, 0, -2); ctx.restore(); ctx.textBaseline = 'alphabetic';
+      const p = toS(hx, hy), hot = walker.hot === e.dir;
+      // hovered: ring the stop it leads to, and lift the arrow
+      if (hot) { const tn = map.nodes[e.b], tq = toS(tn.x, tn.y); ctx.strokeStyle = 'rgba(255,240,180,' + (0.55 + 0.3 * Math.sin(T * 8)) + ')'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(tq.x, tq.y - 30, 78, 0, 7); ctx.stroke(); }
+      const sc = pulse * (hot ? 1.25 : 1); ctx.save(); ctx.translate(p.x, p.y); ctx.scale(sc, sc);
+      if (hot) { ctx.fillStyle = '#ffffff'; ctx.fillRect(-40, -40, 80, 76); }
+      ctx.fillStyle = '#0b090e'; ctx.fillRect(-34, -30, 68, 68); ctx.fillStyle = hot ? '#ffe08a' : '#f2c14e'; ctx.fillRect(-34, -34, 68, 64); ctx.fillStyle = '#0e0c12'; ctx.font = `44px ${CNF}`; ctx.textBaseline = 'middle'; ctx.fillText(k, 0, -2); ctx.restore(); ctx.textBaseline = 'alphabetic';
     });
   }
   if (opts.fade) { ctx.globalAlpha = opts.fade; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 1920, 1080); ctx.globalAlpha = 1; }

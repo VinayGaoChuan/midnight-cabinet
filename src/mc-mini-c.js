@@ -195,7 +195,7 @@ MINI.mirror = { title: '落地镜', img: 'mirror', col: '#8fb0ff', text: '镜子
   input(mg, d) { if (mg.phase !== 'input') return; mg.inp.push(d); mg.pose = { d, t: 0 }; const i = mg.inp.length - 1; if (mg.seq[i] !== d) { S.shatter(); this.miniSet('fail'); return; } S.tone(PENTA[i % 8], 0.15, 'triangle', 0.1); if (mg.inp.length === mg.seq.length) { S.up(2); this.miniSet('win'); } },
   key(mg, k, down) { if (down && mg.phase === 'input' && ARW[k]) { MINI.mirror.input.call(this, mg, k); return true; } },
   btns(mg) { if (mg.phase === 'idle') return [{ t: '凝视镜子', sub: '记住它的动作，再做一遍', gold: 1, fn: () => MINI.mirror.begin.call(this, mg) }, { t: '打碎镜子', sub: '得到道具，领袖受伤', danger: 1, dis: this.run.items.indexOf(null) < 0, why: '道具栏满了', fn: () => { this.heroHurt(0.1); S.shatter(); this.miniFinish('碎片划伤了你。镜框里藏着东西。', '#d0453c', [K.item(this.run, mg.P)]); } }, { t: '离开', leave: 1, fn: () => this.miniFinish('你背对着镜子离开。它还在看你。', '#8d8496') }];
-    if (mg.phase === 'input') return ['up', 'down', 'left', 'right'].map(d => ({ t: ARW[d], sub: '方向键', fn: () => MINI.mirror.input.call(this, mg, d) }));
+    if (mg.phase === 'input') return ['up', 'down', 'left', 'right'].map(d => ({ t: ARW[d], sub: '点击或方向键', fn: () => MINI.mirror.input.call(this, mg, d) }));
     if (mg.phase === 'won') return [{ t: '再来一轮', sub: '更长的动作 · 赢了再得一件宝贝', gold: 1, dis: mg.round >= 2, why: '镜子不肯了', fn: () => MINI.mirror.begin.call(this, mg) }, { t: '见好就收', leave: 1, fn: () => this.miniFinish('镜子里走出了：' + mg.got.join('、') + '。', '#8fb0ff') }]; return []; },
   tick(mg, dt) {
     if (mg.pose) mg.pose.t += dt;

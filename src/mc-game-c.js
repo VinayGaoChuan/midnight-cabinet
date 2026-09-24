@@ -7,7 +7,7 @@ Object.assign(G, {
     const m = this.meta, h = m.heroes[0];
     this.run = M.newRun3(m, h, 'corridor', []); this.run.tut = true; this.enterWorld();
     this.toast('序章 · 旧公寓走廊', '#f2c14e');
-    setTimeout(() => this.coachOnce('go', '按 → 方向键前进。路只能往前走，走过的节点不能回头。', 960, 880), 900);
+    setTimeout(() => this.coachOnce('go', '点击发光的 → 箭头（或按 → 键）前进。路只能往前走，走过的节点不能回头。', 960, 880), 900);
   },
   enterWorld() { if (!this.walker || this.walker.map !== this.run.map) this.walker = new M.Walker2(this.run.map); this.trans = { kind: 'in', t: 0 }; this.modal = null; this.go('world'); },
   worldTick(dt) {
@@ -17,7 +17,7 @@ Object.assign(G, {
       if (this.trans.kind === 'out') { zoom = 1 + 0.6 * q * q; fade = q; if (this.trans.t >= 0.75) { const n = this.trans.node; this.trans = null; this.beginBattle(n); return; } }
       else { zoom = 1.25 - 0.25 * (1 - Math.pow(1 - q, 3)); fade = 1 - q; if (q >= 1) this.trans = null; } }
     else if (!this.modal && !this.reel && !this.chest) w.update(dt, this.keys, (n) => this.arrive(n)); else w.follow(dt);
-    if (run.tut && !w.edge && !this.modal && M.nodeAhead(run.map, w.node).length > 1) this.coachOnce('fork', '岔路！按 ↑ 或 ↓ 选择要走的路。另一条路会就此关闭。', 960, 880);
+    if (run.tut && !w.edge && !this.modal && M.nodeAhead(run.map, w.node).length > 1) this.coachOnce('fork', '岔路！点击 ↑ 或 ↓ 箭头（或按键）选择要走的路。另一条路会就此关闭。', 960, 880);
     const c = this.ui.cv('world'); if (c) M.drawWorld2(c.getContext('2d'), run, w, { zoom, fade, dt });
   },
   worldMove(sx, sy) { if (!this.walker) return; const n = M.worldPick(this.run, this.walker, sx, sy); this.tipData = n ? { title: M.nodeLabel(n), c: n.type === 'boss' || n.type === 'elite' ? '#ff6a5a' : n.type === 'extract' ? '#5fd0c0' : '#f2c14e', kind: n.done ? '已经过' : '第 ' + (n.col + 1) + ' 站', d: M.nodeDesc(n) } : null; },
@@ -163,7 +163,7 @@ Object.assign(G, {
   runWin(kind) {
     const m = this.meta, run = this.run, h = run.hero, L = run.loot;
     m.supplies += L.supplies; const tiles = [];
-    L.bp.forEach(k => { if (k.startsWith('tile:')) { const plain = []; for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) { const x = m.base.cells[r][c]; if (!x.tile && !x.b && !x.job) plain.push([c, r]); } if (plain.length) { const [c, r] = M.pick(plain); m.base.cells[r][c].tile = k.slice(5); tiles.push({ c, r, t: k.slice(5) }); } } else M.invAdd(m, k, 1); });
+    L.bp.forEach(k => { if (k.startsWith('tile:')) { const at = M.tileSpot ? M.tileSpot(m) : null; if (at) { const [c, r] = at; m.base.cells[r][c].tile = k.slice(5); tiles.push({ c, r, t: k.slice(5) }); } } else M.invAdd(m, k, 1); });
     const ups = M.addExp(h, L.exp); h.runs++; h.relics = [];
     if (kind === 'clear' && !run.region.tut) m.cleared[run.regionKey] = true;
     m.runs++; const tut = !!run.region.tut;

@@ -230,6 +230,14 @@ def analyse(batches, events):
     fu = [(e['k'], e['lv'], e.get('g')) for e in by['furn']]
     if fu: R.p('家具购买顺序：' + ' → '.join('%s Lv%d' % (k, lv) for k, lv, _ in fu[:30]))
 
+    # ── growth and keepsakes ──
+    gk = Counter(k for e in by['gift'] for k in (e.get('kinds') or []))
+    if gk: R.p('带回基地的东西：' + '，'.join('%s %d' % kv for kv in gk.most_common()))
+    lu = Counter(e.get('src') for e in by['lvup'])
+    if lu: R.p('领袖升级来源：' + '，'.join('%s %d' % ({'button': '升级按钮', 'run': '出征回来', 'daily': '冥想类建筑'}.get(k, k), v) for k, v in lu.most_common()))
+    sc = by['savecheck']
+    if sc: R.p('启动时存档检测：%d 次发现问题（整份删除 %d 次）。' % (len(sc), sum(1 for e in sc if e.get('wiped'))))
+
     # ── UX ──
     R.h('操作与体验')
     tl, ts = len(by['talent']), len(by['talent_short'])
