@@ -31,11 +31,11 @@ M.spriteCanvas = function (k, s) { if (M.SP && !M.SP[k] && IC[k]) return M.iconC
 // ───────── the keepsakes ─────────
 const ok = (t, extra) => Object.assign({ t }, extra || {});
 const GIFTS = {
-  hero:   { n: '流浪领袖', ic: 'r_hero', c: '#ffe08a', w: 8, d: '一名流浪的领袖跟你回到基地（领袖满员时，他留下 15 灵魂碎片）。',
+  hero:   { n: '流浪领袖', ic: 'r_hero', c: '#ffe08a', w: 8, d: '一名流浪领袖加入；满员时留下 15 灵魂碎片。',
     apply(g, m) { if (m.heroes.length >= M.heroCap(m)) { m.shards += 15; return ok('领袖满员，他留下 15 灵魂碎片'); } const rar = M.wpick([0, 1, 2, 3], i => [58, 30, 10, 2][i]); const h = M.newHero(m, null, rar); m.heroes.push(h); return ok(M.qn(h.name, rar) + ' 加入了基地', { hero: h.id, col: M.qc(rar) }); } },
   miner:  { n: '矿工队', ic: 'g_miner', c: '#ffd060', w: 10, d: '回基地后免费挖通一格岩层（优先有地脉的格子）。',
     apply(g, m) { const cand = []; for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) { if (M.canDig(m, c, r)) cand.push([c, r, M.cell(m, c, r).tile ? 0 : 1]); } if (!cand.length) { m.supplies += 50; return ok('没有能挖的岩层，矿工留下 50 物资'); } cand.sort((a, b) => a[2] - b[2] || Math.random() - 0.5); const [c, r] = cand[0], x = M.cell(m, c, r); x.dug = true; x.job = null; return ok('挖通了第 ' + (r + 1) + ' 层的一格' + (x.tile ? '，露出「' + M.TILES[x.tile].n + '」' : ''), { cc: c, cr: r }); } },
-  mason:  { n: '工匠', ic: 'g_mason', c: '#ff9a6a', w: 10, d: '所有在建工程推进 2 天（够了就当场完工）；没有工程时，下一项工程少 2 天。',
+  mason:  { n: '工匠', ic: 'g_mason', c: '#ff9a6a', w: 10, d: '在建工程推进 2 天。',
     apply(g, m) { let n = 0, done = 0, at = null; for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) { const x = m.base.cells[r][c]; if (!x.job) continue; n++; at = at || { cc: c, cr: r }; x.job.days -= 2;
         if (x.job.days <= 0) { if (x.job.kind === 'dig') x.dug = true; else { x.b = x.job.key; x.dug = true; } x.job = null; done++; } }
       if (!n) { m.buildBoost = (m.buildBoost || 0) + 2; return ok('下一项工程少 2 天'); } return ok(n + ' 项工程各推进 2 天' + (done ? '，' + done + ' 项当场完工' : ''), at); } },
@@ -43,7 +43,7 @@ const GIFTS = {
     apply(g, m) { const mx = M.portalMax(m), v = Math.min(300, mx - m.portal.hp); m.portal.hp += Math.max(0, v); return ok(v > 0 ? '传送门耐久 +' + Math.round(v) : '传送门本来就是满的', { door: 1 }); } },
   talent: { n: '启示卷轴', ic: 'g_scroll', c: '#ffcf4a', w: 9, d: '带着它回来的领袖获得 1 个天赋点。',
     apply(g, m, run) { const h = (run && m.heroes.includes(run.hero)) ? run.hero : M.pick(m.heroes); if (!h) return ok('没有领袖可以读它'); h.points++; return ok(M.heroN(h) + ' 天赋点 +1', { hero: h.id }); } },
-  temper: { n: '淬火石', ic: 'g_anvil', c: '#ff8a3a', w: 8, d: '仓库里品质最低的一件宝物品质 +1（没有宝物时换成一张宝物图纸）。',
+  temper: { n: '淬火石', ic: 'g_anvil', c: '#ff8a3a', w: 8, d: '最差的一件宝物品质 +1。',
     apply(g, m) { const r = m.relics.filter(x => x.q < 3).sort((a, b) => a.q - b.q)[0]; if (!r) { const k = 'rbp:' + M.pick(Object.keys(M.RELICS)); M.invAdd(m, k, 1); return ok('没有可淬火的宝物，换成「' + M.itemInfo(k).n + '」'); } r.q++; r.lines = M.relicLines(r.key, r.q); return ok(M.qn(M.RELICS[r.key].n, r.q) + ' 升了一档', { col: M.qc(r.q) }); } },
   calm:   { n: '安神香', ic: 'g_incense', c: '#c8c8ff', w: 8, d: '所有领袖回复 25% 生命。',
     apply(g, m) { m.heroes.forEach(h => { h.hp = Math.min(M.heroMaxHp(h, m), h.hp + M.heroMaxHp(h, m) * 0.25); }); return ok('全员回复 25% 生命'); } },
@@ -126,7 +126,7 @@ G.recruit = function () {
 const oView = G.view;
 G.view = function () {
   const v = oView.call(this), m = this.meta;
-  if (v.pn && v.pn.isRecruit && m && m.freeRecruit > 0) v.pn.recBtn = '招募 · 免费（引荐信 ×' + m.freeRecruit + '，至少「稀有」）';
+  if (v.pn && v.pn.isRecruit && m && m.freeRecruit > 0) v.pn.recBtn = '免费招募领袖（至少稀有）';
   return v;
 };
 })();

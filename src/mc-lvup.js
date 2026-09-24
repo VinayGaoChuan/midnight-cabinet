@@ -142,8 +142,8 @@ G.view = function () {
 const oTF = G.tipFor;
 G.tipFor = function (key) {
   const p = this.panel, m = this.meta, h = p && p.kind === 'hero' && m && m.heroes.find(x => x.id === p.id);
-  if (h && key === 'hs-power') return { title: '战斗力 ' + M.fmt(M.heroPower(h, m)), c: '#ffe08a', d: '由攻击、生命、学会的天赋和携带的宝物折算。升级、学天赋、宝物、基地建筑和地格都会让它上涨。', icon: 't_sword' };
-  if (h && key === 'hs-lvup') { const mul = 1 + (M.baseMods(m).orbMul || 0); return { title: h.lv >= 10 ? '已满级' : '升到 Lv ' + (h.lv + 1), c: '#9cff7a', d: '点击直接把经验球灌给这名领袖。经验球来自出征、阵亡的领袖、琥珀层等地格和训练类建筑。', lines: [{ t: '当前经验球效率 ×' + mul.toFixed(1) + '（训练场、图书馆、琥珀层能提高）', c: '#a89ca8' }, { t: '现有经验球 ' + m.orbs, c: '#b8ff9a' }], icon: 't_orb' }; }
+  if (h && key === 'hs-power') return { title: '战斗力 ' + M.fmt(M.heroPower(h, m)), c: '#ffe08a', d: '由攻击、生命、天赋和宝物折算。', icon: 't_sword' };
+  if (h && key === 'hs-lvup') { const mul = 1 + (M.baseMods(m).orbMul || 0); return { title: h.lv >= 10 ? '已满级' : '升到 Lv ' + (h.lv + 1), c: '#9cff7a', d: '花经验球升一级。', lines: [{ t: '当前经验球效率 ×' + mul.toFixed(1) + '（训练场、图书馆、琥珀层能提高）', c: '#a89ca8' }, { t: '现有经验球 ' + m.orbs, c: '#b8ff9a' }], icon: 't_orb' }; }
   return oTF.call(this, key);
 };
 })();

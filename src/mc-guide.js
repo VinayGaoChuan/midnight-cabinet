@@ -48,13 +48,14 @@ const CONCEPTS = [
   { id: 'orb', cat: '基地', img: () => sprite('orb'), title: '经验球', line: '在领袖详情里点「升级」花掉，领袖立刻升一级。', scr: 'base', sel: '[data-fx="morb"]' },
   { id: 'power', cat: '基地', icon: 'f_power', title: '电力', line: '房间要耗电，发电类建筑产电。电不够就建不了新的耗电房间。', scr: 'base', sel: '[data-g="power"]' },
   { id: 'heroes', cat: '领袖', icon: 't_command', title: '领袖', line: '出征带队、守城作战。点卡片看天赋和升级；卡片上的黄点 = 有没用的天赋点。', scr: 'base', sel: '[data-tip="b-herocap"]' },
-  { id: 'tile', cat: '基地', icon: 'l_geo', title: '特殊地格', line: '岩层里的宝地。挖开后在上面建房间就有加成，建筑「契合」时更强。', scr: 'base', at: (g) => bvIcon(g, t => t.tile) },
+  { id: 'tile', cat: '基地', icon: 'l_geo', title: '特殊地格', line: '和岩层不同的地形。开垦天数各不相同；在上面建房间有加成，建筑「契合」时更强。悬浮看效果。', scr: 'base', at: (g) => (M.terrainAt ? M.terrainAt(g) : null) },
   { id: 'rtags', cat: '基地', icon: 's_steam', title: '房间标签', line: '房间角上两个图标：风格 + 功能。地格和奇观按它们挑「契合」的建筑。', scr: 'base', at: (g) => bvIcon(g, t => t.tag) },
   { id: 'rock', cat: '基地', icon: 'u_pick', title: '挖掘', line: '点和房间相邻的岩层，花物资和天数挖开，挖通才能建房间。', scr: 'base', sel: '[data-g="dig"]' },
   { id: 'bp', cat: '基地', icon: 'g_scroll', title: '建筑图纸', line: '列表里只有你有图纸的建筑，×2 就是有 2 张。图纸靠出征和守城拿。', scr: 'base', sel: '[data-g="bld"]' },
-  { id: 'portal', cat: '出征', icon: 'g_gate', title: '传送门', line: '点它出征。每天只开几个世界，第二天换一批。被怪物打破，这一局结束。', scr: 'base', at: (g) => { if (g.panel || !g.bv || !M.BASE_GEO) return null; const p = g.bv.toScreen(M.BASE_GEO.DOOR_X, -130); return { x: p.x - 100, y: p.y - 110, w: 200, h: 230 }; } },
-  { id: 'danger', cat: '出征', img: () => sprite('skull'), title: '危险程度', line: '骷髅越多敌人越强；天数越往后，所有世界都更危险。', scr: 'base', sel: '[data-tip^="w-danger-"]' },
-  { id: 'loot', cat: '出征', img: () => sprite('sack'), title: '世界特产', line: '这个世界更容易带回的东西，比如「物资 ×1.6」。', scr: 'base', sel: '[data-tip^="w-loot-"]' },
+  { id: 'portal', cat: '出征', icon: 'g_gate', title: '传送门', line: '点它打开，上方升起今天能去的世界碑，点碑出征。被怪物打破，这一局结束。', scr: 'base', at: (g) => { if (g.panel || !g.bv || !M.BASE_GEO) return null; const p = g.bv.toScreen(M.BASE_GEO.DOOR_X, -130); return { x: p.x - 100, y: p.y - 110, w: 200, h: 230 }; } },
+  { id: 'danger', cat: '出征', img: () => sprite('skull'), title: '危险度', line: '碑上的低 / 中 / 高：按你最强领袖的战斗力算。', scr: 'base', at: (g) => M.STELE_AT && M.STELE_AT.danger(g) },
+  { id: 'loot', cat: '出征', img: () => sprite('sack'), title: '世界特产', line: '碑下方的图标：这个世界多给的东西。悬浮看详情。', scr: 'base', at: (g) => M.STELE_AT && M.STELE_AT.loot(g) },
+  { id: 'rest', cat: '基地', icon: 't_hourglass', title: '休整一天', line: '不出征，直接过一天：挖掘、建造推进 1 天。', scr: 'base', sel: '[data-tip="b-rest"]' },
   { id: 'relic', cat: '领袖', icon: 't_eye', title: '宝物', line: '出征时带在身上的装备，领袖阵亡就丢了（保险库能保住第 1 件）。', scr: 'base', sel: '[data-g="relics"]' },
   { id: 'lvup', cat: '领袖', img: () => sprite('orb'), title: '升级', line: '花经验球立刻升一级，生命、攻击都涨，还给 1 个天赋点。', scr: 'base', sel: '[data-tip="hs-lvup"]' },
   { id: 'talent', cat: '领袖', icon: 't_clover', title: '天赋树', line: '三条路线：杀伐、坚忍、运数。从中间往外点，每级 1 点。', scr: 'base', sel: '[data-tip^="tal-"]:not([data-tip="tal-root"])' },
@@ -147,44 +148,30 @@ const oView = G.view;
 G.view = function () {
   this._dtHas = false;
   const v = oView.call(this), m = this.meta, D = (a, b) => this.D(a, b), D1 = (s) => this.D1(s);
-  // world: the how-to bar is for the first (tutorial) run; afterwards it lives behind Ctrl
-  if (v.worldHint && this.run) v.worldHint = D(this.run.tut ? (/^点击箭头或下一站/.test(v.worldHint) ? '点击 → 箭头前进 · 悬浮节点看详情' : v.worldHint.split(' · ')[0]) : '', v.worldHint);
+  // world: the how-to bar is for the first (tutorial) run only
+  if (v.worldHint && this.run && !this.run.tut) v.worldHint = '';
   // battle: the legion card shows its name and key; what it does is one Ctrl away (or on hover)
   if (v.h && typeof v.h.skillSub === 'string' && /^军团技能 · /.test(v.h.skillSub)) v.h.skillSub = D('', v.h.skillSub);
   // base top bar: the raid is tonight while the defenders are being picked; tips say what is true now
   if (v.b && m) {
     if (this.raidPrep || m.raidPending === m.day) { v.b.raidTxt = '今晚袭击'; v.b.raidC = '#ff5a4a'; }
-    v.raidTip = this.tipFn({ title: '袭击', c: '#ff6a5a', kind: '每 ' + (m.raidEvery || M.RAID_EVERY) + ' 天一次 · 下次在第 ' + M.nextRaid(m) + ' 天', d: '袭击当天先挑守城的领袖。守城阵亡的领袖永久死亡，留下灵魂碎片；地下的武器房间向地面开火。传送门被打破，这一局结束。' });
-    if (v.b.res && v.b.res[2]) v.b.res[2].tipOn = this.tipFn({ title: '经验球', c: '#b8ff9a', d: '在领袖详情里点「升级」花掉，领袖立刻升一级。训练类建筑提高经验效率。' });
+    v.raidTip = this.tipFn({ title: '袭击', c: '#ff6a5a', d: '第 ' + M.nextRaid(m) + ' 天夜里，怪物攻打传送门。' });
+    if (v.b.res && v.b.res[2]) v.b.res[2].tipOn = this.tipFn({ title: '经验球', c: '#b8ff9a', d: '给领袖升级用。' });
   }
-  // panels: the first sentence, the rest behind Ctrl
-  const pn = v.pn, P = this.panel, cellT = P && P.c != null && m ? M.TILES[(M.cell(m, P.c, P.r) || {}).tile] : null;
-  const tileBrief = (full) => cellT ? this.D(cellT.n + (cellT.fitN ? ' · 契合「' + cellT.fitN + '」' : ''), full) : this.D1(full);
+  // panels: details are shown directly; only the leaders' own lines keep a Ctrl layer
+  const pn = v.pn;
   if (pn) {
     if (pn.isBuild) {
-      const pw = M.power(m); pn.sub = '⚡ 剩余 ' + pw.free; if (pn.hasTile) pn.tileTxt = tileBrief(pn.tileTxt);
+      const pw = M.power(m); pn.sub = '⚡ 剩余 ' + pw.free;
       (pn.opts || []).forEach(o => { const s = o.meta || '', seg = []; let x;
         if ((x = /(\d+) 物资/.exec(s))) seg.push({ img: sprite('sack'), t: x[1] }); if ((x = /(\d+) 碎片/.exec(s))) seg.push({ img: sprite('shard'), t: x[1] });
         if ((x = /(\d+) 天/.exec(s))) seg.push({ img: icon('t_hourglass'), t: x[1] + ' 天' }); if ((x = /电力 \+(\d+)/.exec(s))) seg.push({ img: icon('f_power'), t: '+' + x[1] }); else if ((x = /耗电 (\d+)/.exec(s))) seg.push({ img: icon('f_power'), t: '-' + x[1] });
-        o.ms = seg; o.hasMs = seg.length > 0; if (o.bonus) o.bonus = D('★', o.bonus); });
+        o.ms = seg; o.hasMs = seg.length > 0; });
     }
-    if (pn.isRoom) {
-      if (pn.hasTile) pn.tileTxt = tileBrief(pn.tileTxt);
-      ['reachTxt', 'trainTxt'].forEach(k => { if (pn[k]) pn[k] = D1(pn[k]); });
-      ['recTxt', 'medTxt'].forEach(k => { if (pn[k]) pn[k] = D('', pn[k]); });   // the room's own line already says it; the button carries the cost
-      if (pn.isForge) { (pn.forge || []).forEach(f => { if (f.sub === '没有图纸') f.sub = D('', f.sub); }); if (pn.fineTxt) pn.fineTxt = D('精铸：+' + M.FINE_SH + ' 灵魂碎片，至少「史诗」', pn.fineTxt); }
-    }
-    if (pn.isDig && pn.digTxt) pn.digTxt = D1(pn.digTxt);
-    if (pn.isJob && pn.jobTxt) pn.jobTxt = D1(pn.jobTxt);
     if (pn.isRaidPrep) {
-      pn.sub = '第 ' + m.day + ' 天'; pn.rpTxt = D('阵亡的领袖会永久死亡，留下灵魂碎片。', pn.rpTxt);
+      pn.sub = '第 ' + m.day + ' 天';
       (pn.rpHeroes || []).forEach(rh => { if (rh.sub) rh.sub = D(rh.sub.split(' · ').slice(0, 2).join(' · '), rh.sub); if (rh.sh) rh.sh = rh.sh.replace('阵亡留下 ', '阵亡 → '); });
     }
-    if (pn.isWorlds) {
-      pn.sub = D('明天换一批', pn.sub); (pn.worlds || []).forEach(w => { w.desc = D('', w.desc); });
-      if (pn.hasMore) { pn.moreTxt = D('', pn.moreTxt); pn.hasMore = !!pn.moreTxt; }
-    }
-    if (pn.isLoadout) { pn.sub = D('', pn.sub); if (pn.slotTxt) pn.slotTxt = D(pn.slotTxt.replace(/（.*）$/, ''), pn.slotTxt); }
   }
   // the ⓘ switch shows up only where there is something behind it
   const dtAny = this._dtHas || this._domDt;

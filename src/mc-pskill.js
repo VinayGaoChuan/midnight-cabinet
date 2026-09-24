@@ -96,9 +96,9 @@ G.heroTip = function (h) {
 const oTF = G.tipFor;
 G.tipFor = function (key) {
   const p = this.panel, m = this.meta, h = p && p.kind === 'hero' && m && m.heroes.find(x => x.id === p.id);
-  if (h && key === 'hs-ps') { const P = PS[h.cls]; return { title: '个人技能「' + P.n + '」', c: P.col, kind: '上场后自动释放 · ' + P.resN, d: P.d, icon: P.ic, lines: [{ t: '部队全灭、领袖亲自上场时会先放一次；守城战里也会自动释放。', c: '#a89ca8' }, { t: '伤害随领袖攻击力（等级、品质、天赋）提升。', c: '#a89ca8' }] }; }
+  if (h && key === 'hs-ps') { const P = PS[h.cls]; return { title: P.n, c: P.col, kind: '个人技能 · ' + P.resN, d: P.d, icon: P.ic }; }
   const t = oTF.call(this, key);
-  if (h && key === 'tal-root' && t) { t.kind = '军团技能 · 点击释放'; t.lines = [{ t: '领袖在场外指挥时，点下方按钮释放。冷却 ' + M.skillNodeCd(h, m) + ' 个节点，每场最多 1 次。', c: '#a89ca8' }, { t: '领袖亲自上场后收起，改由个人技能作战。', c: '#a89ca8' }]; }
+  if (h && key === 'tal-root' && t) { t.title = M.HEROES[h.cls].skill.n; t.kind = '军团技能 · 冷却 ' + M.skillNodeCd(h, m) + ' 个节点'; t.lines = []; }
   return t;
 };
 const oView = G.view;

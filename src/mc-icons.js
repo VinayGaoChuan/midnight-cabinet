@@ -140,7 +140,9 @@ M.TAG = {
   style: (k) => STYLE_IC[k] ? { kind: 'style', k, n: M.STYLE[k], c: M.STYLE_COL[k], icon: STYLE_IC[k], d: STYLE_D } : null,
   cat: (k) => CAT_IC[k] ? { kind: 'cat', k, n: M.CAT[k], c: M.CAT_COL[k], icon: CAT_IC[k], d: CAT_D[k] } : null,
 };
-M.tagTip = (t) => t && { title: t.n, c: t.c, kind: { race: '种族', voc: '职业', style: '建筑风格', cat: '建筑功能' }[t.kind], d: t.d, icon: t.icon };
+// one sentence in context, the tag's name in its colour (the title row already shows icon + name)
+const TAG_LINE = { race: ['该部队属于', '种族'], voc: ['该部队的职业是', ''], style: ['该建筑具有', '风格'], cat: ['该建筑用于', ''] };
+M.tagTip = (t) => t && { title: t.n, c: t.c, icon: t.icon, lines: [{ rich: [{ t: TAG_LINE[t.kind][0], c: '#e8dcc4' }, { t: t.n, c: t.c, b: 1 }, { t: TAG_LINE[t.kind][1], c: '#e8dcc4' }] }] };
 const byName = { style: {}, cat: {} }; Object.keys(STYLE_IC).forEach(k => { if (k !== 'core') byName.style[M.STYLE[k]] = k; }); Object.keys(CAT_IC).forEach(k => { byName.cat[M.CAT[k]] = k; });
 // words recognised inside rich text; ctx 'bld' prefers building meanings for words shared with races (自然)
 const WORDS = Object.keys(RACE_IC).filter(n => n !== '英雄').map(n => ['race', n]).concat(Object.keys(VOC_IC).map(n => ['voc', n]), Object.keys(byName.style).map(n => ['style', n]), Object.keys(byName.cat).map(n => ['cat', n])).sort((a, b) => b[1].length - a[1].length);

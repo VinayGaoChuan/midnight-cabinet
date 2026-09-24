@@ -173,18 +173,21 @@ const dimC = '#8d8496', okC = '#9cff7a';
 // tooltip for a vein, optionally judged against the room built (or being chosen) on it
 M.tileTip = function (m, c, r, bkey) {
   const x = M.cell(m, c, r); if (!x || !x.tile) return null; const T = TILES[x.tile];
-  if (M.tileHidden(m, c, r)) return { title: '未勘明的地脉', c: '#cfc6b8', kind: M.TILE_DEPTH[r] + ' · 特殊地格', d: '岩层深处透出奇异的光。挖开它旁边的一格，就能看清是什么。', icon: 'l_unknown', ctx: 'bld' };
+  if (M.tileHidden(m, c, r)) return { title: '未勘明的地脉', c: '#cfc6b8', d: '挖开旁边一格就能看清。', ctx: 'bld' };
   const k = bkey || x.b, fit = k ? M.tileFits(x.tile, k) : null;
-  const lines = [{ t: '任何房间：' + T.anyD, c: k ? okC : '#e8dcc4' }, { t: '契合「' + T.fitN + '」：' + T.fitD + (k ? (fit ? '　✔ 已契合' : '　✘ 这个房间不契合') : ''), c: k ? (fit ? okC : dimC) : '#ffe08a' }];
-  return { title: T.n, c: T.c, kind: M.TILE_DEPTH[r] + ' · 特殊地格', d: k ? '' : x.dug ? '在这里建一个房间，就能占下这块地脉。' : '挖到这里并在上面建房间，就能占下这块地脉。', icon: T.ic, lines, ctx: 'bld' };
+  const lines = [{ t: '任何房间：' + T.anyD, c: k ? okC : '#e8dcc4' }, { t: '契合「' + T.fitN + '」：' + T.fitD + (k ? (fit ? '　✔' : '　✘') : ''), c: k ? (fit ? okC : dimC) : '#ffe08a' }];
+  return { title: T.n, c: T.c, icon: T.ic, lines, ctx: 'bld' };
 };
 const tileLines = (m, c, r, bkey) => { const t = M.tileTip(m, c, r, bkey); return t ? [{ t: '地格 · ' + t.title, c: t.c }].concat(t.lines || []) : []; };
 // rock tooltips: hide what is unidentified, spell out the two halves otherwise
 const oCT = G.cellTip;
 G.cellTip = function (p) {
   const t = oCT.call(this, p), m = this.meta, x = p && !p.door && M.cell(m, p.c, p.r); if (!t || !x || !x.tile || x.b) return t;
-  t.lines = (t.lines || []).filter(l => !/^特殊地格 · /.test(l.t || '') && !(TILES[x.tile] && l.t === TILES[x.tile].d));
-  const tt = M.tileTip(m, p.c, p.r); t.lines = [{ t: tt.title, c: tt.c }].concat(tt.lines || [{ t: tt.d, c: '#cfc6b8' }]).concat(t.lines);
+  const tt = M.tileTip(m, p.c, p.r), days = M.digDays ? M.digDays(m, p.c, p.r) : 1;
+  // rock that is terrain: named and explained as the terrain; digging it is 开垦 with the terrain's own days
+  if (!x.dug && !x.job) { const hid = M.tileHidden(m, p.c, p.r); return Object.assign(tt, { d: hid ? tt.d : M.canDig(m, p.c, p.r) ? '开垦：' + M.digCost(m) + ' 物资，' + days + ' 天。' : '先挖通旁边的房间。' }); }
+  if (x.job && x.job.kind === 'dig') return Object.assign(tt, { title: '开垦中 · ' + tt.title, d: '还需 ' + x.job.days + ' 天。' });
+  t.lines = (tt.lines || []).map(l => Object.assign({}, l)); t.lines.unshift({ t: tt.title, c: tt.c });
   return t;
 };
 const oBT = G.bldTip;
@@ -205,16 +208,17 @@ G.view = function () {
   const v = oView.call(this), pn = v.pn, p = this.panel, m = this.meta; if (!pn || !p || p.c == null) return v;
   const x = M.cell(m, p.c, p.r); if (!x || !x.tile) return v; const T = TILES[x.tile];
   if (pn.isDig) {
-    if (M.tileHidden(m, p.c, p.r)) { pn.tileTxt = '未勘明的地脉：挖开旁边的一格就能看清。'; pn.tileC = '#cfc6b8'; }
-    else { pn.tileTxt = '特殊地格「' + T.n + '」　任何房间：' + T.anyD + '　·　契合「' + T.fitN + '」：' + T.fitD; pn.tileC = T.c; }
+    const hid = M.tileHidden(m, p.c, p.r), days = M.digDays(m, p.c, p.r);
+    pn.title = hid ? '未勘明的地脉' : T.n; pn.titleColor = hid ? '#cfc6b8' : T.c; pn.digBtn = '开垦 · ' + M.digCost(m) + ' 物资 · ' + days + ' 天';
+    pn.tileTxt = hid ? '挖开旁边一格就能看清。' : '任何房间：' + T.anyD + '　·　契合「' + T.fitN + '」：' + T.fitD; pn.tileC = hid ? '#cfc6b8' : '#e8dcc4';
   }
   if (pn.isBuild) {
-    pn.tileTxt = T.n + '　任何房间：' + T.anyD + '　·　契合「' + T.fitN + '」：' + T.fitD;
+    pn.tileTxt = '任何房间：' + T.anyD + '　·　契合「' + T.fitN + '」：' + T.fitD;
     const opts = M.buildOptions(m, p.c, p.r); (pn.opts || []).forEach((o, i) => { const q = opts[i]; if (q) o.bonus = M.tileFits(x.tile, q.key) ? '★ 契合地格' : '☆ 地格通用效果'; });
   }
   if (pn.isRoom && x.b) {
     const fit = M.tileFits(x.tile, x.b);
-    pn.tileTxt = T.n + '　任何房间：' + T.anyD + '　·　契合「' + T.fitN + '」：' + T.fitD + (fit ? '　✔ 已契合' : '　✘ 未契合');
+    pn.tileTxt = '任何房间：' + T.anyD + '　·　契合「' + T.fitN + '」：' + T.fitD + (fit ? '　✔' : '　✘');
     (pn.chips || []).forEach(ch => { if (/^地格 · /.test(ch.t)) { ch.t = '地格 · ' + T.n + (fit ? ' ★' : ''); ch.c = T.c; } });
   }
   return v;

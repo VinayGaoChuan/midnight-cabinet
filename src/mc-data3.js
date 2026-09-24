@@ -78,7 +78,7 @@ M.relicText = (r) => r.lines.map(l => M.statText(l.k, l.v)).join('，');
 const STYLE = { core:'主基地', steam:'蒸汽', magic:'魔法', nature:'自然', water:'水域', fantasy:'玄幻', scifi:'科幻', medieval:'中世纪', cartoon:'卡通' };
 const CAT = { core:'核心', power:'电力', forge:'锻造', med:'医疗', recruit:'招募', train:'训练', store:'后勤', defense:'防御', luck:'运势', misc:'特殊' };
 const BUILDINGS = {
-  core:{ n:'主基地', q:0, cat:'core', style:'core', pw:4, cost:0, days:0, fixed:1, d:'连通地面的第一个房间。自带仓库，所有物资都在这里。' },
+  core:{ n:'主基地', q:0, cat:'core', style:'core', pw:4, cost:0, days:0, fixed:1, d:'所有物资、图纸和宝物都在这里。' },
   generator:{ n:'发电机', q:0, cat:'power', style:'steam', pw:4, cost:80, days:1, d:'提供 4 点电力。' },
   smithy:{ n:'铁匠铺', q:0, cat:'forge', style:'medieval', pw:-1, cost:100, days:2, forge:{}, d:'用宝物图纸打造宝物，品质随机。' },
   hospital:{ n:'医院', q:0, cat:'med', style:'scifi', pw:-1, cost:100, days:2, fx:{ heal:0.35 }, d:'领袖每天回复 35% 生命。' },
@@ -89,10 +89,10 @@ const BUILDINGS = {
   pool:{ n:'净水池', q:0, cat:'med', style:'water', pw:-1, cost:80, days:1, fx:{ heal:0.1 }, d:'医院回复额外 +10%。' },
   lookout:{ n:'监听室', q:0, cat:'misc', style:'scifi', pw:-1, cost:90, days:1, fx:{ tower:1 }, d:'出征时，所有节点的类型一开始就可见。' },
   vault:{ n:'保险库', q:0, cat:'misc', style:'steam', pw:-1, cost:110, days:2, fx:{ bank:1 }, d:'领袖死亡时，第一件宝物不会丢失。' },
-  ballista:{ n:'弩炮室', q:0, cat:'defense', style:'medieval', pw:-1, cost:90, days:1, weapon:{ range:2, dmg:30, cd:1.1, kind:'bolt' }, d:'防守时向地面射击。射程 2 格。' },
-  cannon:{ n:'蒸汽加农炮', q:0, cat:'defense', style:'steam', pw:-2, cost:140, days:2, weapon:{ range:3, dmg:60, cd:2.2, kind:'shell', splash:110 }, d:'溅射伤害。射程 3 格。' },
-  tesla:{ n:'特斯拉线圈', q:0, cat:'defense', style:'scifi', pw:-3, cost:160, days:2, weapon:{ range:2, dmg:26, cd:0.9, kind:'chain', chain:3 }, d:'电弧会在敌人之间跳跃。射程 2 格。' },
-  spire:{ n:'奥术尖塔', q:0, cat:'defense', style:'magic', pw:-2, cost:150, days:2, weapon:{ range:3, dmg:22, cd:1.2, kind:'arcane', slow:0.5 }, d:'命中的敌人减速 50%。射程 3 格。' },
+  ballista:{ n:'弩炮室', q:0, cat:'defense', style:'medieval', pw:-1, cost:90, days:1, weapon:{ range:2, dmg:30, cd:1.1, kind:'bolt' }, d:'防守时向地面射击。' },
+  cannon:{ n:'蒸汽加农炮', q:0, cat:'defense', style:'steam', pw:-2, cost:140, days:2, weapon:{ range:3, dmg:60, cd:2.2, kind:'shell', splash:110 }, d:'溅射伤害。' },
+  tesla:{ n:'特斯拉线圈', q:0, cat:'defense', style:'scifi', pw:-3, cost:160, days:2, weapon:{ range:2, dmg:26, cd:0.9, kind:'chain', chain:3 }, d:'电弧会在敌人之间跳跃。' },
+  spire:{ n:'奥术尖塔', q:0, cat:'defense', style:'magic', pw:-2, cost:150, days:2, weapon:{ range:3, dmg:22, cd:1.2, kind:'arcane', slow:0.5 }, d:'命中的敌人减速 50%。' },
   // ── wonders ──
   wolfsburg:{ n:'沃尔夫斯堡工厂', q:3, cat:'forge', style:'steam', pw:-3, cost:420, days:5, forge:{ qUp:1 }, d:'传说级锻造厂。打造出的宝物品质 +1。' },
   venice:{ n:'威尼斯兵工厂', q:2, cat:'forge', style:'medieval', pw:-2, cost:300, days:4, forge:{ twice:0.35 }, d:'打造时 35% 概率额外得到一件同名宝物。' },
@@ -104,9 +104,9 @@ const BUILDINGS = {
   gardens:{ n:'空中花园', q:2, cat:'med', style:'nature', pw:-2, cost:300, days:4, fx:{ heal:0.45 }, d:'医院回复额外 +45%。' },
   artemis:{ n:'阿尔忒弥斯神庙', q:1, cat:'store', style:'nature', pw:-1, cost:220, days:3, fx:{ supplyDaily:30 }, d:'每天产出 30 物资。' },
   library:{ n:'亚历山大图书馆', q:2, cat:'train', style:'magic', pw:-2, cost:300, days:4, train:{}, fx:{ orbMul:1, newHeroLv:2 }, d:'经验球效率 +100%，新领袖从 3 级开始。' },
-  colossus:{ n:'罗德岛巨像', q:2, cat:'defense', style:'water', pw:-3, cost:340, days:4, weapon:{ range:5, dmg:90, cd:2.4, kind:'colossus', splash:140 }, d:'巨像会砸向地面。射程 5 格。' },
+  colossus:{ n:'罗德岛巨像', q:2, cat:'defense', style:'water', pw:-3, cost:340, days:4, weapon:{ range:5, dmg:90, cd:2.4, kind:'colossus', splash:140 }, d:'巨像会砸向地面。' },
   terracotta:{ n:'兵马俑', q:3, cat:'defense', style:'fantasy', pw:-2, cost:420, days:5, fx:{ defArmy:4 }, d:'防守战时，4 名陶俑士兵加入战斗。' },
-  zeus:{ n:'奥林匹亚宙斯神像', q:2, cat:'defense', style:'fantasy', pw:-3, cost:360, days:4, weapon:{ range:4, dmg:70, cd:1.8, kind:'zeus', chain:4 }, d:'召唤落雷，连锁 4 个敌人。射程 4 格。' },
+  zeus:{ n:'奥林匹亚宙斯神像', q:2, cat:'defense', style:'fantasy', pw:-3, cost:360, days:4, weapon:{ range:4, dmg:70, cd:1.8, kind:'zeus', chain:4 }, d:'召唤落雷，连锁 4 个敌人。' },
   kotoku:{ n:'高德院', q:1, cat:'defense', style:'fantasy', pw:-1, cost:200, days:3, fx:{ defArmy:2 }, d:'防守战时，2 名武僧加入战斗。' },
   hagia:{ n:'圣索菲亚大教堂', q:2, cat:'luck', style:'fantasy', pw:-2, cost:300, days:4, fx:{ startItemQ:1 }, d:'出征开局获得 1 个支援道具，至少为「史诗」。' },
   forbidden:{ n:'紫禁城', q:3, cat:'misc', style:'medieval', pw:-2, cost:440, days:5, fx:{ relicSlot:1 }, d:'每名领袖出征可多带 1 件宝物。' },

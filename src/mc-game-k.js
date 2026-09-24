@@ -62,7 +62,7 @@ G.view = function () {
     caps.push({ x: Math.round(top.x - 40), y: Math.max(4, Math.round(top.y - 66)), t: M.BRANCH[b].n + ' ' + taken + '/' + h.tree[b].length, c: Bc });
   });
   pn.nodes = nodes; pn.links = links; pn.caps = caps; pn.noPts = pts <= 0; pn.hasPts = pts > 0;
-  pn.holdTip = '按住发光的天赋，圆环蓄满就学会'; const nag = this.talNag && now() - this.talNag.at < 1600 ? this.talNag : null; pn.nagOn = !!nag; pn.nagX = nag ? nag.x : 0; pn.nagY = nag ? nag.y : 0;
+  const nag = this.talNag && now() - this.talNag.at < 1600 ? this.talNag : null; pn.nagOn = !!nag; pn.nagX = nag ? nag.x : 0; pn.nagY = nag ? nag.y : 0;
   return v;
 };
 
@@ -76,14 +76,14 @@ G.tipFor = function (key) {
     let mm = /^tal-(atk|def|luck)-(\d+)$/.exec(key);
     if (mm) { const b = mm[1], i = +mm[2], T = h.tree[b][i], taken = i < h.taken[b], avail = i === h.taken[b] && h.points > 0;
       const st = taken ? '已学会' : avail ? '按住学习' : i > h.taken[b] ? '先学会下面的天赋' : '没有天赋点';
-      return { title: T.n + (T.big ? ' ×2' : ''), c: M.BRANCH[b].c, kind: M.BRANCH[b].n + ' · 第 ' + (i + 1) + ' 层 · ' + st, d: T.d + (T.big ? '（传说领袖：效果翻倍）' : ''), icon: icOf(T.m) }; }
-    if (key === 'hs-rar') return { title: R.n + '领袖', c: R.c, d: '品质决定基础属性和天赋树的层数。', lines: [{ t: '每条分支 ' + h.tree.atk.length + ' 层 · 属性 ×' + R.stat, c: '#a89ca8' }] };
-    if (key === 'hs-lv') return { title: '等级 ' + h.lv, c: '#9cff7a', d: '经验 ' + h.exp + ' / ' + M.expNeed(h.lv) + '。每升 1 级获得 1 个天赋点，最高 10 级。', icon: 't_orb' };
-    if (key === 'hs-pts') return { title: '天赋点 ' + h.points, c: '#ffe08a', d: h.points ? '发光跳动的天赋可以学。按住它，蓄满就学会了。' : '升级获得天赋点。去出征，或者在训练建筑里灌经验球。', icon: 't_skill' };
-    if (key === 'hs-hp') return { title: '生命 ' + Math.round(h.hp) + ' / ' + mx, c: '#9cff7a', d: '不会自动恢复。医疗建筑每天治疗，也可以急救。降到 0 就永久死亡。', icon: 't_heart' };
-    if (key === 'hs-atk') return { title: '攻击 ' + Math.round(M.heroAtk(h, m)), c: '#ff9a6a', d: '部队全灭后领袖亲自上场时的攻击力。', icon: 't_sword' };
-    if (key === 'hs-slot') return { title: '宝物格 ' + M.relicSlots(h, m), c: '#ffcc33', d: '出征时能带的宝物数量。领袖死亡时带着的宝物会丢失。', icon: 't_chest' };
-    if (key === 'hs-runs') return { title: '出征 ' + h.runs + ' 次', c: '#cfc6b8', d: '这名领袖出征过的次数。', icon: 'u_mask' };
+      return { title: T.n + (T.big ? ' ×2' : ''), c: M.BRANCH[b].c, kind: st, d: T.d + (T.big ? '，效果翻倍。' : '。'), icon: icOf(T.m) }; }
+    if (key === 'hs-rar') return { title: R.n + '领袖', c: R.c, d: '属性 ×' + R.stat + '，每条天赋 ' + h.tree.atk.length + ' 层。' };
+    if (key === 'hs-lv') return { title: '等级 ' + h.lv, c: '#9cff7a', d: '经验 ' + h.exp + ' / ' + M.expNeed(h.lv) + '。', icon: 't_orb' };
+    if (key === 'hs-pts') return { title: '天赋点 ' + h.points, c: '#ffe08a', d: h.points ? '按住发光的天赋学习。' : '升级获得。', icon: 't_skill' };
+    if (key === 'hs-hp') return { title: '生命 ' + Math.round(h.hp) + ' / ' + mx, c: '#9cff7a', d: '不会自动恢复，医疗建筑每天治疗。', icon: 't_heart' };
+    if (key === 'hs-atk') return { title: '攻击 ' + Math.round(M.heroAtk(h, m)), c: '#ff9a6a', d: '亲自上场时的攻击力。', icon: 't_sword' };
+    if (key === 'hs-slot') return { title: '宝物格 ' + M.relicSlots(h, m), c: '#ffcc33', d: '出征能带的宝物数。', icon: 't_chest' };
+    if (key === 'hs-runs') return { title: '出征 ' + h.runs + ' 次', c: '#cfc6b8', icon: 'u_mask' };
   }
   return oldTipFor.call(this, key);
 };

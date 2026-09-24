@@ -138,19 +138,19 @@ G.view = function () {
   const v = oView.call(this), p = this.panel, m = this.meta, pn = v.pn;
   if (pn && p && p.kind === 'raidPrep' && this.raidPrep) {
     const sel = this.raidPrep.sel, n = m.heroes.filter(h => sel[h.id]).length;
-    Object.assign(pn, { isRaidPrep: true, title: '今夜袭击', titleColor: '#ff6a5a', sub: '第 ' + m.day + ' 天 · 怪物正朝传送门涌来',
-      rpTxt: '选出守城的领袖。守城战里倒下的领袖会永久死亡，留下灵魂碎片——正好用来清掉弱小的领袖，换成高端材料。基地核心不会因此受损。打完按表现评级，发物资、经验球和图纸。',
+    Object.assign(pn, { isRaidPrep: true, title: '今夜袭击', titleColor: '#ff6a5a', sub: '第 ' + m.day + ' 天',
+      rpTxt: '选守城的领袖。守城阵亡的领袖永久死亡，留下灵魂碎片。',
       rpHeroes: m.heroes.map(h => { const on = !!sel[h.id], mx = M.heroMaxHp(h, m), P = M.PSKILL && M.PSKILL[h.cls];
         return { img: M.spriteURL(M.HEROES[h.cls].sprite, 4), n: M.heroN(h), c: M.qc(h.rarity), sub: 'Lv ' + h.lv + ' · 生命 ' + Math.round(h.hp) + '/' + mx + (P ? ' · 个人技能「' + P.n + '」' : ''), sh: '阵亡留下 ' + M.deathShards(h, m) + ' 碎片',
           mark: on ? '守城' : '留守', markC: on ? '#ff6a5a' : '#6b6570', border: on ? '#ff6a5a' : '#3a3040', bg: on ? 'linear-gradient(90deg,#3a1418,#15111a)' : '#15111a', onClick: () => this.raidToggle(h.id), tipOn: this.tipFn(() => this.heroTip(h)) }; }),
       rpBtn: n ? '开始守城 · ' + n + ' 名领袖出战' : '开始守城 · 只靠防御房间', rpGo: () => this.raidLaunch() });
   }
   // recruit panel speaks supplies
-  if (pn && pn.isRecruit) { const cost = M.recruitCost(m); pn.recTxt = '花 ' + cost + ' 物资，从另一个世界招来一名领袖。品质随机：普通 / 稀有 / 史诗 / 传说，天赋树和个人技能也随之不同。'; pn.recBtn = '招募 · ' + cost + ' 物资（现有 ' + m.supplies + '）'; }
+  if (pn && pn.isRecruit) { const cost = M.recruitCost(m); const qUp = this.panel && M.BUILDINGS[this.panel.key] && M.BUILDINGS[this.panel.key].recruit && M.BUILDINGS[this.panel.key].recruit.qUp; pn.recBtn = '花 ' + cost + ' 物资，招募领袖' + (qUp ? '（至少稀有）' : ''); }
   // build options show the shard price of epic / legendary rooms
   if (pn && pn.isBuild && pn.opts && p) { const opts = M.buildOptions(m, p.c, p.r); pn.opts.forEach((o, i) => { const x = opts[i]; if (x && x.sh && o.meta) o.meta = o.meta.replace(' 物资', ' 物资 + ' + x.sh + ' 碎片'); }); }
   // forge: fine forging toggle
-  if (pn && pn.isForge) { const on = !!this.fineOn; Object.assign(pn, { fineOn: true, fineMark: on ? '✔' : '☐', fineC: on ? '#d8a0ff' : '#6b6570', fineBorder: on ? '#b86bff' : '#3a3040', fineBg: on ? '#241830' : '#15111a', fineTxt: '精铸：每次多花 ' + M.FINE_SH + ' 灵魂碎片，品质至少为「史诗」（现有 ' + m.shards + '）', fineToggle: () => { this.fineOn = !this.fineOn; M.Sfx.click(); } }); }
+  if (pn && pn.isForge) { const on = !!this.fineOn; Object.assign(pn, { fineOn: true, fineMark: on ? '✔' : '☐', fineC: on ? '#d8a0ff' : '#6b6570', fineBorder: on ? '#b86bff' : '#3a3040', fineBg: on ? '#241830' : '#15111a', fineTxt: '精铸：+' + M.FINE_SH + ' 灵魂碎片，至少史诗', fineToggle: () => { this.fineOn = !this.fineOn; M.Sfx.click(); } }); }
   return v;
 };
 })();

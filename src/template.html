@@ -940,6 +940,7 @@
       <div data-g="power" sc-camel-on-mouse-enter="{{pwTip}}" sc-camel-on-mouse-leave="{{tipOff}}" style="display:flex;align-items:center;gap:10px;padding:6px 16px;background:rgba(0,0,0,0.45);border:1px solid #4a3a2a;font-size:28px;color:{{b.pwC}};white-space:nowrap">⚡ 电力 {{b.pwTxt}}</div>
     </div>
     <div style="flex:1"></div>
+    <div data-tip="b-rest" sc-camel-on-click="{{restDay}}" style="padding:6px 18px;font-size:26px;color:#cfc6b8;border:2px solid #4a3a2a;background:rgba(0,0,0,0.45);cursor:pointer;white-space:nowrap" style-hover="color:#ffe08a;border-color:#caa84a">☾ 休整一天</div>
     <div sc-camel-on-click="{{abandon}}" style="padding:6px 18px;font-size:26px;color:#c86a6a;border:2px solid #5a2a2a;background:rgba(40,8,8,0.5);cursor:pointer" style-hover="color:#ff8a7a;border-color:#ff6a5a">放弃</div>
   </div>
   <sc-if value="{{isRaid}}" hint-placeholder-val="{{false}}">
@@ -977,7 +978,7 @@
         <div style="display:flex;gap:18px;align-items:flex-start">
           <m-img src="{{pn.thumb}}" style="width:210px;height:147px;border:2px solid #4a3a2a"></m-img>
           <div style="flex:1;display:flex;flex-direction:column;gap:10px">
-            <div style="font-size:28px;line-height:1.4;color:#e8dcc4;text-wrap:pretty">{{pn.d}}</div>
+            <sc-if value="{{pn.hasD}}"><div style="font-size:28px;line-height:1.4;color:#e8dcc4;text-wrap:pretty">{{pn.d}}</div></sc-if>
             <div style="display:flex;flex-wrap:wrap;gap:8px"><sc-for list="{{pn.chips}}" as="ch" hint-placeholder-count="1"><div style="padding:3px 12px;border:1px solid {{ch.c}};color:{{ch.c}};font-size:22px">{{ch.t}}</div></sc-for></div>
           </div>
         </div>
@@ -1004,7 +1005,6 @@
           </div>
         </sc-if>
         <sc-if value="{{pn.isRecruit}}">
-          <div style="font-size:26px;line-height:1.45;color:#cfc6b8">{{pn.recTxt}}</div>
           <div sc-camel-on-click="{{recruit}}" style="padding:18px 0;text-align:center;font-size:36px;background:linear-gradient(180deg,#d8a0ff,#7a3ab0);color:#140a1a;border:2px solid #f0d8ff;box-shadow:0 5px 0 #3a1a5a,0 0 30px rgba(184,107,255,0.4);cursor:pointer;transition:transform .08s" style-hover="filter:brightness(1.12);transform:translateY(-2px)" style-active="transform:translateY(3px) scale(0.97)">{{pn.recBtn}}</div>
         </sc-if>
         <sc-if value="{{pn.isTrain}}"><div style="font-size:26px;color:#b8ff9a">{{pn.trainTxt}}</div></sc-if>
@@ -1028,7 +1028,7 @@
       </sc-if>
 
       <sc-if value="{{pn.isBuild}}" hint-placeholder-val="{{false}}">
-        <sc-if value="{{pn.empty}}"><div style="font-size:28px;line-height:1.5;color:#a89ca8">还没有建筑图纸。<span data-detail="1">去异世界探索吧，首领、精英和宝箱都会掉落图纸。</span></div></sc-if>
+        <sc-if value="{{pn.empty}}"><div style="font-size:28px;line-height:1.5;color:#a89ca8">没有建筑图纸，出征能拿到。</div></sc-if>
         <div data-g="bld" style="display:flex;flex-direction:column;gap:10px;overflow-y:auto;max-height:720px;padding-right:6px">
           <sc-for list="{{pn.opts}}" as="op" hint-placeholder-count="0">
             <div sc-camel-on-click="{{op.onClick}}" sc-camel-on-mouse-enter="{{op.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" style="display:flex;gap:14px;align-items:center;padding:10px;border:2px solid {{op.border}};background:#15111a;opacity:{{op.op}};cursor:pointer;transition:transform .08s" style-hover="transform:translateX(6px);background:#221a2a" style-active="transform:scale(0.97)">
@@ -1046,13 +1046,11 @@
 
       <sc-if value="{{pn.isDig}}" hint-placeholder-val="{{false}}">
         <sc-if value="{{pn.hasTileRow}}"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px;border:1px solid {{pn.tileC}};background:rgba(0,0,0,0.35)"><sc-for list="{{pn.tileRow}}" as="tw" hint-placeholder-count="0"><div style="display:flex;align-items:center;gap:6px"><sc-if value="{{tw.hasImg}}"><m-img src="{{tw.img}}" style="width:34px;height:34px"></m-img></sc-if><span style="font-size:24px;color:{{tw.c}}">{{tw.t}}</span></div></sc-for></div></sc-if><sc-if value="{{pn.hasTile}}"><div style="font-size:26px;line-height:1.45;color:{{pn.tileC}}">{{pn.tileTxt}}</div></sc-if>
-        <div style="font-size:26px;line-height:1.45;color:#cfc6b8">{{pn.digTxt}}</div>
         <div data-g="dig" sc-camel-on-click="{{doDig}}" style="padding:20px 0;text-align:center;font-size:38px;background:linear-gradient(180deg,#ffe08a,#d4982e);color:#1a0e08;border:2px solid #fff3c4;box-shadow:0 5px 0 #6a4410,0 0 24px rgba(255,190,80,0.35);cursor:pointer;transition:transform .08s" style-hover="filter:brightness(1.12);transform:translateY(-2px)" style-active="transform:translateY(3px) scale(0.97)">⛏ {{pn.digBtn}}</div>
       </sc-if>
 
       <sc-if value="{{pn.isJob}}" hint-placeholder-val="{{false}}">
         <div style="height:26px;background:#000;border:2px solid #4a3a2a"><div style="height:22px;width:{{pn.jobW}};background:linear-gradient(90deg,#d4982e,#ffe08a)"></div></div>
-        <div style="font-size:26px;line-height:1.45;color:#cfc6b8">{{pn.jobTxt}}</div>
       </sc-if>
 
       <sc-if value="{{pn.isRaidPrep}}" hint-placeholder-val="{{false}}">
@@ -1068,23 +1066,6 @@
         </div>
         <div sc-camel-on-click="{{pn.rpGo}}" style="padding:18px 0;text-align:center;font-size:34px;background:linear-gradient(180deg,#ff8a6a,#b02a20);color:#1a0806;border:2px solid #ffd0c0;box-shadow:0 5px 0 #4a0a08,0 0 30px rgba(255,90,60,0.4);cursor:pointer;transition:transform .08s" style-hover="filter:brightness(1.12);transform:translateY(-2px)" style-active="transform:translateY(3px) scale(0.97)">{{pn.rpBtn}}</div>
       </sc-if>
-      <sc-if value="{{pn.isWorlds}}" hint-placeholder-val="{{false}}">
-        <div style="display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-height:560px;padding-right:6px">
-          <sc-for list="{{pn.worlds}}" as="wc" hint-placeholder-count="1">
-            <div sc-camel-on-click="{{wc.onClick}}" style="position:relative;height:180px;box-sizing:border-box;padding:16px 20px;background:linear-gradient(100deg,{{wc.bg}} 0%,{{wc.tile}} 70%,{{wc.light}} 160%);border:2px solid {{wc.light}};box-shadow:inset 0 0 50px rgba(0,0,0,0.6);display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;transition:transform .1s" style-hover="transform:translateX(-6px) scale(1.02)" style-active="transform:scale(0.97)">
-              <div style="position:absolute;right:16px;bottom:10px;display:flex;gap:10px;align-items:flex-end;opacity:0.85"><sc-for list="{{wc.foes}}" as="dk" hint-placeholder-count="0"><m-img src="{{dk.img}}"></m-img></sc-for></div>
-              <div style="font-size:44px;color:#fff;text-shadow:0 0 18px {{wc.light}},3px 3px 0 #000">{{wc.n}} <span style="font-size:24px;color:#ffcc33">{{wc.tag}}</span></div>
-              <div style="font-size:22px;color:#e8dcc4;text-shadow:2px 2px 0 #000;max-width:440px">{{wc.desc}}</div>
-              <div style="display:flex;align-items:center;gap:16px"><div data-tip="w-danger-{{wc.k}}" style="display:flex;gap:2px;align-items:center"><sc-for list="{{wc.skulls}}" as="sk" hint-placeholder-count="0"><m-img src="{{sk.img}}"></m-img></sc-for></div><div style="width:2px;height:28px;background:rgba(255,255,255,0.2)"></div><div data-tip="w-loot-{{wc.k}}" style="display:flex;gap:12px;align-items:center"><sc-for list="{{wc.loot}}" as="lt" hint-placeholder-count="0"><div style="position:relative;display:flex;align-items:center;justify-content:center;width:44px;height:40px"><m-img src="{{lt.img}}"></m-img><span style="position:absolute;right:-12px;top:-10px;font-family:'Cinzel','Noto Serif SC',serif;font-size:16px;color:#ffe08a;text-shadow:2px 2px 0 #000">{{lt.t}}</span></div></sc-for></div></div>
-            </div>
-          </sc-for>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <sc-if value="{{pn.hasMore}}"><div data-tip="w-portal" style="font-size:22px;color:#8d8496">{{pn.moreTxt}}</div></sc-if>
-        </div>
-        <div sc-camel-on-click="{{restDay}}" style="margin-top:auto;padding:14px 0;text-align:center;font-size:30px;background:linear-gradient(180deg,#2e2436,#1a1420);border:2px solid #8a6a3a;cursor:pointer;transition:transform .08s" style-hover="border-color:#ffd970" style-active="transform:scale(0.97)">休整一天<span data-detail="1">（不出征，推进 1 天）</span></div>
-      </sc-if>
-
       <sc-if value="{{pn.isLoadout}}" hint-placeholder-val="{{false}}">
         <div style="font-size:28px;color:#ffe08a">领袖</div>
         <div style="display:flex;flex-wrap:wrap;gap:10px">
@@ -1096,7 +1077,7 @@
           </sc-for>
         </div>
         <div data-g="relics" style="font-size:28px;color:#ffe08a">宝物 <span style="font-size:22px;color:#a89ca8">{{pn.slotTxt}}</span></div>
-        <sc-if value="{{pn.noRelic}}"><div style="font-size:24px;color:#6b6570">还没有宝物。<span data-detail="1">用宝物图纸在锻造建筑里打造。</span></div></sc-if>
+        <sc-if value="{{pn.noRelic}}"><div style="font-size:24px;color:#6b6570">没有宝物</div></sc-if>
         <div style="display:flex;flex-wrap:wrap;gap:10px;overflow-y:auto;max-height:260px">
           <sc-for list="{{pn.relics}}" as="lr" hint-placeholder-count="0">
             <div sc-camel-on-click="{{lr.onClick}}" sc-camel-on-mouse-enter="{{lr.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" style="position:relative;width:90px;height:90px;box-sizing:border-box;border:2px solid {{lr.border}};background:{{lr.bg}};display:flex;align-items:center;justify-content:center;cursor:pointer;transform:scale({{lr.sc}});transition:transform .1s">
@@ -1131,7 +1112,6 @@
             </div>
           </sc-for>
           <sc-if value="{{pn.noPts}}"><div style="position:absolute;right:10px;bottom:8px;font-size:18px;color:#6b6570;pointer-events:none">升级获得天赋点</div></sc-if>
-          <sc-if value="{{pn.hasPts}}"><div style="position:absolute;left:10px;bottom:8px;font-size:20px;color:#ffe08a;pointer-events:none">{{pn.holdTip}}</div></sc-if>
           <sc-if value="{{pn.nagOn}}"><div style="position:absolute;left:{{pn.nagX}}px;top:{{pn.nagY}}px;width:220px;padding:6px 10px;text-align:center;font-size:22px;color:#1a0e08;background:#ffcc33;border:2px solid #fff3c4;box-shadow:0 4px 0 #6a4410;pointer-events:none;animation:talBob .5s ease-in-out infinite">要按住不放哦！</div></sc-if>
         </div>
       </sc-if>
@@ -1210,7 +1190,7 @@
   </div>
   <sc-if value="{{pausedOn}}"><div style="position:absolute;left:0;top:480px;width:1920px;text-align:center;font-size:110px;text-shadow:0 0 40px #000,6px 6px 0 #000;pointer-events:none">已暂停</div></sc-if>
   <div style="position:absolute;left:0;top:900px;width:1920px;height:180px;box-sizing:border-box;background:linear-gradient(180deg,#120e18,#08060a);border-top:2px solid #c8a060;box-shadow:0 -3px 0 #0a080c">
-    <div data-tip="b-items" style="position:absolute;left:50px;top:14px;font-size:24px;color:#a89ca8">支援道具<span data-detail="1"> · 按键或点击由领袖释放</span></div>
+    <div data-tip="b-items" style="position:absolute;left:50px;top:14px;font-size:24px;color:#a89ca8">支援道具</div>
     <div style="position:absolute;left:50px;top:50px;display:flex;gap:18px">
       <sc-for list="{{h.items}}" as="it" hint-placeholder-count="0">
         <div sc-camel-on-click="{{it.onClick}}" sc-camel-on-mouse-enter="{{it.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" style="width:104px;height:104px;box-sizing:border-box;border:3px solid {{it.border}};background:{{it.bg}};position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .08s;transform:scale({{it.sc}})" style-hover="transform:translateY(-6px);filter:brightness(1.2)" style-active="transform:scale(0.92)"><sc-if value="{{it.keyOn}}"><div style="position:absolute;left:-10px;top:-12px;min-width:30px;height:30px;padding:0 6px;box-sizing:border-box;background:#0a080c;border:2px solid #f2c14e;color:#ffe08a;font-family:'Cinzel','Noto Serif SC',serif;font-size:18px;display:flex;align-items:center;justify-content:center;pointer-events:none">{{it.key}}</div></sc-if><sc-if value="{{it.has}}"><m-img src="{{it.img}}"></m-img></sc-if></div>
@@ -1282,7 +1262,7 @@
       </div>
     </div>
     <div style="position:absolute;left:1250px;top:490px;width:630px;height:350px;box-sizing:border-box;padding:18px 22px;background:rgba(10,8,14,0.55);border:1px solid #4a3a2a;display:flex;flex-direction:column;gap:14px">
-      <div style="display:flex;align-items:baseline;gap:16px"><span style="font-size:38px;color:#ffe8b0">道具</span><span data-detail="1" style="font-size:22px;color:#8d8496">战斗中点击使用</span></div>
+      <div style="display:flex;align-items:baseline;gap:16px"><span style="font-size:38px;color:#ffe8b0">道具</span></div>
       <div style="display:flex;gap:18px;flex:1;align-items:center;justify-content:center">
         <sc-for list="{{s.items}}" as="si" hint-placeholder-count="3">
           <div style="display:flex;flex-direction:column;align-items:center;gap:10px">

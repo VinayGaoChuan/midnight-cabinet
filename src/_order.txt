@@ -39,6 +39,7 @@ mc-meta-b.js
 mc-names.js
 mc-bp.js
 mc-terrain.js
+mc-terrain-art.js
 mc-pskill.js
 mc-soul.js
 mc-mouse.js
@@ -47,6 +48,7 @@ mc-lvup.js
 mc-save.js
 mc-guide.js
 mc-flow.js
+mc-portal.js
 mc-tipcompact.js
 mc-px16.js
 mc-px16-hum.js

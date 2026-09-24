@@ -70,30 +70,28 @@ const R = (s) => ({ rich: M.rich(s) });
 G.tipFor = function (key) {
   const m = this.meta, run = this.run, b = this.battle, kq = (a) => '「' + M.keyOf(a) + '」';
   const T = {
-    'b-mode': () => ({ title: this.cfg && this.cfg.mode === 'hold' ? '坚守战' : '普通战', c: '#f2c14e', d: this.cfg && this.cfg.mode === 'hold' ? '撑过倒计时就算胜利。敌人会一波一波地出现。' : '消灭所有敌人就算胜利。', lines: [R('领袖倒下 = 永久死亡，带着的宝物全部丢失。')] }),
-    'b-base': () => ({ title: '基础积分', c: '#f5ead4', d: '击杀敌人获得。精英、首领给得更多，部分特性和亡语也会加分。', lines: [R('最终积分 = 基础积分 × 倍率')] }),
-    'b-mult': () => ({ title: '倍率', c: '#ffcc33', d: '击杀精英 +0.1、首领 +0.3，战旗、宝物和部分特性还会继续叠加。', lines: [R('最终积分 = 基础积分 × 倍率')] }),
-    'b-score': () => ({ title: '积分', c: '#ffcc33', d: '战斗胜利后存进钱包，是局内唯一的货币，在夜市购买部队、战旗和道具。' }),
-    'b-hero': () => ({ title: run ? 'Lv' + run.hero.lv + ' ' + M.heroN(run.hero) : '领袖', c: '#f2c14e', d: '站在左边的指挥位。部队全灭后会亲自上场。', lines: [R('生命不会自动恢复，靠营火、事件或回基地治疗。'), R('领袖倒下 = 永久死亡。')] }),
-    'b-count': () => ({ title: '战况', c: '#e8dcc4', d: '左边是我方还在战斗的部队数，右边是剩余敌人（含还没出场的）。' }),
-    'b-pause': () => ({ title: '暂停', c: '#e8dcc4', d: '暂停时依然可以查看单位信息。', lines: [R('快捷键 ' + kq('pause'))] }),
-    'b-speed': () => ({ title: '战斗速度', c: '#f2c14e', d: '1× / 2× / 3×，只影响战斗画面的快慢。', lines: [R('快捷键 ' + kq('speed') + ' 循环切换')] }),
-    'b-items': () => ({ title: '支援道具', c: '#ffcc33', d: '由领袖在场外释放。使用时滚轮决定品质，至少是道具本身的品质。', lines: [R('快捷键 ' + kq('item1') + kq('item2') + kq('item3'))] }),
+    'b-mode': () => ({ title: this.cfg && this.cfg.mode === 'hold' ? '坚守战' : '普通战', c: '#f2c14e', d: this.cfg && this.cfg.mode === 'hold' ? '撑过倒计时就赢。' : '消灭所有敌人就赢。' }),
+    'b-base': () => ({ title: '基础积分', c: '#f5ead4', d: '击杀获得，乘以倍率就是本场积分。' }),
+    'b-mult': () => ({ title: '倍率', c: '#ffcc33', d: '击杀精英 +0.1，击杀首领 +0.3。' }),
+    'b-score': () => ({ title: '积分', c: '#ffcc33', d: '胜利后存进钱包，在夜市花。' }),
+    'b-hero': () => ({ title: run ? 'Lv' + run.hero.lv + ' ' + M.heroN(run.hero) : '领袖', c: '#f2c14e', d: '部队全灭后亲自上场。' }),
+    'b-count': () => ({ title: '战况', c: '#e8dcc4', d: '我方剩余部队 / 剩余敌人。' }),
+    'b-pause': () => ({ title: '暂停 ' + kq('pause'), c: '#e8dcc4' }),
+    'b-speed': () => ({ title: '战斗速度 ' + kq('speed'), c: '#f2c14e' }),
+    'b-items': () => ({ title: '支援道具', c: '#ffcc33', d: '使用时随机品质，至少是道具本身的品质。' }),
     'w-hero': () => run && this.heroTip(run.hero),
-    'w-hp': () => ({ title: '领袖生命', c: '#f2c14e', d: '不会自动恢复。营火、事件、战后喘息能回血；回到基地后由医疗建筑治疗。', lines: [R('降到 0 = 领袖永久死亡')] }),
-    'w-wallet': () => ({ title: '积分', c: '#ffcc33', d: '局内货币。战斗胜利获得，在夜市、事件里花掉。', lines: [R('只在本次出征中有效，回基地后清空。')] }),
-    'w-rsup': () => ({ title: '本局物资', c: '#e8c86a', d: '撤离或通关后带回基地仓库，用于挖掘、建造和打造宝物。', lines: [R('领袖死亡则全部丢失。')] }),
-    'w-rexp': () => ({ title: '本局经验', c: '#9cff7a', d: '撤离或通关后，领袖获得这些经验并升级。' }),
-    'w-rshard': () => ({ title: '灵魂碎片', c: '#d8a0ff', d: '撤离或通关后带回基地。高端材料：建造史诗 / 传说建筑、精铸宝物时消耗。' }),
-    'w-roster': () => ({ title: '部队 ' + (run ? run.roster.length : 0) + ' / ' + M.ROSTER_CAP, c: '#6fa8dc', d: '战斗中自动作战。在夜市购买，或者在招募旗、事件里获得。', lines: [R('在夜市里点击部队可以卖掉，换回一半价格。')] }),
-    'b-day': () => ({ title: '第 ' + m.day + ' 天', c: '#ffe08a', d: '每出征一次，或在传送门「休整一天」，就过去 1 天。挖掘、建造都按天推进。', lines: [R('每 ' + M.RAID_EVERY + ' 天基地遭到一次袭击。')] }),
-    'b-herocap': () => ({ title: '领袖', c: '#ffe08a', d: '当前领袖数 / 上限。在招募建筑里花物资招募更多领袖。', lines: [R('点击领袖卡片查看天赋树。')] }),
-    's-refresh': () => ({ title: '刷新', c: '#e8dcc4', d: '花积分重新摆一遍夜市的货。每刷新一次，价格涨一点。' }),
-    's-leave': () => ({ title: '离开夜市', c: '#ffe08a', d: '回到地图继续前进。这个夜市不能再回来。' }),
-    'w-portal': () => ({ title: '传送门', c: '#5fd0c0', d: '每天只能看到其中几个世界，第二天会换一批。' }),
+    'w-hp': () => ({ title: '领袖生命', c: '#f2c14e', d: '不会自动恢复，归零领袖永久死亡。' }),
+    'w-wallet': () => ({ title: '积分', c: '#ffcc33', d: '这次出征的钱，回基地后清空。' }),
+    'w-rsup': () => ({ title: '本局物资', c: '#e8c86a', d: '撤离后带回基地；领袖阵亡则丢失。' }),
+    'w-rexp': () => ({ title: '本局经验', c: '#9cff7a', d: '撤离后给领袖。' }),
+    'w-rshard': () => ({ title: '灵魂碎片', c: '#d8a0ff', d: '撤离后带回基地。' }),
+    'w-roster': () => ({ title: '部队 ' + (run ? run.roster.length : 0) + ' / ' + M.ROSTER_CAP, c: '#6fa8dc', d: '在夜市买卖。' }),
+    'b-day': () => ({ title: '第 ' + m.day + ' 天', c: '#ffe08a', d: '出征或休整一天，过去 1 天。' }),
+    'b-herocap': () => ({ title: '领袖 ' + m.heroes.length + ' / ' + M.heroCap(m), c: '#ffe08a', d: '领袖数 / 上限。' }),
+    's-refresh': () => ({ title: '刷新', c: '#e8dcc4', d: '花积分换一批货，每次涨价。' }),
+    's-leave': () => ({ title: '离开夜市', c: '#ffe08a', d: '回到地图，不能再回来。' }),
+    'b-rest': () => ({ title: '休整一天', c: '#cfc6b8', d: '不出征，直接过一天。' }),
   };
-  if (/^w-loot-/.test(key)) { const k = key.slice(7), W = M.WORLDS[k], th = WT[k]; return W && th ? { title: W.n + ' · 特产', c: W.light, d: th.lootD, lines: [R('建筑图纸偏向「' + M.STYLE[th.style] + '」风格'), R('这里的敌人：' + th.races.join('、'))] } : null; }
-  if (/^w-danger-/.test(key)) { const k = key.slice(9), W = M.WORLDS[k]; return W ? { title: '危险程度', c: '#ff8a6a', d: '骷髅越多，敌人越强。天数越往后，所有世界都会变得更危险。', lines: [R('走得越深，敌人越强；首领和精英掉落更好的图纸。')] } : null; }
   const f = T[key]; return f ? f() : null;
 };
 G.tipDeleg = function (t) {
@@ -211,14 +209,6 @@ G.view = function () {
   const co = this.coachData; if (co && co.world && v.coach && (this.screen === 'base' || this.screen === 'raid')) { const p = this.bv.toScreen(co.world.p.x, co.world.p.y); v.coach.rx = Math.round(p.x - 70); v.coach.ry = Math.round(p.y - 70); v.coach.x = cl(Math.round(p.x + co.world.off.x - 360), 20, 1180); v.coach.y = cl(Math.round(p.y + co.world.off.y - 60), 110, 940); }
   // key hints on battle controls
   if (v.h) { v.h.items = v.h.items.map((it, i) => Object.assign(it, { key: M.keyOf('item' + (i + 1)), sc: this.ps('bslot' + i) })); v.h.skillKey = M.keyOf('skill'); }
-  // world cards: only today's offers, with their loot shown as icons
-  if (v.pn && v.pn.isWorlds) {
-    const m = this.meta, open = M.worldsOpen(m);
-    v.pn.sub = '今天能去的世界 · 明天会换一批'; v.pn.locked = []; v.pn.hasCleared = false;
-    v.pn.worlds = v.pn.worlds.map((w, i) => { const k = open[i], T = WT[k] || { tags: [] }, W = M.WORLDS[k], d = W.diff * 0.75 + (m.day - 1) * 0.12; return Object.assign(w, { k, tag: m.cleared[k] ? '已通关' : W.final ? '最终之地' : '', loot: T.tags.map(([ic, t]) => ({ img: M.spriteURL(ic, 6), t })), skulls: [...Array(cl(Math.round(d / 1.3 + 0.5), 1, 6))].map(() => ({ img: M.spriteURL('skull', 4) })), foes: (THEMED[k] || []).slice(0, 4).map(u => ({ img: M.spriteURL(u, 3) })) }); });
-    v.pn.moreTxt = M.worldShow(m) < 3 ? (M.worldShow(m) === 1 ? '第 6 天起，每天能看到 2 个世界' : '第 12 天起，每天能看到 3 个世界') : '';
-    v.pn.hasMore = !!v.pn.moreTxt;
-  }
   v.settingsOn = !!this.settingsOpen; if (this.settingsOpen) Object.assign(v, this.settingsView ? this.settingsView() : {});
   return v;
 };
@@ -251,7 +241,7 @@ G.worldMove = function (sx, sy) {
     const map = this.run.map, X = 1330, Y = 30, Wd = 560, Ht = 250, COLW = 520, ROWH = 270, Y0 = 700, sxk = (Wd - 70) / (map.W - 500), syk = (Ht - 90) / (ROWH * 2.4);
     let best = null, bd = 18; map.nodes.forEach(n => { const cx = X + 35 + (n.x - 300) * sxk, cy = Y + 60 + (n.y - (Y0 - ROWH * 1.2)) * syk, d = Math.hypot(cx - sx, cy - sy); if (d < bd) { bd = d; best = n; } });
     if (best) { const n = best, cur = this.walker.edge ? this.walker.edge.b : this.walker.node; this.tipData = { title: M.nodeLabel(n), c: !n.seen ? '#8d8496' : n.type === 'boss' || n.type === 'elite' ? '#ff6a5a' : n.type === 'extract' ? '#5fd0c0' : '#f2c14e', kind: (n.id === cur ? '你在这里 · ' : n.done ? '已经过 · ' : '') + '第 ' + (n.col + 1) + ' 站', d: n.seen ? M.nodeDesc(n) : '在视野之外。走近一些，或者提高视野（监听室、自由女神像）就能提前看清。' }; this.tipKey = null; return; }
-    this.tipData = { title: '小地图', c: '#e8dcc4', d: '整张地图的缩略图。视野范围内的节点会显示图标，鼠标悬浮可以查看。', lines: [R('当前视野：前方 ' + (this.run.vision || 1) + ' 步')] }; return;
+    this.tipData = { title: '小地图', c: '#e8dcc4', d: '整张地图。', lines: [R('当前视野：前方 ' + (this.run.vision || 1) + ' 步')] }; return;
   }
   return oldWM.call(this, sx, sy);
 };

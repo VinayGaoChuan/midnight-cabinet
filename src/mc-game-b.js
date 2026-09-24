@@ -10,19 +10,19 @@ Object.assign(G, {
   },
   cellTip(p) {
     const m = this.meta;
-    if (p.door) return { title: '传送门', c: '#5fd0c0', kind: '耐久 ' + Math.round(m.portal.hp) + ' / ' + M.portalMax(m), d: '点击选择要探索的世界。传送门被摧毁，游戏就结束了。' };
+    if (p.door) return { title: '传送门', c: '#5fd0c0', kind: '耐久 ' + Math.round(m.portal.hp) + ' / ' + M.portalMax(m), d: '耐久归零，这一局结束。' };
     const x = M.cell(m, p.c, p.r), T = x.tile ? M.TILES[x.tile] : null, tl = T ? [{ t: '特殊地格 · ' + T.n, c: T.c }, { t: T.d, c: '#cfc6b8' }] : [];
     if (x.b) return this.bldTip(x.b, p.c, p.r);
-    if (x.job) return { title: x.job.kind === 'dig' ? '挖掘中' : M.BUILDINGS[x.job.key].n + '（建造中）', c: '#ffd060', kind: '还需 ' + x.job.days + ' 个探索日', d: '每出征一次，或休整一天，推进 1 天。', lines: tl };
-    if (x.dug) return { title: '空房间', c: '#e8dcc4', kind: '点击建造', d: '有对应建筑图纸就能在这里建造。', lines: tl };
-    if (M.canDig(m, p.c, p.r)) return { title: '岩层', c: '#f2c14e', kind: '点击挖掘 · ' + M.digCost(m) + ' 物资 · 1 个探索日', d: '挖通后变成空房间。', lines: tl };
-    return { title: '岩层', c: '#8d8496', kind: '需要先挖通相邻的房间', d: '', lines: tl };
+    if (x.job) return { title: x.job.kind === 'dig' ? '挖掘中' : M.BUILDINGS[x.job.key].n + '（建造中）', c: '#ffd060', d: '还需 ' + x.job.days + ' 天。', lines: tl };
+    if (x.dug) return { title: '空房间', c: '#e8dcc4', d: '可以建造。', lines: tl };
+    if (M.canDig(m, p.c, p.r)) return { title: '岩层', c: '#f2c14e', d: '挖掘：' + M.digCost(m) + ' 物资，1 天。', lines: tl };
+    return { title: '岩层', c: '#8d8496', d: '先挖通旁边的房间。', lines: tl };
   },
   bldTip(key, c, r) {
     const B = M.BUILDINGS[key], m = this.meta, lines = [{ t: M.QUALITY[B.q].n + ' · ' + M.STYLE[B.style] + ' · ' + M.CAT[B.cat], c: M.QUALITY[B.q].c }];
     const pw = c != null ? M.roomPw(m, c, r, key) : B.pw; lines.push({ t: pw >= 0 ? '电力 +' + pw : '耗电 ' + (-pw), c: pw >= 0 ? '#9cff7a' : '#ff9a6a' });
-    if (B.weapon) lines.push({ t: '射程 ' + (c != null ? M.weaponStats(m, c, r).range : B.weapon.range) + ' 格（向上 1 层算 1 格）', c: '#ff8a8a' });
-    if (c != null) { const x = M.cell(m, c, r); if (x.tile) lines.push({ t: '地格加成 · ' + M.TILES[x.tile].n + '：' + M.TILES[x.tile].d, c: M.TILES[x.tile].c }); }
+    if (B.weapon) lines.push({ t: '射程 ' + (c != null ? M.weaponStats(m, c, r).range : B.weapon.range) + ' 格', c: '#ff8a8a' });
+    if (c != null) { const x = M.cell(m, c, r); if (x.tile) lines.push({ t: M.TILES[x.tile].n + '：' + M.TILES[x.tile].d, c: M.TILES[x.tile].c }); }
     return { title: B.n, c: B.q ? M.QUALITY[B.q].c : '#e8dcc4', kind: B.q ? '奇观' : '建筑', d: B.d, lines };
   },
   baseMove(sx, sy) { if (this.raid || (this.drag && this.drag.moved)) return; const p = this.bv.pick(sx, sy); const k = p ? (p.door ? 'door' : p.c + ',' + p.r) : null; if (k !== this.hoverK) { this.hoverK = k; this.bv.hover = p; if (p) M.Sfx.hover(); } this.tipData = p ? this.cellTip(p) : null; },
@@ -52,7 +52,7 @@ Object.assign(G, {
     if (m.baseTut === 0 && m.tutDone) { m.baseTut = 1; this.save(); }
     if (m.baseTut === 1) { const p = this.corePos(); this.coach('这是你的地下基地。点击「主基地」，打开仓库看看。', p.x, p.y + 220, p.x, p.y); }
     if (m.baseTut === 3) { const p = this.cellPos(M.CORE.c, M.CORE.r + 1); this.coach('点击主基地左、右、下方的岩层，挖出新房间（花物资和 1 个探索日）。发光的岩层是特殊地格，建在上面会有加成。', p.x, p.y + 200, p.x, p.y); }
-    if (m.baseTut === 4) { const p = this.bv.toScreen(M.BASE_GEO.DOOR_X, -130); this.coach('每次出征，基地就过去 1 天，挖掘和建造也跟着推进。点击地面上的「传送门」出发。每 ' + M.RAID_EVERY + ' 天基地会遭到袭击，记得在地下造武器房间。', p.x, p.y + 330, p.x, p.y); }
+    if (m.baseTut === 4) { const p = this.bv.toScreen(M.BASE_GEO.DOOR_X, -130); this.coach('每次出征，基地就过去 1 天，挖掘和建造也跟着推进。点击地面上的「传送门」，再点升起的碑出发。每 ' + M.RAID_EVERY + ' 天基地会遭到袭击，记得在地下造武器房间。', p.x, p.y + 330, p.x, p.y); }
   },
   doDig(c, r) {
     const m = this.meta, cost = M.digCost(m);
@@ -114,7 +114,6 @@ Object.assign(G, {
   },
   takeTalent(id, b) { const m = this.meta, h = m.heroes.find(x => x.id === id); if (!h || h.points <= 0 || h.taken[b] >= h.tree[b].length) return; h.points--; h.taken[b]++; h.hp = Math.min(h.hp, M.heroMaxHp(h, m)); this.save(); M.Sfx.up(1); const p = this.fxPos('tal-' + b + '-' + (h.taken[b] - 1)); if (p) { this.fx.burst(p.x, p.y, M.BRANCH[b].c, 24); this.fx.ring(p.x, p.y, 10, 120, M.BRANCH[b].c, 6, 0.4); } },
   openHero(id) { this.openPanel({ kind: 'hero', id }); },
-  openWorlds() { this.bv.focusDoor(); this.openPanel({ kind: 'worlds' }); M.Sfx.portal(); if (this.meta.baseTut === 4) { this.meta.baseTut = 99; this.coachData = null; this.save(); } },
   pickWorld(k) { const m = this.meta, ok = m.heroes.filter(h => !h.status && h.hp > 0); if (!ok.length) { this.toast('没有能出征的领袖', '#d0453c'); return; } this.openPanel({ kind: 'loadout', world: k, hero: ok[0].id, relics: [] }); },
   toggleRelic(rid) { const p = this.panel, m = this.meta, h = m.heroes.find(x => x.id === p.hero), slots = M.relicSlots(h, m); const i = p.relics.indexOf(rid); if (i >= 0) p.relics.splice(i, 1); else if (p.relics.length < slots) { p.relics.push(rid); M.Sfx.land(p.relics.length); } else this.toast('这名领袖最多带 ' + slots + ' 件宝物', '#8d8496'); this.bump(); },
   pickHero(id) { const p = this.panel, m = this.meta, h = m.heroes.find(x => x.id === id); if (h.hp <= 0) { this.toast('重伤，先去治疗', '#8d8496'); return; } p.hero = id; p.relics = p.relics.slice(0, M.relicSlots(h, m)); M.Sfx.click(); this.bump(); },

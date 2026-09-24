@@ -87,7 +87,7 @@ G.baseMove = function (sx, sy) {
   const ic = (bv.icons || []).find(i => sx >= i.x && sx <= i.x + i.w && sy >= i.y && sy <= i.y + i.h);
   if (!ic) { bv.hoverIc = null; return; }
   const T = ic.tip; let tip = null, hk = '';
-  if (T.tag) { tip = Object.assign(M.tagTip(T.tag), { ctx: 'bld', lines: [{ t: '这个房间：' + M.BUILDINGS[T.key].n, c: '#a89ca8' }] }); hk = T.tag.kind === 'style' ? 's' : 'f'; }
+  if (T.tag) { tip = M.tagTip(T.tag); hk = T.tag.kind === 'style' ? 's' : 'f'; }
   else if (T.job) { tip = Object.assign(this.cellTip({ c: T.c, r: T.r }), { icon: M.cell(this.meta, T.c, T.r).job.kind === 'dig' ? 'u_pick' : 'u_hammer' }); hk = 'j'; }
   else if (T.tile) { tip = tagFromKey('tag-tile-' + T.tile); hk = 't'; }
   const key = T.c + ',' + T.r + hk; if (key !== this.hoverIcK) { this.hoverIcK = key; M.Sfx.hover(); }

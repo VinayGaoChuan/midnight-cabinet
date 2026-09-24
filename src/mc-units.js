@@ -122,7 +122,7 @@ M.makeBattleCfg = function (run, node) {
 // ───────── items keep; quality shown ─────────
 // ───────── buildings: tavern + day rules ─────────
 const B = M.BUILDINGS;
-B.tavern = { n:'酒馆', q:0, cat:'recruit', style:'medieval', pw:-1, cost:60, days:1, recruit:{}, d:'花物资招募新领袖。领袖越多，出征和守城的选择越多。' };
+B.tavern = { n:'酒馆', q:0, cat:'recruit', style:'medieval', pw:-1, cost:60, days:1, recruit:{}, d:'花物资招募新领袖。' };
 Object.keys(B).forEach(k => { if (!B[k].fixed && !B[k].specialDays) B[k].days = B[k].q + 1; });
 M.LIGHT_R = (m, x) => x.b === 'core' ? 3 : x.b ? [1, 2, 2, 3][M.BUILDINGS[x.b].q] : x.dug ? 1 : 0;
 // ───────── heroes scaled to the new stat range ─────────

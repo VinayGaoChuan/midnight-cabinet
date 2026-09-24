@@ -18,7 +18,7 @@ window.__bot = async function (secs, opts = {}) {
       else if (s === 'over') { log.push('over'); break; }
       else if (s === 'base') {
         if (opts.stopAtBase && nodes > 2) break;
-        if (!g.panel) { g.openWorlds(); } else if (g.panel.kind === 'worlds') { const w = M.worldsOpen(g.meta)[0]; g.pickWorld(w); } else if (g.panel.kind === 'loadout') g.launch(); else if (g.panel.kind === 'raidPrep') { raids++; g.raidLaunch(); } else g.closePanel();
+        if (!g.panel) { if (!g.portalOn || !g.portalOn()) g.openWorlds(); else if (!g.bv.drop) { const st = (g.bv.steles || [])[0]; if (st) g.steleDrop(st.k, st.wx, st.wy); else if (g.bv.sv > 0.9 || !g.bv.steles) g.pickWorld(M.worldsOpen(g.meta)[0]); } } else if (g.panel.kind === 'loadout') g.launch(); else if (g.panel.kind === 'raidPrep') { raids++; g.raidLaunch(); } else g.closePanel();
         await sleep(900);
       }
       else if (s === 'raid') { for (let i = 0; i < 60; i++) g.tick(1 / 30); }
