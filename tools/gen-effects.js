@@ -28,6 +28,8 @@ const skillOf = (k) => {
   const s = M.unitSkill(k); if (!s) return null;
   if (s.sig) return { n: s.n, sig: 1, key: s.sig, rec: FX[s.sig] };
   const t = (DB[k].tr || []).find(x => (TDB[x] || {}).n === s.n); const key = t ? short(t) : '';
+  // growth traits (渔夫、灵魂献祭) spend the bar on growing; in battle these units cast their vocation's signature skill
+  if (/^(JuniorFisherman|EliteFisherman|SpiritOffering)$/.test(key) && M.sigOf(DB[k])) { const sg = M.sigOf(DB[k]); return { n: M.SIG[sg].n, sig: 1, key: sg, rec: FX[sg], grow: TDB[t].n }; }
   return { n: s.n, key, rec: FX[key] };
 };
 
@@ -40,13 +42,13 @@ const count = {};
   let out = '', n = 0;
   [['Summon', '我方部队'], ['Enemy', '敌人'], ['Derivant', '召唤物 / 衍生单位']].forEach(([type, title]) => {
     const keys = Object.keys(DB).filter(k => DB[k].type === type).sort((a, b) => (DB[a].q || 0) - (DB[b].q || 0) || DB[a].race.localeCompare(DB[b].race) || a.localeCompare(b));
-    out += '\n#### ' + title + '（' + keys.length + '）\n\n| 编号 | 单位 | 种族 · 职业 · 品质 | 主动技能 | 蓄力 → 施放（色板） | 其他特性 |\n|---|---|---|---|---|---|\n';
+    out += '\n#### ' + title + '（' + keys.length + '）\n\n| 编号 | 单位 | 种族 · 职业 · 品质 | 主动技能 | 触发条件 | 蓄力 → 施放（色板） | 其他特性 |\n|---|---|---|---|---|---|---|\n';
     keys.forEach(k => {
-      const d = DB[k], s = skillOf(k), others = (d.tr || []).filter(t => !s || (TDB[t] || {}).n !== s.n).map(t => ((TDB[t] || {}).n || short(t)) + (FX[short(t)] ? '✦' : ''));
-      out += '| ' + pad('U', ++n) + ' | ' + esc(d.n) + '<br>`' + k + '` | ' + d.race + ' · ' + (d.voc || '无职业') + ' · ' + Q[d.q || 0] + ' | ' + (s ? esc(s.n) + (s.sig ? '（职业招牌）' : '') : '无（只有普攻）') + ' | ' + (s ? recTxt(s.rec) : '—') + ' | ' + esc(others.join('、') || '—') + ' |\n';
+      const d = DB[k], s = skillOf(k), tr = s && M.unitTrigger(k), others = (d.tr || []).filter(t => !s || (TDB[t] || {}).n !== s.n).map(t => ((TDB[t] || {}).n || short(t)) + (FX[short(t)] ? '✦' : ''));
+      out += '| ' + pad('U', ++n) + ' | ' + esc(d.n) + '<br>`' + k + '` | ' + d.race + ' · ' + (d.voc || '无职业') + ' · ' + Q[d.q || 0] + ' | ' + (s ? esc(s.n) + (s.sig ? '（职业招牌）' : '') : '无（只有普攻）') + ' | ' + (tr ? esc(tr.d) : '—') + ' | ' + (s ? recTxt(s.rec) : '—') + ' | ' + esc(others.join('、') || '—') + ' |\n';
     });
   });
-  out += '\n- 敌人里只有精英和首领会放职业招牌技能，普通敌人只放自己的特性技能。\n- 「其他特性」里带 ✦ 的：不是攒满法力才放的主动技能，但触发时有自己的特效（配方见 E2）。\n';
+  out += '\n- 我方部队开战时技能就绪（法力满），满足触发条件才放（`src/mc-skilltrigger.js`）；敌人从 0 开始攒法力，用同样的触发条件。\n- 敌人里只有精英和首领会放职业招牌技能，普通敌人只放自己的特性技能。\n- 「其他特性」里带 ✦ 的：不是攒满法力才放的主动技能，但触发时有自己的特效（配方见 S）。\n';
   doc = put(doc, 'units', out); count.units = n;
 }
 
@@ -93,6 +95,34 @@ const count = {};
   let out = '\n| 编号 | 音效 | 调用次数 |\n|---|---|---|\n', n = 0;
   names.forEach(k => { out += '| ' + pad('V', ++n) + ' | `Sfx.' + k + '` | ' + (hasBuild ? users(k) : '—') + ' |\n'; });
   doc = put(doc, 'sounds', out); count.sounds = n;
+}
+
+// ── the character table: every leader and unit on one sheet (docs/characters.csv; .ai/characters.json feeds the web view) ──
+{
+  const TYPE = { Summon: '部队', Enemy: '敌人', Derivant: '召唤物' }, RANGED = ['近战', '远程', '不动（建筑 / 塔）'];
+  const trait = (t) => { const x = TDB[t] || {}; return (x.n || short(t)) + '：' + (x.d || ''); };
+  const rows = [];
+  Object.keys(M.HEROES).forEach((k, i) => {
+    const h = M.HEROES[k], ps = M.PSKILL[k] || {}, tr = (M.PS_TRIG || {})[k];
+    let ld = ''; try { ld = typeof h.skill.d === 'function' ? h.skill.d(1, {}) : h.skill.d; } catch (e) {}
+    rows.push({ id: 'L' + String(i + 1).padStart(2, '0'), n: h.n, key: k, type: '领袖', race: '英雄', voc: '', q: '随招募', hp: h.hp, atk: h.atk, as: Math.round(100 / (h.cd || 1)), spd: h.spd, range: h.range, ranged: h.range > 200 ? '远程' : '近战', cost: '', power: '',
+      skill: '军团「' + h.skill.n + '」：' + ld + '（1 级数值，冷却按走过的站数算）', trig: '玩家按空格（领袖在场外指挥时）',
+      skill2: '个人「' + ps.n + '」（' + (ps.resN || '') + '）：' + (ps.d || ''), trig2: tr ? tr.d : '', fx: '', traits: '', up: '', desc: '' });
+  });
+  let i = 0;
+  ['Summon', 'Enemy', 'Derivant'].forEach(type => Object.keys(DB).filter(k => DB[k].type === type).sort((a, b) => (DB[a].q || 0) - (DB[b].q || 0) || DB[a].race.localeCompare(DB[b].race) || a.localeCompare(b)).forEach(k => {
+    const d = DB[k], s = skillOf(k), tr = s && M.unitTrigger(k), skillT = s ? (s.sig ? { n: s.n, d: M.SIG_DESC[s.key] } : M.unitSkill(k)) : null;
+    rows.push({ id: pad('U', ++i), n: d.n, key: k, type: TYPE[type] || type, race: d.race, voc: d.voc || '', q: Q[d.q || 0], hp: d.hp, atk: d.atk, as: d.as, spd: d.spd, range: d.rad, ranged: RANGED[d.ranged || 0], cost: d.cost, power: M.unitPower ? M.unitPower(k) : '',
+      skill: skillT ? skillT.n + (s.sig ? '（职业招牌）' : '') + '：' + (skillT.d || '') : '', trig: tr ? tr.d : '', skill2: '', trig2: '', fx: s ? recTxt(s.rec) : '',
+      traits: (d.tr || []).map(trait).join('\n'), up: d.up ? (DB[d.up] ? DB[d.up].n + '（' + d.up + '）' : d.up) : '', desc: d.desc || '' });
+  }));
+  const COLS = [['id', '编号'], ['n', '名字'], ['key', '代码名'], ['type', '类型'], ['race', '种族'], ['voc', '职业'], ['q', '品质'], ['hp', '生命'], ['atk', '攻击'], ['as', '攻速（100=标准）'], ['spd', '移速'], ['range', '射程'], ['ranged', '攻击方式'], ['cost', '招募费用'], ['power', '战力'], ['skill', '主动技能'], ['trig', '触发条件'], ['skill2', '个人技能（领袖）'], ['trig2', '个人技能触发'], ['fx', '技能特效（蓄力 → 施放）'], ['traits', '全部特性'], ['up', '进化为'], ['desc', '简介']];
+  const cell = (v) => { const s = String(v == null ? '' : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const csv = '﻿' + [COLS.map(c => c[1]).join(',')].concat(rows.map(r => COLS.map(c => cell(r[c[0]])).join(','))).join('\r\n') + '\r\n';
+  fs.writeFileSync(path.join(ROOT, 'docs', 'characters.csv'), csv, 'utf8');
+  fs.mkdirSync(path.join(ROOT, '.ai'), { recursive: true });
+  fs.writeFileSync(path.join(ROOT, '.ai', 'characters.json'), JSON.stringify({ cols: COLS, rows }), 'utf8');
+  count.characters = rows.length;
 }
 
 fs.writeFileSync(DOC, doc);

@@ -58,7 +58,7 @@ const CONCEPTS = [
   { id: 'relic', cat: '领袖', icon: 't_eye', title: '宝物', line: '出征时带在身上的装备，领袖阵亡就丢了（保险库能保住第 1 件）。', scr: 'base', sel: '[data-g="relics"]' },
   { id: 'lvup', cat: '领袖', img: () => sprite('orb'), title: '升级', line: '花经验球立刻升一级，生命、攻击都涨，还给 1 个天赋点。', scr: 'base', sel: '[data-tip="hs-lvup"]' },
   { id: 'talent', cat: '领袖', icon: 't_clover', title: '天赋树', line: '三条路线：杀伐、坚忍、运数。从中间往外点，每级 1 点。', scr: 'base', sel: '[data-tip^="tal-"]:not([data-tip="tal-root"])' },
-  { id: 'pskill', cat: '领袖', icon: 't_rage', title: '个人技能', line: '领袖亲自上场后自己放；守城时也会自动放。怒气、能量、法力或冷却攒满就放。', scr: 'base', sel: '[data-tip="hs-ps"]' },
+  { id: 'pskill', cat: '领袖', icon: 't_rage', title: '个人技能', line: '领袖亲自上场后自己放；守城时也会自动放。怒气、能量、法力或冷却攒满、时机合适（比如身边有敌人）才放。', scr: 'base', sel: '[data-tip="hs-ps"]' },
   { id: 'quirk', cat: '领袖', icon: 't_dice', title: '性格', line: '领袖自带的小加成或小毛病。坏性格可以在疗养室消掉。', scr: 'base', sel: '[data-tip^="hs-q-"]' },
   { id: 'rarity', cat: '标签与品质', icon: 'u_star', title: '品质', line: '白 普通 → 蓝 稀有 → 紫 史诗 → 金 传说。名字和边框的颜色就是品质。', scr: ['base', 'shop'], sel: '[data-tip="hs-rar"],[data-g="shop-units"]' },
   { id: 'defend', cat: '守城', icon: 't_shield', title: '守城', line: '选中的领袖在地面作战，地下的武器房间向地面开火。传送门被打破这一局就结束。', scr: 'base', sel: '[data-g="raidprep"]' },
@@ -79,7 +79,7 @@ const CONCEPTS = [
   { id: 'bskill', cat: '战斗', icon: 't_skill', title: '军团技能', line: '按空格放。领袖亲自上场后收起，这场不能再用。', scr: 'battle', sel: '[data-g="b-skill"]', freeze: 1, when: (g) => g.battle && g.battle.hero && g.battle.hero.bench },
   { id: 'race', cat: '标签与品质', icon: 'r_human', title: '种族标签', line: '只是分类。战旗、特性写到某个种族时，看这个图标就知道谁吃加成。', scr: ['shop', 'world', 'battle', 'base'], sel: '[data-tip^="tag-race-"]' },
   { id: 'voc', cat: '标签与品质', icon: 'v_archer', title: '职业标签', line: '决定打法：先锋扛伤、战士近战、射手远程、法师范围、祭司治疗、商人赚钱。', scr: ['shop', 'world', 'battle', 'base'], sel: '[data-tip^="tag-voc-"]' },
-  { id: 'trait', cat: '战斗', icon: 't_crit', title: '特性', line: '每支部队自带的本事：法力攒满就放，或者一直生效。悬浮看具体效果。', scr: ['shop', 'world'], sel: '[data-g="trait"]' },
+  { id: 'trait', cat: '战斗', icon: 't_crit', title: '特性', line: '每支部队自带的本事：开战时就绪，时机合适（比如友军掉血、敌人靠近）才放，或者一直生效。悬浮看触发条件。', scr: ['shop', 'world'], sel: '[data-g="trait"]' },
   // ── 夜市 ──
   { id: 'shop', cat: '夜市', icon: 'e_market', title: '夜市', line: '部队、战旗、道具三个区，点击直接买。点自己的部队可以半价卖掉。', scr: 'shop', sel: '[data-g="shop-units"]' },
   // ── 守城 ──

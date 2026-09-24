@@ -31,7 +31,7 @@ Steam / 安卓打包工具在 [`steam/`](steam/)，用法见 [`steam/使用说�
 | `tools/artifact.py` | 把 `index.html` 转成 Claude Artifact 页面（数据自动上传版） |
 | `tools/gen-prompts.js` | 从角色 / 技能数据生成 `docs/prompts/characters.md` 与 `docs/prompts/skills.md`（每个角色、每个技能一段 16-bit 像素动画 prompt） |
 | `tools/p16view.js` | 开发用精灵网格查看器：`__p16view(keys, states, opts)` |
-| `tools/gen-effects.js` | 加载真实游戏代码，生成 `docs/effects.md` 里的单位技能、技能配方、小游戏、房间场景、道具、音效清单 |
+| `tools/gen-effects.js` | 加载真实游戏代码，生成 `docs/effects.md` 里的单位技能、技能配方、小游戏、房间场景、道具、音效清单，以及角色总表 `docs/characters.csv`（Excel 可直接打开） |
 | `tools/textaudit.js` | 界面文字审计：`__textAudit('标签')` 统计当前画面的常驻文字 |
 | `tools/designcheck.js` | 设计文档自检：`await __designCheck()` 列出游戏里有、文档没写的内容 |
 
@@ -73,6 +73,7 @@ python3 -m http.server 8000    # 本地起服务，打开 http://localhost:8000/
 | `mc-bring.js` | 出征带回的“改造”：流浪领袖、矿工、工匠、修门石、启示卷轴、淬火石、安神香、迷踪粉、引荐信、蓄能核心、行军包 |
 | `mc-lvup.js` | 领袖升级按钮、LEVEL UP 与战斗力仪式、每天给经验 / 提升领袖战斗力的建筑 |
 | `mc-save.js` | 启动时的存档检测：不兼容的部分单独清掉，整份不能用就删除，并播放撕碎存档的效果 |
+| `mc-skilltrigger.js` | 技能触发条件：我方开战时技能就绪，每个技能（和领袖个人技能）满足自己的条件才放 |
 | `mc-guide.js` | 文字分层与说明：按住 Shift 看详情、每个设计元素的初见说明卡、玩法说明页（F1 / 右下角「？」） |
 | `mc-px16.js` | 16-bit 像素引擎：固定调色板色阶、材质缓冲 → 自动两色明暗 / 选择性描边 / 1px 轮廓光烘焙，逐状态姿势（待机、行走、攻击、蓄力、施法、收招、受击、死亡），帧缓存，池化粒子 |
 | `mc-px16-hum.js` | 人形骨架：体型、头部、发型、帽子、衣服、翅膀、尾巴、全部武器和盾 |

@@ -62,7 +62,8 @@ BP.step = function (dt) {
   oStep.call(this, dt); const s = this.psInit(), h = this.hero; if (!s || h.bench || !h.alive || this.over || dt <= 0) return;
   if (!s.full) { s.full = 1; s.v = s.P.max; }                          // taking the field charges it once
   if (s.P.gain.t) s.v = Math.min(s.P.max, s.v + s.P.gain.t * dt);
-  if (s.v >= s.P.max && this.active(h) && this.ents.some(o => this.active(o) && o.side === 'E')) this.psCast();
+  // a full bar waits for its moment (M.PS_TRIG in mc-skilltrigger.js), checked a few times a second
+  if (s.v >= s.P.max && this.active(h) && this.ents.some(o => this.active(o) && o.side === 'E') && (!M.psTrigOk || this.t - (s.trT || -1) >= 0.1)) { s.trT = this.t; if (!M.psTrigOk || M.psTrigOk(this, h, this.run.hero.cls)) this.psCast(); }
 };
 const oDeal = BP.deal;
 BP.deal = function (src, tg, amt, o = {}) {

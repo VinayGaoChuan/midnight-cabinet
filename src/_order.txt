@@ -13,6 +13,7 @@ mc-fx.js
 mc-battle2.js
 mc-battle3.js
 mc-battle4.js
+mc-skilltrigger.js
 mc-world2.js
 mc-base.js
 mc-rooms.js
