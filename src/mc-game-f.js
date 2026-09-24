@@ -22,7 +22,10 @@ G.beginBattle = function (n) {
   const run = this.run, cfg = M.makeBattleCfg(run, n); this.cfg = cfg; this.node = n;
   this.battle = new M.Battle3(run, cfg); this.settle = null; this.paused = false; this.lastCut = null; this.go('battle');
   const nm = (cfg.mode === 'hold' ? '坚守战' : '普通战') + (n.type === 'elite' ? ' · 精英' : n.type === 'boss' ? (n.final ? ' · 最终首领' : ' · 守关首领') : n.type === 'extract' ? ' · 撤离' : '');
-  this.banner({ kind: 'win', text: nm, col: n.type === 'boss' || n.type === 'elite' ? '#ff6a5a' : n.type === 'extract' ? '#5fd0c0' : '#ffd970', life: 1.5, y: 520, sub: cfg.mode === 'hold' ? '坚守 ' + cfg.dur + ' 秒' : '全灭敌人' });
+  // the announcement stays while both sides walk in, and leaves once everyone stands in place; the fight waits for it
+  const b = this.battle;
+  this.banner({ kind: 'win', text: nm, col: n.type === 'boss' || n.type === 'elite' ? '#ff6a5a' : n.type === 'extract' ? '#5fd0c0' : '#ffd970', life: 1.5, y: 520, sub: cfg.mode === 'hold' ? '坚守 ' + cfg.dur + ' 秒' : '全灭敌人', hold: () => this.battle === b && !b.over && b.t < b.entryEnd - 0.01 });
+  this.introBanner = this.banners[this.banners.length - 1];
   M.Sfx.whoosh(0.5); if (n.type === 'boss') M.Sfx.impact();
   if (run.tut) {
     const T = { 1: ['b1', '部队会自动上场作战。领袖站在左边的指挥位，部队全灭后，领袖会亲自上场。鼠标悬浮在单位上能看到它的特性。'], 3: ['b3', '每场战斗的收益 = 基础积分 × 倍率。击杀敌人得到基础积分；精英、首领和部分特性能提高倍率，每次 +0.1。'], 5: ['b5', '这一场试试下方的支援道具：点击后滚轮会决定它的品质。'], 6: ['b6', '精英战！精英更强，击杀后倍率 +0.1。战斗胜利后，倒下的部队会全部复活。'], 9: ['boss', '最终首领！打败它，序章就结束了。'] }[n.col];

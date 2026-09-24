@@ -44,12 +44,15 @@ M.drawDayFx = function (ctx, g) {
   const rx = 1330, ry = 380, E = M.RAID_EVERY, st = cl((t - 0.45) / 0.3, 0, 1);
   if (st > 0) { ctx.save(); ctx.globalAlpha = st; ctx.translate((1 - eo(st)) * 300, 0);
     ransom(ctx, D.raid ? '今晚·袭击' : '袭击倒计时', rx, ry - 120, D.raid ? 76 : 52, 11, D.raid ? { pal: [INK, RED, INK] } : null);
-    const pos0 = ((D.from - 1) % E + E) % E, pos1 = ((D.to - 1) % E + E) % E, mv = eo((t - 1.0) / 0.4), mk = pos0 + ((pos1 < pos0 ? pos1 + E : pos1) - pos0) * mv;
-    for (let i = 0; i < E; i++) { const sx = rx - (E - 1) * 70 + i * 140, last = i === E - 1; ctx.save(); ctx.translate(sx, ry + 40); ctx.rotate(-0.08 + (i % 2) * 0.05);
-      ctx.fillStyle = INK; ctx.fillRect(-58, -58, 116, 116); ctx.fillStyle = last ? RED : i <= mk ? '#3a2a2e' : PAPER; ctx.fillRect(-50, -50, 100, 100);
-      if (last) { const ic = M.iconCanvas('r_skel', 3); if (ic) ctx.drawImage(ic, -38, -38, 76, 76); } else { ctx.fillStyle = i <= mk ? '#6a5a5e' : INK; ctx.font = "900 44px 'Cinzel', serif"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(i + 1), 0, 4); }
+    const pos0 = ((D.from - 1) % E + E) % E, pos1 = ((D.to - 1) % E + E) % E, wrap = pos1 < pos0, arrive = eo((t - (wrap ? 1.3 : 1.0)) / (wrap ? 0.45 : 0.4)), mk = pos0 + (pos1 - pos0) * arrive;
+    for (let i = 0; i < E; i++) { const sx = rx - (E - 1) * 70 + i * 140, last = i === E - 1;
+      // a new cycle: the used slots flip over one by one and come back lit
+      const rl = wrap ? eo((t - 1.0 - i * 0.07) / 0.18) : 1, dark = wrap ? (rl < 0.5 ? i <= pos0 : i <= pos1 && arrive > 0.95) : i <= mk, fs = wrap ? Math.max(0.08, Math.abs(1 - 2 * rl)) : 1;
+      ctx.save(); ctx.translate(sx, ry + 40); ctx.rotate(-0.08 + (i % 2) * 0.05); ctx.scale(1, fs);
+      ctx.fillStyle = INK; ctx.fillRect(-58, -58, 116, 116); ctx.fillStyle = last ? RED : dark ? '#3a2a2e' : PAPER; ctx.fillRect(-50, -50, 100, 100);
+      if (last) { const ic = M.iconCanvas('r_skel', 3); if (ic) ctx.drawImage(ic, -38, -38, 76, 76); } else { ctx.fillStyle = dark ? '#6a5a5e' : INK; ctx.font = "900 44px 'Cinzel', serif"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(i + 1), 0, 4); }
       ctx.restore(); }
-    const mxp = rx - (E - 1) * 70 + mk % E * 140; ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(mxp - 36, ry - 58); ctx.lineTo(mxp + 36, ry - 58); ctx.lineTo(mxp, ry - 8); ctx.fill(); ctx.fillStyle = PAPER; ctx.beginPath(); ctx.moveTo(mxp - 26, ry - 52); ctx.lineTo(mxp + 26, ry - 52); ctx.lineTo(mxp, ry - 18); ctx.fill(); ctx.strokeStyle = PAPER; ctx.lineWidth = 6; ctx.strokeRect(mxp - 58, ry - 18, 116, 116);
+    const mxp = rx - (E - 1) * 70 + mk * 140; ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(mxp - 36, ry - 58); ctx.lineTo(mxp + 36, ry - 58); ctx.lineTo(mxp, ry - 8); ctx.fill(); ctx.fillStyle = PAPER; ctx.beginPath(); ctx.moveTo(mxp - 26, ry - 52); ctx.lineTo(mxp + 26, ry - 52); ctx.lineTo(mxp, ry - 18); ctx.fill(); ctx.strokeStyle = PAPER; ctx.lineWidth = 6; ctx.strokeRect(mxp - 58, ry - 18, 116, 116);
     const left = D.raidIn; ransom(ctx, D.raid ? '准备迎战' : left === 1 ? '明晚来袭' : '还有' + left + '天', rx, ry + 180, 60, 19, D.raid ? { pal: [RED, INK, RED] } : null);
     ctx.restore(); }
   if (D.raid && t > 1.3) { ctx.globalAlpha = 0.25 * pulse; ctx.fillStyle = '#ff0000'; ctx.fillRect(-ox, 0, 1920, 1080); ctx.globalAlpha = 1; }
@@ -73,6 +76,7 @@ G.dayTick = function (dt) {
   if (x(0.72 + 0.2)) { S.stamp(); S.impact(); this.fx.kick(22); this.fx.flash('#ffffff', 0.25); }
   if (x(0.45)) S.whoosh(0.3);
   if (x(1.0)) { for (let i = 0; i < 3; i++) S.tick(i * 3); }
+  if (((D.to - 1) % M.RAID_EVERY) < ((D.from - 1) % M.RAID_EVERY)) for (let i = 0; i < M.RAID_EVERY; i++) if (x(1.09 + i * 0.07)) S.tick(i);
   if (D.raid && x(1.3)) { S.alarm(); this.fx.kick(30); }
   if (D.raid && D.t > 1.3 && Math.floor(D.t * 3) !== Math.floor(prev * 3)) S.heart();
   if (x(L - 0.45)) S.whoosh(0.4);
@@ -118,7 +122,11 @@ G.camStep = function (b, dt) {
 G.camField = function (x, y) { const c = this.bcam || { x: FW / 2, y: FH / 2, z: 1 }; return { x: (x - c.x) * c.z + FW / 2, y: (y - c.y) * c.z + FH / 2 }; };
 G.battleTick = function (dt) {
   const b = this.battle; if (!b) return;
-  if (!this.paused && !this.settle) b.step(dt * this.speed * (this.reel ? 0.03 : 1));
+  // everyone is in place: hold the fight until the intro announcement has faded
+  // (the clock stops just short of the moment the first opening skill is due)
+  if (this.introBanner && !this.banners.includes(this.introBanner)) this.introBanner = null;
+  let bd = dt * this.speed * (this.reel ? 0.03 : 1); if (this.introBanner) bd = Math.max(0, Math.min(bd, b.entryEnd - 0.005 - b.t));
+  if (!this.paused && !this.settle && bd > 0) b.step(bd);
   if (b.cutin && b.cutin !== this.lastCut) { this.lastCut = b.cutin; this.banner({ kind: 'skill', text: b.cutin.text, sub: b.cutin.sub, col: b.cutin.col, img: M.spriteCanvas(b.cutin.sprite, 22), life: 1.25, y: 470 }); }
   if (this.settle) this.settleTick(dt); else if (b.over && b.overT > 1.0) this.startSettle();
   const c = this.ui.cv('field'); if (!c) return;

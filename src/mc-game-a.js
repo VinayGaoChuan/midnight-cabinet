@@ -114,7 +114,7 @@ class Game {
     const frozen = this.fx.frozen;
     if (this.reel && !frozen) this.reelTick(dt);
     if (this.chest && !frozen) this.chestTick(dt);
-    this.banners.forEach(b => b.t += dt); this.banners = this.banners.filter(b => b.t < b.life);
+    this.banners.forEach(b => { b.t += dt; if (b.hold && b.hold()) b.t = Math.min(b.t, b.life - 0.3); }); this.banners = this.banners.filter(b => b.t < b.life);
     let moving = false;
     Object.keys(this.twT).forEach(k => { const c = this.tw[k], g = this.twT[k]; if (c == null) { this.tw[k] = g; return; } if (Math.abs(g - c) > 0.5) { let n = c + (g - c) * Math.min(1, dt * 7) + Math.sign(g - c) * 0.4; if (Math.sign(g - n) !== Math.sign(g - c)) n = g; this.tw[k] = n; moving = true; } else this.tw[k] = g; });
     if (s === 'base' || s === 'raid') this.baseTick(dt);
