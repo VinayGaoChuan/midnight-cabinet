@@ -1,11 +1,13 @@
 // headless-ish play bot: drives the Game through menus, map, battles, shops, events, chests, settlement
 window.__bot = async function (secs, opts = {}) {
-  const g = window.__mcg, M = window.MC, log = [], T0 = performance.now(); const minis = {}; let games = 0, raids = 0, steps = 0, battles = 0, shops = 0, events = 0, chests = 0, settles = 0, nodes = 0;
+  const g = window.__mcg, M = window.MC, log = [], T0 = performance.now(); const minis = {}; let games = 0, raids = 0, viewErrs = 0, steps = 0, battles = 0, shops = 0, events = 0, chests = 0, settles = 0, nodes = 0;
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   while (performance.now() - T0 < secs * 1000) {
     steps++;
     for (let i = 0; i < 6; i++) g.tick(1 / 30);
     const s = g.screen;
+    // the view is what the page renders every frame: a throw here means a broken screen for the player
+    try { g.view(); } catch (e) { viewErrs++; if (viewErrs < 4) log.push('VIEW ' + s + ': ' + String(e.stack || e).slice(0, 200)); }
     try {
       if (s === 'intro') g.toMenu();
       else if (s === 'menu') g.startGame();
@@ -38,5 +40,5 @@ window.__bot = async function (secs, opts = {}) {
     } catch (e) { log.push('ERR ' + s + ': ' + (e.stack || e).toString().slice(0, 300)); break; }
     await sleep(opts.sleep || 5);
   }
-  return { games, raids, tokens: g.prof && g.prof.tokens, minis, steps, battles, settles, shops, events, chests, screen: g.screen, day: g.meta.day, heroes: g.meta.heroes.length, errs: (window.__mcErrs || []).slice(0, 5), log: log.slice(0, 10) };
+  return { games, raids, viewErrs, tokens: g.prof && g.prof.tokens, minis, steps, battles, settles, shops, events, chests, screen: g.screen, day: g.meta.day, heroes: g.meta.heroes.length, errs: (window.__mcErrs || []).slice(0, 5), log: log.slice(0, 10) };
 };
