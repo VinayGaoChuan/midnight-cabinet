@@ -21,6 +21,8 @@
 | `tools/upload.py` | 本地截图接收服务（调试用，截图存到 `.ai/shots/`） |
 | `tools/tele_analyze.py` | 玩法数据分析：读入采集数据，输出难度 / 经济 / 体验报告 |
 | `tools/artifact.py` | 把 `index.html` 转成 Claude Artifact 页面（数据自动上传版） |
+| `tools/gen-prompts.js` | 从角色 / 技能数据生成 `docs/prompts/characters.md` 与 `docs/prompts/skills.md`（每个角色、每个技能一段 16-bit 像素动画 prompt） |
+| `tools/p16view.js` | 开发用精灵网格查看器：`__p16view(keys, states, opts)` |
 
 ## 开发流程
 
@@ -60,6 +62,14 @@ python3 -m http.server 8000    # 本地起服务，打开 http://localhost:8000/
 | `mc-bring.js` | 出征带回的“改造”：流浪领袖、矿工、工匠、修门石、启示卷轴、淬火石、安神香、迷踪粉、引荐信、蓄能核心、行军包 |
 | `mc-lvup.js` | 领袖升级按钮、LEVEL UP 与战斗力仪式、每天给经验 / 提升领袖战斗力的建筑 |
 | `mc-save.js` | 启动时的存档检测：不兼容的部分单独清掉，整份不能用就删除，并播放撕碎存档的效果 |
+| `mc-px16.js` | 16-bit 像素引擎：固定调色板色阶、材质缓冲 → 自动两色明暗 / 选择性描边 / 1px 轮廓光烘焙，逐状态姿势（待机、行走、攻击、蓄力、施法、收招、受击、死亡），帧缓存，池化粒子 |
+| `mc-px16-hum.js` | 人形骨架：体型、头部、发型、帽子、衣服、翅膀、尾巴、全部武器和盾 |
+| `mc-px16-rigs.js` | 非人形骨架：野兽、龙、鸟、飞行物、蜘蛛、螃蟹、蠕虫、机甲、攻城器、塔、树、宝箱怪、半人马等 |
+| `mc-px16-spec.js` | 角色描述表的默认值：各材质默认色阶、各种族的肤色 / 服装 / 魔法色，尺寸规则 |
+| `mc-px16-cast.js` | 每个角色的数据版 prompt（全部部队、敌人、领袖、民兵） |
+| `mc-px16-game.js` | 接入游戏：战斗单位动画、施法蓄力 / 释放粒子、受击火花，卡牌 / 头像 / 守城 / 大地图同一套精灵 |
+| `mc-px16-fx.js` | 技能特效配方：单位技能、招牌技能、领袖军团技能与个人技能各自的蓄力 / 施放花样和颜色 |
+| `mc-px16-gallery.js` | 角色一览：网址末尾加 `#gallery` 打开，每个角色循环播放 待机→行走→攻击→蓄力→施法→收招 |
 | `mc-tele.js` | 玩法数据采集 |
 
 界面模板语法：`{{表达式}}` 绑定视图数据，`<sc-if value>` 条件渲染，`<sc-for list as>` 列表，`sc-camel-on-click` 等绑定事件，`data-tip` 自动悬浮提示，`data-fx` 标记飞行动画落点。

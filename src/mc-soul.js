@@ -78,6 +78,9 @@ G.openPanel = function (p) { if (this.raidPrep && (!p || p.kind !== 'raidPrep'))
 const oCP = G.closePanel;
 G.closePanel = function () { if (this.raidPrep && this.panel && this.panel.kind === 'raidPrep') { this.toast('袭击躲不掉：选好领袖，点「开始守城」', '#ff6a5a'); return; } return oCP.apply(this, arguments); };
 ['passDay', 'restDay', 'toRoom'].forEach(k => { const o = G[k]; if (!o) return; G[k] = function () { if (this.raidPrep) { this.toast('袭击就要来了：先选好守城的领袖', '#ff6a5a'); return; } return o.apply(this, arguments); }; });
+// whatever cleared the base (a reset, a new game, a screen change) must not strand the choice: reopen it, or drop it once the raid is no longer today's
+const oTick = G.tick;
+G.tick = function () { const r = oTick.apply(this, arguments), m = this.meta; if (this.raidPrep && this.screen === 'base' && !this.raid && !this.panel && m) { if (m.raidPending !== m.day || !m.heroes.length) { this.raidPrep = null; this.raidGo = false; } else oOP.call(this, { kind: 'raidPrep' }); } return r; };
 // a reload in the middle of choosing brings the choice back
 const oTB = G.toBase;
 G.toBase = function () { const r = oTB.apply(this, arguments), m = this.meta; if (m && m.raidPending === m.day && m.lastRaid !== m.day && !this.raid && !this.raidPrep) setTimeout(() => { if (this.screen === 'base' && !this.raid && !this.raidPrep) this.startRaid(); }, 900); return r; };

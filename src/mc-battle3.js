@@ -383,6 +383,7 @@ class B3 extends M.Battle2 {
     ctx.setTransform(1, 0, 0, 1, sx, sy);
     for (const e of list) drawBars(ctx, e, T, this);
     for (const p of this.proj) drawProj(ctx, p, T);
+    if (M.P16 && M.P16.drawPool) M.P16.drawPool(ctx, this);
     for (const f of this.fx) { if (f.k === 'circle' || f.k === 'tomb' || f.k === 'death' || f.k === 'cast' || f.k === 'crack') continue; if (!(M.drawFxPx && M.drawFxPx(ctx, f, T, this)) && !drawFx3(ctx, f, T, this)) M._drawFx(ctx, f, T); }
     if (M.drawBattleHudPx) M.drawBattleHudPx(ctx, this, T);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -409,18 +410,22 @@ function entOff(e, T) {
 function drawEnt3(ctx, e, T, b) {
   const o = entOff(e, T), H0 = 88 * e.sz;
   const pose = e.casting || (e.castPose != null && T - e.castPose < 0.25) ? 2 : e.lunge != null && T - e.lunge < 0.18 ? 1 : 0;
-  const img = M.hdCanvas(e.hd || { key: 'x', race: '人类', voc: '', q: 0 }, H0, e.flash > 0 ? '#ffffff' : e.raging && Math.floor(T * 8) % 2 ? '#ff4a3a' : null, pose);
+  // 16-bit sprites (mc-px16-*.js) animate on their own grid; the old painted sprite is the fallback
+  const px16 = M.P16 && M.P16.entImg ? M.P16.entImg(e, T) : null;
+  const img = px16 || M.hdCanvas(e.hd || { key: 'x', race: '人类', voc: '', q: 0 }, H0, e.flash > 0 ? '#ffffff' : e.raging && Math.floor(T * 8) % 2 ? '#ff4a3a' : null, pose);
   let x = e.x + o.x, y = e.y + o.y;
   if (e.lunge != null && T - e.lunge < 0.16) x += (e.side === 'A' ? 1 : -1) * 16 * Math.sin((T - e.lunge) / 0.16 * Math.PI);
   if (e.kb != null && T - e.kb < 0.12) x += (e.kbDir || 1) * 7 * (1 - (T - e.kb) / 0.12);
-  const moving = e.walk && !(e.lunge != null && T - e.lunge < 0.3), bob = moving ? Math.abs(Math.sin(e.walk / 22)) * 6 : Math.sin(T * 2.4 + e.id) * 1.5;
-  const sq = e.kb != null && T - e.kb < 0.1 ? 0.9 : 1, sc = (o.s || 1);
+  const moving = e.walk && !(e.lunge != null && T - e.lunge < 0.3), bob = px16 ? 0 : moving ? Math.abs(Math.sin(e.walk / 22)) * 6 : Math.sin(T * 2.4 + e.id) * 1.5;
+  const sq = !px16 && e.kb != null && T - e.kb < 0.1 ? 0.9 : 1, sc = (o.s || 1);
+  if (px16) { x = M.P16.snap(x); y = M.P16.snap(y); }
   ctx.save(); ctx.globalAlpha = (o.a == null ? 1 : o.a) * (e.stealth ? 0.35 + 0.1 * Math.sin(T * 10) : 1) * (e.ghost ? 0.75 : 1);
-  ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.beginPath(); ctx.ellipse(e.x + o.x * (o.y ? 0 : 1), e.y, 34 * e.sz, 10 * e.sz, 0, 0, 7); ctx.fill();
   const qc = M.QUALITY[e.d.q] ? M.QUALITY[e.d.q].c : '#fff';
-  if (e.d.q >= 2 || e.boss) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(e.x, e.y); ctx.scale(1, 0.35); const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 60 * e.sz); g.addColorStop(0, (e.boss ? '#ff4a4a' : qc) + '66'); g.addColorStop(1, (e.boss ? '#ff4a4a' : qc) + '00'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 60 * e.sz, 0, 7); ctx.fill(); ctx.restore(); }
+  if (px16) { const ga = ctx.globalAlpha; ctx.globalAlpha = ga * 0.5; M.P16.ellipse(ctx, e.x + o.x * (o.y ? 0 : 1), e.y, 30 * e.sz, 8 * e.sz, '#0b0610'); ctx.globalAlpha = ga; if (e.d.q >= 2 || e.boss) M.P16.ellipse(ctx, e.x + o.x * (o.y ? 0 : 1), e.y, 36 * e.sz, 11 * e.sz, e.boss ? '#ff4a4a' : qc, true); }
+  else { ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.beginPath(); ctx.ellipse(e.x + o.x * (o.y ? 0 : 1), e.y, 34 * e.sz, 10 * e.sz, 0, 0, 7); ctx.fill(); }
+  if (!px16 && (e.d.q >= 2 || e.boss)) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(e.x, e.y); ctx.scale(1, 0.35); const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 60 * e.sz); g.addColorStop(0, (e.boss ? '#ff4a4a' : qc) + '66'); g.addColorStop(1, (e.boss ? '#ff4a4a' : qc) + '00'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 60 * e.sz, 0, 7); ctx.fill(); ctx.restore(); }
   ctx.translate(x, y - bob); ctx.scale(sc * (2 - sq), sc * sq); if (e.side === 'E') ctx.scale(-1, 1);
-  if (e.d.q >= 3 || e.boss) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= 0.35 + 0.15 * Math.sin(T * 3); ctx.filter = 'blur(6px)'; ctx.drawImage(img, -img.cx - 4, -img.footY - 4, img.width + 8, img.height + 8); ctx.filter = 'none'; ctx.restore(); }
+  if (!px16 && (e.d.q >= 3 || e.boss)) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= 0.35 + 0.15 * Math.sin(T * 3); ctx.filter = 'blur(6px)'; ctx.drawImage(img, -img.cx - 4, -img.footY - 4, img.width + 8, img.height + 8); ctx.filter = 'none'; ctx.restore(); }
   ctx.drawImage(img, -img.cx, -img.footY);
   ctx.restore();
   if (e.shieldFx && T - e.shieldFx < 0.25) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1 - (T - e.shieldFx) / 0.25; ctx.strokeStyle = '#ffa040'; ctx.lineWidth = 5; ctx.beginPath(); ctx.ellipse(e.x, e.y - H0 * 0.5, H0 * 0.55, H0 * 0.65, 0, 0, 7); ctx.stroke(); ctx.restore(); }

@@ -535,11 +535,13 @@ M.Raid = class {
     const T = this.t;
     if (this.portal.hit && T - this.portal.hit < 0.15) { ctx.fillStyle = 'rgba(255,80,80,0.4)'; ctx.fillRect(DOOR_X - 70, -240, 140, 230); }
     this.ents.filter(e => e.alive || e.hero).sort((a, b) => a.y - b.y).forEach(e => {
-      const img = spriteCanvas(e.sprite, e.s, e.flash && T - e.flash < 0.08 ? '#ffffff' : !e.alive ? '#3a3440' : null);
+      // 16-bit sprites walk / swing / fall with their own frames; old sprites keep the bob
+      const ps = M.P16 && M.P16.spec(e.sprite) ? M.P16.raidState(e, T) : null;
+      const img = ps ? M.P16.img(e.sprite, ps[0], ps[1], e.flash && T - e.flash < 0.08 ? '#ffffff' : !e.alive ? '#3a2c48' : null, e.s * 13 * 0.8) : spriteCanvas(e.sprite, e.s, e.flash && T - e.flash < 0.08 ? '#ffffff' : !e.alive ? '#3a3440' : null);
       let x = e.x; if (e.lunge != null && T - e.lunge < 0.15) x += e.face * 14 * Math.sin((T - e.lunge) / 0.15 * Math.PI);
-      const bob = e.alive ? Math.abs(Math.sin((e.walk || 0) / 30)) * 5 : 0;
+      const bob = ps ? 0 : e.alive ? Math.abs(Math.sin((e.walk || 0) / 30)) * 5 : 0;
       ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.beginPath(); ctx.ellipse(e.x, e.y - 1, img.S ? img.S * 0.42 : img.width * 0.35, 5, 0, 0, 7); ctx.fill();
-      ctx.save(); ctx.translate(x, e.y - bob); if (!e.alive) ctx.rotate(-Math.PI / 2 * (e.face || 1)); const need = (SPF(e.sprite) === 'R') !== (e.face > 0); if (need) ctx.scale(-1, 1); ctx.drawImage(img, -img.width / 2, -img.height); ctx.restore();
+      ctx.save(); ctx.translate(x, e.y - bob); if (ps) { if ((e.face || 1) < 0) ctx.scale(-1, 1); ctx.drawImage(img, -img.cx, -img.footY); } else { if (!e.alive) ctx.rotate(-Math.PI / 2 * (e.face || 1)); const need = (SPF(e.sprite) === 'R') !== (e.face > 0); if (need) ctx.scale(-1, 1); ctx.drawImage(img, -img.width / 2, -img.height); } ctx.restore();
       if (e.alive) { const bw = Math.max(40, img.S ? img.S * 0.9 : img.width * 0.7), top = e.y - (img.S ? img.S * 1.25 : img.height) - 14; ctx.fillStyle = '#000'; ctx.fillRect(x - bw / 2 - 2, top - 2, bw + 4, 10); ctx.fillStyle = e.side === 'A' ? (e.hero ? '#f2c14e' : '#9ccc6a') : '#d0453c'; ctx.fillRect(x - bw / 2, top, bw * clamp(e.hp / e.max, 0, 1), 6); }
       if (e.hero && e.alive) lights.push({ x: e.x, y: e.y - 40, r: 160, c: '#ffe6b0', f: 1 });
     });

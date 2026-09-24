@@ -165,11 +165,12 @@ M.drawWorld2 = function (ctx, run, walker, opts = {}) {
   items.push({ y: walker.y + 1, draw: () => {
     walker.dust.forEach(d => { const a = (walker.t - d.t0) / 0.5; ctx.globalAlpha = 0.5 * (1 - a); ctx.fillStyle = '#9d94a6'; ctx.fillRect(d.x + d.vx * a * 0.5, d.y + d.vy * a * 0.5, 10, 10); });
     ctx.globalAlpha = 1;
-    const img = spriteCanvas(M.HEROES[run.hero.cls].sprite, 6), moving = !!walker.edge;
-    const bob = moving ? Math.abs(Math.sin(walker.walkT / 38)) * 12 : Math.sin(T * 2) * 2;
+    const hk = M.HEROES[run.hero.cls].sprite, moving = !!walker.edge, p16 = M.P16 && M.P16.spec(hk);
+    const img = p16 ? M.P16.img(hk, moving ? 'walk' : 'idle', moving ? Math.floor((walker.walkT || 0) / 22) : Math.floor(T * 2.5), null, 72) : spriteCanvas(hk, 6);
+    const bob = p16 ? 0 : moving ? Math.abs(Math.sin(walker.walkT / 38)) * 12 : Math.sin(T * 2) * 2;
     const land = walker.land != null && T - walker.land < 0.25 ? Math.sin((T - walker.land) / 0.25 * Math.PI) : 0;
     ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.beginPath(); ctx.ellipse(walker.x, walker.y, 34, 10, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.save(); ctx.translate(walker.x, walker.y - bob); ctx.scale(1 + land * 0.15, 1 - land * 0.15); if (walker.face < 0) ctx.scale(-1, 1); ctx.drawImage(img, -img.width / 2, -img.height); ctx.restore();
+    ctx.save(); ctx.translate(walker.x, walker.y - bob); ctx.scale(1 + land * 0.15, 1 - land * 0.15); if (walker.face < 0) ctx.scale(-1, 1); if (p16) ctx.drawImage(img, -img.cx, -img.footY); else ctx.drawImage(img, -img.width / 2, -img.height); ctx.restore();
     lights.push({ x: walker.x, y: walker.y - 50, r: 420, c: '#ffe6b0', f: 1 });
   } });
   items.sort((a, b) => a.y - b.y).forEach(i => i.draw());

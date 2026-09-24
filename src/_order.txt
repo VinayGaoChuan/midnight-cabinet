@@ -44,4 +44,12 @@ mc-mouse.js
 mc-bring.js
 mc-lvup.js
 mc-save.js
+mc-px16.js
+mc-px16-hum.js
+mc-px16-rigs.js
+mc-px16-spec.js
+mc-px16-cast.js
+mc-px16-game.js
+mc-px16-fx.js
+mc-px16-gallery.js
 mc-tele.js
