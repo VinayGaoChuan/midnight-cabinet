@@ -1,0 +1,12 @@
+node_modules/
+shell/node_modules/
+build/
+输出/
+secrets/
+收到的日志/
+.wgp.json
+.DS_Store
+
+# 每次打包放进来的游戏包（从仓库根目录的 index.html 复制），不入库
+放游戏包/*
+!放游戏包/说明.txt

@@ -9,6 +9,10 @@
 
 玩法、系统、数值和界面规范都在 [`docs/design.md`](docs/design.md)。改设计时和代码一起改它（规则见 [`AGENTS.md`](AGENTS.md)）。
 
+所有有表现效果的单元（单位技能、奇遇小游戏、全屏演出、战斗特效、界面动效、音效……）的清单在 [`docs/effects.md`](docs/effects.md)，给打磨表现的同学用。
+
+Steam / 安卓打包工具在 [`steam/`](steam/)，用法见 [`steam/使用说明.md`](steam/使用说明.md)。
+
 ## 目录结构
 
 | 路径 | 内容 |
@@ -27,6 +31,7 @@
 | `tools/artifact.py` | 把 `index.html` 转成 Claude Artifact 页面（数据自动上传版） |
 | `tools/gen-prompts.js` | 从角色 / 技能数据生成 `docs/prompts/characters.md` 与 `docs/prompts/skills.md`（每个角色、每个技能一段 16-bit 像素动画 prompt） |
 | `tools/p16view.js` | 开发用精灵网格查看器：`__p16view(keys, states, opts)` |
+| `tools/gen-effects.js` | 加载真实游戏代码，生成 `docs/effects.md` 里的单位技能、技能配方、小游戏、房间场景、道具、音效清单 |
 | `tools/textaudit.js` | 界面文字审计：`__textAudit('标签')` 统计当前画面的常驻文字 |
 | `tools/designcheck.js` | 设计文档自检：`await __designCheck()` 列出游戏里有、文档没写的内容 |
 
