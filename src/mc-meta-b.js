@@ -174,7 +174,7 @@ const ic = (k, s) => (M.IC && M.IC[k]) ? M.iconURL(k, s || 2) : M.spriteURL(k, 4
 const oldView = G.view;
 G.view = function () {
   const v = oldView.call(this), p = this.prof, t0 = now();
-  v.isRoom = this.screen === 'room'; v.isMenu = false;
+  v.isRoom = this.screen === 'room'; if (M.META_ROOM) v.isMenu = false;
   if (!v.isRoom) return v;
   const self = this;
   v.roomMove = (e) => { const q = self.miniPt(e.clientX, e.clientY); self.roomHover(q.x, q.y); };
@@ -241,13 +241,13 @@ G.view = function () { const v = oldView2.call(this); if (v.b) { const m = this.
 // ═════════════════════ intro → room; ticks ═════════════════════
 const oTick = G.tick;
 G.tick = function (dt) {
-  if (this.screen === 'intro' && this.intro && this.intro.started && this.intro.t >= 3.5) { this.toRoom({}); }
+  if (M.META_ROOM && this.screen === 'intro' && this.intro && this.intro.started && this.intro.t >= 3.5) { this.toRoom({}); }
   oTick.call(this, dt);
   if (this.screen === 'room') this.roomTick(Math.min(dt, 0.05));
   if (this.screen === 'base') this.coreTick(Math.min(dt, 0.05));
 };
-const oIC = G.introClick; G.introClick = function () { M.Sfx.init(); if (this.intro) this.intro.started = true; this.roomT = 0; this.toRoom({}); this.roomFadeIn = 1; };
-const oTM = G.toMenu; G.toMenu = function () { this.toRoom({}); };
+const oIC = G.introClick; G.introClick = function () { if (!M.META_ROOM) return oIC.apply(this, arguments); M.Sfx.init(); if (this.intro) this.intro.started = true; this.roomT = 0; this.toRoom({}); this.roomFadeIn = 1; };
+const oTM = G.toMenu; G.toMenu = function () { if (!M.META_ROOM) return oTM.apply(this, arguments); this.toRoom({}); };
 })();
 
 ;

@@ -11,7 +11,8 @@ G.backAction = function () {
   this.closePanel();
 };
 // the page evaluates the bundle twice, so this listener exists twice: only the first one acts on a given click
-window.addEventListener('contextmenu', (ev) => { const g = M._g; if (!g || ev.defaultPrevented) return; ev.preventDefault(); if (g.rebind) return; g.lastInput = 'kbm'; g.backAction(); });
+window.addEventListener('contextmenu', (ev) => { const g = M._g; if (!g || ev.defaultPrevented) return; ev.preventDefault();
+  if (ev.ctrlKey && ev.button !== 2) return; /* macOS turns Ctrl + click into a context menu: while Ctrl shows details, that is not "back" */ if (g.rebind) return; g.lastInput = 'kbm'; g.backAction(); });
 
 // ───────── world map: the next stops, their labels and the glowing arrows all take a click ─────────
 const STUB = 130;

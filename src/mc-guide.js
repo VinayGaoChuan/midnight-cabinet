@@ -1,7 +1,7 @@
 // ==== mc-guide.js ====
 (function () {
 // Few words on screen, and nothing on it left unexplained (docs/design.md §界面文字规范).
-//  · 详情层：rules in brackets, how-to hints and flavour stay hidden until Shift is held (or the ⓘ button is pinned).
+//  · 详情层：rules in brackets, how-to hints and flavour stay hidden until Ctrl is held (or the ⓘ button is pinned).
 //    View code asks this.D(brief, full) / this.D1(text); fixed template text is marked data-detail.
 //  · 初见说明：the first time a design element shows up, a one-line card points at it and says what it is. Each card
 //    shows once per device; every card is also listed in 玩法说明 (F1, the ？ button, the title menu).
@@ -23,10 +23,10 @@ M.firstSentence = firstSentence;
 if (!DS.bound) {
   DS.bound = true;
   window.addEventListener('keydown', (e) => {
-    if ((e.code === 'ShiftLeft' || e.code === 'ShiftRight') && !DS.hold) { DS.hold = true; sync(); }
+    if ((e.code === 'ControlLeft' || e.code === 'ControlRight') && !DS.hold) { DS.hold = true; sync(); }
     if (e.code === 'F1') { e.preventDefault(); const g = M._g; if (g) { g.rulesOpen = !g.rulesOpen; M.Sfx.click(); g.bump(); } }
   }, true);
-  window.addEventListener('keyup', (e) => { if ((e.code === 'ShiftLeft' || e.code === 'ShiftRight') && DS.hold) { DS.hold = false; sync(); } }, true);
+  window.addEventListener('keyup', (e) => { if ((e.code === 'ControlLeft' || e.code === 'ControlRight') && DS.hold) { DS.hold = false; sync(); } }, true);
   window.addEventListener('blur', () => { if (DS.hold) { DS.hold = false; sync(); } });
   try { const st = document.createElement('style'); st.textContent = 'html:not(.mc-detail) [data-detail]{display:none!important}html.mc-detail [data-brief]{display:none!important}'; document.head.appendChild(st); } catch (e) {}
 }
@@ -147,9 +147,9 @@ const oView = G.view;
 G.view = function () {
   this._dtHas = false;
   const v = oView.call(this), m = this.meta, D = (a, b) => this.D(a, b), D1 = (s) => this.D1(s);
-  // world: the how-to bar is for the first (tutorial) run; afterwards it lives behind Shift
+  // world: the how-to bar is for the first (tutorial) run; afterwards it lives behind Ctrl
   if (v.worldHint && this.run) v.worldHint = D(this.run.tut ? (/^点击箭头或下一站/.test(v.worldHint) ? '点击 → 箭头前进 · 悬浮节点看详情' : v.worldHint.split(' · ')[0]) : '', v.worldHint);
-  // battle: the legion card shows its name and key; what it does is one Shift away (or on hover)
+  // battle: the legion card shows its name and key; what it does is one Ctrl away (or on hover)
   if (v.h && typeof v.h.skillSub === 'string' && /^军团技能 · /.test(v.h.skillSub)) v.h.skillSub = D('', v.h.skillSub);
   // base top bar: the raid is tonight while the defenders are being picked; tips say what is true now
   if (v.b && m) {
@@ -157,7 +157,7 @@ G.view = function () {
     v.raidTip = this.tipFn({ title: '袭击', c: '#ff6a5a', kind: '每 ' + (m.raidEvery || M.RAID_EVERY) + ' 天一次 · 下次在第 ' + M.nextRaid(m) + ' 天', d: '袭击当天先挑守城的领袖。守城阵亡的领袖永久死亡，留下灵魂碎片；地下的武器房间向地面开火。传送门被打破，这一局结束。' });
     if (v.b.res && v.b.res[2]) v.b.res[2].tipOn = this.tipFn({ title: '经验球', c: '#b8ff9a', d: '在领袖详情里点「升级」花掉，领袖立刻升一级。训练类建筑提高经验效率。' });
   }
-  // panels: the first sentence, the rest behind Shift
+  // panels: the first sentence, the rest behind Ctrl
   const pn = v.pn, P = this.panel, cellT = P && P.c != null && m ? M.TILES[(M.cell(m, P.c, P.r) || {}).tile] : null;
   const tileBrief = (full) => cellT ? this.D(cellT.n + (cellT.fitN ? ' · 契合「' + cellT.fitN + '」' : ''), full) : this.D1(full);
   if (pn) {
@@ -189,7 +189,7 @@ G.view = function () {
   // the ⓘ switch shows up only where there is something behind it
   const dtAny = this._dtHas || this._domDt;
   v.dtOn = !!dtAny && this.screen !== 'intro' && !this.rulesOpen; const on = this.detailOn();
-  const kbm = !M.inputMode || M.inputMode(this) === 'kbm'; v.dtTxt = on ? (DS.pin ? 'ⓘ 详情 · 已展开' : 'ⓘ 详情') : kbm ? 'ⓘ 按住 Shift 看详情' : 'ⓘ 详情'; v.dtC = on ? '#ffe08a' : '#8d8496';
+  const kbm = !M.inputMode || M.inputMode(this) === 'kbm'; v.dtTxt = on ? (DS.pin ? 'ⓘ 详情 · 已展开' : 'ⓘ 详情') : kbm ? 'ⓘ 按住 Ctrl 看详情' : 'ⓘ 详情'; v.dtC = on ? '#ffe08a' : '#8d8496';
   v.dtToggle = () => { DS.pin = !DS.pin; M.Sfx.click(); sync(); };
   v.helpOn = this.screen !== 'intro'; v.helpOpen = () => { this.rulesOpen = true; M.Sfx.click(); this.bump(); };
   // the card

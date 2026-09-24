@@ -938,7 +938,7 @@
       <div data-g="power" sc-camel-on-mouse-enter="{{pwTip}}" sc-camel-on-mouse-leave="{{tipOff}}" style="display:flex;align-items:center;gap:10px;padding:6px 16px;background:rgba(0,0,0,0.45);border:1px solid #4a3a2a;font-size:28px;color:{{b.pwC}};white-space:nowrap">⚡ 电力 {{b.pwTxt}}</div>
     </div>
     <div style="flex:1"></div>
-    <div sc-camel-on-click="{{toMenu}}" style="padding:8px 18px;font-size:28px;color:#8d8496;cursor:pointer" style-hover="color:#ffe08a">⌂ 回房间</div>
+    <div sc-camel-on-click="{{abandon}}" style="padding:6px 18px;font-size:26px;color:#c86a6a;border:2px solid #5a2a2a;background:rgba(40,8,8,0.5);cursor:pointer" style-hover="color:#ff8a7a;border-color:#ff6a5a">放弃</div>
   </div>
   <sc-if value="{{isRaid}}" hint-placeholder-val="{{false}}">
     <div style="position:absolute;right:30px;top:112px;display:flex;gap:10px">
@@ -968,6 +968,7 @@
         <div sc-camel-on-click="{{closePanel}}" style="font-size:36px;color:#8d8496;cursor:pointer;padding:0 6px" style-hover="color:#ffe08a">✕</div>
       </div>
       <div style="height:2px;background:linear-gradient(90deg,transparent,#c8a060,transparent)"></div>
+      <sc-if value="{{pn.hint}}"><div data-blink="1" style="font-size:20px;color:#6fb8ff">{{pn.hintTxt}}</div></sc-if>
 
       <sc-if value="{{pn.isRoom}}" hint-placeholder-val="{{false}}">
         <div style="display:flex;gap:18px;align-items:flex-start">
@@ -1029,7 +1030,7 @@
             </div>
           </sc-for>
         </sc-if>
-        <sc-if value="{{pn.hasTile}}"><div style="font-size:22px;color:#a89ca8;margin-top:auto">{{pn.tileTxt}}</div></sc-if>
+        <sc-if value="{{pn.hasTileRow}}"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:auto"><sc-for list="{{pn.tileRow}}" as="tw" hint-placeholder-count="0"><div style="display:flex;align-items:center;gap:6px"><sc-if value="{{tw.hasImg}}"><m-img src="{{tw.img}}" style="width:34px;height:34px"></m-img></sc-if><span style="font-size:24px;color:{{tw.c}}">{{tw.t}}</span></div></sc-for></div></sc-if><sc-if value="{{pn.hasTile}}"><div style="font-size:22px;color:#a89ca8">{{pn.tileTxt}}</div></sc-if>
       </sc-if>
 
       <sc-if value="{{pn.isBuild}}" hint-placeholder-val="{{false}}">
@@ -1046,11 +1047,11 @@
             </div>
           </sc-for>
         </div>
-        <sc-if value="{{pn.hasTile}}"><div style="font-size:22px;color:#ffcc33;margin-top:auto">{{pn.tileTxt}}</div></sc-if>
+        <sc-if value="{{pn.hasTileRow}}"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:auto"><sc-for list="{{pn.tileRow}}" as="tw" hint-placeholder-count="0"><div style="display:flex;align-items:center;gap:6px"><sc-if value="{{tw.hasImg}}"><m-img src="{{tw.img}}" style="width:34px;height:34px"></m-img></sc-if><span style="font-size:24px;color:{{tw.c}}">{{tw.t}}</span></div></sc-for></div></sc-if><sc-if value="{{pn.hasTile}}"><div style="font-size:22px;color:#ffcc33">{{pn.tileTxt}}</div></sc-if>
       </sc-if>
 
       <sc-if value="{{pn.isDig}}" hint-placeholder-val="{{false}}">
-        <sc-if value="{{pn.hasTile}}"><div style="font-size:28px;line-height:1.45;color:{{pn.tileC}};padding:14px;border:1px solid {{pn.tileC}};background:rgba(0,0,0,0.35)">{{pn.tileTxt}}</div></sc-if>
+        <sc-if value="{{pn.hasTileRow}}"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px;border:1px solid {{pn.tileC}};background:rgba(0,0,0,0.35)"><sc-for list="{{pn.tileRow}}" as="tw" hint-placeholder-count="0"><div style="display:flex;align-items:center;gap:6px"><sc-if value="{{tw.hasImg}}"><m-img src="{{tw.img}}" style="width:34px;height:34px"></m-img></sc-if><span style="font-size:24px;color:{{tw.c}}">{{tw.t}}</span></div></sc-for></div></sc-if><sc-if value="{{pn.hasTile}}"><div style="font-size:26px;line-height:1.45;color:{{pn.tileC}}">{{pn.tileTxt}}</div></sc-if>
         <div style="font-size:26px;line-height:1.45;color:#cfc6b8">{{pn.digTxt}}</div>
         <div data-g="dig" sc-camel-on-click="{{doDig}}" style="padding:20px 0;text-align:center;font-size:38px;background:linear-gradient(180deg,#ffe08a,#d4982e);color:#1a0e08;border:2px solid #fff3c4;box-shadow:0 5px 0 #6a4410,0 0 24px rgba(255,190,80,0.35);cursor:pointer;transition:transform .08s" style-hover="filter:brightness(1.12);transform:translateY(-2px)" style-active="transform:translateY(3px) scale(0.97)">⛏ {{pn.digBtn}}</div>
       </sc-if>
@@ -1156,10 +1157,10 @@
   <div data-tip="w-hero" style="position:absolute;left:24px;top:24px;width:620px;box-sizing:border-box;padding:16px 20px;display:flex;gap:18px;align-items:center;background:linear-gradient(180deg,rgba(24,18,30,0.94),rgba(10,8,14,0.94));border:2px solid #c8a060;box-shadow:0 0 0 4px rgba(10,8,12,0.9),0 0 0 6px #5a4428,0 14px 40px rgba(0,0,0,0.6)">
     <div style="width:92px;height:110px;display:flex;align-items:flex-end;justify-content:center;background:radial-gradient(circle at 50% 70%,rgba(255,200,120,0.25),transparent 70%)"><m-img src="{{w.heroImg}}"></m-img></div>
     <div style="flex:1;display:flex;flex-direction:column;gap:7px">
-      <div style="font-size:34px;color:{{w.rc}}">{{w.heroName}} <span style="font-size:24px;color:#a89ca8">Lv {{w.lv}} · {{w.cls}}</span></div>
+      <div style="font-size:32px;color:{{w.rc}}">Lv{{w.lv}} {{w.cls}}<span data-detail="1" style="font-size:22px;color:#a89ca8"> · {{w.heroName}}</span></div>
       <div data-fx="hp" data-tip="w-hp" style="position:relative;height:18px;background:#000;border:1px solid #3a3040;transform:scale({{w.hpSc}})"><div style="position:absolute;left:0;top:0;bottom:0;width:{{w.hpW}};background:linear-gradient(180deg,#fff0a0,{{w.hpC}})"></div></div>
-      <div style="font-size:22px;color:#a89ca8">生命 {{w.hp}}<span data-detail="1"> · 不会自动回复</span></div>
-      <div data-g="w-skill" sc-camel-on-mouse-enter="{{skillTip}}" sc-camel-on-mouse-leave="{{tipOff}}" style="display:flex;align-items:center;gap:8px;font-size:22px;color:{{w.skillC}}">技能「{{w.skill}}」{{w.skillTxt}}
+      <div style="font-size:22px;color:#cfc6b8;font-variant-numeric:tabular-nums">{{w.hp}}<span data-detail="1" style="color:#a89ca8"> · 生命不会自动回复</span></div>
+      <div data-g="w-skill" sc-camel-on-mouse-enter="{{skillTip}}" sc-camel-on-mouse-leave="{{tipOff}}" style="display:flex;align-items:center;gap:8px;font-size:22px;color:{{w.skillC}}"><m-img src="{{w.skIc}}" style="width:28px;height:28px"></m-img>{{w.skill}}<span data-detail="1">{{w.skillTxt}}</span>
         <div style="display:flex;gap:4px"><sc-for list="{{w.pips}}" as="pp" hint-placeholder-count="3"><div style="width:16px;height:16px;background:{{pp.c}};transform:rotate(45deg)"></div></sc-for></div>
       </div>
     </div>
@@ -1268,8 +1269,8 @@
             <sc-if value="{{su.hasV}}"><div data-tip="{{su.vi.tip}}" style="position:absolute;right:6px;top:6px;padding:3px;background:rgba(8,6,10,0.8);border:2px solid {{su.vi.c}}"><m-img src="{{su.vi.img}}" style="width:40px;height:40px"></m-img></div></sc-if>
             <m-img src="{{su.img}}" style="max-width:220px;max-height:190px;filter:drop-shadow(0 10px 8px rgba(0,0,0,0.6))"></m-img>
             <div style="font-size:32px;line-height:1.1;color:{{su.qc}};text-shadow:0 2px 0 #000">{{su.n}}</div>
-            <div style="display:flex;gap:10px;font-size:20px"><span style="color:{{su.qc}}">{{su.qn}}</span><span style="color:#a89ca8">{{su.pw}}</span></div>
-            <div data-g="trait" style="font-size:19px;color:#ffe8b0;opacity:0.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px">{{su.trait}}</div>
+            <div style="display:flex;gap:10px;font-size:22px;align-items:center"><span data-detail="1" style="color:{{su.qc}}">{{su.qn}}</span><m-img src="{{pwIc}}" style="width:24px;height:24px"></m-img><span style="color:#cfc6b8">{{su.pwN}}</span><sc-if value="{{su.hasSk}}"><m-img data-g="trait" src="{{skIc}}" style="width:26px;height:26px;margin-left:6px"></m-img></sc-if></div>
+            <div data-detail="1" style="font-size:19px;color:#ffe8b0;opacity:0.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px">{{su.trait}}</div>
             <div style="margin-top:6px;display:flex;align-items:center;gap:8px;padding:4px 18px;background:rgba(0,0,0,0.55);border:1px solid #6a5030"><m-img src="{{coinImg}}" style="width:26px;height:26px"></m-img><span style="font-family:'Cinzel','Noto Serif SC',serif;font-size:26px;color:{{su.priceC}}">{{su.price}}</span></div>
             <sc-if value="{{su.sold}}"><div style="position:absolute;inset:0;background:rgba(8,6,10,0.8);display:flex;align-items:center;justify-content:center"><span style="font-size:52px;color:{{su.qc}};border:5px solid {{su.qc}};padding:4px 18px;transform:rotate(-12deg) scale({{su.stampSc}})">已购</span></div></sc-if>
           </div>
@@ -1391,7 +1392,7 @@
 <sc-if value="{{rulesOpen}}" hint-placeholder-val="{{false}}">
   <div sc-camel-on-click="{{closeRules}}" style="position:absolute;inset:0;z-index:850;background:rgba(4,2,8,0.92);display:flex;align-items:center;justify-content:center">
     <div sc-camel-on-click="{{stop}}" style="width:1640px;height:960px;box-sizing:border-box;padding:36px 48px;display:flex;flex-direction:column;gap:18px;background:linear-gradient(180deg,rgba(28,22,34,0.99),rgba(12,9,15,0.99));border:2px solid #c8a060;box-shadow:0 0 0 5px rgba(10,8,12,0.9),0 0 0 7px #5a4428">
-      <div style="display:flex;align-items:baseline;gap:20px"><span style="font-size:56px;color:#ffe08a">玩法说明</span><span style="font-size:22px;color:#8d8496">F1 随时打开 · 按住 Shift 看界面上的详细说明</span><div style="flex:1"></div><div sc-camel-on-click="{{closeRules}}" style="font-size:40px;color:#8d8496;cursor:pointer;padding:0 10px" style-hover="color:#ffe08a">✕</div></div>
+      <div style="display:flex;align-items:baseline;gap:20px"><span style="font-size:56px;color:#ffe08a">玩法说明</span><span style="font-size:22px;color:#8d8496">F1 随时打开 · 按住 Ctrl 看界面上的详细说明</span><div style="flex:1"></div><div sc-camel-on-click="{{closeRules}}" style="font-size:40px;color:#8d8496;cursor:pointer;padding:0 10px" style-hover="color:#ffe08a">✕</div></div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
         <sc-for list="{{gl.loop}}" as="gp" hint-placeholder-count="4"><div style="display:flex;gap:12px;align-items:flex-start;padding:12px 14px;background:#15111a;border:1px solid #4a3a2a"><m-img src="{{gp.img}}" style="width:48px;height:48px;flex:none"></m-img><div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:28px;color:#ffe08a">{{gp.t}}</span><span style="font-size:20px;line-height:1.4;color:#cfc6b8">{{gp.d}}</span></div></div></sc-for>
       </div>
@@ -1436,12 +1437,14 @@
 </sc-if>
 
 <sc-if value="{{tipOn}}" hint-placeholder-val="{{false}}">
-  <div data-tipbox="1" style="position:absolute;z-index:1000;left:{{tip.x}}px;top:{{tip.y}}px;opacity:{{tip.op}};width:480px;box-sizing:border-box;padding:16px 20px;display:flex;flex-direction:column;gap:8px;background:linear-gradient(180deg,rgba(24,18,30,0.97),rgba(8,6,10,0.97));border:2px solid {{tip.c}};box-shadow:0 0 0 3px rgba(8,6,10,0.9),0 14px 40px rgba(0,0,0,0.7);pointer-events:none">
-    <div style="display:flex;align-items:center;gap:12px"><sc-if value="{{tip.hasIcon}}"><m-img src="{{tip.icon}}" style="width:48px;height:48px;flex:none"></m-img></sc-if><div style="font-size:34px;color:{{tip.c}}">{{tip.title}}</div></div>
+  <div data-tipbox="1" style="position:absolute;z-index:1000;left:{{tip.x}}px;top:{{tip.y}}px;opacity:{{tip.op}};width:max-content;min-width:220px;max-width:500px;box-sizing:border-box;padding:14px 18px;display:flex;flex-direction:column;gap:9px;background:linear-gradient(180deg,rgba(24,18,30,0.97),rgba(8,6,10,0.97));border:2px solid {{tip.c}};box-shadow:0 0 0 3px rgba(8,6,10,0.9),0 14px 40px rgba(0,0,0,0.7);pointer-events:none">
+    <div style="display:flex;align-items:center;gap:12px"><sc-if value="{{tip.hasIcon}}"><m-img src="{{tip.icon}}" style="width:48px;height:48px;flex:none"></m-img></sc-if><sc-if value="{{tip.hasPic}}"><m-img src="{{tip.pic}}" style="max-width:72px;max-height:64px;flex:none"></m-img></sc-if><div style="font-size:32px;color:{{tip.c}};white-space:nowrap">{{tip.title}}</div></div>
+    <sc-if value="{{tip.hasBrief}}"><div style="display:flex;flex-direction:column;gap:8px"><sc-for list="{{tip.brief}}" as="br" hint-placeholder-count="0"><div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap"><sc-for list="{{br.parts}}" as="bp" hint-placeholder-count="0"><div style="display:flex;align-items:center;gap:6px"><sc-if value="{{bp.hasImg}}"><m-img src="{{bp.img}}" style="width:{{bp.is}}px;height:{{bp.is}}px;flex:none"></m-img></sc-if><sc-if value="{{bp.isBar}}"><div style="position:relative;width:{{bp.bw}}px;height:16px;background:#0a0610;border:2px solid #3a3040;box-sizing:border-box"><div style="position:absolute;left:0;top:0;bottom:0;width:{{bp.fill}};background:linear-gradient(180deg,#fff0a0,{{bp.bc}})"></div></div></sc-if><sc-if value="{{bp.hasT}}"><span style="font-size:{{bp.fs}}px;color:{{bp.c}};white-space:nowrap;font-variant-numeric:tabular-nums">{{bp.t}}</span></sc-if></div></sc-for></div></sc-for></div></sc-if>
     <sc-if value="{{tip.hasTop}}"><div style="font-size:22px;line-height:1.4"><sc-for list="{{tip.top}}" as="tt2" hint-placeholder-count="0"><sc-if value="{{tt2.hasImg}}"><m-img src="{{tt2.img}}" style="display:inline-block;width:26px;height:26px;vertical-align:-6px;margin:0 2px 0 3px"></m-img></sc-if><span style="color:{{tt2.c}};font-weight:{{tt2.fw}}">{{tt2.t}}</span></sc-for></div></sc-if>
     <sc-if value="{{tip.hasKind}}"><div style="font-size:22px;color:#a89ca8">{{tip.kind}}</div></sc-if>
     <sc-if value="{{tip.hasD}}"><div style="font-size:24px;line-height:1.45;color:#e8dcc4;text-wrap:pretty"><sc-for list="{{tip.dsegs}}" as="dg" hint-placeholder-count="0"><sc-if value="{{dg.hasImg}}"><m-img src="{{dg.img}}" style="display:inline-block;width:28px;height:28px;vertical-align:-6px;margin:0 2px 0 3px"></m-img></sc-if><span style="color:{{dg.c}};font-weight:{{dg.fw}}">{{dg.t}}</span></sc-for></div></sc-if>
     <sc-for list="{{tip.lines}}" as="tl" hint-placeholder-count="0"><div style="font-size:22px;line-height:1.45;text-wrap:pretty"><sc-for list="{{tl.segs}}" as="sg" hint-placeholder-count="0"><sc-if value="{{sg.hasImg}}"><m-img src="{{sg.img}}" style="display:inline-block;width:26px;height:26px;vertical-align:-6px;margin:0 2px 0 3px"></m-img></sc-if><span style="color:{{sg.c}};font-weight:{{sg.fw}}">{{sg.t}}</span></sc-for></div></sc-for>
+    <sc-if value="{{tip.hint}}"><div data-blink="1" style="font-size:20px;color:#6fb8ff;white-space:nowrap">{{tip.hintTxt}}</div></sc-if>
   </div>
 </sc-if>
 

@@ -10,6 +10,7 @@ const TAL_IC = { heroAtk: 't_sword', unitAtk: 't_command', crit: 't_crit', skill
   baseScore: 't_coin', killHeal: 't_heal', campHalf: 't_flame', exp: 't_orb' };
 M.TAL_IC = TAL_IC;
 const SKILL_IC = { watchman: 't_eye', widow: 't_dice', nun: 't_heal', butcherlord: 't_rage', clockmaker: 't_hourglass', cremator: 't_flame' };
+M.SKILL_IC = SKILL_IC;
 const icOf = (m) => TAL_IC[Object.keys(m || {})[0]] || 't_skill';
 const HOLD = 0.75; // seconds of charge to learn a talent
 const W = 636, H = 500, ROOT = { x: 318, y: 440 };

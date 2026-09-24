@@ -3,6 +3,9 @@
 // The room outside the cabinet is the real meta layer. One "game" (局) = base + expeditions inside the machine; it ends when
 // the base core breaks (leaders keep dying) or the portal falls. Tokens earned there buy furniture; every piece changes a rule.
 const M = window.MC, G = M.Game.prototype, S = M.Sfx;
+// switched off for now (user ruling 2026-09-24): the base is the outer loop, expeditions the inner one. With the room off,
+// the intro leads to the title menu, no furniture / achievement perks apply, and a finished game goes back to the menu.
+M.META_ROOM = false;
 const now = () => performance.now();
 const cl = (v, a, b) => Math.max(a, Math.min(b, v));
 const rnd = Math.random;
@@ -96,6 +99,7 @@ M.ACH_BY = {}; M.ACH.forEach(a => M.ACH_BY[a.k] = a);
 const ADD = ['drinkAtk', 'drinkHp', 'startSup', 'lootSup', 'carrySup', 'carrySh', 'startHeroLv', 'newHeroLv', 'healMul', 'vision', 'startTiles', 'eventLuck', 'startMult', 'buildDays', 'defDmg', 'deathOrbsX', 'deathShards', 'startBpQ', 'portalHp', 'buildCost', 'startWonder', 'eventRate', 'bossBp', 'recruitCost', 'clawBonus', 'unitHp'];
 let cache = null, cacheV = -1;
 M.perks = function () {
+  if (!M.META_ROOM) return {};
   if (cache && cacheV === PV) return cache; const p = prof(), o = {};
   const add = (fx) => Object.keys(fx).forEach(k => { if (ADD.includes(k)) o[k] = (o[k] || 0) + fx[k]; else o[k] = Math.max(o[k] || 0, fx[k]); });
   M.FURN.forEach(f => { const L = p.furn[f.k] || 0; if (L) add(f.lv[L - 1].fx); });
@@ -279,8 +283,8 @@ M.settleRows = function (m) {
 G.gameOver = function (reason) {
   if (this._over) return; this._over = true;
   const m = this.meta, p = this.prof, P = M.perks(); m.st = m.st || {};
-  const newAch = this.achCheck();
-  const S0 = M.settleRows(m);
+  const newAch = M.META_ROOM ? this.achCheck() : [];
+  const S0 = M.settleRows(m); S0.day = m.day; S0.clears = Object.keys(m.cleared || {}).length;
   // piggy bank: part of this game's stock walks out with you
   const best = m.relics.slice().sort((a, b) => (b.q || 0) - (a.q || 0))[0];
   p.carry = (P.carrySup || P.carrySh) ? { sup: Math.round(m.supplies * (P.carrySup || 0)), sh: Math.round(m.shards * (P.carrySh || 0)), relic: P.carryRelic && best ? best : null } : null;
@@ -292,11 +296,15 @@ G.gameOver = function (reason) {
   const tut = m.tutDone; this.meta = M.resetMeta3(); this.meta.tutDone = tut; this.meta.baseTut = tut ? 99 : 0; this.save();
   this.run = null; this.battle = null; this.raid = null; this.modal = null; this.panel = null; this.tear = null; this.dayFx = null; this.coreFx = null;
   setTimeout(() => { this._over = false; }, 500);
-  if (this.toRoom) this.toRoom({ settle: true }); else this.go('menu');
+  if (M.META_ROOM && this.toRoom) { this.toRoom({ settle: true }); return; }
+  // no room: back to the title menu with the game's summary
+  this.go('menu');
+  const why = reason === 'core' ? '基地核心碎了' : reason === 'portal' ? '传送门被打破了' : '这一局结束了';
+  this.modal = { over: 1, title: '这一局结束了', text: why + '。\n坚持到第 ' + S0.day + ' 天，通关 ' + S0.clears + ' 个世界。', border: '#d0453c', img: 'skull', back: () => { this.modal = null; }, choices: [{ t: '重新开始', fn: () => { this.modal = null; this.startGame(); } }, { t: '回到标题', fn: () => { this.modal = null; } }] }; this.bump();
 };
 // the portal collapsing is also the end of the game
 const oGo = G.go;
-G.go = function (s) { if (s === 'over') return this.gameOver('portal'); if (s === 'menu' && this.toRoom && !this._goingRoom) return this.toRoom({}); return oGo.call(this, s); };
+G.go = function (s) { if (s === 'over') return this.gameOver('portal'); if (s === 'menu' && M.META_ROOM && this.toRoom && !this._goingRoom) return this.toRoom({}); return oGo.call(this, s); };
 M.syncRaid = syncRaid;
 const oTick = G.tick;
 G.tick = function (dt) { if (!this._metaInit) { this._metaInit = 1; syncRaid(this.meta); if (this.meta && this.meta.core == null) this.meta.core = 3; } return oTick.call(this, dt); };
