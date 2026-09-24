@@ -51,7 +51,8 @@ T.status = () => { const n = ls.get(K_A, []).reduce((a, b) => a + b.ev.length, 0
 // ───────── snapshots ─────────
 const heroS = (h, m) => h && ({ cls: h.cls, lv: h.lv, r: h.rarity, hp: r2(h.hp / Math.max(1, M.heroMaxHp(h, m))), q: (h.quirks || []).length, tal: h.taken ? h.taken.atk + h.taken.def + h.taken.luck : 0 });
 const rooms = (m) => { const o = []; M.eachBuilt(m, (b) => o.push(b)); return o; };
-const metaS = (m) => ({ sup: m.supplies, sh: m.shards, orb: m.orbs, core: m.core, portal: r2(m.portal.hp / Math.max(1, M.portalMax(m))), heroes: m.heroes.map(h => heroS(h, m)), rooms: rooms(m), pw: M.power(m), bpInv: Object.keys(m.inv).filter(k => /^(bbp|rbp):/.test(k)).reduce((a, k) => a + m.inv[k], 0), relics: m.relics.length });
+const tilesS = (m) => { const o = []; M.eachBuilt(m, (b, c, r, x) => { if (x.tile) o.push({ t: x.tile, q: M.TILES[x.tile] ? M.TILES[x.tile].q : null, b, fit: M.tileFits ? M.tileFits(x.tile, b) : null }); }); return o; };
+const metaS = (m) => ({ sup: m.supplies, sh: m.shards, orb: m.orbs, core: m.core, portal: r2(m.portal.hp / Math.max(1, M.portalMax(m))), heroes: m.heroes.map(h => heroS(h, m)), rooms: rooms(m), pw: M.power(m), bpInv: Object.keys(m.inv).filter(k => /^(bbp|rbp):/.test(k)).reduce((a, k) => a + m.inv[k], 0), relics: m.relics.length, tiles: tilesS(m) });
 const rosterS = (run) => run.roster.map(u => [u.type, (M.DB[u.type] || {}).q, u.lv || 1]);
 const gainS = (list) => (list || []).map(g => g.k === 'bp' ? ['bp', g.key] : g.k === 'unit' ? ['unit', g.type] : g.k === 'item' ? ['item', g.key, g.q] : [g.k, g.v]);
 const wrap = (obj, name, before, after) => { const o = obj[name]; if (typeof o !== 'function') return; obj[name] = function () { let ctx; try { ctx = before && before.apply(this, arguments); } catch (e) {} const r = o.apply(this, arguments); try { after && after.call(this, ctx, r, arguments); } catch (e) {} return r; }; };
@@ -112,8 +113,8 @@ wrap(G, 'miniBattle', function () { return this.mini && this.mini.kind; }, funct
 wrap(G, 'openChest', function (items) { return (items || []).map(it => it.award ? gainS([it.award])[0] : null).filter(Boolean); }, function (items) { T.ev('chest', { items }); });
 
 // ───────── base ─────────
-wrap(G, 'doDig', function () { return this.meta.supplies; }, function (s0) { if (this.meta.supplies < s0) T.ev('dig', { cost: s0 - this.meta.supplies }); });
-wrap(G, 'doBuild', function (c, r, key) { return { s0: this.meta.supplies, key }; }, function (x) { if (this.meta.supplies < x.s0) { const B = M.BUILDINGS[x.key]; T.ev('build', { key: x.key, q: B.q, cost: x.s0 - this.meta.supplies, style: B.style, cat: B.cat }); } });
+wrap(G, 'doDig', function (c, r) { return { s0: this.meta.supplies, c, r }; }, function (x) { if (this.meta.supplies < x.s0) { const cl = M.cell(this.meta, x.c, x.r) || {}, TT = cl.tile && M.TILES[cl.tile]; T.ev('dig', { cost: x.s0 - this.meta.supplies, row: x.r, tile: cl.tile || null, tq: TT ? TT.q : null }); } });
+wrap(G, 'doBuild', function (c, r, key) { return { s0: this.meta.supplies, key, c, r }; }, function (x) { if (this.meta.supplies < x.s0) { const B = M.BUILDINGS[x.key]; const cl = M.cell(this.meta, x.c, x.r) || {}; T.ev('build', { key: x.key, q: B.q, cost: x.s0 - this.meta.supplies, style: B.style, cat: B.cat, row: x.r, tile: cl.tile || null, fit: cl.tile && M.tileFits ? M.tileFits(cl.tile, x.key) : null }); } });
 const oCraft = M.craftRelic3; M.craftRelic3 = function (meta, key, forge) { const r = oCraft.apply(this, arguments); try { const rel = r && r.key ? r : meta.relics[meta.relics.length - 1]; T.ev('craft', { key, q: rel && rel.q, forge: forge || {} }); } catch (e) {} return r; };
 const oNH = M.newHero; M.newHero = function (meta, cls, rarity) { const h = oNH.apply(this, arguments); try { T.ev('hero_new', { cls: h.cls, r: h.rarity, lv: h.lv }); } catch (e) {} return h; };
 wrap(G, 'train', function (id) { return this.meta.orbs; }, function (o0, r, a) { const h = this.meta.heroes.find(x => x.id === a[0]); if (this.meta.orbs < o0) T.ev('train', { orbs: o0 - this.meta.orbs, lv: h && h.lv }); });

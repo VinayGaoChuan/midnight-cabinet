@@ -91,7 +91,7 @@ Object.assign(G, {
     if (m.heroes.length >= M.heroCap(m)) { this.toast('领袖已满（上限 ' + M.heroCap(m) + '）', '#d0453c'); return; }
     if (m.shards < cost) { this.toast('灵魂碎片不足', '#d0453c'); return; }
     this.hold('msh', m.shards); m.shards -= cost; this.release('msh');
-    let rar = M.RARITY.indexOf(M.wpick(M.RARITY, r => r.w)); if (M.hasBuilt(m, B => B.recruit && B.recruit.qUp)) rar = Math.max(1, rar);
+    let rar = M.RARITY.indexOf(M.wpick(M.RARITY, r => r.w)); if (M.hasBuilt(m, B => B.recruit && B.recruit.qUp)) rar = Math.max(1, rar); rar = Math.max(rar, M.baseMods(m).recruitMin || 0);
     this.startReel({ title: '招魂', iconKey: 'candle', itemMode: true, land: 0, ups: rar, tease: rar < 3, tiles: M.RARITY.map(r => ({ n: r.n, sub: '领袖', c: r.c })), onDone: () => {
       const h = M.newHero(m, null, rar); m.heroes.push(h); this.save(); const col = M.RARITY[rar].c;
       this.fx.rays(960, 460, col, 2.2); this.fx.pop(960, 700, h.name + ' · ' + M.HEROES[h.cls].n, col, 80, { life: 1.8, rise: 20 });

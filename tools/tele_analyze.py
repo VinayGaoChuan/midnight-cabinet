@@ -209,6 +209,22 @@ def analyse(batches, events):
     if rs:
         R.table(['指标', '数值'], [['袭击次数', len(rs)], ['守住', pct(sum(1 for e in rs if e['res'] == 'win'), len(rs))], ['传送门剩余耐久 平均', f1(avg([e['portal'] for e in rs]))]])
         if avg([e['res'] == 'win' for e in rs]) < 0.7: R.flag('警告', '袭击守住率 %s，低于 70%%。' % pct(sum(1 for e in rs if e['res'] == 'win'), len(rs)))
+    # terrain: which veins get dug toward and occupied, and whether the fitting room goes on them
+    QN = ['普通', '稀有', '史诗', '传说']
+    dg = by['dig']
+    if dg:
+        rows_ = Counter(e.get('row') for e in dg if e.get('row') is not None)
+        hit = [e for e in dg if e.get('tile')]
+        R.p('挖掘 %d 次，按层：%s；挖到特殊地格 %d 次（%s）。' % (len(dg), '，'.join('第%d层 %d' % (r + 1, v) for r, v in sorted(rows_.items())), len(hit), '，'.join('%s %d' % (QN[q] if isinstance(q, int) and 0 <= q < 4 else q, v) for q, v in sorted(Counter(e.get('tq') for e in hit).items(), key=lambda kv: str(kv[0])))))
+    bt = [e for e in by['build'] if e.get('tile')]
+    if bt:
+        R.p('建在地格上的房间 %d 个，其中契合 %s；地格：%s。' % (len(bt), pct(sum(1 for e in bt if e.get('fit')), len(bt)), '，'.join('%s %d' % kv for kv in Counter(e['tile'] for e in bt).most_common(12))))
+    last_day = {}
+    for e in by['day']: last_day[e['_sid']] = e
+    occ = [len(e.get('tiles') or []) for e in last_day.values() if 'tiles' in e]
+    if occ:
+        R.p('每局最后一天占领的地格数：平均 %s，中位 %s。' % (f1(avg(occ)), f1(med(occ))))
+        if len(occ) >= 5 and med(occ) < 1: R.flag('建议', '多数局一块特殊地格都没占（中位 %s）：地格吸引力或可达性不够。' % f1(med(occ)))
     fu = [(e['k'], e['lv'], e.get('g')) for e in by['furn']]
     if fu: R.p('家具购买顺序：' + ' → '.join('%s Lv%d' % (k, lv) for k, lv, _ in fu[:30]))
 

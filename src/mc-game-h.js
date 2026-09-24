@@ -176,7 +176,7 @@ G.startSettle = function () {
     const pb = (n.type === 'boss' ? 1 : n.type === 'elite' ? 0.45 : run.tut ? 0 : 0.06) + (th.rbp || 0) * (n.type === 'normal' ? 1 : 0);
     const drop = (k) => { bpHold(); run.loot.bp.push(k); const I = M.itemInfo(k); tiles.push({ icon: I.icon === 'scroll' || I.icon === 'gem' ? I.icon : I.icon, v: 1, c: I.c, to: 'rbp', n: I.n }); };
     if (Math.random() < pb && !run.tut) drop(th.rbp && Math.random() < 0.5 ? 'rbp:' + M.pick(Object.keys(M.RELICS)) : M.dropBp(n.type === 'boss' ? 1 : 0.3, run.theme && run.theme.style, th.bpq));
-    if (!run.tut && Math.random() < (n.type === 'boss' ? 0.3 : 0) + (th.tile || 0)) drop('tile:' + M.pick(Object.keys(M.TILES)));
+    if (!run.tut && Math.random() < (n.type === 'boss' ? 0.3 : 0) + (th.tile || 0)) drop('tile:' + M.dropTile());
     const heal = (run.mods.postHeal || 0) + (th.heal || 0); if (heal) { const v = Math.round(mx * heal); this.hold('hp', Math.round(h.hp)); h.hp = Math.min(mx, h.hp + v); tiles.push({ icon: 'r_heart', v: '+' + v, c: '#9cff7a', to: 'hp' }); }
     run.roster.forEach(u => { u.battles = (u.battles || 0) + 1; (DB[u.type].tr || []).forEach(t => { const T = M.TDB[t]; if (!T) return; const hh = M.TRAIT_H[T.cls.replace(/^Summon|Trait$/g, '')]; if (hh && hh.post) hh.post(b, null, T.v, u); }); });
     (b.grew || []).forEach(g => tiles.push({ icon: g.type, v: g.v, c: '#ffcc33', to: 'roster', unit: 1 }));

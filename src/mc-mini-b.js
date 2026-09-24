@@ -83,7 +83,7 @@ const FRUITS = [
   { n: '灵魂果', c: '#c890ff', ic: 't_shard', d: '灵魂碎片 +25', f(g, mg) { return g.giveShards(25, mg.from); } },
   { n: '黄金果', c: '#ffcc33', ic: 't_coin', d: '积分 +', f(g, mg) { g.award([{ k: 'wallet', v: M.nice(mg.P * 10) }], mg.from); return '积分 +' + M.nice(mg.P * 10); } },
   { n: '幸运果', c: '#7fe060', ic: 't_clover', d: '本局事件好运 +10%，道具升品 +5%', f(g) { g.run.mods.tier = (g.run.mods.tier || 0) + 0.05; return g.buffRun('eventLuck', 0.1, '好运 +10%', '#7fe060'); } },
-  { n: '地脉种子', c: '#8fe0ff', ic: 'l_ley', d: '一颗特殊地格的种子', f(g, mg) { g.award([{ k: 'bp', key: 'tile:' + M.pick(Object.keys(M.TILES)) }], mg.from); return '地格种子'; } }];
+  { n: '地脉种子', c: '#8fe0ff', ic: 'l_ley', d: '一颗特殊地格的种子', f(g, mg) { g.award([{ k: 'bp', key: 'tile:' + M.dropTile() }], mg.from); return '地格种子'; } }];
 MINI.tree = { title: '世界树', img: 'e_tree', col: '#9cdc6a', text: '树根扎进每一个世界。它结的果子，只允许你摘一个。',
   init(mg) { const pool = FRUITS.slice().sort(() => rnd() - 0.5); mg.fr = pool.slice(0, 3).map((f, i) => ({ f, x: CX - 220 + i * 220, y: SY + 250 + (i === 1 ? -60 : 0), gone: false, vy: 0, fy: 0 })); mg.spare = pool[3]; mg.picks = 0; mg.allow = 1; mg.got = []; mg.watered = false; mg.bugs = [...Array(24)].map(() => ({ x: SX + rnd() * SW, y: SY + 100 + rnd() * 500, p: rnd() * 6 })); },
   pick(mg, i) { const F = mg.fr[i]; if (F.gone || mg.phase !== 'idle') return; F.gone = true; F.falling = true; mg.pickI = i; this.miniSet('fall'); S.whoosh(0.2); },

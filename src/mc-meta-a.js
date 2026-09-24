@@ -134,7 +134,7 @@ G.newGame = function (kits) {
   if (P.startWonder) M.invAdd(m, wonderBp(2), 1);
   // tiles found in the rock before the first dig
   const rock = []; for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) { const x = m.base.cells[r][c]; if (!x.dug && !x.tile && r <= 2) rock.push([c, r]); }
-  rock.sort(() => rnd() - 0.5).slice(0, P.startTiles || 0).forEach(([c, r]) => m.base.cells[r][c].tile = M.pick(Object.keys(M.TILES)));
+  rock.sort(() => rnd() - 0.5).slice(0, P.startTiles || 0).forEach(([c, r]) => m.base.cells[r][c].tile = M.rollTile ? M.rollTile(r) : M.pick(Object.keys(M.TILES)));
   if (P.coreLey) { const x = M.cell(m, M.CORE.c, M.CORE.r + 1); if (x && !x.dug) x.tile = 'ley'; }
   const h = m.heroes[0]; for (let i = 0; i < (P.startHeroLv || 0); i++) { h.lv++; h.points++; } h.hp = M.heroMaxHp(h, m);
   (kits || []).forEach(k => {
@@ -180,7 +180,7 @@ G.startSettle = function () {
   if (n.type === 'boss') m.st.boss = (m.st.boss || 0) + 1; if (n.type === 'elite') m.st.elite = (m.st.elite || 0) + 1;
   const has = (pre) => run.loot.bp.slice(n0).filter(k => !k.startsWith('tile:') && (!pre || k.startsWith(pre))).length;
   const drop = (k) => { this.hold('rbp', run.loot.bp.length); run.loot.bp.push(k); const I = M.itemInfo(k); st.tiles.push({ icon: I.icon, v: 1, c: I.c, to: 'rbp', n: I.n, key: k }); };
-  const style = run.theme && run.theme.style, dbl = run.blood ? 2 : 1;
+  const style = run.theme && run.theme.style, dbl = (run.blood ? 2 : 1) * (1 + (M.baseMods(m).bpLuck || 0));
   const bbp = (bias, qUp) => { let k = M.dropBp(bias, style, qUp); for (let i = 0; i < 6 && !k.startsWith('bbp:'); i++) k = M.dropBp(bias, style, qUp); return k.startsWith('bbp:') ? k : wonderBp(0); };
   if (n.type === 'boss') {
     if (!has('bbp:')) drop(bbp(1, n.final ? 1 : 0));
@@ -196,7 +196,7 @@ G.startSettle = function () {
 const oChest = G.openChest;
 G.openChest = function (items, col, done) {
   const run = this.run, P = M.perks();
-  if (run && !run.tut && !items.some(it => it.award && it.award.k === 'bp') && rnd() < (0.22 * (P.chestBp ? 2 : 1) * (run.blood ? 2 : 1))) { const b = M.dropBp(0.4, run.theme && run.theme.style), I = M.itemInfo(b); items.push({ n: I.n, sub: I.kind, c: I.c, img: M.spriteCanvas(I.icon, 12), award: { k: 'bp', key: b } }); }
+  if (run && !run.tut && !items.some(it => it.award && it.award.k === 'bp') && rnd() < (0.22 * (P.chestBp ? 2 : 1) * (run.blood ? 2 : 1) * (1 + (M.baseMods(this.meta).bpLuck || 0)))) { const b = M.dropBp(0.4, run.theme && run.theme.style), I = M.itemInfo(b); items.push({ n: I.n, sub: I.kind, c: I.c, img: M.spriteCanvas(I.icon, 12), award: { k: 'bp', key: b } }); }
   return oChest.call(this, items, col, done);
 };
 // claw machine: grip bonus and a lifetime counter
@@ -211,7 +211,7 @@ G.recruit = function () {
   if (m.heroes.length >= M.heroCap(m)) { this.toast('领袖已满（上限 ' + M.heroCap(m) + '）', '#d0453c'); return; }
   if (m.shards < cost) { this.toast('灵魂碎片不足', '#d0453c'); return; }
   this.hold('msh', m.shards); m.shards -= cost; this.release('msh');
-  let rar = M.RARITY.indexOf(M.wpick(M.RARITY, r => r.w)); if (M.hasBuilt(m, B => B.recruit && B.recruit.qUp) || P.recruitMinRar) rar = Math.max(1, rar);
+  let rar = M.RARITY.indexOf(M.wpick(M.RARITY, r => r.w)); if (M.hasBuilt(m, B => B.recruit && B.recruit.qUp) || P.recruitMinRar) rar = Math.max(1, rar); rar = Math.max(rar, M.baseMods(m).recruitMin || 0);
   this.startReel({ title: '招魂', iconKey: 'candle', itemMode: true, land: 0, ups: rar, tease: rar < 3, tiles: M.RARITY.map(r => ({ n: r.n, sub: '领袖', c: r.c })), onDone: () => {
     const h = M.newHero(m, null, rar); m.heroes.push(h); this.save(); const col = M.RARITY[rar].c;
     this.fx.rays(960, 460, col, 2.2); this.fx.pop(960, 700, h.name + ' · ' + M.HEROES[h.cls].n, col, 80, { life: 1.8, rise: 20 });

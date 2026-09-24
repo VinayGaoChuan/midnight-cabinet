@@ -49,6 +49,10 @@ Object.assign(G, {
         roster: run.roster.filter(u => !this.hideU.has(u.uid)).map(u => ({ img: M.spriteURL(u.type, 4), stars: '★'.repeat(u.star), tipOn: this.tipFn(this.unitTip(u.type, u.star)), sel: this.sel === u.uid, border: this.sel === u.uid ? '#f2c14e' : 'transparent', onClick: () => { if (this.screen === 'shop') { this.sel = this.sel === u.uid ? null : u.uid; M.Sfx.click(); this.bump(); } } })),
         items: run.items.map((k, i) => ({ has: !!k && !this.hideI.has(i), img: k ? M.spriteURL(M.ITEMS[k].icon, 5) : '', border: k ? M.QUALITY[run.itemQ[i] || 0].c : '#3a3040', tipOn: this.tipFn(k ? this.itemTip(k, run.itemQ[i]) : { title: '空道具栏', d: '宝箱、商店、事件都能获得支援道具。' }) })),
         region: run.region.n };
+      // leader on the field: the skill panel folds down and stays folded for the rest of the battle
+      const fold = !b.hero.bench; if (fold && !b.foldAt) b.foldAt = t0; const fe = fold ? M.ease.eo(cl((t0 - b.foldAt) / 450, 0, 1)) : 0;
+      Object.assign(v.h, { skTop: Math.round(26 + 78 * fe), skH: Math.round(128 - 78 * fe), skOp: (1 - fe).toFixed(3), skOpenOn: fe < 0.5, skFoldOn: fold, skFoldOp: fe.toFixed(3) });
+      if (fold) Object.assign(v.h, { skillBorder: '#3a3040', skillBg: 'linear-gradient(180deg,#141018,#0c090f)', skillGlow: 'none', skillColor: '#6b6570' });
       v.skillTip = this.tipFn(() => this.heroTip(h));
       v.bpTip = this.tipFn(() => ({ title: '本局收获', c: '#e0904a', kind: '撤离或通关后带回基地', d: run.loot.bp.length ? '' : '还没有找到图纸。', lines: run.loot.bp.map(k => { const I = M.itemInfo(k); return { t: I.n, c: I.c }; }) }));
     }
@@ -65,6 +69,10 @@ Object.assign(G, {
         heroName: h.name, heroState: b.hero.bench ? '场外指挥' : b.hero.alive ? '亲自上场！' : '倒下', hp: Math.max(0, Math.round(b.hero.hp)) + ' / ' + Math.round(b.hero.maxHp), hpW: Math.max(0, b.hero.hp / b.hero.maxHp * 100) + '%', alive, left,
         items: run.items.map((k, i) => ({ has: !!k, img: k ? M.spriteURL(M.ITEMS[k].icon, 7) : '', border: k ? M.QUALITY[run.itemQ[i] || 0].c : '#3a3040', bg: k ? '#2a1e14' : '#141018', onClick: () => this.useSlot(i), tipOn: this.tipFn(k ? this.itemTip(k, run.itemQ[i]) : { title: '空道具栏' }) })),
         skillName: H.skill.n, skillSub: ready ? M.skillDesc(h) : b.skillUsed ? '本场已使用 · 冷却 ' + cd + ' 节点' : cd > 0 ? '冷却中：还要 ' + cd + ' 个节点' : '准备中……', skillBorder: ready ? '#ffcf4a' : '#3a3040', skillBg: ready ? 'linear-gradient(180deg,#4a3418,#2a1c0e)' : 'linear-gradient(180deg,#1a1520,#100c14)', skillColor: ready ? '#ffe08a' : '#6b6570', skillGlow: ready ? '0 0 ' + Math.round(20 + 14 * Math.sin(t0 / 150)) + 'px rgba(255,200,80,0.7)' : 'none', skillImg: M.spriteURL(H.sprite, 4) };
+      // leader on the field: the skill panel folds down and stays folded for the rest of the battle
+      const fold = !b.hero.bench; if (fold && !b.foldAt) b.foldAt = t0; const fe = fold ? M.ease.eo(cl((t0 - b.foldAt) / 450, 0, 1)) : 0;
+      Object.assign(v.h, { skTop: Math.round(26 + 78 * fe), skH: Math.round(128 - 78 * fe), skOp: (1 - fe).toFixed(3), skOpenOn: fe < 0.5, skFoldOn: fold, skFoldOp: fe.toFixed(3) });
+      if (fold) Object.assign(v.h, { skillBorder: '#3a3040', skillBg: 'linear-gradient(180deg,#141018,#0c090f)', skillGlow: 'none', skillColor: '#6b6570' });
       v.skillTip = this.tipFn(() => this.heroTip(h));
       const sy = M.synergies(run.roster); v.syn = Object.keys(M.TAGS).filter(t => sy.cnt[t] > 0).map(t => { const T = M.TAGS[t], l = sy.lvl[t]; return { label: l > 0 ? t + ' ' + sy.cnt[t] + ' · ' + T.desc[l - 1] : t + ' ' + sy.cnt[t] + '/' + T.th[0], color: l > 0 ? T.color : '#8d8496' }; });
       v.pausedOn = this.paused; v.pauseText = this.paused ? '继续' : '暂停';

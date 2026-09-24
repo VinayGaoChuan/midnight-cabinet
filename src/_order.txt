@@ -37,4 +37,5 @@ mc-meta-a.js
 mc-meta-b.js
 mc-names.js
 mc-bp.js
+mc-terrain.js
 mc-tele.js

@@ -52,6 +52,9 @@ python3 -m http.server 8000    # 本地起服务，打开 http://localhost:8000/
 | `mc-game-a.js` … `mc-game-m.js` | 游戏流程与界面（a 主循环，b 基地操作，c 出征 / 事件 / 商店，d 视图，e 面板，之后是逐轮叠加的功能层：提示、输入、标签、天赋树、回城仪式、日期仪式、自动运镜） |
 | `mc-mini-a.js` … `mc-mini-d.js` | 28 个事件小游戏（框架在 `mc-mini-a.js`） |
 | `mc-meta-a.js` `mc-meta-b.js` | 局外：存档、家具、成就、基地核心、图纸规则、房间场景 |
+| `mc-names.js` `mc-bp.js` | 统一命名「名字（品质）」、建筑信息三段式；图纸有效性判断 |
+| `mc-terrain.js` | 特殊地格：22 种、四档品质、越深越稀有；任何房间都生效的效果 + 契合房间的额外能力；深层地脉挖到旁边才勘明 |
+| `mc-tele.js` | 玩法数据采集 |
 
 界面模板语法：`{{表达式}}` 绑定视图数据，`<sc-if value>` 条件渲染，`<sc-for list as>` 列表，`sc-camel-on-click` 等绑定事件，`data-tip` 自动悬浮提示，`data-fx` 标记飞行动画落点。
 

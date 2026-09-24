@@ -90,7 +90,8 @@ class Battle {
     // taking the field is the leader's one free cast
     this.pending.push({ t: this.t + 0.9, fn: () => { if (!this.over && this.hero.alive) this.castSkill(true); } });
   }
-  canCast() { return this.hero.alive && !this.over && !this.skillUsed && (this.run.skillCd || 0) <= 0 && this.t > this.entryEnd * 0.5; }
+  // the leader's skill is cast from the sidelines; once the leader takes the field the skill is folded away for this battle
+  canCast() { return this.hero.alive && this.hero.bench && !this.over && !this.skillUsed && (this.run.skillCd || 0) <= 0 && this.t > this.entryEnd * 0.5; }
   castAnim(fn, tx, ty, col) {
     const h = this.hero; h.castT = this.t;
     this.ring(h.x, h.y - 50, 10, 90, col || C.candle, 6, 0.35);

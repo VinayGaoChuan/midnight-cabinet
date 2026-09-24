@@ -394,7 +394,7 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
   // cells
   for (let r = 0; r < BROWS; r++) for (let c = 0; c < BCOLS; c++) {
     const x = M.cell(meta, c, r), X = cellX(c), Y = cellY(r);
-    if (x.b) { drawRoomPx(ctx, X, Y, x.b, t, { seed: c * 0.31 + r * 0.17, fireT: opts.fire && opts.fire[c + ',' + r] }, c + ',' + r, bv.z); const B = BUILDINGS[x.b]; lights.push({ x: X + CW / 2, y: Y + CH / 2, r: (M.LIGHT_R(meta, x) + 0.6) * CW, c: PAL[B.style][2], f: 0.95 + 0.05 * Math.sin(t * 3 + c), cell: 1 }); }
+    if (x.b) { drawRoomPx(ctx, X, Y, x.b, t, { seed: c * 0.31 + r * 0.17, fireT: opts.fire && opts.fire[c + ',' + r] }, c + ',' + r, bv.z); const B = BUILDINGS[x.b]; lights.push({ x: X + CW / 2, y: Y + CH / 2, r: (M.LIGHT_R(meta, x) + 0.6) * CW, c: PAL[B.style][2], f: 0.95 + 0.05 * Math.sin(t * 3 + c), cell: 1 }); if (x.tile && TILES[x.tile]) lights.push({ x: X + 60, y: Y + CH - 40, r: 150, c: TILES[x.tile].c, f: 0.7 + 0.3 * Math.sin(t * 2 + c + r) }); }
     else if (x.dug) {
       ctx.drawImage(emptyRoom(), X, Y);
       if (x.job && x.job.kind === 'build') {
@@ -408,7 +408,7 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
       } else lights.push({ x: X + CW / 2, y: Y + CH / 2, r: 1.6 * CW, c: '#e8d8b8', f: 0.95, cell: 1 });
     } else {
       ctx.drawImage(rock((c * 5 + r * 3) % 3), X, Y);
-      if (x.tile) { const T = TILES[x.tile]; const pu = 0.5 + 0.5 * Math.sin(t * 2 + c + r); ctx.fillStyle = T.c; for (let k = 0; k < 5; k++) { const cx2 = X + 70 + rnd(k + c * 7 + r * 13) * 160, cy2 = Y + 50 + rnd(k + 20 + c * 3 + r) * 110; ctx.globalAlpha = 0.6 + 0.4 * pu; ctx.fillRect(cx2, cy2, 10, 18); ctx.fillRect(cx2 - 6, cy2 + 8, 22, 6); } ctx.globalAlpha = 1; lights.push({ x: X + CW / 2, y: Y + CH / 2, r: 150, c: T.c, f: 0.6 + 0.3 * pu }); }
+      if (x.tile) { const T = TILES[x.tile]; const pu = 0.5 + 0.5 * Math.sin(t * 2 + c + r), nq = 5 + (T.q || 0) * 3; ctx.fillStyle = T.c; for (let k = 0; k < nq; k++) { const cx2 = X + 70 + rnd(k + c * 7 + r * 13) * 160, cy2 = Y + 50 + rnd(k + 20 + c * 3 + r) * 110; ctx.globalAlpha = 0.6 + 0.4 * pu; ctx.fillRect(cx2, cy2, 10, 18); ctx.fillRect(cx2 - 6, cy2 + 8, 22, 6); } ctx.globalAlpha = 1; lights.push({ x: X + CW / 2, y: Y + CH / 2, r: 150 + (T.q || 0) * 45, c: T.c, f: 0.6 + 0.3 * pu }); }
       if (x.job && x.job.kind === 'dig') {
         const q = 1 - x.job.days / x.job.total; ctx.fillStyle = '#0b090e'; ctx.fillRect(X + 20, Y + 20, CW * 0.4, CH - 40);
         ctx.save(); ctx.translate(X + 20 + CW * 0.4, Y + CH / 2); ctx.fillStyle = '#b0b8c4'; ctx.beginPath(); ctx.moveTo(0, -24); ctx.lineTo(40 + Math.sin(t * 40) * 3, 0); ctx.lineTo(0, 24); ctx.fill(); ctx.restore();
@@ -462,7 +462,9 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
       badge(st.icon, a.x + pad, a.y + pad, st.c, { tag: st, key: x.b, c, r }, hot === 's'); badge(ct.icon, b.x - pad - S, b.y - pad - S, ct.c, { tag: ct, key: x.b, c, r }, hot === 'f'); }
     else if (x.job) { const cx = (a.x + b.x) / 2; badge(x.job.kind === 'dig' ? 'u_pick' : 'u_hammer', cx - S - 4, b.y - pad - S, '#ffd060', { job: 1, c, r }, hot === 'j');
       ctx.fillStyle = 'rgba(8,6,10,0.86)'; ctx.fillRect(cx + 2, b.y - pad - S, S * 1.3, S); M.pxNum(ctx, String(x.job.days), cx + 2 + S * 0.65, b.y - pad - S / 2, '#ffd060', S / 26); }
-    else if (!x.dug && x.tile) { const T = TILES[x.tile]; badge('l_' + x.tile, (a.x + b.x) / 2 - S / 2, (a.y + b.y) / 2 - S / 2, T.c, { tile: x.tile, c, r }, hot === 't'); }
+    else if (!x.dug && x.tile) { const T = TILES[x.tile]; badge(M.tileHidden && M.tileHidden(meta, c, r) ? 'l_unknown' : 'l_' + x.tile, (a.x + b.x) / 2 - S / 2, (a.y + b.y) / 2 - S / 2, T.c, { tile: x.tile, c, r }, hot === 't'); }
+    // an occupied vein keeps its badge in the free bottom-left corner
+    if ((x.b || x.dug) && x.tile && TILES[x.tile]) badge('l_' + x.tile, a.x + pad, b.y - pad - S, TILES[x.tile].c, { tile: x.tile, c, r }, hot === 't');
   }
   const dp = bv.toScreen(DOOR_X, -300);
   const bw = 200 * bv.z; ctx.fillStyle = '#000'; ctx.fillRect(dp.x - bw / 2 - 3, dp.y + 12, bw + 6, 16); ctx.fillStyle = pH < 0.35 ? '#d0453c' : '#5fd0c0'; ctx.fillRect(dp.x - bw / 2, dp.y + 15, bw * clamp(pH, 0, 1), 10);
@@ -519,6 +521,10 @@ M.Raid = class {
       if (k === 'shell' || k === 'colossus') { this.fx.push({ k: 'boom', x: tg.x, y: tg.y - 20, r: tu.w.splash, t0: T, life: 0.45 }); this.ents.forEach(o => { if (o.alive && o.side === 'E' && Math.abs(o.x - tg.x) < tu.w.splash) this.damage(o, tu.w.dmg * (o === tg ? 1 : 0.6), '#ffcc33'); }); this.shake = Math.max(this.shake, k === 'colossus' ? 16 : 8); M.Sfx.boom(); }
       else if (k === 'chain' || k === 'zeus') { let cur = tg, hit = new Set(); for (let i = 0; i < (tu.w.chain || 3) && cur; i++) { hit.add(cur); this.damage(cur, tu.w.dmg * Math.pow(0.8, i), '#8ff6ff'); const nx = this.ents.filter(o => o.alive && o.side === 'E' && !hit.has(o) && Math.abs(o.x - cur.x) < 260).sort((a, b) => Math.abs(a.x - cur.x) - Math.abs(b.x - cur.x))[0]; if (nx) this.fx.push({ k: 'chain', x1: cur.x, y1: cur.y - 40, x2: nx.x, y2: nx.y - 40, t0: T, life: 0.25 }); cur = nx; } if (k === 'zeus') { this.fx.push({ k: 'sky', x: tg.x, t0: T, life: 0.35 }); this.shake = Math.max(this.shake, 10); } M.Sfx.bolt(k === 'zeus' ? 2 : 0); }
       else { this.damage(tg, tu.w.dmg, '#ffe08a'); if (k === 'arcane') tg.slow = 2; M.Sfx.shoot(); }
+      // abilities granted by the vein under the room
+      if (tu.w.xChain && k !== 'chain' && k !== 'zeus') { let cur = tg; const hit = new Set([tg]); for (let i = 0; i < tu.w.xChain; i++) { const nx = this.ents.filter(o => o.alive && o.side === 'E' && !hit.has(o) && Math.abs(o.x - cur.x) < 260).sort((a, b) => Math.abs(a.x - cur.x) - Math.abs(b.x - cur.x))[0]; if (!nx) break; hit.add(nx); this.fx.push({ k: 'chain', x1: cur.x, y1: cur.y - 40, x2: nx.x, y2: nx.y - 40, t0: T, life: 0.25 }); this.damage(nx, tu.w.dmg * 0.5 * Math.pow(0.8, i), '#8ff6ff'); cur = nx; } M.Sfx.bolt(0); }
+      if (tu.w.xSplash && k !== 'shell' && k !== 'colossus') { this.fx.push({ k: 'boom', x: tg.x, y: tg.y - 20, r: tu.w.xSplash, t0: T, life: 0.4 }); this.ents.forEach(o => { if (o !== tg && o.alive && o.side === 'E' && Math.abs(o.x - tg.x) < tu.w.xSplash) this.damage(o, tu.w.dmg * 0.5, '#ffcc33'); }); }
+      if (tu.w.xSlow) this.ents.forEach(o => { if (o.alive && o.side === 'E' && Math.abs(o.x - tg.x) < (tu.w.xSplash || tu.w.splash || 60)) o.slow = Math.max(o.slow || 0, 2); });
     });
     this.shake = Math.max(0, this.shake - dt * 50);
     this.fx = this.fx.filter(f => T - f.t0 < f.life);
