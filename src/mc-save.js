@@ -33,7 +33,8 @@ function checkMeta(raw) {
   if (!Array.isArray(cells) || cells.length !== BR || cells.some(row => !Array.isArray(row) || row.length !== BC)) { m.base = D.base; note('基地布局'); }
   else for (let r = 0; r < BR; r++) for (let c = 0; c < BC; c++) {
     let x = cells[r][c]; if (!isObj(x)) { cells[r][c] = x = { dug: false, tile: null, b: null, job: null }; note('基地房间'); }
-    if (x.b === 'sanitarium') { x.b = null; m.supplies += 90; mig = true; }   // the 疗养室 was removed with the personalities: refund it
+    if (x.b === 'sanitarium') { x.b = null; m.supplies += 90; mig = true; }
+    if (x.b && x.tile === 'ruin') { x.tile = null; mig = true; }   // the ruin's effect is spent once the room stands   // the 疗养室 was removed with the personalities: refund it
     if (isObj(x.job) && x.job.key === 'sanitarium') { x.job = null; m.supplies += 90; mig = true; }
     if (x.b != null && !M.BUILDINGS[x.b]) { x.b = null; note('基地房间'); }
     if (x.tile != null && !M.TILES[x.tile]) { x.tile = null; note('地格'); }

@@ -102,11 +102,11 @@ const count = {};
   const trait = (t) => { const x = TDB[t] || {}; return (x.n || short(t)) + '：' + (x.d || ''); };
   const rows = [];
   Object.keys(M.HEROES).forEach((k, i) => {
-    const h = M.HEROES[k], ps = M.PSKILL[k] || {}, tr = (M.PS_TRIG || {})[k];
+    const h = M.HEROES[k], ps = M.PSKILL[k] || {}, tr = ps.r ? { d: (k === 'nun' ? '有友军生命低于 75%，或 ' : '') + ps.r + ' 以内有 ' + (ps.min || 1) + ' 个以上敌人' } : { d: '场上有敌人' };
     let ld = ''; try { ld = typeof h.skill.d === 'function' ? h.skill.d(1, {}) : h.skill.d; } catch (e) {}
     rows.push({ id: 'L' + String(i + 1).padStart(2, '0'), n: h.n, key: k, type: '领袖', race: '英雄', voc: '', q: '随招募', hp: h.hp, atk: h.atk, as: Math.round(100 / (h.cd || 1)), spd: h.spd, range: h.range, ranged: h.range > 200 ? '远程' : '近战', cost: '', power: '',
-      skill: '军团「' + h.skill.n + '」：' + ld + '（1 级数值，冷却按走过的站数算）', trig: '玩家按空格（领袖在场外指挥时）',
-      skill2: '个人「' + ps.n + '」（' + (ps.resN || '') + '）：' + (ps.d || ''), trig2: tr ? tr.d : '', fx: '', traits: '', up: '', desc: '' });
+      skill: h.skill.n + '：' + ld + '（1 级数值，冷却按走过的站数算）；亲自上场后，' + (ps.d || ''), trig: '场外指挥时玩家按空格；亲自上场后：' + (tr ? tr.d : ''),
+      skill2: '', trig2: '', fx: '', traits: '', up: '', desc: '' });
   });
   let i = 0;
   ['Summon', 'Enemy', 'Derivant'].forEach(type => Object.keys(DB).filter(k => DB[k].type === type).sort((a, b) => (DB[a].q || 0) - (DB[b].q || 0) || DB[a].race.localeCompare(DB[b].race) || a.localeCompare(b)).forEach(k => {

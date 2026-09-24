@@ -59,7 +59,6 @@ const CONCEPTS = [
   { id: 'relic', cat: '领袖', icon: 't_eye', title: '宝物', line: '出征时带在身上的装备，领袖阵亡就丢了（保险库能保住第 1 件）。', scr: 'base', sel: '[data-g="relics"]' },
   { id: 'lvup', cat: '领袖', img: () => sprite('orb'), title: '升级', line: '花经验球立刻升一级，生命、攻击都涨，还给 1 个天赋点。', scr: 'base', sel: '[data-tip="hs-lvup"]' },
   { id: 'talent', cat: '领袖', icon: 't_clover', title: '天赋树', line: '三条路线：杀伐、坚忍、运数。从中间往外点，每级 1 点。', scr: 'base', sel: '[data-tip^="tal-"]:not([data-tip="tal-root"])' },
-  { id: 'pskill', cat: '领袖', icon: 't_rage', title: '个人技能', line: '领袖亲自上场后自己放；守城时也会自动放。怒气、能量、法力或冷却攒满、时机合适（比如身边有敌人）才放。', scr: 'base', sel: '[data-tip="hs-ps"]' },
   { id: 'hclass', cat: '领袖', icon: 'c_nun', title: '职业', line: '头像左上角是领袖的职业。职业决定两个技能：同一职业，技能永远一样。', scr: 'base', sel: '[data-g="hclass"]' },
   { id: 'rarity', cat: '标签与品质', icon: 'u_star', title: '品质', line: '白 普通 → 蓝 稀有 → 紫 史诗 → 金 传说。名字和边框的颜色就是品质。', scr: ['base', 'shop'], sel: '[data-tip="hs-rar"],[data-g="shop-units"]' },
   { id: 'defend', cat: '守城', icon: 't_shield', title: '守城', line: '选中的领袖在地面作战，地下的武器房间向地面开火。传送门被打破这一局就结束。', scr: 'base', sel: '[data-g="raidprep"]' },
@@ -72,12 +71,14 @@ const CONCEPTS = [
   { id: 'items', cat: '出征', icon: 't_chest', title: '支援道具', line: '战斗中按 Q W E 由领袖放出。用的时候转一下，决定这次的品质。', scr: ['world', 'battle'], sel: '[data-tip="b-items"]' },
   { id: 'banners', cat: '出征', img: () => sprite('flag'), title: '战旗', line: '整支部队的常驻加成，比如「射手战旗」让所有射手更强。', scr: ['world', 'shop'], sel: '[data-fx="banners"],[data-g="shop-banners"]' },
   { id: 'minimap', cat: '出征', icon: 'e_path', title: '小地图', line: '整条路线的缩略图。越往右越深，最右边是首领。', scr: 'world', at: () => ({ x: 1330, y: 30, w: 560, h: 250 }), when: (g) => g.run && !g.run.tut },
-  { id: 'legion', cat: '领袖', icon: 't_skill', title: '军团技能', line: '领袖在场外指挥时按空格放。冷却按走过的站数算，每站亮一格。', scr: ['base', 'world'], sel: '[data-tip="tal-root"],[data-g="w-skill"]' },
+  { id: 'wpower', cat: '出征', icon: 'u_star', title: '战斗力', line: '敌人头上是它的战斗力，你头上是你的。颜色：绿稳赢，黄有风险，红很危险。', scr: 'world', sel: '[data-tip="w-power"]' },
+  { id: 'hcap', cat: '领袖', icon: 't_command', title: '扩建', line: '在招募房间里花物资扩建，领袖上限 +1。', scr: 'base', sel: '[data-g="hcap"]' },
+  { id: 'legion', cat: '领袖', icon: 't_skill', title: '领袖技能', line: '每个职业一个技能。在场外指挥时按空格放，冷却按走过的站数算；亲自上场后，它自己攒满、有敌人在范围里就放。', scr: ['base', 'world'], sel: '[data-tip="tal-root"],[data-g="w-skill"]' },
   // ── 战斗 ──
   { id: 'bmode', cat: '战斗', icon: 't_sword', title: '战斗目标', line: '普通战：消灭所有敌人；坚守战：撑过倒计时。', scr: 'battle', sel: '[data-tip="b-mode"]', freeze: 1 },
   { id: 'score', cat: '战斗', icon: 't_mult', title: '积分 = 基础 × 倍率', line: '击杀得基础分；精英、首领、战旗、宝物会加倍率。积分就是这一局的钱。', scr: 'battle', sel: '[data-tip="b-score"]', freeze: 1 },
   { id: 'bhero', cat: '战斗', icon: 't_command', title: '指挥位', line: '领袖站在左边不参战；部队全灭后亲自上场，倒下就永久死亡。', scr: 'battle', sel: '[data-tip="b-hero"]', freeze: 1 },
-  { id: 'bskill', cat: '战斗', icon: 't_skill', title: '军团技能', line: '按空格放。领袖亲自上场后收起，这场不能再用。', scr: 'battle', sel: '[data-g="b-skill"]', freeze: 1, when: (g) => g.battle && g.battle.hero && g.battle.hero.bench },
+  { id: 'bskill', cat: '战斗', icon: 't_skill', title: '领袖技能', line: '按空格放。领袖亲自上场后改为自动释放。', scr: 'battle', sel: '[data-g="b-skill"]', freeze: 1, when: (g) => g.battle && g.battle.hero && g.battle.hero.bench },
   { id: 'voc', cat: '标签与品质', icon: 'v_archer', title: '职业标签', line: '决定打法：先锋扛伤、战士近战、射手远程、法师范围、祭司治疗、商人赚钱。', scr: ['shop', 'world', 'battle', 'base'], sel: '[data-tip^="tag-voc-"]' },
   { id: 'trait', cat: '战斗', icon: 'e_skull', title: '特性', line: '卡片上那一句话就是这支部队的本事。开战时它的图标从身上亮出来，停在头顶，生效时会闪。', scr: ['shop', 'world'], sel: '[data-g="trait"]' },
   { id: 'upower', cat: '标签与品质', icon: 'u_star', title: '战斗力', line: '部队有多强。先挑缺的职业，再在里面挑战斗力高、买得起的。', scr: ['shop'], sel: '[data-g="upower"]' },
@@ -151,7 +152,6 @@ G.view = function () {
   // world: the how-to bar is for the first (tutorial) run only
   if (v.worldHint && this.run && !this.run.tut) v.worldHint = '';
   // battle: the legion card shows its name and key; what it does is one Ctrl away (or on hover)
-  if (v.h && typeof v.h.skillSub === 'string' && /^军团技能 · /.test(v.h.skillSub)) v.h.skillSub = D('', v.h.skillSub);
   // base top bar: the raid is tonight while the defenders are being picked; tips say what is true now
   if (v.b && m) {
     if (this.raidPrep || m.raidPending === m.day) { v.b.raidTxt = '今晚袭击'; v.b.raidC = '#ff5a4a'; }

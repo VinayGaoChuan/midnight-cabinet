@@ -49,6 +49,9 @@ mc-save.js
 mc-guide.js
 mc-flow.js
 mc-portal.js
+mc-vision.js
+mc-recruit.js
+mc-power.js
 mc-tipcompact.js
 mc-awaken.js
 mc-px16.js

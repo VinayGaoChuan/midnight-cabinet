@@ -29,17 +29,17 @@ M.tileBrief = function (key) {
 };
 
 // ───────── leaders (user ruling 2026-09-24) ─────────
-//   Lv2 驱魔修女 / life bar 1864/1870 / skill icon + name ×2 / blinking 按住 Ctrl… / blinking 有 N 个天赋点可用
-// With Ctrl only the two skills change: each unfolds into its full description; everything else stays where it was.
+//   Lv2 驱魔修女 / life bar 1864/1870 / skill icon + name / blinking 按住 Ctrl… / blinking 有 N 个天赋点可用
+// With Ctrl only the skill changes: it unfolds into its sentence; everything else stays where it was.
 const oHT = G.heroTip;
 G.heroTip = function (h) {
   const t = oHT.apply(this, arguments); if (!t || !h) return t;
   const m = this.meta, H = M.HEROES[h.cls], P = M.PSKILL && M.PSKILL[h.cls], mx = M.heroMaxHp(h, m), hp = Math.max(0, Math.round(h.hp)), f = hp / Math.max(1, mx);
   const bar = [{ bar: f, bc: f < 0.35 ? '#ff5a4a' : '#9cff7a', bw: 190 }, { t: hp + '/' + mx, c: '#e8dcc4' }];
-  const s1 = { img: IC((M.SKILL_IC || {})[h.cls] || 't_skill'), t: H.skill.n, c: '#ffe08a' }, s2 = P ? { img: IC(P.ic), t: P.n, c: P.col } : null;
+  const s1 = { img: IC((M.SKILL_IC || {})[h.cls] || 't_skill'), t: H.skill.n, c: '#ffe08a' };
   t.title = t.briefTitle = 'Lv' + h.lv + ' ' + H.n;
-  t.brief = [bar, [s1, s2]];
-  t.briefDet = [bar, { parts: [s1], desc: '点击释放：' + M.skillDesc(h) + '，冷却 ' + M.skillNodeCd(h, m) + ' 个节点。' }].concat(P ? [{ parts: [s2], desc: '上场后自动 · ' + P.resN + '：' + P.d, c: P.col }] : []);
+  t.brief = [bar, [s1]];
+  t.briefDet = [bar, { parts: [s1], desc: M.heroSkillD(h, m) }];
   t.kind = ''; t.d = ''; t.lines = [];
   t.alert = h.points > 0 ? { t: '有 ' + h.points + ' 个天赋点可用', c: '#f2c14e' } : null;
   t.ctrl = true;

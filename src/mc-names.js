@@ -1,10 +1,10 @@
 // ==== mc-names.js ====
 (function () {
-// One naming rule everywhere: 名字（品质） written in the quality colour (普通白 / 稀有蓝 / 史诗紫 / 传说金).
+// One naming rule everywhere: just the name, written in the quality colour (普通白 / 稀有蓝 / 史诗紫 / 传说金) — the colour is the quality.
 // Buildings read in three parts: name + quality, then tags + power, then the description.
 const M = window.MC, G = M.Game.prototype, Q = M.QUALITY, TG = M.TAG;
 const QN = Q.map(q => q.n);
-M.qn = (name, q) => (q == null || !Q[q]) ? name : name + '（' + Q[q].n + '）';
+M.qn = (name) => name;
 M.qc = (q) => (Q[q] || Q[0]).c;
 const stripQ = (s) => String(s || '').replace(new RegExp('^(' + QN.join('|') + ')(\\s*·\\s*)?'), '').replace(/^\s*·\s*/, '');
 const named = (t, name, q) => { if (!t) return t; t.title = M.qn(name, q); t.c = M.qc(q); t.kind = stripQ(t.kind); return t; };

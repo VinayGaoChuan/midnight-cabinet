@@ -240,7 +240,7 @@ G.worldMove = function (sx, sy) {
   if (this.walker && sx >= 1330 && sx <= 1890 && sy >= 30 && sy <= 280) {
     const map = this.run.map, X = 1330, Y = 30, Wd = 560, Ht = 250, COLW = 520, ROWH = 270, Y0 = 700, sxk = (Wd - 70) / (map.W - 500), syk = (Ht - 90) / (ROWH * 2.4);
     let best = null, bd = 18; map.nodes.forEach(n => { const cx = X + 35 + (n.x - 300) * sxk, cy = Y + 60 + (n.y - (Y0 - ROWH * 1.2)) * syk, d = Math.hypot(cx - sx, cy - sy); if (d < bd) { bd = d; best = n; } });
-    if (best) { const n = best, cur = this.walker.edge ? this.walker.edge.b : this.walker.node; this.tipData = { title: M.nodeLabel(n), c: !n.seen ? '#8d8496' : n.type === 'boss' || n.type === 'elite' ? '#ff6a5a' : n.type === 'extract' ? '#5fd0c0' : '#f2c14e', kind: (n.id === cur ? '你在这里 · ' : n.done ? '已经过 · ' : '') + '第 ' + (n.col + 1) + ' 站', d: n.seen ? M.nodeDesc(n) : '在视野之外。走近一些，或者提高视野（监听室、自由女神像）就能提前看清。' }; this.tipKey = null; return; }
+    if (best) { const n = best, cur = this.walker.edge ? this.walker.edge.b : this.walker.node; this.tipData = { title: M.nodeLabel(n), c: !n.seen ? '#8d8496' : n.type === 'boss' || n.type === 'elite' ? '#ff6a5a' : n.type === 'extract' ? '#5fd0c0' : '#f2c14e', kind: (n.id === cur ? '你在这里 · ' : n.done ? '已经过 · ' : '') + '第 ' + (n.col + 1) + ' 站', d: n.seen ? M.nodeDesc(n) : '在视野之外。' }; this.tipKey = null; return; }
     this.tipData = { title: '小地图', c: '#e8dcc4', d: '整张地图。', lines: [R('当前视野：前方 ' + (this.run.vision || 1) + ' 步')] }; return;
   }
   return oldWM.call(this, sx, sy);

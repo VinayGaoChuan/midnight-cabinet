@@ -3,7 +3,7 @@
 // Skills fire when they make sense, not on a timer. The army takes the field with every skill ready (a full bar);
 // a ready skill waits until its trigger holds — a healer waits for someone to get hurt, a whirl for enemies around it,
 // a volley for a cluster to hit — and the unit keeps fighting normally meanwhile. Enemies fill their bars as before
-// and use the same triggers. Leaders' personal skills follow the same idea (M.PS_TRIG).
+// and use the same triggers. Leaders' skills on the field follow the same idea (M.psReady).
 const M = window.MC, P = M.Battle3.prototype;
 const RS = 125, RM = 195, RL = 330;
 const dist = (a, b) => Math.hypot(a.x - b.x, (a.y - b.y) * 1.2);
@@ -57,11 +57,7 @@ P.canSkill = function (e, ignoreTrigger) {
   e._trT = this.t; e._trV = !!M.skillTrig(e).test(this, e); return e._trV;
 };
 // ───────── leaders: personal skills wait for their moment too ─────────
-M.PS_TRIG = {
-  watchman: T.near(240, 1), widow: T.any(), nun: { d: '有友军生命低于 75%，或身边有 2 个以上敌人', test: (b, e) => T.hurt(0.75).test(b, e) || T.near(280, 2).test(b, e) },
-  butcherlord: T.near(220, 2), clockmaker: T.approach(400), cremator: T.near(280, 1),
-};
-M.psTrigOk = function (b, h, cls) { const t = M.PS_TRIG[cls]; return !t || !!t.test(b, h); };
+// leaders: on the field their skill fires only when it can hit — see M.psReady in mc-pskill.js
 })();
 
 ;

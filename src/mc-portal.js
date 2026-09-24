@@ -236,7 +236,7 @@ const hitSt = (g, sx, sy) => { const s = hitS(g, sx, sy); return s ? s.k : null;
 G.steleTip = function (k) {
   const m = this.meta, W = M.WORLDS[k], th = M.WTHEME && M.WTHEME[k], D = M.worldDanger(m, k);
   const brief = [[{ img: M.spriteURL('skull', 4), t: '危险 ' + D.n, c: D.c }]].concat(M.worldLoot(k).map(l => [{ img: icURL(l.ic), t: l.t, c: l.c || '#e8dcc4' }]));
-  const lines = [{ t: '推荐战斗力 ' + D.par + ' · 你最强的领袖 ' + D.mine, c: '#a89ca8' }];
+  const lines = [{ t: '开局的仗约 ' + D.first + '，首领约 ' + D.boss, c: '#cfc6b8' }, { t: '你出发时约 ' + D.mine + '（最强领袖 + 开局部队）', c: '#a89ca8' }];
   if (th) lines.push({ t: '敌人：' + th.races.join('、'), c: '#a89ca8' });
   if (m.cleared[k]) lines.push({ t: '已通关', c: '#9cff7a' }); else if (W.final) lines.push({ t: '最终之地', c: '#ffcc33' });
   return { title: W.n, c: W.light, brief, lines };
