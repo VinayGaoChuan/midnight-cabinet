@@ -30,6 +30,11 @@ const oldView = G.view;
 G.view = function () {
   const v = oldView.call(this), tip = this.tipData, run = this.run, t0 = now();
   if (tip && v.tip) {
+    // place the tooltip from its measured size: below-right of the pointer, flipped above / left when it would leave the screen
+    const key = (tip.title || '') + '|' + (tip.kind || '') + '|' + (tip.d || '').length + '|' + (tip.lines || []).length, box = this._tipBox && this._tipBox.key === key ? this._tipBox : null;
+    const bw = box ? box.w : 480, bh = box ? box.h : 240, mx = this.mx || 0, my = this.my || 0;
+    let tx = mx + 28, ty = my + 28; if (tx + bw > 1910) tx = mx - 28 - bw; if (ty + bh > 1070) ty = my - 24 - bh;
+    v.tip.x = Math.round(Math.max(10, Math.min(1910 - bw, tx))); v.tip.y = Math.round(Math.max(10, Math.min(1070 - bh, ty))); v.tip.op = box ? 1 : 0; this._tipKey = key;
     if (this._tipSrc !== tip) { this._tipSrc = tip; this._tipV = { hasIcon: !!tip.icon, icon: tip.icon ? M.iconURL(tip.icon, 3) : '', dsegs: segs(M.rich(tip.d || '', '#e8dcc4', tip.ctx)), lines: (tip.lines || []).map(l => ({ segs: segs(l.rich || M.rich(l.t, l.c, tip.ctx)) })) }; }
     Object.assign(v.tip, this._tipV);
   }
@@ -100,6 +105,13 @@ M.roomThumb = function (key) {
     const st = TG.style(B.style), ct = TG.cat(B.cat); b(st.icon, 14, 14, st.c); b(ct.icon, 450 - 80, 315 - 80, ct.c); thumbC[key] = c.toDataURL(); if (M._g) M._g.bump(); };
   return thumbC[key];
 };
+})();
+
+;
+
+// measure the tooltip after it renders so the next frame can keep it on screen
+(function () { const M = window.MC, G = M.Game.prototype, oT = G.tick;
+  G.tick = function (dt) { oT.call(this, dt); if (!this.tipData) return; const st = this.ui && this.ui.stage && this.ui.stage(), el = st && st.querySelector('[data-tipbox]'); if (!el) return; const w = el.offsetWidth, h = el.offsetHeight; if (!w || !h) return; const b = this._tipBox; if (!b || b.key !== this._tipKey || Math.abs(b.h - h) > 1 || Math.abs(b.w - w) > 1) { this._tipBox = { key: this._tipKey, w, h }; this.bump(); } };
 })();
 
 ;

@@ -35,3 +35,6 @@ mc-mini-d.js
 mc-game-m.js
 mc-meta-a.js
 mc-meta-b.js
+mc-names.js
+mc-bp.js
+mc-tele.js

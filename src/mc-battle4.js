@@ -98,7 +98,6 @@ P.fireCast = function (e) {
   if (sp.tier >= 2) this.hs = 0.04 + sp.tier * 0.025;
   if (sp.tier >= 3) { this.flash = Math.max(this.flash, 0.3); this.flashCol = sp.col; Sfx.impact(); }
 };
-P.heroFreeCast = function () { this.castSkill(true); };
 const oldDeal = P.deal;
 P.deal = function (src, tg, amt, o = {}) {
   const d = oldDeal.call(this, src, tg, amt, o);

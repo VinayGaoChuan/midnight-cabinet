@@ -12,14 +12,15 @@ M.TAL_IC = TAL_IC;
 const SKILL_IC = { watchman: 't_eye', widow: 't_dice', nun: 't_heal', butcherlord: 't_rage', clockmaker: 't_hourglass', cremator: 't_flame' };
 const icOf = (m) => TAL_IC[Object.keys(m || {})[0]] || 't_skill';
 const HOLD = 0.75; // seconds of charge to learn a talent
-const W = 636, H = 500, ROOT = { x: 318, y: 430 };
+const W = 636, H = 500, ROOT = { x: 318, y: 440 };
 const hash = (s) => { let h = 7; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) % 9973; return h; };
 // node positions: three branches fan up out of the root, each hero's tree bends its own way
 function layout(h) {
   const hs = hash(h.id), out = {};
   ['atk', 'def', 'luck'].forEach((b, k) => {
-    const d = k - 1, n = h.tree[b].length, step = Math.min(92, 300 / Math.max(1, n - 1 || 1));
-    out[b] = h.tree[b].map((_, i) => ({ x: ROOT.x + d * (78 + i * 38) + Math.sin(hs * 0.7 + i * 1.9 + k * 2.3) * (d ? 12 : 26), y: ROOT.y - 112 - i * step }));
+    // side branches fan out 150px+ from the trunk so no two nodes (72px) can touch; each hero bends a little differently
+    const d = k - 1, n = h.tree[b].length, step = Math.min(86, 280 / Math.max(1, n - 1));
+    out[b] = h.tree[b].map((_, i) => ({ x: ROOT.x + d * (150 + i * 28) + Math.sin(hs * 0.7 + i * 1.9 + k * 2.3) * (d ? 10 : 6), y: ROOT.y - 100 - i * step }));
   });
   return out;
 }
@@ -42,7 +43,7 @@ G.view = function () {
   // tree
   const nodes = [], links = [], caps = [];
   const rootIc = SKILL_IC[h.cls] || 't_skill', rp = 0.5 + 0.5 * Math.sin(t * 2.2);
-  nodes.push({ id: 'root', tip: 'tal-root', fx: 'tal-root', x: ROOT.x - 46, y: ROOT.y - 46, s: 92, is: 60, ic: IC(rootIc, 3), border: '#ffe08a', bg: 'radial-gradient(circle at 50% 40%,#6a4a1a,#1a1008)', glow: '0 0 ' + Math.round(24 + rp * 16) + 'px rgba(255,210,110,0.85),inset 0 0 18px rgba(255,220,140,0.6)', filter: 'none', sx: 0, sy: 0, sc: 1, cursor: 'help', anim: 'none', charging: false, big: false, deg: 0, ringC: '#fff' });
+  nodes.push({ id: 'root', tip: 'tal-root', fx: 'tal-root', x: ROOT.x - 46, y: ROOT.y - 46, s: 92, is: 60, ic: IC(rootIc, 3), border: '#ffe08a', bg: 'radial-gradient(circle at 50% 40%,#6a4a1a,#1a1008)', glow: '0 0 ' + Math.round(24 + rp * 16) + 'px rgba(255,210,110,0.85),inset 0 0 18px rgba(255,220,140,0.6)', filter: 'none', sx: 0, sy: 0, sc: 1, cursor: 'help', anim: 'none', charging: false, big: false, deg: 0, ringC: '#fff', hint: false, hintT: '' });
   ['atk', 'def', 'luck'].forEach(b => {
     const Bc = M.BRANCH[b].c, taken = h.taken[b];
     h.tree[b].forEach((T, i) => {
@@ -53,12 +54,14 @@ G.view = function () {
         border: isTaken ? Bc : avail ? '#fff3c4' : '#3a3040', bg: isTaken ? 'radial-gradient(circle at 50% 40%,' + hexA(Bc, 0.55) + ',#140e18)' : avail ? 'radial-gradient(circle at 50% 40%,#3a2e20,#140e18)' : '#120e16',
         glow: isTaken ? '0 0 16px ' + hexA(Bc, 0.7) + ',inset 0 0 12px ' + hexA(Bc, 0.5) : 'none', filter: isTaken || avail ? 'none' : 'grayscale(1) brightness(0.55)',
         sx: sh ? Math.round((Math.random() - 0.5) * sh * 2) : 0, sy: sh ? Math.round((Math.random() - 0.5) * sh * 2) : 0, sc: (1 + chg * 0.14).toFixed(3),
-        cursor: avail ? 'pointer' : 'default', anim: avail && !chg ? 'talPulse 1.1s ease-in-out infinite, talBob 1.1s ease-in-out infinite' : 'none', charging: chg > 0, deg: Math.round(chg * 360), ringC: chg >= 1 ? '#ffffff' : Bc, big: !!T.big });
+        cursor: avail ? 'pointer' : 'default', anim: avail && !chg ? 'talPulse 1.1s ease-in-out infinite, talBob 1.1s ease-in-out infinite' : 'none', charging: chg > 0, deg: Math.round(chg * 360), ringC: chg >= 1 ? '#ffffff' : Bc, big: !!T.big,
+        hint: avail, hintT: chg > 0 ? '蓄力中…' : '按住' });
     });
     const top = L[b][h.tree[b].length - 1];
-    caps.push({ x: Math.round(top.x - 40), y: Math.max(4, Math.round(top.y - 70)), t: M.BRANCH[b].n + ' ' + taken + '/' + h.tree[b].length, c: Bc });
+    caps.push({ x: Math.round(top.x - 40), y: Math.max(4, Math.round(top.y - 66)), t: M.BRANCH[b].n + ' ' + taken + '/' + h.tree[b].length, c: Bc });
   });
-  pn.nodes = nodes; pn.links = links; pn.caps = caps; pn.noPts = pts <= 0;
+  pn.nodes = nodes; pn.links = links; pn.caps = caps; pn.noPts = pts <= 0; pn.hasPts = pts > 0;
+  pn.holdTip = '按住发光的天赋，圆环蓄满就学会'; const nag = this.talNag && now() - this.talNag.at < 1600 ? this.talNag : null; pn.nagOn = !!nag; pn.nagX = nag ? nag.x : 0; pn.nagY = nag ? nag.y : 0;
   pn.quirkIc = h.quirks.map(k => { const Q = M.QUIRKS[k]; return { tip: 'hs-q-' + k, ic: IC(icOf(Q.m), 2), c: Q.pos ? '#9ccc6a' : '#ff6a5a' }; });
   pn.hasQuirk = h.quirks.length > 0;
   return v;
@@ -102,7 +105,10 @@ G.talDown = function (el, src) {
   this.jiggle(el, [{ transform: 'translateY(0) scale(1)' }, { transform: 'translateY(-14px) scale(1.08,0.94)', offset: 0.3 }, { transform: 'translateY(0) scale(0.94,1.06)', offset: 0.6 }, { transform: 'translateY(-4px) scale(1)', offset: 0.8 }, { transform: 'translateY(0) scale(1)' }], 420);
   S.boing(); return true;
 };
-G.talUp = function () { const c = this.talCharge; if (!c) return; this.talCharge = null; if (now() / 1000 - c.t0 < HOLD) { M.Sfx.tone(180, 0.08, 'sine', 0.06, -60); this.bump(); } };
+G.talUp = function () {
+  const c = this.talCharge; if (!c) return; this.talCharge = null;
+  if (now() / 1000 - c.t0 < HOLD) { M.Sfx.tone(180, 0.08, 'sine', 0.06, -60); const L = layout(this.meta.heroes.find(x => x.id === this.panel.id)), q = L[c.b][c.i]; this.talNag = { at: now(), x: cl(Math.round(q.x - 110), 4, W - 228), y: cl(Math.round(q.y - 92), 4, H - 44) }; this.bump(); }
+};
 G.talTick = function () {
   const c = this.talCharge; if (!c) return;
   if (!this.panel || this.panel.kind !== 'hero') { this.talCharge = null; return; }

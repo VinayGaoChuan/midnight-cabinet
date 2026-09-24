@@ -75,7 +75,7 @@ M.FURN_BY = {}; M.FURN.forEach(f => M.FURN_BY[f.k] = f);
 
 // ═════════════════════ achievements: each one unlocks something inside the machine ═════════════════════
 M.ACH = [
-  { k: 'first_clear', n: '初次通关', d: '通关任意一个世界', r: '每局开局多一张青铜以上的建筑图纸', fx: { startBpQ: 1 }, ok: (m) => Object.keys(m.cleared).length >= 1 },
+  { k: 'first_clear', n: '初次通关', d: '通关任意一个世界', r: '每局开局多一张「稀有」以上的建筑图纸', fx: { startBpQ: 1 }, ok: (m) => Object.keys(m.cleared).length >= 1 },
   { k: 'veteran', n: '老兵', d: '把一名领袖升到 8 级', r: '招魂至少招来「稀有」领袖', fx: { recruitMinRar: 1 }, ok: (m) => m.heroes.some(h => h.lv >= 8) },
   { k: 'warden', n: '守夜人', d: '一局里守住 3 次袭击', r: '传送门耐久 +25%', fx: { portalHp: 0.25 }, ok: (m) => (m.st.raidsWon || 0) >= 3 },
   { k: 'architect', n: '建筑师', d: '一局里建成 8 座建筑', r: '建造花费 -15%', fx: { buildCost: -0.15 }, ok: (m) => (m.st.built || 0) >= 8 },
@@ -118,7 +118,7 @@ M.startDig = function (m, c, r) { const ok = oSD.call(this, m, c, r); if (ok && 
 // ═════════════════════ a new game (投币) ═════════════════════
 M.KITS = [
   { k: 'build', n: '建筑师卡带', d: '开局多 3 张建筑图纸（至少 1 张奇观）', ic: 'scroll' },
-  { k: 'arms', n: '军火卡带', d: '开局多 3 张宝物图纸和 1 件青铜宝物', ic: 'gem' },
+  { k: 'arms', n: '军火卡带', d: '开局多 3 张宝物图纸和 1 件「稀有」宝物', ic: 'gem' },
   { k: 'soul', n: '招魂卡带', d: '开局多 150 灵魂碎片，领袖上限 +1', ic: 't_shard' },
   { k: 'dig', n: '工兵卡带', d: '开局已挖通 3 个房间，物资 +100', ic: 'u_pick' }];
 const wonderBp = (qMin) => { const ks = Object.keys(M.BUILDINGS).filter(k => !M.BUILDINGS[k].fixed && M.BUILDINGS[k].q >= (qMin || 1)); return 'bbp:' + M.pick(ks); };

@@ -9,7 +9,12 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 SRC, BUILD = ROOT / 'src', ROOT / 'build'
 order = [l.strip() for l in (SRC / '_order.txt').read_text(encoding='utf-8').splitlines() if l.strip()]
 BUILD.mkdir(exist_ok=True)
-(BUILD / 'game.js').write_text(''.join((SRC / n).read_text(encoding='utf-8') for n in order), encoding='utf-8')
+import hashlib
+code = ''.join((SRC / n).read_text(encoding='utf-8') for n in order)
+tpl_text = (SRC / 'template.html').read_text(encoding='utf-8')
+# build id = content hash of the sources: identical sources always give an identical index.html
+build_id = hashlib.sha1((code + tpl_text).encode('utf-8')).hexdigest()[:8]
+(BUILD / 'game.js').write_text('window.MC_BUILD = "' + build_id + '";\n' + code, encoding='utf-8')
 for n in ('template.html', 'mimg.js'):
     (BUILD / n).write_text((SRC / n).read_text(encoding='utf-8'), encoding='utf-8')
 for f in ('game.js', 'mimg.js'):

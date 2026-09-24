@@ -19,6 +19,8 @@
 | `tools/bot.js` | 自动游玩回归机器人 |
 | `tools/sim.js` | 战斗模拟辅助 |
 | `tools/upload.py` | 本地截图接收服务（调试用，截图存到 `.ai/shots/`） |
+| `tools/tele_analyze.py` | 玩法数据分析：读入采集数据，输出难度 / 经济 / 体验报告 |
+| `tools/artifact.py` | 把 `index.html` 转成 Claude Artifact 页面（数据自动上传版） |
 
 ## 开发流程
 
@@ -70,3 +72,25 @@ await __bot(90)
 ```
 
 运行时错误会收集在 `window.__mcErrs`。
+
+## 玩法数据采集
+
+`src/mc-tele.js` 在游戏里自动记录玩法事件（只有玩法数据，不含个人信息），分批保存：
+
+| 运行环境 | 数据去向 |
+|---|---|
+| Claude Artifact 版（`tools/artifact.py` 生成，发布时声明 `db` 能力） | 自动上传到 Artifact 的共享数据库，集合名 `tele`，一批一个文档 |
+| GitHub Pages / 本地文件 | 保存在浏览器本地；设置面板 →「数据采集」→ 复制数据 / 下载数据 |
+| 任意环境，设置了 `localStorage['mc-tele-endpoint']` | 额外 POST 到这个地址 |
+
+每个事件都带 `k`（类型）、`t`（会话内毫秒）、`day`、`g`（第几局）、`s`（当前界面），批次带 `build`（源码内容哈希，`tools/mk.py` 自动注入）、`did`（匿名设备号）、`sid`（会话号）。
+主要事件：`session` `game_start` `game_over` `day` `run_start` `run_end` `node` `battle_start` `battle_end` `shop` `buy` `mini_start` `mini_end` `chest` `build` `craft` `hero_new` `talent` `raid_start` `raid_end` `furn` `ach` `error` `perf`。
+
+分析：
+
+```bash
+python3 tools/tele_analyze.py 数据1.json 数据2.json --out report.md --json metrics.json
+```
+
+输入可以是游戏导出的文件、批次数组，或 Artifact 数据库的导出；重复的批次会自动去重。加 `--build <id>` 只看某个版本。
+报告开头的「结论速览」会自动标出偏离设计目标的地方（例如前 5 天普通战胜率低于 85%、出征阵亡率高于 35%、每次出征带回图纸少于 1 张）。

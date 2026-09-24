@@ -57,7 +57,7 @@ G.startSettle = function () {
 // ───────── shop ─────────
 G.openShop = function (n) {
   const run = this.run; run.lastL = M.levelAt(run, n); M.rollShop(run); this.sel = null; this.shopAt = now(); this.go('shop');
-  if (run.tut) { if (n.col === 4) this.coachOnce('shop', '夜市分三个区：部队、战旗、道具。卡片底色代表品质（黑铁 → 青铜 → 白银 → 黄金），越亮越强。鼠标悬浮看详情，点击直接购买。', 960, 700); else this.coachOnce('shop2', '点击下方队伍里的部队可以把它卖掉，换回一半价格。买到的战旗会显示在顶部。', 960, 700); }
+  if (run.tut) { if (n.col === 4) this.coachOnce('shop', '夜市分三个区：部队、战旗、道具。卡片底色代表品质（普通 → 稀有 → 史诗 → 传说），越亮越强。鼠标悬浮看详情，点击直接购买。', 960, 700); else this.coachOnce('shop2', '点击下方队伍里的部队可以把它卖掉，换回一半价格。买到的战旗会显示在顶部。', 960, 700); }
 };
 G.buy = function (zone, i) {
   const run = this.run, list = run.shop[zone], c = list && list[i]; if (!c || c.sold || this.reel) return;
@@ -96,7 +96,7 @@ G.baseTutStep = function () {
   if (m.baseTut === 0 && m.tutDone) { m.baseTut = 1; this.save(); }
   const C = M.CORE, cp = (c, r) => this.cellPos(c, r);
   if (m.baseTut === 1) { const p = cp(C.c, C.r); this.coach('这是你的地下基地。主基地会照亮周围 3 格。点击「主基地」打开仓库，看看你带回了什么。', p.x, p.y + 230, p.x, p.y); }
-  if (m.baseTut === 3) { const p = cp(C.c - 1, C.r); this.coach('主基地两边各有一个空房间。点击左边的空房间，用「酒馆图纸」建造酒馆。黑铁品质的建筑只要 1 天。', p.x, p.y + 230, p.x, p.y); }
+  if (m.baseTut === 3) { const p = cp(C.c - 1, C.r); this.coach('主基地两边各有一个空房间。点击左边的空房间，用「酒馆图纸」建造酒馆。普通品质的建筑只要 1 天。', p.x, p.y + 230, p.x, p.y); }
   if (m.baseTut === 4) { const p = cp(C.c, C.r + 1); this.coach('再点击主基地下方的岩层，挖出一块新空地。新挖的房间自带光亮，能照亮周围 1 格。发光的岩层是特殊地格。', p.x, p.y + 230, p.x, p.y); }
   if (m.baseTut === 5) { const p = this.bv.toScreen(M.BASE_GEO.DOOR_X, -130); this.coach('每次出征，基地就过去 1 天，挖掘和建造也会推进。点击地面上的「传送门」，再来一局！每 ' + M.RAID_EVERY + ' 天基地会遭到袭击，记得在地下造武器房间。', p.x, p.y + 330, p.x, p.y); }
 };

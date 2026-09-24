@@ -27,25 +27,11 @@ Object.assign(G, {
   },
   baseMove(sx, sy) { if (this.raid || (this.drag && this.drag.moved)) return; const p = this.bv.pick(sx, sy); const k = p ? (p.door ? 'door' : p.c + ',' + p.r) : null; if (k !== this.hoverK) { this.hoverK = k; this.bv.hover = p; if (p) M.Sfx.hover(); } this.tipData = p ? this.cellTip(p) : null; },
   baseLeave() { this.bv.hover = null; this.hoverK = null; this.tipData = null; },
-  basePDown(sx, sy, id) {
-    const P = this.ptrs || (this.ptrs = {}); P[id] = { x: sx, y: sy }; const ids = Object.keys(P);
-    if (ids.length === 1) this.drag = { sx, sy, x0: this.bv.x, y0: this.bv.y, moved: false };
-    else if (ids.length === 2) { const a = P[ids[0]], b = P[ids[1]]; this.pinch = { d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, z0: this.bv.z }; if (this.drag) this.drag.moved = true; this.baseLeave(); }
-  },
-  basePMove(sx, sy, id) {
-    const P = this.ptrs; if (!P || !P[id]) return false; P[id].x = sx; P[id].y = sy; const bv = this.bv, ids = Object.keys(P);
-    if (this.pinch && ids.length >= 2) { const a = P[ids[0]], b = P[ids[1]]; bv.zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, this.pinch.z0 * (Math.hypot(a.x - b.x, a.y - b.y) || 1) / this.pinch.d0, true); return true; }
-    const d = this.drag; if (!d) return false; const dx = sx - d.sx, dy = sy - d.sy;
-    if (!d.moved) { if (Math.hypot(dx, dy) < 10) return false; d.moved = true; this.baseLeave(); }
-    bv.pan(d.x0 - dx / bv.z, d.y0 - dy / bv.z); return true;
-  },
-  basePUp(id) {
-    const P = this.ptrs; if (!P || !P[id]) return; delete P[id]; const ids = Object.keys(P);
-    if (ids.length < 2) this.pinch = null;
-    if (!ids.length) { if (this.drag && this.drag.moved) this.dragEnd = now(); this.drag = null; }
-    else if (ids.length === 1) { const p = P[ids[0]]; this.drag = { sx: p.x, sy: p.y, x0: this.bv.x, y0: this.bv.y, moved: true }; }
-  },
-  baseWheel(sx, sy, dy) { const bv = this.bv; bv.zoomAt(sx, sy, bv.tz * Math.exp(-Math.max(-300, Math.min(300, dy)) * 0.0016)); this.baseLeave(); },
+  // the base camera is fully automatic: no dragging, pinching or wheel zoom (it frames the selected room by itself)
+  basePDown() {},
+  basePMove() { return false; },
+  basePUp() {},
+  baseWheel() {},
   baseClick(sx, sy) {
     if (this.raid || this.reel) return; if (this.dragEnd && now() - this.dragEnd < 350) return; M.Sfx.init();
     const p = this.bv.pick(sx, sy); if (!p) { this.closePanel(); return; }

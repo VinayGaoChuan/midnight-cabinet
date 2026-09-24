@@ -137,9 +137,10 @@ class B3 extends M.Battle2 {
     lay(em, 1180); lay(er, 1480); first.filter(s => s.boss).forEach(s => { s.x = 1560; s.y = 390; });
     first.forEach((s, i) => { s.spawn = 0.35 + i * 0.11; }); const ke = first.length;
     this.entryEnd = 0.4 + Math.max(k, ke) * 0.12 + 0.9;
-    // opening: the hero opens for free, then every ally with an active skill casts once, weakest first
+    // opening: every ally with an active skill casts once, weakest first. The leader only casts when it takes the field
+    // (heroEnter) or when the player presses the skill button.
     const casters = this.ents.filter(e => e.side === 'A' && !e.isHero && this.canSkill(e)).sort((a, b) => a.d.q - b.d.q || a.x - b.x);
-    let t = this.entryEnd; this.later(t, () => this.heroFreeCast()); t += 1.15;
+    let t = this.entryEnd;
     casters.forEach((e, i) => { const at = t + i * 0.42; this.later(at, () => { if (e.alive && !e.casting) this.beginCast(e, { opening: 1 }); }); });
     this.openEnd = t + Math.max(0, casters.length - 1) * 0.42 + (casters.length ? 1.0 : 0.2); this.fightT0 = this.openEnd;
     later.forEach(s => { s.spawn = s.spawn - 1.6 + this.fightT0; s.x = 1250 + Math.random() * 500; });

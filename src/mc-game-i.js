@@ -51,10 +51,6 @@ G.padPoll = function (dt) {
     ['item1', 'item2', 'item3'].forEach((a, i) => { if (hit(a)) { this.useSlot(i); this.pulse['bslot' + i] = now(); } });
     if (hit('skill')) this.castSkill(); if (hit('pause')) this.togglePause(); if (hit('speed')) { this.speed = this.speed % 3 + 1; M.Sfx.click(); this.bump(); }
   }
-  if (s === 'base' || s === 'raid') {
-    if (rx || ry) this.bv.pan(this.bv.x + rx * 900 * dt / this.bv.z, this.bv.y + ry * 900 * dt / this.bv.z);
-    if (cur[P.zoomIn]) this.bv.zoomAt(960, 540, this.bv.tz * (1 + dt * 1.6)); if (cur[P.zoomOut]) this.bv.zoomAt(960, 540, this.bv.tz * (1 - dt * 1.4));
-  }
   if (s === 'intro' && hit('confirm')) this.introClick();
   if (ry && (this.panel || this.settingsOpen)) this.scrollUnderCursor(ry * 900 * dt);
 };
@@ -143,7 +139,7 @@ G.settingsView = function () {
   const S = M.settings, md = M.inputMode(this), plat = { pc: '电脑', deck: 'Steam 掌机', mobile: '手机 / 平板' }[M.platform];
   const modes = (M.platform === 'mobile' ? [['auto', '触屏'], ['pad', '手柄']] : [['auto', '自动'], ['kbm', '键鼠'], ['pad', '手柄']]).map(([k, n]) => ({ n, on: S.input === k, border: S.input === k ? '#f2c14e' : '#4a3a2a', color: S.input === k ? '#ffe08a' : '#a89ca8', onClick: () => this.setInputMode(k) }));
   const kacts = ['up', 'down', 'right', 'item1', 'item2', 'item3', 'skill', 'pause', 'speed', 'back'];
-  const pacts = ['confirm', 'back', 'item1', 'item2', 'item3', 'skill', 'pause', 'speed', 'zoomIn', 'zoomOut'];
+  const pacts = ['confirm', 'back', 'item1', 'item2', 'item3', 'skill', 'pause', 'speed'];
   return { set: { plat, cur: { kbm: '键鼠', pad: '手柄', touch: '触屏' }[md], modes, showKeys: M.platform !== 'mobile',
     keys: kacts.map(a => ({ n: M.ACTION_N[a], k: this.rebind === a ? '按下新按键…' : (S.keys[a] || []).map(M.keyName).join(' / '), c: this.rebind === a ? '#ffe08a' : '#e8dcc4', border: this.rebind === a ? '#f2c14e' : '#3a3040', onClick: () => this.startRebind(a) })),
     pads: pacts.map(a => ({ n: M.ACTION_N[a], k: this.rebindPad === a ? '按下手柄按键…' : M.padName(S.pad[a]), c: this.rebindPad === a ? '#ffe08a' : '#e8dcc4', border: this.rebindPad === a ? '#f2c14e' : '#3a3040', onClick: () => this.startRebind(a, true) })),

@@ -3,10 +3,10 @@
 const M = window.MC;
 const { SP, UNITS, pick, wpick, nice, baseS, ENEMIES, TIERS, HEROES, TALENTS, QUIRKS, STATS } = M;
 
-// ───────── unified quality: 黑铁 / 青铜 / 白银 / 黄金 ─────────
-const QUALITY = [ { n:'黑铁', c:'#9aa3b0', m:1 }, { n:'青铜', c:'#e0904a', m:1.5 }, { n:'白银', c:'#e8f0fa', m:2.2 }, { n:'黄金', c:'#ffcc33', m:3.2 } ];
+// ───────── unified quality: 普通（白）/ 稀有（蓝）/ 史诗（紫）/ 传说（金）; names always show as 名字（品质） in the quality colour ─────────
+const QUALITY = [ { n:'普通', c:'#e4e4ec', m:1 }, { n:'稀有', c:'#4aa0ff', m:1.5 }, { n:'史诗', c:'#b86bff', m:2.2 }, { n:'传说', c:'#ffcc33', m:3.2 } ];
 TIERS.splice(0, TIERS.length, ...QUALITY.map(q => ({ n: q.n, c: q.c })));
-const RARITY = [ { n:'黑铁', c:QUALITY[0].c, w:55, tiers:3, stat:1 }, { n:'青铜', c:QUALITY[1].c, w:30, tiers:3, stat:1.08 }, { n:'白银', c:QUALITY[2].c, w:12, tiers:4, stat:1.18 }, { n:'黄金', c:QUALITY[3].c, w:3, tiers:4, stat:1.3 } ];
+const RARITY = [ { n:'普通', c:QUALITY[0].c, w:55, tiers:3, stat:1 }, { n:'稀有', c:QUALITY[1].c, w:30, tiers:3, stat:1.08 }, { n:'史诗', c:QUALITY[2].c, w:12, tiers:4, stat:1.18 }, { n:'传说', c:QUALITY[3].c, w:3, tiers:4, stat:1.3 } ];
 Object.assign(STATS, {
   supplies:{ d:'获得物资 +{v}%', b:0.1, pct:1 }, exp:{ d:'获得经验 +{v}%', b:0.1, pct:1 }, eventLuck:{ d:'事件好结果 +{v}%', b:0.05, pct:1 }, chest:{ d:'宝箱积分 +{v}%', b:0.15, pct:1 },
   killHeal:{ d:'领袖击杀回复 {v}% 生命', b:0.02, pct:1 }, shortRed:{ d:'积分不足伤害 -{v}%', b:0.15, pct:1 },
@@ -95,13 +95,13 @@ const BUILDINGS = {
   tesla:{ n:'特斯拉线圈', q:0, cat:'defense', style:'scifi', pw:-3, cost:160, days:2, weapon:{ range:2, dmg:26, cd:0.9, kind:'chain', chain:3 }, d:'电弧会在敌人之间跳跃。射程 2 格。' },
   spire:{ n:'奥术尖塔', q:0, cat:'defense', style:'magic', pw:-2, cost:150, days:2, weapon:{ range:3, dmg:22, cd:1.2, kind:'arcane', slow:0.5 }, d:'命中的敌人减速 50%。射程 3 格。' },
   // ── wonders ──
-  wolfsburg:{ n:'沃尔夫斯堡工厂', q:3, cat:'forge', style:'steam', pw:-3, cost:420, days:5, forge:{ qUp:1 }, d:'黄金级锻造厂。打造出的宝物品质 +1。' },
+  wolfsburg:{ n:'沃尔夫斯堡工厂', q:3, cat:'forge', style:'steam', pw:-3, cost:420, days:5, forge:{ qUp:1 }, d:'传说级锻造厂。打造出的宝物品质 +1。' },
   venice:{ n:'威尼斯兵工厂', q:2, cat:'forge', style:'medieval', pw:-2, cost:300, days:4, forge:{ twice:0.35 }, d:'打造时 35% 概率额外得到一件同名宝物。' },
   ruhr:{ n:'鲁尔区', q:2, cat:'power', style:'steam', pw:10, cost:280, days:4, d:'提供 10 点电力。' },
   eiffel:{ n:'埃菲尔铁塔', q:3, cat:'power', style:'steam', pw:6, cost:400, days:5, fx:{ defDmg:0.3 }, d:'提供 6 点电力，所有武器房间伤害 +30%。' },
   machu:{ n:'马丘比丘', q:1, cat:'power', style:'nature', pw:6, cost:200, days:3, fx:{ supplyDaily:10 }, d:'提供 6 点电力，每天产出 10 物资。' },
   pyramids:{ n:'金字塔', q:2, cat:'misc', style:'fantasy', pw:-1, cost:320, days:4, fx:{ buildDays:-1 }, d:'所有建造花费的探索日 -1（最少 1）。' },
-  stonehenge:{ n:'巨石阵', q:1, cat:'recruit', style:'nature', pw:-1, cost:220, days:3, recruit:{ qUp:1 }, d:'招募的领袖品质至少为青铜。' },
+  stonehenge:{ n:'巨石阵', q:1, cat:'recruit', style:'nature', pw:-1, cost:220, days:3, recruit:{ qUp:1 }, d:'招募的领袖至少为「稀有」。' },
   gardens:{ n:'空中花园', q:2, cat:'med', style:'nature', pw:-2, cost:300, days:4, fx:{ heal:0.45 }, d:'医院回复额外 +45%。' },
   artemis:{ n:'阿尔忒弥斯神庙', q:1, cat:'store', style:'nature', pw:-1, cost:220, days:3, fx:{ supplyDaily:30 }, d:'每天产出 30 物资。' },
   library:{ n:'亚历山大图书馆', q:2, cat:'train', style:'magic', pw:-2, cost:300, days:4, train:{}, fx:{ orbMul:1, newHeroLv:2 }, d:'经验球效率 +100%，新领袖从 3 级开始。' },
@@ -109,7 +109,7 @@ const BUILDINGS = {
   terracotta:{ n:'兵马俑', q:3, cat:'defense', style:'fantasy', pw:-2, cost:420, days:5, fx:{ defArmy:4 }, d:'防守战时，4 名陶俑士兵加入战斗。' },
   zeus:{ n:'奥林匹亚宙斯神像', q:2, cat:'defense', style:'fantasy', pw:-3, cost:360, days:4, weapon:{ range:4, dmg:70, cd:1.8, kind:'zeus', chain:4 }, d:'召唤落雷，连锁 4 个敌人。射程 4 格。' },
   kotoku:{ n:'高德院', q:1, cat:'defense', style:'fantasy', pw:-1, cost:200, days:3, fx:{ defArmy:2 }, d:'防守战时，2 名武僧加入战斗。' },
-  hagia:{ n:'圣索菲亚大教堂', q:2, cat:'luck', style:'fantasy', pw:-2, cost:300, days:4, fx:{ startItemQ:1 }, d:'出征开局获得 1 个支援道具，品质至少为白银。' },
+  hagia:{ n:'圣索菲亚大教堂', q:2, cat:'luck', style:'fantasy', pw:-2, cost:300, days:4, fx:{ startItemQ:1 }, d:'出征开局获得 1 个支援道具，至少为「史诗」。' },
   forbidden:{ n:'紫禁城', q:3, cat:'misc', style:'medieval', pw:-2, cost:440, days:5, fx:{ relicSlot:1 }, d:'每名领袖出征可多带 1 件宝物。' },
   taj:{ n:'泰姬陵', q:2, cat:'misc', style:'fantasy', pw:-1, cost:280, days:4, fx:{ deathShards:1 }, d:'领袖死亡时，灵魂碎片 +100%。' },
   bigben:{ n:'大本钟', q:1, cat:'store', style:'steam', pw:-1, cost:220, days:3, fx:{ supplyDaily:15, craftCost:-0.3 }, d:'每天 +15 物资，打造费用 -30%。' },

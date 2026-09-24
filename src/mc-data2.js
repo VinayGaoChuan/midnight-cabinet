@@ -185,8 +185,10 @@ M.heroMods = function (h, meta) {
   if (meta) h.relics.forEach(id => { const r = meta.relics.find(x => x.id === id); if (r) r.lines.forEach(l => { m[l.k] = (m[l.k] || 0) + l.v; }); });
   return m;
 };
-M.heroMaxHp = (h, meta) => { const H = HEROES[h.cls], m = M.heroMods(h, meta); return Math.round(H.hp * RARITY[h.rarity].stat * (1 + 0.1 * (h.lv - 1)) * (1 + (m.heroHp || 0))); };
-M.heroAtk = (h, meta) => { const H = HEROES[h.cls], m = M.heroMods(h, meta); return H.atk * RARITY[h.rarity].stat * (1 + 0.12 * (h.lv - 1)) * (1 + (m.heroAtk || 0)); };
+// the live rarity table is M.RARITY (4 tiers, set up in mc-data3); the local 3-tier table here is only the fallback
+const rarStat = (h) => ((M.RARITY || RARITY)[h.rarity] || RARITY[RARITY.length - 1]).stat;
+M.heroMaxHp = (h, meta) => { const H = HEROES[h.cls], m = M.heroMods(h, meta); return Math.round(H.hp * rarStat(h) * (1 + 0.1 * (h.lv - 1)) * (1 + (m.heroHp || 0))); };
+M.heroAtk = (h, meta) => { const H = HEROES[h.cls], m = M.heroMods(h, meta); return H.atk * rarStat(h) * (1 + 0.12 * (h.lv - 1)) * (1 + (m.heroAtk || 0)); };
 M.addExp = function (h, amt) {
   let ups = 0;
   h.exp += Math.round(amt);
