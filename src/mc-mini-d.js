@@ -198,7 +198,7 @@ MINI.recruit = { title: '招募旗', img: 'e_flag', col: C.blue, text: '旗子�
   init(mg) { const run = this.run; if (this.node) run.lastL = M.levelAt(run, this.node); mg.pool = []; for (let i = 0; i < 16 && mg.pool.length < 3; i++) { const t = M.pickUnitQ(run); if (!mg.pool.includes(t)) mg.pool.push(t); } mg.cards = mg.pool.map((k, i) => ({ k, x: CX - 330 + i * 330, y: SY + 380, lift: 0 })); },
   take(mg, i) { if (mg.phase !== 'idle') return; const c = mg.cards[i], run = this.run; if (!M.canAdd(run, c.k)) { this.toast('队伍满了', '#d0453c'); return; } mg.cur = i; this.miniSet('take'); S.up(2); this.fx.rays(c.x, c.y - 60, M.QUALITY[M.DB[c.k].q].c, 1, { r: 260 }); },
   down(mg, px, py) { mg.cards.forEach((c, i) => { if (Math.abs(px - c.x) < 130 && Math.abs(py - c.y) < 190) MINI.recruit.take.call(this, mg, i); }); },
-  btns(mg) { if (mg.phase !== 'idle') return []; return mg.cards.map((c, i) => ({ t: '选 ' + M.DB[c.k].n, sub: M.DB[c.k].race + ' · ' + M.DB[c.k].voc, dis: !M.canAdd(this.run, c.k), why: '队伍满了', fn: () => MINI.recruit.take.call(this, mg, i) })).concat([{ t: '都不要', leave: 1, fn: () => this.miniFinish('旗子在风里响了一会儿。', '#8d8496') }]); },
+  btns(mg) { if (mg.phase !== 'idle') return []; return mg.cards.map((c, i) => ({ t: '选 ' + M.DB[c.k].n, sub: (M.DB[c.k].voc || '') + ' · 战力 ' + M.unitPower(c.k), dis: !M.canAdd(this.run, c.k), why: '队伍满了', fn: () => MINI.recruit.take.call(this, mg, i) })).concat([{ t: '都不要', leave: 1, fn: () => this.miniFinish('旗子在风里响了一会儿。', '#8d8496') }]); },
   tick(mg) { if (mg.phase === 'idle' || mg.phase === 'take') mg.cards.forEach((c, i) => c.lift = cl((mg.t - 0.5 - i * 0.45) / 0.5, 0, 1)); mg.cards.forEach((c, i) => { if (c.lift > 0.5 && !c.snd) { c.snd = 1; S.whoosh(0.2); S.land(i + M.DB[c.k].q); } });
     if (mg.phase === 'take' && mg.pt > 0.8 && !mg.fin) { mg.fin = true; const c = mg.cards[mg.cur]; this.miniFinish(M.DB[c.k].n + ' 跟上了你。', M.QUALITY[M.DB[c.k].q].c, [{ k: 'unit', type: c.k }]); } },
   draw(x, mg) {
@@ -207,7 +207,7 @@ MINI.recruit = { title: '招募旗', img: 'e_flag', col: C.blue, text: '旗子�
       x.save(); if (dim) x.globalAlpha = 0.35; const y = c.y - (hov || sel ? 16 : 0);
       // 卡：品质色框 + 墨边 + 9px 硬投影；名字是品质色签；帘子酒红，杆子金色
       K.card(x, c.x - 130, y - 200, 260, 380, Q.c, hov || sel, C.abyss); K.GL(x, c.x, y + 20, 200, Q.c, 0.3 * c.lift); K.SP(x, c.k, c.x, y + 110, 210);
-      const tg = M.TAG.race(D.race), tv = M.TAG.voc(D.voc); if (tg) K.IC(x, tg.icon, c.x - 100, y - 170, 44); if (tv) K.IC(x, tv.icon, c.x + 100, y - 170, 44);
+      const tv = M.TAG.voc(D.voc); if (tv) K.IC(x, tv.icon, c.x + 100, y - 170, 44);
       K.chipC(x, D.n, c.x, y + 150, Q.c, T.body);
       const cu = 1 - c.lift; if (cu > 0) { K.R(x, c.x - 126, y - 196, 252, Math.round(372 * cu), K.LG(x, c.x - 126, 0, c.x + 126, 0, [[0, C.umber], [0.5, C.wine], [1, C.umber]])); for (let k = 0; k < 6; k++) K.R(x, c.x - 120 + k * 42, y - 196, 4, Math.round(372 * cu), 'rgba(0,0,0,0.25)'); U.box(x, c.x - 130, y - 206, 260, 14, C.gold); }
       x.restore(); });

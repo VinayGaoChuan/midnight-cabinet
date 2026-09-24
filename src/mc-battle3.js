@@ -53,7 +53,7 @@ H.Blessing = { tick(b, e) { if (e.mana >= 100) { e.mana = 0; e.buffs.push({ as: 
 H.Dartle = { dealt(b, e, tg, d, v, c) { if (!c.auto) return; b.foes(e).filter(o => o !== tg && dist(o, tg) < RS).slice(0, v[0]).forEach(o => b.shootP(e, o, { dmg: e.atk * v[1] / 100, skill: 1, from: tg, style: 'spark', col: RCOL[e.d.race] })); } };
 H.Duelist = { dealt(b, e, tg, d, v, c) { if (!c.auto || !tg.alive) return; if (e.st.dt !== tg) { e.st.dt = tg; e.st.ds = 0; } e.st.ds = Math.min(v[1], e.st.ds + 1); tg.stack = { n: e.st.ds, col: '#ff9a6a', until: b.t + 1.5 }; b.deal(e, tg, e.atk * v[0] / 100 * e.st.ds, { skill: 1, col: '#ff9a6a', small: e.st.ds < 5 }); } };
 H.SolarFlare = { tick: manaT(0), full(b, e, v) { e.buffs.push({ as: v[1] / 100, until: b.t + v[2], col: '#ffd060' }); b.fxp({ k: 'sun', ent: e, life: v[2] }); Sfx.sparkle(); } };
-H.FinalJudgment = { dealt(b, e, tg, d, v, c) { if (!c.auto) return; if (e.st.jd > 0) { e.st.jd--; const r = /中范围/.test(c.T.d) ? RM : RS; b.aoe(e, tg.x, tg.y, r, e.atk * v[4] / 100 * 2, '#fff2a0'); b.ring(tg.x, tg.y - 20, 10, r, '#fff2a0', 6, 0.3); } else b.mana(e, v[0]); }, hurt(b, e, s, d, v) { b.mana(e, v[1]); return d; }, full(b, e, v) { e.st.jd = v[3]; b.fxp({ k: 'pillar', x: e.x, w: 60, col: '#fff2a0', life: 0.7 }); b.float(e.x, e.y - 120, '审判！', '#fff2a0', 34); Sfx.cast(); } };
+H.FinalJudgment = { dealt(b, e, tg, d, v, c) { if (!c.auto) return; if (e.st.jd > 0) { e.st.jd--; const r = /中范围/.test(c.T.d) ? RM : RS; b.aoe(e, tg.x, tg.y, r, e.atk * v[3] / 100 * 2, '#fff2a0'); b.ring(tg.x, tg.y - 20, 10, r, '#fff2a0', 6, 0.3); } else b.mana(e, v[0]); }, hurt(b, e, s, d, v) { b.mana(e, v[1]); return d; }, full(b, e, v) { e.st.jd = v[2]; b.fxp({ k: 'pillar', x: e.x, w: 60, col: '#fff2a0', life: 0.7 }); b.float(e.x, e.y - 120, '审判！', '#fff2a0', 34); Sfx.cast(); } };
 H.DeadDamageTarget = { death(b, e, k, v) { if (k && k.alive) { b.fxp({ k: 'beam2', x1: e.x, y1: e.y - 40, x2: k.x, y2: k.y - 40, col: '#b8ff60', life: 0.4 }); b.later(0.15, () => { b.deal(e, k, e.atk * v[0] / 100, { skill: 1, col: '#b8ff60' }); b.fxp({ k: 'boom', x: k.x, y: k.y - 30, life: 0.4, col: '#b8ff60' }); }); Sfx.boom(); } } };
 H.BossSlayer = { dealt(b, e, tg, d, v, c) { if (c.auto && tg.alive) b.deal(e, tg, e.atk * v[0] / 100, { skill: 1, col: /燃烧/.test(c.T.n) ? '#ff8a3a' : '#ffe08a', small: 1 }); } };
 H.SubDefence = { dealt(b, e, tg, d, v, c) { if (!c.auto || !tg.alive) return; const k = c.T.key, D = tg.debuf[k] || (tg.debuf[k] = { v: v[0] / 100, n: 0, until: 0 }); const max = /不叠加/.test(c.T.d) ? 1 : (v[2] || v[3] || 10); D.n = Math.min(max, D.n + 1); D.until = b.t + (v[1] || 3); if (Math.random() < 0.35) b.fxp({ k: 'shard', x: tg.x, y: tg.y - 40, col: '#9fc8ff', life: 0.35 }); } };
@@ -139,22 +139,23 @@ class B3 extends M.Battle2 {
     this.entryEnd = 0.4 + Math.max(k, ke) * 0.12 + 0.9;
     // the army takes the field with every skill ready (a full bar); each one fires when its trigger holds
     // (mc-skilltrigger.js), not all at once. The leader only casts when it takes the field or when the player presses the skill button.
-    this.ents.filter(e => e.side === 'A' && !e.isHero && this.canSkill(e, true)).forEach(e => { if (e.sigPool) e.smana = 100; else e.mana = 100; });
+    this.ents.filter(e => e.side === 'A' && !e.isHero && this.canSkill(e, true)).forEach(e => { e.mana = 100; });
     this.openEnd = this.entryEnd; this.fightT0 = this.openEnd;
     later.forEach(s => { s.spawn = s.spawn - 1.6 + this.fightT0; s.x = 1250 + Math.random() * 500; });
     L.sort((a, b) => a.spawn - b.spawn);
-    if (!run.roster.length) this.later(this.openEnd, () => this.heroEnter());
+    // no army, or a boss fight (user ruling 2026-09-24): the leader takes the field with the army from the start
+    if (!run.roster.length || cfg.type === 'boss') this.later(this.openEnd, () => this.heroEnter());
   }
   get score() { return Math.round(this.base * this.mult); }
   mk(o) { const e = Object.assign({ id: this.nid++, alive: true, t: Math.random() * 0.4, flash: 0, stun: 0, charm: 0, shield: 0, kills: 0, readyAt: 0, mana: 0, def: 0, dodge: 0, asB: 0, asDyn: 0, atkDyn: 0, defDyn: 0, combo: 0, buffs: [], debuf: {}, st: {}, traits: [], slowAS: 0, slowT: 0, au: {}, sz: 1, tags: [], star: 1 }, o); e.maxHp = e.maxHp || e.hp; this.ents.push(e); return e; }
   unitStats(key, side, x, y, o = {}) {
-    const d = DB[key], u = o.unit, L = side === 'A' ? M.legionMods(this.run, d) : { hp: 0, atk: 0, as: 0, mana: 0, shield: 0 }, md = side === 'A' ? this.mods : {};
+    const d = DB[key], u = o.unit, L = side === 'A' ? M.legionMods(this.run, d) : { hp: 0, atk: 0, as: 0, mana: 0, shield: 0 }, md = side === 'A' ? this.mods : {}, V = side === 'A' ? M.vocMods(md, d) : M.vocMods(null);
     const ek = side === 'E' ? this.ek * (o.elite ? 1.15 : 1) : 1;
-    const hp = (d.hp + (u ? u.bHp : 0)) * (1 + L.hp + (md.unitHp || 0)) * ek * (o.hpMul || 1), atk = (d.atk + (u ? u.bAtk : 0)) * (1 + L.atk + (md.unitAtk || 0) + (this.run.runBuff.unitAtk || 0) * (side === 'A' ? 1 : 0)) * ek * (o.atkMul || 1);
+    const hp = (d.hp + (u ? u.bHp : 0)) * (1 + L.hp + V.hp + (md.unitHp || 0)) * ek * (o.hpMul || 1), atk = (d.atk + (u ? u.bAtk : 0)) * (1 + L.atk + V.atk + (md.unitAtk || 0) + (this.run.runBuff.unitAtk || 0) * (side === 'A' ? 1 : 0)) * ek * (o.atkMul || 1);
     const boss = !!o.boss || d.g === '不朽';
     const traits = (d.tr || []).filter(t => TDB[t]).map(t => { const T = TDB[t]; return { key: t, n: T.n, d: T.d, v: T.v, cls: T.cls.replace(/^Summon|Trait$/g, '') }; });
     const e = this.mk({ side, key, d, kind: key, hd: { key, race: d.race, voc: d.voc, q: d.q }, sz: (QS[d.q] || 1) * (boss ? 1.45 : o.elite ? 1.15 : 1) * (o.summon ? 0.9 : 1), x, y, hp, maxHp: hp, atk, iv: d.as ? 100 / d.as : 99, range: d.ranged === 1 ? d.rad * 0.46 : 48 + Math.max(0, d.rad - 240) * 0.12, spd: (d.spd || 280) * 0.32, ranged: d.ranged === 1, noAtk: d.ranged === 2 || !d.atk, traits, unit: u, uid: u ? u.uid : null, summon: !!o.summon, life: o.life, boss, elite: !!o.elite, base: side === 'E' ? Math.round((d.cost || 10) * (o.elite ? 1.3 : 1)) : 0, mult: side === 'E' ? (boss ? 0.3 : o.elite ? 0.1 : 0) : 0 });
-    e.asB += L.as; e.manaMul = 1 + L.mana; e.hasMana = traits.some(t => /法力/.test(t.d));
+    e.asB += L.as + V.as; e.manaMul = 1 + L.mana + V.mana; e.hasMana = traits.some(t => /法力/.test(t.d));
     e.pw = M.unitPower(key, u);
     if (L.shield) e.shield = e.maxHp * L.shield;
     if (md.shield) e.shield += e.maxHp * md.shield;
@@ -172,7 +173,7 @@ class B3 extends M.Battle2 {
   }
   entryLand(e) { const c = RCOL[e.d.race] || '#fff'; if (e.entry === 'bossdrop') { this.shake = 30; this.flash = 0.3; this.flashCol = '#ff5a4a'; Sfx.impact(); this.dust(e.x, e.y, 26); this.ring(e.x, e.y - 6, 20, 320, '#ff6a4a', 12, 0.5); this.fxp({ k: 'crack', x: e.x, y: e.y, life: 2.5 }); return; } if (e.entry === 'emerge') { this.dust(e.x, e.y, 10); Sfx.stamp(); return; } if (e.entry === 'rift') { this.ring(e.x, e.y - 40, 10, 90, '#c890ff', 6, 0.4); Sfx.portal(); return; } if (e.entry === 'drop') { this.shake = Math.max(this.shake, 8 + e.d.q * 4); Sfx.stamp(); this.dust(e.x, e.y, 12); this.ring(e.x, e.y - 6, 10, 90 * e.sz, '#d8c8a8', 6, 0.3); } else if (e.entry === 'leap') { this.dust(e.x, e.y, 6); Sfx.hit(); } else if (e.entry === 'portal') { this.ring(e.x, e.y - 40, 10, 100, c, 8, 0.45); Sfx.sparkle(); } else if (e.entry === 'descend') { this.fxp({ k: 'pillar', x: e.x, w: 34, col: '#fff2c0', life: 0.5 }); Sfx.heal(); } else { this.dust(e.x, e.y, 4); Sfx.tick(); } if (e.d.q >= 2) { this.fxp({ k: 'rays', x: e.x, y: e.y - 40 * e.sz, col: M.QUALITY[e.d.q].c, life: 0.7, r: 120 * e.sz }); } }
   spawnEnemy(s) {
-    const e = this.unitStats(s.type, 'E', s.x || 1250 + Math.random() * 500, s.y, { elite: s.elite, boss: s.boss });
+    const e = this.unitStats(s.type, 'E', s.x || 1250 + Math.random() * 500, s.y, { elite: s.elite, boss: s.boss, hpMul: s.hpMul, atkMul: s.atkMul });
     const r = e.d.race; e.entry = e.boss ? 'bossdrop' : e.elite ? 'rift' : /不死|骷髅|僵尸|自然/.test(r) ? 'emerge' : /混沌|恶魔|虚空/.test(r) ? 'rift' : 'drop';
     e.entryT = this.t; e.readyAt = this.t + (e.boss ? 1.0 : 0.75);
     if (e.entry === 'rift') this.fxp({ k: 'rift', x: e.x, y: e.y - 40 * e.sz, life: 0.9 });
@@ -198,7 +199,7 @@ class B3 extends M.Battle2 {
   link(a, b2, col) { if (b2) this.fxp({ k: 'arc', x1: a.x, y1: a.y - 40, x2: b2.x, y2: b2.y - 40, col, life: 0.2, w: 3 }); }
   soul(from, to) { this.fxp({ k: 'orb', x1: from.x, y1: from.y - 40, x2: to.x, y2: to.y - 50, col: '#c890ff', life: 0.6, soul: 1 }); }
   levelUp(e, txt) { this.fxp({ k: 'rays', x: e.x, y: e.y - 40 * e.sz, col: '#ffcc33', life: 1, r: 150 }); this.float(e.x, e.y - 120 * e.sz, '升级！' + txt, '#ffcc33', 36); Sfx.up(2); }
-  heal(o, amt, col) { if (!o.alive || amt <= 0) return; const a = Math.min(amt, o.maxHp - o.hp); o.hp += a; if (a > 1) { this.float(o.x + 16, o.y - 70 * o.sz, '+' + fmt(a), col || '#7fff9a', 22, true); for (let i = 0; i < 3; i++) this.fxp({ k: 'plus', x: o.x - 20 + i * 18, y: o.y - 40, t0: this.t + i * 0.05, life: 0.7 }); } }
+  heal(o, amt, col) { if (!o.alive || !(amt > 0)) return; const a = Math.min(amt, o.maxHp - o.hp); o.hp += a; if (a > 1) { this.float(o.x + 16, o.y - 70 * o.sz, '+' + fmt(a), col || '#7fff9a', 22, true); for (let i = 0; i < 3; i++) this.fxp({ k: 'plus', x: o.x - 20 + i * 18, y: o.y - 40, t0: this.t + i * 0.05, life: 0.7 }); } }
   healE(o, amt) { this.heal(o, amt); }
   regen(o, amt, col) { if (!o.alive || amt <= 0) return; o.hp = Math.min(o.maxHp, o.hp + amt); if (Math.random() < 0.03) this.fxp({ k: 'plus', x: o.x + (Math.random() - 0.5) * 30, y: o.y - 40, life: 0.6, col }); }
   ignite(tg, dps, src) { if (!tg.alive || tg.side === 'A') return; tg.burn = { dps, until: this.t + 3, src }; }
@@ -297,7 +298,7 @@ class B3 extends M.Battle2 {
     for (const t of e.traits) { const h = H[t.cls]; if (h && h.dealt) { const cx = { auto: !c.skill || c.ambush, ranged, T: t }; h.dealt(this, e, tg, dealt, t.v, cx, t); } }
   }
   deal(src, tg, amt, o = {}) {
-    if (!tg.alive || amt <= 0) return 0;
+    if (!tg.alive || !(amt > 0)) return 0;   // also refuses NaN: a bad number must never poison a life bar
     if (o.auto && tg.dodge && Math.random() < tg.dodge) { this.float(tg.x, tg.y - 80 * tg.sz, '闪避', '#b8f0ff', 24); tg.dodgeFx = this.t; for (const t of tg.traits) { const h = H[t.cls]; if (h && h.dodged) h.dodged(this, tg, t.v); } return 0; }
     let d = amt;
     if (src && src.dmgDown) d = Math.max(d * 0.2, d - src.dmgDown);
@@ -336,6 +337,7 @@ class B3 extends M.Battle2 {
       const km = M.legionSum(this.run, 'killMult'); if (km && this.kills % km === 0) m += 0.1;
       if (m) this.addMult(Math.round(m * 10) / 10, e.x, e.y - hgt - 50);
       if (e.boss) { this.shake = 30; this.flash = 0.6; this.flashCol = '#ffffff'; this.slow = 0.8; Sfx.impact(); } else if (e.elite) { this.shake = Math.max(this.shake, 14); this.slow = Math.max(this.slow || 0, 0.25); }
+      if (src && src.side === 'A' && (e.elite || e.boss) && this.mods.eliteHeal && this.hero.alive) this.heal(this.hero, this.hero.maxHp * this.mods.eliteHeal);
       if (src && src.side === 'A' && src.alive) { src.kills++; if (src.unit) src.unit.kills = (src.unit.kills || 0) + 1; this.call(src, 'kill', e); if (src.isHero && this.mods.killHeal) this.heal(src, src.maxHp * this.mods.killHeal); }
       Sfx.kill();
     } else if (e.isHero) { this.float(e.x, e.y - 120, '领袖倒下了', '#d0453c', 56); this.shake = 30; Sfx.die(); }
@@ -441,7 +443,7 @@ function drawBars(ctx, e, T, b) {
   if (e.shield > 0) U.R(ctx, x, top, w * clamp(e.shield / e.maxHp, 0, 1), 2, PL.ice);
   if (e.hasMana) { const ch = b.skillCharge ? b.skillCharge(e) : e.mana, ready = ch >= 100 && !e.casting && e.alive;
     if (ready && Math.floor(T * 4) % 2) { U.R(ctx, x - 2, top + 6, w + 4, 8, PL.butter); U.R(ctx, x, top + 8, w, 4, PL.ink); }   // a ready skill waiting for its trigger: the bar's frame blinks
-    const mw = w * clamp(ch / 100, 0, 1); if (mw > 0) { U.R(ctx, x, top + 8, mw, 4, e.sig ? PL.gold : PL.teal); U.R(ctx, x, top + 8, mw, 2, e.sig ? PL.butter : PL.ice); } }
+    const mw = w * clamp(ch / 100, 0, 1); if (mw > 0) { U.R(ctx, x, top + 8, mw, 4, PL.teal); U.R(ctx, x, top + 8, mw, 2, PL.ice); } }
   // 品质菱形：品质色像素菱形，墨色大一圈垫底，顶格亮一阶
   if (e.d.q >= 1 && !e.isHero) { const q = M.UI.Q[Math.min(3, e.d.q)], dx = x - 10, dy = top + 2;
     for (let k = -3; k <= 3; k++) { const r = 3 - Math.abs(k); U.R(ctx, dx - r * 2, dy + k * 2, r * 4 + 2, 2, PL.ink); }

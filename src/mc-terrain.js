@@ -41,7 +41,7 @@ const noPw = (B) => (B.pw < 0 ? { pw: -B.pw } : {});
 const DEF = {
   geo:     { n: '地热', hue: '#ff7a3a', any: { pw: 3 }, anyD: '这个房间 +3 电力', fitN: '电力', fit: cat('power'), fitFx: () => ({ pw: 5 }), fitD: '再 +5 电力' },
   fossil:  { n: '化石层', hue: '#d8c8a0', any: { supplyDaily: 25 }, anyD: '基地每天 +25 物资', fitN: '后勤', fit: (B) => B.cat === 'store' && !!B.fx, fitFx: () => ({ prodMul: 1 }), fitD: '这个房间自己的效果 ×2' },
-  clay:    { n: '陶土层', hue: '#c8845a', any: { portalHp: 0.3 }, anyD: '传送门耐久 +30%', fitN: '防守', fit: cat('defense'), fitFx: () => ({ defArmy: 3 }), fitD: '守城时 3 名陶土守卫加入战斗' },
+  clay:    { n: '陶土层', hue: '#c8845a', any: { portalHp: 0.3 }, anyD: '传送门耐久 +30%', fitN: '防御', fit: cat('defense'), fitFx: () => ({ defArmy: 3 }), fitD: '守城时 3 名陶土守卫加入战斗' },
   ruin:    { n: '古遗迹', hue: '#e8c070', any: { halfDays: 1, refund: 0.3 }, anyD: '建造时间减半，建成返还 30% 物资', fitN: '奇观', fit: (B) => B.q > 0, fitFx: () => ({ refund: 0.5 }), fitD: '返还提高到 80%' },
   spring:  { n: '地下泉', hue: '#6fd0ff', any: { healAll: 0.15 }, anyD: '所有领袖每天回复 15% 生命（不需要医院）', fitN: '医疗 / 水域', fit: (B) => B.cat === 'med' || B.style === 'water', fitFx: (B) => (B.weapon ? { heal: 0.3, range: 1 } : { heal: 0.3 }), fitD: '医院回复 +30%；水域武器射程 +1' },
   mole:    { n: '松软土层', hue: '#b89a70', any: { digCost: -0.4 }, anyD: '挖掘费用 -40%', fitN: '特殊', fit: cat('misc'), fitFx: () => ({ buildDays: -1 }), fitD: '所有建造少花 1 天' },
@@ -60,7 +60,7 @@ const DEF = {
   hourglass: { n: '时之沙', hue: '#ffe08a', any: { skillNodeCd: -1 }, anyD: '所有领袖军团技能冷却 -1 个节点', fitN: '运势', fit: cat('luck'), fitFx: () => ({ startItemQ: 1 }), fitD: '出征开局多带 1 个「史诗」道具' },
   dream:   { n: '梦境裂隙', hue: '#ff3aa0', any: { bpLuck: 0.4 }, anyD: '图纸掉率 +40%', fitN: '锻造', fit: (B) => !!B.forge, fitFx: () => ({ forgeTwice: 0.4 }), fitD: '打造时 40% 概率多得一件' },
   ygg:     { n: '世界树根', hue: '#7aff9a', any: { supplyDaily: 15, orbDaily: 15 }, anyD: '基地每天 +15 物资、+15 经验球', fitN: '后勤 / 自然', fit: (B) => (B.cat === 'store' || B.style === 'nature') && !!B.fx, fitFx: () => ({ prodMul: 1 }), fitD: '这个房间自己的效果 ×2' },
-  crown:   { n: '王座遗骸', hue: '#ffcc33', any: { relicSlot: 1 }, anyD: '每名领袖出征多带 1 件宝物', fitN: '防守', fit: cat('defense'), fitFx: (B) => (B.weapon ? { dmg: 0.4, xSplash: 130, xSlow: 1 } : { defArmy: 3 }), fitD: '武器：伤害 +40%，命中溅射并减速；其它：再多 3 名守卫' },
+  crown:   { n: '王座遗骸', hue: '#ffcc33', any: { relicSlot: 1 }, anyD: '每名领袖出征多带 1 件宝物', fitN: '防御', fit: cat('defense'), fitFx: (B) => (B.weapon ? { dmg: 0.4, xSplash: 130, xSlow: 1 } : { defArmy: 3 }), fitD: '武器：伤害 +40%，命中溅射并减速；其它：再多 3 名守卫' },
 };
 // room-local keys; everything else is a base-wide modifier summed over the whole base
 const LOCAL = ['pw', 'noPw', 'halfDays', 'refund', 'forgeLuck', 'forgeQUp', 'forgeTwice', 'dmg', 'range', 'wcd', 'xChain', 'xSlow', 'xSplash', 'prodMul'];
@@ -75,6 +75,10 @@ Object.keys(DEF).forEach(k => {
   TILES[k] = T;
 });
 M.TILE_DEPTH = ['地表', '浅层', '中层', '深层', '最深层'];
+// terrain whose whole effect happens while the room is built: gone once the room stands
+M.TILE_ONCE = { ruin: 1 };
+// what a terrain still does for the room standing on it: only the effects that keep working (the fitting one only if it fits)
+M.tileActive = function (m, c, r, bkey) { const x = M.cell(m, c, r); if (!x || !x.tile || !TILES[x.tile] || M.TILE_ONCE[x.tile]) return []; const T = TILES[x.tile], out = [T.anyD]; if (bkey && M.tileFits(x.tile, bkey)) out.push(T.fitD); return out; };
 
 // ───────── rolling veins: all kinds are equal; a base never repeats one ─────────
 const ALL = () => Object.keys(TILES);
@@ -162,6 +166,7 @@ M.advanceDay = function (m) {
     const x = M.cell(m, c, r); if (x.b !== key) return; const T = TILES[x.tile], fit = M.tileFits(x.tile, key);
     logs.push({ t: '占领地脉 · ' + T.n + (fit ? ' · 契合！' : ''), c, r });
     const t = M.tileMod(m, c, r, key); if (t.refund) { const v = Math.round(B_[key].cost * t.refund); m.supplies += v; logs.push({ t: T.base + '返还物资 +' + v }); }
+    if (M.TILE_ONCE[x.tile]) x.tile = null;
   });
   hid.forEach(([c, r]) => { if (!M.tileHidden(m, c, r)) logs.push({ t: '勘明地脉 · ' + TILES[M.cell(m, c, r).tile].n, c, r }); });
   const sh = Math.round(bm.shardDaily || 0), ob = Math.round(bm.orbDaily || 0);
@@ -181,14 +186,14 @@ M.tileTip = function (m, c, r, bkey) {
   const lines = [{ t: '任何房间：' + T.anyD, c: k ? okC : '#e8dcc4' }, { t: '契合「' + T.fitN + '」：' + T.fitD + (k ? (fit ? '　✔' : '　✘') : ''), c: k ? (fit ? okC : dimC) : '#ffe08a' }];
   return { title: T.n, c: T.c, icon: T.ic, lines, ctx: 'bld' };
 };
-const tileLines = (m, c, r, bkey) => { const t = M.tileTip(m, c, r, bkey); return t ? [{ t: '地格 · ' + t.title, c: t.c }].concat(t.lines || []) : []; };
+const tileLines = (m, c, r, bkey) => { const x = M.cell(m, c, r), T = x && x.tile && TILES[x.tile]; return T ? M.tileActive(m, c, r, bkey).map(s => ({ t: s + '　✔', c: okC })) : []; };
 // rock tooltips: hide what is unidentified, spell out the two halves otherwise
 const oCT = G.cellTip;
 G.cellTip = function (p) {
   const t = oCT.call(this, p), m = this.meta, x = p && !p.door && M.cell(m, p.c, p.r); if (!t || !x || !x.tile || x.b) return t;
   const tt = M.tileTip(m, p.c, p.r), days = M.digDays ? M.digDays(m, p.c, p.r) : 1;
   // rock that is terrain: named and explained as the terrain; digging it is 开垦 with the terrain's own days
-  if (!x.dug && !x.job) { const hid = M.tileHidden(m, p.c, p.r); return Object.assign(tt, { d: hid ? tt.d : M.canDig(m, p.c, p.r) ? '开垦：' + M.digCost(m) + ' 物资，' + days + ' 天。' : '先挖通旁边的房间。' }); }
+  if (!x.dug && !x.job) { const hid = M.tileHidden(m, p.c, p.r); return Object.assign(tt, { d: hid ? tt.d : M.canDig(m, p.c, p.r) ? '开垦：' + M.digCost(m) + ' 物资，' + days + ' 天。' : '' }); }
   if (x.job && x.job.kind === 'dig') return Object.assign(tt, { title: '开垦中 · ' + tt.title, d: '还需 ' + x.job.days + ' 天。' });
   t.lines = (tt.lines || []).map(l => Object.assign({}, l)); t.lines.unshift({ t: tt.title, c: tt.c });
   return t;
@@ -220,9 +225,9 @@ G.view = function () {
     const opts = M.buildOptions(m, p.c, p.r); (pn.opts || []).forEach((o, i) => { const q = opts[i]; if (q) o.bonus = M.tileFits(x.tile, q.key) ? '★ 契合地格' : '☆ 地格通用效果'; });
   }
   if (pn.isRoom && x.b) {
-    const fit = M.tileFits(x.tile, x.b);
-    pn.tileTxt = '任何房间：' + T.anyD + '　·　契合「' + T.fitN + '」：' + T.fitD + (fit ? '　✔' : '　✘');
-    (pn.chips || []).forEach(ch => { if (/^地格 · /.test(ch.t)) { ch.t = '地格 · ' + T.n + (fit ? ' ★' : ''); ch.c = T.c; } });
+    const act = M.tileActive(m, p.c, p.r, x.b); pn.hasTileRow = false; pn.hasTile = false;
+    pn.tileAct = act.map((t, i) => ({ t, hasImg: i === 0, img: M.iconURL(T.ic, 2), tip: 'tag-tile-' + x.tile })); pn.hasTileAct = act.length > 0;
+    pn.chips = (pn.chips || []).filter(ch => !/^地格/.test(ch.t || ''));
   }
   return v;
 };

@@ -52,9 +52,7 @@ G.lootFly = function (gain, from) {
 const T_FLY = 0.7, T_HOLD = 1.9, T_RIP = 2.0, T_END = 3.8;
 // Pixel Juice（docs/design.md §11.5）：卡片 = 机箱风格的卡（夜色底、3px 墨框、品质色内圈、9px 硬投影），有像素半身像就用
 const U = M.UI, P = M.PJ.PAL, RM = () => !!M.PJ.reduced;
-const BI = {};
-const bustImg = (k) => { const u = M.PJ.on !== false && k && M.PJ.BUSTS && M.PJ.BUSTS[k]; if (!u || typeof Image === 'undefined') return false; let im = BI[k]; if (!im) { im = BI[k] = new Image(); im.src = u; } return im.complete && im.naturalWidth ? im : null; };
-setTimeout(() => Object.keys(M.PJ.BUSTS || {}).forEach(bustImg), 0); // 先解码，免得第一次用时闪一下精灵
+const bustImg = (k) => M.UI.bust(k);
 const cards = {};
 function cardCanvas(d) {
   const k = d.cls + '|' + d.rarity + '|' + d.name + '|' + d.lv; if (cards[k]) return cards[k];

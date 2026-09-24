@@ -81,7 +81,7 @@ MINI.well = { title: '许愿井', img: 'well', col: C.teal, text: '井底有东�
     if (mg.phase === 'charge') { const q = (mg.pt / 1.1) % 2; mg.pow = q < 1 ? q : 2 - q; if (Math.floor(mg.pt * 10) !== mg.tk) { mg.tk = Math.floor(mg.pt * 10); S.tick(Math.round(mg.pow * 8)); } }
     if (mg.phase === 'fly' && mg.pt > 0.95 && !mg.landed) { mg.landed = true; const acc = 1 - Math.abs(mg.shot - mg.band) / 0.32, run = this.run; let tx, col, g = [];
       if (acc > 0.8) { g.push(rnd() < 0.5 ? K.bp(null, 1) : K.item(run, mg.P)); tx = '正中井心！金光从井底涌上来'; col = '#ffcc33'; S.fanfare(); this.fx.rays(SX + SW - 300, SY + 380, '#ffcc33', 1.2, { r: 300 }); }
-      else if (acc > 0.5) { g.push({ k: 'wallet', v: mg.pay * 2 }); tx = '扑通。井里吐出了双倍的积分'; col = '#6fd0ff'; S.up(2); }
+      else if (acc > 0.5) { g.push({ k: 'wallet', v: mg.pay * 2 }, { k: 'vision', v: 1 }); tx = '扑通。井水映出了前面的路，还吐出双倍积分'; col = '#6fd0ff'; S.up(2); }
       else if (acc > 0.2) { g.push({ k: 'rsup', v: 20 }); tx = '硬币擦着井沿掉了进去，捞上来一袋物资'; col = '#caa84a'; S.land(2); }
       else { tx = '硬币弹在井沿上，滚走了'; col = '#8d8496'; S.tone(1600, 0.1, 'triangle', 0.08); }
       const got = g.length ? this.award(g, { x: SX + SW - 300, y: SY + 380 }) : []; mg.got.push(tx + (got.length ? '（' + got.join('、') + '）' : '')); this.miniSay(tx, col, acc > 0.8); mg.acc = acc; }
@@ -206,7 +206,7 @@ MINI.mirror = { title: '落地镜', img: 'mirror', col: C.blue, text: '镜子里
     if (mg.phase === 'show') { const i = Math.floor((mg.pt - 0.5) / 0.7); if (i >= 0 && i < mg.seq.length && mg.si !== i) { mg.si = i; mg.mpose = { d: mg.seq[i], t: 0 }; S.tone(PENTA[i % 8] / 2, 0.2, 'sine', 0.1); } if (mg.mpose) mg.mpose.t += dt; if (mg.pt > 0.5 + mg.seq.length * 0.7 + 0.3) { mg.si = -1; mg.mpose = null; this.miniSet('input'); } }
     if (mg.phase === 'win' && mg.pt > 0.6 && !mg.paid) { mg.paid = true; const run = this.run, u = M.pick(run.roster); let tx; if (mg.round === 1 && u && M.canAdd(run, u.type)) { this.award([{ k: 'unit', type: u.type }], { x: CX + 200, y: SY + 400 }); tx = '另一个' + M.DB[u.type].n; } else { tx = this.award([K.item(run, mg.P)], { x: CX + 200, y: SY + 400 }).join(''); } mg.got.push(tx); this.miniSay('镜子里走出了 ' + tx, '#8fb0ff', true); this.fx.rays(CX + 200, SY + 380, '#8fb0ff', 1, { r: 260 }); }
     if (mg.phase === 'win' && mg.pt > 1.4) { mg.paid = false; this.miniSet('won'); }
-    if (mg.phase === 'fail' && mg.pt > 1.2 && !mg.fin) { mg.fin = true; const run = this.run, u = M.pick(run.roster); if (u) { run.roster = run.roster.filter(v => v !== u); this.miniFinish('动作错了。镜子里的你停住了——' + M.DB[u.type].n + ' 走进了镜子，没有回来。' + (mg.got.length ? '（之前得到：' + mg.got.join('、') + '）' : ''), '#d0453c'); } else { this.heroHurt(0.1); this.miniFinish('动作错了。镜子里的你伸手掐住了你。', '#d0453c'); } }
+    if (mg.phase === 'fail' && mg.pt > 1.2 && !mg.fin) { mg.fin = true; const run = this.run, u = M.pick(run.roster); if (u) { run.roster = run.roster.filter(v => v !== u); this.award([{ k: 'vision', v: -1 }]); this.miniFinish('动作错了。镜子里的你停住了——' + M.DB[u.type].n + ' 走进了镜子，没有回来。雾从镜子里漫了出来，视野 -1。' + (mg.got.length ? '（之前得到：' + mg.got.join('、') + '）' : ''), '#d0453c'); } else { this.heroHurt(0.1); this.miniFinish('动作错了。镜子里的你伸手掐住了你。', '#d0453c'); } }
   },
   draw(x, mg) {
     const t = mg.t; night(x, '#1a1a2a', '#08080e'); const mx = CX + 200, my = SY + 380;

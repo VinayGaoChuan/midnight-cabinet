@@ -91,6 +91,10 @@ U.chip = (x, s, a, b, q, o = {}) => {
   const X = o.align === 'center' ? a - w / 2 : o.align === 'right' ? a - w : a;
   U.box(x, X, b, w, h, f); R(x, X, b + h - 3, w, 3, lo); U.text(x, s, X + w / 2, b + h / 2 - 1, size, P.ink, { shadow: false }); return w;
 };
+// 领袖像素半身像（M.PJ.BUSTS，64×64）→ Image：没有 → false，还在解码 → null
+const BI = {};
+U.bust = (k) => { const u = PJ.on !== false && k && PJ.BUSTS && PJ.BUSTS[k]; if (!u || typeof Image === 'undefined') return false; let im = BI[k]; if (!im) { im = BI[k] = new Image(); im.src = u; } return im.complete && im.naturalWidth ? im : null; };
+setTimeout(() => Object.keys(PJ.BUSTS || {}).forEach(U.bust), 0); // 先解码，免得第一次用时闪一下精灵
 // 金币（像素方块）
 U.coin = (x, a, b, s) => { s = s || 42; const e = Math.max(3, Math.round(s / 7)); R(x, a - 3, b - 3, s + 6, s + 6, P.ink); R(x, a, b, s, s, P.gold); R(x, a, b, s, e, P.butter); R(x, a, b, e, s, P.butter); R(x, a, b + s - e, s, e, P.amber); R(x, a + s - e, b, e, s, P.amber); };
 // 网点：棋盘格铺成一张小贴图，重复平铺（一帧只画一次矩形）

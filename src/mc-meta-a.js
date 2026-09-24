@@ -216,10 +216,9 @@ G.recruit = function () {
   if (m.supplies < cost) { this.toast('物资不足：招募要 ' + cost + ' 物资', '#d0453c'); return; }
   this.hold('msup', m.supplies); m.supplies -= cost; this.release('msup');
   let rar = M.RARITY.indexOf(M.wpick(M.RARITY, r => r.w)); if (M.hasBuilt(m, B => B.recruit && B.recruit.qUp) || P.recruitMinRar) rar = Math.max(1, rar); rar = Math.max(rar, M.baseMods(m).recruitMin || 0);
-  this.startReel({ title: '招魂', iconKey: 'candle', itemMode: true, land: 0, ups: rar, tease: rar < 3, tiles: M.RARITY.map(r => ({ n: r.n, sub: '领袖', c: r.c })), onDone: () => {
-    const h = M.newHero(m, null, rar); m.heroes.push(h); this.save(); const col = M.RARITY[rar].c;
-    this.fx.rays(960, 460, col, 2.2); this.fx.pop(960, 700, M.heroN(h), col, 80, { life: 1.8, rise: 20 });
-    this.fly(M.spriteCanvas(M.HEROES[h.cls].sprite, 14), { x: 960, y: 440 }, 'heroes', col, () => { this.pulse.heroes = now(); }, 1.0); } }); this.afterRecruit();
+  // the leader exists at once (saved), then the card plays: charge, shatter, the true face flies to the leader bar (mc-recruit.js)
+  const h = M.newHero(m, null, rar); m.heroes.push(h); this.save(); this.panel = null; if (this.bv) this.bv.home();
+  this.recruitCard(h, rar); this.afterRecruit();
 };
 G.afterRecruit = function () { const m = this.meta, n0 = this._recN0 != null ? this._recN0 : m.heroes.length; this._recN0 = null; setTimeout(() => { m.st = m.st || {}; if (m.heroes.length > n0) m.st.recruits = (m.st.recruits || 0) + (m.heroes.length - n0); this.achCheck(); }, 5000); };
 // built counter: count finished buildings on each new day

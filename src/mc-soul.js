@@ -141,7 +141,7 @@ G.view = function () {
     Object.assign(pn, { isRaidPrep: true, title: '今夜袭击', titleColor: '#ff6a5a', sub: '第 ' + m.day + ' 天',
       rpTxt: '选守城的领袖。守城阵亡的领袖永久死亡，留下灵魂碎片。',
       rpHeroes: m.heroes.map(h => { const on = !!sel[h.id], mx = M.heroMaxHp(h, m), P = M.PSKILL && M.PSKILL[h.cls];
-        return { img: M.spriteURL(M.HEROES[h.cls].sprite, 4), n: M.heroN(h), c: M.qc(h.rarity), sub: 'Lv ' + h.lv + ' · 生命 ' + Math.round(h.hp) + '/' + mx + (P ? ' · 个人技能「' + P.n + '」' : ''), sh: '阵亡留下 ' + M.deathShards(h, m) + ' 碎片',
+        return { img: M.spriteURL(M.HEROES[h.cls].sprite, 4), n: M.heroN(h), c: M.qc(h.rarity), sub: 'Lv ' + h.lv + ' · 生命 ' + Math.round(h.hp) + '/' + mx, sh: '阵亡留下 ' + M.deathShards(h, m) + ' 碎片',
           mark: on ? '守城' : '留守', markC: on ? '#ff6a5a' : '#6b6570', border: on ? '#ff6a5a' : '#3a3040', bg: on ? 'linear-gradient(90deg,#3a1418,#15111a)' : '#15111a', onClick: () => this.raidToggle(h.id), tipOn: this.tipFn(() => this.heroTip(h)) }; }),
       rpBtn: n ? '开始守城 · ' + n + ' 名领袖出战' : '开始守城 · 只靠防御房间', rpGo: () => this.raidLaunch() });
   }

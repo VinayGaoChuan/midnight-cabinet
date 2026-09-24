@@ -1,6 +1,6 @@
 // ==== mc-tipcompact.js ====
 (function () {
-// Pictures first (user ruling 2026-09-24). Tooltips lead with rows of icons. Only leaders and units (tips marked ctrl)
+// Pictures first (user ruling 2026-09-24). Tooltips lead with rows of icons. Only leaders (tips marked ctrl)
 // keep their words behind Ctrl — a blinking blue line says so; every other tooltip shows its details directly.
 // Tip builders may add:
 //   briefTitle — the title shown without Ctrl ("Lv2 驱魔修女" instead of the full name)
@@ -14,8 +14,8 @@ const rsegs = (arr) => (arr || []).map(s => ({ t: s.t || '', c: s.c || '#e8dcc4'
 try { const st = document.createElement('style'); st.textContent = '[data-blink]{animation:mcBlink 1.2s ease-in-out infinite}@keyframes mcBlink{0%,100%{opacity:1}50%{opacity:.28}}'; document.head.appendChild(st); } catch (e) {}
 
 // words that name a room tag → the tag's icon (terrain "契合" targets)
-// (terrain says 防守 / 武器 for defence rooms and 奇观 for landmarks)
-const ALIAS = { 防守: ['cat', 'defense'], 武器: ['cat', 'defense'] };
+// (terrain says 武器 for defence rooms and 奇观 for landmarks; 防御 is the tag's own word)
+const ALIAS = { 武器: ['cat', 'defense'] };
 const tagByName = (n) => {
   if (n === '奇观') return { img: IC('u_star'), c: '#ffcc33' };
   if (ALIAS[n]) return M.tagIc(ALIAS[n][0], ALIAS[n][1]);
@@ -29,42 +29,30 @@ M.tileBrief = function (key) {
 };
 
 // ───────── leaders (user ruling 2026-09-24) ─────────
-//   Lv2 驱魔修女 / life bar 1864/1870 / skill icon + name ×2 / blinking 按住 Ctrl… / blinking 有 N 个天赋点可用
-// With Ctrl only the two skills change: each unfolds into its full description; everything else stays where it was.
+//   Lv2 驱魔修女 / life bar 1864/1870 / skill icon + name / blinking 按住 Ctrl… / blinking 有 N 个天赋点可用
+// With Ctrl only the skill changes: it unfolds into its sentence; everything else stays where it was.
 const oHT = G.heroTip;
 G.heroTip = function (h) {
   const t = oHT.apply(this, arguments); if (!t || !h) return t;
   const m = this.meta, H = M.HEROES[h.cls], P = M.PSKILL && M.PSKILL[h.cls], mx = M.heroMaxHp(h, m), hp = Math.max(0, Math.round(h.hp)), f = hp / Math.max(1, mx);
   const bar = [{ bar: f, bc: f < 0.35 ? '#ff5a4a' : '#9cff7a', bw: 190 }, { t: hp + '/' + mx, c: '#e8dcc4' }];
-  const s1 = { img: IC((M.SKILL_IC || {})[h.cls] || 't_skill'), t: H.skill.n, c: '#ffe08a' }, s2 = P ? { img: IC(P.ic), t: P.n, c: P.col } : null;
+  const s1 = { img: IC((M.SKILL_IC || {})[h.cls] || 't_skill'), t: H.skill.n, c: '#ffe08a' };
   t.title = t.briefTitle = 'Lv' + h.lv + ' ' + H.n;
-  t.brief = [bar, [s1, s2]];
-  t.briefDet = [bar, { parts: [s1], desc: '点击释放：' + M.skillDesc(h) + '，冷却 ' + M.skillNodeCd(h, m) + ' 个节点。' }].concat(P ? [{ parts: [s2], desc: '上场后自动 · ' + P.resN + '：' + P.d, c: P.col }] : []);
+  t.brief = [bar, [s1]];
+  t.briefDet = [bar, { parts: [s1], desc: M.heroSkillD(h, m) }];
   t.kind = ''; t.d = ''; t.lines = [];
   t.alert = h.points > 0 ? { t: '有 ' + h.points + ' 个天赋点可用', c: '#f2c14e' } : null;
   t.ctrl = true;
   return t;
 };
 
-// ───────── units: portrait, race & vocation, life / attack / power (and price), the active skill ─────────
-const oUT = M.unitTip;
-M.unitTip = function (k, u, run) {
-  const t = oUT.apply(this, arguments), d = M.DB[k]; if (!t || !d) return t;
-  const ri = M.tagIc('race', d.race), vi = d.voc && M.tagIc('voc', d.voc), sk = M.unitSkill && M.unitSkill(k), price = /价格\s*(\d+)/.exec(t.kind || '');
-  t.pic = SP(k);
-  const stats = [{ img: IC('t_heart'), t: fmt(d.hp + (u && u.bHp || 0)) }, { img: IC('t_sword'), t: fmt(d.atk + (u && u.bAtk || 0)) }, { img: IC('u_star'), t: M.unitPower ? M.unitPower(k, u) : '' }];
-  if (price) stats.push({ img: SP('coin'), t: price[1], c: '#ffcc33' });
-  t.brief = [[ri && { img: ri.img, t: d.race, c: ri.c, fs: 22 }, vi && { img: vi.img, t: d.voc, c: vi.c, fs: 22 }], stats];
-  if (sk) t.brief.push([{ img: IC('t_skill'), t: sk.n, c: '#ffe08a' }]);
-  t.ctrl = true;
-  return t;
-};
+// units: see mc-awaken.js (name / vocation + power / one sentence, no Ctrl layer)
 // items, relics and relic blueprints show their own picture
 const oIT = G.itemTip; if (oIT) G.itemTip = function (key) { const t = oIT.apply(this, arguments); const I = M.ITEMS[key]; if (t && I && I.icon) t.pic = SP(I.icon); return t; };
 const oRT = G.relicTip; if (oRT) G.relicTip = function (r) { const t = oRT.apply(this, arguments); const R = r && M.RELICS[r.key]; if (t && R && R.icon) t.pic = SP(R.icon); return t; };
 const oRB = G.relicBpTip; if (oRB) G.relicBpTip = function (key) { const t = oRB.apply(this, arguments); const R = M.RELICS[key]; if (t && R && R.icon) t.pic = SP(R.icon); return t; };
 
-// ───────── the tooltip view: header + icons; leaders' and units' words only with Ctrl ─────────
+// ───────── the tooltip view: header + icons; leaders' words only with Ctrl ─────────
 const oView = G.view;
 G.view = function () {
   const v = oView.call(this), tip = this.tipData, det = this.detailOn ? this.detailOn() : false;
@@ -79,9 +67,11 @@ G.view = function () {
     T.hasAlert = !!tip.alert; T.alertTxt = tip.alert ? tip.alert.t : ''; T.alertC = tip.alert ? tip.alert.c || '#f2c14e' : '#f2c14e';
     const more = !!(tip.kind || tip.d || (tip.lines && tip.lines.length) || tip.briefDet);
     if (cmp && !det) { if (tip.briefTitle) T.title = tip.briefTitle; T.hasKind = false; T.hasD = false; T.lines = []; }
-    T.hint = cmp && more && !det; T.hintTxt = hintTxt;
+    // items: the sentence stays, the per-quality lines wait for Ctrl
+    const lnCtrl = !!tip.ctrlLines && !!(tip.lines && tip.lines.length); if (lnCtrl && !det) T.lines = [];
+    T.hint = ((cmp && more) || lnCtrl) && !det; T.hintTxt = hintTxt;
   }
-  // shop cards: power as an icon and a number, a skill icon when the unit has one; words behind Ctrl
+  // shop cards (see mc-awaken.js for the rest)
   if (v.s && this.run && this.run.shop) (v.s.units || []).forEach((su, i) => { const c = this.run.shop.units[i], sk = c && M.unitSkill && M.unitSkill(c.type); su.pwN = String(su.pw || '').replace(/[^\d.,万k]/g, '') || su.pw; su.hasSk = !!sk; });
   v.pwIc = IC('u_star'); v.skIc = IC('t_skill'); v.ctrlHint = hintTxt;
   if (v.w && this.run && this.run.hero) v.w.skIc = IC((M.SKILL_IC || {})[this.run.hero.cls] || 't_skill');

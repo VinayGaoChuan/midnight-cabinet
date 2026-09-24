@@ -6,7 +6,7 @@ const cl = (v, a, b) => Math.max(a, Math.min(b, v));
 Object.assign(G, {
   tipFn(o) { return () => { this.tipData = typeof o === 'function' ? o() : o; M.Sfx.hover(); this.bump(); }; },
   unitTip(type, star) { const U = M.UNITS[type]; return { title: U.name + (star ? ' ' + '★'.repeat(star) : ''), c: '#6fa8dc', kind: U.tags.map(t => '【' + t + '】').join('') + ' · 生命 ' + U.hp + ' · 攻击 ' + U.atk, d: U.desc }; },
-  itemTip(key, q) { const I = M.ITEMS[key]; return { title: I.name, c: M.QUALITY[q || 0].c, kind: '支援道具', d: I.desc, lines: I.tiers.map((t, i) => ({ t: M.QUALITY[i].n + '：' + t, c: i >= (q || 0) ? M.QUALITY[i].c : '#5a5460' })) }; },
+  itemTip(key, q) { const I = M.ITEMS[key]; return { title: I.name, c: M.QUALITY[q || 0].c, kind: '', ctrlLines: true, d: I.desc, lines: I.tiers.map((t, i) => ({ t: M.QUALITY[i].n + '：' + t, c: i >= (q || 0) ? M.QUALITY[i].c : '#5a5460' })) }; },
   relicTip(r) { const R = M.RELICS[r.key]; return { title: R.n, c: M.QUALITY[r.q].c, kind: '', d: R.d, lines: R.lines.map((l, i) => ({ t: M.QUALITY[i].n + '：' + M.statText(l.k, l.v) + (i <= r.q ? '' : '（未达到）'), c: i <= r.q ? M.QUALITY[i].c : '#5a5460' })) }; },
   relicBpTip(key, owned) { const R = M.RELICS[key]; return { title: R.n, c: owned ? '#ffe8b0' : '#8d8496', kind: owned ? '图纸 × ' + owned : '没有图纸', d: R.d, lines: R.lines.map((l, i) => ({ t: M.QUALITY[i].n + '：' + M.statText(l.k, l.v), c: M.QUALITY[i].c })) }; },
   heroTip(h) { const m = this.meta, H = M.HEROES[h.cls]; return { title: 'Lv' + h.lv + ' ' + H.n, c: M.RARITY[h.rarity].c, kind: '生命 ' + Math.round(h.hp) + '/' + M.heroMaxHp(h, m), d: '技能「' + H.skill.n + '」' + M.skillDesc(h) + '，冷却 ' + M.skillNodeCd(h, m) + ' 个节点。', lines: h.points ? [{ t: '有 ' + h.points + ' 个天赋点可用', c: '#f2c14e' }] : [] }; },
@@ -34,7 +34,7 @@ Object.assign(G, {
         heroes: m.heroes.map(h => { const mx = M.heroMaxHp(h, m), R = M.RARITY[h.rarity]; return { fx: 'hero-' + h.id, n: M.HEROES[h.cls].n, img: M.spriteURL(M.HEROES[h.cls].sprite, 4), clsIc: M.iconURL('c_' + h.cls, 2), lv: h.lv, rc: R.c, hpW: Math.max(0, h.hp / mx * 100) + '%', hpC: h.hp / mx < 0.35 ? '#ff5a4a' : '#9cff7a', dot: h.points > 0, op: h.status ? 0.5 : 1, sc: this.ps('heroes'), tipOn: this.tipFn(() => this.heroTip(h)), onClick: () => { M.Sfx.click(); this.openHero(h.id); } }; }),
         heroCap: m.heroes.length + ' / ' + M.heroCap(m) };
       v.pwTip = this.tipFn({ title: '电力', c: '#8ff6ff', kind: '已用 ' + pw.used + ' / 产出 ' + pw.made, d: '电不够就建不了新的耗电房间。' });
-      v.raidTip = this.tipFn({ title: '基地防守', c: '#ff6a5a', kind: '每 ' + M.RAID_EVERY + ' 天一次 · 下次在第 ' + M.nextRaid(m) + ' 天', d: '所有领袖参与防守，不会永久死亡，但损失的生命不会自动恢复。地下的武器房间会向地面开火，射程受深度限制：每往下一层，就少覆盖一格。传送门被摧毁，游戏结束。' });
+      v.raidTip = this.tipFn({ title: '守城', c: '#ff6a5a', kind: '每 ' + M.RAID_EVERY + ' 天一次 · 下次在第 ' + M.nextRaid(m) + ' 天', d: '所有领袖参与守城，不会永久死亡，但损失的生命不会自动恢复。地下的武器房间会向地面开火，射程受深度限制：每往下一层，就少覆盖一格。传送门被摧毁，游戏结束。' });
       v.pnOn = !!this.panel && s === 'base';
       if (this.panel) Object.assign(v, this.panelView());
     }
@@ -49,13 +49,13 @@ Object.assign(G, {
         roster: run.roster.filter(u => !this.hideU.has(u.uid)).map(u => ({ img: M.spriteURL(u.type, 4), stars: '★'.repeat(u.star), tipOn: this.tipFn(this.unitTip(u.type, u.star)), sel: this.sel === u.uid, border: this.sel === u.uid ? '#f2c14e' : 'transparent', onClick: () => { if (this.screen === 'shop') { this.sel = this.sel === u.uid ? null : u.uid; M.Sfx.click(); this.bump(); } } })),
         items: run.items.map((k, i) => ({ has: !!k && !this.hideI.has(i), img: k ? M.spriteURL(M.ITEMS[k].icon, 5) : '', border: k ? M.QUALITY[run.itemQ[i] || 0].c : '#3a3040', tipOn: this.tipFn(k ? this.itemTip(k, run.itemQ[i]) : { title: '空道具栏', d: '宝箱、商店、事件都能获得支援道具。' }) })),
         region: run.region.n };
-      v.skillTip = this.tipFn(() => this.heroTip(h));
+      v.skillTip = this.tipFn(() => this.skillTipOf(h));
       v.bpTip = this.tipFn(() => ({ title: '本局收获', c: '#e0904a', kind: '撤离或通关后带回基地', d: run.loot.bp.length ? '' : '还没有找到图纸。', lines: run.loot.bp.map(k => { const I = M.itemInfo(k); return { t: I.n, c: I.c }; }) }));
     }
     // ── battle ──
     if (s === 'battle' && this.battle) {
       const b = this.battle, cfg = this.cfg, h = run.hero, H = M.HEROES[h.cls], score = b.score, ok = cfg.target ? score >= cfg.target : true, remain = Math.max(0, Math.ceil(cfg.dur + 1.6 - b.t));
-      const modeN = { normal: '普通战', score: '积分战', hold: '坚守战', holdScore: '坚守积分战' }[cfg.mode] + (cfg.type === 'elite' ? ' · 精英' : cfg.type === 'boss' ? ' · 首领' : cfg.type === 'extract' ? ' · 撤离' : '');
+      const modeN = cfg.type === 'boss' ? '首领战' : cfg.type === 'elite' ? '精英战' : cfg.type === 'extract' ? '撤离战' : { normal: '普通战', score: '积分战', hold: '坚守战', holdScore: '坚守积分战' }[cfg.mode];
       const goal = cfg.mode === 'normal' ? '全灭敌人' : cfg.mode === 'score' ? '目标 ' + M.fmt(cfg.target) + ' · 不够扣领袖血' : cfg.mode === 'hold' ? '坚守 ' + remain + ' 秒' : '坚守 ' + remain + ' 秒 · 目标 ' + M.fmt(cfg.target);
       const alive = b.ents.filter(e => e.alive && e.side === 'A' && !e.isHero).length, left = b.ents.filter(e => e.alive && e.side === 'E').length + (cfg.mode === 'normal' || cfg.mode === 'score' ? cfg.list.length - b.spawnI : 0);
       if (this.lastBase != null && b.base > this.lastBase && t0 - (this.pulse.bscore || 0) > 140) this.pulse.bscore = t0; this.lastBase = b.base; const multR = Math.round(b.mult * 100) / 100; if (this.lastMult != null && multR > this.lastMult) this.pulse.mult = t0; this.lastMult = multR;
@@ -69,7 +69,7 @@ Object.assign(G, {
       const fold = !b.hero.bench; if (fold && !b.foldAt) b.foldAt = t0; const fe = fold ? M.ease.eo(cl((t0 - b.foldAt) / 450, 0, 1)) : 0;
       Object.assign(v.h, { skTop: Math.round(26 + 78 * fe), skH: Math.round(128 - 78 * fe), skOp: (1 - fe).toFixed(3), skOpenOn: fe < 0.5, skFoldOn: fold, skFoldOp: fe.toFixed(3) });
       if (fold) Object.assign(v.h, { skillBorder: '#3a3040', skillBg: 'linear-gradient(180deg,#141018,#0c090f)', skillGlow: 'none', skillColor: '#6b6570' });
-      v.skillTip = this.tipFn(() => this.heroTip(h));
+      v.skillTip = this.tipFn(() => this.skillTipOf(h));
       const sy = M.synergies(run.roster); v.syn = Object.keys(M.TAGS).filter(t => sy.cnt[t] > 0).map(t => { const T = M.TAGS[t], l = sy.lvl[t]; return { label: l > 0 ? t + ' ' + sy.cnt[t] + ' · ' + T.desc[l - 1] : t + ' ' + sy.cnt[t] + '/' + T.th[0], color: l > 0 ? T.color : '#8d8496' }; });
       v.pausedOn = this.paused; v.pauseText = this.paused ? '继续' : '暂停';
       v.settleOn = !!this.settle && this.settle.t > 1.2;

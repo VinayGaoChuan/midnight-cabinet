@@ -1,44 +1,18 @@
 // ==== mc-battle4.js ====
 (function () {
-// Skill ceremony layer on top of Battle3: signature skills, cast wind-ups, pixel VFX, stacked pixel numbers, pixel backdrops.
+// Skill ceremony layer on top of Battle3: cast wind-ups for units' own mana traits, pixel VFX, stacked pixel numbers, pixel backdrops.
 const M = window.MC, B3 = M.Battle3, P = B3.prototype, H = M.TRAIT_H, DB = M.DB, { Sfx, fmt, pick } = M;
 const PX = M.PX, RCOL = M.RACES, FW = 1920, FH = 720;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const eo = (t) => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
 const rnd = (i) => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
-const BAL = M.BAL = { MANA_MUL: 2.0, SIG_RATE: 9, SIG_HIT: 5, ALLY_FLOOR: 5, FOE_SIG_RATE: 5, ENEMY_K: 1.45 };
-let { MANA_MUL, SIG_RATE, SIG_HIT, ALLY_FLOOR, FOE_SIG_RATE } = BAL;
-M.setBal = (o) => { Object.assign(BAL, o); ({ MANA_MUL, SIG_RATE, SIG_HIT, ALLY_FLOOR, FOE_SIG_RATE } = BAL); };
-// enemies hit harder now that the army casts far more often (the tutorial stays gentle)
+const BAL = M.BAL = { MANA_MUL: 2.0, ALLY_FLOOR: 5, ENEMY_K: 1.15 };
+let { MANA_MUL, ALLY_FLOOR } = BAL;
+M.setBal = (o) => { Object.assign(BAL, o); ({ MANA_MUL, ALLY_FLOOR } = BAL); };
+// enemies are a little tougher outside the tutorial
 const oldInit = P.init;
 P.init = function (run, cfg) { oldInit.call(this, run, cfg); if (!run.region.tut) this.ek *= BAL.ENEMY_K; };
 
-// ───────── signature skills for units without an active trait ─────────
-const target = (b, e) => (e.target && e.target.alive && b.active(e.target) ? e.target : b.nearestFoe(e, 3000));
-const SIG = {
-  charge: { n: '冲锋盾击', col: '#9fc8ff', fn(b, e, pw) { const tg = target(b, e); if (!tg) return; const x1 = tg.x + (e.side === 'A' ? -64 : 64); e.leap = { x0: e.x, y0: e.y, x1, y1: tg.y, t0: b.t, dur: 0.32 }; Sfx.whoosh(0.3);
-    b.later(0.32, () => { e.x = x1; e.y = tg.y; e.leap = null; b.aoe(e, tg.x, tg.y, 135, e.atk * 2.4 * pw, '#bfe0ff', o => { o.stun = Math.max(o.stun, 0.9); }); e.shield = Math.max(e.shield || 0, e.maxHp * 0.18 * pw); b.fxp({ k: 'pxboom', x: tg.x, y: tg.y - 16, col: '#9fc8ff', r: 135, life: 0.55 }); b.fxp({ k: 'dome', ent: e, col: '#9fc8ff', life: 0.6 }); b.dust(e.x, e.y, 14); b.shake = Math.max(b.shake, 12); Sfx.impact(); }); } },
-  whirl: { n: '旋风斩', col: '#ffa070', fn(b, e, pw) { b.fxp({ k: 'whirl', ent: e, col: '#ffc090', r: 150 * e.sz, life: 0.72 }); for (let i = 0; i < 3; i++) b.later(i * 0.2, () => { if (!e.alive) return; b.aoe(e, e.x, e.y, 150 * e.sz, e.atk * 1.3 * pw, '#ffc090'); Sfx.hit(); b.shake = Math.max(b.shake, 5); }); } },
-  volley: { n: '箭雨', col: '#ffd060', fn(b, e, pw) { const tg = target(b, e); if (!tg) return; const x = tg.x, y = tg.y; b.fxp({ k: 'arrowrain', x, y, r: 130, col: '#fff0b0', life: 1.0 }); for (let i = 0; i < 4; i++) b.later(0.3 + i * 0.13, () => { b.aoe(e, x, y, 130, e.atk * 0.9 * pw, '#ffe08a'); Sfx.shoot(); }); } },
-  fireball: { n: '陨石术', col: '#ff8a3a', power: 1, fn(b, e, pw) { const tg = target(b, e); if (!tg) return; const x = tg.x, y = tg.y; b.fxp({ k: 'pxmeteor', x, y, col: '#ff8a3a', life: 0.55 }); Sfx.whoosh(0.4);
-    b.later(0.52, () => { b.aoe(e, x, y, 165, e.atk * 3.6 * pw, '#ffb050', o => b.ignite(o, e.atk * 0.35 * pw, e)); b.fxp({ k: 'pxboom', x, y: y - 10, col: '#ff8a3a', r: 175, life: 0.7 }); b.fxp({ k: 'crack', x, y, life: 1.6, col: '#ff6a2a' }); b.shake = Math.max(b.shake, 16); Sfx.impact(); }); } },
-  frost: { n: '霜冻新星', col: '#9fe8ff', fn(b, e, pw) { const tg = target(b, e); if (!tg) return; const x = tg.x, y = tg.y; b.fxp({ k: 'frost', x, y, r: 175, col: '#bff4ff', life: 0.95 });
-    b.later(0.12, () => { b.aoe(e, x, y, 175, e.atk * 2.0 * pw, '#bff4ff', o => { o.slowAS = Math.max(o.slowAS, 0.5); o.slowT = b.t + 3; o.frostT = b.t + 3; }); Sfx.bolt(0); b.shake = Math.max(b.shake, 8); }); } },
-  chain: { n: '闪电链', col: '#bfe8ff', fn(b, e, pw) { let prev = e; const done = new Set(); for (let i = 0; i < 4; i++) { const c = b.foes(e).filter(o => !done.has(o)).sort((a, x) => Math.hypot(a.x - prev.x, a.y - prev.y) - Math.hypot(x.x - prev.x, x.y - prev.y))[0]; if (!c) break; done.add(c); const p = prev; b.later(i * 0.08, () => { b.fxp({ k: 'arc', x1: p.x, y1: p.y - 40 * (p.sz || 1), x2: c.x, y2: c.y - 40 * c.sz, col: '#dff4ff', life: 0.32, w: 6 }); b.fxp({ k: 'pxboom', x: c.x, y: c.y - 30, col: '#bfe8ff', r: 60, life: 0.3 }); b.deal(e, c, e.atk * 1.8 * pw, { skill: 1, col: '#dff4ff' }); }); prev = c; } b.flash = Math.max(b.flash, 0.15); b.flashCol = '#d0e8ff'; Sfx.bolt(1); } },
-  holy: { n: '圣光审判', col: '#fff2a0', fn(b, e, pw) { b.allies(e).forEach(o => b.heal(o, o.maxHp * 0.12 * pw, '#fff2a0')); const tg = b.foes(e).sort((a, x) => x.maxHp - a.maxHp)[0]; if (tg) { b.fxp({ k: 'pxpillar', x: tg.x, y: tg.y, col: '#fff2a0', w: 58, life: 0.95 }); b.later(0.22, () => b.deal(e, tg, e.atk * 3 * pw, { skill: 1, col: '#fff2a0', big: 1 })); } Sfx.heal(); } },
-  gold: { n: '金币风暴', col: '#ffcc33', fn(b, e, pw) { const fs = b.foes(e).sort(() => Math.random() - 0.5).slice(0, 4); fs.forEach((o, i) => b.later(i * 0.09, () => b.shootP(e, o, { dmg: e.atk * 1.6 * pw, skill: 1, style: 'coin', col: '#ffcc33', speed: 1500, size: 14 }))); if (e.side === 'A') b.gainBase(Math.round(4 + b.w * 3 * pw), e, '金币'); b.coins(e.x, e.y - 50, 10); } },
-  maul: { n: '猛扑', col: '#ff6a4a', fn(b, e, pw) { const tg = target(b, e); if (!tg) return; const x1 = tg.x + (e.side === 'A' ? -50 : 50); e.leap = { x0: e.x, y0: e.y, x1, y1: tg.y, t0: b.t, dur: 0.3 };
-    b.later(0.3, () => { e.x = x1; e.y = tg.y; e.leap = null; if (!tg.alive) return; b.deal(e, tg, e.atk * 3.2 * pw, { skill: 1, col: '#ff8a6a', big: 1 }); tg.x += (e.side === 'A' ? 40 : -40); tg.stun = Math.max(tg.stun, 0.5); b.fxp({ k: 'xslash', x: tg.x, y: tg.y - 40, col: '#ff8a6a', life: 0.35 }); b.shake = Math.max(b.shake, 10); Sfx.crit(); }); } },
-};
-M.SIG = SIG;
-function sigOf(d) {
-  if (!d || d.ranged === 2 || !d.atk) return null;
-  const v = d.voc, r = d.race;
-  if (v === '先锋') return 'charge'; if (v === '战士') return 'whirl'; if (v === '射手') return 'volley'; if (v === '祭司') return 'holy'; if (v === '商人') return 'gold';
-  if (v === '法师') return /恶魔|混沌|兽人|野兽/.test(r) ? 'fireball' : /不死|骷髅|僵尸|精灵|自然/.test(r) ? 'frost' : 'chain';
-  return d.ranged === 1 ? (/科技|虚空/.test(r) ? 'chain' : 'volley') : 'maul';
-}
-M.sigOf = sigOf;
 const hasFull = (e) => e.traits.some(t => H[t.cls] && H[t.cls].full);
 const manaRes = (e) => e.traits.some(t => H[t.cls] && H[t.cls].noFull);
 // growth traits spend a full bar on evolving / levelling — that is progression, not a castable skill
@@ -46,41 +20,33 @@ const GROWTH = new Set(['JuniorFisherman', 'EliteFisherman', 'SpiritOffering']);
 const growth = (e) => e.traits.some(t => GROWTH.has(t.cls) && H[t.cls] && H[t.cls].full);
 const BIGT = new Set(['WaterSpoutNew', 'LightningStrike', 'EnergySurge', 'DimensionalRift', 'FinalJudgment', 'ForbiddenFruit', 'JuniorFisherman', 'SpiritOffering']);
 const SKCOL = { ChainHeal: '#7fff9a', ShellShock: '#ffa040', Invigorate: '#ff6a4a', Summon: '#c890ff', DimensionalRift: '#c890ff', SkullStew: '#b8ff80', MindWarp: '#c890ff', SolarFlare: '#ffd060', FinalJudgment: '#fff2a0', LightningStrike: '#bfe8ff', WaterSpoutNew: '#6fe0ff', EnergySurge: '#b0a0ff', LifeBindVow: '#ff7a9a', IronHail: '#d8e0ea', RapidFire: '#ffd060', ForbiddenFruit: '#ff5a6a', JuniorFisherman: '#ffcc33', SpiritOffering: '#c890ff', SummonFroggo: '#9cff7a' };
-M.unitSkill = function (k) { const d = DB[k]; if (!d) return null; const T = M.traitsOf(k).find(t => { const h = H[t.cls.replace(/^Summon|Trait$/g, '')]; return h && h.full; }); if (T) return { n: T.n, d: T.d, own: 1 }; if (M.traitsOf(k).some(t => { const h = H[t.cls.replace(/^Summon|Trait$/g, '')]; return h && h.noFull; })) return null; const s = sigOf(d); return s ? { n: SIG[s].n, d: SIG_DESC[s], sig: s } : null; };
-const SIG_DESC = { charge: '冲向最近的敌人，小范围 240% 攻击力伤害并眩晕 0.9 秒，自身获得 18% 生命的护盾', whirl: '原地旋转 3 次，每次对周围敌人造成 130% 攻击力伤害', volley: '向目标区域射出箭雨，4 轮各 90% 攻击力伤害', fireball: '召唤陨石砸向目标，中范围 360% 攻击力伤害并点燃', frost: '在目标处引爆霜冻新星，中范围 200% 攻击力伤害并减速 50% 3 秒', chain: '闪电在 4 个敌人之间弹射，每次 180% 攻击力伤害', holy: '治疗全体友军 12% 最大生命，并对生命最高的敌人降下 300% 攻击力的圣光', gold: '向 4 个敌人抛出金币，各 160% 攻击力伤害，并获得额外积分', maul: '扑向目标，造成 320% 攻击力伤害并击退、眩晕' };
-M.SIG_DESC = SIG_DESC;
+M.unitSkill = function (k) { const d = DB[k]; if (!d) return null; const T = M.traitsOf(k).find(t => { const h = H[t.cls.replace(/^Summon|Trait$/g, '')]; return h && h.full; }); return T ? { n: T.n, d: T.d, own: 1 } : null; };
 
 const oldStats = P.unitStats;
 P.unitStats = function (key, side, x, y, o = {}) {
   const e = oldStats.call(this, key, side, x, y, o);
-  if (!e.summon && (side === 'A' || e.elite || e.boss) && (!hasFull(e) || growth(e)) && !manaRes(e)) { e.sig = sigOf(e.d); if (e.sig && growth(e)) e.sigPool = 1; }
-  if (e.sig || (side === 'A' && hasFull(e))) e.hasMana = true;
+  if (side === 'A' && hasFull(e)) e.hasMana = true;
   return e;
 };
-P.canSkill = function (e) { return e.alive && !e.isHero && !e.bench && (!!e.sig || (hasFull(e) && !growth(e))); };
-P.skillCharge = function (e) { return e.sigPool ? (e.smana || 0) : e.mana; };
+P.canSkill = function (e) { return e.alive && !e.isHero && !e.bench && hasFull(e) && !growth(e); };
+P.skillCharge = function (e) { return e.mana; };
 P.growthFull = function (e) { if (!growth(e) || e.mana < 100) return false; e.mana = 0; this.call(e, 'full'); return !e.alive; };
 P.sigTick = function (e, dt) {
   if (!e.alive || e.casting) return;
-  const r = (e.side === 'A' ? SIG_RATE : FOE_SIG_RATE) * dt;
-  if (e.sig && e.sigPool) e.smana = Math.min(100, (e.smana || 0) + r);
-  else if (e.sig) e.mana = Math.min(100, e.mana + r);
-  else if (e.side === 'A' && !e.isHero && hasFull(e) && !manaRes(e) && !growth(e)) e.mana = Math.min(100, e.mana + ALLY_FLOOR * dt);
+  if (e.side === 'A' && !e.isHero && hasFull(e) && !manaRes(e) && !growth(e)) e.mana = Math.min(100, e.mana + ALLY_FLOOR * dt);
 };
 const oldMana = P.mana;
 P.mana = function (e, amt, perSec) { if (e && e.side === 'A' && !e.isHero) amt *= MANA_MUL; return oldMana.call(this, e, amt, perSec); };
-const oldStrike = P.strike;
-P.strike = function (e, tg, ranged) { oldStrike.call(this, e, tg, ranged); if (e.sig && e.alive && !e.casting) { const v = e.side === 'A' ? SIG_HIT * MANA_MUL : 2.5; if (e.sigPool) e.smana = Math.min(100, (e.smana || 0) + v); else e.mana = Math.min(100, e.mana + v); } };
 P.skillSpec = function (e) {
-  const T = e.traits.find(t => H[t.cls] && H[t.cls].full), S = e.sig ? SIG[e.sig] : null, q = e.d.q || 0;
-  const n = S ? S.n : T ? T.n : '技能', big = S ? (S.power || 0) : T && BIGT.has(T.cls) ? 1 : 0;
+  const T = e.traits.find(t => H[t.cls] && H[t.cls].full), q = e.d.q || 0;
+  const n = T ? T.n : '技能', big = T && BIGT.has(T.cls) ? 1 : 0;
   const tier = clamp(q + big + (e.boss ? 2 : e.elite ? 1 : 0), 0, 3);
-  const col = S ? S.col : (T && SKCOL[T.cls]) || RCOL[e.d.race] || '#ffe08a';
-  return { n, col: e.side === 'E' && !S ? '#ff6a5a' : col, q, tier, pw: [1, 1.25, 1.55, 2][q] * (e.side === 'E' ? 0.85 : 1) };
+  const col = (T && SKCOL[T.cls]) || RCOL[e.d.race] || '#ffe08a';
+  return { n, col: e.side === 'E' ? '#ff6a5a' : col, q, tier, pw: [1, 1.25, 1.55, 2][q] * (e.side === 'E' ? 0.85 : 1) };
 };
 P.beginCast = function (e, o = {}) {
   const sp = this.skillSpec(e), dur = [0.34, 0.5, 0.72, 0.95][sp.tier];
-  if (e.sigPool) e.smana = 0; else e.mana = 0; e.casting = { t0: this.t, until: this.t + dur, sp };
+  e.mana = 0; e.casting = { t0: this.t, until: this.t + dur, sp };
   this.fxp({ k: 'cast', ent: e, col: sp.col, tier: sp.tier, life: dur + 0.3 });
   // one headline banner at a time: only the newest big cast owns the top of the screen
   const ttl = this.fxp({ k: 'ctitle', ent: e, text: sp.n, col: sp.col, tier: sp.tier, side: e.side, life: dur + (sp.tier >= 2 ? 1.1 : 0.8) }); if (sp.tier >= 2) this._bigTitle = ttl;
@@ -91,7 +57,7 @@ P.beginCast = function (e, o = {}) {
 P.fireCast = function (e) {
   const sp = e.casting.sp; e.casting = null; e.castPose = this.t;
   this.meter = { total: 0, t: this.t, last: this.t, col: sp.col, n: sp.n };
-  if (e.sig) SIG[e.sig].fn(this, e, sp.pw); else this.call(e, 'full');
+  this.call(e, 'full');
   this.shake = Math.max(this.shake, [4, 8, 14, 22][sp.tier]);
   this.ring(e.x, e.y - 30 * e.sz, 10, [80, 120, 170, 240][sp.tier] * e.sz, sp.col, 4 + sp.tier * 2, 0.35);
   this.fxp({ k: 'pxburst', x: e.x, y: e.y - 44 * e.sz, col: sp.col, n: 10 + sp.tier * 8, life: 0.55 });

@@ -11,7 +11,7 @@
       节点: vals(M.NODE).map(n => n.n),
       奇遇: vals(M.EVENTS).map(e => e.n),
       领袖: vals(M.HEROES).map(h => h.n),
-      领袖技能: vals(M.HEROES).map(h => h.skill && h.skill.n).concat(vals(M.PSKILL).map(p => p.n)),
+      领袖技能: vals(M.HEROES).map(h => h.skill && h.skill.n),   // one skill per class; the on-field half has no name of its own
       战旗: vals(M.LEGION).map(l => l.name),
       道具: vals(M.ITEMS).map(i => i.name),
       宝物: vals(M.RELICS).map(r => r.n),

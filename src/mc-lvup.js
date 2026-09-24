@@ -47,10 +47,8 @@ const seq = (A, d, dt) => (RM() || d >= A.length * dt ? A[A.length - 1] : A[Math
 // 竖向硬边色带：cols = [[起点, 颜色]…]
 const bands = (x, y0, y1, cols) => { const g = x.createLinearGradient(0, y0, 0, y1); cols.forEach(([p, c], i) => { g.addColorStop(p, c); g.addColorStop(i + 1 < cols.length ? cols[i + 1][0] - 0.001 : 1, c); }); return g; };
 const GREEN = [[0, P.white], [0.22, P.lime], [0.5, P.green], [0.78, P.greenDeep]];
-// 领袖像素半身像（M.PJ.BUSTS，64×64）：没有 → false，还在解码 → null
-const BI = {};
-const bustImg = (k) => { const u = M.PJ.on !== false && k && M.PJ.BUSTS && M.PJ.BUSTS[k]; if (!u || typeof Image === 'undefined') return false; let im = BI[k]; if (!im) { im = BI[k] = new Image(); im.src = u; } return im.complete && im.naturalWidth ? im : null; };
-setTimeout(() => Object.keys(M.PJ.BUSTS || {}).forEach(bustImg), 0); // 先解码，免得第一次用时闪一下精灵
+// 领袖像素半身像（M.UI.bust）：没有 → false，还在解码 → null
+const bustImg = (k) => M.UI.bust(k);
 const drawLv = function (ctx, g) {
   const L = g.lvFx; if (!L) return; const t = (now() - L.t0) / 1000;
   if (t > DUR) { g.lvNext(); if (g.pulse) g.pulse.heroPower = now(); return; }

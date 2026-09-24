@@ -33,7 +33,8 @@ function checkMeta(raw) {
   if (!Array.isArray(cells) || cells.length !== BR || cells.some(row => !Array.isArray(row) || row.length !== BC)) { m.base = D.base; note('基地布局'); }
   else for (let r = 0; r < BR; r++) for (let c = 0; c < BC; c++) {
     let x = cells[r][c]; if (!isObj(x)) { cells[r][c] = x = { dug: false, tile: null, b: null, job: null }; note('基地房间'); }
-    if (x.b === 'sanitarium') { x.b = null; m.supplies += 90; mig = true; }   // the 疗养室 was removed with the personalities: refund it
+    if (x.b === 'sanitarium') { x.b = null; m.supplies += 90; mig = true; }
+    if (x.b && x.tile === 'ruin') { x.tile = null; mig = true; }   // the ruin's effect is spent once the room stands   // the 疗养室 was removed with the personalities: refund it
     if (isObj(x.job) && x.job.key === 'sanitarium') { x.job = null; m.supplies += 90; mig = true; }
     if (x.b != null && !M.BUILDINGS[x.b]) { x.b = null; note('基地房间'); }
     if (x.tile != null && !M.TILES[x.tile]) { x.tile = null; note('地格'); }
@@ -53,12 +54,16 @@ function checkMeta(raw) {
     for (const b of ['atk', 'def', 'luck']) { const t = h.tree[b]; if (!Array.isArray(t) || t.some(x => !isObj(x) || !isObj(x.m))) return false; if (!intIn(h.taken[b], 0, t.length)) return false; }
     return true;
   };
+  const TAL_SWAP = { fire: 'rngAtk', beastAs: 'warAs', shortRed: 'vanHp' }, TAL_BY = {}; Object.keys(M.TALENTS).forEach(b => M.TALENTS[b].forEach(t => { TAL_BY[Object.keys(t.m)[0]] = t; }));
+  relics.forEach(r => { if (r.lines.some(l => l.k === 'shortRed')) { r.lines = M.relicLines(r.key, r.q); mig = true; } });
   const heroes = m.heroes.filter(okHero);
   if (heroes.length < m.heroes.length) note('领袖', m.heroes.length - heroes.length);
   heroes.forEach(h => {
     if (!intIn(h.points, 0, 20)) h.points = 0;
     // personalities and personal names were removed from the design: drop them without reporting damage
     if ('quirks' in h || h.name !== M.heroN(h) || (isObj(h.status) && h.status.kind === 'sanitarium')) mig = true;
+    // talents: refresh words from the table, replace the ones whose effect no longer exists (火 / 兽 tags, score targets)
+    Object.keys(h.tree).forEach(b => h.tree[b].forEach(t => { const k0 = Object.keys(t.m)[0], k = TAL_SWAP[k0] || k0, T = TAL_BY[k]; if (!T) return; if (t.n !== T.n || t.d !== T.d || k !== k0) { t.n = T.n; t.d = T.d; t.m = Object.assign({}, T.m); mig = true; } }));
     delete h.quirks; h.name = M.heroN(h); if (isObj(h.status) && h.status.kind === 'sanitarium') h.status = null;
     h.relics = (Array.isArray(h.relics) ? h.relics : []).filter(id => rid.has(id));
     if (h.status != null && !isObj(h.status)) h.status = null; if (!isNum(h.runs)) h.runs = 0;

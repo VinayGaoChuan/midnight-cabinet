@@ -12,7 +12,10 @@ const SKEY = 'midnight-cabinet-settings-v1';
 const DEF_KEYS = { up: ['ArrowUp', 'KeyW'], down: ['ArrowDown', 'KeyS'], right: ['ArrowRight', 'KeyD'], item1: ['KeyQ'], item2: ['KeyW'], item3: ['KeyE'], skill: ['Space'], pause: ['KeyP'], speed: ['KeyF'], back: ['Escape'] };
 const DEF_PAD = { confirm: 0, back: 1, item1: 2, item2: 3, item3: 5, skill: 7, pause: 9, speed: 8, zoomIn: 4, zoomOut: 6 };
 M.ACTION_N = { up: '向上 / 岔路上', down: '向下 / 岔路下', right: '前进', item1: '支援道具 1', item2: '支援道具 2', item3: '支援道具 3', skill: '领袖技能', pause: '暂停 / 继续', speed: '切换战斗速度', back: '返回 / 关闭', confirm: '确认 / 点击', zoomIn: '基地放大', zoomOut: '基地缩小' };
-M.loadSettings = function () { let s = null; try { s = JSON.parse(localStorage.getItem(SKEY)); } catch (e) {} s = s || {}; return { input: s.input || 'auto', keys: Object.assign({}, DEF_KEYS, s.keys || {}), pad: Object.assign({}, DEF_PAD, s.pad || {}), vol: s.vol == null ? 1 : s.vol }; };
+M.loadSettings = function () { let s = null; try { s = JSON.parse(localStorage.getItem(SKEY)); } catch (e) {} s = s || {}; const keys = Object.assign({}, DEF_KEYS, s.keys || {});
+  // W A S D always work like the arrows on the map (older saved settings only had the arrows)
+  ['up', 'down', 'right'].forEach(a => { keys[a] = (keys[a] || []).slice(); DEF_KEYS[a].forEach(c => { if (!keys[a].includes(c) && !['up', 'down', 'right'].some(o => o !== a && (keys[o] || []).includes(c))) keys[a].push(c); }); });
+  return { input: s.input || 'auto', keys, pad: Object.assign({}, DEF_PAD, s.pad || {}), vol: s.vol == null ? 1 : s.vol }; };
 M.saveSettings = function (s) { try { localStorage.setItem(SKEY, JSON.stringify(s)); } catch (e) {} };
 M.DEF_KEYS = DEF_KEYS; M.DEF_PAD = DEF_PAD;
 M.settings = M.loadSettings();
@@ -70,7 +73,7 @@ const R = (s) => ({ rich: M.rich(s) });
 G.tipFor = function (key) {
   const m = this.meta, run = this.run, b = this.battle, kq = (a) => '「' + M.keyOf(a) + '」';
   const T = {
-    'b-mode': () => ({ title: this.cfg && this.cfg.mode === 'hold' ? '坚守战' : '普通战', c: '#f2c14e', d: this.cfg && this.cfg.mode === 'hold' ? '撑过倒计时就赢。' : '消灭所有敌人就赢。' }),
+    'b-mode': () => { const cf = (b && b.cfg) || this.cfg || {}, hold = cf.mode === 'hold'; return { title: cf.type === 'boss' ? '首领战' : cf.type === 'elite' ? '精英战' : cf.type === 'extract' ? '撤离战' : hold ? '坚守战' : '普通战', c: '#f2c14e', d: hold ? '撑过倒计时就赢。' : cf.type === 'boss' ? '领袖和部队一起上，消灭所有敌人就赢。' : '消灭所有敌人就赢。' }; },
     'b-base': () => ({ title: '基础积分', c: '#f5ead4', d: '击杀获得，乘以倍率就是本场积分。' }),
     'b-mult': () => ({ title: '倍率', c: '#ffcc33', d: '击杀精英 +0.1，击杀首领 +0.3。' }),
     'b-score': () => ({ title: '积分', c: '#ffcc33', d: '胜利后存进钱包，在夜市花。' }),
@@ -240,7 +243,7 @@ G.worldMove = function (sx, sy) {
   if (this.walker && sx >= 1330 && sx <= 1890 && sy >= 30 && sy <= 280) {
     const map = this.run.map, X = 1330, Y = 30, Wd = 560, Ht = 250, COLW = 520, ROWH = 270, Y0 = 700, sxk = (Wd - 70) / (map.W - 500), syk = (Ht - 90) / (ROWH * 2.4);
     let best = null, bd = 18; map.nodes.forEach(n => { const cx = X + 35 + (n.x - 300) * sxk, cy = Y + 60 + (n.y - (Y0 - ROWH * 1.2)) * syk, d = Math.hypot(cx - sx, cy - sy); if (d < bd) { bd = d; best = n; } });
-    if (best) { const n = best, cur = this.walker.edge ? this.walker.edge.b : this.walker.node; this.tipData = { title: M.nodeLabel(n), c: !n.seen ? '#8d8496' : n.type === 'boss' || n.type === 'elite' ? '#ff6a5a' : n.type === 'extract' ? '#5fd0c0' : '#f2c14e', kind: (n.id === cur ? '你在这里 · ' : n.done ? '已经过 · ' : '') + '第 ' + (n.col + 1) + ' 站', d: n.seen ? M.nodeDesc(n) : '在视野之外。走近一些，或者提高视野（监听室、自由女神像）就能提前看清。' }; this.tipKey = null; return; }
+    if (best) { const n = best, cur = this.walker.edge ? this.walker.edge.b : this.walker.node; this.tipData = { title: M.nodeLabel(n), c: !n.seen ? '#8d8496' : n.type === 'boss' || n.type === 'elite' ? '#ff6a5a' : n.type === 'extract' ? '#5fd0c0' : '#f2c14e', kind: (n.id === cur ? '你在这里 · ' : n.done ? '已经过 · ' : '') + '第 ' + (n.col + 1) + ' 站', d: n.seen ? M.nodeDesc(n) : '在视野之外。' }; this.tipKey = null; return; }
     this.tipData = { title: '小地图', c: '#e8dcc4', d: '整张地图。', lines: [R('当前视野：前方 ' + (this.run.vision || 1) + ' 步')] }; return;
   }
   return oldWM.call(this, sx, sy);

@@ -86,7 +86,7 @@ const padHeld = () => { try { const P = M.settings.pad, gp = [...(navigator.getG
 G.miniPt = function (cx, cy) { const st = this.ui.stage(); if (!st) return { x: 960, y: 540 }; const r = st.getBoundingClientRect(), s = this.ui.scale(); return { x: (cx - r.left) / s, y: (cy - r.top) / s }; };
 G.miniDown = function (x, y, src) { const mg = this.mini; if (!mg || this.reel) return false; mg.mx = x; mg.my = y; if (mg.D.down) { mg.holding = src; mg.D.down.call(this, mg, x, y, src); this.bump(); return true; } return false; };
 G.miniUp = function (src) { const mg = this.mini; if (!mg || !mg.holding || (src && mg.holding !== src)) return; mg.holding = null; if (mg.D.up) mg.D.up.call(this, mg); this.bump(); };
-const KEYMAP = { Space: 'act', Enter: 'act', NumpadEnter: 'act', KeyQ: 'l0', KeyW: 'l1', KeyE: 'l2', ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', KeyA: 'left', KeyD: 'right', KeyS: 'down', Escape: 'back' };
+const KEYMAP = { Space: 'act', Enter: 'act', NumpadEnter: 'act', KeyQ: 'l0', KeyW: 'up', KeyE: 'l2', ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', KeyA: 'left', KeyD: 'right', KeyS: 'down', Escape: 'back' };
 const oldKey = G.handleKey;
 G.handleKey = function (ev) {
   const mg = this.mini; if (!mg || this.reel) return oldKey.call(this, ev);

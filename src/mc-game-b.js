@@ -16,7 +16,7 @@ Object.assign(G, {
     if (x.job) return { title: x.job.kind === 'dig' ? '挖掘中' : M.BUILDINGS[x.job.key].n + '（建造中）', c: '#ffd060', d: '还需 ' + x.job.days + ' 天。', lines: tl };
     if (x.dug) return { title: '空房间', c: '#e8dcc4', d: '可以建造。', lines: tl };
     if (M.canDig(m, p.c, p.r)) return { title: '岩层', c: '#f2c14e', d: '挖掘：' + M.digCost(m) + ' 物资，1 天。', lines: tl };
-    return { title: '岩层', c: '#8d8496', d: '先挖通旁边的房间。', lines: tl };
+    return { title: '岩层', c: '#8d8496', lines: tl };
   },
   bldTip(key, c, r) {
     const B = M.BUILDINGS[key], m = this.meta, lines = [{ t: M.QUALITY[B.q].n + ' · ' + M.STYLE[B.style] + ' · ' + M.CAT[B.cat], c: M.QUALITY[B.q].c }];

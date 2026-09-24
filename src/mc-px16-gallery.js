@@ -15,7 +15,7 @@ P16.gallery = function () {
   let page = 0, raf = 0, t0 = performance.now(), last = t0; const cols = 8, rows = 4, per = cols * rows, pages = Math.ceil(keys.length / per);
   const pools = {}, fake = {};
   const close = () => { cancelAnimationFrame(raf); cv.remove(); window.removeEventListener('keydown', key); };
-  const key = (e) => { if (e.code === 'ArrowRight') page = (page + 1) % pages; else if (e.code === 'ArrowLeft') page = (page + pages - 1) % pages; else if (e.code === 'Escape') close(); };
+  const key = (e) => { if (e.code === 'ArrowRight' || e.code === 'KeyD') page = (page + 1) % pages; else if (e.code === 'ArrowLeft' || e.code === 'KeyA') page = (page + pages - 1) % pages; else if (e.code === 'Escape') close(); };
   window.addEventListener('keydown', key); cv.addEventListener('contextmenu', (e) => { e.preventDefault(); close(); });
   cv.addEventListener('wheel', (e) => { page = (page + (e.deltaY > 0 ? 1 : pages - 1)) % pages; });
   cv.addEventListener('click', (e) => { const r = cv.getBoundingClientRect(), px = (e.clientX - r.left) / r.width; if (px > 0.85) page = (page + 1) % pages; else if (px < 0.15) page = (page + pages - 1) % pages; });

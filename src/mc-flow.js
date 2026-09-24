@@ -54,8 +54,29 @@ G.abandon = function () {
   if (this.prof) { this.prof.active = false; this.prof.carry = null; this.prof.pending = null; this.saveProfile && this.saveProfile(); }
   this.meta = M.resetMeta3(); this.meta.tutDone = tut; this.meta.baseTut = tut ? 99 : 0; this.save();
   this.startGame();
-  this.toast('重新开始了 · 第 1 天', '#ffe08a');
+  this.toast('重新开始了 · 第 1 天 · 序章奖励已送到', '#ffe08a');
 };
+
+// 序章的结算奖励 (user ruling 2026-09-24): every new game after the tutorial starts with what the tutorial paid out
+// (supplies, shards, orbs, the leader's experience, the blueprints it found), and the tavern the tutorial has you build
+// already stands next to the core. What the tutorial actually paid is kept in the profile; older profiles get the usual amount.
+const oWinT = G.runWin;
+G.runWin = function (kind) {
+  const tut = !!(this.run && this.run.region && this.run.region.tut), r = oWinT.apply(this, arguments);
+  try { const g = tut && this.endInfo && this.endInfo.gain; if (g && this.prof) { this.prof.tutGift = { sup: Math.max(0, g.msup || 0), sh: Math.max(0, g.msh || 0), orb: Math.max(0, g.morb || 0), exp: Math.max(0, g.exp || 0), bp: (g.bp || []).filter(k => k !== 'bbp:tavern') }; this.saveProfile(); } } catch (e) {}
+  return r;
+};
+M.tutGift = function (m, g) {
+  g = g || { sup: 100, sh: 0, orb: 0, exp: 100, bp: [M.dropBp()] };
+  m.supplies += g.sup || 0; m.shards += g.sh || 0; m.orbs += g.orb || 0;
+  (g.bp || []).forEach(k => { if (k) M.invAdd(m, k, 1); });
+  const h = m.heroes[0]; if (h && g.exp) { M.addExp(h, g.exp); h.hp = M.heroMaxHp(h, m); }
+  const x = M.cell(m, M.CORE.c - 1, M.CORE.r); if (x && !x.b) { x.dug = true; x.b = 'tavern'; x.job = null; if (x.tile === 'ruin') x.tile = null; }
+};
+const oNew = G.newGame;
+const oRestart = G.restart;
+if (oRestart) G.restart = function () { const r = oRestart.apply(this, arguments); if (this.meta && this.meta.tutDone) { M.tutGift(this.meta, this.prof && this.prof.tutGift); this.save(); } return r; };
+if (oNew) G.newGame = function () { const r = oNew.apply(this, arguments), m = this.meta; if (m && m.tutDone) { M.tutGift(m, this.prof && this.prof.tutGift); this.save(); } return r; };
 
 // the room's own explanation cards have nothing to point at while the room is off
 if (!M.META_ROOM && M.GUIDE) for (let i = M.GUIDE.length - 1; i >= 0; i--) if (M.GUIDE[i].cat === '房间') M.GUIDE.splice(i, 1);

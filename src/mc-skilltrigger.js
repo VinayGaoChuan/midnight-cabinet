@@ -3,7 +3,7 @@
 // Skills fire when they make sense, not on a timer. The army takes the field with every skill ready (a full bar);
 // a ready skill waits until its trigger holds — a healer waits for someone to get hurt, a whirl for enemies around it,
 // a volley for a cluster to hit — and the unit keeps fighting normally meanwhile. Enemies fill their bars as before
-// and use the same triggers. Leaders' personal skills follow the same idea (M.PS_TRIG).
+// and use the same triggers. Leaders' skills on the field follow the same idea (M.psReady).
 const M = window.MC, P = M.Battle3.prototype;
 const RS = 125, RM = 195, RL = 330;
 const dist = (a, b) => Math.hypot(a.x - b.x, (a.y - b.y) * 1.2);
@@ -26,10 +26,8 @@ const T = {
   costly: (hp, r) => ({ d: '有敌人逼近到 ' + r + ' 以内，且自己生命够扣（> ' + hp * 2 + '）', test: (b, e) => e.hp > hp * 2 && !!b.nearestFoe(e, r) }),
   any: () => ({ d: '场上有敌人', test: (b, e) => foesOf(b, e).length > 0 }),
 };
-// every castable skill: signature skills by key, trait skills by class (without Summon…Trait)
+// every castable skill: a unit's own mana trait, by class (without Summon…Trait)
 const TRIG = {
-  'sig:charge': T.leap(360), 'sig:whirl': T.near(170, 2), 'sig:volley': T.cluster(130, 2), 'sig:fireball': T.cluster(165, 2), 'sig:frost': T.cluster(175, 2),
-  'sig:chain': T.count(3), 'sig:holy': T.hurt(0.8), 'sig:gold': T.count(2), 'sig:maul': T.leap(320),
   ChainHeal: T.hurt(0.7), SkullStew: T.hurt(0.6), LifeExchange: T.hurtAndSelf(0.6, 0.5), SoulTransfer: T.hurtAndSelf(0.6, 0.5),
   ShellShock: T.cluster(RS, 2), IronHail: T.cluster(RS, 2), SwordRain: T.cluster(RS, 2), BladeStorm: T.cluster(RS, 2),
   LightningStrike: T.count(3), ForbiddenFruit: T.near(RM + 60, 3),
@@ -42,15 +40,12 @@ const TRIG = {
 const DEF = T.engage();
 M.SKILL_TRIG = TRIG;
 const H = M.TRAIT_H, GROWTH = new Set(['JuniorFisherman', 'EliteFisherman', 'SpiritOffering']);
-const castKey = (e) => { if (e.sig) return 'sig:' + e.sig; const t = e.traits.find(x => H[x.cls] && H[x.cls].full); return t ? t.cls.replace(/^Summon|Trait$/g, '') : null; };
+const castKey = (e) => { const t = e.traits.find(x => H[x.cls] && H[x.cls].full); return t ? t.cls.replace(/^Summon|Trait$/g, '') : null; };
 M.skillTrig = (e) => TRIG[castKey(e)] || DEF;
-// the same trigger by unit key (tooltips, docs): the signature or the first castable trait of the unit
+// the same trigger by unit key (tooltips, docs): the first castable trait of the unit
 M.unitTrigger = function (k) {
   const s = M.unitSkill && M.unitSkill(k); if (!s) return null;
-  if (s.sig) return TRIG['sig:' + s.sig] || DEF;
   const t = (M.DB[k].tr || []).find(x => (M.TDB[x] || {}).n === s.n), key = t && t.replace(/^Summon|Trait$/g, '');
-  // growth traits (渔夫、灵魂献祭) spend their bar on growing; in battle such units cast their vocation's signature skill
-  if (key && !(H[key] && H[key].full && !GROWTH.has(key))) { const sg = M.sigOf && M.sigOf(M.DB[k]); if (sg) return TRIG['sig:' + sg] || DEF; }
   return (key && TRIG[key]) || DEF;
 };
 
@@ -62,11 +57,7 @@ P.canSkill = function (e, ignoreTrigger) {
   e._trT = this.t; e._trV = !!M.skillTrig(e).test(this, e); return e._trV;
 };
 // ───────── leaders: personal skills wait for their moment too ─────────
-M.PS_TRIG = {
-  watchman: T.near(240, 1), widow: T.any(), nun: { d: '有友军生命低于 75%，或身边有 2 个以上敌人', test: (b, e) => T.hurt(0.75).test(b, e) || T.near(280, 2).test(b, e) },
-  butcherlord: T.near(220, 2), clockmaker: T.approach(400), cremator: T.near(280, 1),
-};
-M.psTrigOk = function (b, h, cls) { const t = M.PS_TRIG[cls]; return !t || !!t.test(b, h); };
+// leaders: on the field their skill fires only when it can hit — see M.psReady in mc-pskill.js
 })();
 
 ;

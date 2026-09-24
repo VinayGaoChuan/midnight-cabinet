@@ -10,7 +10,7 @@ M.tagIc = (kind, k) => { const t = TG[kind] && TG[kind](k); return t ? { img: M.
 const NIL = { img: '', tip: '', c: '#fff', n: '' };
 const tagFromKey = (key) => {
   const m = /^tag-(race|voc|style|cat|tile)-(.+)$/.exec(key || ''); if (!m) return null;
-  if (m[1] === 'tile') { const T = M.TILES[m[2]]; return T && { title: T.n, c: T.c, kind: '特殊地格', d: T.d, icon: 'l_' + m[2], ctx: 'bld' }; }
+  if (m[1] === 'tile') { const T = M.TILES[m[2]]; return T && { title: T.n, c: T.c, d: T.d, icon: 'l_' + m[2], ctx: 'bld' }; }
   const t = TG[m[1]](m[2]); return t && Object.assign(M.tagTip(t), { ctx: m[1] === 'style' || m[1] === 'cat' ? 'bld' : null });
 };
 M.tagFromKey = tagFromKey;
