@@ -1,0 +1,17 @@
+aspect: 1:1
+共用前缀（每张都带上）：
+Pixel art bust portrait of a dark-fantasy game character, head and shoulders, three-quarter view facing slightly right, dramatic warm rim light, deep shadows, rich saturated accents, crisp dark outline, limited palette, no anti-aliasing, detailed but readable at 64x64. Plain flat pure white background, no text, no frame, no border.
+
+nun 驱魔修女（技能「圣咏」全队回复）:
+a young exorcist nun in a black habit with a white wimple, pale face, calm glowing blue eyes, holding up a silver censer that leaks pale blue holy smoke, a small rosary of bone beads, faint halo of candle light behind her head.
+
+butcherlord 屠宰场主（技能「血祭」）:
+a massive bald slaughterhouse lord with a scarred face and thick grey stubble, bloodstained leather apron over a red shirt, a heavy cleaver resting on his shoulder, iron hooks and chains on his belt, cruel grin, red eyes glinting.
+
+clockmaker 钟表匠（技能「倒带」）:
+an elderly clockmaker with round brass magnifying goggles pushed up on his forehead, white wild hair, a waistcoat full of tiny gears and a hanging pocket watch, one eye glowing teal through a monocle, clockwork mechanical left hand holding a spinning gear.
+
+cremator 焚尸人（技能「火葬」）:
+a hooded cremator in a soot-black cloak and a leather plague-style half mask, glowing orange ember eyes, holding a long iron poker whose tip is white-hot, sparks and ash drifting around, burn scars on the exposed chin.
+
+生成后放进 art/tmp/style/<id>_bust/，用 tools/pj-bust（K=18 色、64×64、墨色外描边）像素化到 art/busts/<id>.png。

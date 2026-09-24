@@ -127,7 +127,7 @@ G.view = function () {
     v.w.roster = run.roster.filter(u => !this.hideU.has(u.uid)).map(u => { const d = DB[u.type]; return { img: M.spriteURL(u.type, 4), q: d.q, bg: qBg(d.q), glow: qGlow(d.q), stars: u.lv > 1 ? 'Lv' + u.lv : '', tipOn: this.tipFn(() => M.unitTip(u.type, u, run)), border: this.sel === u.uid ? '#ffffff' : Q[d.q].c, onClick: () => { if (this.screen === 'shop') { this.sel = this.sel === u.uid ? null : u.uid; M.Sfx.click(); this.bump(); } } }; });
     v.w.items = run.items.map((k, i) => ({ has: !!k && !this.hideI.has(i), img: k ? M.spriteURL(M.ITEMS[k].icon, 5) : '', border: k ? Q[run.itemQ[i] || 0].c : '#3a3040', bg: k ? qBg(run.itemQ[i] || 0) : '#100c14', glow: k ? qGlow(run.itemQ[i] || 0) : 'none', tipOn: this.tipFn(k ? this.itemTip(k, run.itemQ[i]) : { title: '空道具栏', d: '宝箱、商店、事件都能获得支援道具。' }) }));
     v.w.rosterN = run.roster.length + ' / ' + M.ROSTER_CAP;
-    v.w.banners = Object.keys(run.legion).map(k => { const L = M.LEGION[k]; return { n: L.name.replace('战旗', ''), c: Q[L.q].c, glow: qGlow(L.q), tipOn: this.tipFn({ title: L.name, c: Q[L.q].c, kind: Q[L.q].n + ' · 战旗', d: L.desc }) }; });
+    v.w.banners = Object.keys(run.legion).map(k => { const L = M.LEGION[k]; return { n: L.name.replace('战旗', ''), tipOn: this.tipFn({ title: L.name, c: Q[L.q].c, kind: Q[L.q].n + ' · 战旗', d: L.desc }) }; });
     v.w.hasBanners = v.w.banners.length > 0; v.w.banSc = this.ps('banners');
   }
   if (s === 'shop' && run && run.shop && run.shop.units) {
