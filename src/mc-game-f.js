@@ -21,7 +21,7 @@ G.runP = function (node) { return Math.max(4, M.budgetAt(M.levelAt(this.run, { c
 G.beginBattle = function (n) {
   const run = this.run, cfg = M.makeBattleCfg(run, n); this.cfg = cfg; this.node = n;
   this.battle = new M.Battle3(run, cfg); this.settle = null; this.paused = false; this.lastCut = null; this.go('battle');
-  const nm = (cfg.mode === 'hold' ? '坚守战' : '普通战') + (n.type === 'elite' ? ' · 精英' : n.type === 'boss' ? (n.final ? ' · 最终首领' : ' · 守关首领') : n.type === 'extract' ? ' · 撤离' : '');
+  const nm = n.type === 'boss' ? (n.final ? '最终首领战' : '首领战') : n.type === 'elite' ? '精英战' : n.type === 'extract' ? '撤离战' : cfg.mode === 'hold' ? '坚守战' : '普通战';
   // the announcement stays while both sides walk in, and leaves once everyone stands in place; the fight waits for it
   const b = this.battle;
   this.banner({ kind: 'win', text: nm, col: n.type === 'boss' || n.type === 'elite' ? '#ff6a5a' : n.type === 'extract' ? '#5fd0c0' : '#ffd970', life: 1.5, y: 520, sub: cfg.mode === 'hold' ? '坚守 ' + cfg.dur + ' 秒' : '全灭敌人', hold: () => this.battle === b && !b.over && b.t < b.entryEnd - 0.01 });
@@ -137,7 +137,7 @@ G.view = function () {
     v.s = { wallet: v.w.wallet, walSc: v.w.walSc, refreshText: '刷新 · ' + M.refreshCost(run), refreshBorder: run.wallet >= M.refreshCost(run) ? '#e8dcc4' : '#3a3040' };
     v.s.units = run.shop.units.map((c, i) => { const d = DB[c.type]; return Object.assign(card('units', c, i, i), { img: M.spriteURL(c.type, 10), n: d.n, race: d.race, rc: M.RACES[d.race] || '#fff', voc: d.voc, vc: M.VOCS[d.voc] || '#aaa', trait: M.traitsOf(c.type).map(T => T.n).join(' · ') || '无特性', pw: '战力 ' + M.unitPower(c.type), tipOn: this.tipFn(() => { const t = M.unitTip(c.type, null, run); t.kind = Q[c.q].n + ' · 价格 ' + c.cost + ' · 点击购买'; return t; }) }); });
     v.s.banners = run.shop.banners.map((c, i) => { const L = M.LEGION[c.key]; return Object.assign(card('banners', c, i, 6 + i), { n: L.name, emb: L.name.slice(0, 1), desc: L.desc, tipOn: this.tipFn({ title: L.name, c: Q[c.q].c, kind: Q[c.q].n + ' · 战旗 · 价格 ' + c.cost, d: L.desc + '。本局一直生效。', lines: [{ rich: M.rich(L.desc) }] }) }); });
-    v.s.items = run.shop.items.map((c, i) => Object.assign(card('items', c, i, 8 + i), { img: M.spriteURL(M.ITEMS[c.key].icon, 8), n: M.ITEMS[c.key].name, tipOn: this.tipFn(() => { const t = this.itemTip(c.key, c.q); t.kind = '支援道具 · 最低 ' + Q[c.q].n + ' · 价格 ' + c.cost; return t; }) }));
+    v.s.items = run.shop.items.map((c, i) => Object.assign(card('items', c, i, 8 + i), { img: M.spriteURL(M.ITEMS[c.key].icon, 8), n: M.ITEMS[c.key].name, tipOn: this.tipFn(() => this.itemTip(c.key, c.q)) }));
     v.s.noBanner = !v.s.banners.length;
     const u = run.roster.find(x => x.uid === this.sel); v.s.selOn = !!u; v.s.sell = u ? '卖出 ' + DB[u.type].n + ' +' + M.fmt(M.sellValue(run, u)) : '';
   }

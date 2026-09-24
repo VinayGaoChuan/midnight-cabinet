@@ -38,7 +38,7 @@ const noPw = (B) => (B.pw < 0 ? { pw: -B.pw } : {});
 const DEF = {
   geo:     { n: '地热', hue: '#ff7a3a', any: { pw: 3 }, anyD: '这个房间 +3 电力', fitN: '电力', fit: cat('power'), fitFx: () => ({ pw: 5 }), fitD: '再 +5 电力' },
   fossil:  { n: '化石层', hue: '#d8c8a0', any: { supplyDaily: 25 }, anyD: '基地每天 +25 物资', fitN: '后勤', fit: (B) => B.cat === 'store' && !!B.fx, fitFx: () => ({ prodMul: 1 }), fitD: '这个房间自己的效果 ×2' },
-  clay:    { n: '陶土层', hue: '#c8845a', any: { portalHp: 0.3 }, anyD: '传送门耐久 +30%', fitN: '防守', fit: cat('defense'), fitFx: () => ({ defArmy: 3 }), fitD: '守城时 3 名陶土守卫加入战斗' },
+  clay:    { n: '陶土层', hue: '#c8845a', any: { portalHp: 0.3 }, anyD: '传送门耐久 +30%', fitN: '防御', fit: cat('defense'), fitFx: () => ({ defArmy: 3 }), fitD: '守城时 3 名陶土守卫加入战斗' },
   ruin:    { n: '古遗迹', hue: '#e8c070', any: { halfDays: 1, refund: 0.3 }, anyD: '建造时间减半，建成返还 30% 物资', fitN: '奇观', fit: (B) => B.q > 0, fitFx: () => ({ refund: 0.5 }), fitD: '返还提高到 80%' },
   spring:  { n: '地下泉', hue: '#6fd0ff', any: { healAll: 0.15 }, anyD: '所有领袖每天回复 15% 生命（不需要医院）', fitN: '医疗 / 水域', fit: (B) => B.cat === 'med' || B.style === 'water', fitFx: (B) => (B.weapon ? { heal: 0.3, range: 1 } : { heal: 0.3 }), fitD: '医院回复 +30%；水域武器射程 +1' },
   mole:    { n: '松软土层', hue: '#b89a70', any: { digCost: -0.4 }, anyD: '挖掘费用 -40%', fitN: '特殊', fit: cat('misc'), fitFx: () => ({ buildDays: -1 }), fitD: '所有建造少花 1 天' },
@@ -57,7 +57,7 @@ const DEF = {
   hourglass: { n: '时之沙', hue: '#ffe08a', any: { skillNodeCd: -1 }, anyD: '所有领袖军团技能冷却 -1 个节点', fitN: '运势', fit: cat('luck'), fitFx: () => ({ startItemQ: 1 }), fitD: '出征开局多带 1 个「史诗」道具' },
   dream:   { n: '梦境裂隙', hue: '#ff3aa0', any: { bpLuck: 0.4 }, anyD: '图纸掉率 +40%', fitN: '锻造', fit: (B) => !!B.forge, fitFx: () => ({ forgeTwice: 0.4 }), fitD: '打造时 40% 概率多得一件' },
   ygg:     { n: '世界树根', hue: '#7aff9a', any: { supplyDaily: 15, orbDaily: 15 }, anyD: '基地每天 +15 物资、+15 经验球', fitN: '后勤 / 自然', fit: (B) => (B.cat === 'store' || B.style === 'nature') && !!B.fx, fitFx: () => ({ prodMul: 1 }), fitD: '这个房间自己的效果 ×2' },
-  crown:   { n: '王座遗骸', hue: '#ffcc33', any: { relicSlot: 1 }, anyD: '每名领袖出征多带 1 件宝物', fitN: '防守', fit: cat('defense'), fitFx: (B) => (B.weapon ? { dmg: 0.4, xSplash: 130, xSlow: 1 } : { defArmy: 3 }), fitD: '武器：伤害 +40%，命中溅射并减速；其它：再多 3 名守卫' },
+  crown:   { n: '王座遗骸', hue: '#ffcc33', any: { relicSlot: 1 }, anyD: '每名领袖出征多带 1 件宝物', fitN: '防御', fit: cat('defense'), fitFx: (B) => (B.weapon ? { dmg: 0.4, xSplash: 130, xSlow: 1 } : { defArmy: 3 }), fitD: '武器：伤害 +40%，命中溅射并减速；其它：再多 3 名守卫' },
 };
 // room-local keys; everything else is a base-wide modifier summed over the whole base
 const LOCAL = ['pw', 'noPw', 'halfDays', 'refund', 'forgeLuck', 'forgeQUp', 'forgeTwice', 'dmg', 'range', 'wcd', 'xChain', 'xSlow', 'xSplash', 'prodMul'];

@@ -14,8 +14,8 @@ const rsegs = (arr) => (arr || []).map(s => ({ t: s.t || '', c: s.c || '#e8dcc4'
 try { const st = document.createElement('style'); st.textContent = '[data-blink]{animation:mcBlink 1.2s ease-in-out infinite}@keyframes mcBlink{0%,100%{opacity:1}50%{opacity:.28}}'; document.head.appendChild(st); } catch (e) {}
 
 // words that name a room tag → the tag's icon (terrain "契合" targets)
-// (terrain says 防守 / 武器 for defence rooms and 奇观 for landmarks)
-const ALIAS = { 防守: ['cat', 'defense'], 武器: ['cat', 'defense'] };
+// (terrain says 武器 for defence rooms and 奇观 for landmarks; 防御 is the tag's own word)
+const ALIAS = { 武器: ['cat', 'defense'] };
 const tagByName = (n) => {
   if (n === '奇观') return { img: IC('u_star'), c: '#ffcc33' };
   if (ALIAS[n]) return M.tagIc(ALIAS[n][0], ALIAS[n][1]);
@@ -67,7 +67,9 @@ G.view = function () {
     T.hasAlert = !!tip.alert; T.alertTxt = tip.alert ? tip.alert.t : ''; T.alertC = tip.alert ? tip.alert.c || '#f2c14e' : '#f2c14e';
     const more = !!(tip.kind || tip.d || (tip.lines && tip.lines.length) || tip.briefDet);
     if (cmp && !det) { if (tip.briefTitle) T.title = tip.briefTitle; T.hasKind = false; T.hasD = false; T.lines = []; }
-    T.hint = cmp && more && !det; T.hintTxt = hintTxt;
+    // items: the sentence stays, the per-quality lines wait for Ctrl
+    const lnCtrl = !!tip.ctrlLines && !!(tip.lines && tip.lines.length); if (lnCtrl && !det) T.lines = [];
+    T.hint = ((cmp && more) || lnCtrl) && !det; T.hintTxt = hintTxt;
   }
   // shop cards (see mc-awaken.js for the rest)
   if (v.s && this.run && this.run.shop) (v.s.units || []).forEach((su, i) => { const c = this.run.shop.units[i], sk = c && M.unitSkill && M.unitSkill(c.type); su.pwN = String(su.pw || '').replace(/[^\d.,万k]/g, '') || su.pw; su.hasSk = !!sk; });

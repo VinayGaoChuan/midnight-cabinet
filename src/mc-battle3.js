@@ -143,18 +143,19 @@ class B3 extends M.Battle2 {
     this.openEnd = this.entryEnd; this.fightT0 = this.openEnd;
     later.forEach(s => { s.spawn = s.spawn - 1.6 + this.fightT0; s.x = 1250 + Math.random() * 500; });
     L.sort((a, b) => a.spawn - b.spawn);
-    if (!run.roster.length) this.later(this.openEnd, () => this.heroEnter());
+    // no army, or a boss fight (user ruling 2026-09-24): the leader takes the field with the army from the start
+    if (!run.roster.length || cfg.type === 'boss') this.later(this.openEnd, () => this.heroEnter());
   }
   get score() { return Math.round(this.base * this.mult); }
   mk(o) { const e = Object.assign({ id: this.nid++, alive: true, t: Math.random() * 0.4, flash: 0, stun: 0, charm: 0, shield: 0, kills: 0, readyAt: 0, mana: 0, def: 0, dodge: 0, asB: 0, asDyn: 0, atkDyn: 0, defDyn: 0, combo: 0, buffs: [], debuf: {}, st: {}, traits: [], slowAS: 0, slowT: 0, au: {}, sz: 1, tags: [], star: 1 }, o); e.maxHp = e.maxHp || e.hp; this.ents.push(e); return e; }
   unitStats(key, side, x, y, o = {}) {
-    const d = DB[key], u = o.unit, L = side === 'A' ? M.legionMods(this.run, d) : { hp: 0, atk: 0, as: 0, mana: 0, shield: 0 }, md = side === 'A' ? this.mods : {};
+    const d = DB[key], u = o.unit, L = side === 'A' ? M.legionMods(this.run, d) : { hp: 0, atk: 0, as: 0, mana: 0, shield: 0 }, md = side === 'A' ? this.mods : {}, V = side === 'A' ? M.vocMods(md, d) : M.vocMods(null);
     const ek = side === 'E' ? this.ek * (o.elite ? 1.15 : 1) : 1;
-    const hp = (d.hp + (u ? u.bHp : 0)) * (1 + L.hp + (md.unitHp || 0)) * ek * (o.hpMul || 1), atk = (d.atk + (u ? u.bAtk : 0)) * (1 + L.atk + (md.unitAtk || 0) + (this.run.runBuff.unitAtk || 0) * (side === 'A' ? 1 : 0)) * ek * (o.atkMul || 1);
+    const hp = (d.hp + (u ? u.bHp : 0)) * (1 + L.hp + V.hp + (md.unitHp || 0)) * ek * (o.hpMul || 1), atk = (d.atk + (u ? u.bAtk : 0)) * (1 + L.atk + V.atk + (md.unitAtk || 0) + (this.run.runBuff.unitAtk || 0) * (side === 'A' ? 1 : 0)) * ek * (o.atkMul || 1);
     const boss = !!o.boss || d.g === '不朽';
     const traits = (d.tr || []).filter(t => TDB[t]).map(t => { const T = TDB[t]; return { key: t, n: T.n, d: T.d, v: T.v, cls: T.cls.replace(/^Summon|Trait$/g, '') }; });
     const e = this.mk({ side, key, d, kind: key, hd: { key, race: d.race, voc: d.voc, q: d.q }, sz: (QS[d.q] || 1) * (boss ? 1.45 : o.elite ? 1.15 : 1) * (o.summon ? 0.9 : 1), x, y, hp, maxHp: hp, atk, iv: d.as ? 100 / d.as : 99, range: d.ranged === 1 ? d.rad * 0.46 : 48 + Math.max(0, d.rad - 240) * 0.12, spd: (d.spd || 280) * 0.32, ranged: d.ranged === 1, noAtk: d.ranged === 2 || !d.atk, traits, unit: u, uid: u ? u.uid : null, summon: !!o.summon, life: o.life, boss, elite: !!o.elite, base: side === 'E' ? Math.round((d.cost || 10) * (o.elite ? 1.3 : 1)) : 0, mult: side === 'E' ? (boss ? 0.3 : o.elite ? 0.1 : 0) : 0 });
-    e.asB += L.as; e.manaMul = 1 + L.mana; e.hasMana = traits.some(t => /法力/.test(t.d));
+    e.asB += L.as + V.as; e.manaMul = 1 + L.mana + V.mana; e.hasMana = traits.some(t => /法力/.test(t.d));
     e.pw = M.unitPower(key, u);
     if (L.shield) e.shield = e.maxHp * L.shield;
     if (md.shield) e.shield += e.maxHp * md.shield;
@@ -336,6 +337,7 @@ class B3 extends M.Battle2 {
       const km = M.legionSum(this.run, 'killMult'); if (km && this.kills % km === 0) m += 0.1;
       if (m) this.addMult(Math.round(m * 10) / 10, e.x, e.y - hgt - 50);
       if (e.boss) { this.shake = 30; this.flash = 0.6; this.flashCol = '#ffffff'; this.slow = 0.8; Sfx.impact(); } else if (e.elite) { this.shake = Math.max(this.shake, 14); this.slow = Math.max(this.slow || 0, 0.25); }
+      if (src && src.side === 'A' && (e.elite || e.boss) && this.mods.eliteHeal && this.hero.alive) this.heal(this.hero, this.hero.maxHp * this.mods.eliteHeal);
       if (src && src.side === 'A' && src.alive) { src.kills++; if (src.unit) src.unit.kills = (src.unit.kills || 0) + 1; this.call(src, 'kill', e); if (src.isHero && this.mods.killHeal) this.heal(src, src.maxHp * this.mods.killHeal); }
       Sfx.kill();
     } else if (e.isHero) { this.float(e.x, e.y - 120, '领袖倒下了', '#d0453c', 56); this.shake = 30; Sfx.die(); }

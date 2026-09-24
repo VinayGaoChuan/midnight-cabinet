@@ -4,8 +4,8 @@
 const M = window.MC, G = M.Game.prototype, S = M.Sfx;
 const now = () => performance.now();
 const cl = (v, a, b) => Math.max(a, Math.min(b, v));
-const TAL_IC = { heroAtk: 't_sword', unitAtk: 't_command', crit: 't_crit', skillCd: 't_hourglass', rage: 't_rage', fire: 't_flame', beastAs: 't_claw', eliteHeal: 't_heal',
-  heroHp: 't_heart', unitHp: 't_shieldHeart', postHeal: 't_plus', shortRed: 't_coinShield', bank: 't_chest', hospital: 't_cross', shield: 't_shield', hold: 't_hourglass',
+const TAL_IC = { heroAtk: 't_sword', unitAtk: 't_command', crit: 't_crit', skillCd: 't_hourglass', rage: 't_rage', rngAtk: 'v_archer', warAs: 'v_warrior', magMana: 'v_mage', vanHp: 'v_vanguard', priHp: 'v_priest', eliteHeal: 't_heal',
+  heroHp: 't_heart', unitHp: 't_shieldHeart', postHeal: 't_plus', bank: 't_chest', hospital: 't_cross', shield: 't_shield', hold: 't_hourglass',
   startMult: 't_mult', shop: 't_coin', tier: 't_dice', deathShards: 't_shard', deathOrbs: 't_orb', chest: 't_chest', eventLuck: 't_clover', supplies: 't_sack',
   baseScore: 't_coin', killHeal: 't_heal', campHalf: 't_flame', exp: 't_orb', vision: 't_eye' };
 M.TAL_IC = TAL_IC;

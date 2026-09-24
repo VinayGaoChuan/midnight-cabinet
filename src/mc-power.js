@@ -12,9 +12,9 @@ M.powerOf = (s) => Math.round(sq(Math.max(0, s.hp) * Math.max(0, s.dps)));
 // our side: every unit as the battle will build it, and the leader with the life it has now
 M.sideA = function (run) {
   let hp = 0, dps = 0; const md = run.mods || {}, rb = run.runBuff || {};
-  (run.roster || []).forEach(u => { const d = DB[u.type]; if (!d) return; const L = M.legionMods(run, d);
-    hp += (d.hp + (u.bHp || 0)) * (1 + L.hp + (md.unitHp || 0)) * (1 + (L.shield || 0) + (md.shield || 0));
-    dps += (d.atk + (u.bAtk || 0)) * (1 + L.atk + (md.unitAtk || 0) + (rb.unitAtk || 0)) * (d.as || 100) / 100 * (1 + (L.as || 0)); });
+  (run.roster || []).forEach(u => { const d = DB[u.type]; if (!d) return; const L = M.legionMods(run, d), V = M.vocMods(md, d);
+    hp += (d.hp + (u.bHp || 0)) * (1 + L.hp + V.hp + (md.unitHp || 0)) * (1 + (L.shield || 0) + (md.shield || 0));
+    dps += (d.atk + (u.bAtk || 0)) * (1 + L.atk + V.atk + (md.unitAtk || 0) + (rb.unitAtk || 0)) * (d.as || 100) / 100 * (1 + (L.as || 0) + V.as); });
   const h = run.hero; if (h && M.HEROES[h.cls]) { hp += Math.max(1, h.hp); dps += M.heroAtk(h, run.M) * (1 + (rb.heroAtk || 0)) / (M.HEROES[h.cls].cd || 1); }
   return { hp, dps };
 };

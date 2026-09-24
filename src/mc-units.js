@@ -75,6 +75,9 @@ M.legionMods = function (run, d) {
   Object.keys(run.legion || {}).forEach(k => { const L = M.LEGION[k]; if (!L) return; const m = L.m; if (m.voc && m.voc !== d.voc) return; ['hp', 'atk', 'as', 'mana', 'shield'].forEach(x => { if (m[x]) o[x] += m[x]; }); });
   return o;
 };
+// leader talents aimed at one vocation: rngAtk / warAs / magMana / vanHp / priHp …
+const VK = { 先锋: 'van', 战士: 'war', 射手: 'rng', 法师: 'mag', 祭司: 'pri', 商人: 'mer' };
+M.vocMods = function (md, d) { const k = VK[d && d.voc]; if (!k || !md) return { hp: 0, atk: 0, as: 0, mana: 0 }; return { hp: md[k + 'Hp'] || 0, atk: md[k + 'Atk'] || 0, as: md[k + 'As'] || 0, mana: md[k + 'Mana'] || 0 }; };
 M.legionSum = (run, key) => Object.keys(run.legion || {}).reduce((a, k) => a + ((M.LEGION[k] && M.LEGION[k].m[key]) || 0), 0);
 // ───────── shop ─────────
 M.shopQW = function (run) { const L = Math.max(0, run.lastL || 0); return [Math.max(8, 70 - L * 9), 26 + L * 2, 6 + L * 3.2, Math.max(0, -3 + L * 1.6)]; };

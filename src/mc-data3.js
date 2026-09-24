@@ -9,7 +9,7 @@ TIERS.splice(0, TIERS.length, ...QUALITY.map(q => ({ n: q.n, c: q.c })));
 const RARITY = [ { n:'普通', c:QUALITY[0].c, w:55, tiers:3, stat:1 }, { n:'稀有', c:QUALITY[1].c, w:30, tiers:3, stat:1.08 }, { n:'史诗', c:QUALITY[2].c, w:12, tiers:4, stat:1.18 }, { n:'传说', c:QUALITY[3].c, w:3, tiers:4, stat:1.3 } ];
 Object.assign(STATS, {
   supplies:{ d:'获得物资 +{v}%', b:0.1, pct:1 }, exp:{ d:'获得经验 +{v}%', b:0.1, pct:1 }, eventLuck:{ d:'事件好结果 +{v}%', b:0.05, pct:1 }, chest:{ d:'宝箱积分 +{v}%', b:0.15, pct:1 },
-  killHeal:{ d:'领袖击杀回复 {v}% 生命', b:0.02, pct:1 }, shortRed:{ d:'积分不足伤害 -{v}%', b:0.15, pct:1 },
+  killHeal:{ d:'领袖击杀回复 {v}% 生命', b:0.02, pct:1 },
 });
 
 // ───────── sprites ─────────
@@ -66,7 +66,7 @@ const RELICS = {
   ashCrown:{ n:'灰烬王冠', icon:'r_crown', d:'前一个戴它的人烧成了灰。', lines:[{k:'heroHp',v:0.12},{k:'heroAtk',v:0.1},{k:'supplies',v:0.2},{k:'startMult',v:0.5}] },
   angelHeart:{ n:'天使心脏', icon:'r_heart', d:'每隔一会儿，它会跳一下。', lines:[{k:'heroHp',v:0.18},{k:'postHeal',v:0.04},{k:'heroHp',v:0.25},{k:'postHeal',v:0.08}] },
   gullFeather:{ n:'信天翁之羽', icon:'r_feather', d:'风会替你指路。', lines:[{k:'eventLuck',v:0.1},{k:'supplies',v:0.15},{k:'chest',v:0.3},{k:'eventLuck',v:0.2}] },
-  saintSkull:{ n:'圣徒颅骨', icon:'r_skull', d:'它会替你挡下一次。', lines:[{k:'shield',v:0.1},{k:'shortRed',v:0.2},{k:'unitHp',v:0.15},{k:'shortRed',v:0.4}] },
+  saintSkull:{ n:'圣徒颅骨', icon:'r_skull', d:'它会替你挡下一次。', lines:[{k:'shield',v:0.1},{k:'heroHp',v:0.15},{k:'unitHp',v:0.15},{k:'shield',v:0.15}] },
   jesterMask:{ n:'弄臣面具', icon:'r_mask', d:'笑得越久，越难摘下。', lines:[{k:'baseScore',v:0.1},{k:'tier',v:0.05},{k:'baseScore',v:0.15},{k:'crit',v:0.15}] },
   vesperBell:{ n:'晚祷之钟', icon:'r_bell', d:'钟声一响，影子会停下。', lines:[{k:'skillCd',v:-0.1},{k:'unitHp',v:0.06},{k:'skillCd',v:-0.15},{k:'unitAtk',v:0.2}] },
   ghostLantern:{ n:'引魂灯', icon:'r_lantern', d:'它照亮的路，只有死人走过。', lines:[{k:'supplies',v:0.15},{k:'exp',v:0.1},{k:'chest',v:0.25},{k:'supplies',v:0.4}] },
@@ -89,7 +89,7 @@ const BUILDINGS = {
   pool:{ n:'净水池', q:0, cat:'med', style:'water', pw:-1, cost:80, days:1, fx:{ heal:0.1 }, d:'医院回复额外 +10%。' },
   lookout:{ n:'监听室', q:0, cat:'misc', style:'scifi', pw:-1, cost:90, days:1, fx:{ tower:1 }, d:'出征时，所有节点的类型一开始就可见。' },
   vault:{ n:'保险库', q:0, cat:'misc', style:'steam', pw:-1, cost:110, days:2, fx:{ bank:1 }, d:'领袖死亡时，第一件宝物不会丢失。' },
-  ballista:{ n:'弩炮室', q:0, cat:'defense', style:'medieval', pw:-1, cost:90, days:1, weapon:{ range:2, dmg:30, cd:1.1, kind:'bolt' }, d:'防守时向地面射击。' },
+  ballista:{ n:'弩炮室', q:0, cat:'defense', style:'medieval', pw:-1, cost:90, days:1, weapon:{ range:2, dmg:30, cd:1.1, kind:'bolt' }, d:'守城时向地面射击。' },
   cannon:{ n:'蒸汽加农炮', q:0, cat:'defense', style:'steam', pw:-2, cost:140, days:2, weapon:{ range:3, dmg:60, cd:2.2, kind:'shell', splash:110 }, d:'溅射伤害。' },
   tesla:{ n:'特斯拉线圈', q:0, cat:'defense', style:'scifi', pw:-3, cost:160, days:2, weapon:{ range:2, dmg:26, cd:0.9, kind:'chain', chain:3 }, d:'电弧会在敌人之间跳跃。' },
   spire:{ n:'奥术尖塔', q:0, cat:'defense', style:'magic', pw:-2, cost:150, days:2, weapon:{ range:3, dmg:22, cd:1.2, kind:'arcane', slow:0.5 }, d:'命中的敌人减速 50%。' },
@@ -105,9 +105,9 @@ const BUILDINGS = {
   artemis:{ n:'阿尔忒弥斯神庙', q:1, cat:'store', style:'nature', pw:-1, cost:220, days:3, fx:{ supplyDaily:30 }, d:'每天产出 30 物资。' },
   library:{ n:'亚历山大图书馆', q:2, cat:'train', style:'magic', pw:-2, cost:300, days:4, train:{}, fx:{ orbMul:1, newHeroLv:2 }, d:'经验球效率 +100%，新领袖从 3 级开始。' },
   colossus:{ n:'罗德岛巨像', q:2, cat:'defense', style:'water', pw:-3, cost:340, days:4, weapon:{ range:5, dmg:90, cd:2.4, kind:'colossus', splash:140 }, d:'巨像会砸向地面。' },
-  terracotta:{ n:'兵马俑', q:3, cat:'defense', style:'fantasy', pw:-2, cost:420, days:5, fx:{ defArmy:4 }, d:'防守战时，4 名陶俑士兵加入战斗。' },
+  terracotta:{ n:'兵马俑', q:3, cat:'defense', style:'fantasy', pw:-2, cost:420, days:5, fx:{ defArmy:4 }, d:'守城时，4 名陶俑士兵加入战斗。' },
   zeus:{ n:'奥林匹亚宙斯神像', q:2, cat:'defense', style:'fantasy', pw:-3, cost:360, days:4, weapon:{ range:4, dmg:70, cd:1.8, kind:'zeus', chain:4 }, d:'召唤落雷，连锁 4 个敌人。' },
-  kotoku:{ n:'高德院', q:1, cat:'defense', style:'fantasy', pw:-1, cost:200, days:3, fx:{ defArmy:2 }, d:'防守战时，2 名武僧加入战斗。' },
+  kotoku:{ n:'高德院', q:1, cat:'defense', style:'fantasy', pw:-1, cost:200, days:3, fx:{ defArmy:2 }, d:'守城时，2 名武僧加入战斗。' },
   hagia:{ n:'圣索菲亚大教堂', q:2, cat:'luck', style:'fantasy', pw:-2, cost:300, days:4, fx:{ startItemQ:1 }, d:'出征开局获得 1 个支援道具，至少为「史诗」。' },
   forbidden:{ n:'紫禁城', q:3, cat:'misc', style:'medieval', pw:-2, cost:440, days:5, fx:{ relicSlot:1 }, d:'每名领袖出征可多带 1 件宝物。' },
   taj:{ n:'泰姬陵', q:2, cat:'misc', style:'fantasy', pw:-1, cost:280, days:4, fx:{ deathShards:1 }, d:'领袖死亡时，灵魂碎片 +100%。' },

@@ -132,7 +132,7 @@ M.TAG.style = (k) => { const t = oStyle(k); if (t) t.d = '建筑风格：地格�
 
 // ───────── 玩法说明：the loop in four steps, then every card by topic ─────────
 const LOOP = [
-  { icon: 'u_pick', t: '基地', d: '在地下挖岩层、盖房间：发电、打造、招募、训练、防守。' },
+  { icon: 'u_pick', t: '基地', d: '在地下挖岩层、盖房间：发电、打造、招募、训练、防御。' },
   { icon: 'g_gate', t: '出征', d: '穿过传送门进入异世界，一站站往前走：战斗、夜市、奇遇。' },
   { icon: 'g_pack', t: '带回', d: '撤离或打败首领，把物资、经验、图纸带回基地；领袖阵亡就全丢。' },
   { icon: 't_shield', t: '守城', d: '每 5 天一次袭击。传送门被打破，或者核心归零，这一局结束。' },
