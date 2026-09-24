@@ -26,10 +26,8 @@ const T = {
   costly: (hp, r) => ({ d: '有敌人逼近到 ' + r + ' 以内，且自己生命够扣（> ' + hp * 2 + '）', test: (b, e) => e.hp > hp * 2 && !!b.nearestFoe(e, r) }),
   any: () => ({ d: '场上有敌人', test: (b, e) => foesOf(b, e).length > 0 }),
 };
-// every castable skill: signature skills by key, trait skills by class (without Summon…Trait)
+// every castable skill: a unit's own mana trait, by class (without Summon…Trait)
 const TRIG = {
-  'sig:charge': T.leap(360), 'sig:whirl': T.near(170, 2), 'sig:volley': T.cluster(130, 2), 'sig:fireball': T.cluster(165, 2), 'sig:frost': T.cluster(175, 2),
-  'sig:chain': T.count(3), 'sig:holy': T.hurt(0.8), 'sig:gold': T.count(2), 'sig:maul': T.leap(320),
   ChainHeal: T.hurt(0.7), SkullStew: T.hurt(0.6), LifeExchange: T.hurtAndSelf(0.6, 0.5), SoulTransfer: T.hurtAndSelf(0.6, 0.5),
   ShellShock: T.cluster(RS, 2), IronHail: T.cluster(RS, 2), SwordRain: T.cluster(RS, 2), BladeStorm: T.cluster(RS, 2),
   LightningStrike: T.count(3), ForbiddenFruit: T.near(RM + 60, 3),
@@ -42,15 +40,12 @@ const TRIG = {
 const DEF = T.engage();
 M.SKILL_TRIG = TRIG;
 const H = M.TRAIT_H, GROWTH = new Set(['JuniorFisherman', 'EliteFisherman', 'SpiritOffering']);
-const castKey = (e) => { if (e.sig) return 'sig:' + e.sig; const t = e.traits.find(x => H[x.cls] && H[x.cls].full); return t ? t.cls.replace(/^Summon|Trait$/g, '') : null; };
+const castKey = (e) => { const t = e.traits.find(x => H[x.cls] && H[x.cls].full); return t ? t.cls.replace(/^Summon|Trait$/g, '') : null; };
 M.skillTrig = (e) => TRIG[castKey(e)] || DEF;
-// the same trigger by unit key (tooltips, docs): the signature or the first castable trait of the unit
+// the same trigger by unit key (tooltips, docs): the first castable trait of the unit
 M.unitTrigger = function (k) {
   const s = M.unitSkill && M.unitSkill(k); if (!s) return null;
-  if (s.sig) return TRIG['sig:' + s.sig] || DEF;
   const t = (M.DB[k].tr || []).find(x => (M.TDB[x] || {}).n === s.n), key = t && t.replace(/^Summon|Trait$/g, '');
-  // growth traits (渔夫、灵魂献祭) spend their bar on growing; in battle such units cast their vocation's signature skill
-  if (key && !(H[key] && H[key].full && !GROWTH.has(key))) { const sg = M.sigOf && M.sigOf(M.DB[k]); if (sg) return TRIG['sig:' + sg] || DEF; }
   return (key && TRIG[key]) || DEF;
 };
 

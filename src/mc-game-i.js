@@ -175,9 +175,6 @@ const PHR = [
 ];
 const oldCoachI = G.coach;
 G.coach = function (text, x, y, tx, ty) { const md = M.inputMode(this); if (md !== 'kbm') PHR.forEach(([re, alt]) => { text = text.replace(re, alt[md] || '$&'); }); return oldCoachI.call(this, text, x, y, tx, ty); };
-// unit cards also explain their active skill
-const oldUT = M.unitTip;
-M.unitTip = function (k, u, run) { const t = oldUT(k, u, run), sk = M.unitSkill && M.unitSkill(k); if (sk && sk.sig) t.lines.splice(1, 0, { rich: [{ t: '【主动 · ' + sk.n + '】', c: '#ffe08a', b: 1 }].concat(M.rich(sk.d + '。')) }); const tr = sk && M.unitTrigger && M.unitTrigger(k); if (tr) t.lines.splice(sk.sig ? 2 : 1, 0, { rich: [{ t: '开战时技能就绪 · 触发：' + tr.d, c: '#a8e0ff' }] }); return t; };
 // taps on the world canvas walk the map
 const oldMove = G.worldMove;
 G.worldClick = function (sx, sy) { if (!this.worldTap(sx, sy)) oldMove.call(this, sx, sy); };

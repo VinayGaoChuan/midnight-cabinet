@@ -1,6 +1,6 @@
 // ==== mc-tipcompact.js ====
 (function () {
-// Pictures first (user ruling 2026-09-24). Tooltips lead with rows of icons. Only leaders and units (tips marked ctrl)
+// Pictures first (user ruling 2026-09-24). Tooltips lead with rows of icons. Only leaders (tips marked ctrl)
 // keep their words behind Ctrl — a blinking blue line says so; every other tooltip shows its details directly.
 // Tip builders may add:
 //   briefTitle — the title shown without Ctrl ("Lv2 驱魔修女" instead of the full name)
@@ -46,25 +46,13 @@ G.heroTip = function (h) {
   return t;
 };
 
-// ───────── units: portrait, race & vocation, life / attack / power (and price), the active skill ─────────
-const oUT = M.unitTip;
-M.unitTip = function (k, u, run) {
-  const t = oUT.apply(this, arguments), d = M.DB[k]; if (!t || !d) return t;
-  const ri = M.tagIc('race', d.race), vi = d.voc && M.tagIc('voc', d.voc), sk = M.unitSkill && M.unitSkill(k), price = /价格\s*(\d+)/.exec(t.kind || '');
-  t.pic = SP(k);
-  const stats = [{ img: IC('t_heart'), t: fmt(d.hp + (u && u.bHp || 0)) }, { img: IC('t_sword'), t: fmt(d.atk + (u && u.bAtk || 0)) }, { img: IC('u_star'), t: M.unitPower ? M.unitPower(k, u) : '' }];
-  if (price) stats.push({ img: SP('coin'), t: price[1], c: '#ffcc33' });
-  t.brief = [[ri && { img: ri.img, t: d.race, c: ri.c, fs: 22 }, vi && { img: vi.img, t: d.voc, c: vi.c, fs: 22 }], stats];
-  if (sk) t.brief.push([{ img: IC('t_skill'), t: sk.n, c: '#ffe08a' }]);
-  t.ctrl = true;
-  return t;
-};
+// units: see mc-awaken.js (name / vocation + power / one sentence, no Ctrl layer)
 // items, relics and relic blueprints show their own picture
 const oIT = G.itemTip; if (oIT) G.itemTip = function (key) { const t = oIT.apply(this, arguments); const I = M.ITEMS[key]; if (t && I && I.icon) t.pic = SP(I.icon); return t; };
 const oRT = G.relicTip; if (oRT) G.relicTip = function (r) { const t = oRT.apply(this, arguments); const R = r && M.RELICS[r.key]; if (t && R && R.icon) t.pic = SP(R.icon); return t; };
 const oRB = G.relicBpTip; if (oRB) G.relicBpTip = function (key) { const t = oRB.apply(this, arguments); const R = M.RELICS[key]; if (t && R && R.icon) t.pic = SP(R.icon); return t; };
 
-// ───────── the tooltip view: header + icons; leaders' and units' words only with Ctrl ─────────
+// ───────── the tooltip view: header + icons; leaders' words only with Ctrl ─────────
 const oView = G.view;
 G.view = function () {
   const v = oView.call(this), tip = this.tipData, det = this.detailOn ? this.detailOn() : false;
@@ -81,7 +69,7 @@ G.view = function () {
     if (cmp && !det) { if (tip.briefTitle) T.title = tip.briefTitle; T.hasKind = false; T.hasD = false; T.lines = []; }
     T.hint = cmp && more && !det; T.hintTxt = hintTxt;
   }
-  // shop cards: power as an icon and a number, a skill icon when the unit has one; words behind Ctrl
+  // shop cards (see mc-awaken.js for the rest)
   if (v.s && this.run && this.run.shop) (v.s.units || []).forEach((su, i) => { const c = this.run.shop.units[i], sk = c && M.unitSkill && M.unitSkill(c.type); su.pwN = String(su.pw || '').replace(/[^\d.,万k]/g, '') || su.pw; su.hasSk = !!sk; });
   v.pwIc = IC('u_star'); v.skIc = IC('t_skill'); v.ctrlHint = hintTxt;
   if (v.w && this.run && this.run.hero) v.w.skIc = IC((M.SKILL_IC || {})[this.run.hero.cls] || 't_skill');

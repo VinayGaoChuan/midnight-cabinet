@@ -22,16 +22,16 @@ const pad = (p, i) => p + String(i).padStart(3, '0');
 const short = (t) => t.replace(/^Summon|Trait$/g, '');
 const PAT = { spiral: '螺旋聚气', heal: '十字光点', fire: '火星', frost: '冰晶', bolt: '闪电', shield: '护罩', summon: '法阵', poison: '毒雾', blade: '落刃', buff: '光柱鼓舞', shadow: '暗影', beam: '光束', coin: '金币', nova: '环形冲击', meteor: '陨石' };
 const recTxt = (r) => r ? PAT[r.ch] + ' → ' + PAT[r.cs] + '（' + r.ramp + '）' : '通用：螺旋聚气 → 爆散';
-const SIG_KEY = {}; Object.keys(M.SIG).forEach(k => { SIG_KEY[M.SIG[k].n] = k; });
-// what the game shows when this unit casts: its skill's recipe (the signature's, or the castable trait's)
+// a unit's own mana trait, if it has one (units get no other active skill), and what the game shows when it fires
 const skillOf = (k) => {
   const s = M.unitSkill(k); if (!s) return null;
-  if (s.sig) return { n: s.n, sig: 1, key: s.sig, rec: FX[s.sig] };
   const t = (DB[k].tr || []).find(x => (TDB[x] || {}).n === s.n); const key = t ? short(t) : '';
-  // growth traits (渔夫、灵魂献祭) spend the bar on growing; in battle these units cast their vocation's signature skill
-  if (/^(JuniorFisherman|EliteFisherman|SpiritOffering)$/.test(key) && M.sigOf(DB[k])) { const sg = M.sigOf(DB[k]); return { n: M.SIG[sg].n, sig: 1, key: sg, rec: FX[sg], grow: TDB[t].n }; }
   return { n: s.n, key, rec: FX[key] };
 };
+// the awakening a unit plays when the fight starts (mc-awaken.js)
+const AWN = { skull: '亡语', venom: '毒', summon: '召唤', heal: '治疗', guard: '守护', thorns: '反伤', speed: '迅捷', frost: '冰霜', fire: '火焰', bolt: '雷电', gold: '金币', growth: '成长', stealth: '潜行', leap: '冲锋', blade: '刀锋', arcane: '奥术', rage: '狂怒', curse: '诅咒', revive: '复生',
+  aura_heal: '光环 · 治疗', aura_guard: '光环 · 守护', aura_atk: '光环 · 伤害', aura_speed: '光环 · 攻速', aura_mana: '光环 · 法力', aura_frost: '光环 · 冰霜', aura_weak: '光环 · 削弱', aura_blood: '光环 · 吸血' };
+const awOf = (k) => { const a = M.unitAw(k); return a ? AWN[a.cat] || a.cat : '—'; };
 
 const put = (doc, name, body) => { const a = '<!-- gen:' + name + ' -->', b = '<!-- /gen:' + name + ' -->', i = doc.indexOf(a), j = doc.indexOf(b); if (i < 0 || j < i) throw new Error('marker missing: ' + name); return doc.slice(0, i + a.length) + '\n' + body + '\n' + doc.slice(j); };
 let doc = fs.readFileSync(DOC, 'utf8');
@@ -42,13 +42,13 @@ const count = {};
   let out = '', n = 0;
   [['Summon', '我方部队'], ['Enemy', '敌人'], ['Derivant', '召唤物 / 衍生单位']].forEach(([type, title]) => {
     const keys = Object.keys(DB).filter(k => DB[k].type === type).sort((a, b) => (DB[a].q || 0) - (DB[b].q || 0) || DB[a].race.localeCompare(DB[b].race) || a.localeCompare(b));
-    out += '\n#### ' + title + '（' + keys.length + '）\n\n| 编号 | 单位 | 种族 · 职业 · 品质 | 主动技能 | 触发条件 | 蓄力 → 施放（色板） | 其他特性 |\n|---|---|---|---|---|---|---|\n';
+    out += '\n#### ' + title + '（' + keys.length + '）\n\n| 编号 | 单位 | 职业 · 品质 | 卡片上的一句话 | 开战激活 | 自带法力技能 · 触发条件 | 蓄力 → 施放（色板） |\n|---|---|---|---|---|---|---|\n';
     keys.forEach(k => {
-      const d = DB[k], s = skillOf(k), tr = s && M.unitTrigger(k), others = (d.tr || []).filter(t => !s || (TDB[t] || {}).n !== s.n).map(t => ((TDB[t] || {}).n || short(t)) + (FX[short(t)] ? '✦' : ''));
-      out += '| ' + pad('U', ++n) + ' | ' + esc(d.n) + '<br>`' + k + '` | ' + d.race + ' · ' + (d.voc || '无职业') + ' · ' + Q[d.q || 0] + ' | ' + (s ? esc(s.n) + (s.sig ? '（职业招牌）' : '') : '无（只有普攻）') + ' | ' + (tr ? esc(tr.d) : '—') + ' | ' + (s ? recTxt(s.rec) : '—') + ' | ' + esc(others.join('、') || '—') + ' |\n';
+      const d = DB[k], s = skillOf(k), tr = s && M.unitTrigger(k);
+      out += '| ' + pad('U', ++n) + ' | ' + esc(d.n) + '<br>`' + k + '` | ' + (d.voc || '无职业') + ' · ' + Q[d.q || 0] + ' | ' + esc(M.unitLine(k)) + ' | ' + awOf(k) + ' | ' + (s ? esc(s.n) + (tr ? '：' + esc(tr.d) : '') : '—') + ' | ' + (s ? recTxt(s.rec) : '—') + ' |\n';
     });
   });
-  out += '\n- 我方部队开战时技能就绪（法力满），满足触发条件才放（`src/mc-skilltrigger.js`）；敌人从 0 开始攒法力，用同样的触发条件。\n- 敌人里只有精英和首领会放职业招牌技能，普通敌人只放自己的特性技能。\n- 「其他特性」里带 ✦ 的：不是攒满法力才放的主动技能，但触发时有自己的特效（配方见 S）。\n';
+  out += '\n- 部队只有自己的特性，没有额外的主动技能。卡片和悬浮说明只显示职业、战斗力和「卡片上的一句话」（`src/mc-awaken.js` 的特性表）。\n- 开战时，每个有特性的单位依次播放**激活演出**：光点聚向胸口 → 地面冲击环 + 光柱 + 火花 → 这一类的专属花样 → 特性图标从身上冲出、越过头顶再落定，之后一直浮在头顶；特性生效（法力技能放出、击杀）时图标闪一下；亡语类单位死亡时图标飞向击杀者炸开。光环类还会连线到范围内的每个友军。\n- 有「自带法力技能」的单位：开战时法力满，满足触发条件才放（`src/mc-skilltrigger.js`）。\n';
   doc = put(doc, 'units', out); count.units = n;
 }
 
@@ -59,7 +59,6 @@ const count = {};
   const trig = (key) => Object.keys(DB).filter(k => (DB[k].tr || []).some(t => short(t) === key)).map(k => DB[k].n);
   let out = '\n| 编号 | 技能 | 类别 | 谁会放 | 蓄力 → 施放（色板） | 画面描述 |\n|---|---|---|---|---|---|\n', r = 0;
   Object.keys(FX).filter(i => TDB['Summon' + i + 'Trait']).forEach(i => { const u = users(i), all = u.length ? u : trig(i); out += '| ' + pad('S', ++r) + ' | ' + esc(TDB['Summon' + i + 'Trait'].n) + ' | ' + (u.length ? '主动特性' : '特性触发') + ' | ' + esc(all.slice(0, 5).join('、') + (all.length > 5 ? ' 等 ' + all.length + ' 个' : '')) + ' | ' + recTxt(FX[i]) + ' | ' + esc(FX[i].d) + ' |\n'; });
-  Object.keys(M.SIG).forEach(i => { out += '| ' + pad('S', ++r) + ' | ' + M.SIG[i].n + ' | 职业招牌 | ' + (users(i).length ? users(i).length + ' 个单位' : '暂无单位使用（预留）') + ' | ' + recTxt(FX[i]) + ' | ' + esc(FX[i] ? FX[i].d : '') + ' |\n'; });
   Object.keys(FX).filter(i => /^[LP]:/.test(i)).forEach(i => { const h = M.HEROES[i.slice(2)], sk = i[0] === 'L' ? h.skill.n : (M.PSKILL[i.slice(2)] || {}).n; out += '| ' + pad('S', ++r) + ' | ' + (i[0] === 'L' ? '军团技能「' : '个人技能「') + sk + '」 | 领袖 | ' + HERO[i.slice(2)] + ' | ' + recTxt(FX[i]) + ' | ' + esc(FX[i].d) + ' |\n'; });
   doc = put(doc, 'recipes', out); count.recipes = r;
 }
@@ -111,12 +110,12 @@ const count = {};
   });
   let i = 0;
   ['Summon', 'Enemy', 'Derivant'].forEach(type => Object.keys(DB).filter(k => DB[k].type === type).sort((a, b) => (DB[a].q || 0) - (DB[b].q || 0) || DB[a].race.localeCompare(DB[b].race) || a.localeCompare(b)).forEach(k => {
-    const d = DB[k], s = skillOf(k), tr = s && M.unitTrigger(k), skillT = s ? (s.sig ? { n: s.n, d: M.SIG_DESC[s.key] } : M.unitSkill(k)) : null;
+    const d = DB[k], s = skillOf(k), tr = s && M.unitTrigger(k), skillT = s ? M.unitSkill(k) : null;
     rows.push({ id: pad('U', ++i), n: d.n, key: k, type: TYPE[type] || type, race: d.race, voc: d.voc || '', q: Q[d.q || 0], hp: d.hp, atk: d.atk, as: d.as, spd: d.spd, range: d.rad, ranged: RANGED[d.ranged || 0], cost: d.cost, power: M.unitPower ? M.unitPower(k) : '',
-      skill: skillT ? skillT.n + (s.sig ? '（职业招牌）' : '') + '：' + (skillT.d || '') : '', trig: tr ? tr.d : '', skill2: '', trig2: '', fx: s ? recTxt(s.rec) : '',
+      line: M.unitLine(k), aw: awOf(k), skill: skillT ? skillT.n + '：' + (skillT.d || '') : '', trig: tr ? tr.d : '', skill2: '', trig2: '', fx: s ? recTxt(s.rec) : '',
       traits: (d.tr || []).map(trait).join('\n'), up: d.up ? (DB[d.up] ? DB[d.up].n + '（' + d.up + '）' : d.up) : '', desc: d.desc || '' });
   }));
-  const COLS = [['id', '编号'], ['n', '名字'], ['key', '代码名'], ['type', '类型'], ['race', '种族'], ['voc', '职业'], ['q', '品质'], ['hp', '生命'], ['atk', '攻击'], ['as', '攻速（100=标准）'], ['spd', '移速'], ['range', '射程'], ['ranged', '攻击方式'], ['cost', '招募费用'], ['power', '战力'], ['skill', '主动技能'], ['trig', '触发条件'], ['skill2', '个人技能（领袖）'], ['trig2', '个人技能触发'], ['fx', '技能特效（蓄力 → 施放）'], ['traits', '全部特性'], ['up', '进化为'], ['desc', '简介']];
+  const COLS = [['id', '编号'], ['n', '名字'], ['key', '代码名'], ['type', '类型'], ['race', '种族'], ['voc', '职业'], ['q', '品质'], ['hp', '生命'], ['atk', '攻击'], ['as', '攻速（100=标准）'], ['spd', '移速'], ['range', '射程'], ['ranged', '攻击方式'], ['cost', '招募费用'], ['power', '战力'], ['line', '卡片上的一句话'], ['aw', '开战激活'], ['skill', '自带法力技能'], ['trig', '触发条件'], ['skill2', '个人技能（领袖）'], ['trig2', '个人技能触发'], ['fx', '技能特效（蓄力 → 施放）'], ['traits', '全部特性'], ['up', '进化为'], ['desc', '简介']];
   const cell = (v) => { const s = String(v == null ? '' : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
   const csv = '﻿' + [COLS.map(c => c[1]).join(',')].concat(rows.map(r => COLS.map(c => cell(r[c[0]])).join(','))).join('\r\n') + '\r\n';
   fs.writeFileSync(path.join(ROOT, 'docs', 'characters.csv'), csv, 'utf8');

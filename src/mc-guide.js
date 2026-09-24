@@ -78,9 +78,9 @@ const CONCEPTS = [
   { id: 'score', cat: '战斗', icon: 't_mult', title: '积分 = 基础 × 倍率', line: '击杀得基础分；精英、首领、战旗、宝物会加倍率。积分就是这一局的钱。', scr: 'battle', sel: '[data-tip="b-score"]', freeze: 1 },
   { id: 'bhero', cat: '战斗', icon: 't_command', title: '指挥位', line: '领袖站在左边不参战；部队全灭后亲自上场，倒下就永久死亡。', scr: 'battle', sel: '[data-tip="b-hero"]', freeze: 1 },
   { id: 'bskill', cat: '战斗', icon: 't_skill', title: '军团技能', line: '按空格放。领袖亲自上场后收起，这场不能再用。', scr: 'battle', sel: '[data-g="b-skill"]', freeze: 1, when: (g) => g.battle && g.battle.hero && g.battle.hero.bench },
-  { id: 'race', cat: '标签与品质', icon: 'r_human', title: '种族标签', line: '只是分类。战旗、特性写到某个种族时，看这个图标就知道谁吃加成。', scr: ['shop', 'world', 'battle', 'base'], sel: '[data-tip^="tag-race-"]' },
   { id: 'voc', cat: '标签与品质', icon: 'v_archer', title: '职业标签', line: '决定打法：先锋扛伤、战士近战、射手远程、法师范围、祭司治疗、商人赚钱。', scr: ['shop', 'world', 'battle', 'base'], sel: '[data-tip^="tag-voc-"]' },
-  { id: 'trait', cat: '战斗', icon: 't_crit', title: '特性', line: '每支部队自带的本事：开战时就绪，时机合适（比如友军掉血、敌人靠近）才放，或者一直生效。悬浮看触发条件。', scr: ['shop', 'world'], sel: '[data-g="trait"]' },
+  { id: 'trait', cat: '战斗', icon: 'e_skull', title: '特性', line: '卡片上那一句话就是这支部队的本事。开战时它的图标从身上亮出来，停在头顶，生效时会闪。', scr: ['shop', 'world'], sel: '[data-g="trait"]' },
+  { id: 'upower', cat: '标签与品质', icon: 'u_star', title: '战斗力', line: '部队有多强。先挑缺的职业，再在里面挑战斗力高、买得起的。', scr: ['shop'], sel: '[data-g="upower"]' },
   // ── 夜市 ──
   { id: 'shop', cat: '夜市', icon: 'e_market', title: '夜市', line: '部队、战旗、道具三个区，点击直接买。点自己的部队可以半价卖掉。', scr: 'shop', sel: '[data-g="shop-units"]' },
   // ── 守城 ──

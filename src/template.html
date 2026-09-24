@@ -1232,16 +1232,16 @@
       </div>
     </div>
     <div style="position:absolute;left:40px;top:140px;width:1180px;height:700px;box-sizing:border-box;padding:18px 22px;background:rgba(10,8,14,0.55);border:1px solid #4a3a2a;display:flex;flex-direction:column;gap:14px">
-      <div data-g="shop-units" style="display:flex;align-items:baseline;gap:16px"><span style="font-size:38px;color:#ffe8b0">部队</span><span data-detail="1" style="font-size:22px;color:#8d8496">点击购买 · 悬浮查看特性 · 底色越亮品质越高</span></div>
+      <div data-g="shop-units" style="display:flex;align-items:baseline;gap:16px"><span style="font-size:38px;color:#ffe8b0">部队</span></div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;flex:1">
         <sc-for list="{{s.units}}" as="su" hint-placeholder-count="6">
           <div data-fx="{{su.fx}}" sc-camel-on-click="{{su.onBuy}}" sc-camel-on-mouse-enter="{{su.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" style="position:relative;box-sizing:border-box;border:2px solid {{su.qc}};background:{{su.bg}};box-shadow:{{su.glow}};display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:8px 10px 10px;cursor:pointer;transform:translate({{su.sh}}px,{{su.dy}}px);opacity:{{su.op}}">
             <sc-if value="{{su.hasR}}"><div data-tip="{{su.ri.tip}}" style="position:absolute;left:6px;top:6px;padding:3px;background:rgba(8,6,10,0.8);border:2px solid {{su.ri.c}}"><m-img src="{{su.ri.img}}" style="width:40px;height:40px"></m-img></div></sc-if>
             <sc-if value="{{su.hasV}}"><div data-tip="{{su.vi.tip}}" style="position:absolute;right:6px;top:6px;padding:3px;background:rgba(8,6,10,0.8);border:2px solid {{su.vi.c}}"><m-img src="{{su.vi.img}}" style="width:40px;height:40px"></m-img></div></sc-if>
-            <m-img src="{{su.img}}" style="max-width:220px;max-height:190px;filter:drop-shadow(0 10px 8px rgba(0,0,0,0.6))"></m-img>
+            <m-img data-fit="1" src="{{su.img}}" style="max-width:200px;max-height:140px;filter:drop-shadow(0 10px 8px rgba(0,0,0,0.6))"></m-img>
             <div style="font-size:32px;line-height:1.1;color:{{su.qc}};text-shadow:0 2px 0 #000">{{su.n}}</div>
-            <div style="display:flex;gap:10px;font-size:22px;align-items:center"><span data-detail="1" style="color:{{su.qc}}">{{su.qn}}</span><m-img src="{{pwIc}}" style="width:24px;height:24px"></m-img><span style="color:#cfc6b8">{{su.pwN}}</span><sc-if value="{{su.hasSk}}"><m-img data-g="trait" src="{{skIc}}" style="width:26px;height:26px;margin-left:6px"></m-img></sc-if></div>
-            <div data-detail="1" style="font-size:19px;color:#ffe8b0;opacity:0.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px">{{su.trait}}</div>
+            <div style="display:flex;gap:16px;font-size:24px;align-items:center"><span data-tip="tag-voc-{{su.vn}}" style="display:flex;align-items:center;gap:6px;color:{{su.vc}}"><m-img src="{{su.vIc}}" style="width:28px;height:28px"></m-img>{{su.vn}}</span><span data-g="upower" style="display:flex;align-items:center;gap:6px;color:#ffe08a"><m-img src="{{pwIc}}" style="width:26px;height:26px"></m-img>{{su.pwN}}</span></div>
+            <div data-g="trait" style="font-size:20px;line-height:1.3;color:#e8dcc4;text-align:center;max-width:330px;min-height:52px;text-wrap:pretty">{{su.line}}</div>
             <div style="margin-top:6px;display:flex;align-items:center;gap:8px;padding:4px 18px;background:rgba(0,0,0,0.55);border:1px solid #6a5030"><m-img src="{{coinImg}}" style="width:26px;height:26px"></m-img><span style="font-family:'Cinzel','Noto Serif SC',serif;font-size:26px;color:{{su.priceC}}">{{su.price}}</span></div>
             <sc-if value="{{su.sold}}"><div style="position:absolute;inset:0;background:rgba(8,6,10,0.8);display:flex;align-items:center;justify-content:center"><span style="font-size:52px;color:{{su.qc}};border:5px solid {{su.qc}};padding:4px 18px;transform:rotate(-12deg) scale({{su.stampSc}})">已购</span></div></sc-if>
           </div>

@@ -139,7 +139,7 @@ class B3 extends M.Battle2 {
     this.entryEnd = 0.4 + Math.max(k, ke) * 0.12 + 0.9;
     // the army takes the field with every skill ready (a full bar); each one fires when its trigger holds
     // (mc-skilltrigger.js), not all at once. The leader only casts when it takes the field or when the player presses the skill button.
-    this.ents.filter(e => e.side === 'A' && !e.isHero && this.canSkill(e, true)).forEach(e => { if (e.sigPool) e.smana = 100; else e.mana = 100; });
+    this.ents.filter(e => e.side === 'A' && !e.isHero && this.canSkill(e, true)).forEach(e => { e.mana = 100; });
     this.openEnd = this.entryEnd; this.fightT0 = this.openEnd;
     later.forEach(s => { s.spawn = s.spawn - 1.6 + this.fightT0; s.x = 1250 + Math.random() * 500; });
     L.sort((a, b) => a.spawn - b.spawn);
@@ -439,7 +439,7 @@ function drawBars(ctx, e, T, b) {
   if (e.shield > 0) { ctx.fillStyle = '#bfe8ff'; ctx.fillRect(x - w / 2, top, w * clamp(e.shield / e.maxHp, 0, 1), 2); }
   if (e.hasMana) { const ch = b.skillCharge ? b.skillCharge(e) : e.mana, ready = ch >= 100 && !e.casting && e.alive;
     ctx.fillStyle = ready ? (Math.floor(T * 4) % 2 ? '#fff6c8' : 'rgba(0,0,0,0.75)') : 'rgba(0,0,0,0.75)'; ctx.fillRect(x - w / 2 - 2, top + 7, w + 4, 5);   // a ready skill waiting for its trigger: the bar's frame blinks
-    ctx.fillStyle = e.sig ? '#ffd060' : '#5aa8ff'; ctx.fillRect(x - w / 2, top + 8, w * clamp(ch / 100, 0, 1), 3); }
+    ctx.fillStyle = '#5aa8ff'; ctx.fillRect(x - w / 2, top + 8, w * clamp(ch / 100, 0, 1), 3); }
   if (e.d.q >= 1 && !e.isHero) { ctx.fillStyle = M.QUALITY[e.d.q].c; ctx.beginPath(); ctx.moveTo(x - w / 2 - 10, top + 2); ctx.lineTo(x - w / 2 - 5, top - 3); ctx.lineTo(x - w / 2, top + 2); ctx.lineTo(x - w / 2 - 5, top + 7); ctx.fill(); }
   const tags = []; if (e.stack && e.stack.until > T) tags.push({ t: '×' + e.stack.n, c: e.stack.col }); if (e.icon) tags.push({ t: e.icon, c: '#ffcc33' }); const db = Object.values(e.debuf).reduce((a, d) => a + d.n, 0); if (db) tags.push({ t: '破甲' + db, c: '#9fc8ff' }); if (e.unit && e.unit.lv > 1) tags.push({ t: 'Lv' + e.unit.lv, c: '#ffcc33' }); if (e.buffs.length) tags.push({ t: '▲', c: e.buffs[0].col || '#ffd060' }); if (e.stun > 0) tags.push({ t: '晕', c: '#fff2a0' });
   if (tags.length) { ctx.font = "700 18px 'Noto Serif SC', serif"; ctx.textAlign = 'center'; let tx = x - (tags.length - 1) * 22; tags.forEach(g => { ctx.lineWidth = 4; ctx.strokeStyle = '#0a0610'; ctx.strokeText(g.t, tx, top - 8); ctx.fillStyle = g.c; ctx.fillText(g.t, tx, top - 8); tx += 44; }); }

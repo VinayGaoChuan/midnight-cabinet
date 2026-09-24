@@ -50,6 +50,7 @@ mc-guide.js
 mc-flow.js
 mc-portal.js
 mc-tipcompact.js
+mc-awaken.js
 mc-px16.js
 mc-px16-hum.js
 mc-px16-rigs.js

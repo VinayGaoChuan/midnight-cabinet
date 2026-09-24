@@ -93,15 +93,6 @@ const FX = {
   SummonFroggo: R('summon', 'summon', 'toxic', '绿色法阵里跳出蛙人'),
   RaiseImp: R('summon', 'summon', 'fire', '火红法阵里跳出小鬼'),
   // signature skills
-  charge: R('spiral', 'nova', 'frost', '盾面蓄满蓝光，撞击时一圈冲击波'),
-  whirl: R('spiral', 'nova', 'orange', '橙色旋风斩的环形刀光'),
-  volley: R('spiral', 'blade', 'holy', '金色箭雨落在目标区域'),
-  fireball: R('fire', 'meteor', 'fire', '陨石从天而降炸出火花'),
-  frost: R('frost', 'nova', 'frost', '霜冻新星：冰晶向外炸开'),
-  chain: R('bolt', 'bolt', 'frost', '闪电链跳跃'),
-  holy: R('heal', 'meteor', 'holy', '圣光之柱从天而降'),
-  gold: R('spiral', 'coin', 'gold', '金币风暴四散'),
-  maul: R('spiral', 'nova', 'blood', '猛扑落地的血色冲击'),
   // leaders: legion skills (cast from the sidelines) and personal skills (on the field)
   'L:watchman': R('spiral', 'nova', 'holy', '灯笼光芒暴涨，所有敌人被照得停顿'),
   'L:widow': R('spiral', 'coin', 'gold', '梭哈：金币从天上倾泻'),
@@ -118,7 +109,6 @@ const FX = {
 };
 P16.FX = FX;
 P16.fxFor = function (e) {
-  if (e.sig && FX[e.sig]) return FX[e.sig];
   const t = (e.traits || []).find(x => FX[(x.cls || '').replace(/^Summon|Trait$/g, '')]); if (t) return FX[t.cls.replace(/^Summon|Trait$/g, '')];
   return null;
 };
