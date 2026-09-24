@@ -94,7 +94,7 @@ MINI.tree = { title: '世界树', img: 'e_tree', col: '#9cdc6a', text: '树根�
   tick(mg, dt) {
     if (mg.phase === 'fall') { const F = mg.fr[mg.pickI]; F.vy = (F.vy || 0) + 1800 * dt; F.fy = (F.fy || 0) + F.vy * dt; if (F.y + F.fy > FLOOR - 30) { F.fy = FLOOR - 30 - F.y; F.falling = false; mg.from = { x: F.x, y: FLOOR - 30 }; this.fx.explode(F.x, FLOOR - 40, F.f.c, 1); S.up(2); const tx = F.f.f(this, mg); mg.got.push(F.f.n + '（' + tx + '）'); this.miniSay(F.f.n + '：' + tx, F.f.c); mg.picks++; this.miniSet('idle'); if (mg.picks >= mg.allow) this.miniSet('done'); } }
     if (mg.phase === 'water') { const F = mg.fr[mg.fr.length - 1]; F.grow = cl(mg.pt / 1.2, 0, 1); if (mg.pt > 1.2) { this.miniSet('idle'); this.miniSay('树又结了一个' + F.f.n, F.f.c); } }
-    if (mg.phase === 'cut' && !mg.cutDone && mg.pt > 0.5) { mg.cutDone = true; S.hit(); S.creak(); this.fx.kick(14); const g = [K.bp('nature', 1)]; const cursed = rnd() < 0.5 - mg.luck; let tx = '你砍下一根发光的树枝，里面卷着一张图纸。'; if (cursed) { const q = M.addQuirk(this.run.hero, 0); if (q) tx += '树皮上的眼睛全睁开了。' + this.run.hero.name + ' 染上了「' + M.QUIRKS[q].n + '」。'; } setTimeout(() => this.mini === mg && this.miniFinish(tx, cursed ? '#d0453c' : '#9cdc6a', g), 700); }
+    if (mg.phase === 'cut' && !mg.cutDone && mg.pt > 0.5) { mg.cutDone = true; S.hit(); S.creak(); this.fx.kick(14); const g = [K.bp('nature', 1)]; const cursed = rnd() < 0.5 - mg.luck; let tx = '你砍下一根发光的树枝，里面卷着一张图纸。'; if (cursed) tx += '树皮上的眼睛全睁开了。生命 -' + this.heroHurt(0.1) + '。'; setTimeout(() => this.mini === mg && this.miniFinish(tx, cursed ? '#d0453c' : '#9cdc6a', g), 700); }
     if (mg.phase === 'done' && mg.pt > 1.0 && !mg.fin) { mg.fin = true; this.miniFinish('世界树的叶子沙沙作响。你收下了：' + mg.got.join('；') + '。', '#9cdc6a'); }
     mg.bugs.forEach(b => { b.p += dt; b.x += Math.cos(b.p * 0.7) * 20 * dt; b.y += Math.sin(b.p) * 14 * dt; });
   },
@@ -229,7 +229,7 @@ MINI.fate = { title: '命运之轮', img: 'e_fate', col: '#d0453c', text: '石�
       if (idx === 3) { g.push(K.item(run, P)); tx = '石缝里滚出一个瓶子。'; }
       if (idx === 4) { g.push(K.bp(null, 1)); tx = '一张刻在石片上的图纸。'; }
       if (idx === 5) { g.push({ k: 'wallet', v: M.nice(P * 16) }); tx = '血变成了金子。'; }
-      if (idx === 6) { const q = M.addQuirk(run.hero, 0); tx = '石轮记住了你的名字。' + (q ? run.hero.name + ' 染上了「' + M.QUIRKS[q].n + '」。' : ''); }
+      if (idx === 6) { tx = '石轮记住了你的名字。生命 -' + this.heroHurt(0.15) + '。'; }
       this.miniFinish(tx, col, g); } }), 500);
   },
   tick(mg, dt) { mg.ang += dt * (mg.phase === 'spin' ? 4 : 0.2); },

@@ -9,7 +9,7 @@ const TAL_IC = { heroAtk: 't_sword', unitAtk: 't_command', crit: 't_crit', skill
   startMult: 't_mult', shop: 't_coin', tier: 't_dice', deathShards: 't_shard', deathOrbs: 't_orb', chest: 't_chest', eventLuck: 't_clover', supplies: 't_sack',
   baseScore: 't_coin', killHeal: 't_heal', campHalf: 't_flame', exp: 't_orb' };
 M.TAL_IC = TAL_IC;
-const SKILL_IC = { watchman: 't_eye', widow: 't_dice', nun: 't_heal', butcherlord: 't_rage', clockmaker: 't_hourglass', cremator: 't_flame' };
+const SKILL_IC = { watchman: 't_eye', widow: 't_dice', nun: 't_chant', butcherlord: 't_rage', clockmaker: 't_rewind', cremator: 't_pyre' };
 M.SKILL_IC = SKILL_IC;
 const icOf = (m) => TAL_IC[Object.keys(m || {})[0]] || 't_skill';
 const HOLD = 0.75; // seconds of charge to learn a talent
@@ -36,7 +36,7 @@ G.view = function () {
   const h = m.heroes.find(x => x.id === p.id); if (!h) return v;
   const Hc = M.HEROES[h.cls], R = M.RARITY[h.rarity], mx = M.heroMaxHp(h, m), pts = h.points, t = now() / 1000, ch = this.talCharge;
   const pn = v.pn, L = layout(h), IC = (k, s) => M.iconURL(k, s || 3);
-  pn.title = h.name; pn.sub = ''; pn.img = M.spriteURL(Hc.sprite, 5);
+  pn.title = Hc.n; pn.sub = ''; pn.img = M.spriteURL(Hc.sprite, 5);
   pn.heads = [{ tip: 'hs-rar', ic: IC('u_star', 2), t: R.n, c: R.c }, { tip: 'hs-lv', ic: IC('t_orb', 2), t: 'Lv ' + h.lv, c: '#9cff7a', bar: Math.min(100, h.exp / M.expNeed(h.lv) * 100) + '%', hasBar: true }, { tip: 'hs-pts', ic: IC('t_skill', 2), t: String(pts), c: pts ? '#ffe08a' : '#6b6570', hot: pts > 0 }].map(x => Object.assign({ hasBar: false, bar: '0%', anim: x.hot ? 'talPulse 1.1s ease-in-out infinite' : 'none' }, x));
   pn.hasHeads = true;
   pn.stats = [{ tip: 'hs-hp', ic: IC('t_heart', 2), v: Math.round(h.hp) + '/' + mx, c: h.hp / mx < 0.35 ? '#ff6a5a' : '#9cff7a' }, { tip: 'hs-atk', ic: IC('t_sword', 2), v: String(Math.round(M.heroAtk(h, m))), c: '#ff9a6a' }, { tip: 'hs-slot', ic: IC('t_chest', 2), v: String(M.relicSlots(h, m)), c: '#ffcc33' }, { tip: 'hs-runs', ic: IC('u_mask', 2), v: String(h.runs), c: '#cfc6b8' }];
@@ -63,8 +63,6 @@ G.view = function () {
   });
   pn.nodes = nodes; pn.links = links; pn.caps = caps; pn.noPts = pts <= 0; pn.hasPts = pts > 0;
   pn.holdTip = '按住发光的天赋，圆环蓄满就学会'; const nag = this.talNag && now() - this.talNag.at < 1600 ? this.talNag : null; pn.nagOn = !!nag; pn.nagX = nag ? nag.x : 0; pn.nagY = nag ? nag.y : 0;
-  pn.quirkIc = h.quirks.map(k => { const Q = M.QUIRKS[k]; return { tip: 'hs-q-' + k, ic: IC(icOf(Q.m), 2), c: Q.pos ? '#9ccc6a' : '#ff6a5a' }; });
-  pn.hasQuirk = h.quirks.length > 0;
   return v;
 };
 
@@ -85,8 +83,7 @@ G.tipFor = function (key) {
     if (key === 'hs-hp') return { title: '生命 ' + Math.round(h.hp) + ' / ' + mx, c: '#9cff7a', d: '不会自动恢复。医疗建筑每天治疗，也可以急救。降到 0 就永久死亡。', icon: 't_heart' };
     if (key === 'hs-atk') return { title: '攻击 ' + Math.round(M.heroAtk(h, m)), c: '#ff9a6a', d: '部队全灭后领袖亲自上场时的攻击力。', icon: 't_sword' };
     if (key === 'hs-slot') return { title: '宝物格 ' + M.relicSlots(h, m), c: '#ffcc33', d: '出征时能带的宝物数量。领袖死亡时带着的宝物会丢失。', icon: 't_chest' };
-    if (key === 'hs-runs') return { title: '出征 ' + h.runs + ' 次', c: '#cfc6b8', d: h.name + ' · ' + Hc.n, icon: 'u_mask' };
-    mm = /^hs-q-(.+)$/.exec(key); if (mm) { const Q = M.QUIRKS[mm[1]]; return Q && { title: Q.n, c: Q.pos ? '#9ccc6a' : '#ff6a5a', kind: Q.pos ? '好性格' : '坏性格 · 疗养室可以消除', d: Q.d, icon: icOf(Q.m) }; }
+    if (key === 'hs-runs') return { title: '出征 ' + h.runs + ' 次', c: '#cfc6b8', d: '这名领袖出征过的次数。', icon: 'u_mask' };
   }
   return oldTipFor.call(this, key);
 };

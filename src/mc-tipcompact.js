@@ -10,6 +10,7 @@ const M = window.MC, G = M.Game.prototype;
 const cl = (v, a, b) => Math.max(a, Math.min(b, v));
 const IC = (k) => M.iconURL(k, 2), SP = (k) => M.spriteURL(k, 4);
 const fmt = (n) => (M.fmt ? M.fmt(n) : String(n));
+const rsegs = (arr) => (arr || []).map(s => ({ t: s.t || '', c: s.c || '#e8dcc4', img: s.img || '', hasImg: !!s.img, fw: s.b ? 700 : 400 }));
 try { const st = document.createElement('style'); st.textContent = '[data-blink]{animation:mcBlink 1.2s ease-in-out infinite}@keyframes mcBlink{0%,100%{opacity:1}50%{opacity:.28}}'; document.head.appendChild(st); } catch (e) {}
 
 // words that name a room tag → the tag's icon (terrain "契合" targets)
@@ -27,16 +28,20 @@ M.tileBrief = function (key) {
   return row.length > 1 ? [row] : null;
 };
 
-// ───────── leaders: "Lv2 驱魔修女" / life bar / the two skills ─────────
+// ───────── leaders (user ruling 2026-09-24) ─────────
+//   Lv2 驱魔修女 / life bar 1864/1870 / skill icon + name ×2 / blinking 按住 Ctrl… / blinking 有 N 个天赋点可用
+// With Ctrl only the two skills change: each unfolds into its full description; everything else stays where it was.
 const oHT = G.heroTip;
 G.heroTip = function (h) {
   const t = oHT.apply(this, arguments); if (!t || !h) return t;
-  const H = M.HEROES[h.cls], P = M.PSKILL && M.PSKILL[h.cls], mx = M.heroMaxHp(h, this.meta), hp = Math.max(0, Math.round(h.hp)), f = hp / Math.max(1, mx);
-  t.briefTitle = 'Lv' + h.lv + ' ' + H.n;
-  t.brief = [
-    [{ bar: f, bc: f < 0.35 ? '#ff5a4a' : '#9cff7a', bw: 190 }, { t: hp + '/' + mx, c: '#e8dcc4' }],
-    [{ img: IC((M.SKILL_IC || {})[h.cls] || 't_skill'), t: H.skill.n, c: '#ffe08a' }, P ? { img: IC(P.ic), t: P.n, c: P.col } : null],
-  ];
+  const m = this.meta, H = M.HEROES[h.cls], P = M.PSKILL && M.PSKILL[h.cls], mx = M.heroMaxHp(h, m), hp = Math.max(0, Math.round(h.hp)), f = hp / Math.max(1, mx);
+  const bar = [{ bar: f, bc: f < 0.35 ? '#ff5a4a' : '#9cff7a', bw: 190 }, { t: hp + '/' + mx, c: '#e8dcc4' }];
+  const s1 = { img: IC((M.SKILL_IC || {})[h.cls] || 't_skill'), t: H.skill.n, c: '#ffe08a' }, s2 = P ? { img: IC(P.ic), t: P.n, c: P.col } : null;
+  t.title = t.briefTitle = 'Lv' + h.lv + ' ' + H.n;
+  t.brief = [bar, [s1, s2]];
+  t.briefDet = [bar, { parts: [s1], desc: '点击释放：' + M.skillDesc(h) + '，冷却 ' + M.skillNodeCd(h, m) + ' 个节点。' }].concat(P ? [{ parts: [s2], desc: '上场后自动 · ' + P.resN + '：' + P.d, c: P.col }] : []);
+  t.kind = ''; t.d = ''; t.lines = [];
+  t.alert = h.points > 0 ? { t: '有 ' + h.points + ' 个天赋点可用', c: '#f2c14e' } : null;
   return t;
 };
 
@@ -63,12 +68,15 @@ G.view = function () {
   const v = oView.call(this), tip = this.tipData, det = this.detailOn ? this.detailOn() : false;
   const kbm = !M.inputMode || M.inputMode(this) === 'kbm', hintTxt = kbm ? '按住 Ctrl 显示详细信息' : '点右下角 ⓘ 显示详细信息';
   if (tip && v.tip) {
-    const T = v.tip; let brief = tip.brief;
+    const T = v.tip; let brief = det && tip.briefDet ? tip.briefDet : tip.brief;
     if (!brief && tip.icon && /^l_/.test(tip.icon) && tip.icon !== 'l_unknown') brief = M.tileBrief(tip.icon.slice(2));
-    const rows = (brief || []).filter(r => r && r.some(Boolean)).map(r => ({ parts: r.filter(Boolean).map(p => ({ hasImg: !!p.img, img: p.img || '', is: p.is || 30, isBar: p.bar != null, bw: p.bw || 160, fill: Math.round(cl(p.bar || 0, 0, 1) * 100) + '%', bc: p.bc || '#9cff7a', hasT: p.t != null && p.t !== '', t: String(p.t == null ? '' : p.t), c: p.c || '#e8dcc4', fs: p.fs || 24 })) }));
+    // a row is an array of parts, or { parts, desc } when it also carries a line of text under its icons
+    const part = (p) => ({ hasImg: !!p.img, img: p.img || '', is: p.is || 30, isBar: p.bar != null, bw: p.bw || 160, fill: Math.round(cl(p.bar || 0, 0, 1) * 100) + '%', bc: p.bc || '#9cff7a', hasT: p.t != null && p.t !== '', t: String(p.t == null ? '' : p.t), c: p.c || '#e8dcc4', fs: p.fs || 24 });
+    const rows = (brief || []).map(r => Array.isArray(r) ? { parts: r } : r).filter(r => r && r.parts && r.parts.some(Boolean)).map(r => ({ parts: r.parts.filter(Boolean).map(part), hasDesc: !!r.desc, desc: r.desc ? rsegs(M.rich ? M.rich(r.desc, r.c || '#e8dcc4') : [{ t: r.desc, c: r.c }]) : [] }));
     T.brief = rows; T.hasBrief = rows.length > 0;
     T.hasPic = !!tip.pic && !T.hasIcon; T.pic = tip.pic || '';
-    const more = !!(tip.kind || tip.d || (tip.lines && tip.lines.length));
+    T.hasAlert = !!tip.alert; T.alertTxt = tip.alert ? tip.alert.t : ''; T.alertC = tip.alert ? tip.alert.c || '#f2c14e' : '#f2c14e';
+    const more = !!(tip.kind || tip.d || (tip.lines && tip.lines.length) || tip.briefDet);
     if (!det) { if (tip.briefTitle) T.title = tip.briefTitle; T.hasKind = false; T.hasD = false; T.lines = []; }
     T.hint = more && !det; T.hintTxt = hintTxt;
   }

@@ -71,13 +71,6 @@ ROOMS.artemis = (x, t, P, o, S) => { const { box, shadowE } = K(), fy = S.fy;
   return 'sky';
 };
 // ───────── medicine ─────────
-ROOMS.sanitarium = (x, t, P, o, S) => { const { box, glowC, shadowE } = K(), fy = S.fy;
-  box(x, 90, 22, 120, 90, '#5a4a38', 6); x.fillStyle = G(x, 0, 28, 0, 106, [[0, '#101a3a'], [1, '#3a3060']]); x.fillRect(96, 28, 108, 78); CI(x, 176, 50, 10, '#f5e8c0'); CI(x, 172, 47, 9, '#1a2448'); for (let i = 0; i < 8; i++) R(x, 100 + rnd(i) * 100, 32 + rnd(i + 9) * 60, 1.4, 1.4, '#ffffff'); R(x, 148, 28, 4, 78, '#5a4a38'); R(x, 96, 64, 108, 4, '#5a4a38');
-  shadowE(x, 150, fy, 50, 4); box(x, 112, fy - 34, 76, 26, '#7a3a4a', 6); box(x, 104, fy - 60, 16, 52, '#6a2a3a', 5); box(x, 180, fy - 60, 16, 52, '#6a2a3a', 5); box(x, 118, fy - 64, 64, 32, '#8a4a5a', 8); box(x, 126, fy - 30, 50, 10, '#b8d0a0', 3);
-  [[48, 1], [252, -1]].forEach(([px, d]) => { box(x, px - 14, fy - 26, 28, 26, '#8a5a3a', 3); for (let i = 0; i < 6; i++) { const a = -Math.PI / 2 + (i - 2.5) * 0.4 + Math.sin(t * 1.2 + i) * 0.05; EL(x, px + Math.cos(a) * 18, fy - 34 + Math.sin(a) * 26, 12, 4.5, i % 2 ? '#4a9a3a' : '#6ab04a', a); } });
-  box(x, 222, fy - 70, 4, 70, '#3a3036'); PL(x, [[210, fy - 70], [238, fy - 70], [232, fy - 88], [216, fy - 88]], '#e8c870'); glowC(x, 224, fy - 70, 60, '#ffd890', 0.45);
-  box(x, 64, fy - 40, 20, 14, '#e8e0d0', 3); for (let i = 0; i < 3; i++) { const q = (t * 0.5 + i / 3) % 1; x.globalAlpha = S.A0 * 0.5 * (1 - q); CI(x, 72 + Math.sin(q * 6 + i) * 3, fy - 44 - q * 20, 3 + q * 3, '#ffffff'); } x.globalAlpha = S.A0;
-};
 ROOMS.gardens = (x, t, P, o, S) => { const { box, glowC } = K(), fy = S.fy;
   sky(x, S, t, '#1a2a4a', '#6a5a4a', { sun: [250, 40], sunCol: '#ffb870' }); ground(x, S, '#8a7a50', '#4a4028');
   [[30, 120, 240], [60, 80, 180], [95, 44, 110]].forEach(([a, b, wd], k) => { box(x, a, b, wd, fy - b, '#c8b080'); R(x, a, b, wd, 5, '#6ab04a');
@@ -353,7 +346,6 @@ M.ROOM_D = {
   pool: '蓝色净水池、水泵，气泡往上冒',
   lookout: '雷达扫描屏、波形屏和天线碟',
   vault: '巨大的圆形金库门和金条堆',
-  sanitarium: '窗外月夜，沙发、盆栽、落地灯',
   ballista: '上好弦的巨型弩炮，墙上挂着箭',
   cannon: '铜锅炉、压力表和长炮管',
   tesla: '线圈顶端电球放电，电弧四射',

@@ -42,7 +42,6 @@ SP.b_altar = tint('house', { r:'#3a2a5a', w:'#2a2430', y:'#b86bff' });
 SP.b_hospital = tint('house', { r:'#7a2020', w:'#cfd8e3', y:'#8fc8ff' });
 SP.b_smithy = tint('house', { r:'#3a3a44', w:'#4a3018', y:'#ff6a2a' });
 SP.b_bank = tint('house', { r:'#6a5a20', w:'#3a3440', y:'#ffcc33' });
-SP.b_sanitarium = tint('house', { r:'#2a4a44', w:'#cfd8e3', y:'#9ccc6a' });
 SP.b_training = tint('house', { r:'#4a3018', w:'#6a4a2a', y:'#ffcf4a' });
 SP.b_shrine = tint('house', { r:'#1b1b22', w:'#2a2430', y:'#fff2a0' });
 SP.b_barracks = tint('house', { r:'#3a4a2a', w:'#3a3440', y:'#ffcf4a' });
@@ -62,7 +61,6 @@ const HEROES = {
   clockmaker:{ n:'钟表匠', sprite:'clockmaker', hp:320, atk:24, cd:0.7, range:340, ranged:1, spd:100, skill:{ n:'倒带', d:'部队攻速 +60%，持续 6 秒', cd:22 } },
   cremator:{ n:'焚尸人', sprite:'cremator', hp:380, atk:28, cd:1.0, range:70, spd:105, skill:{ n:'火葬', d:'点燃所有敌人', cd:20 } },
 };
-const HERO_NAMES = ['阿槐','老七','白姨','莫娘','钟叔','阿烬','小满','阿九','红妹','瞎子李','秦婆','十三','老哑','阿灯','柳嫂','疤脸'];
 const RARITY = [ { n:'普通', c:'#cfd8e3', w:65, tiers:3, stat:1 }, { n:'稀有', c:'#6fa8dc', w:28, tiers:4, stat:1.1 }, { n:'传说', c:'#ffcc33', w:7, tiers:4, stat:1.25 } ];
 const TALENTS = {
   atk: [
@@ -79,16 +77,6 @@ const TALENTS = {
     { n:'直觉', d:'事件好结果概率 +15%', m:{ eventLuck:0.15 } }, { n:'拾荒', d:'获得物资 +25%', m:{ supplies:0.25 } } ],
 };
 const BRANCH = { atk:{ n:'杀伐', c:'#d0453c' }, def:{ n:'坚忍', c:'#6fa8dc' }, luck:{ n:'运数', c:'#ffcc33' } };
-const QUIRKS = {
-  calm:{ n:'冷静', pos:1, d:'技能冷却 -15%', m:{ skillCd:-0.15 } }, greedy:{ n:'贪婪之眼', pos:1, d:'基础积分 +10%', m:{ baseScore:0.1 } },
-  tin:{ n:'铁皮', pos:1, d:'领袖生命 +15%', m:{ heroHp:0.15 } }, rally:{ n:'鼓舞', pos:1, d:'部队攻击 +10%', m:{ unitAtk:0.1 } },
-  lucky:{ n:'幸运儿', pos:1, d:'道具升品 +5%', m:{ tier:0.05 } }, owl:{ n:'夜猫子', pos:1, d:'坚守时间 -15%', m:{ hold:-0.15 } },
-  thrifty:{ n:'精打细算', pos:1, d:'商店价格 -10%', m:{ shop:-0.1 } }, bloodthirst:{ n:'嗜血', pos:1, d:'领袖击杀回复 2% 生命', m:{ killHeal:0.02 } },
-  panic:{ n:'恐慌', pos:0, d:'部队攻击 -10%', m:{ unitAtk:-0.1 } }, shaky:{ n:'手抖', pos:0, d:'技能冷却 +25%', m:{ skillCd:0.25 } },
-  paranoid:{ n:'多疑', pos:0, d:'商店价格 +15%', m:{ shop:0.15 } }, frail:{ n:'体弱', pos:0, d:'领袖生命 -15%', m:{ heroHp:-0.15 } },
-  jinx:{ n:'霉运', pos:0, d:'道具升品 -8%', m:{ tier:-0.08 } }, coward:{ n:'怯战', pos:0, d:'初始倍率 -0.2', m:{ startMult:-0.2 } },
-  drunk:{ n:'贪杯', pos:0, d:'营火回复减半', m:{ campHalf:1 } }, weary:{ n:'厌世', pos:0, d:'获得经验 -25%', m:{ exp:-0.25 } },
-};
 const RELIC_BP = {
   weapon:{ n:'武器图纸', c:'#d0453c', stats:['heroAtk','unitAtk','crit','skillCd'], names:['锈刀','骨匕','银钉','诅咒之刃'] },
   charm:{ n:'护符图纸', c:'#6fa8dc', stats:['heroHp','unitHp','postHeal','shield'], names:['布偶','护身符','圣骨匣','天使泪'] },
@@ -107,7 +95,6 @@ const BUILDINGS = {
   hospital:{ n:'医院', d:'领袖在这里疗养，每天回复生命', fixed:1 },
   smithy:{ n:'铁匠铺', d:'用图纸打造宝物，品质随机，不会失败', fixed:1 },
   bank:{ n:'银行', d:'领袖死亡时，第一格宝物不会丢失' },
-  sanitarium:{ n:'疗养院', d:'花时间和物资消除领袖的性格' },
   training:{ n:'训练场', d:'经验球效率 +50%，新领袖从 2 级开始' },
   shrine:{ n:'灵堂', d:'领袖死亡时，灵魂碎片 +50%' },
   barracks:{ n:'兵营', d:'每次出征多带 1 支随机部队' },
@@ -154,10 +141,12 @@ const EVENTS = {
   peddler:{ n:'货郎', sprite:'stall', text:'货郎掀开布，里面是一排会动的小瓶子。' },
 };
 ENEMIES.tvmini = { name:'小电视头', sprite:'tv', s:8, hp:360, atk:12, cd:1.4, range:90, spd:45, base:6, mult:1, boss:1 };
-Object.assign(M, { HEROES, HERO_NAMES, RARITY, TALENTS, BRANCH, QUIRKS, RELIC_BP, STATS, QUALITY, BUILDINGS, BLD_BP, HALL_COST, REGIONS, UNIT_UNLOCK, NODE, EVENTS });
+Object.assign(M, { HEROES, RARITY, TALENTS, BRANCH, RELIC_BP, STATS, QUALITY, BUILDINGS, BLD_BP, HALL_COST, REGIONS, UNIT_UNLOCK, NODE, EVENTS });
 
 // ───────── helpers ─────────
 M.rid = () => Math.random().toString(36).slice(2, 9);
+// a leader is known by its class: the class decides both skills, so there are no personal names
+M.heroN = (h) => ((HEROES[h && h.cls] || {}).n || '');
 M.expNeed = (lv) => Math.round(100 * Math.pow(lv, 1.5));
 M.relicSlots = (h) => h.lv >= 8 ? 3 : h.lv >= 4 ? 2 : 1;
 M.statText = (k, v) => STATS[k].d.replace('{v}', STATS[k].pct ? Math.round(Math.abs(v) * 100) : (Math.round(v * 100) / 100));
@@ -170,9 +159,7 @@ M.newHero = function (meta, cls, rarity) {
     const pool = TALENTS[b].slice().sort(() => Math.random() - 0.5);
     tree[b] = pool.slice(0, R.tiers).map((t, i) => ({ n: t.n, d: t.d, m: t.m, big: rarity === 2 && i === 3 }));
   });
-  const used = meta ? meta.heroes.map(h => h.name) : [];
-  const names = HERO_NAMES.filter(n => !used.includes(n));
-  const h = { id: M.rid(), cls, name: pick(names.length ? names : HERO_NAMES), rarity, lv: 1, exp: 0, points: 0, tree, taken: { atk: 0, def: 0, luck: 0 }, relics: [], quirks: [], status: null, hp: 0, runs: 0 };
+  const h = { id: M.rid(), cls, name: HEROES[cls].n, rarity, lv: 1, exp: 0, points: 0, tree, taken: { atk: 0, def: 0, luck: 0 }, relics: [], status: null, hp: 0, runs: 0 };
   if (meta && meta.buildings.includes('training')) { h.lv = 2; h.points = 1; }
   h.hp = M.heroMaxHp(h, meta);
   return h;
@@ -181,7 +168,6 @@ M.heroMods = function (h, meta) {
   const m = {};
   const add = (o, k) => Object.keys(o).forEach(x => { m[x] = (m[x] || 0) + o[x] * (k || 1); });
   Object.keys(h.tree).forEach(b => h.tree[b].slice(0, h.taken[b]).forEach(t => add(t.m, t.big ? 2 : 1)));
-  h.quirks.forEach(q => add(QUIRKS[q].m));
   if (meta) h.relics.forEach(id => { const r = meta.relics.find(x => x.id === id); if (r) r.lines.forEach(l => { m[l.k] = (m[l.k] || 0) + l.v; }); });
   return m;
 };
@@ -197,13 +183,6 @@ M.addExp = function (h, amt) {
   return ups;
 };
 M.canTake = (h, b) => h.points > 0 && h.taken[b] < h.tree[b].length;
-M.addQuirk = function (h, pos) {
-  const pool = Object.keys(QUIRKS).filter(k => !!QUIRKS[k].pos === !!pos && !h.quirks.includes(k));
-  if (!pool.length) return null;
-  const q = pick(pool);
-  if (h.quirks.length >= 5) { const same = h.quirks.filter(k => !!QUIRKS[k].pos === !!pos); const rm = same.length ? pick(same) : pick(h.quirks); h.quirks = h.quirks.filter(k => k !== rm); }
-  h.quirks.push(q); return q;
-};
 M.craftRelic = function (meta, bp) {
   const B = RELIC_BP[bp];
   const q = wpick([0, 1, 2, 3], i => [50, 30, 15, 5][i]);
@@ -246,7 +225,6 @@ M.advanceDay = function (meta) {
     if (!h.status) return;
     h.status.days--;
     if (h.status.kind === 'hospital') { const mx = M.heroMaxHp(h, meta); h.hp = Math.min(mx, h.hp + mx * 0.35 * (1 + (M.heroMods(h, meta).hospital || 0))); if (h.status.days <= 0 || h.hp >= mx) { h.hp = mx; h.status = null; logs.push(h.name + ' 出院了'); } }
-    else if (h.status.kind === 'sanitarium' && h.status.days <= 0) { h.quirks = h.quirks.filter(q => q !== h.status.quirk); logs.push(h.name + ' 的「' + QUIRKS[h.status.quirk].n + '」消除了'); h.status = null; }
   });
   M.rollOffers(meta);
   return logs;

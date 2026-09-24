@@ -19,7 +19,6 @@
       家具: vals(M.FURN).map(f => (f.names || [])[0]),
       成就: vals(M.ACH).map(a => a.n),
       卡带: vals(M.KITS).map(k => k.n || k.name),
-      性格: vals(M.QUIRKS).map(q => q.n),
       天赋: Object.values(M.TALENTS || {}).flat().map(t => t.n),
       说明卡: (M.GUIDE || []).map(c => c.title),
     };

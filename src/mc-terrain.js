@@ -164,7 +164,7 @@ M.advanceDay = function (m) {
   const sh = Math.round(bm.shardDaily || 0), ob = Math.round(bm.orbDaily || 0);
   if (sh) { m.shards += sh; logs.push({ t: '地脉产出灵魂碎片 +' + sh }); }
   if (ob) { m.orbs += ob; logs.push({ t: '地脉产出经验球 +' + ob }); }
-  if (bm.healAll) { let n = 0; m.heroes.forEach(h => { if (h.status && h.status.kind === 'sanitarium') return; const mx = M.heroMaxHp(h, m); if (h.hp > 0 && h.hp < mx) { h.hp = Math.min(mx, h.hp + mx * bm.healAll); n++; } }); if (n) logs.push({ t: '地脉滋养：领袖回复 ' + Math.round(bm.healAll * 100) + '% 生命' }); }
+  if (bm.healAll) { let n = 0; m.heroes.forEach(h => { const mx = M.heroMaxHp(h, m); if (h.hp > 0 && h.hp < mx) { h.hp = Math.min(mx, h.hp + mx * bm.healAll); n++; } }); if (n) logs.push({ t: '地脉滋养：领袖回复 ' + Math.round(bm.healAll * 100) + '% 生命' }); }
   return logs;
 };
 

@@ -14,7 +14,7 @@ const oUT = M.unitTip;
 M.unitTip = function (k, u, run) { const t = oUT.call(this, k, u, run), d = M.DB[k]; return d ? named(t, d.n, d.q) : t; };
 const oIT = G.itemTip; G.itemTip = function (key, q) { const t = oIT.call(this, key, q), I = M.ITEMS[key]; return I ? named(t, I.name, q || 0) : t; };
 const oRT = G.relicTip; G.relicTip = function (r) { const t = oRT.call(this, r); return r ? named(t, M.RELICS[r.key].n, r.q) : t; };
-const oHT = G.heroTip; G.heroTip = function (h) { const t = oHT.call(this, h); if (!t || !h) return t; t.title = M.qn(h.name, h.rarity) + ' · ' + M.HEROES[h.cls].n; t.c = M.qc(h.rarity); t.kind = stripQ(t.kind); return t; };
+const oHT = G.heroTip; G.heroTip = function (h) { const t = oHT.call(this, h); if (!t || !h) return t; t.title = 'Lv' + h.lv + ' ' + M.heroN(h); t.c = M.qc(h.rarity); t.kind = stripQ(t.kind); return t; };
 // blueprints carry the building's quality in their name
 const oInfo = M.itemInfo;
 M.itemInfo = function (key) { const I = oInfo.call(this, key); if (key && key.startsWith('bbp:')) { const B = M.BUILDINGS[key.slice(4)]; if (B) { I.n = M.qn(B.n + '图纸', B.q); I.c = M.qc(B.q); } } return I; };
@@ -40,10 +40,6 @@ const oView = G.view;
 G.view = function () {
   const v = oView.call(this), tip = this.tipData, m = this.meta, run = this.run;
   if (tip && v.tip) { v.tip.hasTop = !!(tip.top && tip.top.length); v.tip.top = v.tip.hasTop ? segs(tip.top) : []; v.tip.kind = stripQ(v.tip.kind).replace(/^\s*·\s*/, ''); v.tip.hasKind = !!v.tip.kind; v.tip.title = tip.title; v.tip.c = tip.c || v.tip.c; }
-  // base hero cards
-  if (v.b && v.b.heroes) v.b.heroes.forEach((bh, i) => { const h = m.heroes[i]; if (h) bh.name = M.qn(h.name, h.rarity); });
-  // world HUD leader name
-  if (v.w && run && run.hero && v.w.heroName) v.w.heroName = M.qn(run.hero.name, run.hero.rarity);
   // shop cards
   if (v.s && run && run.shop) {
     (v.s.units || []).forEach((u, i) => { const c = run.shop.units[i], d = c && M.DB[c.type]; if (d) { u.n = M.qn(d.n, d.q); u.qn = ''; } });
@@ -56,9 +52,9 @@ G.view = function () {
       pn.tags = (pn.tags || []).concat([{ img: M.iconURL('f_power', 2), tip: 'b-power', c: pw >= 0 ? '#9cff7a' : '#ff9a6a', n: pw >= 0 ? '电力 +' + pw : '耗电 ' + (-pw) }]); pn.hasTags = true;
       pn.chips = (pn.chips || []).filter(ch => !/^(电力 \+|耗电 )/.test(ch.t)); }
     if (pn.isBuild && pn.opts) { const opts = M.buildOptions(m, p.c, p.r); pn.opts.forEach((o, i) => { const x = opts[i]; if (!x) return; o.n = M.qn(x.B.n, x.B.q) + (x.count > 1 ? ' ×' + x.count : ''); o.c = M.qc(x.B.q); }); }
-    if (pn.isHero) { const h = m.heroes.find(x => x.id === p.id); if (h) { pn.title = M.qn(h.name, h.rarity); pn.titleColor = M.qc(h.rarity); if (pn.heads) pn.heads = pn.heads.filter(x => x.tip !== 'hs-rar'); } }
-    if (pn.isLoadout && pn.heroes) pn.heroes.forEach((x, i) => { const h = m.heroes[i]; if (h) { x.n = M.qn(h.name, h.rarity); x.c = M.qc(h.rarity); } });
-    if (pn.heroes && !pn.isLoadout) pn.heroes.forEach((x, i) => { const h = m.heroes[i]; if (h && x.n) { x.n = M.qn(h.name, h.rarity) + ' · Lv ' + h.lv; x.c = M.qc(h.rarity); } });
+    if (pn.isHero) { const h = m.heroes.find(x => x.id === p.id); if (h) { pn.title = M.heroN(h); pn.titleColor = M.qc(h.rarity); } }
+    if (pn.isLoadout && pn.heroes) pn.heroes.forEach((x, i) => { const h = m.heroes[i]; if (h) { x.n = M.heroN(h); x.c = M.qc(h.rarity); } });
+    if (pn.heroes && !pn.isLoadout) pn.heroes.forEach((x, i) => { const h = m.heroes[i]; if (h && x.n) { x.n = M.heroN(h) + ' · Lv ' + h.lv; x.c = M.qc(h.rarity); } });
   }
   return v;
 };

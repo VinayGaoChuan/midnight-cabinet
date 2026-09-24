@@ -94,7 +94,7 @@ Object.assign(G, {
     let rar = M.RARITY.indexOf(M.wpick(M.RARITY, r => r.w)); if (M.hasBuilt(m, B => B.recruit && B.recruit.qUp)) rar = Math.max(1, rar); rar = Math.max(rar, M.baseMods(m).recruitMin || 0);
     this.startReel({ title: '招魂', iconKey: 'candle', itemMode: true, land: 0, ups: rar, tease: rar < 3, tiles: M.RARITY.map(r => ({ n: r.n, sub: '领袖', c: r.c })), onDone: () => {
       const h = M.newHero(m, null, rar); m.heroes.push(h); this.save(); const col = M.RARITY[rar].c;
-      this.fx.rays(960, 460, col, 2.2); this.fx.pop(960, 700, h.name + ' · ' + M.HEROES[h.cls].n, col, 80, { life: 1.8, rise: 20 });
+      this.fx.rays(960, 460, col, 2.2); this.fx.pop(960, 700, M.heroN(h), col, 80, { life: 1.8, rise: 20 });
       this.fly(M.spriteCanvas(M.HEROES[h.cls].sprite, 14), { x: 960, y: 440 }, 'heroes', col, () => { this.pulse.heroes = now(); }, 1.0);
     } });
   },
@@ -112,16 +112,12 @@ Object.assign(G, {
     this.hold('msup', m.supplies); m.supplies -= 40; this.release('msup'); h.hp = Math.min(mx, h.hp + mx * 0.3); this.save(); M.Sfx.heal();
     const p = this.fxPos('hero-' + id); if (p) { this.fx.pop(p.x, p.y - 80, '+' + Math.round(mx * 0.3), '#9cff7a', 44, { num: 1 }); this.fx.burst(p.x, p.y, '#9cff7a', 16); }
   },
-  sanit(id, q) {
-    const m = this.meta, h = m.heroes.find(x => x.id === id); if (m.supplies < 80) { this.toast('物资不足', '#d0453c'); return; }
-    this.hold('msup', m.supplies); m.supplies -= 80; this.release('msup'); h.status = { kind: 'sanitarium', days: 3, quirk: q }; this.save(); this.toast(h.name + ' 开始疗养（3 天，期间不能出征）', '#9ccc6a');
-  },
   takeTalent(id, b) { const m = this.meta, h = m.heroes.find(x => x.id === id); if (!h || h.points <= 0 || h.taken[b] >= h.tree[b].length) return; h.points--; h.taken[b]++; h.hp = Math.min(h.hp, M.heroMaxHp(h, m)); this.save(); M.Sfx.up(1); const p = this.fxPos('tal-' + b + '-' + (h.taken[b] - 1)); if (p) { this.fx.burst(p.x, p.y, M.BRANCH[b].c, 24); this.fx.ring(p.x, p.y, 10, 120, M.BRANCH[b].c, 6, 0.4); } },
   openHero(id) { this.openPanel({ kind: 'hero', id }); },
   openWorlds() { this.bv.focusDoor(); this.openPanel({ kind: 'worlds' }); M.Sfx.portal(); if (this.meta.baseTut === 4) { this.meta.baseTut = 99; this.coachData = null; this.save(); } },
   pickWorld(k) { const m = this.meta, ok = m.heroes.filter(h => !h.status && h.hp > 0); if (!ok.length) { this.toast('没有能出征的领袖', '#d0453c'); return; } this.openPanel({ kind: 'loadout', world: k, hero: ok[0].id, relics: [] }); },
   toggleRelic(rid) { const p = this.panel, m = this.meta, h = m.heroes.find(x => x.id === p.hero), slots = M.relicSlots(h, m); const i = p.relics.indexOf(rid); if (i >= 0) p.relics.splice(i, 1); else if (p.relics.length < slots) { p.relics.push(rid); M.Sfx.land(p.relics.length); } else this.toast('这名领袖最多带 ' + slots + ' 件宝物', '#8d8496'); this.bump(); },
-  pickHero(id) { const p = this.panel, m = this.meta, h = m.heroes.find(x => x.id === id); if (h.status || h.hp <= 0) { this.toast(h.status ? '正在疗养' : '重伤，先去治疗', '#8d8496'); return; } p.hero = id; p.relics = p.relics.slice(0, M.relicSlots(h, m)); M.Sfx.click(); this.bump(); },
+  pickHero(id) { const p = this.panel, m = this.meta, h = m.heroes.find(x => x.id === id); if (h.hp <= 0) { this.toast('重伤，先去治疗', '#8d8496'); return; } p.hero = id; p.relics = p.relics.slice(0, M.relicSlots(h, m)); M.Sfx.click(); this.bump(); },
   launch() {
     const p = this.panel, m = this.meta, h = m.heroes.find(x => x.id === p.hero);
     this.panel = null; this.coachData = null; M.Sfx.portal(); M.Sfx.whoosh(0.8);

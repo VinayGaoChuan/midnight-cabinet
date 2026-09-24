@@ -110,10 +110,10 @@ MINI.child = { title: '迷路的孩子', img: 'child', col: '#ffe08a', text: '�
     if (mg.phase === 'walk') { mg.walk += dt; if (mg.pt > 1.3) { this.miniSet('prints'); } }
     if (mg.phase === 'prints' && mg.pt > 1.0 + mg.j * 0.15) this.miniSet('choose');
     if (mg.phase === 'end' && mg.pt > 1.2 && !mg.fin) { mg.fin = true; const h = this.run.hero; let tx, col, g = [];
-      if (mg.ok === 3) { const q = rnd() < 0.75 + mg.luck ? M.addQuirk(h, 1) : null; g.push({ k: 'rsup', v: 30 }, K.item(this.run, mg.P)); tx = '她把你带到一个藏东西的地方，回头笑了笑，不见了。' + (q ? h.name + ' 觉醒了「' + M.QUIRKS[q].n + '」。' : ''); col = '#9ccc6a'; }
+      if (mg.ok === 3) { g.push({ k: 'rsup', v: 30 }, K.item(this.run, mg.P)); tx = '她把你带到一个藏东西的地方，回头笑了笑，不见了。'; col = '#9ccc6a'; }
       else if (mg.ok === 2) { g.push({ k: 'rsup', v: 20 }); tx = '走丢了一次，但最后还是找到了她的家。门口放着一袋东西。'; col = '#caa84a'; }
       else if (mg.ok === 1) { tx = '一转身她就不见了。'; col = '#8d8496'; }
-      else { const q = M.addQuirk(h, 0); tx = '你迷路了。你总觉得背后有人。' + (q ? h.name + ' 染上了「' + M.QUIRKS[q].n + '」。' : ''); col = '#d0453c'; }
+      else { tx = '你迷路了。你总觉得背后有人。生命 -' + this.heroHurt(0.08) + '。'; col = '#d0453c'; }
       this.miniFinish(tx, col, g); }
   },
   draw(x, mg) {
@@ -169,7 +169,7 @@ const MEDS = [
   { n: '金色药水', c: '#ffcc33', d: '宝贝', f(g, mg) { return g.award([K.item(g.run, mg.P)], mg.from).join(''); } },
   { n: '白色药片', c: '#e8e8f0', d: '物资', f(g, mg) { return g.award([{ k: 'rsup', v: 25 }], mg.from).join(''); } },
   { n: '红色药水', c: '#ff3a3a', d: '剧毒', f(g) { return '中毒 -' + g.heroHurt(0.1); } },
-  { n: '紫色药水', c: '#b86bff', d: '改变性格', f(g) { const h = g.run.hero, q = M.addQuirk(h, rnd() < 0.5 ? 1 : 0); return q ? '觉醒了「' + M.QUIRKS[q].n + '」' : '没有变化'; } }];
+  { n: '紫色药水', c: '#b86bff', d: '倍率', f(g) { g.run.runBuff.mult = (g.run.runBuff.mult || 0) + 0.2; return '本局初始倍率 +0.2'; } }];
 MINI.clinic = { title: '废弃医务室', img: 'gurney', col: '#8fe0ff', text: '药柜里有六个瓶子。有两个标签被血糊住了。你最多敢试三瓶。',
   init(mg) { const pool = MEDS.slice().sort(() => rnd() - 0.5); mg.bt = pool.map((m, i) => ({ m, x: SX + 250 + i * 140, y: SY + 330, dark: false, open: 0 })); const dk = [0, 1, 2, 3, 4, 5].sort(() => rnd() - 0.5).slice(0, 2); dk.forEach(i => mg.bt[i].dark = true); mg.opened = 0; mg.got = []; },
   open(mg, i) { const b = mg.bt[i]; if (!b || b.opened || mg.phase !== 'idle' || mg.opened >= 3) return; b.opened = true; mg.opened++; mg.cur = i; this.miniSet('uncork'); S.pop(); },

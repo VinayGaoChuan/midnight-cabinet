@@ -49,7 +49,6 @@ G.startSettle = function () {
     const dn = b.deadUids.length; if (dn) lines.push({ t: dn + ' 名部队倒下，已全部复活', c: '#9cff7a', icon: 'up' });
     run.roster.forEach(u => { u.battles = (u.battles || 0) + 1; (DB[u.type].tr || []).forEach(t => { const T = M.TDB[t]; if (!T) return; const hh = M.TRAIT_H[T.cls.replace(/^Summon|Trait$/g, '')]; if (hh && hh.post) hh.post(b, null, T.v, u); }); });
     b.growLog.forEach(t => lines.push({ t, c: '#ffcc33', icon: 'up' }));
-    if (!run.tut && Math.random() < 0.18) { const pos = b.heroDmgTaken > mx * 0.2 ? Math.random() < 0.3 : Math.random() < 0.75; const q = M.addQuirk(h, pos); if (q) lines.push({ t: h.name + ' 觉醒了性格「' + M.QUIRKS[q].n + '」：' + M.QUIRKS[q].d, c: M.QUIRKS[q].pos ? '#9ccc6a' : '#ff6a5a' }); }
   }
   run.battles++;
   this.settle = { t: 0, good, title, col, lines, shown: 0, score, base: b.base, mult: b.mult, target: 0, pass: true, final: !good ? 'fail' : n.type === 'boss' && n.final ? 'clear' : n.type === 'extract' ? 'extract' : null };

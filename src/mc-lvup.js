@@ -32,7 +32,7 @@ G.heroLvUp = function (id) {
 
 // ───────── the ceremony ─────────
 G.lvUpFx = function (h, lv0, lv1, p0, p1) {
-  const H = M.HEROES[h.cls], item = { h, lv0, lv1, p0, p1, name: M.qn(h.name, h.rarity), col: M.qc(h.rarity), img: M.spriteCanvas(H.sprite, 16) };
+  const H = M.HEROES[h.cls], item = { h, lv0, lv1, p0, p1, name: M.heroN(h), col: M.qc(h.rarity), img: M.spriteCanvas(H.sprite, 16) };
   this.lvQ = this.lvQ || []; this.lvQ.push(item); if (!this.lvFx) this.lvNext();
 };
 G.lvNext = function () {

@@ -49,7 +49,7 @@ T.exportText = () => JSON.stringify(T.exportObj());
 T.status = () => { const n = ls.get(K_A, []).reduce((a, b) => a + b.ev.length, 0) + T.buf.length; return T.sink === 'claude' ? '自动上传到 Claude · 已上传 ' + T.sent.batches + ' 批 / ' + T.sent.events + ' 条' + (T.err ? ' · 上次出错：' + T.err : '') : T.sink === 'http' ? '自动上传到自定义地址 · 已上传 ' + T.sent.batches + ' 批' : '只在本机记录 · ' + n + ' 条事件（可复制或下载后发给开发者）'; };
 
 // ───────── snapshots ─────────
-const heroS = (h, m) => h && ({ cls: h.cls, lv: h.lv, r: h.rarity, hp: r2(h.hp / Math.max(1, M.heroMaxHp(h, m))), q: (h.quirks || []).length, tal: h.taken ? h.taken.atk + h.taken.def + h.taken.luck : 0 });
+const heroS = (h, m) => h && ({ cls: h.cls, lv: h.lv, r: h.rarity, hp: r2(h.hp / Math.max(1, M.heroMaxHp(h, m))), tal: h.taken ? h.taken.atk + h.taken.def + h.taken.luck : 0 });
 const rooms = (m) => { const o = []; M.eachBuilt(m, (b) => o.push(b)); return o; };
 const tilesS = (m) => { const o = []; M.eachBuilt(m, (b, c, r, x) => { if (x.tile) o.push({ t: x.tile, q: M.TILES[x.tile] ? M.TILES[x.tile].q : null, b, fit: M.tileFits ? M.tileFits(x.tile, b) : null }); }); return o; };
 const metaS = (m) => ({ sup: m.supplies, sh: m.shards, orb: m.orbs, core: m.core, portal: r2(m.portal.hp / Math.max(1, M.portalMax(m))), heroes: m.heroes.map(h => heroS(h, m)), rooms: rooms(m), pw: M.power(m), bpInv: Object.keys(m.inv).filter(k => /^(bbp|rbp):/.test(k)).reduce((a, k) => a + m.inv[k], 0), relics: m.relics.length, tiles: tilesS(m) });
@@ -119,7 +119,6 @@ const oCraft = M.craftRelic3; M.craftRelic3 = function (meta, key, forge) { cons
 const oNH = M.newHero; M.newHero = function (meta, cls, rarity) { const h = oNH.apply(this, arguments); try { T.ev('hero_new', { cls: h.cls, r: h.rarity, lv: h.lv }); } catch (e) {} return h; };
 wrap(G, 'train', function (id) { return this.meta.orbs; }, function (o0, r, a) { const h = this.meta.heroes.find(x => x.id === a[0]); if (this.meta.orbs < o0) T.ev('train', { orbs: o0 - this.meta.orbs, lv: h && h.lv }); });
 wrap(G, 'quickHeal', null, function () { T.ev('quick_heal', {}); });
-wrap(G, 'sanit', function (id, q) { return q; }, function (q) { T.ev('sanit', { quirk: q }); });
 wrap(G, 'takeTalent', function (id, b) { const h = this.meta.heroes.find(x => x.id === id); return h ? { cls: h.cls, b, i: h.taken[b], lv: h.lv, pts: h.points } : null; }, function (c) { if (c) T.ev('talent', c); });
 wrap(G, 'talUp', function () { const c = this.talCharge; return c ? (Date.now() / 1000 - c.t0) : null; }, function (held) { if (held != null && held < 0.75) T.ev('talent_short', { held: r2(held) }); });
 wrap(G, 'startRaid', null, function () { const r = this.raid; if (!r || r._t0) return; T.ev('raid_start', { foes: r.list.length, portal: Math.round(r.portal.hp), heroes: r.ents.filter(e => e.hero).map(e => heroS(e.hero, this.meta)), bench: this.meta.heroes.length - r.ents.filter(e => e.hero).length, weapons: r.turrets.length }); r._t0 = Date.now(); });

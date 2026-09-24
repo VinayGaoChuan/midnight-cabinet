@@ -910,18 +910,20 @@
 </sc-if>
 
 <sc-if value="{{isMenu}}" hint-placeholder-val="{{false}}">
-  <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 38%,#3a1a30 0%,#140a14 45%,#050307 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px">
-    <div style="position:absolute;left:0;top:0;width:1920px;height:1080px;background:repeating-linear-gradient(100deg,rgba(255,210,140,0.035) 0 60px,transparent 60px 220px);pointer-events:none"></div>
-    <div style="font-size:250px;line-height:1;color:#ffe08a;text-shadow:0 0 60px rgba(255,170,60,0.55),0 12px 0 #5a1c30,0 14px 40px #000">午夜机台</div>
-    <div style="font-family:'Cinzel','Noto Serif SC',serif;font-size:34px;color:#e07ab0;letter-spacing:10px;text-shadow:0 0 20px #c0407a">MIDNIGHT CABINET</div>
-    <div style="display:flex;flex-direction:column;gap:22px;margin-top:60px;width:560px">
-      <div sc-camel-on-click="{{startGame}}" style="padding:22px 0;text-align:center;display:flex;flex-direction:column;gap:4px;background:linear-gradient(180deg,#ffe08a,#d4982e);color:#1a0e08;border:2px solid #fff3c4;box-shadow:0 6px 0 #6a4410,0 0 40px rgba(255,190,80,0.45);cursor:pointer;transition:transform .08s,filter .12s" style-hover="filter:brightness(1.12);transform:translateY(-3px)" style-active="transform:translateY(4px) scale(0.97)">
-        <span style="font-size:58px">{{menuStart}}</span><span style="font-size:26px;opacity:0.75">{{menuSub}}</span>
+  <canvas ref="{{introRef}}" width="1920" height="1080" style="position:absolute;left:0;top:0;width:1920px;height:1080px"></canvas>
+  <sc-if value="{{mn.on}}" hint-placeholder-val="{{false}}">
+    <div style="position:absolute;left:{{mn.x}}px;top:{{mn.y}}px;width:{{mn.w}}px;height:{{mn.h}}px;box-sizing:border-box;padding:0 0 {{mn.pb}}px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:8px;opacity:{{mn.op}}">
+      <div sc-camel-on-click="{{menuGo}}" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 36px 8px;border:2px solid transparent;cursor:pointer;transition:transform .08s" style-hover="border-color:#ffe08a;background:rgba(255,224,138,0.10)" style-active="transform:scale(0.96)">
+        <div style="display:flex;align-items:center;gap:14px;font-size:54px;line-height:1.15;color:#ffe08a;text-shadow:0 0 18px rgba(255,190,80,0.75),3px 3px 0 #3a1020"><span data-blink="1" style="font-size:34px">▶</span><span>{{menuStart}}</span></div>
+        <div style="font-size:22px;color:#e07ab0;text-shadow:0 0 10px rgba(224,122,176,0.6)">{{menuSub}}</div>
       </div>
-      <div sc-camel-on-click="{{openRules}}" style="padding:18px 0;text-align:center;font-size:46px;background:linear-gradient(180deg,#2e2436,#1a1420);border:2px solid #8a6a3a;box-shadow:0 5px 0 #0a080c;cursor:pointer;transition:transform .08s" style-hover="border-color:#ffd970;transform:translateY(-2px)" style-active="transform:translateY(3px)">玩法说明</div>
-      <div sc-camel-on-click="{{openSettings}}" style="padding:14px 0;text-align:center;font-size:40px;background:linear-gradient(180deg,#2e2436,#1a1420);border:2px solid #8a6a3a;box-shadow:0 5px 0 #0a080c;cursor:pointer;transition:transform .08s" style-hover="border-color:#ffd970;transform:translateY(-2px)" style-active="transform:translateY(3px)">设置 · 操作与按键</div><div sc-camel-on-click="{{askReset}}" style="padding:12px 0;text-align:center;font-size:32px;color:#6b6570;cursor:pointer" style-hover="color:#ff6a5a">重置存档</div>
+      <div style="display:flex;gap:26px">
+        <div sc-camel-on-click="{{openRules}}" style="padding:2px 22px;font-size:34px;color:#7fe0d0;text-shadow:0 0 12px rgba(127,224,208,0.6);border:2px solid transparent;cursor:pointer" style-hover="border-color:#7fe0d0;background:rgba(127,224,208,0.10)" style-active="transform:scale(0.96)">玩法说明</div>
+        <div sc-camel-on-click="{{openSettings}}" style="padding:2px 22px;font-size:34px;color:#7fe0d0;text-shadow:0 0 12px rgba(127,224,208,0.6);border:2px solid transparent;cursor:pointer" style-hover="border-color:#7fe0d0;background:rgba(127,224,208,0.10)" style-active="transform:scale(0.96)">设置</div>
+      </div>
     </div>
-  </div>
+    <div style="position:absolute;left:{{mn.x}}px;top:{{mn.y}}px;width:{{mn.w}}px;height:{{mn.h}}px;background:repeating-linear-gradient(180deg,rgba(0,0,0,0.18) 0 2px,transparent 2px 5px);pointer-events:none"></div>
+  </sc-if>
 </sc-if>
 
 <sc-if value="{{isBase}}" hint-placeholder-val="{{false}}">
@@ -950,9 +952,10 @@
     <div data-fx="heroes" style="display:flex;gap:10px">
       <sc-for list="{{b.heroes}}" as="bh" hint-placeholder-count="0">
         <div data-fx="{{bh.fx}}" sc-camel-on-click="{{bh.onClick}}" sc-camel-on-mouse-enter="{{bh.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" style="position:relative;width:112px;height:132px;box-sizing:border-box;background:linear-gradient(180deg,rgba(30,24,36,0.95),rgba(10,8,14,0.95));border:2px solid {{bh.rc}};box-shadow:0 0 0 3px #0a080c,0 8px 20px rgba(0,0,0,0.6);display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;padding:6px;cursor:pointer;opacity:{{bh.op}};transform:scale({{bh.sc}});transition:transform .1s" style-hover="transform:translateY(-6px)" style-active="transform:scale(0.95)">
-          <m-img src="{{bh.img}}" style="max-width:96px;max-height:72px"></m-img>
-          <div style="font-size:17px;line-height:1.15;text-align:center;color:{{bh.rc}};white-space:normal;word-break:break-all">{{bh.name}} · {{bh.lv}}</div>
-          <div style="width:100%;height:8px;background:#000"><div style="height:8px;width:{{bh.hpW}};background:{{bh.hpC}}"></div></div>
+          <m-img src="{{bh.img}}" style="max-width:100px;max-height:84px"></m-img>
+          <div style="width:100%;height:8px;margin-bottom:10px;background:#000"><div style="height:8px;width:{{bh.hpW}};background:{{bh.hpC}}"></div></div>
+          <div data-g="hclass" style="position:absolute;left:-8px;top:-8px;width:40px;height:40px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;background:#0a080c;border:2px solid {{bh.rc}};box-shadow:0 0 0 2px #0a080c"><m-img src="{{bh.clsIc}}" style="width:32px;height:32px"></m-img></div>
+          <div style="position:absolute;left:50%;bottom:-14px;transform:translateX(-50%);padding:0 10px;background:#0a080c;border:2px solid {{bh.rc}};font-family:'Cinzel','Noto Serif SC',serif;font-size:21px;line-height:24px;color:#ffe08a;white-space:nowrap">Lv{{bh.lv}}</div>
           <sc-if value="{{bh.dot}}"><div style="position:absolute;right:-6px;top:-6px;width:20px;height:20px;border-radius:50%;background:#ffcf4a;box-shadow:0 0 12px #ffcf4a"></div></sc-if>
         </div>
       </sc-for>
@@ -1020,15 +1023,6 @@
               </div>
             </sc-for>
           </div>
-        </sc-if>
-        <sc-if value="{{pn.isSanit}}">
-          <sc-if value="{{pn.noQuirk}}"><div style="font-size:26px;color:#8d8496">没有需要处理的性格。</div></sc-if>
-          <sc-for list="{{pn.quirks}}" as="qk" hint-placeholder-count="0">
-            <div style="display:flex;align-items:center;gap:12px;padding:8px 12px;background:#15111a;border:1px solid #3a3040">
-              <div style="flex:1;display:flex;flex-direction:column"><span style="font-size:26px;color:{{qk.c}}">{{qk.t}}</span><span style="font-size:20px;color:#8d8496">{{qk.sub}}</span></div>
-              <sc-if value="{{qk.btnOn}}"><div sc-camel-on-click="{{qk.onClick}}" style="padding:8px 16px;font-size:22px;border:2px solid #9ccc6a;color:#9ccc6a;cursor:pointer">消除 · 80 物资 · 3 天</div></sc-if>
-            </div>
-          </sc-for>
         </sc-if>
         <sc-if value="{{pn.hasTileRow}}"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:auto"><sc-for list="{{pn.tileRow}}" as="tw" hint-placeholder-count="0"><div style="display:flex;align-items:center;gap:6px"><sc-if value="{{tw.hasImg}}"><m-img src="{{tw.img}}" style="width:34px;height:34px"></m-img></sc-if><span style="font-size:24px;color:{{tw.c}}">{{tw.t}}</span></div></sc-for></div></sc-if><sc-if value="{{pn.hasTile}}"><div style="font-size:22px;color:#a89ca8">{{pn.tileTxt}}</div></sc-if>
       </sc-if>
@@ -1140,9 +1134,6 @@
           <sc-if value="{{pn.hasPts}}"><div style="position:absolute;left:10px;bottom:8px;font-size:20px;color:#ffe08a;pointer-events:none">{{pn.holdTip}}</div></sc-if>
           <sc-if value="{{pn.nagOn}}"><div style="position:absolute;left:{{pn.nagX}}px;top:{{pn.nagY}}px;width:220px;padding:6px 10px;text-align:center;font-size:22px;color:#1a0e08;background:#ffcc33;border:2px solid #fff3c4;box-shadow:0 4px 0 #6a4410;pointer-events:none;animation:talBob .5s ease-in-out infinite">要按住不放哦！</div></sc-if>
         </div>
-        <sc-if value="{{pn.hasQuirk}}"><div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
-          <sc-for list="{{pn.quirkIc}}" as="hq" hint-placeholder-count="0"><div data-tip="{{hq.tip}}" style="width:52px;height:52px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border:2px solid {{hq.c}};background:#15111a;box-shadow:0 0 10px {{hq.c}}55"><m-img src="{{hq.ic}}" style="width:36px;height:36px"></m-img></div></sc-for>
-        </div></sc-if>
       </sc-if>
     </div>
   </sc-if>
@@ -1157,7 +1148,7 @@
   <div data-tip="w-hero" style="position:absolute;left:24px;top:24px;width:620px;box-sizing:border-box;padding:16px 20px;display:flex;gap:18px;align-items:center;background:linear-gradient(180deg,rgba(24,18,30,0.94),rgba(10,8,14,0.94));border:2px solid #c8a060;box-shadow:0 0 0 4px rgba(10,8,12,0.9),0 0 0 6px #5a4428,0 14px 40px rgba(0,0,0,0.6)">
     <div style="width:92px;height:110px;display:flex;align-items:flex-end;justify-content:center;background:radial-gradient(circle at 50% 70%,rgba(255,200,120,0.25),transparent 70%)"><m-img src="{{w.heroImg}}"></m-img></div>
     <div style="flex:1;display:flex;flex-direction:column;gap:7px">
-      <div style="font-size:32px;color:{{w.rc}}">Lv{{w.lv}} {{w.cls}}<span data-detail="1" style="font-size:22px;color:#a89ca8"> · {{w.heroName}}</span></div>
+      <div style="font-size:32px;color:{{w.rc}}">Lv{{w.lv}} {{w.cls}}</div>
       <div data-fx="hp" data-tip="w-hp" style="position:relative;height:18px;background:#000;border:1px solid #3a3040;transform:scale({{w.hpSc}})"><div style="position:absolute;left:0;top:0;bottom:0;width:{{w.hpW}};background:linear-gradient(180deg,#fff0a0,{{w.hpC}})"></div></div>
       <div style="font-size:22px;color:#cfc6b8;font-variant-numeric:tabular-nums">{{w.hp}}<span data-detail="1" style="color:#a89ca8"> · 生命不会自动回复</span></div>
       <div data-g="w-skill" sc-camel-on-mouse-enter="{{skillTip}}" sc-camel-on-mouse-leave="{{tipOff}}" style="display:flex;align-items:center;gap:8px;font-size:22px;color:{{w.skillC}}"><m-img src="{{w.skIc}}" style="width:28px;height:28px"></m-img>{{w.skill}}<span data-detail="1">{{w.skillTxt}}</span>
@@ -1439,12 +1430,13 @@
 <sc-if value="{{tipOn}}" hint-placeholder-val="{{false}}">
   <div data-tipbox="1" style="position:absolute;z-index:1000;left:{{tip.x}}px;top:{{tip.y}}px;opacity:{{tip.op}};width:max-content;min-width:220px;max-width:500px;box-sizing:border-box;padding:14px 18px;display:flex;flex-direction:column;gap:9px;background:linear-gradient(180deg,rgba(24,18,30,0.97),rgba(8,6,10,0.97));border:2px solid {{tip.c}};box-shadow:0 0 0 3px rgba(8,6,10,0.9),0 14px 40px rgba(0,0,0,0.7);pointer-events:none">
     <div style="display:flex;align-items:center;gap:12px"><sc-if value="{{tip.hasIcon}}"><m-img src="{{tip.icon}}" style="width:48px;height:48px;flex:none"></m-img></sc-if><sc-if value="{{tip.hasPic}}"><m-img src="{{tip.pic}}" style="max-width:72px;max-height:64px;flex:none"></m-img></sc-if><div style="font-size:32px;color:{{tip.c}};white-space:nowrap">{{tip.title}}</div></div>
-    <sc-if value="{{tip.hasBrief}}"><div style="display:flex;flex-direction:column;gap:8px"><sc-for list="{{tip.brief}}" as="br" hint-placeholder-count="0"><div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap"><sc-for list="{{br.parts}}" as="bp" hint-placeholder-count="0"><div style="display:flex;align-items:center;gap:6px"><sc-if value="{{bp.hasImg}}"><m-img src="{{bp.img}}" style="width:{{bp.is}}px;height:{{bp.is}}px;flex:none"></m-img></sc-if><sc-if value="{{bp.isBar}}"><div style="position:relative;width:{{bp.bw}}px;height:16px;background:#0a0610;border:2px solid #3a3040;box-sizing:border-box"><div style="position:absolute;left:0;top:0;bottom:0;width:{{bp.fill}};background:linear-gradient(180deg,#fff0a0,{{bp.bc}})"></div></div></sc-if><sc-if value="{{bp.hasT}}"><span style="font-size:{{bp.fs}}px;color:{{bp.c}};white-space:nowrap;font-variant-numeric:tabular-nums">{{bp.t}}</span></sc-if></div></sc-for></div></sc-for></div></sc-if>
+    <sc-if value="{{tip.hasBrief}}"><div style="display:flex;flex-direction:column;gap:8px"><sc-for list="{{tip.brief}}" as="br" hint-placeholder-count="0"><div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap"><sc-for list="{{br.parts}}" as="bp" hint-placeholder-count="0"><div style="display:flex;align-items:center;gap:6px"><sc-if value="{{bp.hasImg}}"><m-img src="{{bp.img}}" style="width:{{bp.is}}px;height:{{bp.is}}px;flex:none"></m-img></sc-if><sc-if value="{{bp.isBar}}"><div style="position:relative;width:{{bp.bw}}px;height:16px;background:#0a0610;border:2px solid #3a3040;box-sizing:border-box"><div style="position:absolute;left:0;top:0;bottom:0;width:{{bp.fill}};background:linear-gradient(180deg,#fff0a0,{{bp.bc}})"></div></div></sc-if><sc-if value="{{bp.hasT}}"><span style="font-size:{{bp.fs}}px;color:{{bp.c}};white-space:nowrap;font-variant-numeric:tabular-nums">{{bp.t}}</span></sc-if></div></sc-for><sc-if value="{{br.hasDesc}}"><div style="flex-basis:100%;margin-top:-4px;padding-left:36px;box-sizing:border-box;font-size:22px;line-height:1.45;text-wrap:pretty"><sc-for list="{{br.desc}}" as="bd" hint-placeholder-count="0"><sc-if value="{{bd.hasImg}}"><m-img src="{{bd.img}}" style="display:inline-block;width:26px;height:26px;vertical-align:-6px;margin:0 2px 0 3px"></m-img></sc-if><span style="color:{{bd.c}};font-weight:{{bd.fw}}">{{bd.t}}</span></sc-for></div></sc-if></div></sc-for></div></sc-if>
     <sc-if value="{{tip.hasTop}}"><div style="font-size:22px;line-height:1.4"><sc-for list="{{tip.top}}" as="tt2" hint-placeholder-count="0"><sc-if value="{{tt2.hasImg}}"><m-img src="{{tt2.img}}" style="display:inline-block;width:26px;height:26px;vertical-align:-6px;margin:0 2px 0 3px"></m-img></sc-if><span style="color:{{tt2.c}};font-weight:{{tt2.fw}}">{{tt2.t}}</span></sc-for></div></sc-if>
     <sc-if value="{{tip.hasKind}}"><div style="font-size:22px;color:#a89ca8">{{tip.kind}}</div></sc-if>
     <sc-if value="{{tip.hasD}}"><div style="font-size:24px;line-height:1.45;color:#e8dcc4;text-wrap:pretty"><sc-for list="{{tip.dsegs}}" as="dg" hint-placeholder-count="0"><sc-if value="{{dg.hasImg}}"><m-img src="{{dg.img}}" style="display:inline-block;width:28px;height:28px;vertical-align:-6px;margin:0 2px 0 3px"></m-img></sc-if><span style="color:{{dg.c}};font-weight:{{dg.fw}}">{{dg.t}}</span></sc-for></div></sc-if>
     <sc-for list="{{tip.lines}}" as="tl" hint-placeholder-count="0"><div style="font-size:22px;line-height:1.45;text-wrap:pretty"><sc-for list="{{tl.segs}}" as="sg" hint-placeholder-count="0"><sc-if value="{{sg.hasImg}}"><m-img src="{{sg.img}}" style="display:inline-block;width:26px;height:26px;vertical-align:-6px;margin:0 2px 0 3px"></m-img></sc-if><span style="color:{{sg.c}};font-weight:{{sg.fw}}">{{sg.t}}</span></sc-for></div></sc-for>
     <sc-if value="{{tip.hint}}"><div data-blink="1" style="font-size:20px;color:#6fb8ff;white-space:nowrap">{{tip.hintTxt}}</div></sc-if>
+    <sc-if value="{{tip.hasAlert}}"><div data-blink="1" style="font-size:20px;color:{{tip.alertC}};white-space:nowrap">{{tip.alertTxt}}</div></sc-if>
   </div>
 </sc-if>
 

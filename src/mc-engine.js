@@ -397,11 +397,45 @@ const FRONT = [[0, 0, 320, 180, '#141118'], ...stripes.map(s => [s[0], 0, 2, 138
   [60, 168, 34, 12, '#b9a58c'], [90, 164, 6, 8, '#b9a58c'], [226, 168, 34, 12, '#b9a58c'], [224, 164, 6, 8, '#b9a58c']];
 function rects(ctx, list) { list.forEach(([x, y, w, h, c, o]) => { ctx.globalAlpha = o == null ? 1 : o; ctx.fillStyle = c; ctx.fillRect(x * 6, y * 6, w * 6, h * 6); }); ctx.globalAlpha = 1; }
 function glow(ctx, x, y, r, col, a) { const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.globalAlpha = a; ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2); ctx.globalAlpha = 1; }
-const INTRO_LEN = 7.4;
+const INTRO_LEN = 6.2;
+// where the camera rests on the cabinet's face once the intro is over: the title menu is drawn on its screen (mc-flow.js)
+const CAB = { z: 1.7, fy: 458.5 };
+const SCR = { x: 720, y: 300, w: 480, h: 270 };   // the glass, in intro-world pixels
+const ease = (a) => a < 0.5 ? 4 * a * a * a : 1 - Math.pow(-2 * a + 2, 3) / 2;
+// the cabinet seen from the front. k: 0 = attract screen (title + 投币开始), 1 = menu screen (title moved up, room for the buttons)
+function drawFront(ctx, t, z, fy, k) {
+  const W = 1920, H = 1080;
+  ctx.setTransform(z, 0, 0, z, W / 2 - 960 * z, H / 2 - fy * z);
+  glow(ctx, 960, 430, 900, 'rgba(127,224,208,0.22)', 1);
+  rects(ctx, FRONT);
+  const bl = []; for (let i = 0; i < 13; i++) { const on = (Math.floor(t * 4) + i) % 2 === 0; bl.push([110 + i * 8, 25, 2, 2, '#ffb0d0', on ? 1 : 0.25], [110 + i * 8, 39, 2, 2, '#ffb0d0', on ? 0.25 : 1]); }
+  rects(ctx, bl);
+  const f1 = Math.round(Math.sin(t * 11)), f2 = Math.round(Math.sin(t * 9 + 2));
+  rects(ctx, [[43 + f1, 106, 3, 6, '#ffb03a'], [44 + f1, 104, 1, 3, '#fff2a0'], [275 + f2, 110, 3, 6, '#ffb03a'], [276 + f2, 108, 1, 3, '#fff2a0']]);
+  glow(ctx, 264, 660, 180, 'rgba(255,176,58,0.3)', 1); glow(ctx, 1656, 684, 180, 'rgba(255,176,58,0.3)', 1);
+  ctx.fillStyle = '#0c0a10'; ctx.fillRect(SCR.x, SCR.y, SCR.w, SCR.h);
+  glow(ctx, 960, 435, 300, 'rgba(127,224,208,0.10)', 0.8 + 0.2 * Math.sin(t * 3));
+  const ty = 430 - 80 * k, fs = Math.round(66 - 26 * k);
+  ctx.textAlign = 'center'; ctx.fillStyle = '#5a1c30'; ctx.font = `${fs}px ${CNF}`; ctx.fillText('午夜机台', 963, ty + 3); ctx.fillStyle = C.candle; ctx.fillText('午夜机台', 960, ty);
+  ctx.font = `12px ${NUMF}`; ctx.fillStyle = '#c95b8a'; ctx.fillText('MIDNIGHT CABINET', 960, ty + 32 - 10 * k);
+  if (k < 1) { ctx.globalAlpha = (1 - k) * (Math.floor(t * 2) % 2 ? 1 : 0.2); ctx.font = `24px ${CNF}`; ctx.fillStyle = C.bone; ctx.fillText('— 投币开始 —', 960, 520); ctx.globalAlpha = 1; }
+  // scan lines on the glass
+  ctx.globalAlpha = 0.22; ctx.fillStyle = '#000'; for (let y = SCR.y; y < SCR.y + SCR.h; y += 3) ctx.fillRect(SCR.x, y, SCR.w, 1); ctx.globalAlpha = 1;
+  ctx.font = `36px ${CNF}`; ctx.fillStyle = '#ffb0d0'; ctx.fillText('MIDNIGHT', 960, 200);
+}
+// the glass on screen (1920×1080 stage pixels) while the camera rests on the cabinet
+const cabScreen = () => ({ x: Math.round(960 + (SCR.x - 960) * CAB.z), y: Math.round(540 + (SCR.y - CAB.fy) * CAB.z), w: Math.round(SCR.w * CAB.z), h: Math.round(SCR.h * CAB.z) });
+// the title menu scene; dive 0..1 pushes the camera into the screen after 开始游戏
+function drawCabinet(ctx, t, dive) {
+  const W = 1920, H = 1080, e = dive * dive * dive, z = CAB.z + (9 - CAB.z) * e, fy = CAB.fy + (435 - CAB.fy) * Math.min(1, dive * 1.5);
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  drawFront(ctx, t, z, fy, 1);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const dip = clamp((dive - 0.72) / 0.28, 0, 1); if (dip > 0) { ctx.globalAlpha = dip; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
+}
 function drawIntro(ctx, t) {
   const W = 1920, H = 1080;
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
-  const ease = (a) => a < 0.5 ? 4 * a * a * a : 1 - Math.pow(-2 * a + 2, 3) / 2;
   const fl = 0.8 + 0.2 * Math.sin(t * 13) * Math.sin(t * 5.3);
   if (t < 3.6) {
     const q = ease(clamp(t / 3.6, 0, 1)), z = 1.3 + 0.25 * q, fx = 740 + 540 * q, fy = 620 - 60 * q;
@@ -411,29 +445,16 @@ function drawIntro(ctx, t) {
     if (t > 2.0 && t < 3.4 && !(t > 2.7 && t < 2.8)) rects(ctx, [[295, 78, 2, 1, '#e04040'], [300, 78, 2, 1, '#e04040']]);
     glow(ctx, 195 * 6, 95 * 6, 520, 'rgba(127,224,208,0.35)', fl);
   } else {
-    let z = 1 + 0.3 * ease(clamp((t - 3.6) / 2.4, 0, 1));
-    if (t > 6) { const q = clamp((t - 6) / 1.4, 0, 1); z = 1.3 + 2.7 * q * q * q; }
-    const fy = 540 + (435 - 540) * clamp((z - 1) / 3, 0, 1);
-    ctx.setTransform(z, 0, 0, z, W / 2 - 960 * z, H / 2 - fy * z);
-    glow(ctx, 960, 430, 900, 'rgba(127,224,208,0.22)', 1);
-    rects(ctx, FRONT);
-    const bl = []; for (let k = 0; k < 13; k++) { const on = (Math.floor(t * 4) + k) % 2 === 0; bl.push([110 + k * 8, 25, 2, 2, '#ffb0d0', on ? 1 : 0.25], [110 + k * 8, 39, 2, 2, '#ffb0d0', on ? 0.25 : 1]); }
-    rects(ctx, bl);
-    const f1 = Math.round(Math.sin(t * 11)), f2 = Math.round(Math.sin(t * 9 + 2));
-    rects(ctx, [[43 + f1, 106, 3, 6, '#ffb03a'], [44 + f1, 104, 1, 3, '#fff2a0'], [275 + f2, 110, 3, 6, '#ffb03a'], [276 + f2, 108, 1, 3, '#fff2a0']]);
-    glow(ctx, 264, 660, 180, 'rgba(255,176,58,0.3)', 1); glow(ctx, 1656, 684, 180, 'rgba(255,176,58,0.3)', 1);
-    ctx.fillStyle = '#0c0a10'; ctx.fillRect(720, 300, 480, 270);
-    ctx.textAlign = 'center'; ctx.fillStyle = '#5a1c30'; ctx.font = `66px ${CNF}`; ctx.fillText('午夜机台', 964, 434); ctx.fillStyle = C.candle; ctx.fillText('午夜机台', 960, 430);
-    ctx.font = `12px ${NUMF}`; ctx.fillStyle = '#c95b8a'; ctx.fillText('MIDNIGHT CABINET', 960, 462);
-    ctx.globalAlpha = Math.floor(t * 2) % 2 ? 1 : 0.2; ctx.font = `24px ${CNF}`; ctx.fillStyle = C.bone; ctx.fillText('— 投币开始 —', 960, 520); ctx.globalAlpha = 1;
-    ctx.font = `36px ${CNF}`; ctx.fillStyle = '#ffb0d0'; ctx.fillText('MIDNIGHT', 960, 200);
+    // front view: the camera eases onto the cabinet's face and stops there; the title slides up to make room for the menu
+    const q = ease(clamp((t - 3.6) / 2.4, 0, 1));
+    drawFront(ctx, t, 1 + (CAB.z - 1) * q, 540 + (CAB.fy - 540) * q, ease(clamp((t - 5.2) / 0.8, 0, 1)));
   }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   const dip = Math.max(1 - clamp(t / 0.8, 0, 1), 1 - clamp(Math.abs(t - 3.6) / 0.4, 0, 1));
   if (dip > 0) { ctx.globalAlpha = dip; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
 }
 
-window.MC=Object.assign(window.MC,{FW,Sfx,Battle,drawBolt,INTRO_LEN,drawIntro});
+window.MC=Object.assign(window.MC,{FW,Sfx,Battle,drawBolt,INTRO_LEN,drawIntro,drawCabinet,cabScreen});
 window.MC_READY=true;
 })();
 

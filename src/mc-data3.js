@@ -1,7 +1,7 @@
 // ==== mc-data3.js ====
 (function () {
 const M = window.MC;
-const { SP, UNITS, pick, wpick, nice, baseS, ENEMIES, TIERS, HEROES, TALENTS, QUIRKS, STATS } = M;
+const { SP, UNITS, pick, wpick, nice, baseS, ENEMIES, TIERS, HEROES, TALENTS, STATS } = M;
 
 // ───────── unified quality: 普通（白）/ 稀有（蓝）/ 史诗（紫）/ 传说（金）; names always show as 名字（品质） in the quality colour ─────────
 const QUALITY = [ { n:'普通', c:'#e4e4ec', m:1 }, { n:'稀有', c:'#4aa0ff', m:1.5 }, { n:'史诗', c:'#b86bff', m:2.2 }, { n:'传说', c:'#ffcc33', m:3.2 } ];
@@ -89,7 +89,6 @@ const BUILDINGS = {
   pool:{ n:'净水池', q:0, cat:'med', style:'water', pw:-1, cost:80, days:1, fx:{ heal:0.1 }, d:'医院回复额外 +10%。' },
   lookout:{ n:'监听室', q:0, cat:'misc', style:'scifi', pw:-1, cost:90, days:1, fx:{ tower:1 }, d:'出征时，所有节点的类型一开始就可见。' },
   vault:{ n:'保险库', q:0, cat:'misc', style:'steam', pw:-1, cost:110, days:2, fx:{ bank:1 }, d:'领袖死亡时，第一件宝物不会丢失。' },
-  sanitarium:{ n:'疗养室', q:0, cat:'med', style:'nature', pw:-1, cost:90, days:1, sanit:{}, d:'花时间消除领袖的坏性格。' },
   ballista:{ n:'弩炮室', q:0, cat:'defense', style:'medieval', pw:-1, cost:90, days:1, weapon:{ range:2, dmg:30, cd:1.1, kind:'bolt' }, d:'防守时向地面射击。射程 2 格。' },
   cannon:{ n:'蒸汽加农炮', q:0, cat:'defense', style:'steam', pw:-2, cost:140, days:2, weapon:{ range:3, dmg:60, cd:2.2, kind:'shell', splash:110 }, d:'溅射伤害。射程 3 格。' },
   tesla:{ n:'特斯拉线圈', q:0, cat:'defense', style:'scifi', pw:-3, cost:160, days:2, weapon:{ range:2, dmg:26, cd:0.9, kind:'chain', chain:3 }, d:'电弧会在敌人之间跳跃。射程 2 格。' },
@@ -233,8 +232,7 @@ M.newHero = function (meta, cls, rarity) {
   rarity = rarity == null ? RARITY.indexOf(wpick(RARITY, r => r.w)) : rarity;
   const R = RARITY[rarity], tree = {};
   Object.keys(TALENTS).forEach(b => { const pool = TALENTS[b].slice().sort(() => Math.random() - 0.5); tree[b] = pool.slice(0, R.tiers).map((t, i) => ({ n: t.n, d: t.d, m: t.m, big: rarity >= 2 && i === 3 })); });
-  const used = meta ? meta.heroes.map(h => h.name) : [], names = M.HERO_NAMES.filter(n => !used.includes(n));
-  const h = { id: M.rid(), cls, name: pick(names.length ? names : M.HERO_NAMES), rarity, lv: 1, exp: 0, points: 0, tree, taken: { atk: 0, def: 0, luck: 0 }, relics: [], quirks: [], status: null, hp: 0, runs: 0 };
+  const h = { id: M.rid(), cls, name: HEROES[cls].n, rarity, lv: 1, exp: 0, points: 0, tree, taken: { atk: 0, def: 0, luck: 0 }, relics: [], status: null, hp: 0, runs: 0 };
   const lv = meta ? (M.baseMods(meta).newHeroLv || 0) : 0; for (let i = 0; i < lv; i++) { h.lv++; h.points++; }
   h.hp = M.heroMaxHp(h, meta);
   return h;
@@ -268,7 +266,6 @@ M.advanceDay = function (m) {
   const sd = Math.round(M.baseMods(m).supplyDaily || 0); if (sd) { m.supplies += sd; logs.push({ t: '基地产出物资 +' + sd }); }
   const rate = M.hospitalRate(m);
   m.heroes.forEach(h => {
-    if (h.status && h.status.kind === 'sanitarium') { h.status.days--; if (h.status.days <= 0) { h.quirks = h.quirks.filter(q => q !== h.status.quirk); logs.push({ t: h.name + ' 的「' + QUIRKS[h.status.quirk].n + '」消除了' }); h.status = null; } return; }
     const mx = M.heroMaxHp(h, m); if (rate && h.hp < mx) { h.hp = Math.min(mx, h.hp + mx * rate * (1 + (M.heroMods(h, m).hospital || 0))); if (h.hp >= mx) logs.push({ t: h.name + ' 伤好了' }); }
   });
   return logs;

@@ -16,7 +16,7 @@ G.runWin = function (kind) {
 };
 const oldFail = G.runFail;
 G.runFail = function () {
-  const run = this.run, h = run.hero, s0 = snap(this), dead = { name: h.name, cls: h.cls, lv: h.lv, rarity: h.rarity, region: run.region.n };
+  const run = this.run, h = run.hero, s0 = snap(this), dead = { name: M.heroN(h), cls: h.cls, lv: h.lv, rarity: h.rarity, region: run.region.n };
   oldFail.call(this);
   const s1 = snap(this); if (this.endInfo) this.endInfo.gain = { msup: s1.sup - s0.sup, msh: s1.sh - s0.sh, morb: s1.orb - s0.orb, dead };
 };
@@ -60,7 +60,7 @@ function cardCanvas(d) {
   const rg = x.createRadialGradient(w / 2, 170, 10, w / 2, 170, 150); rg.addColorStop(0, 'rgba(255,210,140,0.35)'); rg.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = rg; x.fillRect(0, 0, w, h);
   const sp = M.spriteCanvas(M.HEROES[d.cls].sprite, 10); if (sp) { x.imageSmoothingEnabled = false; const s = Math.min(220 / sp.width, 230 / sp.height); x.drawImage(sp, w / 2 - sp.width * s / 2, 290 - sp.height * s, sp.width * s, sp.height * s); }
   x.fillStyle = 'rgba(0,0,0,0.55)'; x.fillRect(18, 300, w - 36, 100);
-  if (M.pxText) { M.pxText(x, d.name, w / 2, 332, 40, R.c); M.pxText(x, M.HEROES[d.cls].n + ' · Lv ' + d.lv, w / 2, 374, 24, '#cfc6b8'); }
+  if (M.pxText) { M.pxText(x, M.HEROES[d.cls].n, w / 2, 332, 40, R.c); M.pxText(x, 'Lv ' + d.lv, w / 2, 374, 24, '#cfc6b8'); }
   return (cards[k] = c);
 }
 function tearPath(seed) { const pts = []; for (let i = 0; i <= 14; i++) { const y = i / 14 * 420; pts.push([150 + Math.sin(seed + i * 2.7) * 16 + ((i * 7919 + seed * 13) % 17 - 8) * 1.6, y]); } pts[0][1] = -2; pts[14][1] = 422; return pts; }

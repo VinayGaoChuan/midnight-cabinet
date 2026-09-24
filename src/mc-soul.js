@@ -115,7 +115,7 @@ G.raidEnd = function () {
   this.banner({ kind: 'win', text: '守住了！', col: '#ffd970', life: 2.2, sub: '评价 ' + GR.g + ' · 击退 ' + r.kills + ' / ' + r.total }); M.Sfx.fanfare(); this.fx.confetti(160); this.fx.rays(960, 470, GR.c, 2);
   const lines = ['击退 ' + r.kills + ' / ' + r.total + ' · 传送门保住 ' + Math.round(keep * 100) + '%', '物资 +' + sup + ' · 经验球 +' + orb];
   if (bps.length) lines.push('图纸：' + bps.map(k => M.itemInfo(k).n).join('、'));
-  if (falls.length) { lines.push(''); falls.forEach(f => lines.push('阵亡 · ' + M.qn(f.h.name, f.h.rarity) + '（Lv ' + f.h.lv + '）→ 灵魂碎片 +' + f.sh + '，经验球 +' + f.orb)); } else lines.push('没有领袖阵亡。');
+  if (falls.length) { lines.push(''); falls.forEach(f => lines.push('阵亡 · ' + M.heroN(f.h) + '（Lv ' + f.h.lv + '）→ 灵魂碎片 +' + f.sh + '，经验球 +' + f.orb)); } else lines.push('没有领袖阵亡。');
   if (spare) lines.push(spare);
   const collect = () => {
     if (!this.modal || !this.modal.raidRes) return; this.modal = null; M.Sfx.click();
@@ -141,7 +141,7 @@ G.view = function () {
     Object.assign(pn, { isRaidPrep: true, title: '今夜袭击', titleColor: '#ff6a5a', sub: '第 ' + m.day + ' 天 · 怪物正朝传送门涌来',
       rpTxt: '选出守城的领袖。守城战里倒下的领袖会永久死亡，留下灵魂碎片——正好用来清掉弱小的领袖，换成高端材料。基地核心不会因此受损。打完按表现评级，发物资、经验球和图纸。',
       rpHeroes: m.heroes.map(h => { const on = !!sel[h.id], mx = M.heroMaxHp(h, m), P = M.PSKILL && M.PSKILL[h.cls];
-        return { img: M.spriteURL(M.HEROES[h.cls].sprite, 4), n: M.qn(h.name, h.rarity), c: M.qc(h.rarity), sub: 'Lv ' + h.lv + ' · 生命 ' + Math.round(h.hp) + '/' + mx + (P ? ' · 个人技能「' + P.n + '」' : ''), sh: '阵亡留下 ' + M.deathShards(h, m) + ' 碎片',
+        return { img: M.spriteURL(M.HEROES[h.cls].sprite, 4), n: M.heroN(h), c: M.qc(h.rarity), sub: 'Lv ' + h.lv + ' · 生命 ' + Math.round(h.hp) + '/' + mx + (P ? ' · 个人技能「' + P.n + '」' : ''), sh: '阵亡留下 ' + M.deathShards(h, m) + ' 碎片',
           mark: on ? '守城' : '留守', markC: on ? '#ff6a5a' : '#6b6570', border: on ? '#ff6a5a' : '#3a3040', bg: on ? 'linear-gradient(90deg,#3a1418,#15111a)' : '#15111a', onClick: () => this.raidToggle(h.id), tipOn: this.tipFn(() => this.heroTip(h)) }; }),
       rpBtn: n ? '开始守城 · ' + n + ' 名领袖出战' : '开始守城 · 只靠防御房间', rpGo: () => this.raidLaunch() });
   }

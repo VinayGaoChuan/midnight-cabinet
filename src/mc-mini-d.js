@@ -13,7 +13,7 @@ MINI.spring = { title: '地下温泉', img: 'e_spring', col: '#6fd0ff', text: '�
   down(mg) { if (mg.phase === 'ready') this.miniSet('soak'); },
   up(mg) { if (mg.phase === 'soak') MINI.spring.judge.call(this, mg); },
   judge(mg) { const h = mg.heat, [a, b] = mg.band, run = this.run; let tx, col;
-    if (h >= a && h <= b) { const v = this.heroHeal(0.3); let q = null; const bad = run.hero.quirks.filter(k => !M.QUIRKS[k].pos); if (bad.length && rnd() < 0.5 + mg.luck) { q = M.pick(bad); run.hero.quirks = run.hero.quirks.filter(k => k !== q); } tx = '刚刚好。回复 ' + v + ' 生命。' + (q ? '「' + M.QUIRKS[q].n + '」被泡掉了。' : ''); col = '#6fd0ff'; S.heal(); }
+    if (h >= a && h <= b) { const v = this.heroHeal(0.3); tx = '刚刚好。回复 ' + v + ' 生命。'; col = '#6fd0ff'; S.heal(); }
     else if (h > b) { const v = this.heroHurt(0.05); tx = '泡太久，晕了过去，醒来时头撞破了（-' + v + '）。'; col = '#ff6a5a'; }
     else { const v = this.heroHeal(0.12); tx = '还没泡热就起来了。回复 ' + v + ' 生命。'; col = '#9ccc6a'; }
     this.miniSet('done'); this.miniSay(tx.split('。')[0], col, true); setTimeout(() => this.mini === mg && this.miniFinish(tx, col), 1100); },

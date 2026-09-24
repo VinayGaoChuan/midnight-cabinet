@@ -74,7 +74,7 @@ G.tipFor = function (key) {
     'b-base': () => ({ title: '基础积分', c: '#f5ead4', d: '击杀敌人获得。精英、首领给得更多，部分特性和亡语也会加分。', lines: [R('最终积分 = 基础积分 × 倍率')] }),
     'b-mult': () => ({ title: '倍率', c: '#ffcc33', d: '击杀精英 +0.1、首领 +0.3，战旗、宝物和部分特性还会继续叠加。', lines: [R('最终积分 = 基础积分 × 倍率')] }),
     'b-score': () => ({ title: '积分', c: '#ffcc33', d: '战斗胜利后存进钱包，是局内唯一的货币，在夜市购买部队、战旗和道具。' }),
-    'b-hero': () => ({ title: run ? run.hero.name + ' · 领袖' : '领袖', c: '#f2c14e', d: '站在左边的指挥位。部队全灭后会亲自上场。', lines: [R('生命不会自动恢复，靠营火、事件或回基地治疗。'), R('领袖倒下 = 永久死亡。')] }),
+    'b-hero': () => ({ title: run ? 'Lv' + run.hero.lv + ' ' + M.heroN(run.hero) : '领袖', c: '#f2c14e', d: '站在左边的指挥位。部队全灭后会亲自上场。', lines: [R('生命不会自动恢复，靠营火、事件或回基地治疗。'), R('领袖倒下 = 永久死亡。')] }),
     'b-count': () => ({ title: '战况', c: '#e8dcc4', d: '左边是我方还在战斗的部队数，右边是剩余敌人（含还没出场的）。' }),
     'b-pause': () => ({ title: '暂停', c: '#e8dcc4', d: '暂停时依然可以查看单位信息。', lines: [R('快捷键 ' + kq('pause'))] }),
     'b-speed': () => ({ title: '战斗速度', c: '#f2c14e', d: '1× / 2× / 3×，只影响战斗画面的快慢。', lines: [R('快捷键 ' + kq('speed') + ' 循环切换')] }),
@@ -180,7 +180,6 @@ G.startSettle = function () {
     const heal = (run.mods.postHeal || 0) + (th.heal || 0); if (heal) { const v = Math.round(mx * heal); this.hold('hp', Math.round(h.hp)); h.hp = Math.min(mx, h.hp + v); tiles.push({ icon: 'r_heart', v: '+' + v, c: '#9cff7a', to: 'hp' }); }
     run.roster.forEach(u => { u.battles = (u.battles || 0) + 1; (DB[u.type].tr || []).forEach(t => { const T = M.TDB[t]; if (!T) return; const hh = M.TRAIT_H[T.cls.replace(/^Summon|Trait$/g, '')]; if (hh && hh.post) hh.post(b, null, T.v, u); }); });
     (b.grew || []).forEach(g => tiles.push({ icon: g.type, v: g.v, c: '#ffcc33', to: 'roster', unit: 1 }));
-    if (!run.tut && Math.random() < 0.18) { const pos = b.heroDmgTaken > mx * 0.2 ? Math.random() < 0.3 : Math.random() < 0.75; const q = M.addQuirk(h, pos); if (q) tiles.push({ icon: M.QUIRKS[q].pos ? 'up' : 'skull', v: M.QUIRKS[q].n, c: M.QUIRKS[q].pos ? '#9ccc6a' : '#ff6a5a', to: 'hp', quirk: q }); }
   }
   run.battles++;
   this.settle = { t: 0, good, title, col, tiles, shown: 0, score, base: b.base, mult: b.mult, target: 0, pass: true, lines: [], final: !good ? 'fail' : n.type === 'boss' && n.final ? 'clear' : n.type === 'extract' ? 'extract' : null };
@@ -204,7 +203,7 @@ G.view = function () {
   if (v.w && run) { v.w.rexp = this.tv('rexp', run.loot.exp); v.w.rexpSc = this.ps('rexp'); v.w.rshard = this.tv('rshard', run.loot.shards || 0); v.w.rshardSc = this.ps('rshard'); v.w.hasShard = (run.loot.shards || 0) > 0 || !!(run.theme && run.theme.loot.shards); v.w.orbImg = M.spriteURL('orb', 4); v.w.shardImg = M.spriteURL('shard', 4); v.w.hp = this.tv('hp', Math.round(run.hero.hp)) + ' / ' + M.heroMaxHp(run.hero, this.meta); }
   if (st && v.st) {
     const q = cl((st.t - 1.4) / 0.8, 0, 1);
-    v.st.tiles = st.tiles.slice(0, st.shown).map((t, i) => { const age = st.t - 1.7 - i * 0.16, s = 1 + 0.35 * Math.exp(-Math.max(0, age) * 9) * Math.cos(Math.max(0, age) * 22); return { img: M.spriteURL(t.icon, t.unit ? 5 : 7), v: String(t.v), c: t.c, border: t.c, sc: s.toFixed(3), op: cl(age / 0.1 + 1, 0, 1), glow: '0 0 18px ' + t.c + '66', n: t.n || '', hasN: !!t.n, tipOn: this.tipFn(t.quirk ? { title: M.QUIRKS[t.quirk].n, c: t.c, d: M.QUIRKS[t.quirk].d } : t.n ? { title: t.n, c: t.c } : null) }; });
+    v.st.tiles = st.tiles.slice(0, st.shown).map((t, i) => { const age = st.t - 1.7 - i * 0.16, s = 1 + 0.35 * Math.exp(-Math.max(0, age) * 9) * Math.cos(Math.max(0, age) * 22); return { img: M.spriteURL(t.icon, t.unit ? 5 : 7), v: String(t.v), c: t.c, border: t.c, sc: s.toFixed(3), op: cl(age / 0.1 + 1, 0, 1), glow: '0 0 18px ' + t.c + '66', n: t.n || '', hasN: !!t.n, tipOn: this.tipFn(t.n ? { title: t.n, c: t.c } : null) }; });
     v.st.hasTiles = v.st.tiles.length > 0; v.st.eqOn = st.good; v.st.base = M.fmt(st.base); v.st.mult = (Math.round(st.mult * 100) / 100).toFixed(2); v.st.score = M.fmt(st.score * M.ease.eo(q));
     v.st.btn = st.shown < st.tiles.length ? '跳过' : st.final === 'fail' ? '结束' : st.final ? '带着收获回家' : '继续前进';
   }

@@ -59,7 +59,7 @@ const CONCEPTS = [
   { id: 'lvup', cat: '领袖', img: () => sprite('orb'), title: '升级', line: '花经验球立刻升一级，生命、攻击都涨，还给 1 个天赋点。', scr: 'base', sel: '[data-tip="hs-lvup"]' },
   { id: 'talent', cat: '领袖', icon: 't_clover', title: '天赋树', line: '三条路线：杀伐、坚忍、运数。从中间往外点，每级 1 点。', scr: 'base', sel: '[data-tip^="tal-"]:not([data-tip="tal-root"])' },
   { id: 'pskill', cat: '领袖', icon: 't_rage', title: '个人技能', line: '领袖亲自上场后自己放；守城时也会自动放。怒气、能量、法力或冷却攒满、时机合适（比如身边有敌人）才放。', scr: 'base', sel: '[data-tip="hs-ps"]' },
-  { id: 'quirk', cat: '领袖', icon: 't_dice', title: '性格', line: '领袖自带的小加成或小毛病。坏性格可以在疗养室消掉。', scr: 'base', sel: '[data-tip^="hs-q-"]' },
+  { id: 'hclass', cat: '领袖', icon: 'c_nun', title: '职业', line: '头像左上角是领袖的职业。职业决定两个技能：同一职业，技能永远一样。', scr: 'base', sel: '[data-g="hclass"]' },
   { id: 'rarity', cat: '标签与品质', icon: 'u_star', title: '品质', line: '白 普通 → 蓝 稀有 → 紫 史诗 → 金 传说。名字和边框的颜色就是品质。', scr: ['base', 'shop'], sel: '[data-tip="hs-rar"],[data-g="shop-units"]' },
   { id: 'defend', cat: '守城', icon: 't_shield', title: '守城', line: '选中的领袖在地面作战，地下的武器房间向地面开火。传送门被打破这一局就结束。', scr: 'base', sel: '[data-g="raidprep"]' },
   // ── 出征 ──

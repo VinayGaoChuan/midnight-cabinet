@@ -20,7 +20,7 @@ function checkMeta(raw) {
   let m; try { m = JSON.parse(raw); } catch (e) { return { wipe: '存档文件损坏，无法读取' }; }
   if (!isObj(m)) return { wipe: '存档内容为空' };
   if (m.v !== 4) return { wipe: '旧版本的存档（v' + m.v + '）' };
-  const D = M.defaultMeta3(), cut = {}; const note = (k, n) => { cut[k] = (cut[k] || 0) + (n || 1); };
+  const D = M.defaultMeta3(), cut = {}; const note = (k, n) => { cut[k] = (cut[k] || 0) + (n || 1); }; let mig = false;   // mig: silent design migrations, saved without a report
   // numbers and containers
   [['day', 1], ['supplies', 0], ['shards', 0], ['orbs', 0], ['runs', 0], ['raids', 0]].forEach(([k, min]) => { if (!isNum(m[k]) || m[k] < min) { m[k] = D[k] == null ? min : D[k]; note('数值'); } });
   ['inv', 'cleared', 'seenWorlds'].forEach(k => { if (!isObj(m[k])) { m[k] = {}; note('数值'); } });
@@ -33,6 +33,8 @@ function checkMeta(raw) {
   if (!Array.isArray(cells) || cells.length !== BR || cells.some(row => !Array.isArray(row) || row.length !== BC)) { m.base = D.base; note('基地布局'); }
   else for (let r = 0; r < BR; r++) for (let c = 0; c < BC; c++) {
     let x = cells[r][c]; if (!isObj(x)) { cells[r][c] = x = { dug: false, tile: null, b: null, job: null }; note('基地房间'); }
+    if (x.b === 'sanitarium') { x.b = null; m.supplies += 90; mig = true; }   // the 疗养室 was removed with the personalities: refund it
+    if (isObj(x.job) && x.job.key === 'sanitarium') { x.job = null; m.supplies += 90; mig = true; }
     if (x.b != null && !M.BUILDINGS[x.b]) { x.b = null; note('基地房间'); }
     if (x.tile != null && !M.TILES[x.tile]) { x.tile = null; note('地格'); }
     if (x.job != null && !(isObj(x.job) && (x.job.kind === 'dig' || (x.job.kind === 'build' && M.BUILDINGS[x.job.key])) && isNum(x.job.days))) { x.job = null; note('工程'); }
@@ -55,18 +57,22 @@ function checkMeta(raw) {
   if (heroes.length < m.heroes.length) note('领袖', m.heroes.length - heroes.length);
   heroes.forEach(h => {
     if (!intIn(h.points, 0, 20)) h.points = 0;
-    const q0 = (h.quirks || []).length; h.quirks = (Array.isArray(h.quirks) ? h.quirks : []).filter(q => M.QUIRKS[q]); if (h.quirks.length < q0) note('性格');
+    // personalities and personal names were removed from the design: drop them without reporting damage
+    if ('quirks' in h || h.name !== M.heroN(h) || (isObj(h.status) && h.status.kind === 'sanitarium')) mig = true;
+    delete h.quirks; h.name = M.heroN(h); if (isObj(h.status) && h.status.kind === 'sanitarium') h.status = null;
     h.relics = (Array.isArray(h.relics) ? h.relics : []).filter(id => rid.has(id));
     if (h.status != null && !isObj(h.status)) h.status = null; if (!isNum(h.runs)) h.runs = 0;
   });
   m.heroes = heroes.length ? heroes : D.heroes;
   // inventory: only blueprints and vein crystals this version knows
+  if (m.inv['bbp:sanitarium']) { delete m.inv['bbp:sanitarium']; mig = true; }
+  m.graveyard.forEach(g => { if (isObj(g) && M.HEROES[g.cls] && g.name !== M.HEROES[g.cls].n) { g.name = M.HEROES[g.cls].n; mig = true; } });
   Object.keys(m.inv).forEach(k => { const [kind, id] = k.split(':'), n = m.inv[k]; const known = kind === 'bbp' ? !!M.BUILDINGS[id] && !M.BUILDINGS[id].fixed : kind === 'rbp' ? !!M.RELICS[id] : kind === 'tile' ? !!M.TILES[id] : false; if (!known || !intIn(n, 1, 999)) { delete m.inv[k]; note('仓库物品'); } });
   Object.keys(m.cleared).forEach(k => { if (!M.WORLDS[k]) { delete m.cleared[k]; note('世界进度'); } });
   // last word: run the systems that read the save; if any of them throws, the save is not usable
   try { M.baseMods(m); M.power(m); M.invList(m); m.heroes.forEach(h => { M.heroMaxHp(h, m); M.heroAtk(h, m); M.skillNodeCd(h, m); }); M.buildOptions(m, 0, 0); }
   catch (e) { return { wipe: '存档和当前版本的系统对不上（' + String(e && e.message || e).slice(0, 40) + '）' }; }
-  return { m, cut };
+  return { m, cut, mig };
 }
 
 // ───────── the room outside the cabinet (局外) ─────────
@@ -98,7 +104,7 @@ const rm = get(K_META);
 if (rm != null) {
   const r = checkMeta(rm);
   if (r.wipe) { del(K_META); addRow('局内存档', 'wipe', r.wipe); rep.wiped = true; }
-  else { const ks = Object.keys(r.cut); if (ks.length) { put(K_META, r.m); ks.forEach(k => addRow(k, 'cut', r.cut[k] + ' 处不兼容，已清掉')); rep.fixed = true; } else addRow('局内存档 · 第 ' + r.m.day + ' 天', 'ok'); }
+  else { const ks = Object.keys(r.cut); if (ks.length) { put(K_META, r.m); ks.forEach(k => addRow(k, 'cut', r.cut[k] + ' 处不兼容，已清掉')); rep.fixed = true; } else { if (r.mig) put(K_META, r.m); addRow('局内存档 · 第 ' + r.m.day + ' 天', 'ok'); } }
 }
 const rp = get(K_PROF);
 if (rp != null) {

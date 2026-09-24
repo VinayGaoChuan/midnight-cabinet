@@ -99,6 +99,18 @@ IC.u_hammer = (x) => { line(x, 8, 28, 20, 10, 3.4, '#8a5a30'); rect(x, 15, 3, 14
 IC.u_star = (x) => star(x, 16, 16, 14, 6, 5, '#ffcc33');
 IC.u_mask = (x) => { poly(x, [[4, 8], [28, 8], [26, 20], [16, 28], [6, 20]], '#f5ead4'); ell(x, 11, 14, 3, 2, '#1a1418'); ell(x, 21, 14, 3, 2, '#1a1418'); arc(x, 16, 18, 5, 0.3, 2.8, 2, '#d0453c'); };
 
+// ── leader classes: the class decides both skills, so the emblem is how a leader is recognised at a glance
+IC.c_watchman = (x) => { rect(x, 13, 2, 6, 3, '#5a4a30'); poly(x, [[9, 6], [23, 6], [25, 10], [7, 10]], '#3a3036'); rect(x, 9, 10, 14, 15, '#ffb830'); rect(x, 11, 12, 10, 11, '#fff2a0'); rect(x, 15, 10, 2, 15, '#3a3036'); rect(x, 9, 16, 14, 2, '#3a3036'); poly(x, [[7, 25], [25, 25], [22, 29], [10, 29]], '#3a3036'); };
+IC.c_widow = (x) => { x.save(); x.translate(16, 16); x.rotate(-0.3); rect(x, -13, -12, 15, 21, '#2a0c12'); rect(x, -12, -11, 13, 19, '#8a2030'); x.rotate(0.55); rect(x, -3, -13, 16, 22, '#1a1418'); rect(x, -2, -12, 14, 20, '#f5ecd8'); heart(x, 5, -2, 4.6, '#d0303a'); x.restore(); };
+IC.c_nun = (x) => { poly(x, [[5, 30], [6, 13], [10, 5], [22, 5], [26, 13], [27, 30]], '#1e1a2a'); ell(x, 16, 15, 7, 8, '#f5ecd8'); circ(x, 16, 16, 5, '#f0c8a0'); rect(x, 13, 15, 2, 2, '#1a1418'); rect(x, 17, 15, 2, 2, '#1a1418'); rect(x, 14.5, 22, 3, 9, '#ffd650'); rect(x, 11.5, 24.5, 9, 3, '#ffd650'); };
+IC.c_butcherlord = (x) => { rect(x, 21, 9, 9, 6, '#6a4a2a'); rect(x, 26, 9, 2, 6, '#3a2a1a'); poly(x, [[2, 4], [22, 4], [22, 19], [6, 22], [2, 18]], '#aab4c2'); rect(x, 2, 4, 20, 4, '#e8eef6'); circ(x, 17, 11, 2, '#2a2430'); poly(x, [[4, 21], [13, 20], [12, 27], [10, 24], [8, 29], [6, 24]], '#c0303a'); };
+IC.c_clockmaker = (x) => { rect(x, 13, 2, 6, 5, '#caa84a'); circ(x, 16, 18, 12, '#caa84a'); circ(x, 16, 18, 9.5, '#f5ecd8'); for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; rect(x, 16 + Math.cos(a) * 7.5 - 1, 18 + Math.sin(a) * 7.5 - 1, 2, 2, '#6a5a3a'); } line(x, 16, 18, 16, 11.5, 2.2, '#1a1418'); line(x, 16, 18, 21, 20, 2.2, '#1a1418'); circ(x, 16, 18, 2, '#d0453c'); };
+IC.c_cremator = (x) => { poly(x, [[16, 1], [22, 9], [21, 15], [11, 15], [10, 9]], '#ff7a2a'); poly(x, [[16, 6], [19, 11], [18, 14], [14, 14], [13, 11]], '#fff2a0'); rect(x, 10, 15, 12, 3, '#4a3a44'); poly(x, [[9, 18], [23, 18], [26, 24], [21, 30], [11, 30], [6, 24]], '#6a5a64'); rect(x, 8, 22, 16, 2, '#8a7a84'); };
+// ── skills that used to share an icon with the same leader's other skill
+IC.t_chant = (x) => { rect(x, 19, 4, 3, 18, '#fff2a0'); poly(x, [[19, 4], [28, 8], [28, 13], [22, 10]], '#fff2a0'); ell(x, 15, 22, 6, 4.2, '#ffd650', -0.4); star(x, 8, 8, 4.5, 1.5, 4, '#ffffff'); star(x, 26, 22, 3.5, 1.2, 4, '#ffffff'); };
+IC.t_rewind = (x) => { circ(x, 16, 16, 13, '#9fd8c8'); circ(x, 16, 16, 11, '#1e3a36'); poly(x, [[16, 9], [16, 23], [7, 16]], '#bff8e8'); poly(x, [[25, 9], [25, 23], [16, 16]], '#bff8e8'); };
+IC.t_pyre = (x) => { poly(x, [[16, 2], [25, 14], [22, 22], [10, 22], [7, 14]], '#ff5a2a'); poly(x, [[16, 9], [20, 16], [19, 21], [13, 21], [12, 16]], '#ffd650'); line(x, 4, 27, 28, 22, 4, '#6a4a2a'); line(x, 4, 22, 28, 27, 4, '#8a5a3a'); };
+
 // ── rasterise: vector (32x32) -> 16x16 pixel art with outline, cached
 const cache = {};
 M.IC = IC;
@@ -120,7 +132,7 @@ M.CAT_COL = { core: '#e8c86a', power: '#ffd23a', forge: '#b8c0cc', med: '#ff6a6a
 M.CAT.core = '仓库';
 const STYLE_IC = { core: 's_core', steam: 's_steam', magic: 's_magic', nature: 's_nature', water: 's_water', fantasy: 's_fantasy', scifi: 's_scifi', medieval: 's_medieval', cartoon: 's_cartoon' };
 const CAT_IC = { core: 'f_store', power: 'f_power', forge: 'f_forge', med: 'f_med', recruit: 'f_recruit', train: 'f_train', store: 'f_logi', defense: 'f_defense', luck: 'f_luck', misc: 'f_misc' };
-const CAT_D = { core: '所有物资、图纸和宝物都放在这里。', power: '产出电力，让耗电建筑能运转。', forge: '用宝物图纸打造宝物。', med: '让受伤的领袖回血、消除坏性格。', recruit: '招募新的领袖。', train: '把经验球灌给领袖。', store: '每天产出物资，或提供出征补给。', defense: '基地遭到袭击时向地面开火。', luck: '出征时带来好运。', misc: '各种特殊效果。' };
+const CAT_D = { core: '所有物资、图纸和宝物都放在这里。', power: '产出电力，让耗电建筑能运转。', forge: '用宝物图纸打造宝物。', med: '让受伤的领袖回血。', recruit: '招募新的领袖。', train: '把经验球灌给领袖。', store: '每天产出物资，或提供出征补给。', defense: '基地遭到袭击时向地面开火。', luck: '出征时带来好运。', misc: '各种特殊效果。' };
 const STYLE_D = '建筑风格。地格和一些奇观只对特定风格的建筑生效。';
 M.TAG = {
   race: (n) => RACE_IC[n] ? { kind: 'race', n, c: RC[n] || '#fff', icon: RACE_IC[n], d: '种族。部分特性、战旗和世界的敌人按种族区分。' } : null,

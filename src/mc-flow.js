@@ -1,10 +1,12 @@
 // ==== mc-flow.js ====
 (function () {
-// The flow without the room (M.META_ROOM off): intro → title menu (开始游戏 / 继续) → the base, which is the outer loop;
-// expeditions are the inner one. The base top bar carries 放弃: a confirmed full restart from day 1.
+// The flow without the room (M.META_ROOM off): intro → the cabinet's screen shows 开始游戏 / 继续 → the base, which is the
+// outer loop; expeditions are the inner one. The base top bar carries 放弃: a confirmed full restart from day 1.
 const M = window.MC, G = M.Game.prototype;
 
-// title menu: start a new game or continue the one in progress
+// title menu: no page of its own. The intro's camera stops on the cabinet and the buttons sit on its screen;
+// 开始游戏 pushes the camera into the screen, then the game starts.
+const DIVE = 0.95;
 const oView = G.view;
 G.view = function () {
   const v = oView.call(this), m = this.meta, p = this.prof;
@@ -12,9 +14,27 @@ G.view = function () {
     const on = !!(p && p.active) && m && m.tutDone;
     v.menuStart = on ? '继续' : '开始游戏';
     v.menuSub = on ? '第 ' + m.day + ' 天 · ' + m.heroes.length + ' 名领袖' : (m && m.tutDone ? '新的一局' : '从序章开始');
-  }
+    const r = M.cabScreen(), fade = Math.min(1, (this.menuT || 0) / 0.35), d = this.menuDive;
+    v.mn = { on: true, x: r.x, y: r.y, w: r.w, h: r.h, pb: 26, op: (d ? Math.max(0, 1 - d.t / 0.2) : fade).toFixed(2) };
+    v.menuGo = () => this.menuGo();
+  } else v.mn = { on: false };
   v.abandon = () => { M.Sfx.click(); this.askAbandon(); };
   return v;
+};
+G.menuGo = function () {
+  if (this.menuDive || this.modal) return;
+  M.Sfx.init(); M.Sfx.click(); M.Sfx.whoosh && M.Sfx.whoosh(0.8); this.menuDive = { t: 0 }; this.bump();
+};
+const oGo = G.go;
+G.go = function (s) { if (s === 'menu') { this.menuT = 0; this.menuDive = null; } return oGo.apply(this, arguments); };
+const oTick = G.tick;
+G.tick = function (dt) {
+  oTick.call(this, dt);
+  if (this.screen !== 'menu' || M.META_ROOM) return;
+  this.menuT = (this.menuT || 0) + dt; const d = this.menuDive;
+  if (d) { d.t += dt; if (d.t >= DIVE) { this.menuDive = null; this.startGame(); return; } }
+  const c = this.ui && this.ui.cv('intro'); if (c) M.drawCabinet(c.getContext('2d'), this.menuT, d ? d.t / DIVE : 0);
+  if (d || this.menuT < 0.5) this.bump();
 };
 
 // starting a game closes the last game's summary if it is still up

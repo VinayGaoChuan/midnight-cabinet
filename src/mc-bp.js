@@ -15,7 +15,7 @@ M.bpUseful = function (m, key) {
   if (fx.tileX2) { let on = false; M.eachBuilt(m, (b, c, r, x) => { if (x.tile) on = true; }); return on; } // doubles tiles under rooms
   if (k === 'lookout') return !has(m, X => X.fx && X.fx.tower);                                     // the map is already revealed
   if (k === 'smithy') return !has(m, X => !!X.forge);                                               // any forge already crafts
-  if (k === 'altar' || k === 'sanitarium') return !has(m, (X, kk) => kk === k);                    // a second copy adds nothing
+  if (k === 'altar') return !has(m, (X, kk) => kk === k);                    // a second copy adds nothing
   return true;
 };
 // a useful replacement of similar standing (same kind first, then any building)
