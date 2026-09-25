@@ -10,20 +10,22 @@ const MINI = M.MINI = {};
 const SX = 360, SY = 110, SW = 1200, SH = 700, CX = SX + SW / 2, FLOOR = SY + SH - 110;
 // ───────── drawing kit (shared by every mini game) ─────────
 const K = M.MK = { SX, SY, SW, SH, CX, FLOOR, cl, eo, eio, eb, rnd };
-K.R = (x, a, b, w, h, c) => { x.fillStyle = c; x.fillRect(a, b, w, h); };
-K.CI = (x, a, b, r, c) => { x.fillStyle = c; x.beginPath(); x.arc(a, b, Math.max(0, r), 0, 7); x.fill(); };
-K.EL = (x, a, b, rx, ry, c, rot) => { x.fillStyle = c; x.beginPath(); x.ellipse(a, b, Math.max(0, rx), Math.max(0, ry), rot || 0, 0, 7); x.fill(); };
-K.PL = (x, pts, c) => { x.fillStyle = c; x.beginPath(); pts.forEach(([a, b], i) => (i ? x.lineTo(a, b) : x.moveTo(a, b))); x.closePath(); x.fill(); };
-K.LN = (x, a, b, c, d, w, col) => { x.strokeStyle = col; x.lineWidth = w; x.lineCap = 'round'; x.beginPath(); x.moveTo(a, b); x.lineTo(c, d); x.stroke(); };
-K.RR = (x, a, b, w, h, r, c, st, sw) => { x.beginPath(); x.moveTo(a + r, b); x.arcTo(a + w, b, a + w, b + h, r); x.arcTo(a + w, b + h, a, b + h, r); x.arcTo(a, b + h, a, b, r); x.arcTo(a, b, a + w, b, r); x.closePath(); if (c) { x.fillStyle = c; x.fill(); } if (st) { x.strokeStyle = st; x.lineWidth = sw || 2; x.stroke(); } };
-K.LG = (x, x0, y0, x1, y1, stops) => { const g = x.createLinearGradient(x0, y0, x1, y1); stops.forEach(([p, c]) => g.addColorStop(p, c)); return g; };
-K.RG = (x, a, b, r0, r1, stops) => { const g = x.createRadialGradient(a, b, r0, a, b, r1); stops.forEach(([p, c]) => g.addColorStop(p, c)); return g; };
-K.TX = (x, s, a, b, size, col, o = {}) => { x.font = (o.w || 700) + ' ' + size + "px 'Noto Serif SC', serif"; x.textAlign = o.al || 'center'; x.textBaseline = 'middle'; if (o.sh !== 0) { x.fillStyle = 'rgba(0,0,0,0.85)'; x.fillText(s, a + 2, b + 3); } x.fillStyle = col; x.fillText(s, a, b); };
-K.PT = (x, s, a, b, size, col, o) => M.pxText(x, String(s), a, b, size, col, o || {});
+// 画具按设计稿（§11.5）：颜色过调色板、硬边无圆角、渐变变成色带、像素字 + 3px 墨影、灯珠是方块
+const U = M.UI, pc = (c) => (U ? U.pal(c) : c);
+K.R = (x, a, b, w, h, c) => { x.fillStyle = pc(c); x.fillRect(a, b, w, h); };
+K.CI = (x, a, b, r, c) => { x.fillStyle = pc(c); x.beginPath(); x.arc(a, b, Math.max(0, r), 0, 7); x.fill(); };
+K.EL = (x, a, b, rx, ry, c, rot) => { x.fillStyle = pc(c); x.beginPath(); x.ellipse(a, b, Math.max(0, rx), Math.max(0, ry), rot || 0, 0, 7); x.fill(); };
+K.PL = (x, pts, c) => { x.fillStyle = pc(c); x.beginPath(); pts.forEach(([a, b], i) => (i ? x.lineTo(a, b) : x.moveTo(a, b))); x.closePath(); x.fill(); };
+K.LN = (x, a, b, c, d, w, col) => { x.strokeStyle = pc(col); x.lineWidth = w; x.lineCap = 'square'; x.beginPath(); x.moveTo(a, b); x.lineTo(c, d); x.stroke(); };
+K.RR = (x, a, b, w, h, r, c, st, sw) => { if (c) { x.fillStyle = pc(c); x.fillRect(a, b, w, h); } if (st) { const lw = Math.max(3, Math.round((sw || 2) / 3) * 3); x.strokeStyle = pc(st); x.lineWidth = lw; x.strokeRect(a + lw / 2, b + lw / 2, w - lw, h - lw); } };
+K.LG = (x, x0, y0, x1, y1, stops) => (U ? U.lg(x, x0, y0, x1, y1, stops) : stops[0][1]);
+K.RG = (x, a, b, r0, r1, stops) => (U ? U.rg(x, a, b, r0, r1, stops) : stops[0][1]);
+K.TX = (x, s, a, b, size, col, o = {}) => { if (U) { U.text(x, s, a, b, size, col, { align: o.al || 'center', shadow: o.sh !== 0 }); return; } x.font = size + "px 'Noto Serif SC', serif"; x.textAlign = o.al || 'center'; x.textBaseline = 'middle'; x.fillStyle = col; x.fillText(s, a, b); };
+K.PT = (x, s, a, b, size, col, o) => M.pxText(x, String(s), a, b, size, pc(col), o || {});
 K.GL = (x, a, b, r, col, al) => { if (al <= 0) return; const A = x.globalAlpha; x.globalAlpha = A * cl(al, 0, 1); x.globalCompositeOperation = 'lighter'; x.fillStyle = K.RG(x, a, b, 0, r, [[0, col], [1, 'rgba(0,0,0,0)']]); x.fillRect(a - r, b - r, r * 2, r * 2); x.globalCompositeOperation = 'source-over'; x.globalAlpha = A; };
 K.IC = (x, key, a, b, s) => { const c = M.iconCanvas(key, 3) || (M.SP && M.SP[key] ? M.spriteCanvas(key, 4) : null); if (c) x.drawImage(c, a - s / 2, b - s / 2, s, s); };
 K.SP = (x, key, a, b, h, flip) => { const c = M.spriteCanvas(key, 6); if (!c || !c.height) return 0; const s = h / c.height; x.save(); x.translate(a, b); if (flip) x.scale(-1, 1); x.drawImage(c, -c.width * s / 2, -c.height * s, c.width * s, c.height * s); x.restore(); return c.width * s; };
-K.bulbs = (x, a, b, w, h, t, col, n) => { n = n || 24; for (let i = 0; i < n; i++) { const p = i / n, per = 2 * (w + h), d = p * per; let px, py; if (d < w) { px = a + d; py = b; } else if (d < w + h) { px = a + w; py = b + d - w; } else if (d < 2 * w + h) { px = a + w - (d - w - h); py = b + h; } else { px = a; py = b + h - (d - 2 * w - h); } const on = (Math.floor(t * 6) + i) % 3 === 0; K.CI(x, px, py, 5, on ? '#fff6c0' : col); if (on) K.GL(x, px, py, 16, col, 0.7); } };
+K.bulbs = (x, a, b, w, h, t, col, n) => { n = n || 24; for (let i = 0; i < n; i++) { const p = i / n, per = 2 * (w + h), d = p * per; let px, py; if (d < w) { px = a + d; py = b; } else if (d < w + h) { px = a + w; py = b + d - w; } else if (d < 2 * w + h) { px = a + w - (d - w - h); py = b + h; } else { px = a; py = b + h - (d - 2 * w - h); } const on = (Math.floor(t * 6) + i) % 3 === 0; K.R(x, px - 6, py - 6, 12, 12, '#07060f'); K.R(x, px - 3, py - 3, 6, 6, on ? '#fff3b0' : col); } };
 K.shade = (c, k) => M.shade(c, k);
 K.ease = { eo, eio, eb };
 // ───────── lifecycle ─────────
@@ -50,23 +52,24 @@ G.buffRun = function (k, v, label, col) { const run = this.run; if (k === 'unitA
 // ───────── frame: dim, stage, title plate, flavour text, message banner ─────────
 function frameBegin(x, mg) {
   const a = cl(mg.t / 0.25, 0, 1), q = eb(mg.t / 0.4), D = mg.D;
-  x.fillStyle = 'rgba(4,2,8,' + (0.8 * a) + ')'; x.fillRect(0, 0, 1920, 1080);
+  x.save(); x.globalAlpha = a * 0.84; K.R(x, 0, 0, 1920, 1080, '#07060f'); x.restore();
   x.save(); x.globalAlpha = a; const sc = 0.86 + 0.14 * q; x.translate(CX, SY + SH / 2); x.scale(sc, sc); x.translate(-CX, -(SY + SH / 2));
-  x.fillStyle = '#0a080c'; x.fillRect(SX - 10, SY - 10, SW + 20, SH + 20);
-  x.fillStyle = D.bg ? D.bg(x) : K.LG(x, 0, SY, 0, SY + SH, [[0, '#1c1622'], [1, '#0c0a10']]); x.fillRect(SX, SY, SW, SH);
+  x.fillStyle = D.bg ? D.bg(x) : K.LG(x, 0, SY, 0, SY + SH, [[0, '#1a1640'], [1, '#0d0b1e']]); x.fillRect(SX, SY, SW, SH);
   x.save(); x.beginPath(); x.rect(SX, SY, SW, SH); x.clip();
 }
+// 机箱框（清晰层）：墨框 + 本玩法的颜色内圈 + 斜面 + 右下硬投影 + 铆钉；标题是压在上沿的招牌灯箱
 function frameDeco(x, mg) {
   const a = cl(mg.t / 0.25, 0, 1), q = eb(mg.t / 0.4), sc = 0.86 + 0.14 * q; x.save(); x.globalAlpha = a; x.translate(CX, SY + SH / 2); x.scale(sc, sc); x.translate(-CX, -(SY + SH / 2));
-  const col = mg.col;
-  x.strokeStyle = col; x.lineWidth = 4; x.strokeRect(SX - 2, SY - 2, SW + 4, SH + 4); x.strokeStyle = 'rgba(0,0,0,0.7)'; x.lineWidth = 2; x.strokeRect(SX + 3, SY + 3, SW - 6, SH - 6);
-  [[SX, SY], [SX + SW, SY], [SX, SY + SH], [SX + SW, SY + SH]].forEach(([a, b]) => { K.R(x, a - 9, b - 9, 18, 18, col); K.R(x, a - 5, b - 5, 10, 10, '#0a080c'); });
-  // title plate
-  const tw = 420, ty = SY - 34; K.PL(x, [[CX - tw / 2 - 30, ty], [CX + tw / 2 + 30, ty], [CX + tw / 2, ty + 64], [CX - tw / 2, ty + 64]], '#0a080c'); x.strokeStyle = col; x.lineWidth = 3; x.beginPath(); x.moveTo(CX - tw / 2 - 30, ty); x.lineTo(CX + tw / 2 + 30, ty); x.lineTo(CX + tw / 2, ty + 64); x.lineTo(CX - tw / 2, ty + 64); x.closePath(); x.stroke();
-  K.IC(x, mg.img, CX - tw / 2 + 24, ty + 32, 44); K.PT(x, mg.title, CX + 16, ty + 32, 46, col);
-  if (mg.text) { x.globalAlpha *= 0.9; K.TX(x, mg.text, CX, SY + 56, 24, '#cfc6b8', { w: 400 }); x.globalAlpha = cl(mg.t / 0.25, 0, 1); }
-  // message
-  const m = mg.msg; if (m) { const q = cl(m.t / 0.25, 0, 1), fade = cl((m.big ? 3 : 2.2) - m.t, 0, 1), y = SY + SH - 64; if (fade > 0) { x.globalAlpha = fade; const w = 60 + m.text.length * (m.big ? 44 : 30); x.fillStyle = 'rgba(8,6,10,0.88)'; x.fillRect(CX - w / 2 * eb(q), y - 30, w * eb(q), 60); K.R(x, CX - w / 2 * eb(q), y - 30, w * eb(q), 3, m.col); K.R(x, CX - w / 2 * eb(q), y + 27, w * eb(q), 3, m.col); K.PT(x, m.text, CX, y, m.big ? 44 : 32, m.col); x.globalAlpha = 1; } }
+  const col = pc(mg.col), ink = '#07060f';
+  K.R(x, SX + SW + 9, SY + 6, 12, SH + 15, ink); K.R(x, SX + 6, SY + SH + 9, SW + 15, 12, ink);
+  K.R(x, SX - 9, SY - 9, SW + 18, 6, ink); K.R(x, SX - 9, SY + SH + 3, SW + 18, 6, ink); K.R(x, SX - 9, SY - 3, 6, SH + 6, ink); K.R(x, SX + SW + 3, SY - 3, 6, SH + 6, ink);
+  K.R(x, SX - 3, SY - 3, SW + 6, 3, col); K.R(x, SX - 3, SY + SH, SW + 6, 3, col); K.R(x, SX - 3, SY, 3, SH, col); K.R(x, SX + SW, SY, 3, SH, col);
+  K.R(x, SX, SY, SW, 3, '#3d3a8c'); K.R(x, SX, SY, 3, SH, '#3d3a8c'); K.R(x, SX, SY + SH - 6, SW, 6, '#0d0b1e'); K.R(x, SX + SW - 3, SY, 3, SH, '#0d0b1e');
+  if (U) { U.rivet(x, SX + 12, SY + SH - 27); U.rivet(x, SX + SW - 24, SY + SH - 27); U.rivet(x, SX + 12, SY + 12); U.rivet(x, SX + SW - 24, SY + 12); }
+  if (U) U.marquee(x, mg.title, CX, SY - 6, { size: 52, t: mg.t, minW: 380 }); else K.PT(x, mg.title, CX, SY, 46, col);
+  if (mg.text) K.TX(x, mg.text, CX, SY + 74, 26, '#a9a3c9');
+  // 提示条：小面板，顶边一道本条颜色
+  const m = mg.msg; if (m) { const q = cl(m.t / 0.25, 0, 1), fade = cl((m.big ? 3 : 2.2) - m.t, 0, 1), y = SY + SH - 64; if (fade > 0 && U) { x.globalAlpha = fade; const size = m.big ? 44 : 32, w = (U.measure(x, m.text, size) + 72) * eb(q), h = size + 30; U.box(x, CX - w / 2, y - h / 2, w, h, '#1a1640'); K.R(x, CX - w / 2, y - h / 2, w, 6, m.col); K.R(x, CX - w / 2, y + h / 2 - 6, w, 6, '#0d0b1e'); if (q > 0.7) U.text(x, m.text, CX, y + 2, size, m.col, { outline: m.big }); x.globalAlpha = 1; } }
   x.restore();
 }
 // the stage is painted at art resolution (pixel look, like the rest of the game); frame, title and text stay crisp on top
@@ -117,7 +120,7 @@ G.view = function () {
   v.miniOn = !!mg && !this.reel;
   if (mg) { v.modalOn = false; v.tipOn = false; v.coachOn = false; if (!this.reel) v.coverOn = true;
     const bs = mg.D.btns ? mg.D.btns.call(this, mg) || [] : [];
-    v.mini = { btns: bs.map(b => ({ t: b.t, sub: b.sub || '', hasSub: !!b.sub, op: b.dis ? 0.45 : 1, bg: b.dis ? '#15111a' : b.gold ? 'linear-gradient(180deg,#ffe08a,#d4982e)' : b.danger ? 'linear-gradient(180deg,#e05a4a,#8a2020)' : 'linear-gradient(180deg,#2e2436,#1a1420)', color: b.dis ? '#6b6570' : b.gold ? '#1a0e08' : '#f5ead4', border: b.dis ? '#2a2230' : b.gold ? '#fff3c4' : b.danger ? '#ff9a8a' : '#8a6a3a', glow: b.gold && !b.dis ? 'rgba(255,200,90,0.45)' : 'rgba(0,0,0,0)',
+    v.mini = { btns: bs.map(b => ({ t: b.t, sub: b.sub || '', hasSub: !!b.sub, op: b.dis ? 0.45 : 1, k: b.dis ? 'dis' : b.gold ? 'gold' : b.danger ? 'red' : 'dark', bg: b.dis ? '#15111a' : b.gold ? 'linear-gradient(180deg,#ffe08a,#d4982e)' : b.danger ? 'linear-gradient(180deg,#e05a4a,#8a2020)' : 'linear-gradient(180deg,#2e2436,#1a1420)', color: b.dis ? '#6b6570' : b.gold ? '#1a0e08' : '#f5ead4', border: b.dis ? '#2a2230' : b.gold ? '#fff3c4' : b.danger ? '#ff9a8a' : '#8a6a3a', glow: b.gold && !b.dis ? 'rgba(255,200,90,0.45)' : 'rgba(0,0,0,0)',
       onClick: () => { if (!this.mini) return; if (b.dis) { this.toast(b.why || '现在不行', '#8d8496'); return; } M.Sfx.click(); b.fn(); this.bump(); } })) };
   }
   return v;
@@ -125,15 +128,26 @@ G.view = function () {
 M.EVMINI = {}; // event key -> mini kind
 
 // ═════════════════════ 挖矿 · push your luck ═════════════════════
-MINI.mine = { title: '废弃矿坑', img: 'u_pick', col: '#e0904a', text: '岩壁里闪着光。每挖一镐，头顶的石头就松一分。',
+// 小游戏里的界面件（设计稿 §11.5，b / c / d 共用）：招牌小牌、居中标签、卡框、方块计数灯、弹跳大字
+const C = M.PJ.PAL, T = U.T;
+const SIGN = { wine: [C.wine, C.red, C.umber, C.butter], gold: [C.gold, C.butter, C.amber, C.ink], indigo: [C.indigo, C.dusk, C.night, C.butter], red: [C.red, C.pink, C.wine, C.ink], teal: [C.teal, C.ice, C.tealDeep, C.ink], dark: [C.abyss, C.dusk, C.ink, C.gold] };
+K.sign = (x, s, cx, cy, o = {}) => { const size = o.size || T.btn, k = SIGN[o.kind || 'wine'], pad = Math.round(size * 0.6), w = Math.max(o.minW || 0, Math.ceil(U.measure(x, s, size, o.num)) + pad * 2), h = o.h || Math.round(size * 1.45), X = Math.round(cx - w / 2), Y = Math.round(cy - h / 2);
+  K.R(x, X + 3, Y + 3, w + 6, h + 6, C.ink); U.box(x, X, Y, w, h, k[0]); K.R(x, X, Y, w, 3, k[1]); K.R(x, X, Y + h - 6, w, 6, k[2]); if (o.ring) K.RR(x, X, Y, w, h, 0, null, o.ring, 3);
+  U.text(x, s, cx, cy - 2, size, o.col || k[3], { num: o.num, shadow: k[3] !== C.ink }); return { x: X, y: Y, w, h }; };
+K.chipC = (x, s, cx, cy, col, size) => { size = size || T.cap; return U.chip(x, s, cx, Math.round(cy - Math.round(size * 1.6) / 2), col, { size, align: 'center' }); };
+K.card = (x, a, b, w, h, ring, hov, fill) => { a = Math.round(a); b = Math.round(b); const k = hov ? 6 : 3; K.R(x, a + 6, b + 6, w + 6, h + 6, C.ink); U.box(x, a, b, w, h, fill || C.night); K.R(x, a, b, w, k, ring); K.R(x, a, b + h - k, w, k, ring); K.R(x, a, b, k, h, ring); K.R(x, a + w - k, b, k, h, ring); };
+K.pip = (x, a, b, s, col) => { const h = Math.round(s / 2), X = Math.round(a) - h, Y = Math.round(b) - h, f = col ? pc(col) : C.indigo; U.box(x, X, Y, s, s, f); if (col && M.PJ.shades) K.R(x, X, Y, s, 3, M.PJ.shades(f).hi); };
+K.pop = (t) => (M.PJ.reduced || !(t >= 0) || t >= 0.26 ? 1 : [1.45, 0.9, 1.06, 1][Math.floor(t / 0.065)]);
+K.big = (x, s, a, b, size, col, t, o) => { const k = K.pop(t); x.save(); x.translate(Math.round(a), Math.round(b)); if (k !== 1) x.scale(k, k); U.text(x, s, 0, 0, size, col, Object.assign({ outline: size >= 52 }, o)); x.restore(); };
+MINI.mine = { title: '废弃矿坑', img: 'u_pick', col: C.tan, text: '岩壁里闪着光。每挖一镐，头顶的石头就松一分。',
   init(mg) { mg.digs = 0; mg.pile = []; mg.cracks = []; mg.seed = rnd() * 100; mg.rocks = [...Array(26)].map((_, i) => ({ x: SX + 80 + rnd() * (SW - 160), y: SY + 110 + rnd() * 330, r: 30 + rnd() * 50, c: ['#3a2e26', '#2e241e', '#443629'][i % 3] })); mg.fall = []; mg.dust = []; },
   risk(mg) { return cl(0.05 + mg.digs * 0.085 - mg.luck * 0.3, 0.03, 0.8); },
   table(mg) { const d = mg.digs, run = this.run, P = mg.P; return [
-    { n: '煤块', ic: 'sack', c: '#9a9aa8', w: 40, g: () => ({ k: 'rsup', v: 10 + d * 4 }) },
-    { n: '银矿石', ic: 'coin', c: '#dfe6f0', w: 26, g: () => ({ k: 'wallet', v: M.nice(P * 2.5) }) },
-    { n: '金矿石', ic: 'coin', c: '#ffcc33', w: 12 + d * 3, g: () => ({ k: 'wallet', v: M.nice(P * 6) }) },
-    { n: '魔晶', ic: 'gem', c: '#c890ff', w: 6 + d * 2, g: () => K.item(run, P) },
-    { n: '古代图纸', ic: 'scroll', c: '#ffe08a', w: 4 + d * 2, g: () => K.bp() }]; },
+    { n: '煤块', ic: 'sack', c: C.steel, w: 40, g: () => ({ k: 'rsup', v: 10 + d * 4 }) },
+    { n: '银矿石', ic: 'coin', c: C.silver, w: 26, g: () => ({ k: 'wallet', v: M.nice(P * 2.5) }) },
+    { n: '金矿石', ic: 'coin', c: C.gold, w: 12 + d * 3, g: () => ({ k: 'wallet', v: M.nice(P * 6) }) },
+    { n: '魔晶', ic: 'gem', c: C.violet, w: 6 + d * 2, g: () => K.item(run, P) },
+    { n: '古代图纸', ic: 'scroll', c: C.butter, w: 4 + d * 2, g: () => K.bp() }]; },
   dig(mg) { mg.collapse = rnd() < MINI.mine.risk(mg); mg.next = M.wpick(MINI.mine.table.call(this, mg), o => o.w); mg.hit = false; this.miniSet('swing'); },
   btns(mg) { if (mg.phase !== 'idle') return []; const r = Math.round(MINI.mine.risk(mg) * 100);
     return [{ t: '挖一镐', sub: '塌方风险 ' + r + '%', gold: 1, fn: () => MINI.mine.dig.call(this, mg) }, { t: '收工离开', leave: 1, sub: mg.pile.length ? '带走 ' + mg.pile.length + ' 样东西' : '什么也不拿', fn: () => { if (!mg.pile.length) return this.miniFinish('你拍掉身上的灰，离开了矿坑。', '#8d8496'); this.miniFinish('你背着 ' + mg.pile.map(p => p.n).join('、') + ' 爬出了矿坑。', '#e0904a', mg.pile.map(p => p.g())); } }]; },
@@ -155,10 +169,11 @@ MINI.mine = { title: '废弃矿坑', img: 'u_pick', col: '#e0904a', text: '岩�
     const t = mg.t, ox = CX + 60, oy = SY + 290, r = MINI.mine.risk(mg);
     x.fillStyle = K.LG(x, 0, SY, 0, SY + SH, [[0, '#2a1e18'], [1, '#120c0a']]); x.fillRect(SX, SY, SW, SH);
     mg.rocks.forEach(k => { K.EL(x, k.x, k.y, k.r, k.r * 0.7, k.c); K.EL(x, k.x - k.r * 0.2, k.y - k.r * 0.25, k.r * 0.5, k.r * 0.3, 'rgba(255,220,180,0.05)'); });
-    for (let i = 0; i < 18; i++) { const a = mg.seed + i * 2.1, px = SX + 120 + ((i * 97) % (SW - 240)), py = SY + 120 + ((i * 61) % 320); K.GL(x, px, py, 14, ['#ffcc33', '#c890ff', '#dfe6f0'][i % 3], 0.25 + 0.2 * Math.sin(t * 2 + a)); K.R(x, px - 2, py - 2, 4, 4, ['#ffcc33', '#c890ff', '#dfe6f0'][i % 3]); }
+    for (let i = 0; i < 18; i++) { const a = mg.seed + i * 2.1, px = SX + 120 + ((i * 97) % (SW - 240)), py = SY + 120 + ((i * 61) % 320); K.GL(x, px, py, 14, [C.gold, C.violet, C.silver][i % 3], 0.25 + 0.2 * Math.sin(t * 2 + a)); K.R(x, px - 2, py - 2, 4, 4, [C.gold, C.violet, C.silver][i % 3]); }
     // the hole grows with every swing
     const hr = 50 + mg.digs * 16; K.EL(x, ox, oy, hr + 10, hr * 0.8 + 8, '#1a120e'); K.EL(x, ox, oy, hr, hr * 0.78, K.RG(x, ox, oy, 4, hr, [[0, '#000'], [1, '#150e0b']]));
-    x.strokeStyle = r > 0.4 ? 'rgba(255,90,60,0.55)' : 'rgba(0,0,0,0.6)'; mg.cracks.forEach(c => { x.lineWidth = c.w; x.beginPath(); let px = ox + Math.cos(c.a) * hr, py = oy + Math.sin(c.a) * hr * 0.78; x.moveTo(px, py); for (let s = 1; s <= 4; s++) { px += Math.cos(c.a + Math.sin(s * 3 + c.l) * 0.5) * c.l / 4; py += Math.sin(c.a + Math.cos(s * 2 + c.l) * 0.5) * c.l / 4; x.lineTo(px, py); } x.stroke(); });
+    // 裂纹：3px 硬线，风险高了变红
+    x.save(); x.globalAlpha *= 0.6; x.strokeStyle = r > 0.4 ? C.red : C.ink; x.lineWidth = 3; x.lineCap = 'square'; mg.cracks.forEach(c => { x.beginPath(); let px = ox + Math.cos(c.a) * hr, py = oy + Math.sin(c.a) * hr * 0.78; x.moveTo(px, py); for (let s = 1; s <= 4; s++) { px += Math.cos(c.a + Math.sin(s * 3 + c.l) * 0.5) * c.l / 4; py += Math.sin(c.a + Math.cos(s * 2 + c.l) * 0.5) * c.l / 4; x.lineTo(px, py); } x.stroke(); }); x.restore();
     if (mg.ore && mg.ore.t < 1.4) { const q = eb(mg.ore.t / 0.4), o = mg.ore.o; K.GL(x, ox, oy, 120, o.c, 0.8 * (1 - mg.ore.t / 1.4)); K.IC(x, o.ic, ox, oy - q * 30, 90 * q); }
     // floor + hero
     K.R(x, SX, FLOOR, SW, SH - (FLOOR - SY), '#1a120e'); K.R(x, SX, FLOOR, SW, 4, '#4a3a2e');
@@ -166,17 +181,20 @@ MINI.mine = { title: '废弃矿坑', img: 'u_pick', col: '#e0904a', text: '岩�
     K.SP(x, M.HEROES[this.run.hero.cls].sprite, hx, FLOOR, 170);
     x.save(); x.translate(hx + 40, FLOOR - 110); x.rotate(sw); K.IC(x, 'u_pick', 60, 0, 110); x.restore();
     K.GL(x, hx + 20, FLOOR - 140, 160, '#ffcf80', 0.35); // head lamp
-    // danger gauge
-    const gx = SX + SW - 90, gy = SY + 110, gh = 380; K.R(x, gx - 4, gy - 4, 44, gh + 8, '#0a080c'); K.R(x, gx, gy, 36, gh, '#1a1418'); const fh = gh * r; K.R(x, gx, gy + gh - fh, 36, fh, K.LG(x, 0, gy + gh, 0, gy, [[0, '#9cff7a'], [0.5, '#ffcc33'], [1, '#ff3a2a']])); K.IC(x, 'r_skel', gx + 18, gy - 34, 44); K.PT(x, Math.round(r * 100) + '%', gx + 18, gy + gh + 30, 30, r > 0.4 ? '#ff6a5a' : '#ffe08a');
+    // 塌方风险条：小机箱面板上的墨槽，按格切，底绿、中金、顶红
+    const gx = SX + SW - 90, gy = SY + 110, gh = 380, fh = Math.round(gh * r); U.plate(x, gx - 30, gy - 66, 96, gh + 132, { shadow: 9, rivets: false }); U.box(x, gx, gy, 36, gh, C.ink);
+    [[0, C.green], [1 / 3, C.gold], [2 / 3, C.red]].forEach(([z, c]) => { const y0 = gy + gh - Math.round(gh * z), y1 = Math.max(gy + gh - fh, gy + gh - Math.round(gh * (z + 1 / 3))); if (y1 < y0) K.R(x, gx, y1, 36, y0 - y1, c); });
+    if (fh > 0) K.R(x, gx, gy + gh - fh, 36, 3, C.butter); for (let k = gy + gh - 38; k > gy; k -= 38) K.R(x, gx, k, 36, 3, C.ink);
+    K.IC(x, 'r_skel', gx + 18, gy - 34, 44); U.text(x, Math.round(r * 100) + '%', gx + 18, gy + gh + 30, T.item, r > 0.4 ? C.red : C.gold, { num: true });
     mg.dust.forEach(d => K.R(x, d.x, d.y, 3, 3, 'rgba(200,180,150,0.6)'));
-    // haul
-    mg.pile.forEach((p, i) => { const px = SX + 70 + i * 86, py = FLOOR + 50; K.R(x, px - 36, py - 36, 72, 72, 'rgba(0,0,0,0.5)'); K.R(x, px - 36, py - 36, 72, 3, p.c); K.IC(x, p.ic, px, py, 52); });
-    if (mg.phase === 'collapse') { x.fillStyle = 'rgba(40,30,20,' + cl(mg.pt / 1.2, 0, 0.7) + ')'; x.fillRect(SX, SY, SW, SH); mg.fall.forEach(f => { x.save(); x.translate(f.x, f.y); x.rotate(f.rot); K.EL(x, 0, 0, f.r, f.r * 0.75, f.c); K.EL(x, -f.r * 0.25, -f.r * 0.25, f.r * 0.4, f.r * 0.25, 'rgba(255,220,180,0.08)'); x.restore(); }); if (mg.pt > 0.6) K.PT(x, '塌方！', CX, SY + 300, 110, '#ff4a3a'); }
+    // haul：底部一排小格，顶边是矿石的颜色
+    mg.pile.forEach((p, i) => { const px = SX + 70 + i * 86, py = FLOOR + 50; U.box(x, px - 36, py - 36, 72, 72, C.abyss); K.R(x, px - 36, py - 36, 72, 6, p.c); K.IC(x, p.ic, px, py + 3, 52); });
+    if (mg.phase === 'collapse') { K.R(x, SX, SY, SW, SH, 'rgba(7,6,15,' + Math.floor(cl(mg.pt / 0.84, 0, 1) * 4) / 4 * 0.7 + ')'); mg.fall.forEach(f => { x.save(); x.translate(f.x, f.y); x.rotate(f.rot); K.EL(x, 0, 0, f.r, f.r * 0.75, f.c); K.EL(x, -f.r * 0.25, -f.r * 0.25, f.r * 0.4, f.r * 0.25, 'rgba(255,220,180,0.08)'); x.restore(); }); if (mg.pt > 0.6) K.big(x, '塌方！', CX, SY + 300, 120, C.red, mg.pt - 0.6); }
   } };
 
 // ═════════════════════ 转盘 · roulette ═════════════════════
 const RSEC = [...Array(14)].map((_, i) => i === 0 ? 'g' : i === 7 ? 'x' : i % 2 ? 'r' : 'b');
-MINI.roulette = { title: '午夜转盘', img: 'e_wheel', col: '#ff5a4a', text: '荷官没有脸。转盘上的小球一直在跳，好像在等你下注。',
+MINI.roulette = { title: '午夜转盘', img: 'e_wheel', col: C.red, text: '荷官没有脸。转盘上的小球一直在跳，好像在等你下注。',
   init(mg) { mg.ang = rnd() * 6.28; mg.spins = 0; mg.max = 3; mg.net = 0; mg.hist = []; mg.lastSec = -1; },
   spin(mg, bet) {
     const stake = bet === 'g' ? mg.pay : mg.pay; if (!this.miniPay(stake)) return; mg.net -= stake; mg.bet = bet;
@@ -200,33 +218,37 @@ MINI.roulette = { title: '午夜转盘', img: 'e_wheel', col: '#ff5a4a', text: '
     const t = mg.t, wx = CX, wy = SY + 380, R = 250, st = Math.PI * 2 / 14;
     x.fillStyle = K.RG(x, CX, SY + 380, 60, 700, [[0, '#1e5a36'], [1, '#08180e']]); x.fillRect(SX, SY, SW, SH);
     for (let i = 0; i < 40; i++) K.R(x, SX + (i * 131) % SW, SY + 80 + (i * 71) % (SH - 80), 2, 2, 'rgba(255,255,255,0.05)');
-    K.CI(x, wx, wy + 14, R + 34, 'rgba(0,0,0,0.5)'); K.CI(x, wx, wy, R + 30, '#6a3a1a'); K.CI(x, wx, wy, R + 22, '#caa84a'); K.CI(x, wx, wy, R + 16, '#3a200e');
-    for (let i = 0; i < 28; i++) { const a = i / 28 * 6.28; const on = (Math.floor(t * 8) + i) % 4 === 0 || mg.phase === 'spin' && (i + Math.floor(t * 20)) % 7 === 0; K.CI(x, wx + Math.cos(a) * (R + 26), wy + Math.sin(a) * (R + 26), 5, on ? '#fff6c0' : '#8a6a2a'); }
+    K.CI(x, wx, wy + 14, R + 34, 'rgba(0,0,0,0.5)'); K.CI(x, wx, wy, R + 30, '#6a3a1a'); K.CI(x, wx, wy, R + 22, C.gold); K.CI(x, wx, wy, R + 16, '#3a200e');
+    // 轮缘灯珠：方块，奶油亮 / 棕色灭
+    for (let i = 0; i < 28; i++) { const a = i / 28 * 6.28; const on = (Math.floor(t * 8) + i) % 4 === 0 || mg.phase === 'spin' && (i + Math.floor(t * 20)) % 7 === 0, bx = Math.round(wx + Math.cos(a) * (R + 26)), by = Math.round(wy + Math.sin(a) * (R + 26)); K.R(x, bx - 6, by - 6, 12, 12, C.ink); K.R(x, bx - 3, by - 3, 6, 6, on ? C.butter : C.brown); }
     x.save(); x.translate(wx, wy); x.rotate(mg.ang);
-    RSEC.forEach((s, i) => { x.fillStyle = s === 'g' ? '#e8b830' : s === 'x' ? '#2a2a33' : s === 'r' ? (i % 4 === 1 ? '#c0302a' : '#a8241e') : (i % 4 === 2 ? '#1a1418' : '#221c22'); x.beginPath(); x.moveTo(0, 0); x.arc(0, 0, R, i * st, (i + 1) * st); x.closePath(); x.fill(); x.strokeStyle = '#caa84a'; x.lineWidth = 2; x.stroke();
-      const ma = (i + 0.5) * st; x.save(); x.rotate(ma); x.translate(R * 0.74, 0); x.rotate(Math.PI / 2); if (s === 'g') K.IC(x, 'u_star', 0, 0, 44); else if (s === 'x') K.IC(x, 'r_skel', 0, 0, 44); else K.CI(x, 0, 0, 9, s === 'r' ? '#ff8a7a' : '#8a8090'); x.restore(); });
-    K.CI(x, 0, 0, R * 0.42, '#3a200e'); K.CI(x, 0, 0, R * 0.36, K.RG(x, -20, -20, 5, R * 0.4, [[0, '#ffe08a'], [1, '#8a6a2a']])); for (let k = 0; k < 4; k++) { x.rotate(Math.PI / 2); K.R(x, -4, -R * 0.5, 8, R * 0.22, '#caa84a'); } x.restore();
-    K.PL(x, [[wx - 22, wy - R - 44], [wx + 22, wy - R - 44], [wx, wy - R + 6]], '#ff4a3a'); K.PL(x, [[wx - 12, wy - R - 40], [wx + 12, wy - R - 40], [wx, wy - R - 6]], '#ffb0a0');
-    if (mg.phase === 'spin') K.GL(x, wx, wy - R, 60, '#ffcc33', 0.5 + 0.3 * Math.sin(t * 30));
-    // side table: bet + history
-    K.PT(x, '下注', SX + 150, SY + 150, 30, '#e8dcc4'); if (mg.bet) { const c = { r: '#c0302a', b: '#2a2430', g: '#e8b830' }[mg.bet]; for (let i = 0; i < 5; i++) { K.EL(x, SX + 150, SY + 250 - i * 10, 44, 14, '#0a080c'); K.EL(x, SX + 150, SY + 246 - i * 10, 42, 12, c); } }
-    K.PT(x, '战绩', SX + SW - 150, SY + 150, 30, '#e8dcc4'); mg.hist.forEach((h, i) => K.CI(x, SX + SW - 190 + (i % 3) * 40, SY + 210 + Math.floor(i / 3) * 40, 14, { r: '#c0302a', b: '#1a1418', g: '#e8b830', x: '#6a6a78' }[h]));
-    K.PT(x, (mg.net >= 0 ? '+' : '') + M.fmt(mg.net), SX + SW - 150, SY + 340, 36, mg.net >= 0 ? '#ffcc33' : '#ff6a5a');
+    RSEC.forEach((s, i) => { x.fillStyle = s === 'g' ? C.gold : s === 'x' ? C.slate : s === 'r' ? C.red : (i % 4 === 2 ? C.ink : C.abyss); x.beginPath(); x.moveTo(0, 0); x.arc(0, 0, R, i * st, (i + 1) * st); x.closePath(); x.fill(); x.strokeStyle = C.gold; x.lineWidth = 3; x.stroke();
+      const ma = (i + 0.5) * st; x.save(); x.rotate(ma); x.translate(R * 0.74, 0); x.rotate(Math.PI / 2); if (s === 'g') K.IC(x, 'u_star', 0, 0, 44); else if (s === 'x') K.IC(x, 'r_skel', 0, 0, 44); else K.CI(x, 0, 0, 9, s === 'r' ? C.pink : C.steel); x.restore(); });
+    K.CI(x, 0, 0, R * 0.42, '#3a200e'); K.CI(x, 0, 0, R * 0.36, K.RG(x, -20, -20, 5, R * 0.4, [[0, C.butter], [0.4, C.gold], [1, C.amber]])); for (let k = 0; k < 4; k++) { x.rotate(Math.PI / 2); K.R(x, -4, -R * 0.5, 8, R * 0.22, C.gold); } x.restore();
+    K.PL(x, [[wx - 28, wy - R - 48], [wx + 28, wy - R - 48], [wx, wy - R + 12]], C.ink); K.PL(x, [[wx - 22, wy - R - 44], [wx + 22, wy - R - 44], [wx, wy - R + 6]], C.red); K.PL(x, [[wx - 12, wy - R - 40], [wx + 12, wy - R - 40], [wx, wy - R - 6]], C.pink);
+    if (mg.phase === 'spin') K.GL(x, wx, wy - R, 60, C.gold, 0.5 + 0.3 * Math.sin(t * 30));
+    // 下注 / 战绩：机箱小面板 + 靛蓝小牌；盈亏金色，亏了红色
+    const lx = SX + 50, rx = SX + SW - 250, py = SY + 150;
+    U.plate(x, lx, py, 200, 180, { shadow: 9 }); U.tab(x, '下注', lx + 24, py - 21, { size: T.body, kind: 'indigo' });
+    if (mg.bet) { const c = { r: C.red, b: C.slate, g: C.gold }[mg.bet]; for (let i = 0; i < 5; i++) { K.EL(x, SX + 150, SY + 250 - i * 10, 44, 14, C.ink); K.EL(x, SX + 150, SY + 246 - i * 10, 42, 12, c); } }
+    U.plate(x, rx, py, 200, 220, { shadow: 9 }); U.tab(x, '战绩', rx + 24, py - 21, { size: T.body, kind: 'indigo' });
+    mg.hist.forEach((h, i) => K.pip(x, SX + SW - 190 + (i % 3) * 40, SY + 210 + Math.floor(i / 3) * 40, 24, { r: C.red, b: C.ink, g: C.gold, x: C.slate }[h]));
+    U.text(x, (mg.net >= 0 ? '+' : '') + M.fmt(mg.net), rx + 100, py + 170, T.title, mg.net >= 0 ? C.gold : C.red, { num: true });
   } };
 
 // ═════════════════════ 水果机 · slot machine ═════════════════════
 const SYM = ['cherry', 'lemon', 'bell', 'bar', 'seven', 'skull'], SW8 = [30, 26, 18, 12, 6, 8], STRIP = [0, 1, 2, 0, 3, 1, 4, 0, 2, 5, 1, 3];
 K.sym = function (x, k, a, b, s) {
   const u = s / 100; x.save(); x.translate(a, b); x.scale(u, u);
-  if (k === 'cherry') { x.strokeStyle = '#3a8a3a'; x.lineWidth = 6; x.beginPath(); x.moveTo(-18, 10); x.quadraticCurveTo(-6, -30, 14, -38); x.moveTo(20, 16); x.quadraticCurveTo(14, -20, 14, -38); x.stroke(); K.EL(x, 22, -38, 14, 7, '#5ab04a', -0.4); K.CI(x, -20, 18, 22, '#d0202a'); K.CI(x, 20, 24, 22, '#e0303a'); K.CI(x, -27, 10, 6, '#ff9a9a'); K.CI(x, 13, 16, 6, '#ff9a9a'); }
-  else if (k === 'lemon') { K.EL(x, 0, 0, 40, 30, '#ffd23a', -0.3); K.EL(x, -10, -10, 16, 8, '#fff2a0', -0.3); K.CI(x, 38, -14, 6, '#e8b020'); }
-  else if (k === 'bell') { K.PL(x, [[-34, 26], [-26, -10], [-14, -34], [14, -34], [26, -10], [34, 26]], '#f0c040'); K.R(x, -40, 22, 80, 10, '#c8982a'); K.CI(x, 0, 38, 9, '#8a6a2a'); K.R(x, -18, -26, 8, 40, 'rgba(255,255,255,0.35)'); }
-  else if (k === 'bar') { K.RR(x, -46, -24, 92, 48, 6, '#1a1418', '#ffe08a', 4); K.TX(x, 'BAR', 0, 2, 34, '#ffe08a', { sh: 0, w: 900 }); }
-  else if (k === 'seven') { K.TX(x, '7', 4, 4, 100, '#6a0a0a', { sh: 0, w: 900 }); K.TX(x, '7', 0, 0, 100, '#ff2a2a', { sh: 0, w: 900 }); }
-  else if (k === 'skull') { K.CI(x, 0, -6, 32, '#e8e0d0'); K.R(x, -18, 18, 36, 18, '#e8e0d0'); K.CI(x, -12, -6, 9, '#1a1418'); K.CI(x, 12, -6, 9, '#1a1418'); K.PL(x, [[0, 6], [-5, 14], [5, 14]], '#1a1418'); for (let i = 0; i < 3; i++) K.R(x, -12 + i * 10, 26, 3, 10, '#1a1418'); }
+  if (k === 'cherry') { x.strokeStyle = C.greenDeep; x.lineWidth = 6; x.lineCap = 'square'; x.beginPath(); x.moveTo(-18, 10); x.quadraticCurveTo(-6, -30, 14, -38); x.moveTo(20, 16); x.quadraticCurveTo(14, -20, 14, -38); x.stroke(); K.EL(x, 22, -38, 14, 7, C.green, -0.4); K.CI(x, -20, 18, 22, C.red); K.CI(x, 20, 24, 22, C.red); K.CI(x, -27, 10, 6, C.pink); K.CI(x, 13, 16, 6, C.pink); }
+  else if (k === 'lemon') { K.EL(x, 0, 0, 40, 30, C.gold, -0.3); K.EL(x, -10, -10, 16, 8, C.butter, -0.3); K.CI(x, 38, -14, 6, C.amber); }
+  else if (k === 'bell') { K.PL(x, [[-34, 26], [-26, -10], [-14, -34], [14, -34], [26, -10], [34, 26]], C.gold); K.R(x, -40, 22, 80, 10, C.amber); K.CI(x, 0, 38, 9, C.brown); K.R(x, -18, -26, 8, 40, C.butter); }
+  else if (k === 'bar') { K.RR(x, -46, -24, 92, 48, 6, C.ink, C.gold, 3); U.text(x, 'BAR', 0, 2, T.item, C.gold, { num: true, shadow: false }); }
+  else if (k === 'seven') { U.text(x, '7', 4, 4, 100, C.wine, { num: true, shadow: false }); U.text(x, '7', 0, 0, 100, C.red, { num: true, shadow: false }); }
+  else if (k === 'skull') { K.CI(x, 0, -6, 32, C.cream); K.R(x, -18, 18, 36, 18, C.cream); K.CI(x, -12, -6, 9, C.ink); K.CI(x, 12, -6, 9, C.ink); K.PL(x, [[0, 6], [-5, 14], [5, 14]], C.ink); for (let i = 0; i < 3; i++) K.R(x, -12 + i * 10, 26, 3, 10, C.ink); }
   x.restore();
 };
-MINI.fruit = { title: '水果机', img: 'e_fruit', col: '#ff7ab0', text: '一台还插着电的老虎机。投币口旁边刻着：三个七，带你回家。',
+MINI.fruit = { title: '水果机', img: 'e_fruit', col: C.magenta, text: '一台还插着电的老虎机。投币口旁边刻着：三个七，带你回家。',
   init(mg) { mg.reels = [0, 1, 2].map(() => ({ pos: Math.floor(rnd() * 12), f: 0, s0: 0 })); mg.pulls = 0; mg.max = 5; mg.lever = 0; mg.win = 0; mg.flash = 0; },
   pull(mg) {
     if (!this.miniPay(mg.pay)) return; mg.pulls++; mg.win = 0;
@@ -249,24 +271,24 @@ MINI.fruit = { title: '水果机', img: 'e_fruit', col: '#ff7ab0', text: '一台
   draw(x, mg) {
     const t = mg.t, bx = CX - 330, by = SY + 150, bw = 560, bh = 480;
     x.fillStyle = K.RG(x, CX, SY + 350, 50, 700, [[0, '#3a1030'], [1, '#0e0610']]); x.fillRect(SX, SY, SW, SH);
-    // pay table
-    const PT = [['seven', '×25'], ['bar', '×10'], ['bell', '×6'], ['lemon', '×4'], ['cherry', '2个 ×2'], ['skull', '伤身']]; K.RR(x, SX + 40, SY + 110, 190, 440, 10, 'rgba(0,0,0,0.5)', '#6a3a5a', 2); PT.forEach(([k, s], i) => { K.sym(x, k, SX + 90, SY + 160 + i * 70, 44); K.TX(x, s, SX + 170, SY + 160 + i * 70, 22, k === 'skull' ? '#ff6a5a' : '#ffe08a'); });
+    // pay table：机箱面板，倍数品红、伤身红
+    const PT = [['seven', '×25'], ['bar', '×10'], ['bell', '×6'], ['lemon', '×4'], ['cherry', '2个 ×2'], ['skull', '伤身']]; U.plate(x, SX + 40, SY + 110, 190, 440, { shadow: 9 }); PT.forEach(([k, s], i) => { K.sym(x, k, SX + 90, SY + 160 + i * 70, 44); U.text(x, s, SX + 170, SY + 160 + i * 70, T.cap, k === 'skull' ? C.red : C.magenta); });
     // cabinet
-    K.RR(x, bx - 20, by - 60, bw + 40, bh + 80, 30, '#6a0a1a'); K.RR(x, bx - 10, by - 50, bw + 20, bh + 60, 24, K.LG(x, 0, by - 50, 0, by + bh, [[0, '#d0303a'], [1, '#6a0a1a']])); K.bulbs(x, bx, by - 40, bw, bh + 20, t + (mg.flash ? t * 3 : 0), '#ffcc33', 30);
-    K.RR(x, bx + 60, by - 30, bw - 120, 60, 12, '#1a0810', '#ffcc33', 3); K.PT(x, 'LUCKY 777', CX - 50, by, 40, mg.flash ? (Math.floor(t * 12) % 2 ? '#fff' : '#ffcc33') : '#ffcc33');
-    const wy = by + 110, ww = 150, wh = 250; for (let i = 0; i < 3; i++) { const wx = bx + 40 + i * (ww + 20), r = mg.reels[i]; K.RR(x, wx - 6, wy - 6, ww + 12, wh + 12, 10, '#1a0810'); K.R(x, wx, wy, ww, wh, K.LG(x, 0, wy, 0, wy + wh, [[0, '#888'], [0.2, '#f5f0e8'], [0.8, '#f5f0e8'], [1, '#888']]));
+    U.box(x, bx - 20, by - 60, bw + 40, bh + 80, C.wine); K.R(x, bx - 10, by - 50, bw + 20, bh + 60, K.LG(x, 0, by - 50, 0, by + bh, [[0, C.red], [1, C.wine]])); K.bulbs(x, bx, by - 40, bw, bh + 20, t + (mg.flash ? t * 3 : 0), C.gold, 30);
+    K.sign(x, 'LUCKY 777', CX - 50, by, { kind: 'dark', size: T.title, num: true, minW: bw - 120, h: 60, ring: C.gold, col: mg.flash && Math.floor(t * 12) % 2 ? C.white : C.gold });
+    const wy = by + 110, ww = 150, wh = 250; for (let i = 0; i < 3; i++) { const wx = bx + 40 + i * (ww + 20), r = mg.reels[i]; K.R(x, wx - 6, wy - 6, ww + 12, wh + 12, C.ink); K.R(x, wx, wy, ww, wh, K.LG(x, 0, wy, 0, wy + wh, [[0, C.steel], [0.2, C.cream], [0.8, C.cream], [1, C.steel]]));
       x.save(); x.beginPath(); x.rect(wx, wy, ww, wh); x.clip(); const fast = mg.phase === 'spin' && mg.pt < r.d - 0.2; const base = Math.floor(r.pos), fr = r.pos - base;
       for (let k = -2; k <= 2; k++) { const s = STRIP[(((base + k) % 12) + 12) % 12], yy = wy + wh / 2 + (k - fr) * 110; if (fast) { x.globalAlpha = 0.55; K.sym(x, SYM[s], wx + ww / 2, yy, 84); K.sym(x, SYM[s], wx + ww / 2, yy - 24, 84); x.globalAlpha = 1; } else K.sym(x, SYM[s], wx + ww / 2, yy, 90); }
-      x.fillStyle = K.LG(x, 0, wy, 0, wy + wh, [[0, 'rgba(0,0,0,0.5)'], [0.25, 'rgba(0,0,0,0)'], [0.75, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,0.5)']]); x.fillRect(wx, wy, ww, wh); x.restore(); }
-    K.R(x, bx + 30, wy + wh / 2 - 2, bw - 60, 4, mg.flash ? '#ffcc33' : 'rgba(255,60,60,0.8)');
-    K.RR(x, bx + 120, by + bh - 110, bw - 240, 50, 8, '#1a0810', '#caa84a', 2); K.PT(x, '剩余 ' + (mg.max - mg.pulls), CX - 50, by + bh - 85, 28, '#ffe08a');
+      x.fillStyle = K.LG(x, 0, wy, 0, wy + wh, [[0, 'rgba(7,6,15,0.5)'], [0.25, 'rgba(7,6,15,0)'], [0.75, 'rgba(7,6,15,0)'], [1, 'rgba(7,6,15,0.5)']]); x.fillRect(wx, wy, ww, wh); x.restore(); }
+    K.R(x, bx + 30, wy + wh / 2 - 3, bw - 60, 6, mg.flash ? C.gold : C.red);
+    K.sign(x, '剩余 ' + (mg.max - mg.pulls), CX - 50, by + bh - 85, { kind: 'dark', size: T.body, minW: bw - 240, h: 50, col: C.butter });
     // lever
-    const lx = bx + bw + 60, ly = by + 260, la = -1.1 + (mg.lever > 0 ? (1 - mg.lever) * 0 + 2.0 * mg.lever : 0); K.RR(x, lx - 18, ly - 20, 36, 90, 8, '#8a8a9a'); x.save(); x.translate(lx, ly); x.rotate(la * 0.6 + (mg.phase === 'spin' ? 1.2 * Math.max(0, 1 - mg.pt * 2) : 0)); K.R(x, -6, -170, 12, 170, '#c8d0dc'); K.CI(x, 0, -176, 28, '#d0202a'); K.CI(x, -8, -184, 9, '#ff9a9a'); x.restore();
-    if (mg.flash) K.GL(x, CX - 50, wy + wh / 2, 380, '#ffcc33', mg.flash * 0.5);
+    const lx = bx + bw + 60, ly = by + 260, la = -1.1 + (mg.lever > 0 ? (1 - mg.lever) * 0 + 2.0 * mg.lever : 0); U.box(x, lx - 18, ly - 20, 36, 90, C.steel); x.save(); x.translate(lx, ly); x.rotate(la * 0.6 + (mg.phase === 'spin' ? 1.2 * Math.max(0, 1 - mg.pt * 2) : 0)); K.R(x, -6, -170, 12, 170, C.silver); K.CI(x, 0, -176, 28, C.red); K.CI(x, -8, -184, 9, C.pink); x.restore();
+    if (mg.flash) K.GL(x, CX - 50, wy + wh / 2, 380, C.gold, mg.flash * 0.5);
   } };
 
 // ═════════════════════ 抓娃娃 · claw machine ═════════════════════
-MINI.claw = { title: '抓娃娃机', img: 'e_claw', col: '#ff8ac0', text: '玻璃柜里塞满了玩偶——仔细看，每一只都是会动的部队。',
+MINI.claw = { title: '抓娃娃机', img: 'e_claw', col: C.pink, text: '玻璃柜里塞满了玩偶——仔细看，每一只都是会动的部队。',
   init(mg) { const run = this.run, seen = new Set(); mg.prizes = []; for (let i = 0; i < 24 && mg.prizes.length < 6; i++) { const t = M.pickUnitQ(run); if (seen.has(t)) continue; seen.add(t); mg.prizes.push({ type: t, q: M.DB[t].q, x: 0, y: 0, rot: (rnd() - 0.5) * 0.5, vy: 0 }); }
     const L = SX + 380, Rr = SX + SW - 120; mg.prizes.forEach((p, i) => { p.x = L + 40 + (i % 3) * ((Rr - L - 80) / 2) + (rnd() - 0.5) * 40 + (i >= 3 ? 70 : 0); p.y = FLOOR - 10 - (i >= 3 ? 70 : 0); });
     mg.tries = 0; mg.max = 3; mg.cx = CX; mg.cy = SY + 130; mg.open = 1; mg.hold = -1; mg.got = []; },
@@ -292,23 +314,23 @@ MINI.claw = { title: '抓娃娃机', img: 'e_claw', col: '#ff8ac0', text: '玻�
   draw(x, mg) {
     const t = mg.t, B = MINI.claw.box;
     x.fillStyle = K.RG(x, CX, SY + 300, 40, 800, [[0, '#4a1a4a'], [1, '#12061a']]); x.fillRect(SX, SY, SW, SH);
-    K.RR(x, B.L - 30, B.T - 60, B.R - B.L + 60, FLOOR - B.T + 100, 20, '#ff8ac0'); K.RR(x, B.L - 20, B.T - 50, B.R - B.L + 40, FLOOR - B.T + 80, 16, '#2a0a2a');
+    U.box(x, B.L - 30, B.T - 60, B.R - B.L + 60, FLOOR - B.T + 100, C.pink); K.R(x, B.L - 20, B.T - 50, B.R - B.L + 40, FLOOR - B.T + 80, '#2a0a2a');
     x.fillStyle = K.LG(x, 0, B.T, 0, FLOOR, [[0, '#3a1a4a'], [1, '#1a0a24']]); x.fillRect(B.L, B.T, B.R - B.L, FLOOR - B.T);
-    for (let i = 0; i < 20; i++) { const px = B.L + (i * 73) % (B.R - B.L), py = B.T + 20 + (i * 47) % (FLOOR - B.T - 60); K.GL(x, px, py, 10, '#ff8ac0', 0.3 + 0.3 * Math.sin(t * 3 + i)); }
-    K.bulbs(x, B.L - 26, B.T - 56, B.R - B.L + 52, FLOOR - B.T + 92, t, '#ff8ac0', 34);
-    // chute
-    K.RR(x, SX + 120, FLOOR - 120, 160, 200, 10, '#1a0a1a', '#ff8ac0', 3); K.R(x, SX + 130, FLOOR - 10, 140, 90, '#000'); K.PT(x, '出口', SX + 200, FLOOR - 90, 30, '#ff8ac0'); K.PL(x, [[SX + 185, FLOOR - 60], [SX + 215, FLOOR - 60], [SX + 200, FLOOR - 36]], '#ffcc33');
+    for (let i = 0; i < 20; i++) { const px = B.L + (i * 73) % (B.R - B.L), py = B.T + 20 + (i * 47) % (FLOOR - B.T - 60); K.GL(x, px, py, 10, C.pink, 0.3 + 0.3 * Math.sin(t * 3 + i)); }
+    K.bulbs(x, B.L - 26, B.T - 56, B.R - B.L + 52, FLOOR - B.T + 92, t, C.pink, 34);
+    // chute：出口是粉色小签
+    K.RR(x, SX + 120, FLOOR - 120, 160, 200, 10, '#1a0a1a', C.pink, 3); K.R(x, SX + 130, FLOOR - 10, 140, 90, C.ink); K.chipC(x, '出口', SX + 200, FLOOR - 90, C.pink); K.PL(x, [[SX + 185, FLOOR - 60], [SX + 215, FLOOR - 60], [SX + 200, FLOOR - 36]], C.gold);
     // prizes
     mg.prizes.forEach((p, i) => { if (p.gone) return; const col = M.QUALITY[p.q].c; x.save(); x.translate(p.x, p.y); x.rotate(p.rot + (mg.hold === i ? Math.sin(t * 8) * 0.15 : 0)); K.EL(x, 0, -44, 52, 50, 'rgba(255,255,255,0.08)'); K.SP(x, p.type, 0, 0, 92); K.PL(x, [[-12, -96], [0, -88], [12, -96], [12, -82], [0, -88], [-12, -82]], col); x.restore(); });
     // floor & glass
     K.R(x, B.L, FLOOR, B.R - B.L, 12, '#6a2a5a');
-    if (mg.phase === 'idle') { x.globalAlpha = 0.35; K.EL(x, mg.cx, FLOOR, 40, 10, '#ffcc33'); x.globalAlpha = 1; }
-    // claw
-    K.R(x, B.L, B.T - 14, B.R - B.L, 10, '#8a8a9a'); K.RR(x, mg.cx - 34, B.T - 30, 68, 34, 6, '#c8d0dc', '#4a4a55', 2); K.LN(x, mg.cx, B.T, mg.cx, mg.cy, 3, '#dfe6f0');
-    K.RR(x, mg.cx - 22, mg.cy - 6, 44, 26, 6, '#caa84a'); const op = 0.25 + mg.open * 0.55;
-    [-1, 0, 1].forEach(s => { x.save(); x.translate(mg.cx + s * 12, mg.cy + 18); x.rotate(s * op + (s === 0 ? 0 : 0)); x.strokeStyle = '#dfe6f0'; x.lineWidth = 6; x.lineCap = 'round'; x.beginPath(); x.moveTo(0, 0); x.lineTo(s * 16, 34); x.lineTo(s * 6 - s * op * 10, 58); x.stroke(); x.restore(); });
-    x.fillStyle = 'rgba(255,255,255,0.06)'; x.beginPath(); x.moveTo(B.L + 40, B.T); x.lineTo(B.L + 120, B.T); x.lineTo(B.L + 20, FLOOR); x.lineTo(B.L - 20 + 20, FLOOR); x.fill();
-    for (let i = 0; i < mg.max; i++) K.CI(x, SX + 170 + i * 30, FLOOR - 150, 10, i < mg.max - mg.tries ? '#ffcc33' : '#3a2a3a');
+    if (mg.phase === 'idle') { x.globalAlpha = 0.35; K.EL(x, mg.cx, FLOOR, 40, 10, C.gold); x.globalAlpha = 1; }
+    // claw：爪子是方头硬线
+    K.R(x, B.L, B.T - 14, B.R - B.L, 10, C.steel); U.box(x, mg.cx - 34, B.T - 30, 68, 34, C.silver); K.LN(x, mg.cx, B.T, mg.cx, mg.cy, 3, C.silver);
+    U.box(x, mg.cx - 22, mg.cy - 6, 44, 26, C.gold); const op = 0.25 + mg.open * 0.55;
+    [-1, 0, 1].forEach(s => { x.save(); x.translate(mg.cx + s * 12, mg.cy + 18); x.rotate(s * op + (s === 0 ? 0 : 0)); x.strokeStyle = C.silver; x.lineWidth = 6; x.lineCap = 'square'; x.lineJoin = 'miter'; x.beginPath(); x.moveTo(0, 0); x.lineTo(s * 16, 34); x.lineTo(s * 6 - s * op * 10, 58); x.stroke(); x.restore(); });
+    K.PL(x, [[B.L + 40, B.T], [B.L + 120, B.T], [B.L + 20, FLOOR], [B.L, FLOOR]], 'rgba(255,255,255,0.06)');
+    for (let i = 0; i < mg.max; i++) K.pip(x, SX + 170 + i * 30, FLOOR - 150, 18, i < mg.max - mg.tries ? C.gold : null);
   } };
 })();
 

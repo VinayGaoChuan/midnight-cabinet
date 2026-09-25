@@ -30,44 +30,55 @@ G.recruitCard = function (h, rar, done) {
   S.whoosh && S.whoosh(0.5); this.bump();
 };
 const RC = () => M.RARITY.map(r => r.c);
+const U = M.UI, P = M.PJ.PAL, RM = () => !!M.PJ.reduced, st = (t, fps) => (RM() ? 0 : Math.floor(t * fps) / fps);
+// 卡背（设计稿卡片）：酒红夜色色带底 + 墨框 + 金色硬边内框 + 四角铆钉；中间像素菱形徽记，外圈刻度按步转
 function cardBack(x, t, glowC, glowA) {
-  const g = x.createLinearGradient(0, -CH / 2, 0, CH / 2); g.addColorStop(0, '#34143e'); g.addColorStop(1, '#12081a'); x.fillStyle = g; x.fillRect(-CW / 2, -CH / 2, CW, CH);
-  x.strokeStyle = '#caa84a'; x.lineWidth = 8; x.strokeRect(-CW / 2 + 4, -CH / 2 + 4, CW - 8, CH - 8); x.strokeStyle = 'rgba(202,168,74,0.5)'; x.lineWidth = 2; x.strokeRect(-CW / 2 + 22, -CH / 2 + 22, CW - 44, CH - 44);
-  [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => { x.fillStyle = '#caa84a'; x.beginPath(); x.moveTo(sx * (CW / 2 - 22), sy * (CH / 2 - 22)); x.lineTo(sx * (CW / 2 - 52), sy * (CH / 2 - 22)); x.lineTo(sx * (CW / 2 - 22), sy * (CH / 2 - 52)); x.fill(); });
-  x.save(); x.rotate(t * 0.6); x.strokeStyle = glowC; x.globalAlpha = 0.5 + 0.5 * glowA; x.lineWidth = 3; x.beginPath(); x.arc(0, 0, 70, 0, 7); x.stroke(); for (let i = 0; i < 6; i++) { x.rotate(Math.PI / 3); x.beginPath(); x.moveTo(0, -70); x.lineTo(0, -92); x.stroke(); } x.restore();
-  x.globalAlpha = 1; x.fillStyle = glowC; x.beginPath(); x.moveTo(0, -46); x.lineTo(12, -12); x.lineTo(46, 0); x.lineTo(12, 12); x.lineTo(0, 46); x.lineTo(-12, 12); x.lineTo(-46, 0); x.lineTo(-12, -12); x.fill(); x.fillStyle = '#fff6e0'; x.beginPath(); x.arc(0, 0, 9, 0, 7); x.fill();
+  x.fillStyle = U.lg(x, 0, -CH / 2, 0, CH / 2, [[0, P.wine], [1, P.night]], 4); x.fillRect(-CW / 2, -CH / 2, CW, CH);
+  U.R(x, -CW / 2 - 3, -CH / 2 - 3, CW + 6, 3, P.ink); U.R(x, -CW / 2 - 3, CH / 2, CW + 6, 3, P.ink); U.R(x, -CW / 2 - 3, -CH / 2, 3, CH, P.ink); U.R(x, CW / 2, -CH / 2, 3, CH, P.ink);
+  U.R(x, -CW / 2 + 6, -CH / 2 + 6, CW - 12, 6, P.gold); U.R(x, -CW / 2 + 6, CH / 2 - 12, CW - 12, 6, P.gold); U.R(x, -CW / 2 + 6, -CH / 2 + 6, 6, CH - 12, P.gold); U.R(x, CW / 2 - 12, -CH / 2 + 6, 6, CH - 12, P.gold);
+  U.R(x, -CW / 2 + 24, -CH / 2 + 24, CW - 48, 3, P.amber); U.R(x, -CW / 2 + 24, CH / 2 - 27, CW - 48, 3, P.amber); U.R(x, -CW / 2 + 24, -CH / 2 + 24, 3, CH - 48, P.amber); U.R(x, CW / 2 - 27, -CH / 2 + 24, 3, CH - 48, P.amber);
+  U.rivet(x, -CW / 2 + 33, -CH / 2 + 33); U.rivet(x, CW / 2 - 42, -CH / 2 + 33); U.rivet(x, -CW / 2 + 33, CH / 2 - 42); U.rivet(x, CW / 2 - 42, CH / 2 - 42);
+  const gc = U.pal(glowC); x.save(); x.globalAlpha = 0.5 + 0.5 * Math.round(glowA * 3) / 3; x.rotate(Math.round(st(t, 6) * 0.6 / (Math.PI / 12)) * (Math.PI / 12));
+  for (let i = 0; i < 12; i++) { x.rotate(Math.PI / 6); U.R(x, -3, -96, 6, 18, gc); } x.restore();
+  x.globalAlpha = 1;
+  for (let k = -8; k <= 8; k++) { const r = 8 - Math.abs(k); U.R(x, -r * 6 - 3, k * 6 - 3, r * 12 + 6, 6, P.ink); }
+  for (let k = -7; k <= 7; k++) { const r = 7 - Math.abs(k); U.R(x, -r * 6, k * 6, r * 12, 6, k < -3 ? P.butter : gc); }
+  U.R(x, -6, -6, 12, 12, P.white);
 }
 function drawCard(ctx, F) {
-  const t = F.t, cols = RC(), rc = cols[F.rar] || '#ffffff', H = M.HEROES[F.h.cls];
+  const t = F.t, cols = RC(), rc = U.pal(cols[F.rar] || '#ffffff'), H = M.HEROES[F.h.cls];
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
-  // the room goes dark
-  const dim = t < T_REVEAL ? cl(t / 0.3, 0, 1) : 1 - cl((t - T_REVEAL) / (T_END - T_REVEAL), 0, 1); ctx.fillStyle = 'rgba(4,2,8,' + (0.78 * dim).toFixed(3) + ')'; ctx.fillRect(0, 0, 1920, 1080);
-  // the glow climbs through the qualities it passes on the way to its own
-  const tier = t < T_IN ? 0 : Math.min(F.rar, Math.floor((t - T_IN) / ((T_CHARGE - T_IN) / (F.rar + 1)))), glowC = cols[tier];
+  // 压暗：墨色 + 网点，分 4 档进出
+  const dim = t < T_REVEAL ? cl(t / 0.3, 0, 1) : 1 - cl((t - T_REVEAL) / (T_END - T_REVEAL), 0, 1); U.dim(ctx, Math.round(dim * 4) / 4);
+  // 光一档档爬过经过的品质，停在自己的品质
+  const tier = t < T_IN ? 0 : Math.min(F.rar, Math.floor((t - T_IN) / ((T_CHARGE - T_IN) / (F.rar + 1)))), glowC = U.pal(cols[tier]);
   if (t < T_CHARGE) {
     const qi = eo(cl(t / T_IN, 0, 1)), qc = cl((t - T_IN) / (T_CHARGE - T_IN), 0, 1), shake = qc * qc * (6 + F.rar * 5);
-    const x = 960 + (CX - 960) * qi + (Math.random() - 0.5) * shake, y = 1000 + (CY - 1000) * qi + (Math.random() - 0.5) * shake, s = 0.3 + 0.7 * eb(qi);
-    if (qc > 0) { const r = 180 + 260 * qc; const g = ctx.createRadialGradient(x, y, 20, x, y, r); g.addColorStop(0, glowC); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35 + 0.4 * qc; ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+    const x = Math.round((960 + (CX - 960) * qi + (Math.random() - 0.5) * shake) / 3) * 3, y = Math.round((1000 + (CY - 1000) * qi + (Math.random() - 0.5) * shake) / 3) * 3, s = 0.3 + 0.7 * eb(qi);
+    if (qc > 0) { const r = Math.round((180 + 260 * qc) / 12) * 12; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.3 + 0.35 * Math.round(qc * 4) / 4; ctx.fillStyle = U.rg(ctx, x, y, 20, r, [[0, glowC], [1, 'rgba(0,0,0,0)']], 4); ctx.fillRect(x - r, y - r, r * 2, r * 2); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
     ctx.save(); ctx.translate(x, y); ctx.scale(s * Math.max(0.08, Math.abs(Math.cos((1 - qi) * Math.PI * 2))), s); ctx.rotate((1 - qi) * 0.4); cardBack(ctx, t, glowC, qc);
-    // cracks spread from the centre, white-hot
-    if (qc > 0.05) { ctx.globalCompositeOperation = 'lighter'; F.cracks.forEach(p => { const nq = Math.floor(qc * (p.length - 1)) + 1; ctx.strokeStyle = glowC; ctx.lineWidth = 7; ctx.globalAlpha = 0.6; ctx.beginPath(); p.slice(0, nq + 1).forEach(([a, b], i) => (i ? ctx.lineTo(a, b) : ctx.moveTo(a, b))); ctx.stroke(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; ctx.globalAlpha = 1; ctx.stroke(); }); ctx.globalCompositeOperation = 'source-over'; }
+    // 裂纹从中心往外爬：6px 方头硬线，外面一圈墨
+    if (qc > 0.05) F.cracks.forEach(p => { const nq = Math.floor(qc * (p.length - 1)) + 1, pts = p.slice(0, nq + 1); ctx.lineCap = 'square'; ctx.lineJoin = 'miter';
+      [[12, P.ink], [6, glowC], [2, P.white]].forEach(([lw, c]) => { ctx.strokeStyle = c; ctx.lineWidth = lw; ctx.beginPath(); pts.forEach(([a, b], i) => (i ? ctx.lineTo(a, b) : ctx.moveTo(a, b))); ctx.stroke(); }); });
     ctx.restore();
   }
-  // the shatter
+  // 碎开
   if (t >= T_CHARGE && !F.boom) { F.boom = true; S.boom && S.boom(); S.fanfare && S.fanfare(); if (F.g) { F.g.fx.kick(22 + F.rar * 6); F.g.fx.rays && F.g.fx.rays(CX, CY, rc, 2.2); } }
   if (t >= T_CHARGE) {
     const d = t - T_CHARGE;
-    if (d < 0.35) { ctx.globalAlpha = 0.85 * (1 - d / 0.35); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 1920, 1080); ctx.globalAlpha = 1; }
-    if (d < 0.7) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1 - d / 0.7; ctx.strokeStyle = rc; ctx.lineWidth = 16 * (1 - d / 0.7) + 2; ctx.beginPath(); ctx.ellipse(CX, CY, 60 + d * 1400, 40 + d * 800, 0, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
-    if (d < 1.3) F.shards.forEach(p => { ctx.save(); ctx.globalAlpha = cl(1 - d / 1.3, 0, 1); ctx.translate(CX + p.cx + p.vx * d, CY + p.cy + p.vy * d + 900 * d * d); ctx.rotate(p.vr * d); ctx.translate(-p.cx, -p.cy); ctx.fillStyle = (p.cx + p.cy) % 3 > 1 ? '#2a1034' : '#3e1a48'; ctx.strokeStyle = rc; ctx.lineWidth = 2; ctx.beginPath(); p.tri.forEach(([a, b], i) => (i ? ctx.lineTo(a, b) : ctx.moveTo(a, b))); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); });
-    // the true face: rays, the leader, its emblem and name — then it flies to the leader bar
+    if (d < 0.35) { ctx.globalAlpha = 0.85 * (1 - Math.floor(d / 0.35 * 3) / 3); ctx.fillStyle = P.white; ctx.fillRect(0, 0, 1920, 1080); ctx.globalAlpha = 1; }
+    if (d < 0.7) { const e = Math.floor(d / 0.7 * 6) / 6, rw = Math.round((60 + e * 1400) / 6) * 6, rh = Math.round((40 + e * 800) / 6) * 6, lw = e < 0.5 ? 12 : 6; ctx.lineWidth = lw; ctx.strokeStyle = P.ink; ctx.beginPath(); ctx.ellipse(CX, CY, rw + lw, rh + lw, 0, 0, 7); ctx.stroke(); ctx.strokeStyle = rc; ctx.beginPath(); ctx.ellipse(CX, CY, rw, rh, 0, 0, 7); ctx.stroke(); }
+    if (d < 1.3) F.shards.forEach(p => { ctx.save(); ctx.globalAlpha = Math.ceil(cl(1 - d / 1.3, 0, 1) * 4) / 4; ctx.translate(Math.round(CX + p.cx + p.vx * d), Math.round(CY + p.cy + p.vy * d + 900 * d * d)); ctx.rotate(Math.round(p.vr * d / 0.4) * 0.4); ctx.translate(-p.cx, -p.cy); ctx.fillStyle = (p.cx + p.cy) % 3 > 1 ? P.night : P.wine; ctx.strokeStyle = rc; ctx.lineWidth = 3; ctx.lineJoin = 'miter'; ctx.beginPath(); p.tri.forEach(([a, b], i) => (i ? ctx.lineTo(a, b) : ctx.moveTo(a, b))); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); });
+    // 真容：光束、领袖像素半身像（没有就用精灵）、职业徽记和名字——然后飞进领袖栏
     const fl = cl((t - T_REVEAL) / (T_END - T_REVEAL - 0.1), 0, 1), q = eo(fl), rv = eb(cl(d / 0.5, 0, 1));
-    const x = CX + (F.to.x - CX) * q, y = CY + (F.to.y - CY) * q - Math.sin(q * Math.PI) * 160, sc = (1 - 0.8 * q) * rv;
+    const x = Math.round(CX + (F.to.x - CX) * q), y = Math.round(CY + (F.to.y - CY) * q - Math.sin(q * Math.PI) * 160), sc = (1 - 0.8 * q) * rv;
     if (fl < 1) {
-      if (q < 0.5) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(CX, CY); ctx.rotate(t * 0.5); ctx.globalAlpha = (1 - q * 2) * 0.55; for (let i = 0; i < 16; i++) { ctx.rotate(Math.PI / 8); ctx.fillStyle = i % 2 ? rc : '#ffffff'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-30, -700); ctx.lineTo(30, -700); ctx.fill(); } ctx.restore(); }
-      if (F.img) { const w = F.img.width * 1.1 * sc, hh = F.img.height * 1.1 * sc; ctx.save(); ctx.imageSmoothingEnabled = false; if (M.glow) M.glow(ctx, x, y, 220 * sc, rc, 0.6); ctx.drawImage(F.img, x - w / 2, y - hh / 2, w, hh); ctx.restore(); }
-      if (q < 0.15) { const a = 1 - q / 0.15; ctx.save(); ctx.globalAlpha = a * cl(d / 0.4, 0, 1); ctx.textAlign = 'center'; ctx.font = "700 72px 'Noto Serif SC', serif"; ctx.lineWidth = 8; ctx.strokeStyle = '#0a0610'; ctx.strokeText(H.n, CX, CY + 270); ctx.fillStyle = rc; ctx.fillText(H.n, CX, CY + 270);
-        if (F.ic) { const s2 = 72; ctx.imageSmoothingEnabled = false; ctx.drawImage(F.ic, CX - s2 / 2, CY - 300, s2, s2); } ctx.restore(); }
+      if (q < 0.5) { ctx.save(); ctx.translate(CX, CY); ctx.rotate(Math.round(st(t, 6) * 0.5 / (Math.PI / 16)) * (Math.PI / 16)); ctx.globalAlpha = Math.ceil((1 - q * 2) * 3) / 3 * 0.5; for (let i = 0; i < 16; i++) { ctx.rotate(Math.PI / 8); ctx.fillStyle = i % 2 ? rc : P.butter; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-30, -700); ctx.lineTo(30, -700); ctx.fill(); } ctx.restore(); }
+      const bi = U.bust(H.sprite);
+      if (bi) { const w = Math.round(256 * sc / 4) * 4, hh = w; ctx.save(); ctx.imageSmoothingEnabled = false; U.R(ctx, x - w / 2 + 9 * sc, y - hh / 2 + 9 * sc, w + 6, hh + 6, P.ink); U.box(ctx, x - w / 2, y - hh / 2, w, hh, P.indigo); ctx.drawImage(bi, x - w / 2, y - hh / 2, w, hh); U.R(ctx, x - w / 2, y + hh / 2 - 6, w, 6, rc); ctx.restore(); }
+      else if (F.img) { const w = F.img.width * 1.1 * sc, hh = F.img.height * 1.1 * sc; ctx.save(); ctx.imageSmoothingEnabled = false; ctx.drawImage(F.img, x - w / 2, y - hh / 2, w, hh); ctx.restore(); }
+      if (q < 0.15) { const a = Math.ceil((1 - q / 0.15) * cl(d / 0.4, 0, 1) * 4) / 4; ctx.save(); ctx.globalAlpha = a; U.text(ctx, H.n, CX, CY + 250, 64, rc, { outline: true });
+        if (F.ic) { const s2 = 72; ctx.imageSmoothingEnabled = false; U.box(ctx, CX - s2 / 2 - 6, CY - 318, s2 + 12, s2 + 12, P.abyss); ctx.drawImage(F.ic, CX - s2 / 2, CY - 312, s2, s2); } ctx.restore(); }
     }
   }
   ctx.restore();

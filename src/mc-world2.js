@@ -2,8 +2,36 @@
 (function () {
 const M = window.MC;
 const { SP, C, spriteCanvas, pick, wpick, NODE } = M;
-const CNF = "'Noto Serif SC', serif";
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+// 界面件（站牌、箭头键、锁定框、小地图）画在半分辨率像素层里（mc-game-g.js）：坐标、线宽都取偶数，1 格 = 2 舞台像素，边才是硬的
+const PJ = M.PJ || {}, P = PJ.PAL || {};
+const E = (v) => Math.round(v / 2) * 2;
+const PR = (x, a, b, w, h, c) => { x.fillStyle = c; x.fillRect(E(a), E(b), E(w), E(h)); };
+// 站点类型 → 调色板含义色（撤离青、首领红、商店金、奇遇紫……）
+const NODE_C = { extract: 'teal', hold: 'teal', camp: 'amber', chest: 'gold', shop: 'gold', boss: 'red', elite: 'red', event: 'violet', recruit: 'blue', normal: 'pink', start: 'cream' };
+// 站牌：夜色底 + 墨框 + 右下硬投影 + 左侧含义色条；像素字 24（= 字库原生 12px × 2，最清楚）
+function nodeTag(ctx, n, p) {
+  const U = M.UI, lab = M.nodeLabel(n), fs = 24, h = 40, w = E(U.measure(ctx, lab, fs) + 38), x0 = E(p.x - w / 2), y0 = E(p.y + 36);
+  const acc = n.seen ? P[NODE_C[n.type]] || P.cream : P.dusk, tc = n.seen ? (n.type === 'extract' ? P.teal : n.type === 'boss' || n.type === 'elite' ? P.red : P.cream) : P.lavender;
+  PR(ctx, x0 + 2, y0 + 2, w + 8, h + 8, P.ink); PR(ctx, x0 - 4, y0 - 4, w + 8, h + 8, P.ink);
+  PR(ctx, x0, y0, w, h, P.night); PR(ctx, x0, y0, w, 2, P.dusk); PR(ctx, x0, y0 + h - 4, w, 4, P.abyss); PR(ctx, x0, y0, 6, h, acc);
+  U.text(ctx, lab, x0 + 20, y0 + 28, fs, tc, { align: 'left', base: 'alphabetic', u: 2 });
+}
+// 方向键：金色街机键（上黄油高光、下琥珀暗阶、墨框、垂直硬投影），悬停抬起 4px、白框；箭头用像素块拼
+const ARW = ['....#...', '....##..', '#######.', '########', '#######.', '....##..', '....#...'];
+function arrowKey(ctx, dir, p, hot, T) {
+  const kw = 68, kh = 60, gy = E(p.y - kh / 2), off = hot ? -4 : PJ.reduced ? 0 : (Math.floor(T * 3) % 2) * -4, X = E(p.x - kw / 2), Y = gy + off;
+  PR(ctx, X - 4, Y + kh + 4, kw + 8, 8 - off, P.ink);
+  PR(ctx, X - 4, Y - 4, kw + 8, kh + 8, hot ? P.white : P.ink); PR(ctx, X, Y, kw, kh, P.gold); PR(ctx, X, Y, kw, 6, P.butter); PR(ctx, X, Y + kh - 8, kw, 8, P.amber);
+  const u = 4, gw = dir === 'right' ? 8 : 7, gh = dir === 'right' ? 7 : 8, g0 = E(X + kw / 2 - gw * u / 2), h0 = E(Y + (kh - 2) / 2 - gh * u / 2);
+  ctx.fillStyle = P.ink; ARW.forEach((row, r) => [...row].forEach((ch, c) => { if (ch !== '#') return; const gx = dir === 'right' ? c : r, gy2 = dir === 'right' ? r : dir === 'up' ? 7 - c : c; ctx.fillRect(g0 + gx * u, h0 + gy2 * u, u, u); }));
+}
+// 悬停时锁定目标站：四角金色括号（墨边），两档步进缩放
+function lockOn(ctx, cx, cy, T) {
+  const r = 78 + (PJ.reduced ? 0 : (Math.floor(T * 4) % 2) * 6), L = 30, t = 6;
+  const brk = (rr, LL, tt, c) => [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => { const X = cx + sx * rr, Y = cy + sy * rr; PR(ctx, sx < 0 ? X : X - LL, sy < 0 ? Y : Y - tt, LL, tt, c); PR(ctx, sx < 0 ? X : X - tt, sy < 0 ? Y : Y - LL, tt, LL, c); });
+  brk(r + 2, L + 4, t + 4, P.ink); brk(r, L, t, P.gold);
+}
 const COLW = 520, ROWH = 270, Y0 = 700, STUB = 130;
 
 // The map (user ruling 2026-09-24): a run is one or more segments, each ending in a boss — the length of a map is how
@@ -164,8 +192,9 @@ M.drawWorld2 = function (ctx, run, walker, opts = {}) {
     items.push({ y: n.y - 10, draw: () => {
       const closed = n.col <= curCol && n.id !== cur;
       ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.beginPath(); ctx.ellipse(n.x, n.y + 4, 74, 26, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = closed ? '#15121a' : '#2a2430'; ctx.fillRect(n.x - 60, n.y - 16, 120, 32); ctx.fillStyle = closed ? '#1c1822' : '#3a3242'; ctx.fillRect(n.x - 60, n.y - 16, 120, 8);
-      if (!n.seen) { const img = spriteCanvas('question', 8); ctx.globalAlpha = 0.5 + 0.2 * Math.sin(T * 3 + n.id); ctx.drawImage(img, n.x - img.width / 2, n.y - 40 - img.height); ctx.globalAlpha = 1; return; }
+      // 站台：墨框硬边石板（走过的压暗）
+      ctx.fillStyle = P.ink; ctx.fillRect(n.x - 64, n.y - 20, 128, 40); ctx.fillStyle = closed ? P.abyss : P.night; ctx.fillRect(n.x - 60, n.y - 16, 120, 32); ctx.fillStyle = closed ? P.night : P.dusk; ctx.fillRect(n.x - 60, n.y - 16, 120, 8);
+      if (!n.seen) { const img = spriteCanvas('question', 8); ctx.globalAlpha = PJ.reduced ? 0.6 : Math.floor(T * 2 + n.id) % 2 ? 0.7 : 0.5; ctx.drawImage(img, n.x - img.width / 2, n.y - 40 - img.height); ctx.globalAlpha = 1; return; }
       const key = nodeSprite(n), big = ['stall', 'house', 'tent'].includes(key) ? 7 : key === 'tv' ? 8 : 8;
       const img = spriteCanvas(key, big, closed && n.type !== 'shop' ? '#2a2632' : null);
       const bob = n.done || closed ? 0 : Math.round(Math.sin(T * 2.4 + n.id) * 5);
@@ -202,24 +231,20 @@ M.drawWorld2 = function (ctx, run, walker, opts = {}) {
   M.hd2d(ctx, 1920, 1080, { focus: 0.52, band: 0.2, bloom: 0.5, grade: R.grade, gradeA: 0.3, vig: 0.55 });
   // foreground silhouettes (heavy blur, fast parallax)
   map.fg.forEach(f => { const sx = ((f.x - walker.camX * 1.5) % (map.W * 1.3) + map.W * 1.3) % (map.W * 1.3) - 200; if (sx < -500 || sx > 2200) return; const img = blurred(f.k, f.s); ctx.drawImage(img, sx, 1080 - img.height * 0.55); });
-  // labels (crisp, after post)
-  ctx.textAlign = 'center';
-  const ahead = map.nodes[cur].out.map(e => map.edges[e].b).concat(walker.edge ? [] : []);
-  (walker.edge ? [walker.edge.b] : ahead).forEach(id => { const n = map.nodes[id]; const p = toS(n.x, n.y); const lab = M.nodeLabel(n); ctx.font = `32px ${CNF}`; const w = ctx.measureText(lab).width + 34; ctx.fillStyle = 'rgba(11,9,14,0.88)'; ctx.fillRect(p.x - w / 2, p.y + 34, w, 48); ctx.fillStyle = n.seen ? (n.type === 'extract' ? C.teal : n.type === 'boss' || n.type === 'elite' ? C.blood : C.bone) : C.dim; ctx.fillRect(p.x - w / 2, p.y + 34, 5, 48); ctx.fillText(lab, p.x, p.y + 68); });
   if (!walker.edge && !opts.noHints) {
-    const outs = M.nodeAhead(map, walker.node), n = map.nodes[walker.node], pulse = 1 + 0.08 * Math.sin(T * 6);
+    const outs = M.nodeAhead(map, walker.node), n = map.nodes[walker.node];
     outs.forEach(e => {
-      const k = e.dir === 'up' ? '↑' : e.dir === 'down' ? '↓' : '→';
       const hx = e.dir === 'right' ? n.x + 270 : n.x + STUB, hy = e.dir === 'right' ? n.y - 4 : n.y + (e.dir === 'up' ? -150 : 150);
       const p = toS(hx, hy), hot = walker.hot === e.dir;
-      // hovered: ring the stop it leads to, and lift the arrow
-      if (hot) { const tn = map.nodes[e.b], tq = toS(tn.x, tn.y); ctx.strokeStyle = 'rgba(255,240,180,' + (0.55 + 0.3 * Math.sin(T * 8)) + ')'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(tq.x, tq.y - 30, 78, 0, 7); ctx.stroke(); }
-      const sc = pulse * (hot ? 1.25 : 1); ctx.save(); ctx.translate(p.x, p.y); ctx.scale(sc, sc);
-      if (hot) { ctx.fillStyle = '#ffffff'; ctx.fillRect(-40, -40, 80, 76); }
-      ctx.fillStyle = '#0b090e'; ctx.fillRect(-34, -30, 68, 68); ctx.fillStyle = hot ? '#ffe08a' : '#f2c14e'; ctx.fillRect(-34, -34, 68, 64); ctx.fillStyle = '#0e0c12'; ctx.font = `44px ${CNF}`; ctx.textBaseline = 'middle'; ctx.fillText(k, 0, -2); ctx.restore(); ctx.textBaseline = 'alphabetic';
+      // hovered: lock onto the stop it leads to, and lift the key
+      if (hot) { const tn = map.nodes[e.b], tq = toS(tn.x, tn.y); lockOn(ctx, E(tq.x), E(tq.y - 30), T); }
+      arrowKey(ctx, e.dir, p, hot, T);
     });
   }
-  if (opts.fade) { ctx.globalAlpha = opts.fade; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 1920, 1080); ctx.globalAlpha = 1; }
+  // labels (crisp, after post; on top of the lock-on brackets)
+  const ahead = map.nodes[cur].out.map(e => map.edges[e].b).concat(walker.edge ? [] : []);
+  (walker.edge ? [walker.edge.b] : ahead).forEach(id => { const n = map.nodes[id]; nodeTag(ctx, n, toS(n.x, n.y)); });
+  if (opts.fade) { ctx.globalAlpha = opts.fade; ctx.fillStyle = P.ink; ctx.fillRect(0, 0, 1920, 1080); ctx.globalAlpha = 1; }
   if (!opts.noMini) M.drawMinimap2(ctx, run, walker);
 };
 M.worldPick = function (run, walker, sx, sy) {
@@ -230,22 +255,30 @@ M.worldPick = function (run, walker, sx, sy) {
 M.drawMinimap2 = function (ctx, run, walker) {
   const map = run.map, X = 1330, Y = 30, Wd = 560, Ht = 250;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.fillStyle = 'rgba(11,9,14,0.9)'; ctx.fillRect(X, Y, Wd, Ht); ctx.strokeStyle = '#3a3040'; ctx.lineWidth = 4; ctx.strokeRect(X + 2, Y + 2, Wd - 4, Ht - 4);
+  // 机箱面板：右下 12px 硬投影 + 墨框 + 斜面（上左亮、下右暗）+ 四角铆钉；里面是网点凹槽
+  PR(ctx, X + 8, Y + 8, Wd + 8, Ht + 8, P.ink); PR(ctx, X - 4, Y - 4, Wd + 8, Ht + 8, P.ink); PR(ctx, X, Y, Wd, Ht, P.night);
+  PR(ctx, X, Y, Wd, 4, P.dusk); PR(ctx, X, Y, 4, Ht, P.dusk); PR(ctx, X, Y + Ht - 6, Wd, 6, P.abyss); PR(ctx, X + Wd - 4, Y, 4, Ht, P.abyss);
+  [[X + 10, Y + 10], [X + Wd - 20, Y + 10], [X + 10, Y + Ht - 22], [X + Wd - 20, Y + Ht - 22]].forEach(([a, b]) => { PR(ctx, a + 2, b + 2, 8, 8, P.ink); PR(ctx, a, b, 8, 8, P.steel); PR(ctx, a, b, 8, 2, P.silver); PR(ctx, a, b, 2, 8, P.silver); });
+  PR(ctx, X + 22, Y + 30, 514, 202, P.ink); if (M.UI) M.UI.dither(ctx, X + 24, Y + 32, 510, 198, P.abyss, P.ink, 6); PR(ctx, X + 24, Y + 32, 510, 4, P.ink); PR(ctx, X + 22, Y + 232, 514, 2, P.dusk);
   const sx = (Wd - 70) / (map.W - 500), sy = (Ht - 90) / (ROWH * 2.4);
-  const px = (x) => X + 35 + (x - 300) * sx, py = (y) => Y + 60 + (y - (Y0 - ROWH * 1.2)) * sy;
+  const px = (x) => E(X + 35 + (x - 300) * sx), py = (y) => E(Y + 60 + (y - (Y0 - ROWH * 1.2)) * sy);
   const cur = walker.edge ? walker.edge.b : walker.node, curCol = map.nodes[cur].col;
-  ctx.lineWidth = 3;
-  map.edges.forEach(e => { ctx.strokeStyle = map.nodes[e.a].col < curCol ? '#231c2a' : '#4a4052'; ctx.beginPath(); e.pts.forEach((p, i) => i ? ctx.lineTo(px(p[0]), py(p[1])) : ctx.moveTo(px(p[0]), py(p[1]))); ctx.stroke(); });
+  // 路：走过的靛蓝、没走的暮紫、眼前能走的亮起（薰衣草）
+  ctx.lineWidth = 4; ctx.lineCap = 'square'; ctx.lineJoin = 'miter';
+  map.edges.forEach(e => { const lit = e === walker.edge || (!walker.edge && e.a === walker.node); ctx.strokeStyle = lit ? P.lavender : map.nodes[e.a].col < curCol ? P.indigo : P.dusk; ctx.beginPath(); e.pts.forEach((p, i) => i ? ctx.lineTo(px(p[0]), py(p[1])) : ctx.moveTo(px(p[0]), py(p[1]))); ctx.stroke(); });
+  // 站：墨边方块 + 暮紫内圈（撤离点青、首领红）
   map.nodes.forEach(n => {
-    const ic = M.nodeIcon(n), img = spriteCanvas(ic, ic === 'tv' || ic === 'elite' ? 1 : 2), cx = px(n.x), cy = py(n.y);
-    ctx.fillStyle = n.col < curCol ? '#15121a' : '#2a2232'; ctx.fillRect(cx - 12, cy - 12, 24, 24);
-    ctx.globalAlpha = n.col < curCol && n.id !== cur ? 0.3 : 1; ctx.drawImage(img, cx - img.width / 2, cy - img.height / 2); ctx.globalAlpha = 1;
-    if (n.type === 'extract' && n.seen) { ctx.strokeStyle = C.teal; ctx.lineWidth = 2; ctx.strokeRect(cx - 13, cy - 13, 26, 26); }
-    if (n.type === 'boss' && n.seen) { ctx.strokeStyle = C.blood; ctx.lineWidth = 2; ctx.strokeRect(cx - 13, cy - 13, 26, 26); }
+    const ic = M.nodeIcon(n), img = spriteCanvas(ic, ic === 'tv' || ic === 'elite' ? 1 : 2), cx = px(n.x), cy = py(n.y), past = n.col < curCol;
+    PR(ctx, cx - 14, cy - 14, 28, 28, P.ink); PR(ctx, cx - 12, cy - 12, 24, 24, n.seen && n.type === 'extract' ? P.teal : n.seen && n.type === 'boss' ? P.red : P.dusk); PR(ctx, cx - 10, cy - 10, 20, 20, past ? P.ink : P.abyss);
+    ctx.globalAlpha = past && n.id !== cur ? 0.3 : 1; ctx.drawImage(img, cx - img.width / 2, cy - img.height / 2); ctx.globalAlpha = 1;
   });
-  const hx = px(walker.x), hy = py(walker.y);
-  ctx.fillStyle = Math.floor(walker.t * 3) % 2 ? C.candle : '#fff'; ctx.fillRect(hx - 6, hy - 24, 12, 12);
-  ctx.font = `24px ${CNF}`; ctx.textAlign = 'left'; ctx.fillStyle = C.dim; ctx.fillText(run.region.n + ' · ' + (run.len.boss ? run.len.boss + ' 个首领' : run.len.n) + ' · 第 ' + (curCol + 1) + '/' + map.cols + ' 站', X + 16, Y + 34);
+  // 自己：金 / 白两档闪烁的方块 + 下方小尖角
+  const hx = px(walker.x), hy = py(walker.y), hc = PJ.reduced || Math.floor(walker.t * 3) % 2 ? P.gold : P.white;
+  PR(ctx, hx - 8, hy - 26, 16, 16, P.ink); PR(ctx, hx - 6, hy - 24, 12, 12, hc); PR(ctx, hx - 4, hy - 12, 8, 6, P.ink); PR(ctx, hx - 2, hy - 12, 4, 4, hc);
+  // 标题小牌（靛蓝）：压在面板上沿
+  const cap = run.region.n + ' · ' + (run.len.boss ? run.len.boss + ' 个首领' : run.len.n) + ' · 第 ' + (curCol + 1) + '/' + map.cols + ' 站', U = M.UI, tw = E((U ? U.measure(ctx, cap, 24) : 300) + 32), tx = X + 24, ty = Y - 20;
+  PR(ctx, tx - 4, ty - 4, tw + 8, 44, P.ink); PR(ctx, tx, ty, tw, 36, P.indigo); PR(ctx, tx, ty, tw, 4, P.dusk);
+  if (U) U.text(ctx, cap, tx + 16, ty + 28, 24, P.butter, { align: 'left', base: 'alphabetic', u: 2 });
 };
 })();
 

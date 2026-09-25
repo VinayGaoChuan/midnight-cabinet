@@ -9,6 +9,7 @@ const cl = (v, a, b) => Math.max(a, Math.min(b, v));
 const eo = (p) => 1 - Math.pow(1 - p, 3), eb = (p) => { const c = 1.7; return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };
 const DX = () => M.BASE_GEO.DOOR_X;
 const SW = 170, SH = 224, GAP = 250, TOPY = -612;   // stele size and where the row floats (base-world pixels)
+const PJ = M.PJ || {}, P = PJ.PAL || {};   // 调色板（界面件只用这 32 色）
 
 // ───────── danger: the strongest leader who can go vs. a plain leader of the level this world expects ─────────
 M.bestLeader = (m) => m.heroes.filter(h => h.hp > 0).reduce((b, h) => (!b || M.heroPower(h, m) > M.heroPower(b, m) ? h : b), null);
@@ -19,7 +20,7 @@ M.parPower = function (m, k, cls) {
 M.worldDanger = function (m, k) {
   const b = M.bestLeader(m), mine = b ? M.heroPower(b, m) : 0, par = M.parPower(m, k, b && b.cls), r = mine / Math.max(1, par);
   const lv = r >= 1.1 ? 0 : r >= 0.85 ? 1 : 2;
-  return { lv, n: ['低', '中', '高'][lv], c: ['#9cff7a', '#ffb040', '#ff4a4a'][lv], mine, par };
+  return { lv, n: ['低', '中', '高'][lv], c: [P.teal, P.gold, P.red][lv], mine, par };
 };
 
 // ───────── specialty: what a world gives more of ─────────
@@ -160,15 +161,25 @@ const THEME = {
 };
 
 // ───────── drawing (called from M.drawBase) ─────────
-function slab(ctx, x, y, w, h) { const r = w / 2; ctx.beginPath(); ctx.moveTo(x - r, y + h); ctx.lineTo(x - r, y + r); ctx.arc(x, y + r, r, Math.PI, 0); ctx.lineTo(x + r, y + h); ctx.closePath(); }
+// 碑身：阶梯拱顶（每 10 格一级台阶，像素硬边，不画圆弧）
+function slab(ctx, x, y, w, h) {
+  const r = w / 2, st = 10; ctx.beginPath(); ctx.moveTo(x - r, y + h);
+  for (let a = x - r; a < x + r - 0.01; a += st) { const b = Math.min(a + st, x + r), m = Math.abs((a + b) / 2 - x), top = y + r - Math.sqrt(Math.max(0, r * r - m * m)); ctx.lineTo(a, top); ctx.lineTo(b, top); }
+  ctx.lineTo(x + r, y + h); ctx.closePath();
+}
 function stele(ctx, x, y, W, t, i, hov, sel) {
-  ctx.fillStyle = '#1c1822'; ctx.fillRect(x - SW / 2 - 14, y + SH - 4, SW + 28, 26); ctx.fillStyle = '#3a3444'; ctx.fillRect(x - SW / 2 - 14, y + SH - 4, SW + 28, 5);
-  const sg = ctx.createLinearGradient(0, y, 0, y + SH); sg.addColorStop(0, '#5a5364'); sg.addColorStop(1, '#27222e'); ctx.fillStyle = sg; slab(ctx, x, y, SW, SH); ctx.fill();
-  ctx.lineWidth = 5; ctx.strokeStyle = sel ? '#f2c14e' : hov ? '#ffffff' : '#15121a'; slab(ctx, x, y, SW, SH); ctx.stroke();
-  ctx.fillStyle = 'rgba(10,8,14,0.55)'; slab(ctx, x, y + 14, SW - 28, SH - 26); ctx.fill();
-  const a0 = ctx.globalAlpha; ctx.globalAlpha = a0 * (0.45 + 0.25 * Math.sin(t * 2 + i)); ctx.lineWidth = 2; ctx.strokeStyle = W.light; slab(ctx, x, y + 14, SW - 28, SH - 26); ctx.stroke(); ctx.globalAlpha = a0;
-  ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - SW / 2 + 6, y + 120); ctx.lineTo(x - SW / 2 + 22, y + 138); ctx.lineTo(x - SW / 2 + 16, y + 160); ctx.moveTo(x + SW / 2 - 8, y + 70); ctx.lineTo(x + SW / 2 - 20, y + 84); ctx.stroke();
-  ctx.fillStyle = '#15121a'; ctx.beginPath(); ctx.arc(x, y + 22, 14, 0, 7); ctx.fill(); ctx.fillStyle = W.light; ctx.beginPath(); ctx.arc(x, y + 22, 9, 0, 7); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.fillRect(x - 4, y + 16, 3, 3);
+  const U = M.UI, wl = U ? U.pal(W.light) : W.light; ctx.lineJoin = 'miter';
+  // 底座：墨框 + 深渊底 + 靛蓝顶边
+  ctx.fillStyle = P.ink; ctx.fillRect(x - SW / 2 - 17, y + SH - 7, SW + 34, 32); ctx.fillStyle = P.abyss; ctx.fillRect(x - SW / 2 - 14, y + SH - 4, SW + 28, 26); ctx.fillStyle = P.indigo; ctx.fillRect(x - SW / 2 - 14, y + SH - 4, SW + 28, 5);
+  // 石面：石板灰 → 深渊，5 条硬色带；外框墨色，悬停白、选中金
+  ctx.fillStyle = U ? U.lg(ctx, 0, y, 0, y + SH, [[0, P.slate], [1, P.abyss]], 5) : P.slate; slab(ctx, x, y, SW, SH); ctx.fill();
+  ctx.lineWidth = 5; ctx.strokeStyle = sel ? P.gold : hov ? P.white : P.ink; slab(ctx, x, y, SW, SH); ctx.stroke();
+  ctx.fillStyle = 'rgba(7,6,15,0.55)'; slab(ctx, x, y + 14, SW - 28, SH - 26); ctx.fill();
+  // 内圈：世界色 3px 硬线，两档明暗步进
+  const a0 = ctx.globalAlpha; ctx.globalAlpha = a0 * (PJ.reduced ? 0.6 : Math.floor(t * 2 + i) % 2 ? 0.7 : 0.45); ctx.lineWidth = 3; ctx.strokeStyle = wl; slab(ctx, x, y + 14, SW - 28, SH - 26); ctx.stroke(); ctx.globalAlpha = a0;
+  ctx.strokeStyle = 'rgba(7,6,15,0.45)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - SW / 2 + 6, y + 120); ctx.lineTo(x - SW / 2 + 22, y + 138); ctx.lineTo(x - SW / 2 + 16, y + 160); ctx.moveTo(x + SW / 2 - 8, y + 70); ctx.lineTo(x + SW / 2 - 20, y + 84); ctx.stroke();
+  // 顶上的宝石：墨框方块 + 世界色 + 左上白高光
+  ctx.fillStyle = P.ink; ctx.fillRect(x - 14, y + 8, 28, 28); ctx.fillStyle = wl; ctx.fillRect(x - 10, y + 12, 20, 20); ctx.fillStyle = P.white; ctx.fillRect(x - 8, y + 14, 6, 6);
 }
 M.drawSteles = function (ctx, meta, bv, lights, layer) {
   const t = bv.t, on = !!bv.portalOpen, dtf = layer === 'body' ? Math.max(0, Math.min(0.05, t - (bv._dtp || t))) : 0;
@@ -191,7 +202,7 @@ M.drawSteles = function (ctx, meta, bv, lights, layer) {
       if (lights) lights.push({ x, y: y + SH / 2, r: 260, c: W.light, f: 0.9 });
     } else if (!D.hit) {
       D.hit = true; bv.theme = { k: D.k, t0: t };
-      bv.shards = []; for (let i = 0; i < 44; i++) { const a = -Math.PI / 2 + (Math.random() - 0.5) * 3.4, v = 260 + Math.random() * 560; bv.shards.push({ x: X + (Math.random() - 0.5) * 90, y: -140 + (Math.random() - 0.5) * 90, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 120, r: Math.random() * 6, vr: (Math.random() - 0.5) * 14, s: 6 + Math.random() * 16, c: i % 5 === 0 ? W.light : i % 2 ? '#5a5364' : '#3a3444', life: 1.1 + Math.random() * 0.6, age: 0 }); }
+      bv.shards = []; for (let i = 0; i < 44; i++) { const a = -Math.PI / 2 + (Math.random() - 0.5) * 3.4, v = 260 + Math.random() * 560; bv.shards.push({ x: X + (Math.random() - 0.5) * 90, y: -140 + (Math.random() - 0.5) * 90, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 120, r: Math.random() * 6, vr: (Math.random() - 0.5) * 14, s: 6 + Math.random() * 16, c: i % 5 === 0 ? W.light : i % 2 ? P.slate : P.indigo, life: 1.1 + Math.random() * 0.6, age: 0 }); }
       bv.boom = t; bv.onImpact && bv.onImpact();
     }
   }
@@ -211,7 +222,8 @@ M.drawSteles = function (ctx, meta, bv, lights, layer) {
     const hov = bv.hoverSt === k, al = cl(rise * 1.4, 0, 1);
     if (layer === 'body') {
       ctx.save(); ctx.globalAlpha = al;
-      const bg = ctx.createLinearGradient(0, y + SH, 0, -240); bg.addColorStop(0, 'rgba(95,208,192,0.35)'); bg.addColorStop(1, 'rgba(95,208,192,0)'); ctx.fillStyle = bg; ctx.fillRect(x - 3, y + SH, 6, Math.max(0, -240 - y - SH));
+      // 碑下的光柱：青色 4 级硬色带，越往下越淡
+      ctx.fillStyle = M.UI ? M.UI.lg(ctx, 0, y + SH, 0, -240, [[0, 'rgba(71,214,193,0.35)'], [1, 'rgba(71,214,193,0)']], 4) : 'rgba(71,214,193,0.2)'; ctx.fillRect(x - 3, y + SH, 6, Math.max(0, -240 - y - SH));
       stele(ctx, x, y, W, t, i, hov, false); ctx.restore();
       if (lights) lights.push({ x, y: y + SH / 2, r: 240, c: W.light, f: (0.55 + (hov ? 0.3 : 0)) * rise });
       if (sv > 0.95) { const a = bv.toScreen(x - SW / 2 - 14, y), b = bv.toScreen(x + SW / 2 + 14, y + SH + 22); bv.steles.push({ k, x: a.x, y: a.y, w: b.x - a.x, h: b.y - a.y, wx: x, wy: y }); }
@@ -219,11 +231,12 @@ M.drawSteles = function (ctx, meta, bv, lights, layer) {
     }
     // crisp layer (screen space): the danger word and the specialty icons
     const z = bv.z, c = bv.toScreen(x, y), Dg = M.worldDanger(meta, k), L = M.worldLoot(k);
-    ctx.save(); ctx.globalAlpha = al; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    const sk = M.spriteCanvas('skull', 4), ss = 34 * z, fs = Math.round(46 * z), dy = c.y + 92 * z;
-    ctx.font = `700 ${fs}px 'Noto Serif SC', serif`; const tw = ctx.measureText(Dg.n).width, x0 = c.x - (ss + 8 * z + tw) / 2;
+    ctx.save(); ctx.globalAlpha = al;
+    // 危险字：像素字（字号取 12 的倍数，随镜头一档一档变）+ 八向 3px 墨描边
+    const U = M.UI, sk = M.spriteCanvas('skull', 4), ss = 34 * z, fs = Math.max(24, Math.round(46 * z / 12) * 12), dy = Math.round(c.y + 92 * z);
+    const tw = U.measure(ctx, Dg.n, fs), x0 = Math.round(c.x - (ss + 8 * z + tw) / 2);
     if (sk) ctx.drawImage(sk, x0, dy - ss / 2, ss, ss);
-    ctx.fillStyle = '#000'; ctx.fillText(Dg.n, x0 + ss + 8 * z + tw / 2 + 3, dy + 3); ctx.fillStyle = Dg.c; ctx.fillText(Dg.n, x0 + ss + 8 * z + tw / 2, dy);
+    U.text(ctx, Dg.n, Math.round(x0 + ss + 8 * z + tw / 2), dy, fs, Dg.c, { outline: true });
     const is = 38 * z, gap = 10 * z, wT = L.length * is + (L.length - 1) * gap; let lx = c.x - wT / 2; const ly = c.y + 150 * z;
     L.forEach(l => { const cv = icCanvas(l.ic); if (cv) { const s = Math.min(is / cv.width, is / cv.height); ctx.drawImage(cv, lx + (is - cv.width * s) / 2, ly + (is - cv.height * s) / 2, cv.width * s, cv.height * s); } lx += is + gap; });
     ctx.restore();

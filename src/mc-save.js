@@ -128,47 +128,56 @@ M.saveReport = (rep.wiped || rep.fixed) ? rep : (parked && parked.rows ? parked 
 M.saveCheck = { checkMeta, checkProfile };
 
 // ───────── the shredding ─────────
+// Pixel Juice（docs/design.md §11.5）：存档卡 = 机台维修模式的小屏（石板色机框、深渊色屏幕、青色字、扫描线）
+const U = M.UI, P = M.PJ.PAL, RM = () => !!M.PJ.reduced, stepT = (t, f) => (RM() ? t : Math.floor(t * f) / f), st4 = (v) => Math.round(cl(v, 0, 1) * 4) / 4;
+const frame = (x, a, b, w, h, k, c) => { U.R(x, a, b, w, k, c); U.R(x, a, b + h - k, w, k, c); U.R(x, a, b, k, h, c); U.R(x, a + w - k, b, k, h, c); };
 const CARD = { w: 620, x: 650, y: 250 };
 const drawSave = function (ctx, g) {
   const F = g.saveFx; if (!F) return; const t = (now() - F.t0) / 1000, R = F.rep, all = R.rows, wipeAll = !all.some(r => r.state === 'ok' || r.state === 'cut') && R.wiped;
   const rowH = 58, h = 150 + all.length * rowH, x0 = CARD.x, y0 = 540 - h / 2, T_SCAN = 0.5, T_TEAR = 0.6 + all.length * 0.22 + 0.3, T_END = T_TEAR + 3.4;
   if (t > T_END) { g.saveFx = null; if (M.saveReport) M.saveReport.done = true; return; }
   const snd = (k, at, fn) => { if (t >= at && !F.s[k]) { F.s[k] = 1; try { fn(); } catch (e) {} } };
-  const fin = t > T_END - 0.5 ? cl((T_END - t) / 0.5, 0, 1) : 1;
-  ctx.save(); ctx.fillStyle = 'rgba(3,2,6,' + (0.82 * cl(t / 0.3, 0, 1) * fin) + ')'; ctx.fillRect(0, 0, 1920, 1080);
+  const fin = t > T_END - 0.5 ? st4((T_END - t) / 0.5) : 1, ts = stepT(t, 12);
+  ctx.save(); M.fxDim(ctx, st4(t / 0.3) * fin);
   // title
-  ctx.globalAlpha = fin; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = "700 40px 'Noto Serif SC',serif"; ctx.fillStyle = '#e8dcc4'; ctx.fillText(t < T_TEAR ? '正在检测存档……' : wipeAll ? '存档与当前版本不兼容，已粉碎' : '不兼容的部分已粉碎，其余存档保留', 960, y0 - 70);
+  ctx.globalAlpha = fin; U.text(ctx, t < T_TEAR ? '正在检测存档……' : wipeAll ? '存档与当前版本不兼容，已粉碎' : '不兼容的部分已粉碎，其余存档保留', 960, y0 - 70, 40, P.cream);
   // the card, row by row; broken rows are torn off and shattered
-  const slide = eo(cl(t / 0.4, 0, 1)), cx = x0, cy = y0 + (1 - slide) * 80;
-  const split = wipeAll ? eo(cl((t - T_TEAR) / 0.5, 0, 1)) : 0;
+  const slide = eo(cl(ts / 0.4, 0, 1)), cx = x0, cy = y0 + Math.round((1 - slide) * 80 / 6) * 6;
+  const split = wipeAll ? eo(cl((ts - T_TEAR) / 0.5, 0, 1)) : 0;
   const drawRow = (r, i, dx, dy, rot, alpha) => {
     const ry = cy + 110 + i * rowH; ctx.save(); ctx.globalAlpha = alpha * fin; ctx.translate(cx + CARD.w / 2 + dx, ry + rowH / 2 + dy); ctx.rotate(rot);
-    const scanned = t > T_SCAN + i * 0.22, bad = scanned && r.state !== 'ok';
-    ctx.fillStyle = bad ? '#2a1014' : '#1a1520'; ctx.fillRect(-CARD.w / 2 + 20, -rowH / 2 + 4, CARD.w - 40, rowH - 8);
-    ctx.textAlign = 'left'; ctx.font = "600 26px 'Noto Serif SC',serif"; ctx.fillStyle = bad ? '#ff8a8a' : '#e8dcc4'; ctx.fillText(r.n, -CARD.w / 2 + 40, 0);
-    ctx.textAlign = 'right'; ctx.font = "600 22px 'Noto Serif SC',serif"; ctx.fillStyle = !scanned ? '#6b6570' : bad ? '#ff4a5a' : '#9cff7a'; ctx.fillText(!scanned ? '……' : bad ? '✘ ' + (r.why || '不兼容') : '✔ 正常', CARD.w / 2 - 40, 0);
+    const scanned = t > T_SCAN + i * 0.22, bad = scanned && r.state !== 'ok', rw = CARD.w - 80, rh = rowH - 14;
+    // 行 = 凹槽：深渊色底 + 3px 圈（正常深青、坏的红）+ 顶上 3px 墨影
+    U.box(ctx, -rw / 2, -rh / 2, rw, rh, P.abyss, bad ? P.red : P.tealDeep); U.R(ctx, -rw / 2, -rh / 2, rw, 3, P.ink);
+    U.text(ctx, r.n, -rw / 2 + 18, 0, 26, bad ? P.pink : P.teal, { align: 'left', shadow: false });
+    U.text(ctx, !scanned ? '……' : bad ? '✘ ' + (r.why || '不兼容') : '✔ 正常', rw / 2 - 18, 0, 22, !scanned ? P.haze : bad ? P.red : P.lime, { align: 'right', shadow: false });
     ctx.restore();
   };
-  // card body (halves when the whole save goes)
+  // card body (halves when the whole save goes): 石板色机框（钢色上沿、靛蓝下沿、铆钉、12px 硬投影）+ 屏幕（6px 墨边、3px 深青内圈）
   const body = (dx, rot, clipL) => { ctx.save(); ctx.globalAlpha = fin * (1 - (wipeAll ? cl((t - T_TEAR - 0.6) / 0.2, 0, 1) : 0)); ctx.translate(cx + CARD.w / 2 + dx, cy + h / 2); ctx.rotate(rot); ctx.beginPath(); if (clipL != null) { const zig = []; for (let k = 0; k <= 12; k++) zig.push([(k % 2 ? 14 : -14), -h / 2 + k * h / 12]); if (clipL) { ctx.moveTo(-CARD.w / 2, -h / 2); zig.forEach(([zx, zy]) => ctx.lineTo(zx, zy)); ctx.lineTo(-CARD.w / 2, h / 2); } else { ctx.moveTo(CARD.w / 2, -h / 2); zig.forEach(([zx, zy]) => ctx.lineTo(zx, zy)); ctx.lineTo(CARD.w / 2, h / 2); } ctx.closePath(); ctx.clip(); }
-    const gr = ctx.createLinearGradient(0, -h / 2, 0, h / 2); gr.addColorStop(0, '#2e2436'); gr.addColorStop(1, '#100c14'); ctx.fillStyle = gr; ctx.fillRect(-CARD.w / 2, -h / 2, CARD.w, h);
-    ctx.strokeStyle = '#c8a060'; ctx.lineWidth = 4; ctx.strokeRect(-CARD.w / 2 + 6, -h / 2 + 6, CARD.w - 12, h - 12);
-    ctx.textAlign = 'center'; ctx.font = "900 44px 'Cinzel','Noto Serif SC',serif"; ctx.fillStyle = '#ffe08a'; ctx.fillText('午夜机台 · 存档', 0, -h / 2 + 60); ctx.restore(); };
+    const W2 = CARD.w / 2, H2 = h / 2; U.plate(ctx, -W2, -H2, CARD.w, h, { fill: P.slate, hi: P.steel, lo: P.indigo });
+    U.R(ctx, -W2 + 24, -H2 + 24, CARD.w - 48, h - 48, P.ink); U.R(ctx, -W2 + 30, -H2 + 30, CARD.w - 60, h - 60, P.abyss); frame(ctx, -W2 + 30, -H2 + 30, CARD.w - 60, h - 60, 3, P.tealDeep);
+    // 标题：冰青像素字 + 3px 深青影，下面一条深青虚线
+    U.text(ctx, '午夜机台 · 存档', 3, -H2 + 63, 40, P.tealDeep, { shadow: false }); U.text(ctx, '午夜机台 · 存档', 0, -H2 + 60, 40, P.ice, { shadow: false });
+    for (let k = -W2 + 48; k < W2 - 57; k += 15) U.R(ctx, k, -H2 + 92, 9, 3, P.tealDeep);
+    ctx.restore(); };
   if (!wipeAll || split < 1) { if (wipeAll && split > 0) { body(-split * 140, -split * 0.12, true); body(split * 140, split * 0.12, false); } else body(0, 0, null); }
-  // scan line
-  if (t > T_SCAN && t < T_TEAR) { const sy = cy + 110 + ((t - T_SCAN) / (T_TEAR - T_SCAN - 0.3)) * all.length * rowH; ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(120,220,255,0.35)'; ctx.fillRect(cx + 10, sy - 3, CARD.w - 20, 6); ctx.globalCompositeOperation = 'source-over'; }
   all.forEach((r, i) => {
     const bad = r.state !== 'ok'; const tt = t - T_TEAR - i * 0.12;
     if (!bad || tt < 0) { if (!(wipeAll && split > 0)) drawRow(r, i, 0, 0, 0, 1); else drawRow(r, i, (i % 2 ? 1 : -1) * split * 140, 0, (i % 2 ? 1 : -1) * split * 0.12, 1 - cl((t - T_TEAR - 0.6) / 0.2, 0, 1)); return; }
     // tear: the strip jerks sideways, then bursts into shards
     if (!F.s['tear' + i]) { F.s['tear' + i] = 1; try { S.whoosh && S.whoosh(0.25); } catch (e) {} }
-    if (tt < 0.35) { const k = eo(tt / 0.35); drawRow(r, i, (i % 2 ? 1 : -1) * k * 60, -k * 20, (i % 2 ? 1 : -1) * k * 0.2, 1); return; }
-    if (!F.shards[i]) { F.shards[i] = []; const ry = cy + 110 + i * rowH + rowH / 2; for (let k = 0; k < 46; k++) F.shards[i].push({ x: cx + 40 + Math.random() * (CARD.w - 80), y: ry + (Math.random() - 0.5) * rowH, vx: (Math.random() - 0.5) * 900, vy: -300 - Math.random() * 600, s: 6 + Math.random() * 16, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 12, col: Math.random() < 0.5 ? '#ff4a5a' : Math.random() < 0.5 ? '#2e2436' : '#c8a060', t0: t }); try { S.shatter && S.shatter(); } catch (e) {} if (g.fx && g.fx.kick) g.fx.kick(10); }
+    if (tt < 0.35) { const k = eo(stepT(tt, 12) / 0.35); drawRow(r, i, (i % 2 ? 1 : -1) * k * 60, -k * 20, (i % 2 ? 1 : -1) * k * 0.2, 1); return; }
+    if (!F.shards[i]) { F.shards[i] = []; const ry = cy + 110 + i * rowH + rowH / 2; for (let k = 0; k < 46; k++) F.shards[i].push({ x: cx + 40 + Math.random() * (CARD.w - 80), y: ry + (Math.random() - 0.5) * rowH, vx: (Math.random() - 0.5) * 900, vy: -300 - Math.random() * 600, s: 6 + Math.random() * 16, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 12, col: Math.random() < 0.5 ? P.red : Math.random() < 0.5 ? P.abyss : P.tealDeep, t0: t }); try { S.shatter && S.shatter(); } catch (e) {} if (g.fx && g.fx.kick) g.fx.kick(10); }
   });
-  if (wipeAll && split >= 1 && !F.shards.all) { F.shards.all = []; for (let k = 0; k < 220; k++) F.shards.all.push({ x: cx + Math.random() * CARD.w, y: cy + Math.random() * h, vx: (Math.random() - 0.5) * 1400, vy: -500 - Math.random() * 700, s: 8 + Math.random() * 22, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 14, col: ['#2e2436', '#c8a060', '#ffe08a', '#ff4a5a', '#100c14'][k % 5], t0: t }); try { S.impact && S.impact(); S.shatter && S.shatter(); } catch (e) {} if (g.fx && g.fx.flash) g.fx.flash('#ff2a4a', 0.5); if (g.fx && g.fx.kick) g.fx.kick(26); }
-  Object.values(F.shards).forEach(list => (list || []).forEach(p => { const k = t - p.t0; if (k > 2.4) return; ctx.save(); ctx.globalAlpha = cl(1 - k / 2.4, 0, 1) * fin; ctx.translate(p.x + p.vx * k, p.y + p.vy * k + 1400 * k * k); ctx.rotate(p.rot + p.vr * k); ctx.fillStyle = p.col; ctx.beginPath(); ctx.moveTo(-p.s / 2, -p.s / 3); ctx.lineTo(p.s / 2, -p.s / 2); ctx.lineTo(p.s / 3, p.s / 2); ctx.closePath(); ctx.fill(); ctx.restore(); }));
+  // scan line: 3px 冰青硬条 + 3px 青色余光，按 3px 一格往下走
+  if (t > T_SCAN && t < T_TEAR) { const sy = Math.min(cy + h - 36, Math.round((cy + 110 + ((t - T_SCAN) / (T_TEAR - T_SCAN - 0.3)) * all.length * rowH) / 3) * 3); ctx.globalAlpha = 0.8 * fin; U.R(ctx, cx + 30, sy - 3, CARD.w - 60, 3, P.ice); ctx.globalAlpha = 0.4 * fin; U.R(ctx, cx + 30, sy, CARD.w - 60, 3, P.teal); ctx.globalAlpha = fin; }
+  // CRT 扫描线：每 6px 一条 3px 墨色横纹，两格跳
+  if (!(wipeAll && split > 0)) { const off = RM() ? 0 : (Math.floor(t * 5) % 2) * 3; ctx.save(); ctx.globalAlpha = 0.3 * fin; ctx.fillStyle = P.ink; for (let yy = cy + 30 + off; yy < cy + h - 33; yy += 6) ctx.fillRect(cx + 30, yy, CARD.w - 60, 3); ctx.restore(); }
+  if (wipeAll && split >= 1 && !F.shards.all) { F.shards.all = []; for (let k = 0; k < 220; k++) F.shards.all.push({ x: cx + Math.random() * CARD.w, y: cy + Math.random() * h, vx: (Math.random() - 0.5) * 1400, vy: -500 - Math.random() * 700, s: 8 + Math.random() * 22, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 14, col: [P.slate, P.steel, P.teal, P.red, P.abyss][k % 5], t0: t }); try { S.impact && S.impact(); S.shatter && S.shatter(); } catch (e) {} if (g.fx && g.fx.flash) g.fx.flash(P.red, 0.5); if (g.fx && g.fx.kick) g.fx.kick(26); }
+  Object.values(F.shards).forEach(list => (list || []).forEach(p => { const k = t - p.t0; if (k > 2.4) return; ctx.save(); ctx.globalAlpha = st4(1 - k / 2.4) * fin; ctx.translate(p.x + p.vx * k, p.y + p.vy * k + 1400 * k * k); ctx.rotate(p.rot + p.vr * k); ctx.fillStyle = p.col; ctx.beginPath(); ctx.moveTo(-p.s / 2, -p.s / 3); ctx.lineTo(p.s / 2, -p.s / 2); ctx.lineTo(p.s / 3, p.s / 2); ctx.closePath(); ctx.fill(); ctx.restore(); }));
   // verdict
-  if (t > T_TEAR + 1) { const q = eo(cl((t - T_TEAR - 1) / 0.4, 0, 1)); ctx.globalAlpha = q * fin; ctx.textAlign = 'center'; ctx.font = "700 30px 'Noto Serif SC',serif"; ctx.fillStyle = '#cfc6b8'; ctx.fillText(wipeAll ? '不影响游戏：直接开始新的一局就好。' : '修好的存档可以继续玩。', 960, y0 + h + 70); }
+  if (t > T_TEAR + 1) { ctx.globalAlpha = st4(eo(cl((t - T_TEAR - 1) / 0.4, 0, 1))) * fin; U.text(ctx, wipeAll ? '不影响游戏：直接开始新的一局就好。' : '修好的存档可以继续玩。', 960, y0 + h + 70, 30, P.cream); }
   ctx.restore();
   snd('scan', 0.1, () => S.whoosh && S.whoosh(0.3));
 };

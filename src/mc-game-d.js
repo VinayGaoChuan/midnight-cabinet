@@ -31,7 +31,7 @@ Object.assign(G, {
       const pw = M.power(m), raidIn = M.nextRaid(m) - m.day;
       v.b = { day: m.day, raidTxt: raidIn === 0 ? '今晚袭击' : raidIn + ' 天后袭击', raidC: raidIn <= 1 ? '#ff5a4a' : '#e8dcc4', pwTxt: pw.used + ' / ' + pw.made, pwC: pw.free <= 0 ? '#ff6a5a' : '#8ff6ff', portal: Math.round(m.portal.hp) + ' / ' + M.portalMax(m),
         res: [{ k: 'msup', img: M.spriteURL('sack', 4), v: this.tv('msup', m.supplies), c: '#e8c86a', n: '物资', d: '挖掘、建造、打造、招募领袖都要用。' }, { k: 'msh', img: M.spriteURL('shard', 4), v: this.tv('msh', m.shards), c: '#d8a0ff', n: '灵魂碎片', d: '建史诗 / 传说建筑、精铸宝物用。' }, { k: 'morb', img: M.spriteURL('orb', 4), v: this.tv('morb', m.orbs), c: '#b8ff9a', n: '经验球', d: '在训练建筑里灌给领袖。' }].map(r => ({ img: r.img, v: r.v, c: r.c, fx: r.k, sc: this.ps(r.k), tipOn: this.tipFn({ title: r.n, c: r.c, d: r.d }) })),
-        heroes: m.heroes.map(h => { const mx = M.heroMaxHp(h, m), R = M.RARITY[h.rarity]; return { fx: 'hero-' + h.id, img: M.spriteURL(M.HEROES[h.cls].sprite, 4), clsIc: M.iconURL('c_' + h.cls, 2), lv: h.lv, rc: R.c, hpW: Math.max(0, h.hp / mx * 100) + '%', hpC: h.hp / mx < 0.35 ? '#ff5a4a' : '#9cff7a', dot: h.points > 0, op: h.status ? 0.5 : 1, sc: this.ps('heroes'), tipOn: this.tipFn(() => this.heroTip(h)), onClick: () => { M.Sfx.click(); this.openHero(h.id); } }; }),
+        heroes: m.heroes.map(h => { const mx = M.heroMaxHp(h, m), R = M.RARITY[h.rarity]; return { fx: 'hero-' + h.id, n: M.HEROES[h.cls].n, img: M.spriteURL(M.HEROES[h.cls].sprite, 4), clsIc: M.iconURL('c_' + h.cls, 2), lv: h.lv, rc: R.c, hpW: Math.max(0, h.hp / mx * 100) + '%', hpC: h.hp / mx < 0.35 ? '#ff5a4a' : '#9cff7a', dot: h.points > 0, op: h.status ? 0.5 : 1, sc: this.ps('heroes'), tipOn: this.tipFn(() => this.heroTip(h)), onClick: () => { M.Sfx.click(); this.openHero(h.id); } }; }),
         heroCap: m.heroes.length + ' / ' + M.heroCap(m) };
       v.pwTip = this.tipFn({ title: '电力', c: '#8ff6ff', kind: '已用 ' + pw.used + ' / 产出 ' + pw.made, d: '电不够就建不了新的耗电房间。' });
       v.raidTip = this.tipFn({ title: '守城', c: '#ff6a5a', kind: '每 ' + M.RAID_EVERY + ' 天一次 · 下次在第 ' + M.nextRaid(m) + ' 天', d: '所有领袖参与守城，不会永久死亡，但损失的生命不会自动恢复。地下的武器房间会向地面开火，射程受深度限制：每往下一层，就少覆盖一格。传送门被摧毁，游戏结束。' });
@@ -94,8 +94,10 @@ Object.assign(G, {
     // ── modal ──
     v.modalOn = !!this.modal && !this.reel;
     if (this.modal) { const md = this.modal, q = cl((t0 - (md.at || 0)) / 260, 0, 1);
-      v.md = { title: md.title, titleColor: md.titleColor || '#ffe8b0', text: md.text || '', hasImg: !!md.img, img: md.img ? M.spriteURL(md.img, 14) : '', border: md.border || '#8a6a3a', sc: 0.85 + 0.15 * M.ease.eback(q), op: q, glow: md.titleColor || '#ffcc66',
-        choices: (md.choices || []).map(c => ({ t: c.t, sub: c.sub || '', hasSub: !!c.sub, bg: c.dis ? '#15111a' : c.gold ? 'linear-gradient(180deg,#ffe08a,#d4982e)' : c.danger ? 'linear-gradient(180deg,#e05a4a,#8a2020)' : 'linear-gradient(180deg,#2e2436,#1a1420)', color: c.dis ? '#5a5460' : c.gold ? '#1a0e08' : '#f5ead4', border: c.dis ? '#2a2230' : c.gold ? '#fff3c4' : '#8a6a3a', onClick: () => { if (c.dis) { this.toast('条件不足', '#8d8496'); return; } M.Sfx.click(); c.fn(); this.bump(); } })) }; }
+      // 奇遇有像素插画时用「立绘 + 对话框」版式（设计稿 1d），否则是居中的机箱面板
+      const art = md.img && M.PJ && M.PJ.EVART ? M.PJ.EVART[md.img] : null;
+      v.md = { title: md.title, titleColor: md.titleColor || '#ffe8b0', text: md.text || '', hasImg: !!art, noImg: !art, art: art ? art + '#x0.2p' : '', hasIcon: !!md.img && !art, img: md.img ? M.spriteURL(md.img, 14) : '', border: md.border || '#8a6a3a', sc: 0.85 + 0.15 * M.ease.eback(q), op: q, glow: md.titleColor || '#ffcc66',
+        choices: (md.choices || []).map(c => ({ t: c.t, sub: c.sub || '', hasSub: !!c.sub, ring: c.dis ? '#2b2461' : c.gold ? '#ffcf4a' : c.danger ? '#e8434f' : '#3d3a8c', op: c.dis ? 0.45 : 1, color: c.dis ? '#6a6394' : c.gold ? '#fff3b0' : c.danger ? '#ff9aa8' : '#f4efe0', onClick: () => { if (c.dis) { this.toast('条件不足', '#8d8496'); return; } M.Sfx.click(); c.fn(); this.bump(); } })) }; }
     return v;
   },
 });

@@ -46,15 +46,17 @@ M.makeBattleCfg = function (run, node) {
 const FIGHT = { normal: 1, elite: 1, boss: 1, hold: 1, extract: 1 };
 // survive-the-clock fights (坚守 / 撤离) only need holding out: their waves count 0.7 (they were won at a raw 0.93)
 M.nodePower = function (run, n) { if (!FIGHT[n.type] || run.region.tut) return 0; if (n._pw == null) n._pw = Math.round(M.powerOf(M.sideE(run, M.makeBattleCfg(run, n))) * (n.type === 'hold' || n.type === 'extract' ? 0.7 : 1)); return n._pw; };
-M.oddsCol = (mine, theirs) => { const r = mine / Math.max(1, theirs); return r >= 1.25 ? '#9cff7a' : r >= 1 ? '#ffd060' : '#ff5a4a'; };
+M.oddsCol = (mine, theirs) => { const r = mine / Math.max(1, theirs); return r >= 1.25 ? '#b6f28a' : r >= 1 ? '#ffcf4a' : '#e8434f'; };
 M.oddsWord = (mine, theirs) => { const r = mine / Math.max(1, theirs); return r >= 1.25 ? '稳赢' : r >= 1 ? '有风险' : '很危险'; };
 
 // ───────── the map: badges over the fights and over the leader ─────────
+// 地图画在半分辨率层：尺寸取偶数（4px 墨框、24px 字），夜色小牌 + 顶边胜算色条 + 6px 硬投影
 function badge(ctx, x, y, ic, txt, col) {
-  ctx.save(); ctx.font = "700 26px 'Cinzel', 'Noto Serif SC', serif"; const w = ctx.measureText(txt).width + 50, h = 36;
-  ctx.fillStyle = 'rgba(8,6,12,0.88)'; ctx.fillRect(x - w / 2, y - h / 2, w, h); ctx.fillStyle = col; ctx.fillRect(x - w / 2, y - h / 2, w, 3); ctx.fillRect(x - w / 2, y + h / 2 - 3, w, 3); ctx.fillRect(x - w / 2, y - h / 2, 3, h); ctx.fillRect(x + w / 2 - 3, y - h / 2, 3, h);
-  const cv = M.iconCanvas(ic, 2); if (cv) { ctx.imageSmoothingEnabled = false; ctx.drawImage(cv, x - w / 2 + 8, y - 13, 26, 26); }
-  ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = col; ctx.fillText(txt, x - w / 2 + 40, y + 1); ctx.restore();
+  const U = M.UI, P = M.PJ.PAL, e = (v) => Math.round(v / 2) * 2; ctx.save(); ctx.font = U.font(24, true);
+  const w = e(ctx.measureText(txt).width + 48), h = 36, X = e(x - w / 2), Y = e(y - h / 2);
+  U.R(ctx, X + 2, Y + 6, w + 4, h + 4, P.ink); U.R(ctx, X - 4, Y - 4, w + 8, h + 8, P.ink); U.R(ctx, X, Y, w, h, P.night); U.R(ctx, X, Y, w, 4, col); U.R(ctx, X, Y + h - 4, w, 4, P.abyss);
+  const cv = M.iconCanvas(ic, 2); if (cv) { ctx.imageSmoothingEnabled = false; ctx.drawImage(cv, X + 6, e(y - 12), 24, 24); }
+  U.text(ctx, txt, X + 36, e(y + 2), 24, col, { align: 'left', num: true, u: 2 }); ctx.restore();
 }
 const oDraw = M.drawWorld2;
 M.drawWorld2 = function (ctx, run, walker, opts = {}) {
@@ -64,7 +66,7 @@ M.drawWorld2 = function (ctx, run, walker, opts = {}) {
       const z = opts.zoom || 1, toS = (x, y) => ({ x: 960 + (x - walker.camX) * z, y: 560 + (y - walker.camY) * z }), mine = M.runPower(run), map = run.map;
       const cur = walker.edge ? walker.edge.b : walker.node, curCol = map.nodes[cur] ? map.nodes[cur].col : 0;
       map.nodes.forEach(n => { if (!n.seen || n.done || !FIGHT[n.type] || (n.col <= curCol && n.id !== cur)) return; const p = toS(n.x, n.y - 178); if (p.x < -100 || p.x > 2020 || p.y < -60 || p.y > 1140) return; const pw = M.nodePower(run, n); badge(ctx, p.x, p.y, 't_sword', String(pw), M.oddsCol(mine, pw)); });
-      const w = toS(walker.x, walker.y - 150); badge(ctx, w.x, w.y, 'u_star', String(mine), '#ffe08a');
+      const w = toS(walker.x, walker.y - 150); badge(ctx, w.x, w.y, 'u_star', String(mine), '#ffcf4a');
     }
   } catch (e) { (window.__mcErrs = window.__mcErrs || []).push('power badge: ' + (e && e.message)); }
   return r;

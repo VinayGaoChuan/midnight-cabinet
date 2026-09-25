@@ -6,56 +6,70 @@ const M = window.MC, G = M.Game.prototype, S = M.Sfx;
 const now = () => performance.now();
 const cl = (v, a, b) => Math.max(a, Math.min(b, v));
 const eo = (p) => 1 - Math.pow(1 - cl(p, 0, 1), 3), eb = (p) => M.ease.eback(cl(p, 0, 1));
-const RED = '#e3121b', INK = '#0b0708', PAPER = '#f4efe6';
+// Pixel Juice（docs/design.md §11.5）：红 / 墨 / 奶油三色勒索信，像素字，动作按 12 帧一格一格走
+const U = M.UI, P = M.PJ.PAL, RED = P.red, INK = P.ink, PAPER = P.cream, WINE = P.wine;
+const RM = () => !!M.PJ.reduced, stepT = (t, f) => (RM() ? t : Math.floor(t * f) / f);
 
 // ═════════════════════ day ceremony ═════════════════════
 const DAY_LEN = 2.9, RAID_LEN = 3.6;
-// jagged ransom-note letters: every glyph in its own tilted box
+// jagged ransom-note letters: every glyph in its own tilted box (3px ink edge, pixel font)
 function ransom(x, s, cx, cy, size, seed, o) {
   o = o || {};
-  const chars = [...s], ws = chars.map((ch, i) => size * (0.86 + ((i * 37 + seed) % 7) * 0.05)), gap = size * 0.08, tot = ws.reduce((a, b) => a + b * 0.92 + gap, 0);
+  const chars = [...s], ws = chars.map((ch, i) => Math.round(size * (0.86 + ((i * 37 + seed) % 7) * 0.05))), gap = size * 0.08, tot = ws.reduce((a, b) => a + b * 0.92 + gap, 0);
   let px = cx - tot / 2; chars.forEach((ch, i) => { const w = ws[i], k = (i * 13 + seed) % 3, rot = (((i * 29 + seed) % 9) - 4) * 0.035, bg = o.pal ? o.pal[k] : [INK, PAPER, RED][k], fg = bg === PAPER ? INK : PAPER, jy = (((i * 17 + seed) % 5) - 2) * size * 0.05;
-    x.save(); x.translate(px + w / 2, cy + jy); x.rotate(rot); if (ch !== ' ') { x.fillStyle = INK; x.fillRect(-w / 2 - 4, -w / 2 - 4, w + 8, w + 8); x.fillStyle = bg; x.fillRect(-w / 2, -w / 2, w, w); x.font = '900 ' + Math.round(w * 0.78) + "px 'Noto Serif SC', serif"; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = fg; x.fillText(ch, 0, w * 0.04); } x.restore(); px += w * 0.92 + gap; });
+    x.save(); x.translate(Math.round(px + w / 2), Math.round(cy + jy)); x.rotate(rot); if (ch !== ' ') { x.fillStyle = INK; x.fillRect(-w / 2 - 3, -w / 2 - 3, w + 6, w + 6); x.fillStyle = bg; x.fillRect(-w / 2, -w / 2, w, w); x.font = U.font(Math.round(w * 0.78)); x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = fg; x.fillText(ch, 0, Math.round(w * 0.04)); } x.restore(); px += w * 0.92 + gap; });
 }
-function halftone(x, a, b, w, h, col, r) { x.fillStyle = col; for (let yy = b; yy < b + h; yy += 18) for (let xx = a + ((yy / 18) % 2) * 9; xx < a + w; xx += 18) { x.beginPath(); x.arc(xx, yy, r, 0, 7); x.fill(); } }
+// 网点 → 6px 棋盘格（墨色，低透明度）
+let HT = null;
+function halftone(x, a, b, w, h, al) { if (!HT) { HT = document.createElement('canvas'); HT.width = HT.height = 12; const c = HT.getContext('2d'); c.fillStyle = INK; c.fillRect(0, 0, 6, 6); c.fillRect(6, 6, 6, 6); } x.save(); x.imageSmoothingEnabled = false; x.globalAlpha *= al; x.fillStyle = x.createPattern(HT, 'repeat'); x.fillRect(a, b, w, h); x.restore(); }
+// 像素箭头（朝下）：一行一行缩短，3px 墨边
+function downArrow(x, cx, top, col) { const Wd = [60, 42, 24, 6]; Wd.forEach((w, i) => { x.fillStyle = INK; x.fillRect(cx - w / 2 - 3, top + i * 12 - 3, w + 6, 18); }); Wd.forEach((w, i) => { x.fillStyle = col; x.fillRect(cx - w / 2, top + i * 12, w, 12); }); }
 M.drawDayFx = function (ctx, g) {
-  const D = g.dayFx; if (!D) return; const t = D.t, L = D.raid ? RAID_LEN : DAY_LEN, out = cl((t - (L - 0.45)) / 0.45, 0, 1), inQ = eo(t / 0.22), ox = out * out * 2400;
+  const D = g.dayFx; if (!D) return; const t = D.t, ts = stepT(t, 12), L = D.raid ? RAID_LEN : DAY_LEN, out = cl((ts - (L - 0.45)) / 0.45, 0, 1), inQ = eo(ts / 0.22), ox = Math.round(out * out * 2400 / 6) * 6;
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.fillStyle = 'rgba(6,2,4,' + (0.62 * cl(t / 0.15, 0, 1) * (1 - out)) + ')'; ctx.fillRect(0, 0, 1920, 1080);
+  M.fxDim(ctx, 0.76 * cl(ts / 0.15, 0, 1) * (1 - out));
   ctx.translate(ox, 0);
-  // red slash band with halftone, black shards
+  // red slash band (wine hard shadow, 6px dither), ink shards
   const pulse = D.raid && t > 1.3 ? 0.5 + 0.5 * Math.sin(t * 18) : 0;
-  ctx.save(); ctx.translate(-1920 * (1 - inQ), 0);
-  ctx.fillStyle = D.raid ? (pulse > 0.5 ? '#ff2a1a' : RED) : RED; ctx.beginPath(); ctx.moveTo(0, 300); ctx.lineTo(1920, 120); ctx.lineTo(1920, 700); ctx.lineTo(0, 900); ctx.closePath(); ctx.fill();
-  ctx.save(); ctx.clip(); halftone(ctx, 0, 120, 1920, 780, 'rgba(0,0,0,0.22)', 4); ctx.restore();
+  const band = () => { ctx.beginPath(); ctx.moveTo(0, 300); ctx.lineTo(1920, 120); ctx.lineTo(1920, 700); ctx.lineTo(0, 900); ctx.closePath(); };
+  ctx.save(); ctx.translate(Math.round(-1920 * (1 - inQ) / 6) * 6, 0);
+  ctx.save(); ctx.translate(0, 12); ctx.fillStyle = WINE; band(); ctx.fill(); ctx.restore();
+  ctx.fillStyle = RED; band(); ctx.fill();
+  ctx.save(); ctx.clip(); halftone(ctx, 0, 120, 1920, 780, 0.22); ctx.restore();
   ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(0, 860); ctx.lineTo(1920, 640); ctx.lineTo(1920, 760); ctx.lineTo(0, 1000); ctx.fill();
   ctx.beginPath(); ctx.moveTo(0, 250); ctx.lineTo(900, 140); ctx.lineTo(0, 200); ctx.fill(); ctx.restore();
   // star burst behind the number
-  const nx = 660, ny = 500, sq = eb((t - 0.15) / 0.35); if (sq > 0) { ctx.save(); ctx.translate(nx, ny); ctx.rotate(t * 0.4); ctx.scale(sq, sq); ctx.fillStyle = INK; ctx.beginPath(); for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2, r = i % 2 ? 230 : 330 + (i % 4) * 20; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.fill(); ctx.fillStyle = PAPER; ctx.beginPath(); for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2, r = i % 2 ? 200 : 290 + (i % 4) * 16; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.fill(); ctx.restore(); }
-  // calendar number: old day slides away, new day slams down
-  const flip = 0.72, slam = cl((t - flip) / 0.22, 0, 1);
+  const nx = 660, ny = 500, sq = eb((ts - 0.15) / 0.35); if (sq > 0) { ctx.save(); ctx.translate(nx, ny); ctx.rotate(ts * 0.4); ctx.scale(sq, sq); ctx.fillStyle = INK; ctx.beginPath(); for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2, r = i % 2 ? 230 : 330 + (i % 4) * 20; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.fill(); ctx.fillStyle = PAPER; ctx.beginPath(); for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2, r = i % 2 ? 200 : 290 + (i % 4) * 16; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.fill(); ctx.restore(); }
+  // calendar number (Silkscreen, red hard offset): old day slides away, new day slams down
+  const flip = 0.72, slam = cl((ts - flip) / 0.22, 0, 1), nw = U.measure(ctx, String(Math.max(D.from, D.to)), 288, true), NS = nw > 400 ? Math.max(120, Math.floor(288 * 400 / nw / 8) * 8) : 288;
   ctx.save(); ctx.translate(nx, ny); ctx.rotate(-0.08);
-  ctx.font = "900 250px 'Cinzel', 'Noto Serif SC', serif"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  if (t < flip + 0.2) { const u = cl((t - flip) / 0.2, 0, 1); ctx.save(); ctx.globalAlpha = 1 - u; ctx.translate(-u * 120, -u * 260); ctx.rotate(-u * 0.5); ctx.fillStyle = RED; ctx.fillText(String(D.from), 10, 12); ctx.fillStyle = INK; ctx.fillText(String(D.from), 0, 0); ctx.restore(); }
-  if (t >= flip) { const s = 1 + (1 - eo(slam)) * 0.9, dy = -(1 - eo(slam)) * 300; ctx.save(); ctx.translate(0, dy); ctx.scale(s, s); ctx.fillStyle = RED; ctx.fillText(String(D.to), 12, 14); ctx.fillStyle = INK; ctx.fillText(String(D.to), 0, 0); ctx.restore(); }
+  ctx.font = U.font(NS, true); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  if (t < flip + 0.2) { const u = cl((ts - flip) / 0.2, 0, 1); ctx.save(); ctx.globalAlpha = 1 - u; ctx.translate(-u * 120, -u * 260); ctx.rotate(-u * 0.5); ctx.fillStyle = RED; ctx.fillText(String(D.from), 12, 12); ctx.fillStyle = INK; ctx.fillText(String(D.from), 0, 0); ctx.restore(); }
+  if (t >= flip) { const s = 1 + (1 - eo(slam)) * 0.9, dy = -(1 - eo(slam)) * 300; ctx.save(); ctx.translate(0, dy); ctx.scale(s, s); ctx.fillStyle = RED; ctx.fillText(String(D.to), 12, 12); ctx.fillStyle = INK; ctx.fillText(String(D.to), 0, 0); ctx.restore(); }
   ctx.restore();
   ransom(ctx, '第', nx - 250, ny - 150, 70, 3); ransom(ctx, '天', nx + 250, ny + 150, 70, 7);
-  // raid countdown on the right: one slot per day of the cycle
-  const rx = 1330, ry = 380, E = M.RAID_EVERY, st = cl((t - 0.45) / 0.3, 0, 1);
-  if (st > 0) { ctx.save(); ctx.globalAlpha = st; ctx.translate((1 - eo(st)) * 300, 0);
+  // raid countdown on the right: one key cap per day of the cycle (used days are pressed in)
+  const rx = 1330, ry = 380, E = M.RAID_EVERY, st = cl((ts - 0.45) / 0.3, 0, 1);
+  if (st > 0) { ctx.save(); ctx.globalAlpha = st; ctx.translate(Math.round((1 - eo(st)) * 300 / 6) * 6, 0);
     ransom(ctx, D.raid ? '今晚·袭击' : '袭击倒计时', rx, ry - 120, D.raid ? 76 : 52, 11, D.raid ? { pal: [INK, RED, INK] } : null);
-    const pos0 = ((D.from - 1) % E + E) % E, pos1 = ((D.to - 1) % E + E) % E, wrap = pos1 < pos0, arrive = eo((t - (wrap ? 1.3 : 1.0)) / (wrap ? 0.45 : 0.4)), mk = pos0 + (pos1 - pos0) * arrive;
+    const pos0 = ((D.from - 1) % E + E) % E, pos1 = ((D.to - 1) % E + E) % E, wrap = pos1 < pos0, arrive = eo((ts - (wrap ? 1.3 : 1.0)) / (wrap ? 0.45 : 0.4)), mk = pos0 + (pos1 - pos0) * arrive;
     for (let i = 0; i < E; i++) { const sx = rx - (E - 1) * 70 + i * 140, last = i === E - 1;
       // a new cycle: the used slots flip over one by one and come back lit
-      const rl = wrap ? eo((t - 1.0 - i * 0.07) / 0.18) : 1, dark = wrap ? (rl < 0.5 ? i <= pos0 : i <= pos1 && arrive > 0.95) : i <= mk, fs = wrap ? Math.max(0.08, Math.abs(1 - 2 * rl)) : 1;
+      const rl = wrap ? eo((ts - 1.0 - i * 0.07) / 0.18) : 1, dark = wrap ? (rl < 0.5 ? i <= pos0 : i <= pos1 && arrive > 0.95) : i <= mk, fs = wrap ? Math.max(0.08, Math.abs(1 - 2 * rl)) : 1;
       ctx.save(); ctx.translate(sx, ry + 40); ctx.rotate(-0.08 + (i % 2) * 0.05); ctx.scale(1, fs);
-      ctx.fillStyle = INK; ctx.fillRect(-58, -58, 116, 116); ctx.fillStyle = last ? RED : dark ? '#3a2a2e' : PAPER; ctx.fillRect(-50, -50, 100, 100);
-      if (last) { const ic = M.iconCanvas('r_skel', 3); if (ic) ctx.drawImage(ic, -38, -38, 76, 76); } else { ctx.fillStyle = dark ? '#6a5a5e' : INK; ctx.font = "900 44px 'Cinzel', serif"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(i + 1), 0, 4); }
+      // 键帽：3px 墨框 + 6px 墨投影；袭击夜 = 红键；用过的天 = 按下去的暗键（陷下 6px、没有投影）
+      const k = last ? 'red' : dark ? 'dn' : 'cap', F = { red: [RED, P.pink, WINE], cap: [PAPER, null, P.lavender], dn: [P.night, null, null] }[k], oy = k === 'dn' ? 6 : 0;
+      ctx.fillStyle = INK; if (k !== 'dn') ctx.fillRect(-53, -47, 106, 106); ctx.fillRect(-53, -53 + oy, 106, 106);
+      ctx.fillStyle = F[0]; ctx.fillRect(-50, -50 + oy, 100, 100);
+      if (F[1]) { ctx.fillStyle = F[1]; ctx.fillRect(-50, -50, 100, 6); }
+      if (F[2]) { ctx.fillStyle = F[2]; ctx.fillRect(-50, 41, 100, 9); }
+      if (k === 'dn') { ctx.fillStyle = P.abyss; ctx.fillRect(-50, -44, 100, 6); }
+      if (last) { const ic = M.iconCanvas('r_skel', 3); if (ic) { ctx.imageSmoothingEnabled = false; ctx.drawImage(ic, -38, -42, 76, 76); } } else U.text(ctx, String(i + 1), 0, oy - 4, 52, k === 'dn' ? P.haze : INK, { num: true, shadow: false });
       ctx.restore(); }
-    const mxp = rx - (E - 1) * 70 + mk * 140; ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(mxp - 36, ry - 58); ctx.lineTo(mxp + 36, ry - 58); ctx.lineTo(mxp, ry - 8); ctx.fill(); ctx.fillStyle = PAPER; ctx.beginPath(); ctx.moveTo(mxp - 26, ry - 52); ctx.lineTo(mxp + 26, ry - 52); ctx.lineTo(mxp, ry - 18); ctx.fill(); ctx.strokeStyle = PAPER; ctx.lineWidth = 6; ctx.strokeRect(mxp - 58, ry - 18, 116, 116);
+    const mxp = Math.round((rx - (E - 1) * 70 + mk * 140) / 3) * 3; downArrow(ctx, mxp, ry - 60, PAPER); ctx.strokeStyle = PAPER; ctx.lineWidth = 6; ctx.strokeRect(mxp - 58, ry - 18, 116, 116);
     const left = D.raidIn; ransom(ctx, D.raid ? '准备迎战' : left === 1 ? '明晚来袭' : '还有' + left + '天', rx, ry + 180, 60, 19, D.raid ? { pal: [RED, INK, RED] } : null);
     ctx.restore(); }
-  if (D.raid && t > 1.3) { ctx.globalAlpha = 0.25 * pulse; ctx.fillStyle = '#ff0000'; ctx.fillRect(-ox, 0, 1920, 1080); ctx.globalAlpha = 1; }
+  if (D.raid && t > 1.3 && pulse > 0.5) { ctx.globalAlpha = 0.2; ctx.fillStyle = RED; ctx.fillRect(-ox, 0, 1920, 1080); ctx.globalAlpha = 1; }
   ctx.restore();
 };
 const oldPass = G.passDay;

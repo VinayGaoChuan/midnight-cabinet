@@ -1,4 +1,7 @@
 _pre0.js
+mc-pj.js
+mc-pj-art.js
+mc-pj-ui.js
 mc-data.js
 mc-hdart.js
 mc-hidpi.js

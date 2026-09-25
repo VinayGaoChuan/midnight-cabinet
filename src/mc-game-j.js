@@ -40,11 +40,10 @@ G.view = function () {
   }
   // world HUD roster: race top-left, vocation top-right
   if (v.w && run && v.w.roster) { const vis = run.roster.filter(u => !this.hideU.has(u.uid)); v.w.roster.forEach((r, i) => { const d = vis[i] && DB[vis[i].type]; const ri = d && M.tagIc('race', d.race), vi = d && M.tagIc('voc', d.voc); Object.assign(r, { ri: ri || NIL, vi: vi || NIL, hasR: !!ri, hasV: !!vi }); }); }
-  if (v.w && run && v.w.banners) v.w.banners.forEach((b, i) => { const k = Object.keys(run.legion)[i], L = M.LEGION[k]; b.ic = banIc(L); });
   // shop cards
   if (v.s && run && run.shop) {
     (v.s.units || []).forEach((u, i) => { const c = run.shop.units[i], d = c && DB[c.type]; const ri = d && M.tagIc('race', d.race), vi = d && M.tagIc('voc', d.voc); Object.assign(u, { ri: ri || NIL, vi: vi || NIL, hasR: !!ri, hasV: !!vi }); });
-    (v.s.banners || []).forEach((b, i) => { const c = run.shop.banners[i]; b.ic = banIc(M.LEGION[c.key]); b.icTip = banTip(M.LEGION[c.key]); b.hasIcTip = !!b.icTip; });
+    (v.s.banners || []).forEach((b, i) => { const c = run.shop.banners[i]; b.icTip = banTip(M.LEGION[c.key]); });
   }
   // event choices: tag words inside the sub line become icons
   if (v.md && v.md.choices) v.md.choices.forEach(mb => { mb.subSegs = M.richSegs(mb.sub || '', 'inherit'); });
@@ -57,7 +56,6 @@ G.view = function () {
   }
   return v;
 };
-const banIc = (L) => { const m = L && L.m || {}; if (m.voc) return M.iconURL(TG.voc(m.voc).icon, 2); if (m.race) return M.iconURL(TG.race(m.race).icon, 2); return M.iconURL(m.mult ? 't_mult' : m.base ? 'v_merchant' : 'u_star', 2); };
 const banTip = (L) => { const m = L && L.m || {}; return m.voc ? 'tag-voc-' + m.voc : m.race ? 'tag-race-' + m.race : ''; };
 
 // ───────── unit tooltips: race & vocation with their icons ─────────
