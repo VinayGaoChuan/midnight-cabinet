@@ -6,10 +6,11 @@
 // the whole strip advances five days in a big show: the spent days fall away, the strip rolls, the next five days
 // land one by one and the next 混沌来袭 is called out. An event on the new day happens right after the frame moves.
 const M = window.MC, G = M.Game.prototype, S = M.Sfx, cl = (v, a, b) => Math.max(a, Math.min(b, v));
-const DAYS = 10, CW = 64, GAP = 6, PITCH = CW + GAP, TLX = 1050, TLY = 12, STEP_D = 1.25, EV_D = 2.7, BIG_D = 4.8;
+// round day nodes with three small dots between (user ruling 2026-09-25): a passing day lights the dots one by one
+const DAYS = 10, CW = 52, GAP = 50, PITCH = CW + GAP, NDOT = 3, TLX = 560, TLY = 6, STEP_D = 1.5, EV_D = 2.9, BIG_D = 4.8;
 const EV = {
-  raid:     { n: '混沌来袭', ic: 'e_skull', c: '#e8434f', d: '怪物攻打传送门，所有领袖一起守城。' },
-  merchant: { n: '流浪商人', ic: 't_coin', c: '#ffcf4a', d: '用物资、碎片或经验球，换随机的好东西。', w: 5 },
+  raid:     { n: '混沌来袭', ic: 'e_skull', c: '#e8434f', d: '怪物攻打主基地，领袖出来守城。' },
+  merchant: { n: '流浪商人', ic: 't_coin', c: '#ffcf4a', d: '用物资或碎片，换随机的好东西。', w: 5 },
   star:     { n: '幸运之星', ic: 't_clover', c: '#9cff7a', d: '三选一：下一次出征的祝福。', w: 4 },
   recruit:  { n: '招募日', ic: 'f_recruit', c: '#7fb0ff', d: '下一次招募领袖免费，至少「稀有」。', w: 2 },
   ley:      { n: '地脉涌动', ic: 'l_ley', c: '#b86bff', d: '一格岩层变成随机的特殊地形。', w: 2 },
@@ -45,7 +46,7 @@ const IC = (k) => (M.iconURL ? M.iconURL(k, 2) : '');
 function cells(g, m, first, n) {
   const out = []; for (let i = 0; i < n; i++) {
     const d = first + i, k = shownOn(m, d), E = k && EV[k], past = d < m.day || (d === m.day && k === 'raid' && m.lastRaid === d), today = d === m.day && !past, tom = d === m.day + 1;
-    out.push({ d, k, E, past, lab: today ? '今天' : tom ? '明天' : '第' + d + '天', c: E ? E.c : '#3d3a8c', dc: today ? '#ffcf4a' : E ? E.c : '#a9a3c9', hasIc: !!E, noIc: !E, ic: E ? IC(E.ic) : '',
+    out.push({ d, k, E, past, x: i * PITCH, num: String(d), lab: today ? '今天' : tom ? '明天' : '', c: E ? E.c : '#3d3a8c', dc: today ? '#ffcf4a' : E ? E.c : '#a9a3c9', hasIc: !!E, noIc: !E, ic: E ? IC(E.ic) : '',
       tipOn: g.tipFn(() => (E ? { title: E.n, c: E.c, icon: E.ic, d: E.d, lines: [{ t: past ? '已经过去' : today ? '今天' : '第 ' + d + ' 天（' + (d - m.day) + ' 天后）', c: '#a9a3c9' }] } : { title: today ? '今天 · 第 ' + d + ' 天' : '第 ' + d + ' 天', c: '#ffcf4a', d: past ? '已经过去。' : today ? '' : '这一天没有事件。' })),
       op: past ? 0.45 : 1, dy: 0, sc: 1, stamp: past, stampSc: 1 });
   }
@@ -56,21 +57,21 @@ const eio = (t) => { t = cl(t, 0, 1); return t * t * (3 - 2 * t); };
 const pop = (t) => { t = cl(t, 0, 1); return t < 0.55 ? 1.3 * eio(t / 0.55) : 1.3 - 0.3 * eio((t - 0.55) / 0.45); };
 const W = DAYS * PITCH - GAP;
 // where a cell of the strip is on screen (the strip scales about its top centre)
-const cellAt = (tl, i) => { const lx = tl.x + i * PITCH + CW / 2, ly = 4 + 34; return { x: TLX + W / 2 + (lx - W / 2) * tl.sc + tl.dx, y: TLY + ly * tl.sc + tl.y }; };
+const cellAt = (tl, i) => { const lx = tl.x + i * PITCH + CW / 2, ly = 6 + CW / 2; return { x: TLX + W / 2 + (lx - W / 2) * tl.sc + tl.dx, y: TLY + ly * tl.sc + tl.y }; };
 function stripState(g, m) {
-  const F = g.tlFx, tl = { left: TLX, w: W, x: 0, dx: 0, y: 0, sc: 1, shade: 0, banner: false, mx: 0, msc: 1, mop: 1 };
+  const F = g.tlFx, tl = { left: TLX, w: W, cw: W + 24, x: 0, dx: 0, y: 0, sc: 1, shade: 0, banner: false, mx: 0, msc: 1, mop: 1 };
   const ws = F && F.kind === 'big' ? F.from : m.tlWin != null ? m.tlWin : M.tlWinStart(m);
   tl.cells = cells(g, m, ws, F && F.kind === 'big' ? DAYS + (F.to - F.from) : DAYS);
   let today = m.day;
   if (F && F.kind === 'day') {
-    const t = F.t; today = t < 0.62 ? F.from : F.to;
+    const t = F.t; today = t < 0.9 ? F.from : F.to;
     const lift = eio(t / 0.2) * (1 - eio((t - (F.dur - 0.3)) / 0.3)); tl.sc = 1 + 0.06 * lift;
-    const c0 = tl.cells[F.from - ws]; if (c0) { c0.stamp = t > 0.2; c0.stampSc = t > 0.2 ? 1 + 1.4 * (1 - eio((t - 0.2) / 0.18)) : 1; c0.op = 1 - 0.55 * eio((t - 0.2) / 0.3); c0.lab = t < 0.62 ? '今天' : '第' + F.from + '天'; c0.dc = t < 0.62 ? '#ffcf4a' : '#a9a3c9'; }
-    const c1 = tl.cells[F.to - ws]; if (c1) { c1.sc = t > 0.8 ? 1 + 0.28 * Math.sin(cl((t - 0.8) / 0.45, 0, 1) * Math.PI) : 1; c1.op = 1; c1.stamp = false; c1.lab = t < 0.62 ? '明天' : '今天'; c1.dc = t < 0.62 ? (c1.E ? c1.E.c : '#a9a3c9') : '#ffcf4a'; }
-    const c2 = tl.cells[F.to - ws + 1]; if (c2 && t < 0.62) c2.lab = '第' + c2.d + '天';
-    const i0 = F.from - ws, i1 = F.to - ws; tl.mx = (i0 + (i1 - i0) * eback((t - 0.3) / 0.5)) * PITCH; tl.mop = i1 >= 0 && i1 < DAYS ? 1 : 1 - eio((t - 0.3) / 0.4);
+    const c0 = tl.cells[F.from - ws]; if (c0) { c0.stamp = t > 0.2; c0.stampSc = t > 0.2 ? 1 + 1.4 * (1 - eio((t - 0.2) / 0.18)) : 1; c0.op = 1 - 0.55 * eio((t - 0.2) / 0.3); c0.lab = t < 0.9 ? '今天' : ''; c0.dc = t < 0.9 ? '#ffcf4a' : '#a9a3c9'; }
+    const c1 = tl.cells[F.to - ws]; if (c1) { c1.sc = t > 1.05 ? 1 + 0.28 * Math.sin(cl((t - 1.05) / 0.45, 0, 1) * Math.PI) : 1; c1.op = 1; c1.stamp = false; c1.lab = t < 0.9 ? '明天' : '今天'; c1.dc = t < 0.9 ? (c1.E ? c1.E.c : '#a9a3c9') : '#ffcf4a'; }
+    const c2 = tl.cells[F.to - ws + 1]; if (c2 && t < 0.9) c2.lab = '';
+    const i0 = F.from - ws, i1 = F.to - ws; tl.mx = (i0 + (i1 - i0) * eback((t - 0.75) / 0.45)) * PITCH; tl.mop = i1 >= 0 && i1 < DAYS ? 1 : 1 - eio((t - 0.3) / 0.4);
     if (F.ev) {
-      const bt = t - 0.95; tl.banner = bt > 0 && t < F.dur - 0.25; tl.shade = 0.45 * eio(bt / 0.25) * (1 - eio((t - (F.dur - 0.45)) / 0.3));
+      const bt = t - 1.2; tl.banner = bt > 0 && t < F.dur - 0.25; tl.shade = 0.45 * eio(bt / 0.25) * (1 - eio((t - (F.dur - 0.45)) / 0.3));
       tl.bannerTxt = EV[F.ev].n; tl.bannerC = EV[F.ev].c; tl.bannerSub = EV[F.ev].d; tl.bannerSc = 1 + 0.6 * (1 - eio(bt / 0.22)); tl.bannerOp = eio(bt / 0.18) * (1 - eio((t - (F.dur - 0.5)) / 0.25));
     }
   } else if (F && F.kind === 'big') {
@@ -88,7 +89,12 @@ function stripState(g, m) {
   }
   if (!(F && F.kind === 'day')) { const i = today - ws; tl.mx = i * PITCH; tl.mop = i >= 0 && i < DAYS && !(F && F.kind === 'big') ? 1 : 0; }
   tl.cells.forEach(c => { c.border = c.c; c.bg = c.d === today ? '#2b2461' : '#15112e'; c.stampOn = !!c.stamp; });
-  tl.msc = F && F.kind === 'day' ? 1 + 0.12 * Math.sin(cl((F.t - 0.3) / 0.5, 0, 1) * Math.PI) : 1;
+  // the dots between the days: lit behind today, dim ahead; on a day step they light one by one
+  tl.dots = []; for (let i = 0; i < tl.cells.length - 1; i++) { const a = tl.cells[i], b2 = tl.cells[i + 1]; for (let j = 0; j < NDOT; j++) {
+    const x = a.x + CW + GAP * (j + 1) / (NDOT + 1) - 4; let lit = b2.past || b2.d <= (F && F.kind === 'day' ? F.from : m.day) ? 1 : 0, sc = 1;
+    if (F && F.kind === 'day' && a.d === F.from) { const q = (F.t - 0.12 - j * 0.18) / 0.14; lit = q > 0 ? 1 : 0; sc = q > 0 && q < 1.4 ? 1 + 0.9 * Math.sin(cl(q / 1.4, 0, 1) * Math.PI) : 1; }
+    tl.dots.push({ x: Math.round(x), c: lit ? '#ffcf4a' : '#3d3a8c', glow: lit ? 8 : 0, sc: sc.toFixed(2), op: Math.min(a.op, b2.op).toFixed(2) }); } }
+  tl.msc = F && F.kind === 'day' ? 1 + 0.15 * Math.sin(cl((F.t - 0.75) / 0.45, 0, 1) * Math.PI) : 1;
   if (!tl.bannerSubC) tl.bannerSubC = '#f4efe0';
   tl.bannerY = F && F.kind === 'big' ? 560 : 420;
   return tl;
@@ -115,11 +121,12 @@ G.tlBig = function (from, to) {
 G.tlTick = function (dt) {
   const F = this.tlFx; if (!F) return; const t0 = F.t; F.t += dt; const x = (a) => t0 < a && F.t >= a, tl = this._tl || { x: 0, dx: 0, y: 0, sc: 1 };
   if (F.kind === 'day') {
+    for (let j = 0; j < NDOT; j++) if (x(0.12 + j * 0.18)) { if (S.tick) S.tick(j * 2 + 4); else if (S.up) S.up(1); }
     if (x(0.2)) { S.stamp && S.stamp(); this.fx.kick && this.fx.kick(5); }
-    if (x(0.32)) S.whoosh && S.whoosh(0.3);
-    if (x(0.8)) { const p = cellAt(tl, F.to - (this.meta.tlWin || F.to)); this.fx.rays && this.fx.rays(p.x, p.y, F.ev ? EV[F.ev].c : '#ffcf4a', 0.8, { r: 140 }); S.up && S.up(1); }
-    if (F.ev && x(0.95)) { S.impact && S.impact(); this.fx.kick && this.fx.kick(F.ev === 'raid' ? 26 : 12); this.fx.rays && this.fx.rays(960, 470, EV[F.ev].c, 1.3, { r: 320 }); this.fx.flash && this.fx.flash(F.ev === 'raid' ? '#e8434f' : '#ffffff', F.ev === 'raid' ? 0.35 : 0.16); if (F.ev === 'raid') S.alarm && S.alarm(); else S.up && S.up(2); }
-    if (F.ev === 'raid' && F.t > 1.05 && Math.floor(F.t * 3) !== Math.floor(t0 * 3)) S.heart && S.heart();
+    if (x(0.75)) S.whoosh && S.whoosh(0.3);
+    if (x(1.05)) { const p = cellAt(tl, F.to - (this.meta.tlWin || F.to)); this.fx.rays && this.fx.rays(p.x, p.y, F.ev ? EV[F.ev].c : '#ffcf4a', 0.8, { r: 140 }); S.up && S.up(1); }
+    if (F.ev && x(1.2)) { S.impact && S.impact(); this.fx.kick && this.fx.kick(F.ev === 'raid' ? 26 : 12); this.fx.rays && this.fx.rays(960, 470, EV[F.ev].c, 1.3, { r: 320 }); this.fx.flash && this.fx.flash(F.ev === 'raid' ? '#e8434f' : '#ffffff', F.ev === 'raid' ? 0.35 : 0.16); if (F.ev === 'raid') S.alarm && S.alarm(); else S.up && S.up(2); }
+    if (F.ev === 'raid' && F.t > 1.3 && Math.floor(F.t * 3) !== Math.floor(t0 * 3)) S.heart && S.heart();
     if (F.t >= F.dur) this.tlFx = null;
   } else {
     const n5 = F.to - F.from;
@@ -145,12 +152,11 @@ G.tick = function (dt) {
 const rnd = Math.random, pick = (a) => a[Math.floor(rnd() * a.length)];
 const cur = { sup: ['物资', 'msup', 'supplies', 'sack'], sh: ['碎片', 'msh', 'shards', 'shard'], orb: ['经验球', 'morb', 'orbs', 'orb'] };
 function goods(g, m) {
-  const out = [], bld = Object.keys(M.BUILDINGS).filter(k => !M.BUILDINGS[k].fixed), rel = Object.keys(M.RELICS), gifts = Object.keys(M.GIFTS || {});
+  const out = [], bld = Object.keys(M.BUILDINGS).filter(k => !M.BUILDINGS[k].fixed), rel = Object.keys(M.RELICS), gifts = Object.keys(M.GIFTS || {}).filter(k => M.GIFTS[k].w > 0);
   const bk = pick(bld), B = M.BUILDINGS[bk]; out.push({ n: B.n + '图纸', d: B.d, cost: B.q >= 2 ? ['sh', 40 + 20 * B.q] : ['sup', 90 + 50 * B.q], give: () => M.invAdd(m, 'bbp:' + bk, 1) });
-  const rk = pick(rel), Rl = M.RELICS[rk]; out.push({ n: Rl.n + '图纸', d: '打造「' + Rl.n + '」', cost: ['orb', 60], give: () => M.invAdd(m, 'rbp:' + rk, 1) });
-  const tk = M.dropTile(), T = M.TILES[tk]; out.push({ n: '地脉结晶·' + T.n, d: '把一格岩层变成「' + T.n + '」：' + (T.anyD || T.d), cost: ['orb', 80], give: () => { const at = M.tileSpot && M.tileSpot(m); if (at) { const [c, r] = at; M.cell(m, c, r).tile = tk; g.homeQueue(g.tileReveal(c, r, tk)); } } });
-  if (rnd() < 0.6) out.push({ n: '一名领袖（至少稀有）', d: '加入你的基地。', cost: ['sh', 70], give: () => { if (m.heroes.length >= M.heroCap(m)) { m.shards += 70; g.toast('领袖已满，碎片退还', '#d0453c'); return; } const rar = Math.max(1, M.RARITY.indexOf(M.wpick(M.RARITY, r => r.w))); const h = M.newHero(m, null, rar); m.heroes.push(h); g.save(); g.recruitCard && g.recruitCard(h, rar); } });
-  else { const gk = pick(gifts), K = M.GIFTS[gk]; out.push({ n: K.n, d: K.d, cost: ['sup', 70], give: () => { const r = K.apply(g, m, null); g.toast(K.n + ' · ' + ((r && r.t) || ''), K.c); } }); }
+  const rk = pick(rel), Rl = M.RELICS[rk]; out.push({ n: Rl.n + '图纸', d: '打造「' + Rl.n + '」', cost: ['sh', 30], give: () => M.invAdd(m, 'rbp:' + rk, 1) });
+  const tk = M.dropTile(), T = M.TILES[tk]; out.push({ n: '地脉结晶·' + T.n, d: '把一格岩层变成「' + T.n + '」：' + (T.anyD || T.d), cost: ['sup', 140], give: () => { const at = M.tileSpot && M.tileSpot(m); if (at) { const [c, r] = at; M.cell(m, c, r).tile = tk; g.homeQueue(g.tileReveal(c, r, tk)); } } });
+  { const gk = pick(gifts), K = M.GIFTS[gk]; out.push({ n: K.n, d: K.d, cost: ['sup', 70], give: () => { const r = K.apply(g, m, null); g.toast(K.n + ' · ' + ((r && r.t) || ''), K.c); } }); }
   return out;
 }
 function merchant(g, m, stock) {
@@ -190,7 +196,6 @@ M.pendingFx = function (m) {
   const G_ = M.GIFTS || {}, out = [], gi = (k) => G_[k] || {};
   if (m.bless != null && BLESS[m.bless]) out.push({ ic: 't_clover', c: EV.star.c, t: BLESS[m.bless].n, title: EV.star.n, d: '下一次出征：' + BLESS[m.bless].n + '。' });
   if (m.raidWeak) out.push({ ic: gi('decoy').ic || 'g_powder', c: gi('decoy').c || '#c8b0ff', t: '混沌来袭 -' + Math.round(m.raidWeak * 100) + '%', title: gi('decoy').n || '迷踪粉', d: '下一次混沌来袭的怪物减少 ' + Math.round(m.raidWeak * 100) + '%。' });
-  if (m.freeRecruit) out.push({ ic: 'g_letter', c: EV.recruit.c, t: '免费招募 ×' + m.freeRecruit, title: '免费招募', d: '下一次招募领袖免费，至少「稀有」。' });
   if (m.nextKit) out.push({ ic: gi('kit').ic || 'g_pack', c: gi('kit').c || '#caa84a', t: '支援道具 +' + m.nextKit, title: gi('kit').n || '行军包', d: '下次出征开局多带 ' + m.nextKit + ' 个支援道具。' });
   if (m.buildBoost) out.push({ ic: gi('mason').ic || 'g_mason', c: gi('mason').c || '#ff9a6a', t: '工期 -' + m.buildBoost + ' 天', title: gi('mason').n || '工匠', d: '下一项工程少 ' + m.buildBoost + ' 天。' });
   return out;

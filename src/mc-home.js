@@ -85,6 +85,8 @@ M.lootTip = function (key) {
   else if (kind === 'gift' && M.GIFTS && M.GIFTS[id]) d = M.GIFTS[id].d;
   return { title: I.n, c: I.c, d, pic: M.spriteURL(I.icon, 5) };
 };
+const oTF = G.tipFor;
+G.tipFor = function (key) { const mm = /^w-loot-(\d+)$/.exec(key || ''); if (mm && this.run && this.run.loot) { const k = this.run.loot.bp[+mm[1]]; return k ? M.lootTip(k) : null; } return oTF.apply(this, arguments); };
 const short = (I) => String(I.n || '').replace(/图纸$/, '').replace(/^地脉结晶·/, '');
 // the map bar: each find is its own chip next to the resources (they wrap, never scroll)
 const oView = G.view;
@@ -92,7 +94,8 @@ G.view = function () {
   const v = oView.call(this), run = this.run;
   if (v.w && run && run.loot) {
     const n = Math.min(run.loot.bp.length, Math.max(0, Math.round(this.tv ? this.tv('rbp', run.loot.bp.length) : run.loot.bp.length)));
-    v.w.loot = run.loot.bp.slice(0, n).map(k => { const I = M.itemInfo(k); return { img: M.spriteURL(I.icon, 4), c: I.c, n: short(I), tipOn: this.tipFn(() => M.lootTip(k)) }; });
+    // the same chip as the score and supplies next to it (user ruling 2026-09-25): its tip comes by key, nothing moves on hover
+    v.w.loot = run.loot.bp.slice(0, n).map((k, i) => { const I = M.itemInfo(k); return { img: M.spriteURL(I.icon, 4), c: I.c, n: short(I), tip: 'w-loot-' + i }; });
   }
   // the battle's haul and the end screen: every tile says what it is
   if (v.st && v.st.tiles && this.settle) v.st.tiles.forEach((t, i) => { const s = this.settle.tiles[i]; if (s && s.key) t.tipOn = this.tipFn(() => M.lootTip(s.key)); });

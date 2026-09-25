@@ -80,7 +80,7 @@ M.FURN_BY = {}; M.FURN.forEach(f => M.FURN_BY[f.k] = f);
 M.ACH = [
   { k: 'first_clear', n: '初次通关', d: '通关任意一个世界', r: '每局开局多一张「稀有」以上的建筑图纸', fx: { startBpQ: 1 }, ok: (m) => Object.keys(m.cleared).length >= 1 },
   { k: 'veteran', n: '老兵', d: '把一名领袖升到 8 级', r: '招魂至少招来「稀有」领袖', fx: { recruitMinRar: 1 }, ok: (m) => m.heroes.some(h => h.lv >= 8) },
-  { k: 'warden', n: '守夜人', d: '一局里守住 3 次混沌来袭', r: '传送门耐久 +25%', fx: { portalHp: 0.25 }, ok: (m) => (m.st.raidsWon || 0) >= 3 },
+  { k: 'warden', n: '守夜人', d: '一局里守住 3 次混沌来袭', r: '主基地耐久 +25%', fx: { portalHp: 0.25 }, ok: (m) => (m.st.raidsWon || 0) >= 3 },
   { k: 'architect', n: '建筑师', d: '一局里建成 8 座建筑', r: '建造花费 -15%', fx: { buildCost: -0.15 }, ok: (m) => (m.st.built || 0) >= 8 },
   { k: 'wonder', n: '奇观', d: '建成一座奇观', r: '每局开局送一张奇观图纸', fx: { startWonder: 1 }, ok: (m) => { let f = false; M.eachBuilt(m, (b) => { if (M.BUILDINGS[b].q > 0 && b !== 'core') f = true; }); return f; } },
   { k: 'hunter', n: '猎头', d: '一局里击败 8 个精英', r: '精英必掉图纸', fx: { eliteBp: 1 }, ok: (m) => (m.st.elite || 0) >= 8 },
@@ -129,7 +129,7 @@ const wonderBp = (qMin) => { const ks = Object.keys(M.BUILDINGS).filter(k => !M.
 G.newGame = function (kits) {
   const P = M.perks(), p = this.prof, keepTut = this.meta && this.meta.tutDone;
   const m = this.meta = M.defaultMeta3(); m.tutDone = !!keepTut; m.baseTut = keepTut ? 99 : 0;
-  m.core = 3; m.st = {}; m.gameNo = (p.stats.games || 0) + 1; m.raidEvery = P.raidEvery || 5; m.drinkUntil = P.drinkDays || 0; m.catSaves = P.catSaves || 0;
+  m.st = {}; m.gameNo = (p.stats.games || 0) + 1; m.raidEvery = P.raidEvery || 5; m.drinkUntil = P.drinkDays || 0; m.catSaves = P.catSaves || 0;
   m.hard = !!(P.hard && p.hard); m.moon = P.moon ? M.pick(['full', 'new', 'blood']) : null;
   m.supplies += (P.startSup || 0);
   if (p.carry) { m.supplies += p.carry.sup || 0; m.shards += p.carry.sh || 0; if (p.carry.relic) m.relics.push(p.carry.relic); }
@@ -293,7 +293,7 @@ G.gameOver = function (reason) {
   if (M.META_ROOM && this.toRoom) { this.toRoom({ settle: true }); return; }
   // no room: back to the title menu with the game's summary
   this.go('menu');
-  const why = reason === 'core' ? '基地核心碎了' : reason === 'portal' ? '传送门被打破了' : '这一局结束了';
+  const why = reason === 'core' ? '基地核心碎了' : reason === 'portal' ? '主基地被攻破了' : '这一局结束了';
   this.modal = { over: 1, title: '这一局结束了', text: why + '。\n坚持到第 ' + S0.day + ' 天，通关 ' + S0.clears + ' 个世界。', border: '#d0453c', img: 'skull', back: () => { this.modal = null; }, choices: [{ t: '重新开始', fn: () => { this.modal = null; this.startGame(); } }, { t: '回到标题', fn: () => { this.modal = null; } }] }; this.bump();
 };
 // the portal collapsing is also the end of the game

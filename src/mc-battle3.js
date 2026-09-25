@@ -148,7 +148,7 @@ class B3 extends M.Battle2 {
     later.forEach(s => { s.spawn = s.spawn - 1.6 + this.fightT0; s.x = 1250 + Math.random() * 500; });
     L.sort((a, b) => a.spawn - b.spawn);
     // no army, or a boss fight (user ruling 2026-09-24): the leader takes the field with the army from the start
-    if (!run.roster.length || cfg.type === 'boss') this.later(this.openEnd, () => this.heroEnter());
+    if (!run.roster.length || cfg.type === 'extract') this.later(this.openEnd, () => this.heroEnter());   // 2026-09-25: bosses wait like any fight; the 撤离战 leader fights beside the army
   }
   get score() { return Math.round(this.base * this.mult); }
   mk(o) { const e = Object.assign({ id: this.nid++, alive: true, t: Math.random() * 0.4, flash: 0, stun: 0, charm: 0, shield: 0, kills: 0, readyAt: 0, mana: 0, def: 0, dodge: 0, asB: 0, asDyn: 0, atkDyn: 0, defDyn: 0, combo: 0, buffs: [], debuf: {}, st: {}, traits: [], slowAS: 0, slowT: 0, au: {}, sz: 1, tags: [], star: 1 }, o); e.maxHp = e.maxHp || e.hp; this.ents.push(e); return e; }

@@ -34,7 +34,7 @@ G.heroLvUp = function (id) {
 G.lvUpFx = function (h, lv0, lv1, p0, p1) {
   const H = M.HEROES[h.cls], item = { h, lv0, lv1, p0, p1, name: M.heroN(h), col: M.qc(h.rarity), img: M.spriteCanvas(H.sprite, 16), dur: DUR };
   // the talent layers this level reveals (layer k at Lv k+1) land at the end of the ceremony, and pop on the hero page
-  const hi = M.talHeight(h), a = Math.min(hi, Math.max(0, lv0 - 1)), b = Math.min(hi, Math.max(0, lv1 - 1));
+  const a = M.talShownAt ? M.talShownAt(h, lv0) : Math.max(0, lv0 - 1), b = M.talShownAt ? M.talShownAt(h, lv1) : Math.max(0, lv1 - 1);
   if (b > a) { item.newNodes = h.tree.map((n, i) => i).filter(i => h.tree[i].L > a && h.tree[i].L <= b).slice(0, 9); item.newL = b > a + 1 ? (a + 1) + '–' + b : String(b); item.dur = DUR + 2.1; this.talNew = this.talNew || {}; const o = this.talNew[h.id]; this.talNew[h.id] = { from: o ? Math.min(o.from, a) : a }; }
   this.lvQ = this.lvQ || []; this.lvQ.push(item); if (!this.lvFx) this.lvNext();
 };
@@ -145,7 +145,7 @@ const oAD = M.advanceDay;
 M.advanceDay = function (m) {
   const logs = oAD.apply(this, arguments), xd = Math.round(M.baseMods(m).expDaily || 0); if (!xd) return logs;
   const ups = [];
-  m.heroes.forEach(h => { if (h.lv >= 10) return; const lv0 = h.lv, p0 = M.heroPower(h, m); M.addExp(h, xd); if (h.lv > lv0) ups.push({ id: h.id, lv0, p0 }); });
+  m.heroes.forEach(h => { if (h.lv >= (M.LV_MAX || 10)) return; const lv0 = h.lv, p0 = M.heroPower(h, m); M.addExp(h, xd); if (h.lv > lv0) ups.push({ id: h.id, lv0, p0 }); });
   logs.push({ t: '冥想：所有领袖经验 +' + xd });
   ups.forEach(u => { const h = m.heroes.find(x => x.id === u.id); logs.push({ t: h.name + ' 升到 Lv ' + h.lv + '！' }); });
   m._lvUps = ups; return logs;

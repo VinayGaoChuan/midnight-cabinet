@@ -67,10 +67,10 @@ G.runWin = function (kind) {
   return r;
 };
 // the tavern the tutorial pays for stands next to the core
-M.preTavern = function (m) { const x = M.cell(m, M.CORE.c - 1, M.CORE.r); if (x && !x.b) { x.dug = true; x.b = 'tavern'; x.job = null; if (x.tile === 'ruin') x.tile = null; return true; } return false; };
+M.preTavern = function (m) { const x = M.cell(m, M.CORE.c - 1, M.CORE.r); if (x && !x.b) { x.dug = true; x.b = 'hospital'; x.job = null; if (x.tile === 'ruin') x.tile = null; return true; } return false; };
 M.tutGift = function (m, g) {
   g = g || { sup: 100, sh: 0, orb: 0, exp: 100, bp: [M.dropBp()] };
-  m.supplies += g.sup || 0; m.shards += g.sh || 0; m.orbs += g.orb || 0;
+  m.supplies += g.sup || 0; m.shards += g.sh || 0; if (g.orb && m.heroes[0]) M.addExp(m.heroes[0], g.orb);
   (g.bp || []).forEach(k => { if (k) M.invAdd(m, k, 1); });
   const h = m.heroes[0]; if (h && g.exp) { M.addExp(h, g.exp); h.hp = M.heroMaxHp(h, m); }
   M.preTavern(m);

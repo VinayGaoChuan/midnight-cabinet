@@ -48,9 +48,10 @@ M.makeBattleCfg = function (run, node) {
 };
 const FIGHT = { normal: 1, elite: 1, boss: 1, hold: 1, extract: 1 };
 // survive-the-clock fights (坚守 / 撤离) only need holding out: their waves count 0.7 (they were won at a raw 0.93)
-// shown boss power counts the leader fighting from the first second (user ruling 2026-09-25: "equal power, yet I
-// crushed it"): measured on 300 headless boss fights, a boss at 0.75× its raw power plays like an elite at 1× (.ai/sim-boss2.js)
-M.BOSS_SHOW = 0.75;
+// shown boss power is calibrated against elites on 300 headless fights each (.ai/sim-boss2.js): with the leader
+// starting on the field it was 0.75; since the leader waits on the bench in boss fights too (2026-09-25) a boss plays
+// like an elite of 1.05× its raw power
+M.BOSS_SHOW = 1.05;
 M.nodePower = function (run, n) { if (!FIGHT[n.type] || run.region.tut) return 0; if (n._pw == null) n._pw = Math.round(M.powerOf(M.sideE(run, M.makeBattleCfg(run, n))) * (n.type === 'hold' || n.type === 'extract' ? 0.7 : n.type === 'boss' ? M.BOSS_SHOW : 1)); return n._pw; };
 M.oddsCol = (mine, theirs) => { const r = mine / Math.max(1, theirs); return r >= 1.25 ? '#b6f28a' : r >= 1 ? '#ffcf4a' : '#e8434f'; };
 M.oddsWord = (mine, theirs) => { const r = mine / Math.max(1, theirs); return r >= 1.25 ? '稳赢' : r >= 1 ? '有风险' : '很危险'; };

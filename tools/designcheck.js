@@ -5,7 +5,7 @@
     const M = window.MC, doc = await (await fetch('docs/design.md?' + Date.now())).text();
     const vals = (o) => (Array.isArray(o) ? o : Object.values(o || {}));
     const lists = {
-      建筑: vals(M.BUILDINGS).map(b => b.n),
+      建筑: vals(M.BUILDINGS).filter(b => !b.gone).map(b => b.n),
       地格: vals(M.TILES).map(t => t.n),
       世界: vals(M.WORLDS).map(w => w.n),
       节点: vals(M.NODE).map(n => n.n),

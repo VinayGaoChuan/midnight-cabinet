@@ -117,7 +117,8 @@ M.makeBattleCfg = function (run, node) {
   if (mode === 'hold') {
     cfg.dur = Math.round((t === 'extract' ? 40 : 32) * (1 + (run.mods.hold || 0)));
     const waves = Math.ceil(cfg.dur / 8);
-    for (let i = 0; i < waves; i++) M.pickWave(budget * 0.45).forEach((e, j) => cfg.list.push(Object.assign(e, { spawn: 1.6 + i * 8 + j * 0.35 })));
+    // 撤离战 is harder: the leader stands with the army from the start (2026-09-25)
+    for (let i = 0; i < waves; i++) M.pickWave(budget * (t === 'extract' ? 0.62 : 0.45)).forEach((e, j) => cfg.list.push(Object.assign(e, { spawn: 1.6 + i * 8 + j * 0.35 })));
   } else {
     const list = M.pickWave(budget * (t === 'boss' ? 0.55 : 1), { elite: t === 'elite' });
     list.forEach((e, i) => { e.spawn = 1.6 + i * 0.45 + Math.random() * 0.3; cfg.list.push(e); });

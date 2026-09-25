@@ -39,6 +39,7 @@ const card = (g, m, c, r, o) => ({
 const oView = G.view;
 G.view = function () {
   const v = oView.call(this), pn = v.pn, p = this.panel, m = this.meta; if (!pn || !p || p.c == null || !m) return v;
+  if (pn.isRoom && p.key === 'core') { pn.title = '主基地 · 仓库'; pn.sub = ''; }   // the stock lives in the main base on the surface (2026-09-25)
   const tk = tileAt(m, p.c, p.r);
   if (pn.isBuild) {
     pn.hasTile = false; pn.tileTxt = '';   // the terrain is said on each room that fits, and in each room's tooltip

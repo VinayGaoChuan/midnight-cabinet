@@ -22,7 +22,7 @@ function layout(h) {
     const want = ids.map(i => { const par = h.tree[i].p < 0 ? ROOT : pos[h.tree[i].p], sib = ids.filter(j => h.tree[j].p === h.tree[i].p); return par.x + (sib.indexOf(i) - (sib.length - 1) / 2) * sp; });
     const xs = want.slice(); for (let k = 1; k < xs.length; k++) xs[k] = Math.max(xs[k], xs[k - 1] + sp);
     const mean = (a) => a.reduce((x, y) => x + y, 0) / Math.max(1, a.length); let sh = mean(want) - mean(xs); for (let k = 0; k < xs.length; k++) xs[k] += sh;
-    const lo = 24 + s / 2, hi = W - 24 - s / 2;
+    const lo = 50 + s / 2, hi = W - 24 - s / 2;   // room on the left for the row labels (1 2 3 … / Lv11)
     if (xs.length) { if (xs[0] < lo) { sh = lo - xs[0]; xs.forEach((_, k) => { xs[k] += sh; }); } if (xs[xs.length - 1] > hi) { sh = hi - xs[xs.length - 1]; xs.forEach((_, k) => { xs[k] += sh; }); } if (xs[0] < lo) xs.forEach((_, k) => { xs[k] = xs.length > 1 ? lo + (hi - lo) * k / (xs.length - 1) : W / 2; }); }
     ids.forEach((i, k) => { pos[i] = { x: xs[k] + Math.sin(hs * 0.7 + i * 1.9) * 5, y: y + Math.cos(hs * 1.3 + i * 2.1) * 3 }; });
   }
@@ -40,7 +40,8 @@ G.view = function () {
   const Hc = M.HEROES[h.cls], R = M.RARITY[h.rarity], mx = M.heroMaxHp(h, m), pts = h.points, t = now() / 1000, ch = this.talCharge;
   const pn = v.pn, L = layout(h), IC = (k, s) => M.iconURL(k, s || 3);
   pn.title = Hc.n; pn.sub = ''; pn.img = M.spriteURL(Hc.sprite, 5);
-  pn.heads = [{ tip: 'hs-rar', ic: IC('u_star', 2), t: R.n, c: R.c }, { tip: 'hs-lv', ic: IC('t_orb', 2), t: 'Lv ' + h.lv, c: '#9cff7a', bar: Math.min(100, h.exp / M.expNeed(h.lv) * 100) + '%', hasBar: true }, { tip: 'hs-pts', ic: IC('t_skill', 2), t: String(pts), c: pts ? '#ffe08a' : '#6b6570', hot: pts > 0 }].map(x => Object.assign({ hasBar: false, bar: '0%', anim: x.hot ? 'talPulse 1.1s ease-in-out infinite' : 'none' }, x));
+  // one leader, no quality (2026-09-25): the level shows its cap
+  pn.heads = [{ tip: 'hs-lv', ic: IC('t_orb', 2), t: 'Lv ' + h.lv + ' / ' + (M.LV_MAX || 10), c: '#9cff7a', bar: Math.min(100, h.exp / M.expNeed(h.lv) * 100) + '%', hasBar: true }, { tip: 'hs-pts', ic: IC('t_skill', 2), t: String(pts), c: pts ? '#ffe08a' : '#6b6570', hot: pts > 0 }].map(x => Object.assign({ hasBar: false, bar: '0%', anim: x.hot ? 'talPulse 1.1s ease-in-out infinite' : 'none' }, x));
   pn.hasHeads = true;
   pn.stats = [{ tip: 'hs-hp', ic: IC('t_heart', 2), v: Math.round(h.hp) + '/' + mx, c: h.hp / mx < 0.35 ? '#ff6a5a' : '#9cff7a' }, { tip: 'hs-atk', ic: IC('t_sword', 2), v: String(Math.round(M.heroAtk(h, m))), c: '#ff9a6a' }, { tip: 'hs-slot', ic: IC('t_chest', 2), v: String(M.relicSlots(h, m)), c: '#ffcc33' }, { tip: 'hs-runs', ic: IC('u_mask', 2), v: String(h.runs), c: '#cfc6b8' }];
   pn.rGlow = hexA(R.c, 0.35);
@@ -69,7 +70,7 @@ G.view = function () {
       hint: avail && (NS >= 60 || chg > 0), hintT: chg > 0 ? '蓄力中…' : '按住' });
   });
   // layer numbers down the left edge, the level that opens the waiting row, and what the colours mean
-  for (let L = 1; L <= Lo.rows; L++) { const y = rowY(L, Lo.dy); caps.push({ x: -22, y: Math.round(y - 12), t: L > Lo.shown ? 'Lv' + (L + 1) : String(L), c: L > Lo.shown ? '#ffcf4a' : '#6a6394' }); }
+  for (let L = 1; L <= Lo.rows; L++) { const y = rowY(L, Lo.dy); caps.push({ x: -22, y: Math.round(y - 12), t: L > Lo.shown ? 'Lv' + (M.talLvFor ? M.talLvFor(L) : L + 1) : String(L), c: L > Lo.shown ? '#ffcf4a' : '#6a6394' }); }
   Object.keys(M.TAL_SC).forEach((k, j) => caps.push({ x: -16 + j * 56, y: 468, t: M.TAL_SC[k].n, c: M.TAL_SC[k].c }));
   pn.nodes = nodes; pn.links = links; pn.caps = caps; pn.noPts = pts <= 0; pn.hasPts = pts > 0;
   pn.holdHint = pts > 0 && NS < 60 && nodes.some(n => n.cursor === 'pointer');
@@ -89,9 +90,9 @@ G.tipFor = function (key) {
       const st = taken ? '已学会' : open && h.points > 0 ? '按住学习' : open ? '升级获得天赋点' : '先学会下面连着的天赋';
       return { title: M.talName(T), c: Sc.c, kind: '第 ' + T.L + ' 层 · ' + Sc.n, d: M.talDesc(T), icon: M.talIcon(T), lines: [{ t: st, c: taken ? Sc.c : '#a89ca8' }] }; }
     mm = /^talq-(\d+)$/.exec(key);
-    if (mm) return { title: '第 ' + mm[1] + ' 层', c: '#ffcf4a', d: '升到 Lv ' + (+mm[1] + 1) + ' 展开。', icon: 't_orb' };
+    if (mm) return { title: '第 ' + mm[1] + ' 层', c: '#ffcf4a', d: '升到 Lv ' + (M.talLvFor ? M.talLvFor(+mm[1]) : +mm[1] + 1) + ' 展开。', icon: 't_orb' };
     if (key === 'hs-rar') return { title: R.n + '领袖', c: R.c, d: '属性 ×' + R.stat + '，天赋树 ' + M.talHeight(h) + ' 层。' };
-    if (key === 'hs-lv') return { title: '等级 ' + h.lv, c: '#9cff7a', d: '经验 ' + h.exp + ' / ' + M.expNeed(h.lv) + '。', icon: 't_orb' };
+    if (key === 'hs-lv') return { title: '等级 ' + h.lv + ' / ' + (M.LV_MAX || 10), c: '#9cff7a', d: h.lv >= (M.LV_MAX || 10) ? '已经满级。' : '经验 ' + h.exp + ' / ' + M.expNeed(h.lv) + '。', icon: 't_orb' };
     if (key === 'hs-pts') return { title: '天赋点 ' + h.points, c: '#ffe08a', d: h.points ? '按住发光的天赋学习。' : '升级获得。', icon: 't_skill' };
     if (key === 'hs-hp') return { title: '生命 ' + Math.round(h.hp) + ' / ' + mx, c: '#9cff7a', d: '不会自动恢复，医疗建筑每天治疗。', icon: 't_heart' };
     if (key === 'hs-atk') return { title: '攻击 ' + Math.round(M.heroAtk(h, m)), c: '#ff9a6a', d: '亲自上场时的攻击力。', icon: 't_sword' };

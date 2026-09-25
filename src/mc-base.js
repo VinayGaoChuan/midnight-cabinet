@@ -5,7 +5,7 @@ const { spriteCanvas, BUILDINGS, TILES, QUALITY, BCOLS, BROWS, CORE, ENEMIES, HE
 const CNF = "'Noto Serif SC', serif", NUMF = "'Cinzel', 'Noto Serif SC', serif";
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const eo = M.ease.eo;
-const CW = 300, CH = 210, TOP = 80, DOOR_X = CORE.c * CW + CW / 2;
+const CW = 300, CH = 210, TOP = 80, DOOR_X = CORE.c * CW + CW / 2, MB = { w: 640, top: -200 };
 M.BASE_GEO = { CW, CH, TOP, DOOR_X };
 const PJ = M.PJ || {}, PP = PJ.PAL || {};   // 调色板（界面件只用这 32 色）
 // 实心框：厚 th，画在矩形里面（选中 / 悬停框）
@@ -347,11 +347,11 @@ M.roomThumb = function (key) { if (!thumbs[key]) { const a = document.createElem
 
 // ───────── base view / camera ─────────
 M.BaseView = class {
-  constructor() { this.t = 0; this.x = 1050; this.y = 470; this.z = 0.72; this.tx = this.x; this.ty = this.y; this.tz = this.z; this.sel = null; this.hover = null; this.pulse = {}; this.free = null; this.amb = new M.Ambient('motes', 1920, 1080, 50); this.stars = [...Array(90)].map((_, i) => ({ x: rnd(i) * 2400 - 150, y: -700 + rnd(i + 40) * 560, s: rnd(i + 9) < 0.2 ? 6 : 3, p: rnd(i + 3) * 7 })); }
+  constructor() { this.t = 0; this.x = 1050; this.y = 380; this.z = 0.64; this.tx = this.x; this.ty = this.y; this.tz = this.z; this.sel = null; this.hover = null; this.pulse = {}; this.free = null; this.amb = new M.Ambient('motes', 1920, 1080, 50); this.stars = [...Array(90)].map((_, i) => ({ x: rnd(i) * 2400 - 150, y: -700 + rnd(i + 40) * 560, s: rnd(i + 9) < 0.2 ? 6 : 3, p: rnd(i + 3) * 7 })); }
   keepFree() { if (!this.sel && !this.free) this.free = { x: this.tx, y: this.ty, z: this.tz }; }
   focus(c, r) { this.keepFree(); const p = M.cellCenter(c, r); this.sel = { c, r }; this.tx = p.x + 190; this.ty = p.y; this.tz = 1.7; }
   focusDoor() { this.keepFree(); this.sel = { door: 1 }; this.tx = DOOR_X + 200; this.ty = -140; this.tz = 1.25; }
-  home() { const f = this.free; this.sel = null; this.free = null; if (f) { this.tx = f.x; this.ty = f.y; this.tz = f.z; } else { this.tx = 1050; this.ty = 470; this.tz = 0.72; } }
+  home() { const f = this.free; this.sel = null; this.free = null; if (f) { this.tx = f.x; this.ty = f.y; this.tz = f.z; } else { this.tx = 1050; this.ty = 380; this.tz = 0.64; } }   // the resting view shows the main base on the surface too (2026-09-25)
   raidCam() { this.sel = null; this.free = null; this.tx = 1050; this.ty = -30; this.tz = 1.0; }
   // keep the view over the base; a camera already outside the box is never yanked back
   lim(x, y, z) {
@@ -370,6 +370,7 @@ M.BaseView = class {
   pick(sx, sy) {
     const p = this.toWorld(sx, sy);
     if (Math.abs(p.x - DOOR_X) < 110 && p.y > -260 && p.y < 10) return { door: 1 };
+    if (Math.abs(p.x - DOOR_X) < MB.w / 2 && p.y > MB.top - 80 && p.y < 10) return { door: 1, wing: 1 };
     const c = Math.floor(p.x / CW), r = Math.floor((p.y - TOP) / CH);
     if (c >= 0 && c < BCOLS && r >= 0 && r < BROWS) return { c, r };
     return null;
@@ -385,7 +386,7 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
   bv.stars.forEach(s => { ctx.globalAlpha = 0.4 + 0.6 * Math.abs(Math.sin(t * 0.8 + s.p)); ctx.fillStyle = '#fff'; ctx.fillRect(s.x, s.y, s.s, s.s); }); ctx.globalAlpha = 1;
   ctx.fillStyle = '#fff4d0'; ctx.beginPath(); ctx.arc(1750, -560, 70, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#1a1430'; ctx.beginPath(); ctx.arc(1725, -575, 62, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#120e1c'; ctx.beginPath(); ctx.moveTo(-800, 0); for (let x = -800; x <= 2900; x += 100) ctx.lineTo(x, -120 - 90 * Math.abs(Math.sin(x * 0.004)) - 40 * Math.sin(x * 0.013)); ctx.lineTo(2900, 0); ctx.fill();
-  ctx.fillStyle = '#0d0a12'; for (let i = 0; i < 16; i++) { const x = -600 + i * 230 + (i % 3) * 40; if (Math.abs(x - DOOR_X) < 260) continue; const hh = 60 + (i % 4) * 30; ctx.fillRect(x, -hh, 24, hh); ctx.beginPath(); ctx.moveTo(x - 50, -hh + 30); ctx.lineTo(x + 12, -hh - 70); ctx.lineTo(x + 74, -hh + 30); ctx.fill(); }
+  ctx.fillStyle = '#0d0a12'; for (let i = 0; i < 16; i++) { const x = -600 + i * 230 + (i % 3) * 40; if (Math.abs(x - DOOR_X) < MB.w / 2 + 120) continue; const hh = 60 + (i % 4) * 30; ctx.fillRect(x, -hh, 24, hh); ctx.beginPath(); ctx.moveTo(x - 50, -hh + 30); ctx.lineTo(x + 12, -hh - 70); ctx.lineTo(x + 74, -hh + 30); ctx.fill(); }
   ctx.fillStyle = '#2a2018'; ctx.fillRect(-800, -12, 3700, 30); ctx.fillStyle = '#3a4a2a'; ctx.fillRect(-800, -16, 3700, 8);
   // soil band + bedrock surround
   ctx.fillStyle = '#15100d'; ctx.fillRect(-800, 18, 3700, 2000);
@@ -431,6 +432,9 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
   const hs = (s, sel) => { if (!s || s.door) return; const u = 1 / bv.z, X = cellX(s.c) + 3, Y = cellY(s.r) + 3, W = CW - 6, H = CH - 6;
     if (sel) { frameIn(ctx, X, Y, W, H, 6 * u, PP.gold); frameIn(ctx, X + 6 * u, Y + 6 * u, W - 12 * u, H - 12 * u, 6 * u, PP.ink); } else frameIn(ctx, X, Y, W, H, 3 * u, PP.butter); };
   hs(bv.hover, false); hs(bv.sel, true);
+  // the main base (user ruling 2026-09-25): on the surface, a storehouse hall whose gate is the portal. The wings are
+  // the warehouse (click: the stock), the gate is the portal (click: the worlds); monsters of a 混沌来袭 attack it
+  drawMainBase(ctx, t, bv);
   // portal door：硬边斜面石柱 + 门楣（墨框、上左暮紫亮边、下右深渊暗边），金色门楣条，钢铆钉
   const pH = meta.portal.hp / M.portalMax(meta), U = M.UI, stone = { fill: PP.night, hi: PP.dusk, lo: PP.abyss, shadow: 0, rivets: false };
   if (U) {
@@ -451,7 +455,7 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
   }
   lights.push({ x: DOOR_X, y: -130, r: 140 + 240 * po, c: '#5fd0c0', f: (0.5 + 0.35 * po) + 0.15 * Math.sin(t * 2) });
   if (M.drawSteles) M.drawSteles(ctx, meta, bv, lights, 'body');
-  if (bv.hover && bv.hover.door) frameIn(ctx, DOOR_X - 128, -288, 256, 284, 3 / bv.z, PP.butter);
+  if (bv.hover && bv.hover.door && !bv.hover.wing) frameIn(ctx, DOOR_X - 128, -288, 256, 284, 3 / bv.z, PP.butter);
   // raid entities
   if (opts.raid) opts.raid.draw(ctx, lights);
   // lighting
@@ -493,13 +497,32 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
 };
 
 // ───────── base defense ─────────
+M.RAID_LEASH = 460;
+function drawMainBase(ctx, t, bv) {
+  const X0 = DOOR_X - MB.w / 2, X1 = DOOR_X + MB.w / 2, Y0 = MB.top, R = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
+  // body: ink outline, night brick wall with dusk mortar lines, darker plinth
+  R(X0 - 6, Y0 - 6, MB.w + 12, -Y0 + 6, PP.ink); R(X0, Y0, MB.w, -Y0, PP.night);
+  for (let y = Y0 + 22, i = 0; y < -14; y += 22, i++) { R(X0, y, MB.w, 3, PP.abyss); for (let x = X0 + (i % 2 ? 30 : 0); x < X1; x += 60) R(x, y - 19, 3, 19, PP.abyss); }
+  R(X0, -40, MB.w, 34, PP.indigo); R(X0, -40, MB.w, 4, PP.dusk);
+  // roof: stepped wine eaves with a gold trim, a sign plate in the middle
+  for (let k = 0; k < 3; k++) R(X0 - 30 + k * 34, Y0 - 26 - k * 22, MB.w + 60 - k * 68, 26, k % 2 ? PP.umber : PP.wine);
+  R(X0 - 30, Y0 - 4, MB.w + 60, 6, PP.gold); R(X0 - 36, Y0 - 30, MB.w + 72, 4, PP.ink);
+  // windows with warm light, crates on the wings, lanterns that sway a little
+  [-1, 1].forEach(sd => {
+    const wx = DOOR_X + sd * 215; [[-50, -170], [30, -170]].forEach(([dx, dy]) => { R(wx + dx - 4, dy - 4, 48, 58, PP.ink); R(wx + dx, dy, 40, 50, PP.amber); R(wx + dx, dy, 40, 14, PP.gold); R(wx + dx + 18, dy, 4, 50, PP.ink); R(wx + dx, dy + 24, 40, 4, PP.ink); });
+    const cx = DOOR_X + sd * 150; [[0, 0], [52, 0], [26, -44], [100, 0]].forEach(([dx, dy], i) => { const x = cx + sd * dx - 22, y = -84 + dy; R(x - 3, y - 3, 50, 50, PP.ink); R(x, y, 44, 44, i % 2 ? PP.brown : PP.tan); R(x, y, 44, 5, PP.cream); R(x + 19, y, 6, 44, PP.umber); });
+    const lx = DOOR_X + sd * 132, sw = Math.sin(t * 1.6 + sd) * 3; R(lx - 2, Y0 + 6, 4, 26, PP.ink); R(lx - 12 + sw, Y0 + 30, 24, 30, PP.ink); R(lx - 9 + sw, Y0 + 33, 18, 24, PP.gold);
+  });
+  if (bv && bv.hover && bv.hover.wing) frameIn(ctx, X0 - 10, Y0 - 80, MB.w + 20, -Y0 + 88, 3 / bv.z, PP.butter);
+}
+M.MAIN_BASE = MB;
 M.Raid = class {
   constructor(meta) {
     this.meta = meta; this.t = 0; this.ents = []; this.fx = []; this.proj = []; this.over = null; this.overT = 0; this.fire = {}; this.shake = 0; this.kills = 0;
     const d = meta.day; this.w = 1 + d * 0.22 + meta.raids * 0.3;
     this.portal = { x: DOOR_X, hp: meta.portal.hp, max: M.portalMax(meta) };
-    meta.heroes.forEach((h, i) => { const H = HEROES[h.cls]; this.ents.push({ side: 'A', hero: h, sprite: H.sprite, s: 5, x: DOOR_X + (i % 2 ? 1 : -1) * (70 + Math.floor(i / 2) * 60), y: -20 - (i % 3) * 16, hp: h.hp, max: M.heroMaxHp(h, meta), atk: M.heroAtk(h, meta), cd: H.cd, range: H.ranged ? 360 : 60, spd: H.spd, ranged: H.ranged, t: 0, alive: h.hp > 0, face: 1 }); });
-    const army = M.baseMods(meta).defArmy || 0; for (let i = 0; i < army; i++) this.ents.push({ side: 'A', sprite: 'militia', s: 5, tint: null, x: DOOR_X + (i % 2 ? 1 : -1) * (180 + i * 30), y: -24, hp: 160 * (1 + d * 0.1), max: 160 * (1 + d * 0.1), atk: 14 * (1 + d * 0.08), cd: 0.9, range: 55, spd: 90, t: 0, alive: true, face: 1 });
+    meta.heroes.forEach((h, i) => { const H = HEROES[h.cls]; this.ents.push({ side: 'A', hero: h, sprite: H.sprite, s: 5, x: DOOR_X + (i % 2 ? 1 : -1) * (MB.w / 2 + 50 + Math.floor(i / 2) * 60), y: -20 - (i % 3) * 16, hp: h.hp, max: M.heroMaxHp(h, meta), atk: M.heroAtk(h, meta), cd: H.cd, range: H.ranged ? 360 : 60, spd: H.spd, ranged: H.ranged, t: 0, alive: h.hp > 0, face: 1 }); });
+    const army = M.baseMods(meta).defArmy || 0; for (let i = 0; i < army; i++) this.ents.push({ side: 'A', sprite: 'militia', s: 5, tint: null, x: DOOR_X + (i % 2 ? 1 : -1) * (MB.w / 2 + 90 + i * 30), y: -24, hp: 160 * (1 + d * 0.1), max: 160 * (1 + d * 0.1), atk: 14 * (1 + d * 0.08), cd: 0.9, range: 55, spd: 90, t: 0, alive: true, face: 1 });
     this.turrets = [];
     for (let r = 0; r < BROWS; r++) for (let c = 0; c < BCOLS; c++) { const w = M.weaponStats(meta, c, r), rc = M.weaponReach(meta, c, r); if (w && rc) this.turrets.push({ c, r, w, x0: rc.c0 * CW, x1: (rc.c1 + 1) * CW, px: cellX(c) + CW / 2, py: cellY(r) + 20, t: Math.random() }); }
     const n = 10 + Math.round(d * 1.4); this.list = [];
@@ -521,9 +544,10 @@ M.Raid = class {
       if (e.slow > 0) e.slow -= dt;
       const list = e.side === 'E' ? allies : foes;
       let tg = null, bd = e.side === 'E' ? 260 : 900;
-      list.forEach(o => { const d = Math.abs(o.x - e.x); if (d < bd) { bd = d; tg = o; } });
+      // defenders stay by the gate (user ruling 2026-09-25): they only go for monsters within LEASH of it, else walk back
+      list.forEach(o => { if (e.side === 'A' && Math.abs(o.x - this.portal.x) > M.RAID_LEASH) return; const d = Math.abs(o.x - e.x); if (d < bd) { bd = d; tg = o; } });
       let tx = tg ? tg.x : (e.side === 'E' ? this.portal.x : e.home || e.x); if (e.side === 'A' && !tg) { e.home = e.home || e.x; tx = e.home; }
-      const d = Math.abs(tx - e.x), reach = tg ? e.range : (e.side === 'E' ? 90 : 4);
+      const d = Math.abs(tx - e.x), reach = tg ? e.range : (e.side === 'E' ? MB.w / 2 + 20 : 4);
       if (d > reach) { const sp = e.spd * (e.slow > 0 ? 0.5 : 1) * dt; e.x += Math.sign(tx - e.x) * Math.min(sp, d - reach + 1); e.face = Math.sign(tx - e.x) || e.face; e.walk = (e.walk || 0) + sp; }
       else if (tg || e.side === 'E') { e.t -= dt; e.face = Math.sign(tx - e.x) || e.face; if (e.t <= 0) { e.t = e.cd; e.lunge = T;
         if (e.ranged) this.proj.push({ x: e.x, y: e.y - 40, tg: tg || null, tx: tx, dmg: e.atk, col: e.side === 'E' ? '#b0d040' : '#ffe08a', src: e });

@@ -10,7 +10,8 @@ Object.assign(G, {
   },
   cellTip(p) {
     const m = this.meta;
-    if (p.door) return { title: '传送门', c: '#5fd0c0', kind: '耐久 ' + Math.round(m.portal.hp) + ' / ' + M.portalMax(m), d: '耐久归零，这一局结束。' };
+    if (p.door && p.wing) return { title: '主基地 · 仓库', c: '#ffcf4a', kind: '耐久 ' + Math.round(m.portal.hp) + ' / ' + M.portalMax(m), d: '物资、图纸和宝物都在这里。被攻破，这一局结束。' };
+    if (p.door) return { title: '主基地 · 传送门', c: '#5fd0c0', kind: '耐久 ' + Math.round(m.portal.hp) + ' / ' + M.portalMax(m), d: '点它选世界出征。' };
     const x = M.cell(m, p.c, p.r), T = x.tile ? M.TILES[x.tile] : null, tl = T ? [{ t: '特殊地格 · ' + T.n, c: T.c }, { t: T.d, c: '#cfc6b8' }] : [];
     if (x.b) return this.bldTip(x.b, p.c, p.r);
     if (x.job) return { title: x.job.kind === 'dig' ? '挖掘中' : M.BUILDINGS[x.job.key].n + '（建造中）', c: '#ffd060', d: '还需 ' + x.job.days + ' 天。', lines: tl };
@@ -35,7 +36,7 @@ Object.assign(G, {
     if (this.raid || this.reel) return; if (this.dragEnd && now() - this.dragEnd < 350) return; M.Sfx.init();
     const p = this.bv.pick(sx, sy); if (!p) { this.closePanel(); return; }
     M.Sfx.click(); this.fx.clickBurst(sx, sy, '#ffe08a');
-    if (p.door) return this.openWorlds();
+    if (p.door) return p.wing ? this.openWarehouse() : this.openWorlds();
     const m = this.meta, x = M.cell(m, p.c, p.r);
     this.showReach = null;
     if (x.b) { this.bv.focus(p.c, p.r); this.openPanel({ kind: 'room', c: p.c, r: p.r, key: x.b }); if (M.BUILDINGS[x.b].weapon) this.showReach = { c: p.c, r: p.r }; if (x.b === 'core' && m.baseTut === 1) { m.baseTut = 2; this.coach('仓库里是你所有的物资、图纸和宝物，有多少显示多少。鼠标悬浮可以查看详情，点击画面其它地方就能关闭。', 700, 900); this.save(); } }
@@ -112,12 +113,14 @@ Object.assign(G, {
     const p = this.fxPos('hero-' + id); if (p) { this.fx.pop(p.x, p.y - 80, '+' + Math.round(mx * 0.3), '#9cff7a', 44, { num: 1 }); this.fx.burst(p.x, p.y, '#9cff7a', 16); }
   },
   openHero(id) { this.openPanel({ kind: 'hero', id }); },
-  pickWorld(k) { const m = this.meta, ok = m.heroes.filter(h => !h.status && h.hp > 0); if (!ok.length) { this.toast('没有能出征的领袖', '#d0453c'); return; } this.openPanel({ kind: 'loadout', world: k, hero: ok[0].id, relics: [] }); },
+  // no relics in the vault: straight in; with relics, the panel opens with last time's choice ticked (2026-09-25)
+  openWarehouse() { this.bv.focusDoor && this.bv.focusDoor(); this.openPanel({ kind: 'room', c: M.CORE.c, r: M.CORE.r, key: 'core', top: 1 }); },
+  pickWorld(k) { const m = this.meta, h = m.heroes.find(x => !x.status && x.hp > 0); if (!h) { this.toast('领袖还起不来', '#d0453c'); return; } const keep = (m.lastRelics || []).filter(id => m.relics.some(r => r.id === id)).slice(0, M.relicSlots(h, m)); this.openPanel({ kind: 'loadout', world: k, hero: h.id, relics: keep }); if (!m.relics.length) this.launch(); },
   toggleRelic(rid) { const p = this.panel, m = this.meta, h = m.heroes.find(x => x.id === p.hero), slots = M.relicSlots(h, m); const i = p.relics.indexOf(rid); if (i >= 0) p.relics.splice(i, 1); else if (p.relics.length < slots) { p.relics.push(rid); M.Sfx.land(p.relics.length); } else this.toast('这名领袖最多带 ' + slots + ' 件宝物', '#8d8496'); this.bump(); },
   pickHero(id) { const p = this.panel, m = this.meta, h = m.heroes.find(x => x.id === id); if (h.hp <= 0) { this.toast('重伤，先去治疗', '#8d8496'); return; } p.hero = id; p.relics = p.relics.slice(0, M.relicSlots(h, m)); M.Sfx.click(); this.bump(); },
   launch() {
     const p = this.panel, m = this.meta, h = m.heroes.find(x => x.id === p.hero);
-    this.panel = null; this.coachData = null; M.Sfx.portal(); M.Sfx.whoosh(0.8);
+    m.lastRelics = p.relics.slice(); this.panel = null; this.coachData = null; M.Sfx.portal(); M.Sfx.whoosh(0.8);
     this.bv.tx = M.BASE_GEO.DOOR_X; this.bv.ty = -125; this.bv.tz = 3.4; this.fx.flash('#bff8ee', 0.2);
     setTimeout(() => { this.fx.flash('#e0fff5', 1); this.run = M.newRun3(m, h, p.world, p.relics); this.enterWorld(); this.toast(this.run.region.n + ' · ' + this.run.len.boss + ' 个首领 · ' + this.run.map.cols + ' 站', '#f2c14e'); }, 750);
   },
@@ -141,7 +144,7 @@ Object.assign(G, {
     const r = this.raid, m = this.meta; r.done = true;
     r.ents.forEach(e => { if (e.hero) e.hero.hp = Math.max(1, Math.round(e.hp)); });
     m.portal.hp = Math.max(0, Math.round(r.portal.hp)); m.lastRaid = m.day; m.raids++;
-    if (r.over === 'lose') { this.save(); this.banner({ kind: 'win', text: '传送门崩塌', col: '#ff4a4a', col2: '#3a0000', life: 2.5 }); M.Sfx.lose(); setTimeout(() => { this.raid = null; this.go('over'); }, 2200); return; }
+    if (r.over === 'lose') { this.save(); this.banner({ kind: 'win', text: '主基地被攻破', col: '#ff4a4a', col2: '#3a0000', life: 2.5 }); M.Sfx.lose(); setTimeout(() => { this.raid = null; this.go('over'); }, 2200); return; }
     const sup = 60 + m.day * 10, sh = 10 + m.day * 2;
     this.banner({ kind: 'win', text: '守住了！', col: '#ffd970', life: 2.2, sub: '击退 ' + r.kills + ' 个敌人 · 物资 +' + sup + ' · 灵魂碎片 +' + sh }); M.Sfx.fanfare(); this.fx.confetti(160); this.fx.rays(960, 470, '#ffcc33', 2);
     setTimeout(() => { this.raid = null; this.go('base'); this.bv.home(); this.hold('msup', m.supplies); this.hold('msh', m.shards); m.supplies += sup; m.shards += sh; this.save(); this.fly('sack', { x: 960, y: 540 }, 'msup', '#caa84a', () => this.release('msup')); this.fly('shard', { x: 960, y: 540 }, 'msh', '#b86bff', () => this.release('msh'), 0.2); }, 2300);

@@ -41,7 +41,7 @@ const noPw = (B) => (B.pw < 0 ? { pw: -B.pw } : {});
 const DEF = {
   geo:     { n: '地热', hue: '#ff7a3a', any: { orbDaily: 15 }, anyD: '基地每天 +15 经验球', fitN: '生产', fit: cat('power'), fitFx: () => ({ prodMul: 1 }), fitD: '这个房间自己的产出 ×2' },
   fossil:  { n: '化石层', hue: '#d8c8a0', any: { supplyDaily: 25 }, anyD: '基地每天 +25 物资', fitN: '后勤', fit: (B) => B.cat === 'store' && !!B.fx, fitFx: () => ({ prodMul: 1 }), fitD: '这个房间自己的效果 ×2' },
-  clay:    { n: '陶土层', hue: '#c8845a', any: { portalHp: 0.3 }, anyD: '传送门耐久 +30%', fitN: '防御', fit: cat('defense'), fitFx: () => ({ defArmy: 3 }), fitD: '守城时 3 名陶土守卫加入战斗' },
+  clay:    { n: '陶土层', hue: '#c8845a', any: { portalHp: 0.3 }, anyD: '主基地耐久 +30%', fitN: '防御', fit: cat('defense'), fitFx: () => ({ defArmy: 3 }), fitD: '守城时 3 名陶土守卫加入战斗' },
   ruin:    { n: '古遗迹', hue: '#e8c070', any: { halfDays: 1, refund: 0.3 }, anyD: '建造时间减半，建成返还 30% 物资', fitN: '奇观', fit: (B) => B.q > 0, fitFx: () => ({ refund: 0.5 }), fitD: '返还提高到 80%' },
   spring:  { n: '地下泉', hue: '#6fd0ff', any: { healAll: 0.15 }, anyD: '所有领袖每天回复 15% 生命（不需要医院）', fitN: '医疗 / 水域', fit: (B) => B.cat === 'med' || B.style === 'water', fitFx: (B) => (B.weapon ? { heal: 0.3, range: 1 } : { heal: 0.3 }), fitD: '医院回复 +30%；水域武器射程 +1' },
   mole:    { n: '松软土层', hue: '#b89a70', any: { digCost: -0.4 }, anyD: '挖掘费用 -40%', fitN: '特殊', fit: cat('misc'), fitFx: () => ({ buildDays: -1 }), fitD: '所有建造少花 1 天' },

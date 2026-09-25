@@ -58,13 +58,8 @@ M.raidFall = function (m, h) {
 const oSR = G.startRaid;
 G.startRaid = function () {
   const m = this.meta;
-  if (!this.raidGo && m.heroes.length) {
-    // pick the defenders first: weak (普通 / 稀有) leaders are ticked by default
-    const low = m.heroes.filter(h => (h.rarity || 0) <= 1), sel = {}; (low.length ? low : m.heroes).forEach(h => { sel[h.id] = true; });
-    this.raidPrep = { sel }; m.raidPending = m.day; this.save(); this.panel = null; this.openPanel({ kind: 'raidPrep' }); this.bv.focusDoor && this.bv.focusDoor(); M.Sfx.alarm();
-    this.banner({ kind: 'win', text: '混沌来袭！', col: '#ff5a4a', col2: '#6a0a0a', sub: '选出今晚守城的领袖。', life: 1.8, y: 440 });
-    return;
-  }
+  // no choosing any more (user ruling 2026-09-25): the one leader goes out by itself, without relics
+  if (m.heroes.length) { m.heroes.forEach(h => { h.relics = []; }); this.banner({ kind: 'win', text: '混沌来袭！', col: '#ff5a4a', col2: '#6a0a0a', life: 1.6, y: 440 }); M.Sfx.alarm && M.Sfx.alarm(); }
   this.raidGo = false; const pr = this.raidPrep; this.raidPrep = null; m.raidPending = null;
   oSR.call(this); const R = this.raid; if (!R) return;
   if (pr) R.ents = R.ents.filter(e => !e.hero || pr.sel[e.hero.id]);
@@ -96,32 +91,32 @@ G.raidEnd = function () {
   const fallenH = [];
   r.ents.forEach(e => { if (!e.hero) return; if (e.alive) e.hero.hp = Math.max(1, Math.round(e.hp)); else fallenH.push(e.hero); });
   m.portal.hp = Math.max(0, Math.round(r.portal.hp)); m.lastRaid = m.day; m.raids++; m.raidPending = null;
-  if (r.over === 'lose') { r.result = { grade: 'X', fallen: fallenH.length }; this.save(); this.banner({ kind: 'win', text: '传送门崩塌', col: '#ff4a4a', col2: '#3a0000', life: 2.5 }); M.Sfx.lose(); setTimeout(() => { this.raid = null; this.go('over'); }, 2200); return; }
+  if (r.over === 'lose') { r.result = { grade: 'X', fallen: fallenH.length }; this.save(); this.banner({ kind: 'win', text: '主基地被攻破', col: '#ff4a4a', col2: '#3a0000', life: 2.5 }); M.Sfx.lose(); setTimeout(() => { this.raid = null; this.go('over'); }, 2200); return; }
   m.st.raidsWon = (m.st.raidsWon || 0) + 1;
   // the grade: how many monsters fell, and how much of the portal was kept
   const killR = r.total ? r.kills / r.total : 1, keep = r.portal0 ? Math.max(0, Math.min(1, r.portal.hp / r.portal0)) : 1, sc = 0.55 * killR + 0.45 * keep;
   const gi = sc >= 0.97 ? 0 : sc >= 0.85 ? 1 : sc >= 0.7 ? 2 : 3, GR = GRADE[gi];
-  const sup = Math.round((80 + m.day * 12) * GR.m), orb = Math.round(r.kills * 4 * GR.m), bps = [];
+  const sup = Math.round((80 + m.day * 12) * GR.m), orb = Math.round(r.kills * 4 * GR.m), shK = Math.round(r.kills * 1.5 * GR.m), bps = [];   // shards: the main source is the monsters killed here (2026-09-25)
   bps.push(M.oneBldBp(null));   // fixed: one random building blueprint for holding (user ruling 2026-09-25); the grade still scales supplies and exp
   const boss = r.ents.some(e => e.side === 'E' && e.boss && !e.alive);
   // pay out (the HUD numbers are held until the icons land)
-  ['msup', 'msh', 'morb'].forEach((k, i) => this.hold(k, [m.supplies, m.shards, m.orbs][i]));
+  ['msup', 'msh'].forEach((k, i) => this.hold(k, [m.supplies, m.shards][i]));
   const falls = fallenH.map(h => M.raidFall(m, h));
-  m.supplies += sup; m.orbs += orb; bps.forEach(k => M.invAdd(m, k, 1));
+  m.supplies += sup; m.shards += shK; const hero0 = m.heroes[0], lv0 = hero0 ? hero0.lv : 0, pw0 = hero0 ? M.heroPower(hero0, m) : 0; if (hero0) M.addExp(hero0, orb); bps.forEach(k => M.invAdd(m, k, 1));
   let spare = ''; if (!m.heroes.length) { m.heroes.push(M.newHero(m, null, 0)); spare = '招魂台自己亮了，送来了一名新领袖。'; }
-  const shT = falls.reduce((a, f) => a + f.sh, 0), orbT = orb + falls.reduce((a, f) => a + f.orb, 0);
+  const shT = shK, orbT = orb;
   r.result = { grade: GR.g, score: Math.round(sc * 100) / 100, defenders: r.defenders, fallen: falls.length, sup, orb: orbT, sh: shT, bp: bps.slice(), boss };
   this.save();
   this.banner({ kind: 'win', text: '守住了！', col: '#ffd970', life: 2.2, sub: '评价 ' + GR.g + ' · 击退 ' + r.kills + ' / ' + r.total }); M.Sfx.fanfare(); this.fx.confetti(160); this.fx.rays(960, 470, GR.c, 2);
-  const lines = ['击退 ' + r.kills + ' / ' + r.total + ' · 传送门保住 ' + Math.round(keep * 100) + '%', '物资 +' + sup + ' · 经验球 +' + orb];
+  const lines = ['击退 ' + r.kills + ' / ' + r.total + ' · 主基地保住 ' + Math.round(keep * 100) + '%', '物资 +' + sup + ' · 灵魂碎片 +' + shK + ' · 领袖经验 +' + orb];
   if (bps.length) lines.push('图纸：' + bps.map(k => M.itemInfo(k).n).join('、'));
-  if (falls.length) { lines.push(''); falls.forEach(f => lines.push('阵亡 · ' + M.heroN(f.h) + '（Lv ' + f.h.lv + '）→ 灵魂碎片 +' + f.sh + '，经验球 +' + f.orb)); } else lines.push('没有领袖阵亡。');
+  if (falls.length) lines.push(M.heroN(falls[0].h) + ' 倒下过，守完以 1 点生命站起来。');
   if (spare) lines.push(spare);
   const collect = () => {
     if (!this.modal || !this.modal.raidRes) return; this.modal = null; M.Sfx.click();
     const from = { x: 960, y: 540 };
     this.fly('sack', from, 'msup', '#caa84a', () => this.release('msup'));
-    this.fly('orb', from, 'morb', '#9cff7a', () => this.release('morb'), 0.15);
+    if (hero0) this.fly('orb', from, 'hero-' + hero0.id, '#9cff7a', () => { if (hero0.lv > lv0) this.lvUpFx(hero0, lv0, hero0.lv, pw0, M.heroPower(hero0, m)); }, 0.15);
     if (shT) this.fly('shard', from, 'msh', '#b86bff', () => this.release('msh'), 0.3); else this.release('msh');
     bps.forEach((k, i) => this.fx.fly(M.spriteCanvas(M.itemInfo(k).icon, 8), from, this.corePos(), { col: M.itemInfo(k).c, delay: 0.3 + i * 0.15, s0: 1.2, s1: 0.4, dur: 0.8 }));
     setTimeout(() => this.achCheck && this.achCheck(), 1200);

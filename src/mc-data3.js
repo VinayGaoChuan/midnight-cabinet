@@ -117,7 +117,7 @@ const BUILDINGS = {
   goldengate:{ n:'金门大桥', q:1, cat:'misc', style:'steam', pw:-1, cost:180, days:2, fx:{ digCost:-0.5 }, d:'挖掘费用 -50%。' },
   amundsen:{ n:'阿蒙森-斯科特科考站', q:3, cat:'misc', style:'scifi', pw:-3, cost:420, days:5, fx:{ tileX2:1 }, d:'所有特殊地格的加成翻倍。' },
   potala:{ n:'布达拉宫', q:2, cat:'luck', style:'magic', pw:-2, cost:300, days:4, fx:{ skillNodeCd:-1 }, d:'所有领袖技能冷却 -1 个节点。' },
-  michel:{ n:'圣米歇尔山', q:2, cat:'defense', style:'water', pw:-1, cost:280, days:4, fx:{ portalHp:0.6 }, d:'传送门耐久 +60%。' },
+  michel:{ n:'圣米歇尔山', q:2, cat:'defense', style:'water', pw:-1, cost:280, days:4, fx:{ portalHp:0.6 }, d:'主基地耐久 +60%。' },
   lighthouse:{ n:'亚历山大灯塔', q:1, cat:'luck', style:'water', pw:-1, cost:200, days:3, fx:{ lootSup:0.3 }, d:'出征获得的物资 +30%。' },
   angkor:{ n:'吴哥窟', q:1, cat:'recruit', style:'nature', pw:-1, cost:220, days:3, fx:{ heroCap:2 }, d:'领袖上限 +2。' },
   maracana:{ n:'马拉卡纳体育场', q:2, cat:'train', style:'cartoon', pw:-2, cost:300, days:4, fx:{ exp:0.4 }, d:'出征获得的经验 +40%。' },

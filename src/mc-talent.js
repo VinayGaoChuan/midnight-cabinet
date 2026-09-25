@@ -70,7 +70,7 @@ const T = {
   engineer:  { n: '建筑学', sc: 'base', ic: 'u_hammer', ...X_({ 4: 1, 6: 2 }), d: (v) => '基地建造的工期少 ' + v + ' 天（至少 1 天）。', m: (v) => ({ buildDays: -v }) },
   smith:     { n: '锻造术', sc: 'base', ic: 'g_anvil', ...S_(0.2), d: (v) => '铁匠铺打造宝物的费用 -' + pct(v) + '。', m: (v) => ({ craftCost: -v }) },
   ballistics:{ n: '弹道学', sc: 'base', ic: 'f_defense', ...S_(0.12), d: (v) => '混沌来袭时，基地武器的伤害 +' + pct(v) + '。', m: (v) => ({ defDmg: v }) },
-  bulwark:   { n: '城防术', sc: 'base', ic: 'g_gate', ...S_(0.12), d: (v) => '传送门耐久 +' + pct(v) + '。', m: (v) => ({ portalHp: v }) },
+  bulwark:   { n: '城防术', sc: 'base', ic: 'g_gate', ...S_(0.12), d: (v) => '主基地耐久 +' + pct(v) + '。', m: (v) => ({ portalHp: v }) },
   tactics:   { n: '战术', sc: 'base', ic: 'e_bolt', ...S_(0.04), d: (v) => '所有领袖出征时，部队攻击 +' + pct(v) + '。', m: (v) => ({ unitAtk: v }) },
   drill:     { n: '操练', sc: 'base', ic: 'e_thorns', ...S_(0.04), d: (v) => '所有领袖出征时，部队生命 +' + pct(v) + '。', m: (v) => ({ unitHp: v }) },
   logistics: { n: '军需', sc: 'base', ic: 'f_logi', ...S_(0.1), d: (v) => '所有领袖出征带回的物资 +' + pct(v) + '。', m: (v) => ({ lootSup: v }) },

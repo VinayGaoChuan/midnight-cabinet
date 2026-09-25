@@ -49,14 +49,14 @@ function checkMeta(raw) {
   const rid = new Set(relics.map(r => r.id));
   // leaders
   const okHero = (h) => {
-    if (!isObj(h) || !M.HEROES[h.cls] || !intIn(h.rarity, 0, 3) || !intIn(h.lv, 1, 10) || !isNum(h.exp) || !isNum(h.hp) || typeof h.name !== 'string') return false;
+    if (!isObj(h) || !M.HEROES[h.cls] || !intIn(h.rarity, 0, 3) || !intIn(h.lv, 1, M.LV_MAX || 20) || !isNum(h.exp) || !isNum(h.hp) || typeof h.name !== 'string') return false;
     return true;   // talents: a broken or old-style tree is replaced below, not a reason to drop the leader
   };
   relics.forEach(r => { if (r.lines.some(l => l.k === 'shortRed')) { r.lines = M.relicLines(r.key, r.q); mig = true; } });
   const heroes = m.heroes.filter(okHero);
   if (heroes.length < m.heroes.length) note('领袖', m.heroes.length - heroes.length);
   heroes.forEach(h => {
-    if (!intIn(h.points, 0, 20)) h.points = 0;
+    if (!intIn(h.points, 0, 40)) h.points = 0;
     // personalities and personal names were removed from the design: drop them without reporting damage
     if ('quirks' in h || h.name !== M.heroN(h) || (isObj(h.status) && h.status.kind === 'sanitarium')) mig = true;
     // talents (2026-09-25): the three-branch trees became one random layered tree per leader; an old or broken tree
@@ -70,6 +70,8 @@ function checkMeta(raw) {
     if (h.status != null && !isObj(h.status)) h.status = null; if (!isNum(h.runs)) h.runs = 0;
   });
   m.heroes = heroes.length ? heroes : D.heroes;
+  // one leader, no exp orbs, no core lives, no recruiting rooms (2026-09-25, mc-solo.js)
+  if (M.soloFix && M.soloFix(m)) mig = true;
   // inventory: only blueprints and vein crystals this version knows
   if (m.inv['bbp:sanitarium']) { delete m.inv['bbp:sanitarium']; mig = true; }
   m.graveyard.forEach(g => { if (isObj(g) && M.HEROES[g.cls] && g.name !== M.HEROES[g.cls].n) { g.name = M.HEROES[g.cls].n; mig = true; } });

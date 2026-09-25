@@ -17,9 +17,17 @@ M.tagFromKey = tagFromKey;
 const oldTipFor = G.tipFor;
 G.tipFor = function (key) { return tagFromKey(key) || oldTipFor.call(this, key); };
 // a badge inside a card overrides the card's tip while hovered and hands it back afterwards
+// the box of the thing under the pointer, in stage pixels: the hovered element while the pointer is still on it,
+// otherwise a box round the pointer (canvas units, map nodes, rooms)
+G.tipAnchor = function (mx, my) {
+  const el = this._tipEl; if (el && el.isConnected && this.ui && this.ui.stage) { try { const st = this.ui.stage().getBoundingClientRect(), k = this.ui.scale ? this.ui.scale() : st.width / 1920, r = el.getBoundingClientRect(); const a = { x: (r.left - st.left) / k, y: (r.top - st.top) / k, w: r.width / k, h: r.height / k }; if (a.w > 4 && a.h > 4 && a.w < 1400 && a.h < 900 && mx >= a.x - 6 && mx <= a.x + a.w + 6 && my >= a.y - 6 && my <= a.y + a.h + 6) return a; } catch (e) {} }
+  return { x: mx - 60, y: my - 70, w: 120, h: 140 };
+};
+const oTipFn = G.tipFn;
+G.tipFn = function (o) { const f = oTipFn.call(this, o); return (e) => { this._tipEl = e && (e.currentTarget || e.target) || null; return f(e); }; };
 G.tipDeleg = function (t) {
   const el = t && t.closest ? t.closest('[data-tip]') : null;
-  if (el) { const k = el.getAttribute('data-tip'); if (k !== this.tipKey) { const d = this.tipFor(k); if (d) { if (!this.tipKey) this.tipPrev = this.tipData; this.tipKey = k; this.tipData = d; M.Sfx.hover(); this.bump(); } } }
+  if (el) { this._tipEl = el; const k = el.getAttribute('data-tip'); if (k !== this.tipKey) { const d = this.tipFor(k); if (d) { if (!this.tipKey) this.tipPrev = this.tipData; this.tipKey = k; this.tipData = d; M.Sfx.hover(); this.bump(); } } }
   else if (this.tipKey) { this.tipKey = null; this.tipData = this.tipPrev || null; this.tipPrev = null; this.bump(); }
 };
 
@@ -33,8 +41,12 @@ G.view = function () {
     // place the tooltip from its measured size: below-right of the pointer, flipped above / left when it would leave the screen
     const key = (tip.title || '') + '|' + (tip.kind || '') + '|' + (tip.d || '').length + '|' + (tip.lines || []).length, box = this._tipBox && this._tipBox.key === key ? this._tipBox : null;
     const bw = box ? box.w : 480, bh = box ? box.h : 240, mx = this.mx || 0, my = this.my || 0;
-    let tx = mx + 28, ty = my + 28; if (tx + bw > 1910) tx = mx - 28 - bw; if (ty + bh > 1070) ty = my - 24 - bh;
-    v.tip.x = Math.round(Math.max(10, Math.min(1910 - bw, tx))); v.tip.y = Math.round(Math.max(10, Math.min(1070 - bh, ty))); v.tip.op = box ? 1 : 0; this._tipKey = key;
+    // never over the thing hovered, never off the screen (user ruling 2026-09-25): the hovered element's box (or a box
+    // round the pointer for things drawn on a canvas), then the first side of it — right, left, above, below — where the
+    // whole tooltip fits; if none fits, the side that covers least
+    const A = this.tipAnchor(mx, my), G8 = 14, cand = [[A.x + A.w + G8, A.y + A.h / 2 - bh / 2], [A.x - G8 - bw, A.y + A.h / 2 - bh / 2], [A.x + A.w / 2 - bw / 2, A.y - G8 - bh], [A.x + A.w / 2 - bw / 2, A.y + A.h + G8]];
+    let best = null; cand.forEach(([x0, y0]) => { const x = Math.max(10, Math.min(1910 - bw, x0)), y = Math.max(10, Math.min(1070 - bh, y0)), ov = Math.max(0, Math.min(x + bw, A.x + A.w) - Math.max(x, A.x)) * Math.max(0, Math.min(y + bh, A.y + A.h) - Math.max(y, A.y)); if (!best || ov < best.ov) best = { x, y, ov }; });
+    v.tip.x = Math.round(best.x); v.tip.y = Math.round(best.y); v.tip.op = box ? 1 : 0; this._tipKey = key;
     if (this._tipSrc !== tip) { this._tipSrc = tip; this._tipV = { hasIcon: !!tip.icon, icon: tip.icon ? M.iconURL(tip.icon, 3) : '', dsegs: segs(M.rich(tip.d || '', '#e8dcc4', tip.ctx)), lines: (tip.lines || []).map(l => ({ segs: segs(l.rich || M.rich(l.t, l.c, tip.ctx)) })) }; }
     Object.assign(v.tip, this._tipV);
   }

@@ -217,31 +217,50 @@ MINI.dice = { title: '骰子对决', img: 't_dice', col: C.cream, text: '一个�
   } };
 
 // ═════════════════════ 命运之轮 · pay in blood, spin the reel ═════════════════════
+// the wheel is a wheel (user ruling 2026-09-25): the stone disc itself spins, slows down and stops with a sector under
+// the pointer — no slot reel. Each sector says what it gives.
+const FATE = [{ n: '空', c: C.haze, w: 16 }, { n: '积分倍率 +0.4', c: C.magenta, w: 16 }, { n: '部队', c: C.blue, w: 16 }, { n: '道具', c: C.violet, w: 14 }, { n: '图纸', c: C.tan, w: 12 }, { n: '积分', c: C.gold, w: 16 }, { n: '诅咒', c: C.red, w: 10 }];
+const SEG = Math.PI * 2 / FATE.length, FDUR = 3.4;
 MINI.fate = { title: '命运之轮', img: 'e_fate', col: C.red, text: '石头做的轮盘上刻满了名字。转动它的代价，是血。',
-  init(mg) { mg.ang = 0; },
+  init(mg) { mg.ang = 0; mg.spin = null; },
   btns(mg) { if (mg.phase !== 'idle') return []; return [{ t: '以血转动', sub: '领袖 -12% 生命', danger: 1, fn: () => MINI.fate.spin.call(this, mg) }, { t: '离开', leave: 1, fn: () => this.miniFinish('你没有碰它。石轮自己转了半圈。', '#8d8496') }]; },
   spin(mg) {
-    this.heroHurt(0.12); this.miniSet('spin'); const run = this.run;
-    const outs = [{ n: '空', c: C.haze, w: 16 }, { n: '积分倍率 +0.4', c: C.magenta, w: 16 }, { n: '部队', c: C.blue, w: 16 }, { n: '道具', c: C.violet, w: 14 }, { n: '图纸', c: C.tan, w: 12 }, { n: '积分 ×', c: C.gold, w: 16 }, { n: '诅咒', c: C.red, w: 10 }];
-    const idx = outs.indexOf(M.wpick(outs, o => o.w)), P = mg.P, C0 = { x: 960, y: 520 };
-    setTimeout(() => this.mini === mg && this.startReel({ title: '命运之轮', iconKey: 'e_fate', tiles: outs.map(o => ({ n: o.n, sub: '', c: o.c })), land: idx, ups: 0, onDone: () => {
-      let tx = '', col = outs[idx].c, g = [];
-      if (idx === 0) tx = '石轮停在空白处。血白流了。';
-      if (idx === 1) { run.runBuff.mult = (run.runBuff.mult || 0) + 0.4; tx = '本局初始积分倍率 +0.4。'; }
-      if (idx === 2) { const t = M.pickUnitQ(run); if (M.canAdd(run, t)) { g.push({ k: 'unit', type: t }); tx = '石轮上走下来一个 ' + M.DB[t].n + '。'; } else { g.push({ k: 'wallet', v: M.nice(P * 6) }); tx = '队伍满了，名字化成了积分。'; } }
-      if (idx === 3) { g.push(K.item(run, P)); tx = '石缝里滚出一个瓶子。'; }
-      if (idx === 4) { g.push(K.bp(null, 1)); tx = '一张刻在石片上的图纸。'; }
-      if (idx === 5) { g.push({ k: 'wallet', v: M.nice(P * 16) }); tx = '血变成了金子。'; }
-      if (idx === 6) { tx = '石轮记住了你的名字。生命 -' + this.heroHurt(0.15) + '。'; }
-      this.miniFinish(tx, col, g); } }), 500);
+    this.heroHurt(0.12); this.miniSet('spin'); S.whoosh && S.whoosh(0.6);
+    const idx = FATE.indexOf(M.wpick(FATE, o => o.w)), jit = (Math.random() - 0.5) * SEG * 0.6;
+    // sector k is centred at angle (k + 0.5)·SEG from the pointer at the top; turn at least 5 full rounds
+    const base = mg.ang - (mg.ang % (Math.PI * 2)), a1 = base + Math.PI * 2 * 6 - (idx + 0.5) * SEG + jit;
+    mg.spin = { a0: mg.ang, a1: a1 < mg.ang + Math.PI * 8 ? a1 + Math.PI * 2 : a1, t0: mg.t, idx, lastSeg: Math.floor(mg.ang / SEG) };
   },
-  tick(mg, dt) { mg.ang += dt * (mg.phase === 'spin' ? 4 : 0.2); },
+  resolve(mg, idx) {
+    const run = this.run, P = mg.P; let tx = '', col = FATE[idx].c; const g = [];
+    if (idx === 0) tx = '石轮停在空白处。血白流了。';
+    if (idx === 1) { run.runBuff.mult = (run.runBuff.mult || 0) + 0.4; tx = '本局初始积分倍率 +0.4。'; }
+    if (idx === 2) { const t = M.pickUnitQ(run); if (M.canAdd(run, t)) { g.push({ k: 'unit', type: t }); tx = '石轮上走下来一个 ' + M.DB[t].n + '。'; } else { g.push({ k: 'wallet', v: M.nice(P * 6) }); tx = '队伍满了，名字化成了积分。'; } }
+    if (idx === 3) { g.push(K.item(run, P)); tx = '石缝里滚出一个瓶子。'; }
+    if (idx === 4) { g.push(K.bp(null, 1)); tx = '一张刻在石片上的图纸。'; }
+    if (idx === 5) { g.push({ k: 'wallet', v: M.nice(P * 16) }); tx = '血变成了金子。'; }
+    if (idx === 6) { tx = '石轮记住了你的名字。生命 -' + this.heroHurt(0.15) + '。'; }
+    this.miniFinish(tx, col, g);
+  },
+  tick(mg, dt) {
+    const sp = mg.spin;
+    if (!sp) { mg.ang += dt * 0.2; return; }
+    const q = Math.min(1, (mg.t - sp.t0) / FDUR), e = 1 - Math.pow(1 - q, 4); mg.ang = sp.a0 + (sp.a1 - sp.a0) * e;
+    const seg = Math.floor(mg.ang / SEG); if (seg !== sp.lastSeg) { sp.lastSeg = seg; if (S.tick) S.tick(6); }
+    if (q >= 1 && !sp.done) { sp.done = true; S.impact && S.impact(); this.fx.kick && this.fx.kick(10); this.fx.rays && this.fx.rays(960, SY + 140, FATE[sp.idx].c, 1.1, { r: 260 }); setTimeout(() => { if (this.mini === mg) MINI.fate.resolve.call(this, mg, sp.idx); }, 700); }
+  },
   draw(x, mg) {
     const t = mg.t; x.fillStyle = K.RG(x, CX, SY + 380, 40, 700, [[0, '#3a1010'], [1, '#0a0404']]); x.fillRect(SX, SY, SW, SH);
-    const wx = CX, wy = SY + 380, R = 240; K.CI(x, wx, wy + 16, R + 30, 'rgba(0,0,0,0.5)'); K.CI(x, wx, wy, R + 24, C.slate); K.CI(x, wx, wy, R, C.steel);
-    x.save(); x.translate(wx, wy); x.rotate(mg.ang); for (let i = 0; i < 12; i++) { x.rotate(Math.PI / 6); K.LN(x, 0, 0, 0, -R, 6, C.slate); K.IC(x, ['r_skel', 'u_star', 't_heart', 'gem', 'scroll', 'e_coin'][i % 6], 0, -R * 0.72, 48); } K.CI(x, 0, 0, 50, C.dusk); K.CI(x, 0, 0, 26, C.red); x.restore();
+    const wx = CX, wy = SY + 380, R = 240; K.CI(x, wx, wy + 16, R + 30, 'rgba(0,0,0,0.5)'); K.CI(x, wx, wy, R + 24, C.slate);
+    x.save(); x.translate(wx, wy); x.rotate(mg.ang);
+    // sectors, each in its outcome's colour with its name along the radius
+    FATE.forEach((o, i) => { const a = -Math.PI / 2 + i * SEG; x.fillStyle = i % 2 ? '#2a2632' : '#1e1a26'; x.beginPath(); x.moveTo(0, 0); x.arc(0, 0, R, a, a + SEG); x.closePath(); x.fill(); x.fillStyle = o.c; x.beginPath(); x.arc(0, 0, R, a, a + SEG); x.arc(0, 0, R - 22, a + SEG, a, true); x.closePath(); x.fill(); x.strokeStyle = C.ink; x.lineWidth = 6; x.beginPath(); x.moveTo(0, 0); x.lineTo(Math.cos(a) * R, Math.sin(a) * R); x.stroke();
+      x.save(); x.rotate(a + SEG / 2 + Math.PI / 2); M.UI.text(x, o.n, 0, -R * 0.6, o.n.length > 3 ? 20 : 26, o.c, { outline: true }); x.restore(); });
+    K.CI(x, 0, 0, 50, C.dusk); K.CI(x, 0, 0, 26, C.red); x.restore();
     for (let i = 0; i < 8; i++) { const q = (t * 0.4 + i / 8) % 1; K.CI(x, wx - 300 + i * 80, SY + 120 + q * 500, 4, 'rgba(208,69,60,' + (1 - q) + ')'); }
+    // the pointer at the top; the sector under it glows once the wheel has stopped
     K.PL(x, [[wx - 26, wy - R - 44], [wx + 26, wy - R - 44], [wx, wy - R + 10]], C.ink); K.PL(x, [[wx - 20, wy - R - 40], [wx + 20, wy - R - 40], [wx, wy - R + 4]], C.red);
+    if (mg.spin && mg.spin.done) { const o = FATE[mg.spin.idx]; M.UI.text(x, o.n, wx, wy + R + 60, 40, o.c, { outline: true }); }
   } };
 })();
 

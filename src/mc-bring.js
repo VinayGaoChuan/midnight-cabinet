@@ -39,8 +39,8 @@ const GIFTS = {
     apply(g, m) { let n = 0, done = 0, at = null; for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) { const x = m.base.cells[r][c]; if (!x.job) continue; n++; at = at || { cc: c, cr: r }; x.job.days -= 2;
         if (x.job.days <= 0) { if (x.job.kind === 'dig') x.dug = true; else { x.b = x.job.key; x.dug = true; } x.job = null; done++; } }
       if (!n) { m.buildBoost = (m.buildBoost || 0) + 2; return ok('下一项工程少 2 天'); } return ok(n + ' 项工程各推进 2 天' + (done ? '，' + done + ' 项当场完工' : ''), at); } },
-  portal: { n: '修门石', ic: 'g_gate', c: '#5fd0c0', w: 9, d: '传送门耐久 +300（不超过上限）。',
-    apply(g, m) { const mx = M.portalMax(m), v = Math.min(300, mx - m.portal.hp); m.portal.hp += Math.max(0, v); return ok(v > 0 ? '传送门耐久 +' + Math.round(v) : '传送门本来就是满的', { door: 1 }); } },
+  portal: { n: '修门石', ic: 'g_gate', c: '#5fd0c0', w: 9, d: '主基地耐久 +300（不超过上限）。',
+    apply(g, m) { const mx = M.portalMax(m), v = Math.min(300, mx - m.portal.hp); m.portal.hp += Math.max(0, v); return ok(v > 0 ? '主基地耐久 +' + Math.round(v) : '传送门本来就是满的', { door: 1 }); } },
   talent: { n: '启示卷轴', ic: 'g_scroll', c: '#ffcf4a', w: 9, d: '带着它回来的领袖获得 1 个天赋点。',
     apply(g, m, run) { const h = (run && m.heroes.includes(run.hero)) ? run.hero : M.pick(m.heroes); if (!h) return ok('没有领袖可以读它'); h.points++; return ok(M.heroN(h) + ' 天赋点 +1', { hero: h.id }); } },
   temper: { n: '淬火石', ic: 'g_anvil', c: '#ff8a3a', w: 8, d: '最差的一件宝物品质 +1。',
