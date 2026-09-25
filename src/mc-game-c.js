@@ -162,7 +162,7 @@ Object.assign(G, {
   runWin(kind) {
     const m = this.meta, run = this.run, h = run.hero, L = run.loot;
     m.supplies += L.supplies; const tiles = [];
-    L.bp.forEach(k => { if (k.startsWith('tile:')) { const at = M.tileSpot ? M.tileSpot(m) : null; if (at) { const [c, r] = at; m.base.cells[r][c].tile = k.slice(5); tiles.push({ c, r, t: k.slice(5) }); } } else M.invAdd(m, k, 1); });
+    L.bp.forEach(k => { if (k.startsWith('tile:')) { const at = M.tileSpot ? M.tileSpot(m, k.slice(5)) : null; if (at) { const [c, r] = at; m.base.cells[r][c].tile = k.slice(5); tiles.push({ c, r, t: k.slice(5) }); } } else M.invAdd(m, k, 1); });
     const ups = M.addExp(h, L.exp); h.runs++; h.relics = [];
     if (kind === 'clear' && !run.region.tut) m.cleared[run.regionKey] = true;
     m.runs++; const tut = !!run.region.tut;

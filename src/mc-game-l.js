@@ -106,6 +106,7 @@ M.drawTear = function (ctx, g) {
   }
   ctx.restore();
 };
+M.tearCard = cardCanvas; M.tearPath = tearPath;   // the revival rite (mc-revive.js) tears and mends the same card
 S.rip = function () { S.noise(0.12, 0.35, 5000); S.noise(0.35, 0.3, 2400, 0.05); S.noise(0.5, 0.2, 900, 0.12); S.tone(120, 0.3, 'sawtooth', 0.08, -60); };
 G.tearTick = function (dt) {
   const T = this.tear; if (!T) return; T.t += dt;

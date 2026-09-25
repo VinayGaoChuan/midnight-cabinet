@@ -17,7 +17,8 @@ const TIERS = [
 ];
 M.DANGER = TIERS;
 const DAY_LV = 0.1, DAY_EK = 0.035, OLD_EK = 0.02;
-M.dayEk = (day) => 1 + (Math.max(1, day || 1) - 1) * DAY_EK;
+// the first days ease in (2026-09-26: a lost run costs a core heart, three early losses would end the game): 85% on day 1, full from day 4
+M.dayEk = (day) => { const d = Math.max(1, day || 1); return (1 + (d - 1) * DAY_EK) * Math.min(1, 0.8 + d * 0.05); };
 
 // ───────── today's steles and their danger ─────────
 M.worldShow = (m) => (m.day >= 6 ? 3 : m.day >= 2 ? 2 : 1);
@@ -56,7 +57,7 @@ M.worldOdds = M.worldDanger = function (m, k) {
   const W = M.WORLDS[k], T = TIERS[t], run = { region: W, regionKey: k, M: m, mods: {}, field: null, lvl0: M.lvl0For(W, m, t), lvlStep: 0.45, map: null, dangerK: T.ek };
   const avg = (type, col) => { let s = 0; for (let i = 0; i < 6; i++) s += M.powerOf(M.sideE(run, M.makeBattleCfg(run, { col, type }))); return Math.round(s / 6); };
   let mine = 0; if (b) { const H = M.HEROES[b.cls]; mine = M.powerOf({ hp: 3 * AVG.hp + b.hp, dps: 3 * AVG.dps + M.heroAtk(b, m) / (H.cd || 1) }); }
-  const first = avg('normal', 1), boss = Math.round(avg('boss', 9) * (M.BOSS_SHOW || 1));
+  const first = Math.round(avg('normal', 1) * (M.E_SHOW || 1)), boss = Math.round(avg('boss', 9) * (M.BOSS_SHOW || 1) * (M.E_SHOW || 1));
   const o = { lv: t, n: T.n, c: T.c, mine, first, boss, par: first };
   wcache.set(key, o); if (wcache.size > 60) wcache.delete(wcache.keys().next().value); return o;
 };

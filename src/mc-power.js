@@ -52,7 +52,10 @@ const FIGHT = { normal: 1, elite: 1, boss: 1, hold: 1, extract: 1 };
 // starting on the field it was 0.75; since the leader waits on the bench in boss fights too (2026-09-25) a boss plays
 // like an elite of 1.05× its raw power
 M.BOSS_SHOW = 1.05;
-M.nodePower = function (run, n) { if (!FIGHT[n.type] || run.region.tut) return 0; if (n._pw == null) n._pw = Math.round(M.powerOf(M.sideE(run, M.makeBattleCfg(run, n))) * (n.type === 'hold' || n.type === 'extract' ? 0.7 : n.type === 'boss' ? M.BOSS_SHOW : 1)); return n._pw; };
+// every fight shows 15% stronger since the leader lost its field skill and units throw each other (2026-09-26,
+// .ai/sim-kb.js: a shown 1.0–1.15 had dropped to ~40% wins; ×1.15 brings the colours back to their promise)
+M.E_SHOW = 1.15;
+M.nodePower = function (run, n) { if (!FIGHT[n.type] || run.region.tut) return 0; if (n._pw == null) n._pw = Math.round(M.powerOf(M.sideE(run, M.makeBattleCfg(run, n))) * (n.type === 'hold' || n.type === 'extract' ? 0.7 : n.type === 'boss' ? M.BOSS_SHOW : 1) * (M.E_SHOW || 1)); return n._pw; };
 M.oddsCol = (mine, theirs) => { const r = mine / Math.max(1, theirs); return r >= 1.25 ? '#b6f28a' : r >= 1 ? '#ffcf4a' : '#e8434f'; };
 M.oddsWord = (mine, theirs) => { const r = mine / Math.max(1, theirs); return r >= 1.25 ? '稳赢' : r >= 1 ? '有风险' : '很危险'; };
 

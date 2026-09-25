@@ -51,6 +51,7 @@ mc-bring.js
 mc-lvup.js
 mc-talent.js
 mc-solo.js
+mc-rules26.js
 mc-save.js
 mc-guide.js
 mc-buildui.js
@@ -74,4 +75,9 @@ mc-px16-cast.js
 mc-px16-game.js
 mc-px16-fx.js
 mc-px16-gallery.js
+mc-revive.js
+mc-prosper.js
+mc-town.js
+mc-siege.js
+mc-knock.js
 mc-tele.js

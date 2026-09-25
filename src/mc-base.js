@@ -376,6 +376,7 @@ M.BaseView = class {
     return null;
   }
 };
+M.BASE_HOOKS = [];
 M.drawBase = function (ctx, meta, bv, opts = {}) {
   const t = bv.t; ctx.imageSmoothingEnabled = false;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -398,6 +399,8 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
   // cells
   for (let r = 0; r < BROWS; r++) for (let c = 0; c < BCOLS; c++) {
     const x = M.cell(meta, c, r), X = cellX(c), Y = cellY(r);
+    // rings the base has not opened yet are pure black (mc-prosper.js draws the cracking when a ring opens)
+    if (M.lockedCell && M.lockedCell(meta, c, r)) { ctx.fillStyle = '#000'; ctx.fillRect(X, Y, CW, CH); continue; }
     if (x.b) { drawRoomPx(ctx, X, Y, x.b, t, { seed: c * 0.31 + r * 0.17, fireT: opts.fire && opts.fire[c + ',' + r] }, c + ',' + r, bv.z); if (x.tile && M.drawTerrainFloor) M.drawTerrainFloor(ctx, x.tile, X, Y, t); const B = BUILDINGS[x.b]; lights.push({ x: X + CW / 2, y: Y + CH / 2, r: (M.LIGHT_R(meta, x) + 0.6) * CW, c: PAL[B.style][2], f: 0.95 + 0.05 * Math.sin(t * 3 + c), cell: 1 }); if (x.tile && TILES[x.tile]) lights.push({ x: X + 60, y: Y + CH - 40, r: 150, c: TILES[x.tile].c, f: 0.7 + 0.3 * Math.sin(t * 2 + c + r) }); }
     else if (x.dug) {
       ctx.drawImage(emptyRoom(), X, Y); if (x.tile && M.drawTerrainFloor) M.drawTerrainFloor(ctx, x.tile, X, Y, t);
@@ -426,6 +429,7 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
   }
   // grid seams
   ctx.fillStyle = PP.ink || '#060508'; for (let c = 0; c <= BCOLS; c++) ctx.fillRect(cellX(c) - 3, TOP, 6, BROWS * CH); for (let r = 0; r <= BROWS; r++) ctx.fillRect(0, cellY(r) - 3, BCOLS * CW, 6);
+  (M.BASE_HOOKS || []).forEach(h => h(ctx, meta, bv, lights, 'cells', opts));
   // weapon reach overlay
   if (opts.showReach) { for (let r = 0; r < BROWS; r++) for (let c = 0; c < BCOLS; c++) { const rc = M.weaponReach(meta, c, r); if (!rc) continue; const hl = opts.showReach === true || (opts.showReach.c === c && opts.showReach.r === r); if (!hl) continue; ctx.fillStyle = 'rgba(232,67,79,0.12)'; ctx.fillRect(rc.c0 * CW, -300, (rc.c1 - rc.c0 + 1) * CW, 300); ctx.strokeStyle = PP.red || '#e8434f'; ctx.lineWidth = 3; ctx.strokeRect(rc.c0 * CW, -300, (rc.c1 - rc.c0 + 1) * CW, 300); } }
   // selection / hover（设计稿 1b）：选中 = 外金 6px + 内墨 6px 硬框；悬停 = 3px 奶黄框；厚度按屏幕像素算，不随缩放变粗
@@ -454,6 +458,7 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
     ctx.beginPath(); ctx.rect(DOOR_X - 70, -240, 140, 230); ctx.clip(); ctx.translate(DOOR_X, -125); ctx.scale(0.4 + 0.6 * po, 0.4 + 0.6 * po); for (let k = 0; k < 3; k++) { ctx.rotate(t * (0.6 + k * 0.3)); ctx.strokeStyle = 'rgba(191,247,240,0.35)'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(0, 0, 40 + k * 30, 0, Math.PI * 1.3); ctx.stroke(); } ctx.restore();
   }
   lights.push({ x: DOOR_X, y: -130, r: 140 + 240 * po, c: '#5fd0c0', f: (0.5 + 0.35 * po) + 0.15 * Math.sin(t * 2) });
+  (M.BASE_HOOKS || []).forEach(h => h(ctx, meta, bv, lights, 'surface', opts));   // the town on the surface (mc-town.js)
   if (M.drawSteles) M.drawSteles(ctx, meta, bv, lights, 'body');
   if (bv.hover && bv.hover.door && !bv.hover.wing) frameIn(ctx, DOOR_X - 128, -288, 256, 284, 3 / bv.z, PP.butter);
   // raid entities
@@ -493,6 +498,7 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
   const dp = bv.toScreen(DOOR_X, -300);
   const bw = 200 * bv.z; if (U) U.bar(ctx, dp.x - bw / 2, dp.y + 15, bw, 10, pH, { col: pH < 0.35 ? PP.red : PP.teal, seg: 36 }); else { ctx.fillStyle = '#000'; ctx.fillRect(dp.x - bw / 2 - 3, dp.y + 12, bw + 6, 16); ctx.fillStyle = pH < 0.35 ? '#d0453c' : '#5fd0c0'; ctx.fillRect(dp.x - bw / 2, dp.y + 15, bw * clamp(pH, 0, 1), 10); }
   if (M.drawSteles) M.drawSteles(ctx, meta, bv, null, 'top');
+  (M.BASE_HOOKS || []).forEach(h => h(ctx, meta, bv, null, 'top', opts));   // screen space, after the light
   if (opts.raid) opts.raid.drawHud(ctx, bv);
 };
 

@@ -2,9 +2,8 @@
 (function () {
 // A leader has ONE skill (user ruling 2026-09-24), shown as one thing everywhere. It has two halves:
 //  · commanding from the sidelines: the player presses it (空格); cooldown counted in map nodes.
-//  · on the field (and in base defence): it keeps working by itself, charged like a unit skill — rage from blows,
-//    energy from hits, mana over time, or a cooldown in seconds — and fires only when it can actually hit (r, min).
-//    No banner for it: it is not a big move.
+//  · (until 2026-09-26 it also fired by itself on the field and in base defence; that half is gone. PS below keeps
+//    each class's old field skill only as data for the words and the art.)
 const M = window.MC, G = M.Game.prototype, HEROES = M.HEROES, S = M.Sfx;
 const RES = { rage: { n: '怒气', c: '#ff5a3a' }, energy: { n: '能量', c: '#ffcc33' }, mana: { n: '法力', c: '#6fa8ff' }, cd: { n: '冷却', c: '#9fd8c8' } };
 const near = (list, x, y, r) => list.filter(o => Math.hypot(o.x - x, (o.y - y) * 1.3) < r);
@@ -66,34 +65,8 @@ BP.psCast = function () {
   this.float(h.x, h.y - 150 * (h.sz || 1), HEROES[this.run.hero.cls].skill.n, P.col, 30);
   if (S.cast) S.cast();
 };
-const oStep = BP.step;
-BP.step = function (dt) {
-  oStep.call(this, dt); const s = this.psInit(), h = this.hero; if (!s || h.bench || !h.alive || this.over || dt <= 0) return;
-  if (!s.full) { s.full = 1; s.v = s.P.max; }                          // taking the field charges it once
-  if (s.P.gain.t) s.v = Math.min(s.P.max, s.v + s.P.gain.t * dt * this.psRate());
-  // a full bar waits until the skill can hit (M.psReady), checked a few times a second
-  if (s.v >= s.P.max && this.active(h) && this.t - (s.trT || -1) >= 0.1) { s.trT = this.t; if (M.psReady(this, h, this.run.hero.cls)) this.psCast(); }
-};
-const oDeal = BP.deal;
-BP.deal = function (src, tg, amt, o = {}) {
-  const hp0 = tg && tg.hp, d = oDeal.call(this, src, tg, amt, o); const h = this.hero;
-  if (d > 0 && h && !h.bench) { if (src === h && !o.pskill) this.psGain('hit'); if (tg === h) this.psGain('hurt', Math.min(hp0, d) / h.maxHp * 100); }
-  return d;
-};
-const oKill = BP.kill;
-BP.kill = function (e, src) { const was = e && e.alive; const r = oKill.call(this, e, src); if (was && src && src === this.hero && e.side === 'E') this.psGain('kill'); return r; };
-// ───────── base defence: leaders cast on their own ─────────
-const RP = M.Raid.prototype, oRStep = RP.step;
-RP.step = function (dt) {
-  oRStep.call(this, dt); if (this.over || dt <= 0) return;
-  this.ents.forEach(e => {
-    if (!e.hero || !e.alive) return; const P = PS[e.hero.cls]; if (!P) return;
-    if (e.ps == null) e.ps = P.max * 0.6;
-    e.ps += P.raidRate * dt; if (P.res === 'rage' && e.hp < e.psHp) e.ps += (e.psHp - e.hp) / e.max * 100 * (P.gain.hurt || 0); e.psHp = e.hp;
-    const inR = this.ents.filter(o => o.alive && o.side === 'E' && Math.abs(o.x - e.x) < (P.r || 900)).length;
-    if (e.ps >= P.max && inR >= 1 && (e.hero.cls !== 'nun' || inR >= 2 || this.ents.some(o => o.alive && o.side === 'A' && o.hp < o.max * 0.75))) { if (P.raid.call(P, this, e) !== false) { e.ps = 0; this.float(e.x, e.y - 130, HEROES[e.hero.cls].skill.n, P.col, 30); if (S.cast) S.cast(); } }
-  });
-};
+// the leader's personal skill is gone (user ruling 2026-09-26): on the field the leader only fights; only the legion
+// skill (空格, mc-game-h.js) is left. In a 混沌来袭 the leader stands on the main base and does not fight at all.
 
 // ───────── words ─────────
 const oHT = G.heroTip;

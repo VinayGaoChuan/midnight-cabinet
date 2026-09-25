@@ -1,6 +1,24 @@
 // headless-ish play bot: drives the Game through menus, map, battles, shops, events, chests, settlement
 // shopping like a plain player: keep a third of the army on the front line, otherwise the most power per coin;
 // a banner that fits when money is left over (opts.buy === false: never buys, the old behaviour)
+// the base like a plain player (2026-09-26): repair what fell, fill empty rooms (walls first, then towers, then the
+// best blueprint), dig one more room when nothing is empty and supplies allow
+function botBase(g, M) {
+  const m = g.meta, B = M.BUILDINGS; let did = 0;
+  const cells = []; for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) cells.push([c, r, m.base.cells[r][c]]);
+  cells.forEach(([c, r, x]) => { if (x.b && x.ruin && !x.job && m.supplies >= M.repairCost(x.b) + 40) { if (M.startRepair(m, c, r)) did++; } });
+  const count = (f) => cells.filter(([, , x]) => x.b && f(B[x.b], x.b)).length;
+  cells.forEach(([c, r, x]) => {
+    if (!x.dug || x.b || x.job) return; const opts = M.buildOptions(m, c, r).filter(o => !o.why); if (!opts.length) return;
+    const walls = count(Bd => Bd.wall), towers = count(Bd => Bd.weapon), pick = (f) => opts.find(o => f(o.B));
+    const o = (walls < 2 && pick(Bd => Bd.wall)) || (towers < 1 + M.prosLv(m) && pick(Bd => Bd.weapon)) || opts.slice().sort((a, b2) => b2.B.q - a.B.q || (b2.B.fx && b2.B.fx.supplyDaily ? 1 : 0) - (a.B.fx && a.B.fx.supplyDaily ? 1 : 0))[0];
+    if (o && M.startBuild(m, c, r, o.key)) did++;
+  });
+  const empty = cells.some(([, , x]) => x.dug && !x.b && !x.job), anyBp = Object.keys(m.inv).some(k => k.startsWith('bbp:'));
+  if (!empty && anyBp) { const dig = cells.filter(([c, r]) => M.canDig(m, c, r)).sort((a, b2) => M.digCost(m, a[0], a[1]) - M.digCost(m, b2[0], b2[1]))[0]; if (dig && m.supplies >= M.digCost(m, dig[0], dig[1]) + 60) { if (M.startDig(m, dig[0], dig[1])) did++; } }
+  if (did) g.save();
+  return did;
+}
 function botShop(g, M) {
   const run = g.run; if (!run || !run.shop || !run.shop.units) return; let n = 0;
   while (n++ < 12) {
@@ -20,7 +38,7 @@ function botShop(g, M) {
   (run.shop.items || []).forEach((c, i) => { if (!c.sold && c.cost <= run.wallet * 0.5 && run.items.indexOf(null) >= 0) g.buy('items', i); });
 }
 window.__bot = async function (secs, opts = {}) {
-  const g = window.__mcg, M = window.MC, log = [], T0 = performance.now(); const minis = {}; let guides = 0, games = 0, raids = 0, viewErrs = 0, talents = 0, steps = 0, battles = 0, shops = 0, events = 0, chests = 0, settles = 0, nodes = 0;
+  const g = window.__mcg, M = window.MC, log = [], T0 = performance.now(); const minis = {}; let builds = 0, guides = 0, games = 0, raids = 0, viewErrs = 0, talents = 0, steps = 0, battles = 0, shops = 0, events = 0, chests = 0, settles = 0, nodes = 0;
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   while (performance.now() - T0 < secs * 1000) {
     steps++;
@@ -33,13 +51,14 @@ window.__bot = async function (secs, opts = {}) {
       if (s === 'intro') g.toMenu();
       else if (s === 'menu') g.startGame();
       else if (s === 'room') { if (g.prof.pending) { games++; log.push('settle+' + g.prof.pending.total); g.collectSettle(); } else if (!g.roomTr) g.roomEnter(); for (let i = 0; i < 20; i++) g.tick(1 / 30); }
-      else if (g.coreFx || g.tear) { for (let i = 0; i < 20; i++) g.tick(1 / 30); }
+      else if (g.coreFx || g.tear || g.rite || g.expand) { for (let i = 0; i < 20; i++) g.tick(1 / 30); }
       else if (s === 'end') { g.endBack(); log.push('end'); }
       else if (s === 'over') { log.push('over'); break; }
       else if (s === 'base') {
         if (opts.stopAtBase && nodes > 2) break;
         if (g.modal && g.modal.choices && !g.modal.over) { const ch = g.modal.choices.find(c => !c.dis) || g.modal.choices[g.modal.choices.length - 1]; events++; ch.fn(); if (g.modal && g.modal.title === '流浪商人') g.modal.choices[g.modal.choices.length - 1].fn(); for (let i = 0; i < 10; i++) g.tick(1 / 30); continue; }   // calendar events: take the first thing on offer
-        if (g.homeQ || g.lvFx || g.dayFx || g.tlFx) { for (let i = 0; i < 40; i++) g.tick(1 / 30); await sleep(40); continue; }   // the return home plays in order: let it
+        if (g.homeQ || g.lvFx || g.dayFx || g.tlFx || g.rite || g.expand) { for (let i = 0; i < 40; i++) g.tick(1 / 30); await sleep(40); continue; }   // the return home plays in order: let it
+        if (opts.base !== false && !g.panel && M.startBuild && botBase(g, M)) builds++;
         // leaders grow like a plain player grows them: level up when the orbs are there, spend every talent point
         if (opts.grow !== false && !g.panel) { let lv = false; g.meta.heroes.forEach(h => { if (!lv && h.lv < 10 && M.lvOrbs(h, g.meta) <= g.meta.orbs) { g.heroLvUp(h.id); lv = true; } for (let k = 0; k < 20 && h.points > 0; k++) { const c = (h.tree || []).map((_, i) => i).filter(i => M.talCan(h, i)); if (!c.length) break; g.takeTalent(h.id, c[Math.floor(Math.random() * c.length)]); talents++; } }); if (lv) continue; }
         if (!g.panel) { if (!g.portalOn || !g.portalOn()) g.openWorlds(); else if (!g.bv.drop) { const st = (g.bv.steles || [])[0]; if (st) g.steleDrop(st.k, st.wx, st.wy); else if (g.bv.sv > 0.9 || !g.bv.steles) g.pickWorld(M.worldsOpen(g.meta)[0]); } } else if (g.panel.kind === 'loadout') g.launch(); else if (g.panel.kind === 'raidPrep') { raids++; g.raidLaunch(); } else g.closePanel();
@@ -65,5 +84,5 @@ window.__bot = async function (secs, opts = {}) {
     } catch (e) { log.push('ERR ' + s + ': ' + (e.stack || e).toString().slice(0, 300)); break; }
     await sleep(opts.sleep || 5);
   }
-  return { guides, games, raids, viewErrs, talents, tokens: g.prof && g.prof.tokens, minis, steps, battles, settles, shops, events, chests, screen: g.screen, day: g.meta.day, heroes: g.meta.heroes.length, errs: (window.__mcErrs || []).slice(0, 5), log: log.slice(0, 10) };
+  return { builds, core: g.meta.core, pros: g.meta.prosLv, guides, games, raids, viewErrs, talents, tokens: g.prof && g.prof.tokens, minis, steps, battles, settles, shops, events, chests, screen: g.screen, day: g.meta.day, heroes: g.meta.heroes.length, errs: (window.__mcErrs || []).slice(0, 5), log: log.slice(0, 10) };
 };

@@ -246,6 +246,7 @@ class B3 extends M.Battle2 {
       if (this.opening) continue;
       if (e.stun > 0) { e.stun -= dt; continue; }
       if (e.leap) continue;
+      if (e.kbLock > T) continue;   // knocked back, in the air, or getting up (mc-knock.js)
       if (e.charm > 0) e.charm -= dt;
       if (e.noAtk) continue;
       if (!e.target || !this.active(e.target) || e.target.stealth || Math.random() < 0.02) e.target = this.pickTarget(e);
@@ -366,10 +367,11 @@ class B3 extends M.Battle2 {
     const sx = this.shake ? (Math.random() - 0.5) * 2 * this.shake : 0, sy = this.shake ? (Math.random() - 0.5) * 2 * this.shake : 0;
     ctx.setTransform(1, 0, 0, 1, sx, sy); ctx.imageSmoothingEnabled = true;
     M._drawFloor(ctx, this.run.region); M._drawPodium(ctx);
-    const list = this.ents.filter(e => (e.alive || (e.st.rev && !e.alive && T - e.deadT < 5 && false)) && (T >= (e.entryT || 0) || e.isHero)).sort((a, b) => a.y - b.y);
+    const list = this.ents.filter(e => (e.alive || (e.fling && T - e.deadT < 2.2)) && (T >= (e.entryT || 0) || e.isHero)).sort((a, b) => a.y - b.y);
     // aura discs under units
     for (const e of list) for (const t of e.traits) { const h = H[t.cls]; if (!h || !h.aura || !this.active(e)) continue; const A = h.aura, pu = 0.5 + 0.5 * Math.sin(T * 3 + e.id); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(e.x, e.y); ctx.scale(1, 0.34); ctx.fillStyle = M.UI.rg(ctx, 0, 0, A.r * 0.3, A.r, [[0, A.col + '00'], [0.85, A.col + '30'], [1, A.col + '00']], 5); ctx.beginPath(); ctx.arc(0, 0, A.r, 0, 7); ctx.fill(); ctx.strokeStyle = A.col; ctx.globalAlpha = 0.25 + 0.2 * pu; ctx.lineWidth = 4; ctx.setLineDash([18, 14]); ctx.lineDashOffset = -T * 40; ctx.beginPath(); ctx.arc(0, 0, A.r * (0.96 + 0.04 * pu), 0, 7); ctx.stroke(); ctx.restore(); }
     for (const f of this.fx) if (f.k === 'circle' || f.k === 'tomb' || f.k === 'cast' || f.k === 'crack') { if (!(M.drawFxPx && M.drawFxPx(ctx, f, T, this))) drawFx3(ctx, f, T, this); }
+    if (M.drawKbFloor) M.drawKbFloor(ctx, this, T);
     for (const e of list) drawEnt3(ctx, e, T, this);
     for (const f of this.fx) if (f.k === 'death') drawFx3(ctx, f, T, this);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -418,17 +420,20 @@ function drawEnt3(ctx, e, T, b) {
   const px16 = M.P16 && M.P16.entImg ? M.P16.entImg(e, T) : null;
   const img = px16 || M.hdCanvas(e.hd || { key: 'x', race: '人类', voc: '', q: 0 }, H0, e.flash > 0 ? '#ffffff' : e.raging && Math.floor(T * 8) % 2 ? '#ff4a3a' : null, pose);
   let x = e.x + o.x, y = e.y + o.y;
+  const air = e.air ? e.air.z : 0, spin = e.air ? e.air.rot : e.down ? e.down.rot : 0, dead = !e.alive;
   if (e.lunge != null && T - e.lunge < 0.16) x += (e.side === 'A' ? 1 : -1) * 16 * Math.sin((T - e.lunge) / 0.16 * Math.PI);
   if (e.kb != null && T - e.kb < 0.12) x += (e.kbDir || 1) * 7 * (1 - (T - e.kb) / 0.12);
   const moving = e.walk && !(e.lunge != null && T - e.lunge < 0.3), bob = px16 ? 0 : moving ? Math.abs(Math.sin(e.walk / 22)) * 6 : Math.sin(T * 2.4 + e.id) * 1.5;
   const sq = !px16 && e.kb != null && T - e.kb < 0.1 ? 0.9 : 1, sc = (o.s || 1);
   if (px16) { x = M.P16.snap(x); y = M.P16.snap(y); }
-  ctx.save(); ctx.globalAlpha = (o.a == null ? 1 : o.a) * (e.stealth ? 0.35 + 0.1 * Math.sin(T * 10) : 1) * (e.ghost ? 0.75 : 1);
+  ctx.save(); ctx.globalAlpha = (o.a == null ? 1 : o.a) * (e.stealth ? 0.35 + 0.1 * Math.sin(T * 10) : 1) * (e.ghost ? 0.75 : 1) * (dead ? M.kbCorpseA(e, T) : 1);
+  const shS = air ? Math.max(0.35, 1 - air / 360) : 1;
   const qc = M.QUALITY[e.d.q] ? M.QUALITY[e.d.q].c : '#fff';
-  if (px16) { const ga = ctx.globalAlpha; ctx.globalAlpha = ga * 0.5; M.P16.ellipse(ctx, e.x + o.x * (o.y ? 0 : 1), e.y, 30 * e.sz, 8 * e.sz, PL.ink); ctx.globalAlpha = ga; if (e.d.q >= 2 || e.boss) M.P16.ellipse(ctx, e.x + o.x * (o.y ? 0 : 1), e.y, 36 * e.sz, 11 * e.sz, e.boss ? PL.red : qc, true); }
+  if (px16) { const ga = ctx.globalAlpha; ctx.globalAlpha = ga * 0.5 * shS; M.P16.ellipse(ctx, e.x + o.x * (o.y ? 0 : 1), e.y, 30 * e.sz * shS, 8 * e.sz * shS, PL.ink); ctx.globalAlpha = ga; if (e.d.q >= 2 || e.boss) M.P16.ellipse(ctx, e.x + o.x * (o.y ? 0 : 1), e.y, 36 * e.sz, 11 * e.sz, e.boss ? PL.red : qc, true); }
   else { ctx.fillStyle = 'rgba(7,6,15,0.45)'; ctx.beginPath(); ctx.ellipse(e.x + o.x * (o.y ? 0 : 1), e.y, 34 * e.sz, 10 * e.sz, 0, 0, 7); ctx.fill(); }
   if (!px16 && (e.d.q >= 2 || e.boss)) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(e.x, e.y); ctx.scale(1, 0.35); const gc = e.boss ? PL.red : qc; ctx.fillStyle = M.UI.rg(ctx, 0, 0, 0, 60 * e.sz, [[0, gc + '66'], [1, gc + '00']], 4); ctx.beginPath(); ctx.arc(0, 0, 60 * e.sz, 0, 7); ctx.fill(); ctx.restore(); }
-  ctx.translate(x, y - bob); ctx.scale(sc * (2 - sq), sc * sq); if (e.side === 'E') ctx.scale(-1, 1);
+  if (e.trail && e.trail.length && M.drawKbTrail) M.drawKbTrail(ctx, e, img, T);
+  ctx.translate(x, y - bob - air); if (spin) { ctx.translate(0, -H0 * 0.45); ctx.rotate(spin); ctx.translate(0, H0 * 0.45); } ctx.scale(sc * (2 - sq), sc * sq); if (e.side === 'E') ctx.scale(-1, 1);
   if (!px16 && (e.d.q >= 3 || e.boss)) { const hl = M.hdCanvas(e.hd || { key: 'x', race: '人类', voc: '', q: 0 }, H0, e.boss ? PL.red : qc, pose); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= Math.floor(T * 3) % 2 ? 0.45 : 0.3; for (const [dx, dy] of [[-4, 0], [4, 0], [0, -4], [0, 4]]) ctx.drawImage(hl, -hl.cx + dx, -hl.footY + dy); ctx.restore(); }   // 传说 / 首领：硬边色圈，不模糊
   ctx.drawImage(img, -img.cx, -img.footY);
   ctx.restore();
@@ -437,6 +442,7 @@ function drawEnt3(ctx, e, T, b) {
   if (e.burn || (e.poisoned && T - e.poisoned < 0.3)) { const c = e.burn ? PL.amber : PL.lime; for (let i = 0; i < 3; i++) { const q = (T * 2 + i / 3 + e.id * 0.1) % 1; ctx.globalAlpha = 1 - q; ctx.fillStyle = c; ctx.fillRect(e.x - 14 + i * 12, e.y - H0 * 0.5 - q * 50, 6, 6); } ctx.globalAlpha = 1; }
 }
 function drawBars(ctx, e, T, b) {
+  if (!e.alive) return;   // a flung corpse (mc-knock.js)
   if (e.isHero && e.bench) return;
   const o = entOff(e, T); if (o.a < 0.6) return;
   // 血条（设计稿 BARS 缩小版）：墨槽 + 2px 墨框（像素层 1 格），填充上亮下暗各一阶；护盾是顶上一道冰蓝；法力条贴在下面
