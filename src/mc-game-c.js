@@ -24,12 +24,12 @@ Object.assign(G, {
   gainBp(p) { return Math.random() < p; },
   runP(node) { return M.makeBattleCfg(this.run, { col: node.col, type: 'normal' }).P; },
   heroHeal(pct) { const h = this.run.hero, mx = M.heroMaxHp(h, this.meta), v = Math.round(mx * pct); h.hp = Math.min(mx, h.hp + v); M.Sfx.heal(); const p = this.fxPos('hp'); if (p) { this.fx.pop(p.x, p.y - 30, '+' + v, '#9cff7a', 40, { num: 1 }); this.fx.burst(p.x, p.y, '#9cff7a', 20); } this.pulse.hp = now(); return v; },
-  heroHurt(pct) { const h = this.run.hero, mx = M.heroMaxHp(h, this.meta), v = Math.round(mx * pct); h.hp = Math.max(1, h.hp - v); M.Sfx.hit(); this.fx.flash('#ff2a2a', 0.3); this.fx.kick(12); const p = this.fxPos('hp'); if (p) this.fx.pop(p.x, p.y - 30, '-' + v, '#ff5a4a', 40, { num: 1 }); this.pulse.hp = now(); return v; },
+  heroHurt(pct) { const h = this.run.hero, mx = M.heroMaxHp(h, this.meta), v = Math.round(mx * pct); h.hp = Math.max(1, h.hp - v); M.Sfx.hit(); this.fx.flash('#ff2a2a', 0.22); this.fx.kick(6); const p = this.fxPos('hp'); if (p) this.fx.pop(p.x, p.y - 30, '-' + v, '#ff5a4a', 40, { num: 1 }); this.pulse.hp = now(); return v; },
   arrive(n) {
     const run = this.run; n.seen = true; n.out.forEach(e => run.map.nodes[run.map.edges[e].b].seen = true);
     run.steps++; if (run.skillCd > 0) { run.skillCd--; if (!run.skillCd) this.toast('领袖技能冷却完毕', '#ffcf4a'); }
-    this.node = n; M.Sfx.land(2); this.fx.kick(4);
-    if (M.NODE[n.type].battle) { this.trans = { kind: 'out', t: 0, node: n }; M.Sfx.whoosh(0.6); return; }
+    this.node = n; M.Sfx.arrive(n.type === 'boss' || n.type === 'elite' || n.type === 'shop' || n.type === 'event' || n.type === 'chest' || n.type === 'camp' ? n.type : n.type === 'extract' ? 'evac' : n.type === 'recruit' ? 'event' : M.NODE[n.type] && M.NODE[n.type].battle ? 'battle' : 'empty'); this.fx.kick(4);
+    if (M.NODE[n.type].battle) { this.trans = { kind: 'out', t: 0, node: n }; return; }   // 不出声：紧接着就是进战通告
     if (n.type === 'shop') return this.openShop(n);
     if (n.type === 'chest') return this.nodeChest(n);
     this.openEvent(n);
@@ -81,8 +81,8 @@ Object.assign(G, {
   buy(i) {
     const run = this.run, c = run.shop[i]; if (!c || c.sold || this.reel) return;
     if (run.wallet < c.cost) { this.toast('积分不够', '#d0453c'); this.pulse['card' + i] = now(); return; }
-    if (c.kind === 'unit' && !M.canAdd(run, c.type)) { this.toast('部队已满，先卖掉一个', '#d0453c'); return; }
-    if (c.kind === 'item' && run.items.indexOf(null) < 0) { this.toast('支援道具最多 3 个', '#d0453c'); return; }
+    if (c.kind === 'unit' && !M.canAdd(run, c.type)) { this.deny('部队已满，先卖掉一个', '#d0453c'); return; }
+    if (c.kind === 'item' && run.items.indexOf(null) < 0) { this.deny('支援道具最多 3 个', '#d0453c'); return; }
     const from = this.fxPos('card' + i) || { x: 960, y: 400 };
     this.hold('wallet', run.wallet); run.wallet -= c.cost; this.release('wallet'); c.sold = true; c.soldAt = now(); c.locked = false; M.Sfx.coin(); M.Sfx.stamp(); this.fx.explode(from.x, from.y, '#ffcc33', 1.1); this.fx.coins(from.x, from.y, 10, { v: 700 });
     if (c.kind === 'unit') this.award([{ k: 'unit', type: c.type }], from);
@@ -99,7 +99,7 @@ Object.assign(G, {
     this.bump();
   },
   lock(i) { const c = this.run.shop[i]; if (!c || c.sold) return; c.locked = !c.locked; M.Sfx.click(); this.bump(); },
-  refresh() { const run = this.run, cost = M.nice(M.refreshCost(run) * M.priceMul(run)); if (this.reel) return; if (run.wallet < cost) { this.toast('积分不够', '#d0453c'); return; } this.hold('wallet', run.wallet); run.wallet -= cost; this.release('wallet'); M.rollShop(run, true); run.shop.forEach(c => { if (!c.adj) { c.cost = M.nice(c.cost * M.priceMul(run)); c.adj = 1; } }); this.shopAt = now(); M.Sfx.whoosh(0.3); this.bump(); },
+  refresh() { const run = this.run, cost = M.nice(M.refreshCost(run) * M.priceMul(run)); if (this.reel) return; if (run.wallet < cost) { this.deny('积分不够', '#d0453c'); return; } this.hold('wallet', run.wallet); run.wallet -= cost; this.release('wallet'); M.rollShop(run, true); run.shop.forEach(c => { if (!c.adj) { c.cost = M.nice(c.cost * M.priceMul(run)); c.adj = 1; } }); this.shopAt = now(); M.Sfx.whoosh(0.3); this.bump(); },
   sellSel() { const run = this.run, u = run.roster.find(x => x.uid === this.sel); if (!u) return; const v = M.sellValue(run, u), from = this.fxPos('roster') || { x: 300, y: 900 }; run.roster = run.roster.filter(x => x !== u); this.sel = null; this.award([{ k: 'wallet', v }], from); this.bump(); },
   // ── battle ──
   beginBattle(n) {
@@ -107,18 +107,18 @@ Object.assign(G, {
     this.battle = new M.Battle2(run, cfg); this.settle = null; this.paused = false; this.lastCut = null; this.go('battle');
     const nm = { normal: '普通战', score: '积分战', hold: '坚守战', holdScore: '坚守积分战' }[cfg.mode] + (n.type === 'elite' ? ' · 精英' : n.type === 'boss' ? (n.final ? ' · 最终首领' : ' · 守关首领') : n.type === 'extract' ? ' · 撤离' : '');
     this.banner({ kind: 'win', text: nm, col: n.type === 'boss' || n.type === 'elite' ? '#ff6a5a' : n.type === 'extract' ? '#5fd0c0' : '#ffd970', life: 1.5, y: 520, sub: cfg.mode === 'normal' ? '全灭敌人' : cfg.mode === 'score' ? '积分目标 ' + M.fmt(cfg.target) : cfg.mode === 'hold' ? '坚守 ' + cfg.dur + ' 秒' : '坚守 ' + cfg.dur + ' 秒 · 目标 ' + M.fmt(cfg.target) });
-    M.Sfx.whoosh(0.5); if (n.type === 'boss') M.Sfx.impact();
+    // 开战的声音只有进战通告一个（mc-bigfx.js 里的 S.battleIntro）
     if (run.tut) { if (n.col === 1) setTimeout(() => this.coachOnce('b1', '部队会自动上场作战。领袖站在左边的指挥位，部队全灭后会亲自上场。', 960, 300), 1600); if (cfg.mode === 'score') setTimeout(() => this.coachOnce('sc', '积分战：积分 = 基础积分 × 积分倍率。没达到目标，领袖会扣血。', 960, 300), 1600); if (n.type === 'boss') setTimeout(() => this.coachOnce('boss', '最终首领！打败它，序章就结束了。', 960, 300), 1600); }
   },
   battleTick(dt) {
     const b = this.battle; if (!b) return;
     if (!this.paused && !this.settle) b.step(dt * this.speed * (this.reel ? 0.03 : 1));
-    if (b.cutin && b.cutin !== this.lastCut) { this.lastCut = b.cutin; this.banner({ kind: 'skill', text: b.cutin.text, sub: b.cutin.sub, col: b.cutin.col, img: M.spriteCanvas(b.cutin.sprite, 22), life: 1.25, y: 470 }); }
+    if (b.cutin && b.cutin !== this.lastCut) { this.lastCut = b.cutin; M.Sfx.cutin(); this.banner({ kind: 'skill', text: b.cutin.text, sub: b.cutin.sub, col: b.cutin.col, img: M.spriteCanvas(b.cutin.sprite, 22), life: 1.25, y: 470 }); }
     if (this.run.tut && b.canCast() && !this.settle) this.coachOnce('skill', '领袖技能就绪！点击下方「技能」按钮释放。技能冷却按节点计算，每场最多用一次。', 640, 800, 615, 990);
     if (this.settle) this.settleTick(dt); else if (b.over && b.overT > 1.0) this.startSettle();
     const c = this.ui.cv('field'); if (c) b.render(c.getContext('2d'), { slow: this.reel ? 1 : 0 });
   },
-  castSkill() { const b = this.battle, run = this.run; if (this.reel || this.settle || !b) return; if (!b.hero.alive) { this.toast('领袖倒下了', '#8d8496'); return; } if (b.skillNoTarget && b.skillNoTarget()) { this.toast('没有能献祭的部队', '#8d8496'); return; } if (run.skillCd > 0) { this.toast('技能冷却中：还要 ' + run.skillCd + ' 个节点', '#8d8496'); return; } if (b.skillUsed) { this.toast('本场已经用过技能了', '#8d8496'); return; } if (!b.castSkill()) this.toast('现在还不能释放', '#8d8496'); else this.coachData = null; },
+  castSkill() { const b = this.battle, run = this.run; if (this.reel || this.settle || !b) return; if (!b.hero.alive) { this.deny('领袖倒下了', '#8d8496'); return; } if (b.skillNoTarget && b.skillNoTarget()) { this.deny('没有能献祭的部队', '#8d8496'); return; } if (run.skillCd > 0) { this.deny('技能冷却中：还要 ' + run.skillCd + ' 个节点', '#8d8496'); return; } if (b.skillUsed) { this.deny('本场已经用过技能了', '#8d8496'); return; } if (!b.castSkill()) this.toast('现在还不能释放', '#8d8496'); else this.coachData = null; },
   useSlot(i) {
     const run = this.run, b = this.battle; if (this.reel || this.settle || !b || b.over || !run.items[i]) return;
     const key = run.items[i], q0 = run.itemQ[i] || 0; run.items[i] = null; M.Sfx.click();

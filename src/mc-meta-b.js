@@ -163,7 +163,7 @@ G.roomTip = function (k) {
 };
 G.roomClick = function (x, y) { if (this.roomTr) return; if (this.prof.pending) return; const k = hit(x, y); if (!k) { this.roomPanel = null; this.bump(); return; } S.click(); this.roomPanel = k; this.roomPanelAt = now(); this.tipData = null; this.bump(); };
 G.buyFurn = function (k) {
-  const f = M.FURN_BY[k], p = this.prof, L = p.furn[k] || 0; if (!f || L >= f.lv.length) return; const cost = f.cost[L]; if (p.tokens < cost) { this.toast('机台代币不够', '#d0453c'); return; }
+  const f = M.FURN_BY[k], p = this.prof, L = p.furn[k] || 0; if (!f || L >= f.lv.length) return; const cost = f.cost[L]; if (p.tokens < cost) { this.deny('机台代币不够', '#d0453c'); return; }
   this.hold('tokens', p.tokens); p.tokens -= cost; this.release('tokens'); p.furn[k] = L + 1; if (k === 'cabinet') { p.achOn = true; } this.saveProfile(); if (k === 'cabinet') setTimeout(() => this.achCheck(), 300);
   const s = SLOT[k]; S.build && S.build(); S.up(2); this.fx.rays(s.x + s.w / 2, s.y + s.h / 2, '#ffe08a', 1.4, { r: 320 }); this.fx.explode(s.x + s.w / 2, s.y + s.h / 2, '#ffcc33', 1.2); this.fx.pop(s.x + s.w / 2, s.y - 30, (L ? '升级：' : '解锁：') + f.names[Math.min(L, f.names.length - 1)], '#ffe08a', 44); this.fx.kick(8); this.bump();
 };
@@ -195,7 +195,7 @@ G.view = function () {
     else { const f = M.FURN_BY[k], L = p.furn[k] || 0, max = L >= f.lv.length, cost = max ? 0 : f.cost[L];
       Object.assign(pn, { title: f.names[Math.max(0, Math.min(L, f.names.length) - 1)] || f.names[0], col: '#ffe08a', img: ic(f.icon, 3), sub: L ? 'Lv ' + L + ' / ' + f.lv.length : '未解锁', what: f.what,
         pips: f.lv.map((_, i) => ({ c: i < L ? '#ffcc33' : '#3a3040' })), hasCur: !!L, cur: L ? f.lv[L - 1].d : '', hasNext: !max, nextName: max ? '' : (L ? '升级为「' + f.names[L] + '」' : '解锁「' + f.names[0] + '」'), next: max ? '' : f.lv[L].d,
-        buyTxt: max ? '已满级' : (L ? '升级' : '解锁') + ' · ' + cost + ' 代币', buyOk: !max && p.tokens >= cost, buyBg: !max && p.tokens >= cost ? 'linear-gradient(180deg,#ffe08a,#d4982e)' : '#15111a', buyC: !max && p.tokens >= cost ? '#1a0e08' : '#6b6570', onBuy: () => { if (max) return; if (p.tokens < cost) { this.toast('机台代币不够', '#d0453c'); return; } this.buyFurn(k); } });
+        buyTxt: max ? '已满级' : (L ? '升级' : '解锁') + ' · ' + cost + ' 代币', buyOk: !max && p.tokens >= cost, buyBg: !max && p.tokens >= cost ? 'linear-gradient(180deg,#ffe08a,#d4982e)' : '#15111a', buyC: !max && p.tokens >= cost ? '#1a0e08' : '#6b6570', onBuy: () => { if (max) return; if (p.tokens < cost) { this.deny('机台代币不够', '#d0453c'); return; } this.buyFurn(k); } });
       if (k === 'cabinet' && L) { pn.isCab = true; pn.achN = Object.keys(p.ach).length + ' / ' + M.ACH.length; pn.ach = M.ACH.map(a => { const on = !!p.ach[a.k]; return { img: ic(on ? 'u_star' : 'u_mask', 2), n: a.n, c: on ? '#ffcc33' : '#6b6570', op: on ? 1 : 0.55, tipOn: this.tipFn({ title: a.n + (on ? ' ✓' : ''), c: on ? '#ffcc33' : '#a89ca8', kind: on ? '已达成' : '未达成', d: a.d, lines: [{ t: '奖励：' + a.r, c: '#9cff7a' }] }) }; }); } } }
   // end-of-game settlement
   if (v.rm.stOn) { const P = p.pending; if (!P.shownAt) P.shownAt = t0; const e = (t0 - P.shownAt) / 1000, rows = P.rows || [];
@@ -244,7 +244,7 @@ G.tick = function (dt) {
   if (M.META_ROOM && this.screen === 'intro' && this.intro && this.intro.started && this.intro.t >= 3.5) { this.toRoom({}); }
   oTick.call(this, dt);
   if (this.screen === 'room') this.roomTick(Math.min(dt, 0.05));
-  if (this.screen === 'base') this.coreTick(Math.min(dt, 0.05));
+  if (this.screen === 'base') this.coreTick(Math.min(dt, 0.05) * (this.coreFx && this.coreFx.hp > 0 ? 1.5 : 1));   // 核心受击是负面：1.5 倍速（约 1.6 秒）；核心碎了是结局，原速
 };
 const oIC = G.introClick; G.introClick = function () { if (!M.META_ROOM) return oIC.apply(this, arguments); M.Sfx.init(); if (this.intro) this.intro.started = true; this.roomT = 0; this.toRoom({}); this.roomFadeIn = 1; };
 const oTM = G.toMenu; G.toMenu = function () { if (!M.META_ROOM) return oTM.apply(this, arguments); this.toRoom({}); };

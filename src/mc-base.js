@@ -27,6 +27,7 @@ function texCanvas(W, H, K, paint) { const c = document.createElement('canvas');
 // a room rendered into its own art-resolution canvas each frame, then composited crisp (or smooth when zoomed far out)
 const roomCv = {};
 function drawRoomPx(ctx, X, Y, key, t, o, slot, zoom) {
+  if (M.PXR && M.PXR.has(key)) return M.PXR.draw(ctx, X, Y, key, t, o, slot, zoom);   // true pixel rooms (mc-pxroom.js)
   if (!M.pixelMode) return drawRoom(ctx, X, Y, CW, CH, key, t, o);
   const aw = Math.round(CW / M.PX), ah = Math.round(CH / M.PX); let c = roomCv[slot];
   if (!c) { c = roomCv[slot] = document.createElement('canvas'); c.width = aw; c.height = ah; }
@@ -343,7 +344,7 @@ function drawRoom(ctx, X, Y, W, H, key, t, o = {}) {
 }
 M._roomKit = { box, rivets, shadowE, glowC, spark4, gear, rpath, shade };
 const thumbs = {};
-M.roomThumb = function (key) { if (!thumbs[key]) { const a = document.createElement('canvas'); a.width = 150; a.height = 105; const ax = a.getContext('2d'); ax.imageSmoothingEnabled = false; drawRoom(ax, 0, 0, 150, 105, key, 1.3, { noNpc: false, seed: 0.2 }); const c = document.createElement('canvas'); c.width = 450; c.height = 315; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(a, 0, 0, 450, 315); thumbs[key] = c.toDataURL(); } return thumbs[key]; };
+M.roomThumb = function (key) { if (!thumbs[key]) { const a = document.createElement('canvas'); a.width = 150; a.height = 105; const ax = a.getContext('2d'); ax.imageSmoothingEnabled = false; if (M.PXR && M.PXR.has(key)) ax.drawImage(M.PXR.snapshot(key), 0, 0); else drawRoom(ax, 0, 0, 150, 105, key, 1.3, { noNpc: false, seed: 0.2 }); const c = document.createElement('canvas'); c.width = 450; c.height = 315; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(a, 0, 0, 450, 315); thumbs[key] = c.toDataURL(); } return thumbs[key]; };
 
 // ───────── base view / camera ─────────
 M.BaseView = class {
@@ -382,7 +383,9 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   const sky = ctx.createLinearGradient(0, 0, 0, 1080); sky.addColorStop(0, '#0a0c1e'); sky.addColorStop(1, '#0a0608'); ctx.fillStyle = sky; ctx.fillRect(0, 0, 1920, 1080);
   ctx.setTransform(bv.z, 0, 0, bv.z, 960 - bv.x * bv.z, 540 - bv.y * bv.z);
-  // sky & surface
+  // sky & surface (pixel: mc-pxroom-base.js M.PXR.surface)
+  if (M.PXR && M.PXR.surface) M.PXR.surface(ctx, bv, t);
+  else {
   const sg = ctx.createLinearGradient(0, -900, 0, 0); sg.addColorStop(0, '#070918'); sg.addColorStop(0.7, '#1a1430'); sg.addColorStop(1, '#3a2030'); ctx.fillStyle = sg; ctx.fillRect(-800, -1000, 3700, 1000);
   bv.stars.forEach(s => { ctx.globalAlpha = 0.4 + 0.6 * Math.abs(Math.sin(t * 0.8 + s.p)); ctx.fillStyle = '#fff'; ctx.fillRect(s.x, s.y, s.s, s.s); }); ctx.globalAlpha = 1;
   ctx.fillStyle = '#fff4d0'; ctx.beginPath(); ctx.arc(1750, -560, 70, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#1a1430'; ctx.beginPath(); ctx.arc(1725, -575, 62, 0, Math.PI * 2); ctx.fill();
@@ -392,36 +395,46 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
   // soil band + bedrock surround
   ctx.fillStyle = '#15100d'; ctx.fillRect(-800, 18, 3700, 2000);
   for (let i = 0; i < 260; i++) { ctx.fillStyle = i % 2 ? '#1c1511' : '#100c0a'; ctx.fillRect(-800 + rnd(i) * 3700, 18 + rnd(i + 5) * 1400, 18 + rnd(i + 2) * 30, 10); }
+  }
   // shaft from door to core
   const cc = M.cellCenter(CORE.c, CORE.r);
-  ctx.fillStyle = '#0b090e'; ctx.fillRect(DOOR_X - 40, -10, 80, TOP + 10); ctx.fillStyle = '#caa84a'; ctx.fillRect(DOOR_X - 40, -10, 4, TOP + 10); ctx.fillRect(DOOR_X + 36, -10, 4, TOP + 10);
+  if (!(M.PXR && M.PXR.has('_mainbase'))) { ctx.fillStyle = '#0b090e'; ctx.fillRect(DOOR_X - 40, -10, 80, TOP + 10); ctx.fillStyle = '#caa84a'; ctx.fillRect(DOOR_X - 40, -10, 4, TOP + 10); ctx.fillRect(DOOR_X + 36, -10, 4, TOP + 10); }
   const lights = [];
   // cells
   for (let r = 0; r < BROWS; r++) for (let c = 0; c < BCOLS; c++) {
     const x = M.cell(meta, c, r), X = cellX(c), Y = cellY(r);
     // rings the base has not opened yet are pure black (mc-prosper.js draws the cracking when a ring opens)
     if (M.lockedCell && M.lockedCell(meta, c, r)) { ctx.fillStyle = '#000'; ctx.fillRect(X, Y, CW, CH); continue; }
-    if (x.b) { drawRoomPx(ctx, X, Y, x.b, t, { seed: c * 0.31 + r * 0.17, fireT: opts.fire && opts.fire[c + ',' + r] }, c + ',' + r, bv.z); if (x.tile && M.drawTerrainFloor) M.drawTerrainFloor(ctx, x.tile, X, Y, t); const B = BUILDINGS[x.b]; lights.push({ x: X + CW / 2, y: Y + CH / 2, r: (M.LIGHT_R(meta, x) + 0.6) * CW, c: PAL[B.style][2], f: 0.95 + 0.05 * Math.sin(t * 3 + c), cell: 1 }); if (x.tile && TILES[x.tile]) lights.push({ x: X + 60, y: Y + CH - 40, r: 150, c: TILES[x.tile].c, f: 0.7 + 0.3 * Math.sin(t * 2 + c + r) }); }
+    const hov = !!(bv.hover && bv.hover.c === c && bv.hover.r === r), par = clamp((X + CW / 2 - bv.x) / 900, -1, 1);   // par: the camera's side of the room (layer parallax)
+    const pxSeam = !!(x.tile && M.PXR && M.PXR.TILEF[x.tile]);   // pixel rooms paint their terrain seam themselves
+    if (x.b) { drawRoomPx(ctx, X, Y, x.b, t, { seed: c * 0.31 + r * 0.17, fireT: opts.fire && opts.fire[c + ',' + r], hov, par, tile: x.tile }, c + ',' + r, bv.z); if (x.tile && M.drawTerrainFloor && !(pxSeam && M.PXR.has(x.b))) M.drawTerrainFloor(ctx, x.tile, X, Y, t); const B = BUILDINGS[x.b]; lights.push({ x: X + CW / 2, y: Y + CH / 2, r: (M.LIGHT_R(meta, x) + 0.6) * CW, c: PAL[B.style][2], f: 0.95 + 0.05 * Math.sin(t * 3 + c), cell: 1 }); if (x.tile && TILES[x.tile]) lights.push({ x: X + 60, y: Y + CH - 40, r: 150, c: TILES[x.tile].c, f: 0.7 + 0.3 * Math.sin(t * 2 + c + r) }); }
     else if (x.dug) {
-      ctx.drawImage(emptyRoom(), X, Y); if (x.tile && M.drawTerrainFloor) M.drawTerrainFloor(ctx, x.tile, X, Y, t);
+      if (M.PXR) M.PXR.draw(ctx, X, Y, '_empty', t, { hov: hov && !x.job, par, tile: x.tile }, c + ',' + r, bv.z); else ctx.drawImage(emptyRoom(), X, Y); if (x.tile && M.drawTerrainFloor && !(pxSeam && M.PXR)) M.drawTerrainFloor(ctx, x.tile, X, Y, t);
       if (x.job && x.job.kind === 'build') {
         const B = BUILDINGS[x.job.key], P = PAL[B.style], q = 1 - x.job.days / x.job.total;
-        ctx.globalAlpha = 0.35; drawRoomPx(ctx, X, Y, x.job.key, t, { noNpc: true }, c + ',' + r, bv.z); ctx.globalAlpha = 1;
+        ctx.globalAlpha = 0.35; drawRoomPx(ctx, X, Y, x.job.key, t, { noNpc: true }, 'job:' + c + ',' + r, bv.z); ctx.globalAlpha = 1;
+        if (M.PXR && M.PXR.has('_scaffold')) M.PXR.draw(ctx, X, Y, '_scaffold', t, {}, 'scaf:' + c + ',' + r, bv.z);   // pixel scaffolding and builders (mc-pxroom-jobs.js)
+        else {
         ctx.strokeStyle = '#8a6a3a'; ctx.lineWidth = 6; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.moveTo(X + 20 + k * 80, Y + CH - 30); ctx.lineTo(X + 20 + k * 80, Y + 20); ctx.stroke(); } for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.moveTo(X + 20, Y + 50 + k * 50); ctx.lineTo(X + CW - 20, Y + 50 + k * 50); ctx.stroke(); }
         if (Math.floor(t * 5 + c) % 3 === 0) for (let k = 0; k < 5; k++) { ctx.fillStyle = '#ffd060'; ctx.fillRect(X + 150 + Math.cos(t * 20 + k) * 30, Y + 100 + Math.sin(t * 20 + k) * 20, 5, 5); }
         const img = spriteCanvas('old', 3), bx = X + 60 + ((t * 30) % 180); ctx.drawImage(img, bx, Y + CH - 30 - img.height - Math.abs(Math.sin(t * 8)) * 3);
+        }
         lights.push({ x: X + CW / 2, y: Y + CH / 2, r: 1.6 * CW, c: '#ffd060', f: 0.9, cell: 1 });
         if (M.UI) M.UI.bar(ctx, X + 33, Y + 19, CW - 66, 8, q, { col: P[2] }); else { ctx.fillStyle = '#0b090e'; ctx.fillRect(X + 30, Y + 16, CW - 60, 14); ctx.fillStyle = P[2]; ctx.fillRect(X + 32, Y + 18, (CW - 64) * q, 10); }
       } else lights.push({ x: X + CW / 2, y: Y + CH / 2, r: 1.6 * CW, c: '#e8d8b8', f: 0.95, cell: 1 });
     } else {
       // special terrain is its own ground (mc-terrain-art.js); an unidentified deep vein is rock with a strange light
       const hidV = !!(x.tile && M.tileHidden && M.tileHidden(meta, c, r));
-      if (x.tile && TILES[x.tile] && !hidV && M.drawTerrainCell) M.drawTerrainCell(ctx, x.tile, X, Y, t, lights);
-      else { ctx.drawImage(rock((c * 5 + r * 3) % 3), X, Y); if (hidV && M.drawHiddenVein) M.drawHiddenVein(ctx, X, Y, t, c * 7 + r * 13, lights); }
+      if (x.tile && TILES[x.tile] && !hidV && M.PXR && M.PXR.has('_tile_' + x.tile)) M.PXR.tileCell(ctx, x.tile, X, Y, t, lights, c + ',' + r, bv.z);
+      else if (x.tile && TILES[x.tile] && !hidV && M.drawTerrainCell) M.drawTerrainCell(ctx, x.tile, X, Y, t, lights);
+      else if (hidV && M.PXR && M.PXR.has('_vein')) M.PXR.veinCell(ctx, X, Y, t, lights, c + ',' + r, bv.z);
+      else { if (M.PXR) { const sm = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = bv.z < 0.9; ctx.drawImage(M.PXR.rock((c * 5 + r * 3) % 3), X, Y, CW, CH); ctx.imageSmoothingEnabled = sm; } else ctx.drawImage(rock((c * 5 + r * 3) % 3), X, Y); if (hidV && M.drawHiddenVein) M.drawHiddenVein(ctx, X, Y, t, c * 7 + r * 13, lights); }
       if (x.job && x.job.kind === 'dig') {
-        const q = 1 - x.job.days / x.job.total; ctx.fillStyle = '#0b090e'; ctx.fillRect(X + 20, Y + 20, CW * 0.4, CH - 40);
+        const q = 1 - x.job.days / x.job.total;
+        if (M.PXR && M.PXR.has('_dig')) M.PXR.draw(ctx, X, Y, '_dig', t, { q }, 'dig:' + c + ',' + r, bv.z);   // pixel tunnel face, drill and miner (mc-pxroom-jobs.js)
+        else { ctx.fillStyle = '#0b090e'; ctx.fillRect(X + 20, Y + 20, CW * 0.4, CH - 40);
         ctx.save(); ctx.translate(X + 20 + CW * 0.4, Y + CH / 2); ctx.fillStyle = '#b0b8c4'; ctx.beginPath(); ctx.moveTo(0, -24); ctx.lineTo(40 + Math.sin(t * 40) * 3, 0); ctx.lineTo(0, 24); ctx.fill(); ctx.restore();
-        for (let k = 0; k < 6; k++) { ctx.fillStyle = k % 2 ? '#ffd060' : '#6a5a40'; ctx.fillRect(X + 20 + CW * 0.4 + 30 + Math.cos(t * 30 + k) * 30, Y + CH / 2 + Math.sin(t * 25 + k * 2) * 30, 6, 6); }
+        for (let k = 0; k < 6; k++) { ctx.fillStyle = k % 2 ? '#ffd060' : '#6a5a40'; ctx.fillRect(X + 20 + CW * 0.4 + 30 + Math.cos(t * 30 + k) * 30, Y + CH / 2 + Math.sin(t * 25 + k * 2) * 30, 6, 6); } }
         lights.push({ x: X + CW * 0.5, y: Y + CH / 2, r: 180, c: '#ffd060', f: 0.8 + 0.2 * Math.sin(t * 30) });
       } else if (M.canDig(meta, c, r)) { // 能挖：金色方块虚线，每档走 6 格、明暗 4 档步进
         const st = PJ.reduced ? 0 : Math.floor(t * 8) % 4; ctx.save(); ctx.strokeStyle = 'rgba(255,207,74,' + (PJ.reduced ? 0.45 : [0.3, 0.45, 0.6, 0.45][Math.floor(t * 3) % 4]) + ')'; ctx.lineWidth = 4; ctx.lineCap = 'butt'; ctx.setLineDash([12, 12]); ctx.lineDashOffset = -st * 6; ctx.strokeRect(X + 10, Y + 10, CW - 20, CH - 20); ctx.restore(); }
@@ -438,9 +451,13 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
   hs(bv.hover, false); hs(bv.sel, true);
   // the main base (user ruling 2026-09-25): on the surface, a storehouse hall whose gate is the portal. The wings are
   // the warehouse (click: the stock), the gate is the portal (click: the worlds); monsters of a 混沌来袭 attack it
+  // the pixel main base (mc-pxroom-base.js) is the building, the portal gate and the shaft head in one lit piece
+  const pH = meta.portal.hp / M.portalMax(meta), U = M.UI, po = bv.po || 0;
+  if (M.PXR && M.PXR.has('_mainbase')) { M.PXR.mainBase(ctx, bv, t, meta); if (bv.hover && bv.hover.wing) frameIn(ctx, DOOR_X - MB.w / 2 - 10, MB.top - 80, MB.w + 20, -MB.top + 88, 3 / bv.z, PP.butter); }
+  else {
   drawMainBase(ctx, t, bv);
   // portal door：硬边斜面石柱 + 门楣（墨框、上左暮紫亮边、下右深渊暗边），金色门楣条，钢铆钉
-  const pH = meta.portal.hp / M.portalMax(meta), U = M.UI, stone = { fill: PP.night, hi: PP.dusk, lo: PP.abyss, shadow: 0, rivets: false };
+  const stone = { fill: PP.night, hi: PP.dusk, lo: PP.abyss, shadow: 0, rivets: false };
   if (U) {
     U.plate(ctx, DOOR_X - 100, -250, 30, 240, stone); U.plate(ctx, DOOR_X + 70, -250, 30, 240, stone); ctx.fillStyle = PP.abyss; for (let k = 1; k < 8; k++) { ctx.fillRect(DOOR_X - 97, -250 + k * 30, 24, 3); ctx.fillRect(DOOR_X + 73, -250 + k * 30, 24, 3); }
     U.plate(ctx, DOOR_X - 120, -280, 240, 40, stone); U.R(ctx, DOOR_X - 120, -280, 240, 8, PP.gold); U.R(ctx, DOOR_X - 120, -280, 240, 3, PP.butter); U.R(ctx, DOOR_X - 120, -275, 240, 3, PP.amber);
@@ -450,12 +467,13 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
     box(ctx, DOOR_X - 120, -280, 240, 40, '#34303c', 3); box(ctx, DOOR_X - 120, -280, 240, 8, '#caa84a', 2); rivets(ctx, [[DOOR_X - 108, -258], [DOOR_X - 60, -258], [DOOR_X, -258], [DOOR_X + 60, -258], [DOOR_X + 108, -258]], '#8a8090');
   }
   // closed: a dark arch; clicked open (mc-portal.js): the swirl spins up and the world steles rise
-  const po = bv.po || 0; ctx.fillStyle = U ? U.lg(ctx, 0, -240, 0, -10, [[0, PP.abyss], [1, PP.ink]], 3) : '#0a0910'; ctx.fillRect(DOOR_X - 70, -240, 140, 230);
+  ctx.fillStyle = U ? U.lg(ctx, 0, -240, 0, -10, [[0, PP.abyss], [1, PP.ink]], 3) : '#0a0910'; ctx.fillRect(DOOR_X - 70, -240, 140, 230);
   ctx.fillStyle = PP.tealDeep || '#1f8f8a'; ctx.fillRect(DOOR_X - 70, -240, 140, 3); ctx.fillRect(DOOR_X - 70, -240, 3, 230); ctx.fillRect(DOOR_X + 67, -240, 3, 230);
   if (po > 0.01) {
     // 漩涡：冰 → 青 → 深青 → 夜色，5 圈硬色带
     ctx.save(); ctx.globalAlpha = po; ctx.fillStyle = U ? U.rg(ctx, DOOR_X, -130, 10, 110, [[0, PP.ice], [0.4, PP.teal], [0.75, PP.tealDeep], [1, PP.night]], 5) : '#1f8f8a'; ctx.fillRect(DOOR_X - 70, -240, 140, 230);
     ctx.beginPath(); ctx.rect(DOOR_X - 70, -240, 140, 230); ctx.clip(); ctx.translate(DOOR_X, -125); ctx.scale(0.4 + 0.6 * po, 0.4 + 0.6 * po); for (let k = 0; k < 3; k++) { ctx.rotate(t * (0.6 + k * 0.3)); ctx.strokeStyle = 'rgba(191,247,240,0.35)'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(0, 0, 40 + k * 30, 0, Math.PI * 1.3); ctx.stroke(); } ctx.restore();
+  }
   }
   lights.push({ x: DOOR_X, y: -130, r: 140 + 240 * po, c: '#5fd0c0', f: (0.5 + 0.35 * po) + 0.15 * Math.sin(t * 2) });
   (M.BASE_HOOKS || []).forEach(h => h(ctx, meta, bv, lights, 'surface', opts));   // the town on the surface (mc-town.js)
@@ -471,7 +489,7 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
   lights.forEach(L => { const p = bv.toScreen(L.x, L.y), r = L.r * bv.z * L.f / 4; const g = lx.createRadialGradient(p.x / 4, p.y / 4, 0, p.x / 4, p.y / 4, r); if (L.cell) { g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.62, 'rgba(0,0,0,0.92)'); g.addColorStop(1, 'rgba(0,0,0,0)'); } else { g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.6, 'rgba(0,0,0,0.5)'); g.addColorStop(1, 'rgba(0,0,0,0)'); } lx.fillStyle = g; lx.fillRect(p.x / 4 - r, p.y / 4 - r, r * 2, r * 2); });
   ctx.imageSmoothingEnabled = true; ctx.drawImage(lm, 0, 0, 1920, 1080);
   lights.forEach(L => { const p = bv.toScreen(L.x, L.y); M.glow(ctx, p.x, p.y, (L.cell ? CW * 0.9 : L.r * 0.5) * bv.z, L.c, 0.14); });
-  bv.amb.draw(ctx, bv.x, bv.y);
+  if (M.PXR && M.PXR.motes) M.PXR.motes(ctx, bv); else bv.amb.draw(ctx, bv.x, bv.y);
   const fy = bv.sel && !bv.sel.door ? bv.toScreen(0, M.cellCenter(bv.sel.c, bv.sel.r).y).y / 1080 : 0.5;
   M.hd2d(ctx, 1920, 1080, { focus: clamp(fy, 0.2, 0.8), band: bv.z > 1.2 ? 0.14 : 0.3, dofBlur: bv.z > 1.2 ? 3 : 1.6, bloom: 0.5, grade: ['#ffb070', '#102040'], gradeA: 0.25, vig: 0.6 });
   // crisp tag badges on top (no names: style top-left, function bottom-right; hover explains each)
@@ -495,7 +513,7 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
       ctx.fillStyle = PP.ink; ctx.fillRect(cx + 1, b.y - pad - S - 3, S * 1.3 + 4, S + 6); ctx.fillStyle = PP.abyss; ctx.fillRect(cx + 4, b.y - pad - S, S * 1.3 - 2, S); M.pxNum(ctx, String(x.job.days), cx + 3 + S * 0.65, b.y - pad - S / 2, PP.gold, S / 26); }
   }
   // 传送门耐久：分格硬边条（低于 35% 变红）
-  const dp = bv.toScreen(DOOR_X, -300);
+  const dp = bv.toScreen(DOOR_X, M.PXR && M.PXR.has('_mainbase') ? -372 : -300);   // above the clock tower's finial
   const bw = 200 * bv.z; if (U) U.bar(ctx, dp.x - bw / 2, dp.y + 15, bw, 10, pH, { col: pH < 0.35 ? PP.red : PP.teal, seg: 36 }); else { ctx.fillStyle = '#000'; ctx.fillRect(dp.x - bw / 2 - 3, dp.y + 12, bw + 6, 16); ctx.fillStyle = pH < 0.35 ? '#d0453c' : '#5fd0c0'; ctx.fillRect(dp.x - bw / 2, dp.y + 15, bw * clamp(pH, 0, 1), 10); }
   if (M.drawSteles) M.drawSteles(ctx, meta, bv, null, 'top');
   (M.BASE_HOOKS || []).forEach(h => h(ctx, meta, bv, null, 'top', opts));   // screen space, after the light
@@ -558,7 +576,7 @@ M.Raid = class {
       else if (tg || e.side === 'E') { e.t -= dt; e.face = Math.sign(tx - e.x) || e.face; if (e.t <= 0) { e.t = e.cd; e.lunge = T;
         if (e.ranged) this.proj.push({ x: e.x, y: e.y - 40, tg: tg || null, tx: tx, dmg: e.atk, col: e.side === 'E' ? '#b0d040' : '#ffe08a', src: e });
         else if (tg) { this.damage(tg, e.atk, e.side === 'E' ? '#ff6a6a' : '#fff'); this.fx.push({ k: 'slash', x: tg.x, y: tg.y - 40, t0: T, life: 0.14 }); M.Sfx.hit(); }
-        else { this.portal.hp -= e.atk; this.portal.hit = T; this.shake = Math.max(this.shake, 6); this.float(this.portal.x + (Math.random() - 0.5) * 80, -260, '-' + fmt(e.atk), '#ff6a6a', 30); M.Sfx.hit(); }
+        else { this.portal.hp -= e.atk; this.portal.hit = T; this.shake = Math.max(this.shake, 6); this.float(this.portal.x + (Math.random() - 0.5) * 80, -260, '-' + fmt(e.atk), '#ff6a6a', 30); M.Sfx.wallHit(); }
       } }
     }
     for (let i = this.proj.length - 1; i >= 0; i--) { const p = this.proj[i]; const tx = p.tg ? p.tg.x : p.tx, ty = p.tg ? p.tg.y - 40 : -130; const dx = tx - p.x, dy = ty - p.y, d = Math.hypot(dx, dy), v = 900 * dt; if (d <= v + 6 || (p.tg && !p.tg.alive)) { this.proj.splice(i, 1); if (p.tg && p.tg.alive) this.damage(p.tg, p.dmg, p.src.side === 'E' ? '#ff6a6a' : '#fff'); else if (!p.tg) { this.portal.hp -= p.dmg; this.portal.hit = T; } } else { p.x += dx / d * v; p.y += dy / d * v; } }
@@ -566,12 +584,12 @@ M.Raid = class {
     this.turrets.forEach(tu => {
       tu.t -= dt; if (tu.t > 0) return;
       const inR = this.ents.filter(e => e.alive && e.side === 'E' && e.x >= tu.x0 && e.x <= tu.x1).sort((a, b) => Math.abs(a.x - this.portal.x) - Math.abs(b.x - this.portal.x));
-      if (!inR.length) return; tu.t = tu.w.cd; const tg = inR[0], k = tu.w.kind; this.fire[tu.c + ',' + tu.r] = M.__bvT || 0;
+      if (!inR.length) return; tu.t = tu.w.cd; const tg = inR[0], k = tu.w.kind; this.fire[tu.c + ',' + tu.r] = M.__bvT || 0; M.Sfx.weapon(k);
       this.fx.push({ k: 'beam', x1: tu.px, y1: tu.py, x2: tg.x, y2: tg.y - 40, col: k === 'arcane' ? '#d8a0ff' : k === 'chain' || k === 'zeus' ? '#8ff6ff' : k === 'colossus' ? '#8fe0ff' : '#ffe08a', w: k === 'colossus' ? 30 : k === 'shell' ? 16 : 8, t0: T, life: 0.25 });
       this.fx.push({ k: 'muzzle', x: tu.px, y: 10, t0: T, life: 0.3 });
-      if (k === 'shell' || k === 'colossus') { this.fx.push({ k: 'boom', x: tg.x, y: tg.y - 20, r: tu.w.splash, t0: T, life: 0.45 }); this.ents.forEach(o => { if (o.alive && o.side === 'E' && Math.abs(o.x - tg.x) < tu.w.splash) this.damage(o, tu.w.dmg * (o === tg ? 1 : 0.6), '#ffcc33'); }); this.shake = Math.max(this.shake, k === 'colossus' ? 16 : 8); M.Sfx.boom(); }
-      else if (k === 'chain' || k === 'zeus') { let cur = tg, hit = new Set(); for (let i = 0; i < (tu.w.chain || 3) && cur; i++) { hit.add(cur); this.damage(cur, tu.w.dmg * Math.pow(0.8, i), '#8ff6ff'); const nx = this.ents.filter(o => o.alive && o.side === 'E' && !hit.has(o) && Math.abs(o.x - cur.x) < 260).sort((a, b) => Math.abs(a.x - cur.x) - Math.abs(b.x - cur.x))[0]; if (nx) this.fx.push({ k: 'chain', x1: cur.x, y1: cur.y - 40, x2: nx.x, y2: nx.y - 40, t0: T, life: 0.25 }); cur = nx; } if (k === 'zeus') { this.fx.push({ k: 'sky', x: tg.x, t0: T, life: 0.35 }); this.shake = Math.max(this.shake, 10); } M.Sfx.bolt(k === 'zeus' ? 2 : 0); }
-      else { this.damage(tg, tu.w.dmg, '#ffe08a'); if (k === 'arcane') tg.slow = 2; M.Sfx.shoot(); }
+      if (k === 'shell' || k === 'colossus') { this.fx.push({ k: 'boom', x: tg.x, y: tg.y - 20, r: tu.w.splash, t0: T, life: 0.45 }); this.ents.forEach(o => { if (o.alive && o.side === 'E' && Math.abs(o.x - tg.x) < tu.w.splash) this.damage(o, tu.w.dmg * (o === tg ? 1 : 0.6), '#ffcc33'); }); this.shake = Math.max(this.shake, k === 'colossus' ? 16 : 8); }
+      else if (k === 'chain' || k === 'zeus') { let cur = tg, hit = new Set(); for (let i = 0; i < (tu.w.chain || 3) && cur; i++) { hit.add(cur); this.damage(cur, tu.w.dmg * Math.pow(0.8, i), '#8ff6ff'); const nx = this.ents.filter(o => o.alive && o.side === 'E' && !hit.has(o) && Math.abs(o.x - cur.x) < 260).sort((a, b) => Math.abs(a.x - cur.x) - Math.abs(b.x - cur.x))[0]; if (nx) this.fx.push({ k: 'chain', x1: cur.x, y1: cur.y - 40, x2: nx.x, y2: nx.y - 40, t0: T, life: 0.25 }); cur = nx; } if (k === 'zeus') { this.fx.push({ k: 'sky', x: tg.x, t0: T, life: 0.35 }); this.shake = Math.max(this.shake, 10); } }
+      else { this.damage(tg, tu.w.dmg, '#ffe08a'); if (k === 'arcane') tg.slow = 2; }
       // abilities granted by the vein under the room
       if (tu.w.xChain && k !== 'chain' && k !== 'zeus') { let cur = tg; const hit = new Set([tg]); for (let i = 0; i < tu.w.xChain; i++) { const nx = this.ents.filter(o => o.alive && o.side === 'E' && !hit.has(o) && Math.abs(o.x - cur.x) < 260).sort((a, b) => Math.abs(a.x - cur.x) - Math.abs(b.x - cur.x))[0]; if (!nx) break; hit.add(nx); this.fx.push({ k: 'chain', x1: cur.x, y1: cur.y - 40, x2: nx.x, y2: nx.y - 40, t0: T, life: 0.25 }); this.damage(nx, tu.w.dmg * 0.5 * Math.pow(0.8, i), '#8ff6ff'); cur = nx; } M.Sfx.bolt(0); }
       if (tu.w.xSplash && k !== 'shell' && k !== 'colossus') { this.fx.push({ k: 'boom', x: tg.x, y: tg.y - 20, r: tu.w.xSplash, t0: T, life: 0.4 }); this.ents.forEach(o => { if (o !== tg && o.alive && o.side === 'E' && Math.abs(o.x - tg.x) < tu.w.xSplash) this.damage(o, tu.w.dmg * 0.5, '#ffcc33'); }); }
@@ -602,7 +620,7 @@ M.Raid = class {
       const d = T - f.t0, p = d / f.life;
       if (f.k === 'pt') { ctx.globalAlpha = 1 - p; ctx.fillStyle = f.col; ctx.fillRect(f.x + f.vx * d, f.y + f.vy * d + 400 * d * d, 10, 10); ctx.globalAlpha = 1; }
       else if (f.k === 'float') { // 飘字：像素数码 + 八向墨描边，分 6 档往上跳，最后两档变淡
-        const up = PJ.reduced ? 0 : Math.floor(eo(p) * 6) / 6 * 60; ctx.globalAlpha = p < 0.7 ? 1 : p < 0.85 ? 0.6 : 0.3;
+        const up = PJ.reduced ? 0 : eo(p) * 60; ctx.globalAlpha = p < 0.7 ? 1 : 1 - (p - 0.7) / 0.3 * 0.75;
         if (M.UI) M.UI.text(ctx, f.text, Math.round(f.x), Math.round(f.y - up), f.size, f.col, { num: true, outline: true }); else { ctx.font = `${f.size}px ${NUMF}`; ctx.textAlign = 'center'; ctx.fillStyle = '#000'; ctx.fillText(f.text, f.x + 3, f.y - up + 3); ctx.fillStyle = f.col; ctx.fillText(f.text, f.x, f.y - up); }
         ctx.globalAlpha = 1; }
       else if (f.k === 'slash') { ctx.globalAlpha = 1 - p; ctx.fillStyle = '#fff'; ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(-0.6); ctx.fillRect(-40, -4, 80, 8); ctx.restore(); ctx.globalAlpha = 1; }

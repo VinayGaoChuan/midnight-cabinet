@@ -1,0 +1,305 @@
+[
+ {
+  "id": "batch-01",
+  "group": "不死·部队",
+  "keys": [
+   "Chick",
+   "Turkey",
+   "Rooster",
+   "FootSoldier",
+   "RedCross",
+   "EmperorOfFlame",
+   "Ogre",
+   "Commander",
+   "BrownBear",
+   "WaterWarrior",
+   "ImmortalBlueDemon",
+   "IceAndSnowMage",
+   "Archmage",
+   "Stone",
+   "GiantGodOfWar",
+   "Golem"
+  ]
+ },
+ {
+  "id": "batch-02",
+  "group": "人类·部队",
+  "keys": [
+   "VikingWarrior",
+   "SlaveLord",
+   "ShieldDefender",
+   "HeavilyArmedWarrior",
+   "YellowManeHorse",
+   "SweatBloodHorse",
+   "EliteHunter",
+   "NightArcher",
+   "PunishingCleric",
+   "Bishop",
+   "GuardCommander",
+   "MarshalOrfa",
+   "militia"
+  ]
+ },
+ {
+  "id": "batch-03",
+  "group": "僵尸·部队",
+  "keys": [
+   "EagleBeakedArcher",
+   "CatapultArcher",
+   "AngelArcher",
+   "Lizard",
+   "GemLizard",
+   "FlyingEagle",
+   "BlueDragon",
+   "IroncladWarrior",
+   "SteelWarlord",
+   "MoonlightApostle",
+   "TimeMage",
+   "RedDragon",
+   "BlackDragon"
+  ]
+ },
+ {
+  "id": "batch-04",
+  "group": "兽人·部队",
+  "keys": [
+   "Troll",
+   "GreenDemon",
+   "YellowDemon",
+   "RedWorm",
+   "SickleWorm",
+   "Ronin",
+   "MadMonarch",
+   "DesertBeliever",
+   "SnakeGodMessenger",
+   "MagicShieldSoldier",
+   "AntiMagicGuardian",
+   "BigWildBoar",
+   "RedEyes"
+  ]
+ },
+ {
+  "id": "batch-05",
+  "group": "恶魔·部队",
+  "keys": [
+   "DesertArcher",
+   "FantasyShooter",
+   "BlazingShooter",
+   "FirePig",
+   "WhiteFang",
+   "AncestorWarrior",
+   "SoulWarrior",
+   "WhiteWolf",
+   "SnowWolfKing",
+   "SpiritSummonTower",
+   "HellSummonTower",
+   "Spider",
+   "MoonLeopard",
+   "Watchdog",
+   "MagicLeopard",
+   "EvilDog"
+  ]
+ },
+ {
+  "id": "batch-06",
+  "group": "混沌·敌人",
+  "keys": [
+   "ChaosButcher",
+   "EvilRat",
+   "MotherSpider",
+   "VerdantWormKing",
+   "VerdantWormCommander",
+   "ChaosRat",
+   "ChaosPorcupine",
+   "EarthDragonIron",
+   "EvilEyeDark",
+   "ChaosDireWolf",
+   "LeopardEmperorSavalon",
+   "ChaosGuardBlackKatos",
+   "ChaosEvilPig",
+   "ChaosDireBear",
+   "VerdantWormSoldier"
+  ]
+ },
+ {
+  "id": "batch-07",
+  "group": "混沌·敌人",
+  "keys": [
+   "SpiderEmperorAnazos",
+   "EarthDragonKingGargon",
+   "EvilEyeRed",
+   "ChaosSoldier",
+   "Cerberus",
+   "DecayingCorpseRat",
+   "DecayingChampionRat",
+   "ChaosEvilDog",
+   "Spiderling"
+  ]
+ },
+ {
+  "id": "batch-08",
+  "group": "科技·部队",
+  "keys": [
+   "MageApprentice",
+   "CelestialMage",
+   "FlameMage",
+   "Pikeman",
+   "ChainmailPikeman",
+   "Bat",
+   "VampireBat",
+   "Wizard",
+   "Supervisor",
+   "Gladiator",
+   "Berserker",
+   "GoldenDragon",
+   "MagicDragon",
+   "BoomSoldier"
+  ]
+ },
+ {
+  "id": "batch-09",
+  "group": "精灵·部队",
+  "keys": [
+   "VoodooBeliever",
+   "VoodooGuard",
+   "Ranger",
+   "DeathShooter",
+   "RedGuard",
+   "HolyLightKnight",
+   "EmeraldDragon",
+   "PoisonDragon",
+   "BlackIronGuard",
+   "VerdantShield",
+   "JadeVineFortress",
+   "StormFortress"
+  ]
+ },
+ {
+  "id": "batch-10",
+  "group": "自然·部队",
+  "keys": [
+   "WildMage",
+   "CannonFodderMage",
+   "MageHero",
+   "CursedSwordsman",
+   "AgonyShieldDefender",
+   "DemonKingsGuard",
+   "WildManPriest",
+   "WildManKing",
+   "GreenDragon",
+   "SkyDragon",
+   "ChargeTower",
+   "FireGodTower",
+   "ShadowSwordsman",
+   "ShadowKnight",
+   "ShadowKnightReplicator",
+   "ShadowSwordsmanReplicator",
+   "WildManSpearman",
+   "Pincer",
+   "Crabling"
+  ]
+ },
+ {
+  "id": "batch-11",
+  "group": "虚空·部队",
+  "keys": [
+   "PolarBear",
+   "LifeTree",
+   "BlackBear",
+   "BlackSword",
+   "DarkFang",
+   "Landlord",
+   "GoldenHand",
+   "VikingPirate",
+   "ShadowGrimReaper",
+   "CrabWarlock",
+   "Crabomancer",
+   "Pulsebot",
+   "Skybot",
+   "GoblinCopter",
+   "Whirlybird"
+  ]
+ },
+ {
+  "id": "batch-12",
+  "group": "虚空·部队",
+  "keys": [
+   "WarpWing",
+   "VoidManta",
+   "Annihilator",
+   "GigaAnnihilator",
+   "CrawlingCatapult",
+   "WanderingTrebuchet"
+  ]
+ },
+ {
+  "id": "batch-13",
+  "group": "野兽·敌人",
+  "keys": [
+   "Kraken",
+   "Needler",
+   "SiegeRam",
+   "Shaman",
+   "Centaur",
+   "GhostKnight",
+   "FourEyes",
+   "Witch",
+   "OgreEnemy",
+   "HoneyBear",
+   "PackLeader",
+   "Mimic",
+   "SafetyMole",
+   "Drake",
+   "Imp"
+  ]
+ },
+ {
+  "id": "batch-14",
+  "group": "野兽·敌人",
+  "keys": [
+   "Cannoneer",
+   "Hermit",
+   "Dino",
+   "Fiend",
+   "Robo",
+   "LizardEnemy",
+   "DragonTurtle",
+   "Snail",
+   "GiantSnail",
+   "Froggo",
+   "DancingSnake"
+  ]
+ },
+ {
+  "id": "batch-15",
+  "group": "骷髅·部队",
+  "keys": [
+   "Deserter",
+   "Warrior",
+   "Mage",
+   "Archer",
+   "Guard",
+   "ChurchGuard",
+   "Summoner",
+   "CandyGirl",
+   "BloodKnight",
+   "LionHammer",
+   "SwordDancer",
+   "PhantomDancer",
+   "Necromancer",
+   "GrimReaper",
+   "VengefulDragon"
+  ]
+ },
+ {
+  "id": "batch-16",
+  "group": "骷髅·部队",
+  "keys": [
+   "BoneDragon",
+   "GrayWolf",
+   "DireWolf",
+   "OldHound",
+   "Diabolic"
+  ]
+ }
+]

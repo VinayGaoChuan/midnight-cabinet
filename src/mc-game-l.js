@@ -31,7 +31,7 @@ G.endBack = function () {
   this.toBase();
   (info.newTiles || []).forEach((t, i) => setTimeout(() => { const p = this.cellPos(t.c, t.r); this.fx.rays(p.x, p.y, M.TILES[t.t].c, 1.5, { r: 260 }); this.fx.pop(p.x, p.y, '新地格 · ' + M.TILES[t.t].n, M.TILES[t.t].c, 40); M.Sfx.up(2); }, 800 + i * 500));
   let wait = 900;
-  if (gain.dead) { this.tear = { t: 0, dead: gain.dead, gain, fired: false, seed: Math.random() * 100 }; wait = 4200; M.Sfx.whoosh(0.5); }
+  if (gain.dead) { this.tear = { t: 0, dead: gain.dead, gain, fired: false, seed: Math.random() * 100 }; wait = 2900; M.Sfx.whoosh(0.5); }
   else setTimeout(() => this.lootFly(gain, { x: 960, y: 560 }), 380);
   if (this.pendingDay) { this.pendingDay = false; setTimeout(() => { this.passDay(); setTimeout(() => this.checkRaid(), 1600); }, wait + 600); }
 };
@@ -107,24 +107,24 @@ M.drawTear = function (ctx, g) {
   ctx.restore();
 };
 M.tearCard = cardCanvas; M.tearPath = tearPath;   // the revival rite (mc-revive.js) tears and mends the same card
-S.rip = function () { S.noise(0.12, 0.35, 5000); S.noise(0.35, 0.3, 2400, 0.05); S.noise(0.5, 0.2, 900, 0.12); S.tone(120, 0.3, 'sawtooth', 0.08, -60); };
 G.tearTick = function (dt) {
   const T = this.tear; if (!T) return; T.t += dt;
   const beat = Math.floor((T.t - T_FLY) / 0.32); if (T.t > T_FLY && T.t < T_RIP && beat !== T.beat) { T.beat = beat; S.heart(); this.fx.kick(2 + beat); }
   if (!T.fired && T.t >= T_RIP) {
-    T.fired = true; S.rip(); S.shatter(); this.fx.kick(26); this.fx.flash(P.white, 0.35);
+    T.fired = true; S.tear('rip'); this.fx.kick(26); this.fx.flash(P.white, 0.35);
     const tp = T.path || [], col = M.RARITY[T.dead.rarity].c;
     for (let i = 0; i < 3; i++) this.fx.spark(960, 330 + i * 150, i % 2 ? P.cream : col, 18, { dir: i % 2 ? Math.PI : 0, spread: 2.4, v: 900 });
     this.fx.explode(960, 500, P.violet, 1.3); this.fx.confetti && this.fx.confetti(40);
     setTimeout(() => this.lootFly(T.gain, { x: 960, y: 480 }), 650);
   }
-  if (T.t >= T_END) this.tear = null;
-  this.bump();
+  if (T.t >= T_END) { this.tear = null; this.bump(); }   // 阵亡卡画在特效画布上：只在结束时重画界面
 };
 
 // ───────── hooks ─────────
 const oldTick = G.tick;
-G.tick = function (dt) { oldTick.call(this, dt); if (this.tear && !this.fx.frozen) this.tearTick(Math.min(dt, 0.05)); };
+// 阵亡是负面：整段按 1.5 倍速播（约 2.5 秒），声音和画面都跟着 T.t 走
+const TEAR_SPEED = 1.5;
+G.tick = function (dt) { oldTick.call(this, dt); if (this.tear && !this.fx.frozen) this.tearTick(Math.min(dt, 0.05) * TEAR_SPEED); };
 const FLP = M.FxLayer.prototype, oD = FLP.draw;
 FLP.draw = function (ctx, noClear) { const g = M._g; if (g && this === g.fx && (g.tear || g.mini)) { ctx.save(); try { ctx.setTransform(1, 0, 0, 1, 0, 0); if (g.mini && M.drawMini) M.drawMini(ctx, g); if (g.tear) M.drawTear(ctx, g); } catch (e) { (window.__mcErrs = window.__mcErrs || []).push('overlay: ' + e.message); if (g.tear) g.tear = null; } ctx.restore(); } return oD.call(this, ctx, noClear); };
 const oldView = G.view;

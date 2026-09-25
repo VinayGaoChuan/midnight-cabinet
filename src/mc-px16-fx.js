@@ -136,6 +136,8 @@ const PAT = {
 P16.PAT = PAT;
 P16.castFx = function (b, e, phase, rec, tier, dur) {
   const P = b.p16 || (b.p16 = new P16.Pool()), [x, y] = P16.focusOf(e), n = 10 + (tier || 0) * 6, pat = PAT[phase === 'charge' ? rec.ch : rec.cs] || PAT.spiral;
+  // 声音跟着配方走：花样决定动作，色板决定材质（mc-audio.js 的 skillFx）
+  if (M.Sfx.skillFx) M.Sfx.skillFx(phase, phase === 'charge' ? rec.ch : rec.cs, rec.ramp, tier || 0, dur || 0.6, M.Sfx.panX(e.x));
   pat(P, e, x, y, rec.ramp, n, dur || 0.6, b);
 };
 

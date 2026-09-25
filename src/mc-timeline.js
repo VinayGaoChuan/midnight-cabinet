@@ -121,19 +121,19 @@ G.tlBig = function (from, to) {
 G.tlTick = function (dt) {
   const F = this.tlFx; if (!F) return; const t0 = F.t; F.t += dt; const x = (a) => t0 < a && F.t >= a, tl = this._tl || { x: 0, dx: 0, y: 0, sc: 1 };
   if (F.kind === 'day') {
-    for (let j = 0; j < NDOT; j++) if (x(0.12 + j * 0.18)) { if (S.tick) S.tick(j * 2 + 4); else if (S.up) S.up(1); }
-    if (x(0.2)) { S.stamp && S.stamp(); this.fx.kick && this.fx.kick(5); }
-    if (x(0.75)) S.whoosh && S.whoosh(0.3);
-    if (x(1.05)) { const p = cellAt(tl, F.to - (this.meta.tlWin || F.to)); this.fx.rays && this.fx.rays(p.x, p.y, F.ev ? EV[F.ev].c : '#ffcf4a', 0.8, { r: 140 }); S.up && S.up(1); }
-    if (F.ev && x(1.2)) { S.impact && S.impact(); this.fx.kick && this.fx.kick(F.ev === 'raid' ? 26 : 12); this.fx.rays && this.fx.rays(960, 470, EV[F.ev].c, 1.3, { r: 320 }); this.fx.flash && this.fx.flash(F.ev === 'raid' ? '#e8434f' : '#ffffff', F.ev === 'raid' ? 0.35 : 0.16); if (F.ev === 'raid') S.alarm && S.alarm(); else S.up && S.up(2); }
+    for (let j = 0; j < NDOT; j++) if (x(0.12 + j * 0.18)) S.tlDot(j);
+    if (x(0.2)) { S.tlStamp(); this.fx.kick && this.fx.kick(5); }
+    if (x(0.75)) S.tlSlide();
+    if (x(1.05)) { const p = cellAt(tl, F.to - (this.meta.tlWin || F.to)); this.fx.rays && this.fx.rays(p.x, p.y, F.ev ? EV[F.ev].c : '#ffcf4a', 0.8, { r: 140 }); S.tlLand(); }
+    if (F.ev && x(1.2)) { S.tlEvent(F.ev); this.fx.kick && this.fx.kick(F.ev === 'raid' ? 26 : 12); this.fx.rays && this.fx.rays(960, 470, EV[F.ev].c, 1.3, { r: 320 }); this.fx.flash && this.fx.flash(F.ev === 'raid' ? '#e8434f' : '#ffffff', F.ev === 'raid' ? 0.35 : 0.16); }
     if (F.ev === 'raid' && F.t > 1.3 && Math.floor(F.t * 3) !== Math.floor(t0 * 3)) S.heart && S.heart();
     if (F.t >= F.dur) this.tlFx = null;
   } else {
     const n5 = F.to - F.from;
-    for (let i = 0; i < n5; i++) if (x(0.6 + i * 0.14)) { S.stamp && S.stamp(); this.fx.kick && this.fx.kick(4); }
-    if (x(1.3)) { S.whoosh && S.whoosh(0.8); this.fx.kick && this.fx.kick(10); }
-    for (let j = 0; j < n5; j++) if (x(2.05 + j * 0.14)) { const c = (tl.cells || [])[DAYS + j], p = cellAt(tl, DAYS + j); S.up && S.up(1 + j * 0.25); if (c && c.E) { this.fx.rays && this.fx.rays(p.x, p.y, c.E.c, 1.1, { r: 200 }); this.fx.explode && this.fx.explode(p.x, p.y, c.E.c, 0.8); } }
-    if (x(2.7)) { S.impact && S.impact(); S.fanfare && S.fanfare(); this.fx.flash && this.fx.flash('#ffcf4a', 0.18); this.fx.rays && this.fx.rays(960, 470, '#ffcf4a', 1.6, { r: 420 }); this.fx.confetti && this.fx.confetti(90, { x: 960, y: 470 }); }
+    for (let i = 0; i < n5; i++) if (x(0.6 + i * 0.14)) { S.nfStamp(i); this.fx.kick && this.fx.kick(4); }
+    if (x(1.3)) { S.nfScroll(); this.fx.kick && this.fx.kick(10); }
+    for (let j = 0; j < n5; j++) if (x(2.05 + j * 0.14)) { const c = (tl.cells || [])[DAYS + j], p = cellAt(tl, DAYS + j); S.nfPop(j, !!(c && c.E)); if (c && c.E) { this.fx.rays && this.fx.rays(p.x, p.y, c.E.c, 1.1, { r: 200 }); this.fx.explode && this.fx.explode(p.x, p.y, c.E.c, 0.8); } }
+    if (x(2.7)) { S.nfTitle(); this.fx.flash && this.fx.flash('#ffcf4a', 0.18); this.fx.rays && this.fx.rays(960, 470, '#ffcf4a', 1.6, { r: 420 }); this.fx.confetti && this.fx.confetti(90, { x: 960, y: 470 }); }
     if (F.t >= BIG_D) { this.tlFx = null; this.meta.tlWin = F.to; this.save(); }
   }
   this.bump();
@@ -161,7 +161,7 @@ function goods(g, m) {
 }
 function merchant(g, m, stock) {
   const choices = stock.map(o => { const [ck, v] = o.cost, C = cur[ck], can = !o.sold && m[C[2]] >= v;
-    return { t: (o.sold ? '已买 · ' : '') + o.n, sub: o.d + '　' + v + ' ' + C[0], dis: !can, gold: can, fn: () => { m[C[2]] -= v; o.sold = true; o.give(); g.save(); S.coin && S.coin(); merchant(g, m, stock); } }; });
+    return { t: (o.sold ? '已买 · ' : '') + o.n, sub: o.d + '　' + v + ' ' + C[0], dis: !can, gold: can, fn: () => { m[C[2]] -= v; o.sold = true; o.give(); g.save(); S.buy(); merchant(g, m, stock); } }; });
   choices.push({ t: '离开', fn: () => { g.modal = null; g.bump(); } });
   g.modal = { title: EV.merchant.n, titleColor: EV.merchant.c, text: EV.merchant.d, img: 'e_market', border: EV.merchant.c, at: g.modal && g.modal.title === EV.merchant.n ? g.modal.at : performance.now(), back: () => { g.modal = null; }, choices };
 }
@@ -214,7 +214,7 @@ M.newRun3 = function (meta) { const run = oNR.apply(this, arguments); if (meta &
 G.tileReveal = function (c, r, tk) {
   const T = M.TILES[tk]; return [
     { run: () => { this.bv.focus(c, r); }, wait: 0.7 },
-    { run: () => { const p = this.cellPos(c, r); this.fx.explode(p.x, p.y, T.c, 1.4); this.fx.rays(p.x, p.y, T.c, 1.6, { r: 300 }); this.fx.kick && this.fx.kick(12); this.fx.pop(p.x, p.y - 70, T.n, T.c, 56, { slam: 1 }); setTimeout(() => { const q = this.cellPos(c, r); this.fx.pop(q.x, q.y + 30, T.anyD, '#f4efe0', 30); }, 350); S.up && S.up(3); }, wait: 1.8 },
+    { run: () => { const p = this.cellPos(c, r); this.fx.explode(p.x, p.y, T.c, 1.4); this.fx.rays(p.x, p.y, T.c, 1.6, { r: 300 }); this.fx.kick && this.fx.kick(12); this.fx.pop(p.x, p.y - 70, T.n, T.c, 56, { slam: 1 }); setTimeout(() => { const q = this.cellPos(c, r); this.fx.pop(q.x, q.y + 30, T.anyD, '#f4efe0', 30); }, 350); S.terrainReveal(); }, wait: 1.8 },
     { run: () => { this.bv.home(); }, wait: 0.5 },
   ];
 };

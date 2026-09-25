@@ -24,88 +24,7 @@ M.fxDim = function (x, al) {
   x.save(); x.imageSmoothingEnabled = false; x.globalAlpha = al * 0.82; R(x, 0, 0, 1920, 1080, P.ink); x.globalAlpha = al * 0.35; x.fillStyle = x.createPattern(DP, 'repeat'); x.fillRect(0, 0, 1920, 1080); x.restore();
 };
 
-// ───────── audio: layered synth + reverb + compressor ─────────
-let AC = null, OUT = null, DRY = null, REVG = null, pad = null;
-const S = M.Sfx;
-function impulse(sec, decay) { const n = AC.sampleRate * sec, b = AC.createBuffer(2, n, AC.sampleRate); for (let c = 0; c < 2; c++) { const d = b.getChannelData(c); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, decay); } return b; }
-S.init = function () {
-  if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
-  try {
-    AC = new (window.AudioContext || window.webkitAudioContext)();
-    const comp = AC.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 4; comp.connect(AC.destination);
-    OUT = AC.createGain(); OUT.gain.value = S.muted ? 0 : 0.55; OUT.connect(comp);
-    DRY = AC.createGain(); DRY.gain.value = 1; DRY.connect(OUT);
-    const rev = AC.createConvolver(); rev.buffer = impulse(2.2, 2.6); REVG = AC.createGain(); REVG.gain.value = 0.28; rev.connect(REVG); REVG.connect(OUT);
-    S._rev = rev;
-  } catch (e) { AC = null; }
-};
-S.setMuted = function (m) { S.muted = m; if (OUT) OUT.gain.value = m ? 0 : 0.55; };
-function env(g, t0, a, dur, vol) { g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol), t0 + a); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur); }
-function tone(f, dur, o = {}) {
-  if (!AC || S.muted) return; const t0 = AC.currentTime + (o.delay || 0);
-  const os = AC.createOscillator(), g = AC.createGain(); os.type = o.type || 'triangle';
-  os.frequency.setValueAtTime(f, t0); if (o.to) os.frequency.exponentialRampToValueAtTime(Math.max(20, o.to), t0 + (o.slideT || dur));
-  if (o.detune) os.detune.value = o.detune;
-  env(g, t0, o.a || 0.005, dur, o.vol == null ? 0.12 : o.vol);
-  let node = os;
-  if (o.lp) { const f2 = AC.createBiquadFilter(); f2.type = 'lowpass'; f2.frequency.value = o.lp; os.connect(f2); node = f2; }
-  node.connect(g); g.connect(DRY); if (o.wet !== 0) { const w = AC.createGain(); w.gain.value = o.wet == null ? 0.6 : o.wet; g.connect(w); w.connect(S._rev); }
-  os.start(t0); os.stop(t0 + dur + 0.05);
-}
-function noise(dur, o = {}) {
-  if (!AC || S.muted) return; const t0 = AC.currentTime + (o.delay || 0);
-  const n = Math.max(1, Math.floor(AC.sampleRate * dur)), b = AC.createBuffer(1, n, AC.sampleRate), d = b.getChannelData(0);
-  for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
-  const src = AC.createBufferSource(); src.buffer = b;
-  const f = AC.createBiquadFilter(); f.type = o.ft || 'bandpass'; f.Q.value = o.q || 0.8; f.frequency.setValueAtTime(o.f || 1200, t0); if (o.to) f.frequency.exponentialRampToValueAtTime(o.to, t0 + dur);
-  const g = AC.createGain(); env(g, t0, o.a || 0.003, dur, o.vol == null ? 0.2 : o.vol);
-  src.connect(f); f.connect(g); g.connect(DRY); if (o.wet) { const w = AC.createGain(); w.gain.value = o.wet; g.connect(w); w.connect(S._rev); }
-  src.start(t0); src.stop(t0 + dur + 0.05);
-}
-const chord = (fs, dur, o = {}) => fs.forEach((f, i) => { tone(f, dur, Object.assign({}, o, { delay: (o.delay || 0) + i * (o.arp || 0) })); tone(f * 2.003, dur * 0.7, Object.assign({}, o, { vol: (o.vol || 0.1) * 0.25, type: 'sine', delay: (o.delay || 0) + i * (o.arp || 0) })); });
-Object.assign(S, {
-  tone: (f, dur, type, vol, slide, delay) => tone(f, dur, { type, vol, to: slide ? f + slide : 0, delay }),
-  noise: (dur, vol, f, delay) => noise(dur, { vol, f, delay }),
-  hover() { if (S.lim('hover', 40)) tone(1800, 0.03, { type: 'sine', vol: 0.025, wet: 0.2 }); },
-  click() { tone(900, 0.04, { type: 'square', vol: 0.05, lp: 3000, wet: 0.2 }); tone(180, 0.08, { type: 'sine', vol: 0.12, to: 90, wet: 0 }); },
-  tick(p) { if (S.lim('tick', 28)) { tone(1400 + (p || 0) * 60, 0.025, { type: 'square', vol: 0.05, lp: 5000, wet: 0.15 }); noise(0.02, { f: 5000, vol: 0.05 }); } },
-  hit() { if (S.lim('hit', 45)) { noise(0.06, { f: 1800, vol: 0.14, q: 0.6 }); tone(140, 0.07, { type: 'sine', vol: 0.14, to: 60, wet: 0 }); } },
-  shoot() { if (S.lim('shoot', 55)) { noise(0.07, { f: 3200, to: 1200, vol: 0.06, q: 2 }); tone(1100, 0.05, { type: 'square', vol: 0.03, to: 500, lp: 4000, wet: 0.1 }); } },
-  kill() { if (S.lim('kill', 40)) { tone(660, 0.16, { type: 'square', vol: 0.06, to: 180, lp: 2500 }); noise(0.12, { f: 900, vol: 0.1 }); } },
-  crit() { noise(0.08, { f: 2600, vol: 0.18 }); tone(1760, 0.25, { type: 'sine', vol: 0.08 }); tone(2640, 0.2, { type: 'sine', vol: 0.05, delay: 0.02 }); tone(90, 0.12, { type: 'sine', vol: 0.2, to: 40, wet: 0 }); },
-  mult() { chord([784, 988, 1175, 1568], 0.18, { type: 'square', vol: 0.05, arp: 0.045, lp: 4200 }); },
-  coin() { tone(1319, 0.1, { type: 'square', vol: 0.05, lp: 5000 }); tone(1976, 0.35, { type: 'sine', vol: 0.08, delay: 0.06 }); tone(2637, 0.3, { type: 'sine', vol: 0.03, delay: 0.08 }); },
-  land(i) { const f = [523, 659, 784, 988, 1175][(i || 0) % 5]; tone(f, 0.18, { type: 'triangle', vol: 0.12 }); tone(f * 2, 0.12, { type: 'sine', vol: 0.05, delay: 0.01 }); tone(120, 0.08, { type: 'sine', vol: 0.12, to: 60, wet: 0 }); },
-  whoosh(d) { noise(d || 0.35, { f: 400, to: 3500, vol: 0.12, q: 1.2, a: 0.08, wet: 0.3 }); },
-  sparkle() { for (let i = 0; i < 5; i++) tone(2000 + Math.random() * 2000, 0.12, { type: 'sine', vol: 0.03, delay: i * 0.04 }); },
-  up(i = 0) { chord([523, 659, 784, 1047, 1319, 1568].slice(0, 3 + i).map(f => f * (1 + i * 0.12)), 0.22, { type: 'square', vol: 0.06, arp: 0.055, lp: 3800 }); if (i >= 2) S.sparkle(); },
-  bolt(tier) { noise(0.3 + tier * 0.15, { f: 3000, to: 300, vol: 0.2 + tier * 0.06, q: 0.4, wet: 0.5 }); tone(70, 0.4 + tier * 0.1, { type: 'sawtooth', vol: 0.12 + tier * 0.03, to: 35, lp: 600 }); },
-  boom() { if (S.lim('boom', 80)) { noise(0.6, { ft: 'lowpass', f: 1400, to: 80, vol: 0.35, wet: 0.5 }); tone(70, 0.5, { type: 'sine', vol: 0.35, to: 28, wet: 0 }); } },
-  impact() { noise(0.9, { ft: 'lowpass', f: 2400, to: 60, vol: 0.4, wet: 0.7 }); tone(55, 0.8, { type: 'sine', vol: 0.45, to: 25, wet: 0 }); tone(110, 0.4, { type: 'square', vol: 0.06, to: 40, lp: 400 }); },
-  cast() { noise(0.55, { f: 300, to: 5000, vol: 0.14, q: 3, a: 0.4, wet: 0.5 }); tone(220, 0.55, { type: 'sawtooth', vol: 0.05, to: 880, a: 0.4, lp: 2000 }); },
-  die() { tone(330, 0.6, { type: 'triangle', vol: 0.15, to: 90 }); tone(165, 0.8, { type: 'triangle', vol: 0.1, to: 60, delay: 0.1 }); noise(0.4, { f: 400, vol: 0.08, delay: 0.05 }); },
-  heal() { chord([659, 880, 1109, 1319], 0.5, { type: 'sine', vol: 0.07, arp: 0.07 }); S.sparkle(); },
-  win() { const seq = [[523, 659, 784], [587, 740, 880], [659, 831, 988], [784, 988, 1175, 1568]]; seq.forEach((c, i) => chord(c, i === 3 ? 1.2 : 0.2, { type: 'square', vol: 0.05, delay: i * 0.14, lp: 3600 })); tone(131, 1.4, { type: 'triangle', vol: 0.15, delay: 0.42 }); setTimeout(() => S.sparkle(), 500); },
-  fanfare() { S.win(); noise(0.6, { f: 6000, vol: 0.05, delay: 0.42, wet: 0.6 }); },
-  lose() { [392, 330, 262, 196].forEach((f, i) => tone(f, 0.45, { type: 'triangle', vol: 0.13, to: f * 0.97, delay: i * 0.22 })); },
-  stamp() { noise(0.2, { ft: 'lowpass', f: 900, vol: 0.4 }); tone(70, 0.3, { type: 'sine', vol: 0.4, to: 35, wet: 0 }); },
-  lever() { noise(0.12, { f: 700, vol: 0.2 }); for (let i = 0; i < 6; i++) tone(300 + i * 40, 0.02, { type: 'square', vol: 0.04, delay: i * 0.03, lp: 2000 }); tone(90, 0.2, { type: 'sine', vol: 0.25, to: 50, delay: 0.2, wet: 0 }); },
-  reelStop() { tone(200, 0.12, { type: 'square', vol: 0.08, to: 90, lp: 1200 }); noise(0.08, { f: 1500, vol: 0.12 }); },
-  chest() { noise(0.4, { f: 300, to: 900, vol: 0.12, q: 4 }); setTimeout(() => { S.impact(); chord([523, 659, 784, 1047, 1319], 1.4, { type: 'sine', vol: 0.06, arp: 0.03, delay: 0.05 }); S.sparkle(); }, 10); },
-  heart() { tone(55, 0.18, { type: 'sine', vol: 0.35, to: 40, wet: 0 }); tone(50, 0.16, { type: 'sine', vol: 0.25, to: 36, delay: 0.16, wet: 0 }); },
-  shatter() { noise(0.5, { f: 6000, to: 1500, vol: 0.18, q: 0.5, wet: 0.6 }); for (let i = 0; i < 6; i++) tone(2500 + Math.random() * 3000, 0.15, { type: 'sine', vol: 0.04, delay: i * 0.03 }); },
-  pop() { tone(700, 0.06, { type: 'sine', vol: 0.12, to: 1400, wet: 0.1 }); noise(0.04, { f: 3000, vol: 0.06 }); },
-  creak() { noise(0.5, { f: 250, to: 500, vol: 0.12, q: 8 }); },
-  dig() { noise(0.25, { ft: 'lowpass', f: 600, vol: 0.25 }); tone(80, 0.2, { type: 'square', vol: 0.06, to: 50, lp: 300 }); for (let i = 0; i < 4; i++) noise(0.05, { f: 3000, vol: 0.06, delay: 0.1 + i * 0.07 }); },
-  build() { for (let i = 0; i < 3; i++) { tone(1200, 0.08, { type: 'square', vol: 0.05, lp: 3000, delay: i * 0.16 }); noise(0.04, { f: 4000, vol: 0.1, delay: i * 0.16 }); } },
-  alarm() { for (let i = 0; i < 3; i++) { tone(660, 0.25, { type: 'sawtooth', vol: 0.05, to: 990, lp: 2000, delay: i * 0.5 }); tone(990, 0.25, { type: 'sawtooth', vol: 0.05, to: 660, lp: 2000, delay: i * 0.5 + 0.25 }); } },
-  portal() { tone(110, 1.2, { type: 'sine', vol: 0.12, a: 0.3 }); tone(165, 1.2, { type: 'sine', vol: 0.06, a: 0.3, detune: 8 }); noise(1.0, { f: 800, to: 2400, vol: 0.05, q: 5, a: 0.4, wet: 0.7 }); },
-  drone(on) {
-    if (!AC) return;
-    if (on && !pad) { pad = []; [55, 82.4, 110, 164.8].forEach((f, i) => { const o = AC.createOscillator(), g = AC.createGain(), lp = AC.createBiquadFilter(); o.type = i % 2 ? 'sawtooth' : 'triangle'; o.frequency.value = f; o.detune.value = (i - 1.5) * 6; lp.type = 'lowpass'; lp.frequency.value = 420; g.gain.value = 0.0001; g.gain.exponentialRampToValueAtTime(0.018, AC.currentTime + 3); o.connect(lp); lp.connect(g); g.connect(DRY); const w = AC.createGain(); w.gain.value = 0.8; g.connect(w); w.connect(S._rev); o.start(); pad.push({ o, g }); }); }
-    else if (!on && pad) { pad.forEach(p => { p.g.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime + 1); p.o.stop(AC.currentTime + 1.1); }); pad = null; }
-  },
-});
+// 音效：M.Sfx 的实现在 mc-audio.js
 
 // ───────── HD-2D post processing ─────────
 const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
@@ -207,8 +126,8 @@ M.FxLayer = class {
   spark(x, y, col, n, o = {}) { for (let i = 0; i < n; i++) { const a = o.dir != null ? o.dir + (Math.random() - 0.5) * (o.spread || 1) : Math.random() * Math.PI * 2, v = (o.v || 900) * (0.3 + Math.random() * 0.9); this.add({ k: 'spark', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, col: Math.random() < 0.3 ? P.white : col, w: (o.w || 5) * (0.5 + Math.random()), life: (o.life || 0.45) * (0.5 + Math.random() * 0.8), g: o.g == null ? 600 : o.g, delay: o.delay }); } }
   shock(x, y, r, col, life, delay) { this.add({ k: 'shock', x, y, r: r || 400, col: col || P.white, life: life || 0.45, delay }); }
   flare(x, y, r, col, life, delay) { this.add({ k: 'flare', x, y, r: r || 200, col: col || P.white, life: life || 0.25, delay }); }
-  explode(x, y, col, p = 1) { this.flare(x, y, 160 + 120 * p, P.white, 0.22 + 0.06 * p); this.flare(x, y, 260 + 200 * p, col, 0.4 + 0.1 * p); this.shock(x, y, 260 + 260 * p, col, 0.42 + 0.08 * p); this.shock(x, y, 180 + 200 * p, P.white, 0.32, 0.06); if (p >= 2) this.shock(x, y, 500 + 300 * p, col, 0.7, 0.12); this.spark(x, y, col, Math.round(26 * p), { v: 700 + 300 * p, w: 4 + p * 2 }); this.burst(x, y, col, Math.round(14 * p), { v: 420 + 120 * p, s: 10 + 4 * p }); this.kick(5 + 7 * p); this.flash(col, 0.12 + 0.12 * p); this.freeze(30 + 35 * p); }
-  clickBurst(x, y, col) { this.flare(x, y, 60, P.white, 0.14); this.ring(x, y, 6, 70, col || P.gold, 5, 0.28); this.spark(x, y, col || P.gold, 9, { v: 520, w: 3, life: 0.3, g: 300 }); this.kick(1.6); }
+  explode(x, y, col, p = 1) { this.flare(x, y, 160 + 120 * p, P.white, 0.22 + 0.06 * p); this.flare(x, y, 260 + 200 * p, col, 0.4 + 0.1 * p); this.shock(x, y, 260 + 260 * p, col, 0.42 + 0.08 * p); this.shock(x, y, 180 + 200 * p, P.white, 0.32, 0.06); if (p >= 2) this.shock(x, y, 500 + 300 * p, col, 0.7, 0.12); this.spark(x, y, col, Math.round(26 * p), { v: 700 + 300 * p, w: 4 + p * 2 }); this.burst(x, y, col, Math.round(14 * p), { v: 420 + 120 * p, s: 10 + 4 * p }); this.kick(5 + 7 * p); this.flash(col, 0.12 + 0.12 * p); if (p >= 1.5) this.freeze(20 + 25 * p); }   // 卡帧只给大爆点：小的一停就像卡了
+  clickBurst(x, y, col) { this.ring(x, y, 6, 56, col || P.gold, 4, 0.2); }   // 画布上的普通点击：一个小圈，不震屏（§11.6）
   coins(x, y, n, o = {}) { for (let i = 0; i < n; i++) { const a = -Math.PI / 2 + (Math.random() - 0.5) * (o.spread || 1.3), v = (o.v || 900) * (0.5 + Math.random() * 0.6); this.add({ k: 'coin', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, ph: Math.random() * 6, life: 1.4 + Math.random() * 0.6, delay: (o.delay || 0) + Math.random() * (o.spreadT || 0.4) }); } }
   add(o) { o.t0 = this.t + (o.delay || 0); if (typeof o.col === 'string') o.col = palC(o.col); this.items.push(o); return o; } // 颜色一进来就贴到调色板
   fly(img, from, to, o = {}) {
@@ -300,7 +219,11 @@ M.reelP = function (r) {
   return p;
 };
 M.reelLock = (r) => 2.55 + r.ups * 0.95 + (r.tease ? 0.75 : 0);
-M.reelDur = (r) => M.reelLock(r) + 1.5;
+// 锁定后的余韵按结果分：普通 / 稀有 0.9 秒，史诗以上 1.5 秒（负面的快速过去）
+M.reelDur = (r) => M.reelLock(r) + (r.itemMode && r.ups < 2 ? 0.9 : 1.5);
+// 每一次往上冲（升品、最后的「再上一格？」）的时刻：冲之前 0.42 秒是蓄力
+M.reelEv = (r) => [...Array(r.ups || 0)].map((_, i) => 2.55 + i * 0.95).concat(r.tease ? [2.55 + (r.ups || 0) * 0.95] : []);
+M.REEL_CHG = 0.42;
 function bolt(ctx, x1, y1, x2, y2, col, w, seed) { let s = seed; const rnd = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; }; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(x1, y1); const n = 9; for (let i = 1; i < n; i++) { const t = i / n; ctx.lineTo(x1 + (x2 - x1) * t + (rnd() - 0.5) * 60, y1 + (y2 - y1) * t + (rnd() - 0.5) * 60); } ctx.lineTo(x2, y2); ctx.stroke(); ctx.strokeStyle = '#fff'; ctx.lineWidth = w * 0.35; ctx.stroke(); ctx.restore(); }
 M.bolt = bolt;
 // 四边框 / 像素箭头（dir 1 朝右、-1 朝左：一列一列缩短，3px 墨边）
@@ -320,7 +243,12 @@ M.drawReel = function (ctx, r, fx) {
   const sh = upIdx >= 0 ? (1 - (t - (2.55 + upIdx * 0.95)) / 0.45) * 16 : t > lockT && t < lockT + 0.3 ? (1 - (t - lockT) / 0.3) * 20 : 0;
   const ant = t < lockT ? clamp((ts - (lockT - 0.9)) / 0.9, 0, 1) : 0, punch = ts >= lockT ? 1 + 0.16 * Math.exp(-(ts - lockT) * 9) * Math.cos((ts - lockT) * 30) : 1, upP = upIdx >= 0 ? 1 + 0.07 * (1 - clamp((ts - (2.55 + upIdx * 0.95)) / 0.45, 0, 1)) : 1;
   if (ant > 0) { ctx.globalAlpha = st4(0.35 * ant) * outA; R(ctx, 0, 0, 1920, 1080, P.ink); ctx.globalAlpha = outA; }
-  const SC = inA * (0.85 + 0.15 * outA) * (1 + 0.08 * ant * ant) * punch * upP, jig = () => Math.round((Math.random() - 0.5) * (sh + ant * 5));
+  // 蓄力：每次往上冲之前灯珠全灭、窗口透出下一档的颜色、机箱越抖越厉害
+  let chg = 0; M.reelEv(r).forEach(E => { if (t < E && t > E - M.REEL_CHG) chg = (t - (E - M.REEL_CHG)) / M.REEL_CHG; });
+  const nxt = r.tiles[((Math.round(p) + 1) % N + N) % N], nc = palC(nxt.c);
+  // 传说锁定前黑场一下
+  const legend = r.itemMode && r.ups >= 3, black = legend && t > lockT - 0.18 && t < lockT ? 1 : 0;
+  const SC = inA * (0.85 + 0.15 * outA) * (1 + 0.08 * ant * ant + 0.04 * chg) * punch * upP, jig = () => Math.round((Math.random() - 0.5) * (sh + ant * 5 + chg * 8));
   ctx.translate(X + jig(), Y + jig()); ctx.scale(SC, SC);
   const W = 820, H = 640, hw = W / 2, hh = H / 2;
   // 机箱：酒红铁皮面板（墨框、斜面、铆钉、12px 硬投影）；锁定后外面多一圈 3px 品质色
@@ -331,7 +259,7 @@ M.drawReel = function (ctx, r, fx) {
   for (let i = 0; i < nb; i++) {
     let d = (i / nb) * per, bx, by;
     if (d < 2 * w2) { bx = -w2 + d; by = -h2; } else if ((d -= 2 * w2) < 2 * h2) { bx = w2; by = -h2 + d; } else if ((d -= 2 * h2) < 2 * w2) { bx = w2 - d; by = h2; } else { d -= 2 * w2; bx = -w2; by = h2 - d; }
-    const on = (Math.floor(t * speed) + i) % 3 === 0, qx = Math.round(bx) - 6, qy = Math.round(by) - 6;
+    const on = chg > 0 ? false : (Math.floor(t * speed) + i) % 3 === 0, qx = Math.round(bx) - 6, qy = Math.round(by) - 6;
     R(ctx, qx - 3, qy - 3, 18, 18, P.ink); R(ctx, qx, qy, 12, 12, on ? lit : P.umber); if (on) R(ctx, qx, qy, 3, 3, P.white);
   }
   // 招牌灯箱压在机箱上沿，图标放在灯箱左头
@@ -364,6 +292,7 @@ M.drawReel = function (ctx, r, fx) {
   ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.06 * outA; R(ctx, WX, WY + 24, WW, 36, P.white);
   if (t >= lockT && t < lockT + 0.45) { ctx.globalAlpha = st4(1 - (t - lockT) / 0.45); R(ctx, WX, WY, WW, WH, P.white); }
   ctx.globalCompositeOperation = 'source-over';
+  if (chg > 0) { ctx.globalAlpha = outA * chg * (0.18 + 0.14 * Math.sin(t * 34)); R(ctx, WX, WY, WW, WH, nc); ctx.globalAlpha = outA; }
   if (upIdx >= 0) { const q = (t - (2.55 + upIdx * 0.95)) / 0.45; ctx.globalAlpha = st4((1 - q) * 0.7); R(ctx, WX, WY, WW, WH, cc); for (let k = 0; k < 3; k++) bolt(ctx, WX + Math.random() * WW, WY, WX + Math.random() * WW, WY + WH, cc, 6, Math.floor(t * 30) + k * 7); }
   ctx.restore();
   // 中奖线：两条 6px 金色硬轨（按拍闪）+ 两侧像素箭头（滚起来后换成当前格的颜色）
@@ -381,10 +310,12 @@ M.drawReel = function (ctx, r, fx) {
   // 信息屏：深渊色凹槽里的墨描边字，锁定时按 4 格弹
   let msg = '', mc = P.lavender;
   if (t < 0.5) msg = '拉杆！'; else if (t < 1.9) msg = '滚动中……';
-  else if (upIdx >= 0) { msg = '升品！'; mc = cc; }
+  else if (upIdx >= 0) { msg = '升品' + '！'.repeat(upIdx + 1); mc = cc; }
+  else if (chg > 0) { msg = '……'; mc = nc; }
   else if (r.tease && t >= lockT - 0.75 && t < lockT) { msg = '还能再升……？'; mc = P.cream; }
   else if (t >= lockT) { msg = r.itemMode ? '锁定 · ' + cur.n : cur.n; mc = cc; }
   else { msg = cur.n + '……'; mc = cc; }
+  if (black) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; R(ctx, 0, 0, 1920, 1080, P.ink); ctx.restore(); }
   const ms = t >= lockT ? seq(POP, t - lockT, 0.075) : upIdx >= 0 ? 1.2 : 1, MY = hh - 88;
   U.box(ctx, -330, MY - 32, 660, 64, P.abyss); R(ctx, -330, MY - 32, 660, 6, P.ink);
   ctx.save(); ctx.translate(0, MY); ctx.scale(ms, ms); U.text(ctx, msg, 0, 0, 52, mc, { outline: true }); ctx.restore();
@@ -469,7 +400,7 @@ M.drawBanner = function (ctx, b) {
     const s = seq(SLAMB, t, 0.0733), flashW = t < 0.1 && !RM(), ramp = kind !== 'teal' && !flashW, settled = t > 0.44 && !RM();
     ctx.save(); ctx.globalAlpha = out; ctx.translate(X, sub ? Y - 26 : Y); ctx.scale(s, s);
     const chars = [...String(b.text)], cw = chars.map(ch => U.measure(ctx, ch, size)), tw = cw.reduce((q, c) => q + c, 0) + 4 * (chars.length - 1);
-    let px = -tw / 2; chars.forEach((ch, i) => { const ph = (t * 1.25 + (chars.length - i) * 0.12) % 1, dy = settled ? [0, -9, 0, 3][Math.floor(ph * 4)] : 0; U.text(ctx, ch, px + cw[i] / 2, dy, size, flashW ? P.white : P.gold, { ramp, outline: true }); px += cw[i] + 4; });
+    let px = -tw / 2; chars.forEach((ch, i) => { const ph = (t * 1.25 + (chars.length - i) * 0.12) % 1, dy = settled ? (-6 * Math.sin(ph * Math.PI * 2) - 3 * Math.max(0, Math.sin(ph * Math.PI * 2))) : 0; U.text(ctx, ch, px + cw[i] / 2, dy, size, flashW ? P.white : P.gold, { ramp, outline: true }); px += cw[i] + 4; });
     ctx.restore();
     if (sub && t > 0.3) { ctx.globalAlpha = (t > 0.4 ? 1 : 0.5) * out; U.text(ctx, b.sub, X, Y + 80, 40, P.butter); }
   }

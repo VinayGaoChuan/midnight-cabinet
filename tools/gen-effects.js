@@ -85,14 +85,14 @@ const count = {};
   doc = put(doc, 'items', out); count.items = n;
 }
 
-// ── sounds (all synthesised, src/mc-fx.js) ──
+// ── sounds (all synthesised, src/mc-audio.js; the library registers every name with its group in M.Sfx._names) ──
 {
-  const src = fs.readFileSync(path.join(SRC, 'mc-fx.js'), 'utf8');
-  const names = [...new Set((src.match(/^ {2}([a-zA-Z]+)\(/gm) || []).map(x => x.trim().replace('(', '')))].filter(k => typeof M.Sfx[k] === 'function' && !/^(init|env|setMuted|lim)$/.test(k));
-  const all = fs.readdirSync(SRC).filter(f => /\.js$/.test(f)).map(f => fs.readFileSync(path.join(SRC, f), 'utf8')).join('\n');
-  const users = (k) => all.split('Sfx.' + k + '(').length - 1 + all.split('S.' + k + '(').length - 1; const hasBuild = true;
-  let out = '\n| 编号 | 音效 | 调用次数 |\n|---|---|---|\n', n = 0;
-  names.forEach(k => { out += '| ' + pad('V', ++n) + ' | `Sfx.' + k + '` | ' + (hasBuild ? users(k) : '—') + ' |\n'; });
+  const reg = M.Sfx._names || {}, names = Object.keys(reg);
+  const all = fs.readdirSync(SRC).filter(f => /\.js$/.test(f) && f !== 'mc-audio.js').map(f => fs.readFileSync(path.join(SRC, f), 'utf8')).join('\n') + fs.readFileSync(path.join(SRC, 'template.html'), 'utf8');
+  const users = (k) => all.split('Sfx.' + k + '(').length - 1 + all.split('S.' + k + '(').length - 1 + all.split("cue('" + k + "'").length - 1;
+  let out = '\n| 编号 | 音效 | 分组 | 调用次数 |\n|---|---|---|---|\n', n = 0;
+  names.forEach(k => { out += '| ' + pad('V', ++n) + ' | `Sfx.' + k + '` | ' + reg[k] + ' | ' + users(k) + ' |\n'; });
+  const mini = M.Sfx.MINI || {}; out += '\n小游戏各自的一组（`Sfx.mini(小游戏, 事件)`）：' + Object.keys(mini).filter(k => k !== '_').map(k => '`' + k + '` ' + Object.keys(mini[k]).join(' / ')).join('；') + '。\n';
   doc = put(doc, 'sounds', out); count.sounds = n;
 }
 

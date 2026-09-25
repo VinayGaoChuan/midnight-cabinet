@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>HD-2D 房间预览</title>
+<!-- Dev tool: the same pixel-room data the game draws in 2D (src/mc-pxroom*.js), built into a three.js diorama.
+     Each layer is a plane at its depth with albedo + normal + glow maps; the floor rows lie flat; room lights become
+     point lights; animated layers and particles are refreshed every frame from M.PXR.frame(). Serve the repo root
+     (python3 -m http.server) and open /tools/hd2d-room.html?r=smithy -->
+<style>
+  html, body { margin: 0; height: 100%; background: #07060f; color: #f4efe0; font: 14px/1.4 system-ui, sans-serif; overflow: hidden; }
+  #ui { position: fixed; left: 12px; top: 10px; z-index: 2; display: flex; gap: 8px; align-items: center; }
+  #ui select, #ui button { background: #1a1640; color: #f4efe0; border: 2px solid #3d3a8c; padding: 4px 8px; font: inherit; }
+  #flat { position: fixed; right: 12px; bottom: 12px; z-index: 2; width: 300px; height: 210px; image-rendering: pixelated; border: 3px solid #07060f; }
+  #tip { position: fixed; left: 12px; bottom: 10px; z-index: 2; color: #a9a3c9; }
+</style>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/" } }</script>
+<script>window.MC = { BUILDINGS: {}, PJ: {} };</script>
+<script src="../src/mc-pxroom.js"></script>
+<script src="../src/mc-pxroom-kit.js"></script>
+<script src="../src/mc-pxroom-a.js"></script>
+<script>["b","c","d","e","f","g","h","i","t1","t2","t3","base","jobs"].forEach(k => document.write('<script src="../src/mc-pxroom-' + k + '.js"><\/script>'));</script>
+</head>
+<body>
+<div id="ui"><select id="pick"></select><button id="orbit">镜头摆动：开</button></div>
+<canvas id="flat" width="300" height="210"></canvas>
+<div id="tip">左：HD-2D（三维灯光 · 辉光 · 移轴景深）　右下：游戏里的 2D 画面（同一份数据）</div>
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { HorizontalTiltShiftShader } from 'three/addons/shaders/HorizontalTiltShiftShader.js';
+import { VerticalTiltShiftShader } from 'three/addons/shaders/VerticalTiltShiftShader.js';
+
+const X = window.MC.PXR, U = 10;                       // 10 art px = 1 world unit
+let W = X.W, H = X.H, FY = X.FY, FD = (H - FY) * X.FZ / U;    // per def (the main base is bigger than a room); floor depth in world units
+const wx = (x) => (x - W / 2) / U, wy = (y) => (FY - y) / U, wz = (z) => z / U;
+const keys = Object.keys(X.defs).filter(k => k[0] !== '_' || k === '_mainbase' || k === '_empty'), pick = document.getElementById('pick');
+keys.forEach(k => { const o = document.createElement('option'); o.value = o.textContent = k; pick.appendChild(o); });
+let key = new URLSearchParams(location.search).get('r') || 'smithy'; if (!X.has(key)) key = keys[0]; pick.value = key;
+
+const renderer = new THREE.WebGLRenderer({ antialias: false }); renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = false; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05; document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color('#07060f'); scene.fog = new THREE.Fog('#07060f', 30, 52);
+const camera = new THREE.PerspectiveCamera(28, innerWidth / innerHeight, 0.1, 100);
+scene.add(new THREE.HemisphereLight('#7a78c0', '#1a1014', 1.5));
+const key0 = new THREE.DirectionalLight('#c8c0ff', 0.9); key0.position.set(-4, 8, 6); scene.add(key0);
+
+const tex = (c, color) => { const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; if (color) t.colorSpace = THREE.SRGBColorSpace; return t; };
+function layerMat(L, crop) {
+  const m = new THREE.MeshStandardMaterial({ map: tex(L.albedo, 1), normalMap: tex(L.normal), emissiveMap: tex(L.glow, 1), emissive: new THREE.Color('#ffffff'), emissiveIntensity: 1.6, roughness: 0.82, metalness: 0.05, alphaTest: 0.5, side: THREE.DoubleSide });
+  m.normalScale.set(1.4, 1.4); if (crop) [m.map, m.normalMap, m.emissiveMap].forEach(t => { t.repeat.set(1, crop[1]); t.offset.set(0, crop[0]); }); return m;
+}
+let room = null, fit = 1;
+function build() {
+  if (room) { scene.remove(room.g); room.g.traverse(o => { if (o.material) { ['map', 'normalMap', 'emissiveMap'].forEach(k => o.material[k] && o.material[k].dispose()); o.material.dispose(); } if (o.geometry) o.geometry.dispose(); }); }
+  const E = X.export(key), g = new THREE.Group(), R = { g, dyn: {}, lights: [] }; W = E.W; H = E.H; FY = E.FY; FD = (H - FY) * E.FZ / U; fit = Math.max(W / 150, H / 105); scene.fog.near = 30 * fit; scene.fog.far = 52 * fit; camera.far = 100 * fit; camera.updateProjectionMatrix();
+  E.layers.forEach(L => {
+    if (L.k === 'wall') {   // the wall layer is two surfaces: the upright wall and the flat floor rows
+      const wall = new THREE.Mesh(new THREE.PlaneGeometry(W / U, FY / U), layerMat(L, [(H - FY) / H, FY / H])); wall.position.set(0, FY / U / 2, 0); g.add(wall);
+      const floor = new THREE.Mesh(new THREE.PlaneGeometry(W / U, FD), layerMat(L, [0, (H - FY) / H])); floor.rotation.x = -Math.PI / 2; floor.position.set(0, 0, FD / 2); g.add(floor);
+    } else { const m = new THREE.Mesh(new THREE.PlaneGeometry(W / U, H / U), layerMat(L)); m.position.set(0, wy(H / 2), wz(L.z)); g.add(m); }
+  });
+  // animated layers: planes just in front of each static layer, textures refreshed every frame
+  const F = X.frame(key, 0);
+  F.layers.forEach(L => { const mat = layerMat(L), m = new THREE.Mesh(new THREE.PlaneGeometry(W / U, H / U), mat); m.position.set(0, wy(H / 2), wz(L.z) + 0.02); g.add(m); R.dyn[L.k] = { mat, L }; });
+  E.lights.forEach(l => { const p = new THREE.PointLight(l.c, 0, l.r / U * 1.35, 1.6); p.position.set(wx(l.x), wy(l.y), wz(l.z) + 0.3); g.add(p); R.lights.push({ p, l }); });
+  // particles: glowing ones added on top, the rest plain
+  R.pts = [0, 1].map(glow => { const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(900), 3)); geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(900), 3));
+    const pm = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.13, vertexColors: true, transparent: true, depthWrite: false, blending: glow ? THREE.AdditiveBlending : THREE.NormalBlending })); pm.frustumCulled = false; g.add(pm); return pm; });
+  scene.add(g); room = R;
+}
+build(); pick.onchange = () => { key = pick.value; build(); history.replaceState(null, '', '?r=' + key); };
+let orbit = true; document.getElementById('orbit').onclick = (e) => { orbit = !orbit; e.target.textContent = '镜头摆动：' + (orbit ? '开' : '关'); };
+
+const composer = new EffectComposer(renderer); composer.addPass(new RenderPass(scene, camera));
+composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.85, 0.45, 0.62));
+const hts = new ShaderPass(HorizontalTiltShiftShader), vts = new ShaderPass(VerticalTiltShiftShader);
+[hts, vts].forEach(p => { p.uniforms.r.value = 0.52; composer.addPass(p); }); hts.uniforms.h.value = 1.6 / innerWidth; vts.uniforms.v.value = 1.6 / innerHeight;
+composer.addPass(new OutputPass());
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); hts.uniforms.h.value = 1.6 / innerWidth; vts.uniforms.v.value = 1.6 / innerHeight; });
+
+const flat = document.getElementById('flat').getContext('2d'), t0 = performance.now();
+function loop() {
+  const t = (performance.now() - t0) / 1000, sw = orbit ? Math.sin(t * 0.35) : 0;
+  camera.position.set(sw * 5 * fit, (6.4 + Math.cos(t * 0.21) * 0.4 * (orbit ? 1 : 0)) * fit, 25 * fit); camera.lookAt(sw * 0.8 * fit, wy(H / 2) + 0.3 * fit, 1.2);
+  const F = X.frame(key, t);
+  F.layers.forEach(L => { const d = room.dyn[L.k]; if (!d) return; ['map', 'normalMap', 'emissiveMap'].forEach(k => { d.mat[k].needsUpdate = true; }); });
+  room.lights.forEach((o, i) => { o.p.intensity = Math.max(0, F.lights[i]) * 16; });
+  [0, 1].forEach(glow => { const pm = room.pts[glow], pos = pm.geometry.attributes.position, col = pm.geometry.attributes.color; let n = 0;
+    F.parts.forEach(q => { if (q[5] !== glow || n >= 300) return; pos.array.set([wx(q[0]), wy(q[1]), wz(14) + 0.05], n * 3); col.array.set([q[2] / 255, q[3] / 255, q[4] / 255], n * 3); n++; });
+    pm.geometry.setDrawRange(0, n); pos.needsUpdate = true; col.needsUpdate = true; });
+  composer.render();
+  const fs = Math.min(300 / (W * 2), 210 / (H * 2)); flat.setTransform(1, 0, 0, 1, 0, 0); flat.clearRect(0, 0, 300, 210); flat.setTransform(fs, 0, 0, fs, 0, 0); flat.imageSmoothingEnabled = false; X.draw(flat, 0, 0, key, t, {}, '_flat_' + key, 9);
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

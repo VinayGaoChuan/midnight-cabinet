@@ -65,7 +65,7 @@ const oOpen = G.openShop;
 G.openShop = function (n) { const run = this.run; if (run) run.shopKind = (n && n.shop) || M.shopKindFor(n, run); return oOpen.apply(this, arguments); };
 // the quartermaster's gift is one banner, not one per refresh
 const oRef = G.refresh;
-G.refresh = function () { const run = this.run, S = run && SHOPS[run.shopKind]; if (S && S.pickOne && (run.shop.banners || []).some(o => o.sold)) { this.toast('军需官只给一面', '#d0453c'); return; } return oRef.apply(this, arguments); };
+G.refresh = function () { const run = this.run, S = run && SHOPS[run.shopKind]; if (S && S.pickOne && (run.shop.banners || []).some(o => o.sold)) { this.deny('军需官只给一面', '#d0453c'); return; } return oRef.apply(this, arguments); };
 // the slaver takes its price in the leader's blood too
 const oBuy = G.buy;
 G.buy = function (zone, i) {

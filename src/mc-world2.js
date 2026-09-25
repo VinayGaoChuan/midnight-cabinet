@@ -122,7 +122,7 @@ M.Walker2 = class {
   at(e, s) { let rem = s; for (let i = 1; i < e.pts.length; i++) { const [x1, y1] = e.pts[i - 1], [x2, y2] = e.pts[i]; const l = Math.abs(x2 - x1) + Math.abs(y2 - y1); if (rem <= l || i === e.pts.length - 1) { const q = l ? clamp(rem / l, 0, 1) : 1; return { x: x1 + (x2 - x1) * q, y: y1 + (y2 - y1) * q, dx: Math.sign(x2 - x1), dy: Math.sign(y2 - y1) }; } rem -= l; } return { x: e.pts[0][0], y: e.pts[0][1], dx: 1, dy: 0 }; }
   update(dt, keys, onArrive) {
     this.t += dt;
-    if (!this.edge) { this.idle += dt; const e = this.pickEdge(keys); if (e) { this.edge = e; this.s = 0; this.v = 80; this.idle = 0; M.Sfx.whoosh(0.2); } else { this.follow(dt); return; } }
+    if (!this.edge) { this.idle += dt; const e = this.pickEdge(keys); if (e) { this.edge = e; this.s = 0; this.v = 80; this.idle = 0; } else { this.follow(dt); return; } }   // 起步不出声，脚步声就够了
     const e = this.edge, VMAX = 620, A = 1700, rem = e.len - this.s, target = this.map.nodes[e.b];
     const stop = this.v * this.v / (2 * 2200);
     if (rem < stop + 6 && !target.done) this.v = Math.max(90, Math.sqrt(Math.max(0, 2 * 2200 * rem))); else this.v = Math.min(VMAX, this.v + A * dt);
@@ -130,7 +130,7 @@ M.Walker2 = class {
     this.s += this.v * dt;
     if (Math.random() < 0.5) this.dust.push({ x: this.x - prev.dx * 20, y: this.y + 4, t0: this.t, vx: -prev.dx * 60 + (Math.random() - 0.5) * 40, vy: -30 - Math.random() * 40 });
     if (this.s >= e.len) { this.node = e.b; this.edge = null; this.s = 0; this.x = target.x; this.y = target.y; this.v = 0; this.land = this.t; onArrive(target); }
-    else { const p = this.at(e, this.s); this.x = p.x; this.y = p.y; if (p.dx) this.face = p.dx; this.walkT += this.v * dt; }
+    else { const p = this.at(e, this.s); this.x = p.x; this.y = p.y; if (p.dx) this.face = p.dx; this.walkT += this.v * dt; const sn = Math.floor(this.walkT / 150); if (sn !== this._sn) { this._sn = sn; M.Sfx.step(sn); } }   // 每走 150 像素一步脚步声
     this.follow(dt);
   }
   follow(dt) {
@@ -194,7 +194,7 @@ M.drawWorld2 = function (ctx, run, walker, opts = {}) {
       ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.beginPath(); ctx.ellipse(n.x, n.y + 4, 74, 26, 0, 0, Math.PI * 2); ctx.fill();
       // 站台：墨框硬边石板（走过的压暗）
       ctx.fillStyle = P.ink; ctx.fillRect(n.x - 64, n.y - 20, 128, 40); ctx.fillStyle = closed ? P.abyss : P.night; ctx.fillRect(n.x - 60, n.y - 16, 120, 32); ctx.fillStyle = closed ? P.night : P.dusk; ctx.fillRect(n.x - 60, n.y - 16, 120, 8);
-      if (!n.seen) { const img = spriteCanvas('question', 8); ctx.globalAlpha = PJ.reduced ? 0.6 : Math.floor(T * 2 + n.id) % 2 ? 0.7 : 0.5; ctx.drawImage(img, n.x - img.width / 2, n.y - 40 - img.height); ctx.globalAlpha = 1; return; }
+      if (!n.seen) { const img = spriteCanvas('question', 8); ctx.globalAlpha = PJ.reduced ? 0.6 : 0.6 + 0.1 * Math.sin((T * 2 + n.id) * Math.PI); ctx.drawImage(img, n.x - img.width / 2, n.y - 40 - img.height); ctx.globalAlpha = 1; return; }
       const key = nodeSprite(n), big = ['stall', 'house', 'tent'].includes(key) ? 7 : key === 'tv' ? 8 : 8;
       const img = spriteCanvas(key, big, closed && n.type !== 'shop' ? '#2a2632' : null);
       const bob = n.done || closed ? 0 : Math.round(Math.sin(T * 2.4 + n.id) * 5);
@@ -252,8 +252,8 @@ M.worldPick = function (run, walker, sx, sy) {
   map.nodes.forEach(n => { const x = 960 + (n.x - walker.camX), y = 560 + (n.y - 60 - walker.camY); const d = Math.hypot(x - sx, y - sy); if (d < bd) { bd = d; best = n; } });
   return best;
 };
-// the minimap sits on the left, over ground already walked (user ruling 2026-09-25: the right is where you look)
-M.MMAP = { x: 24, y: 410, w: 560, h: 250 };
+// the minimap sits top-right, level with the leader panel (user ruling 2026-09-25)
+M.MMAP = { x: 1320, y: 48, w: 560, h: 250 };
 M.drawMinimap2 = function (ctx, run, walker) {
   const map = run.map, X = M.MMAP.x, Y = M.MMAP.y, Wd = 560, Ht = 250;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -275,7 +275,7 @@ M.drawMinimap2 = function (ctx, run, walker) {
     ctx.globalAlpha = past && n.id !== cur ? 0.3 : 1; ctx.drawImage(img, cx - img.width / 2, cy - img.height / 2); ctx.globalAlpha = 1;
   });
   // 自己：金 / 白两档闪烁的方块 + 下方小尖角
-  const hx = px(walker.x), hy = py(walker.y), hc = PJ.reduced || Math.floor(walker.t * 3) % 2 ? P.gold : P.white;
+  const hx = px(walker.x), hy = py(walker.y), hc = PJ.reduced || Math.sin(walker.t * 3 * Math.PI) < 0.6 ? P.gold : P.white;
   PR(ctx, hx - 8, hy - 26, 16, 16, P.ink); PR(ctx, hx - 6, hy - 24, 12, 12, hc); PR(ctx, hx - 4, hy - 12, 8, 6, P.ink); PR(ctx, hx - 2, hy - 12, 4, 4, hc);
   // 标题小牌（靛蓝）：压在面板上沿
   const cap = run.region.n + ' · ' + (run.len.boss ? run.len.boss + ' 个首领' : run.len.n) + ' · 第 ' + (curCol + 1) + '/' + map.cols + ' 站', U = M.UI, tw = E((U ? U.measure(ctx, cap, 24) : 300) + 32), tx = X + 24, ty = Y - 20;

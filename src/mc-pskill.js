@@ -12,7 +12,7 @@ const PS = {
   watchman: { n: '灯盾猛击', ic: 't_rage', r: 240, min: 1, res: 'rage', max: 100, gain: { hurt: 2.4, hit: 8 }, raidRate: 12, col: '#ffcf4a',
     d: '怒气满后，用灯盾砸晕身边的敌人',
     cast(b, h) { const f = near(b.ents.filter(o => b.active(o) && o.side === 'E'), h.x, h.y, 240); b.ring(h.x, h.y - 40, 20, 240, this.col, 12, 0.45); b.shake = Math.max(b.shake, 14);
-      f.forEach(o => { b.deal(h, o, h.atk * 2.5, { skill: 1, col: this.col, big: 1, pskill: 1 }); o.stun = Math.max(o.stun || 0, 1.5); }); h.shield = (h.shield || 0) + h.maxHp * 0.2; S.impact && S.impact(); },
+      f.forEach(o => { b.deal(h, o, h.atk * 2.5, { skill: 1, col: this.col, big: 1, pskill: 1 }); o.stun = Math.max(o.stun || 0, 1.5); }); h.shield = (h.shield || 0) + h.maxHp * 0.2;  },
     raid(R, e) { const f = R.ents.filter(o => o.alive && o.side === 'E' && Math.abs(o.x - e.x) < 240); R.fx.push({ k: 'boom', x: e.x, y: e.y - 20, r: 240, t0: R.t, life: 0.45 }); f.forEach(o => { R.damage(o, e.atk * 2.5, this.col); o.t = (o.t || 0) + 1.5; o.slow = Math.max(o.slow || 0, 1.5); }); e.hp = Math.min(e.max, e.hp + e.max * 0.15); } },
   widow: { n: '致命一掷', ic: 't_crit', r: 0, min: 1, res: 'energy', max: 100, gain: { hit: 14 }, raidRate: 13, col: '#ffcc33',
     d: '能量满后，朝最肉的敌人掷出致命一牌',
@@ -23,7 +23,7 @@ const PS = {
   nun: { n: '圣光祷言', ic: 't_heal', r: 280, min: 2, res: 'mana', max: 100, gain: { t: 12 }, raidRate: 12, col: '#b8ffb0',
     d: '法力满后，治疗全队并灼伤身边的敌人',
     cast(b, h) { b.ents.forEach(o => { if (o.alive && o.side === 'A' && !o.bench) { b.healE(o, o.maxHp * 0.2); b.fx.push({ k: 'pillar', x: o.x, w: 70, col: '#d8ffd0', t0: b.t, life: 0.8 }); } });
-      near(b.ents.filter(o => b.active(o) && o.side === 'E'), h.x, h.y, 280).forEach(o => b.deal(h, o, h.atk * 1.2, { skill: 1, col: '#fff2a0', pskill: 1 })); b.ring(h.x, h.y - 40, 20, 280, this.col, 10, 0.5); S.heal && S.heal(); },
+      near(b.ents.filter(o => b.active(o) && o.side === 'E'), h.x, h.y, 280).forEach(o => b.deal(h, o, h.atk * 1.2, { skill: 1, col: '#fff2a0', pskill: 1 })); b.ring(h.x, h.y - 40, 20, 280, this.col, 10, 0.5);  },
     raid(R, e) { R.ents.forEach(o => { if (o.alive && o.side === 'A') o.hp = Math.min(o.max, o.hp + o.max * 0.2); }); R.ents.forEach(o => { if (o.alive && o.side === 'E' && Math.abs(o.x - e.x) < 280) R.damage(o, e.atk * 1.2, '#fff2a0'); }); R.fx.push({ k: 'boom', x: e.x, y: e.y - 20, r: 280, t0: R.t, life: 0.5 }); } },
   butcherlord: { n: '剁骨旋风', ic: 't_claw', r: 220, min: 1, res: 'rage', max: 100, gain: { hit: 12, kill: 30, hurt: 1.5 }, raidRate: 11, col: '#ff3a3a',
     d: '怒气满后，旋转攻击周围敌人',
@@ -63,7 +63,7 @@ BP.psRate = function () { return 1 / Math.max(0.4, 1 + ((this.mods && this.mods.
 BP.psCast = function () {
   const s = this.ps, h = this.hero, P = s.P; if (P.cast(this, h) === false) return; s.v = 0; s.n++;
   this.float(h.x, h.y - 150 * (h.sz || 1), HEROES[this.run.hero.cls].skill.n, P.col, 30);
-  if (S.cast) S.cast();
+  // 个人技能的声音由配方出（mc-px16-fx.js 的 castFx → Sfx.skillFx）
 };
 // the leader's personal skill is gone (user ruling 2026-09-26): on the field the leader only fights; only the legion
 // skill (空格, mc-game-h.js) is left. In a 混沌来袭 the leader stands on the main base and does not fight at all.

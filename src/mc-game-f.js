@@ -27,7 +27,7 @@ G.beginBattle = function (n) {
   const b = this.battle;
   this.banner({ kind: 'win', text: nm, col: n.type === 'boss' || n.type === 'elite' ? '#ff6a5a' : n.type === 'extract' ? '#5fd0c0' : '#ffd970', life: 1.5, y: 520, sub: cfg.mode === 'hold' ? '坚守 ' + cfg.dur + ' 秒' : '全灭敌人', hold: () => this.battle === b && !b.over && b.t < b.entryEnd - 0.01 });
   this.introBanner = this.banners[this.banners.length - 1];
-  M.Sfx.whoosh(0.5); if (n.type === 'boss') M.Sfx.impact();
+  
   if (run.tut) {
     const T = { 1: ['b1', '部队会自动上场作战。领袖站在左边的指挥位，部队全灭后，领袖会亲自上场。鼠标悬浮在单位上能看到它的特性。'], 3: ['b3', '每场战斗的收益 = 基础积分 × 积分倍率。击杀敌人得到基础积分；精英、首领和部分特性能提高积分倍率，每次 +0.1。'], 5: ['b5', '这一场试试下方的支援道具：点击后滚轮会决定它的品质。'], 6: ['b6', '精英战！精英更强，击杀后积分倍率 +0.1。战斗胜利后，倒下的部队会全部复活。'], 9: ['boss', '最终首领！打败它，序章就结束了。'] }[n.col];
     if (T) setTimeout(() => this.coachOnce(T[0], T[1], 960, 300), 1600);
@@ -65,21 +65,23 @@ G.openShop = function (n) {
 G.buy = function (zone, i) {
   const run = this.run, list = run.shop[zone], c = list && list[i]; if (!c || c.sold || this.reel) return;
   const id = zone + i;
-  if (run.wallet < c.cost) { this.toast('积分不够', '#d0453c'); this.pulse['card' + id] = now(); M.Sfx.hit(); return; }
-  if (c.kind === 'unit' && !M.canAdd(run)) { this.toast('部队已满（' + M.ROSTER_CAP + '），先卖掉一个', '#d0453c'); return; }
-  if (c.kind === 'item' && run.items.indexOf(null) < 0) { this.toast('支援道具最多 3 个', '#d0453c'); return; }
+  if (run.wallet < c.cost) { this.deny('积分不够', '#d0453c'); return; }
+  if (c.kind === 'unit' && !M.canAdd(run)) { this.deny('部队已满（' + M.ROSTER_CAP + '），先卖掉一个', '#d0453c'); return; }
+  if (c.kind === 'item' && run.items.indexOf(null) < 0) { this.deny('支援道具最多 3 个', '#d0453c'); return; }
   const from = this.fxPos('card' + id) || { x: 960, y: 400 };
   this.hold('wallet', run.wallet); run.wallet -= c.cost; this.release('wallet'); c.sold = true; c.soldAt = now();
-  M.Sfx.coin(); M.Sfx.stamp(); if (this.fx.explode) this.fx.explode(from.x, from.y, Q[c.q].c, 0.8 + c.q * 0.25); else this.fx.burst(from.x, from.y, Q[c.q].c, 30); if (this.fx.coins) this.fx.coins(from.x, from.y, 8, { v: 600 });
-  if (c.q >= 2) { this.fx.rays(from.x, from.y, Q[c.q].c, 0.9, { r: 260 }); this.fx.kick(8 + c.q * 3); }
+  // 买下是爽点，按品质分两档：普通 / 稀有是小爽（卡片弹一下 + 火花，部队飞进队伍），史诗 / 传说是大爽（炸开 + 光芒 + 金币 + 镜头震）
+  M.Sfx.buy();
+  if (c.q >= 2) { M.Sfx.stamp(); this.juice('big', { x: from.x, y: from.y, col: Q[c.q].c, p: c.q / 3, sfx: false }); this.fx.rays(from.x, from.y, Q[c.q].c, 0.9, { r: 260, delay: 0.06 }); this.fx.coins(from.x, from.y, 8, { v: 600, delay: 0.08 }); }
+  else this.juice('good', { x: from.x, y: from.y, col: Q[c.q].c, p: 0.5 + c.q * 0.3, sfx: false });
   if (c.kind === 'unit') this.award([{ k: 'unit', type: c.type }], from);
   if (c.kind === 'item') this.award([{ k: 'item', key: c.key }], from);
-  if (c.kind === 'legion') { run.legion[c.key] = true; this.fly(M.spriteCanvas('flag', 8), from, 'banners', Q[c.q].c, () => { this.pulse.banners = now(); M.Sfx.up(1); }); }
+  if (c.kind === 'legion') { run.legion[c.key] = true; this.fly(M.spriteCanvas('flag', 8), from, 'banners', Q[c.q].c, () => { this.pulse.banners = now(); M.Sfx.gain('flag'); }); }
   this.bump();
 };
 G.lock = function () {};
-G.refresh = function () { const run = this.run, cost = M.refreshCost(run); if (this.reel) return; if (run.wallet < cost) { this.toast('积分不够', '#d0453c'); return; } this.hold('wallet', run.wallet); run.wallet -= cost; this.release('wallet'); run.refreshN = (run.refreshN || 0) + 1; M.rollShop(run); this.shopAt = now(); M.Sfx.whoosh(0.3); M.Sfx.lever(); this.bump(); };
-G.sellSel = function () { const run = this.run, u = run.roster.find(x => x.uid === this.sel); if (!u) return; const v = M.sellValue(run, u), from = this.fxPos('roster') || { x: 300, y: 900 }; run.roster = run.roster.filter(x => x !== u); this.sel = null; this.award([{ k: 'wallet', v }], from); M.Sfx.coin(); this.bump(); };
+G.refresh = function () { const run = this.run, cost = M.refreshCost(run); if (this.reel) return; if (run.wallet < cost) { this.deny('积分不够', '#d0453c'); return; } this.hold('wallet', run.wallet); run.wallet -= cost; this.release('wallet'); run.refreshN = (run.refreshN || 0) + 1; M.rollShop(run); this.shopAt = now(); M.Sfx.refresh(); this.bump(); };
+G.sellSel = function () { const run = this.run, u = run.roster.find(x => x.uid === this.sel); if (!u) return; const v = M.sellValue(run, u), from = this.fxPos('roster') || { x: 300, y: 900 }; run.roster = run.roster.filter(x => x !== u); this.sel = null; this.juice('back'); this.hold('wallet', run.wallet); run.wallet += v; this.fly('coin', from, 'wallet', '#ffcc33', () => this.release('wallet'), 0); this.bump(); };   // 卖掉是负面：一枚金币飞回钱包就结束
 // ───────── tutorial ─────────
 const oldStartTut = G.startTutorial;
 G.startTutorial = function () { oldStartTut.call(this); };

@@ -1,0 +1,819 @@
+<meta charset="utf-8">
+<title>钟表匠</title>
+<style>
+  :root { color-scheme: dark; --ink: #0b0a18; --hint: #5d5883; --label: #cdc5a3; --panel: #12132e; --line: #242b5f; }
+  html, body { height: 100%; margin: 0; background: var(--ink); overflow: hidden; }
+  #screen { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; background: var(--ink); image-rendering: crisp-edges; image-rendering: pixelated; }
+  .note { position: fixed; font: 12px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; letter-spacing: .05em; user-select: none; pointer-events: none; }
+  #state { left: 16px; top: calc(12px + env(safe-area-inset-top, 0px)); color: var(--label); white-space: pre; }
+  #hint { left: 16px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); color: var(--hint); }
+  #sheet { position: fixed; inset: 0; overflow: auto; background: var(--ink); color: var(--label); font: 12px/1.5 ui-monospace, "SF Mono", Menlo, monospace; padding-block: 16px; padding-inline: 16px; box-sizing: border-box; }
+  #sheet h2 { font-size: 12px; font-weight: 600; margin: 18px 0 8px; letter-spacing: .08em; }
+  #sheet .frames { display: flex; flex-wrap: wrap; gap: 6px; }
+  #sheet canvas { image-rendering: pixelated; background: var(--panel); border: 1px solid var(--line); max-width: 100%; }
+  @media (max-width: 600px) { #hint { display: none; } }
+</style>
+<canvas id="screen" aria-label="像素人物动作演示"></canvas>
+<div class="note" id="state"></div>
+<div class="note" id="hint">1 待机 · 2 移动 · 3 攻击 · 4 技能 · 5 受击 · 6 死亡 · A 自动 · T 动作表 · 空格 暂停 · → 单步 · S 慢放</div>
+<div id="sheet" hidden></div>
+<script>
+/*
+ * 像素人物设计 · 钟表匠（英雄 · 远程领袖，射程 340；领袖技能「倒带」）
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 依据：n「钟表匠」· race 英雄 · voc 远程领袖 · skill「倒带」offField「部队攻速 +60%，持续 6 秒」· onField「每 7 秒，让最近的敌人停摆」
+ * 角色设定卡
+ *   名称：钟表匠     身份：远程领袖（老工匠）     剪影：背上落地钟箱 + 发条钥匙（后上方高出头顶）· 脑门上的长镜筒护目镜 · 身前平端的喇叭口发条铳
+ *   尺寸：佝偻档，头顶约 25 格、钟箱顶 29、钥匙顶 33，宽约 27；128×96 逻辑画布，脚底在地面线 y=79
+ *   材质色阶：工装 [27,28,29,30] · 黄铜 [31,32,14,33] · 皮/木 [0,20,19,16] · 黑漆钟箱 [0,8,9,10] · 钟面 [7,6,5,17] · 白发须 [7,18,17,21] · 肤 [20,16,15,15]
+ *             · 靴 近侧 [0,20,19,16] / 远侧 [0,20,20,19] · 裤腿 近侧 [27,28,28,29] / 远侧 [27,27,28,28] · 手 [20,16,15,15]（不吃轮廓光）· 红点缀 [11,12,13,26]
+ *             · 镜片 [37,35,34,21] · 怀表面（发光体）[37,36,35,34] + [34,34,21,21]
+ *   细节：秃顶反光、一圈白发、耳、白浓眉、墨眼、大鼻头、翘八字胡；护目镜杯 + 副镜片 + 长镜筒（比鼻尖多伸出 3 格，中间一道箍）；驼背工装、背带、腰带 + 表链扣、红领巾；
+ *         皮围裙胸兜、口袋、缝线、红柄螺丝刀；细腿微屈、皮靴；木托 + 机匣小钟面 + 曲柄 + 两道箍 + 喇叭口；钟箱圆拱、铜条、7×7 钟面（2 格分针 + 1 格时针，待机 3 点整）、摆锤窗、蝴蝶钥匙；怀表 5 档
+ * 特效设定卡（元素：倒带 · 时光青，色阶 R_TIME = 白 21 → 淡青 34 → 青薄荷 35 → 铜绿 36 → 墨青 37；金属碎屑 R_BRASS）
+ *   移动：发条顿步——每个半程 10 刻度：接触A 3 → 经过 2 → 接触B 3 → 经过 2（接触帧多停 1 帧、不前进），两腿对称交替、远侧腿暗一档，发条钥匙每步转 1/4 圈，每步 1 颗尘土；转身 = 镜像
+ *   攻击：瞄准（低头贴镜筒、曲柄转）→ 后坐 1 格 + 铳口一团青色蒸汽（3×3 白芯 + 5×5 青环 → 散开）→ 3×3 黄铜小齿轮 170 格/秒 + 1 格青色拖尾 → 碎成 4 颗黄铜碎屑
+ *   技能（上场后的动作，界面不显示名字）：蓄力（举表弹盖、12 刻度点逆时针逐个点亮、背箱指针倒转、动作回跳 2 帧像倒放）
+ *     → 施放（怀表前指、刻度圆外爆 16 颗青光、八齿大齿轮 120 格/秒、震屏 2 格 + 天空闪白）
+ *     → 命中（齿轮嵌进假人、头顶小表盘指针「咔」地停住、青色描边定格 0.6 s，然后闪白 + 大摇 + 击退 + 20 颗外爆 + 冲击环）
+ *     → 收招（合表、指针顺时针快转、身后 2 个青色快进残影）
+ *   受击：敌弹 → 白色剪影 1 帧 + 击退 2 格 + 闭眼仰头 + 镜筒 / 钥匙 / 胡尖 / 怀表反甩 + impact 火花 + 震屏 1 格
+ *   死亡：停摆散架——逐帧变慢（1 → 2 → 3 帧定格）→ 钟面碎裂、弹簧崩出、齿轮和发条钥匙弹飞 → 向前侧翻倒地 → 护目镜滑落 → 怀表熄灭 → 消散 + 魂光
+ *   场外「倒带」（按 R 演示）：1 帧隔行扫描线 → 中央隔点大钟面，指针逆时针一圈再顺时针加速 → 身后 2 个快进残影
+ *
+ * 结构：1 色板 · 2 引擎（勿改）· 3 角色（换人改这里）· 4 特效（换人改这里）· 5 舞台 · 6 循环（勿改）
+ */
+(() => {
+'use strict';
+// ═════════════════════════ 1. 色板：屏幕上每个像素都来自这里 ═════════════════════════
+const PAL = [
+  '#0b0a18', '#12132e', '#1a1d45', '#242b5f', '#333d7c', //  0 墨 · 1–4 夜空
+  '#fff3d4', '#cdc5a3', '#8d8670',                       //  5–7 月光 / 暖灰
+  '#221f33', '#37324b', '#524b6a',                       //  8–10 石
+  '#33102a', '#621c40', '#9c2f4c',                       // 11–13 袍（勾线 / 暗 / 基）
+  '#e3a13c', '#f2c7a0', '#b27658',                       // 14 金 · 15–16 肤
+  '#ebe9e1', '#a6a2b5', '#7a4a2b', '#472916',            // 17–18 胡 · 19–20 木
+  '#ffffff', '#86f5ff', '#38b2ff', '#7b5cff', '#33218a', // 21–25 魔法 白→青→蓝→紫→深紫
+  '#cf4f5a',                                             // 26 袍亮
+  '#0a1c21', '#163842', '#265a63', '#41868c',            // 27–30 钟表匠：铜绿青工装（勾线 / 暗 / 基 / 亮；偏蓝，和守夜人的橄榄绿、元素的青薄荷拉开）
+  '#3e2608', '#8a5a1e', '#ffd98a',                       // 31–33 钟表匠：黄铜（勾线 / 暗 / 亮；基色借 14 金）
+  '#cff6ee', '#9fd8c8', '#3a8f86', '#13403f',            // 34–37 钟表匠元素「倒带 · 时光青」：淡青 → 青薄荷 → 铜绿 → 墨青
+];
+const W = 128, H = 96, DT = 1 / 60;
+const LUT = new Uint32Array(PAL.length), LUTF = new Uint32Array(PAL.length);
+const FLASH = [0, 3, 3, 4, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37];
+for (let i = 0; i < PAL.length; i++) { const n = parseInt(PAL[i].slice(1), 16); LUT[i] = ((255 << 24) | ((n & 255) << 16) | (((n >> 8) & 255) << 8) | (n >> 16)) >>> 0; }
+for (let i = 0; i < PAL.length; i++) LUTF[i] = LUT[FLASH[i]];
+// 天空闪白只提亮夜空 1–4（FLASH 其余保持原色，角色身上的颜色不会跟着变）
+// 特效色阶（亮 → 暗），粒子按寿命逐级走完
+const FXR = [[21, 22, 23, 24, 25], [21, 5, 14, 19, 20], [21, 26, 13, 12, 11], [6, 7, 10, 9, 8], [22, 23, 24, 25, 3], [21, 34, 35, 36, 37], [21, 33, 14, 32, 31]];
+const R_MAGIC = 0, R_IMPACT = 1, R_ENEMY = 2, R_DUST = 3, R_SOUL = 4, R_TIME = 5, R_BRASS = 6;   // 5 倒带 · 时光青（钟表匠元素）· 6 黄铜碎屑
+
+// ═════════════════════════ 2. 引擎：材质缓冲 → 分部明暗 → 分界线 → 选择性勾线 → 轮廓光 → 闪白 → 消散 ═════════════════════════
+// 材质 = [勾线, 暗, 基, 亮] 四个色板下标；band = 暗边宽度；flat = 不自动明暗（眼、宝石、发光体）
+const MRAMP = [0, 0, 0, 0], MBAND = [0], MFLAT = [0];
+function defMat(r, band, flat) { MRAMP.push(r[0], r[1], r[2], r[3]); MBAND.push(band || 1); MFLAT.push(flat ? 1 : 0); return MBAND.length - 1; }
+class Sprite { constructor(w, h, ox, oy) { this.w = w; this.h = h; this.ox = ox; this.oy = oy; const n = w * h; this.mat = new Uint8Array(n); this.tone = new Uint8Array(n); this.part = new Uint8Array(n); this.out = new Uint8Array(n); this.k1 = -1; this.k2 = -1; } }
+let S = null, cPart = 0, dX = 0, dY = 0, shear = 0;
+function begin(spr, ox, oy) { S = spr; S.mat.fill(0); S.tone.fill(0); S.part.fill(0); cPart = 0; dX = ox | 0; dY = oy | 0; shear = 0; }
+function part() { cPart++; }  // 之后画的是新部件，位于之前所有部件前面
+function sp(x, y, m, t) {
+  x = Math.round(x); y = Math.round(y); if (shear) x += Math.round(shear * -y / 26);
+  x += dX + S.ox; y += dY + S.oy; if (x < 0 || y < 0 || x >= S.w || y >= S.h) return; const i = y * S.w + x;
+  if (!m) { S.mat[i] = 0; return; } S.mat[i] = m; S.tone[i] = t || 0; S.part[i] = cPart;
+}
+function run(y, x0, x1, m, t) { x0 = Math.round(x0); x1 = Math.round(x1); for (let x = x0; x <= x1; x++) sp(x, y, m, t); }
+function rect(x, y, w, h, m, t) { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) sp(x + i, y + j, m, t); }
+function line(x0, y0, x1, y1, m, t, maxY) {
+  x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
+  const ax = Math.abs(x1 - x0), ay = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1; let e = ax + ay;
+  for (let n = 0; n < 200; n++) { if (y0 <= maxY) sp(x0, y0, m, t); if (x0 === x1 && y0 === y1) break; const e2 = 2 * e; if (e2 >= ay) { e += ay; x0 += sx; } if (e2 <= ax) { e += ax; y0 += sy; } }
+}
+function brush(x, y, r, m, t) { x = Math.round(x); y = Math.round(y); const R = Math.ceil(r); for (let j = -R; j <= R; j++) for (let i = -R; i <= R; i++) if (i * i + j * j <= r * r + 0.35) sp(x + i, y + j, m, t); }
+function copySprite(dst, src) { dst.out.set(src.out); }   // 残影 / 分身：把烘焙好的精灵拷一份（尺寸必须相同）
+function oth(s, x, y, m, g) { if (x < 0 || y < 0 || x >= s.w || y >= s.h) return true; const j = y * s.w + x; return s.mat[j] !== m || s.part[j] !== g; }
+function front(s, x, y, g) { if (x < 0 || y < 0 || x >= s.w || y >= s.h) return false; const j = y * s.w + x; return s.mat[j] !== 0 && s.part[j] > g; }
+function emp(s, x, y) { return x < 0 || y < 0 || x >= s.w || y >= s.h || s.mat[y * s.w + x] === 0; }
+const B8 = new Float32Array(64);
+for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) { let v = 0; for (let b = 0; b < 3; b++) { const xb = (x >> b) & 1, yb = (y >> b) & 1; v = v * 4 + 2 * (xb ^ yb) + yb; } B8[y * 8 + x] = (v + 0.5) / 64; }
+// o: { rim 0–3, rx, ry（光源在缓冲里的坐标）, rimR[], rimRamp, flash 0/1, dq 0–1 消散量（dq 上升：从头顶开始消失；dq 下降：从脚下开始显形）, skip 不受轮廓光的材质 }
+function bake(s, o) {
+  const w = s.w, h = s.h, M = s.mat, T = s.tone, G = s.part, out = s.out; out.fill(255);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = y * w + x, m = M[i]; if (!m) continue; const g = G[i]; let tn = T[i];
+    if (!tn) {
+      if (MFLAT[m]) tn = 3;
+      else { const lit = oth(s, x - 1, y, m, g) || oth(s, x, y - 1, m, g); let dark = oth(s, x + 1, y + 1, m, g); for (let k = 1; k <= MBAND[m] && !dark; k++) dark = oth(s, x + k, y, m, g) || oth(s, x, y + k, m, g); tn = lit && dark ? 3 : lit ? 4 : dark ? 2 : 3; }
+    }
+    if (!MFLAT[m] && (front(s, x + 1, y, g) || front(s, x - 1, y, g) || front(s, x, y + 1, g) || front(s, x, y - 1, g))) tn = 1;
+    out[i] = MRAMP[m * 4 + tn - 1];
+  }
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = y * w + x; if (M[i]) continue; let m = 0;
+    if (y + 1 < h && M[i + w]) m = M[i + w]; else if (x + 1 < w && M[i + 1]) m = M[i + 1]; else if (x > 0 && M[i - 1]) m = M[i - 1]; else if (y > 0 && M[i - w]) m = M[i - w];
+    if (m) out[i] = MRAMP[m * 4];
+  }
+  if (o.rim) {
+    const R = o.rimR[o.rim], RR = o.rimRamp;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = y * w + x, m = M[i]; if (!m || o.skip[m]) continue;
+      const nx = (emp(s, x + 1, y) ? 1 : 0) - (emp(s, x - 1, y) ? 1 : 0), ny = (emp(s, x, y + 1) ? 1 : 0) - (emp(s, x, y - 1) ? 1 : 0);
+      if (!nx && !ny && !emp(s, x + 1, y) && !emp(s, x - 1, y) && !emp(s, x, y - 1) && !emp(s, x, y + 1)) continue;
+      const vx = o.rx - x, vy = o.ry - y; if (nx * vx + ny * vy <= 0) continue; const d = Math.hypot(vx, vy); if (d > R) continue;
+      out[i] = o.rim === 3 ? (d < R * 0.3 ? RR[0] : d < R * 0.6 ? RR[1] : RR[2]) : o.rim === 2 ? (d < R * 0.5 ? RR[1] : RR[2]) : RR[2];
+    }
+  }
+  if (o.flash) for (let i = 0; i < w * h; i++) if (M[i]) out[i] = 21;
+  if (o.dq > 0) {
+    let top = h, bot = -1; for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (out[y * w + x] !== 255) { if (y < top) top = y; if (y > bot) bot = y; }
+    const span = Math.max(1, bot - top);
+    for (let y = top; y <= bot; y++) { const bias = (y - top) / span; for (let x = 0; x < w; x++) { const i = y * w + x; if (out[i] !== 255 && B8[(y & 7) * 8 + (x & 7)] * 0.55 + bias * 0.45 < o.dq) out[i] = 255; } }
+  }
+}
+
+// ═════════════════════════ 3. 角色：钟表匠（换角色时改这一节） ═════════════════════════
+// 材质 [勾线, 暗, 基, 亮]：工装 铜绿青（主材质）· 黄铜 · 皮 · 黑漆钟箱 · 钟面 · 白发须 · 肤 · 靴 · 木托 · 红点缀 · 墨 · 镜片 · 怀表面（发光体）
+const M_SUIT = defMat([27, 28, 29, 30], 2), M_SLEEVE = defMat([27, 28, 29, 30], 1), M_LEG = defMat([27, 28, 28, 29], 1);
+const M_BRASS = defMat([31, 32, 14, 33], 1), M_LEATHER = defMat([0, 20, 19, 16], 1), M_CASE = defMat([0, 8, 9, 10], 1), M_FACE = defMat([7, 6, 5, 17], 1);
+const M_HAIR = defMat([7, 18, 17, 21], 1), M_SKIN = defMat([20, 16, 15, 15], 1), M_BOOT = defMat([0, 20, 19, 16], 1), M_WOOD = defMat([0, 20, 19, 16], 1), M_RED = defMat([11, 12, 13, 26], 1);
+const M_LEG_B = defMat([27, 27, 28, 28], 1), M_BOOT_B = defMat([0, 20, 20, 19], 1);   // 远侧腿、远侧靴暗一档（近侧靴用浅一档的皮色）：走路时前后脚交替读得出来
+const M_HAND = defMat([20, 16, 15, 15], 1);                     // 手（和肤色同色阶；不吃轮廓光，举表时握表的手不会被描成青边）
+const M_INK = defMat([0, 0, 0, 0], 1, 1), M_LENS = defMat([37, 35, 34, 21], 1, 1), M_WATCH = defMat([37, 36, 35, 34], 1, 1), M_GLOW = defMat([34, 34, 21, 21], 1, 1);
+const R_EL = R_TIME;                                            // 本角色的元素色阶：倒带 · 时光青
+const hero = new Sprite(84, 56, 38, 50);                        // 缓冲：脚底 = (38, 50)；放得下背箱钥匙、平端的铳、侧翻倒地 + 滑落的护目镜
+const HERO_RIM = { rim: 0, rx: 0, ry: 0, rimR: [0, 7, 15, 20], rimRamp: FXR[R_EL], flash: 0, dq: 0, ddir: 0, skip: new Uint8Array(MBAND.length + 4) };
+HERO_RIM.skip[M_HAND] = HERO_RIM.skip[M_WATCH] = HERO_RIM.skip[M_GLOW] = HERO_RIM.skip[M_LENS] = HERO_RIM.skip[M_INK] = HERO_RIM.skip[M_FACE] = 1;
+const HX = 34, HY = 79;                                         // 远程站位
+// 姿势参数：连续插值，按 12 fps 取样后取整。取值范围（缓存键按此编码，超出会串位）：
+//   hx -32..31 · hy -64..63（铳的握把 = 右手扳机位）· a ±π（铳的角度，0 = 平端，正 = 铳口朝下，π/32 一档）· lean / head -1..2 · back / bend 0..3（bend：惯性件 1 后甩 2 前甩）· bob 0..1
+//   fx -8..23 · fy -32..31（back = 1 时左手相对握把的位置：取表、举表、前指）· watch 0..2（0 挂腰间 1 手里合着 2 打开）· tap 0..1 · key 0..3（发条钥匙转角）· hand 0..7（背箱分针方向）
+//   pend -1..1（摆锤）· crank 0..3（铳上曲柄）· broken 0..1（钟面碎裂）
+//   beard -3..4（八字胡尖）· sway -1..2 · gem 0..7 · rim 0..3 · bx -16..15 · crouch 0..7 · lift 0..7 · hatX -16..15 · hatY 0..15（护目镜滑落）· step -1..2 · wup 0..3 · dq 0..1
+//   需要新参数时：加进 P、在 poseAt 开头重置、编进 k1 / k2（每个键的乘积必须小于 2^53，放不下就加 k3 并在 render 里一起比较），并在这里写明范围
+const P = { hx: 0, hy: 0, a: 0, lean: 0, head: 0, back: 0, bend: 0, bob: 0, beard: 0, sway: 0, gem: 0, glint: 0, rim: 0, gx: 0, gy: 0, bx: 0, crouch: 0, eyes: 0, flash: 0, lying: 0, lift: 0, hatX: 0, hatY: 0, dq: 0, ddir: 0, step: 0, walk: 0, wup: 0, flip: 0, mx: 0, k1: 0, k2: 0,
+  fx: 0, fy: 0, watch: 0, tap: 0, key: 0, hand: 0, pend: 0, crank: 0, broken: 0, mzx: 0, mzy: 0 };
+// back：0 = 左手（远侧）托铳管；1 = 左手离开铳管拿怀表，位置 = 握把 + (fx, fy)。右手（近侧）始终握扳机，铳托夹在右腋下
+const K_IDLE = { hx: 5, hy: -12, a: 0.15, lean: 0, head: 0, back: 0, bend: 0, fx: 0, fy: 0 };
+const K_PEEK = { hx: 5, hy: -12, a: 0.45, lean: 0, head: 1, back: 1, bend: 0, fx: 13, fy: -4 };    // 待机个性：左手把怀表举到镜筒尖前面，铳口下垂
+const K_AIM = { hx: 5, hy: -13, a: 0.0, lean: 1, head: 1, back: 0, bend: 0, fx: 0, fy: 0 };       // 低头贴镜筒瞄准
+const K_FIRE = { hx: 4, hy: -13, a: -0.2, lean: 0, head: 0, back: 0, bend: 1, fx: 0, fy: 0 };     // 后坐 1 格、铳口上跳
+const K_CHARGE = { hx: 4, hy: -11, a: 0.45, lean: -1, head: -1, back: 1, bend: 0, fx: 7, fy: -17 }; // 左手把怀表举过头顶
+const K_CAST = { hx: 4, hy: -11, a: 0.4, lean: 1, head: 1, back: 1, bend: 2, fx: 16, fy: -3 };     // 怀表朝前一指：前臂从下巴下面伸出，表离开头部轮廓
+const K_HURT = { hx: 3, hy: -13, a: -0.3, lean: -1, head: -1, back: 0, bend: 1, fx: 0, fy: 0 };
+const K_SAG1 = { hx: 4, hy: -11, a: 0.3, lean: 1, head: 1, back: 0, bend: 0, fx: 0, fy: 0 };      // 发条走完：逐级下沉
+const K_SAG2 = { hx: 4, hy: -10, a: 0.5, lean: 1, head: 2, back: 0, bend: 0, fx: 0, fy: 0 };
+const K_SAG3 = { hx: 4, hy: -9, a: 0.7, lean: 2, head: 2, back: 0, bend: 2, fx: 0, fy: 0 };
+const ASTEP = Math.PI / 32;
+function mixPose(A, B, q) { P.hx = A.hx + (B.hx - A.hx) * q; P.hy = A.hy + (B.hy - A.hy) * q; P.a = A.a + (B.a - A.a) * q; P.lean = A.lean + (B.lean - A.lean) * q; P.head = A.head + (B.head - A.head) * q; P.back = A.back + (B.back - A.back) * q; P.bend = A.bend + (B.bend - A.bend) * q; P.fx = A.fx + (B.fx - A.fx) * q; P.fy = A.fy + (B.fy - A.fy) * q; }
+const easeInOut = (q) => (q < 0.5 ? 2 * q * q : 1 - (-2 * q + 2) * (-2 * q + 2) / 2);
+const easeOut = (q) => 1 - (1 - q) * (1 - q) * (1 - q);
+const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
+const BEARD_IDLE = [0, 1, 0, -1], SWAY_IDLE = [0, 1, 0, -1];
+const WALK_STEP = [1, 0, -1, 0], WALK_UP = [0, 2, 0, 1], WALK_BOB = [1, 0, 1, 0], WALK_SWAY = [-1, 0, 1, 0], WALK_BEARD = [0, -1, 0, 1], WALK_DIST = 14;   // 行走循环：接触 → 经过 → 接触 → 经过
+const GAIT_F = [0, 0, 0, 1, 1, 2, 2, 2, 3, 3], GAIT_C = [0, 1, 1, 2, 3, 4, 5, 5, 6, 7];   // 发条顿步：每个 0.8 s 半程 = 10 个 12 fps 刻度 → 接触A 3 · 经过 2 · 接触B 3 · 经过 2；接触帧多停 1 帧，停的那一拍不前进（GAIT_C 为累计前进刻度）
+const GLOW_MATS = [M_WATCH, M_GLOW], HIT_POINT = [2, -14];     // 发光体材质（怀表面）、受击点（本地坐标）
+const WAIST_X = -1, WAIST_Y = -7;                               // 腰间怀表中心
+// 状态与时长（秒）。SKILL = CHARGE → CAST → RECOVER；HURT / DEATH 的前 0.3 秒是来袭敌弹；MOVE 走出去再转身走回来
+const IDLE = 0, MOVE = 1, ATTACK = 2, CHARGE = 3, CAST = 4, RECOVER = 5, HURT = 6, DEATH = 7, REVIVE = 8;
+const DUR = [2.4, 1.6, 0.75, 1.4, 0.5, 0.7, 0.8, 2.9, 1.0];
+const CHAIN = [-1, -1, -1, CAST, RECOVER, -1, -1, REVIVE, -1];
+const NAMES = ['IDLE 待机', 'MOVE 移动', 'ATTACK 攻击', 'SKILL 技能 · 蓄力', 'SKILL 技能 · 施放', 'SKILL 技能 · 收招', 'HURT 受击', 'DEATH 死亡', 'REVIVE 复活'];
+const INCOMING = 0.3, T_FIRE = 2 / 12, T_SHATTER = INCOMING + 0.7, T_LAND = INCOMING + 0.95;
+const DIR8 = [0, -1, 1, -1, 1, 0, 1, 1, 0, 1, -1, 1, -1, 0, -1, -1];   // 钟面指针 8 个方向（0 = 12 点，顺时针）
+function poseAt(st, t, T) {
+  const tq = Math.floor(t * 12) / 12, fs = Math.floor(t * 12 + 1e-6), f12 = Math.floor(T * 12), TT = f12 / 12;
+  P.glint = 0; P.bx = 0; P.crouch = 0; P.eyes = 0; P.flash = 0; P.lying = 0; P.lift = 0; P.hatX = 0; P.hatY = 0; P.dq = 0; P.ddir = 0; P.step = 0; P.walk = 0; P.wup = 0; P.flip = 0; P.mx = 0; P.bob = 0; P.beard = 0; P.sway = 0; P.gem = 0; P.rim = 0;
+  P.fx = 0; P.fy = 0; P.watch = 0; P.tap = 0; P.key = 0; P.hand = 0; P.pend = 0; P.crank = 0; P.broken = 0;
+  const idle = () => {
+    mixPose(K_IDLE, K_IDLE, 0); const b = Math.floor(TT * 2.5); P.bob = b & 1; P.beard = BEARD_IDLE[(b + 1) & 3]; P.sway = SWAY_IDLE[Math.floor(TT * 1.25) & 3]; P.pend = (b & 1) ? 1 : -1;
+    const li = Math.round((tq % DUR[IDLE]) * 12);             // 待机个性：取出怀表、举到镜筒前、弹开、敲两下、合上放回
+    if (li === 7) P.glint = 1;                                 // 护目镜镜筒尖反光一帧
+    if (li >= 14 && li <= 25) {
+      if (li === 14 || li === 25) { P.back = 1; P.fx = -4; P.fy = 2; P.a = 0.3; }   // 左手到腰间解下 / 挂回怀表
+      else if (li === 15 || li === 24) mixPose(K_IDLE, K_PEEK, 0.55);
+      else mixPose(K_PEEK, K_PEEK, 0);
+      P.watch = li >= 17 && li <= 22 ? 2 : 1;
+      P.gem = P.watch === 2 ? 1 : 0; P.rim = P.watch === 2 ? 1 : 0; P.tap = li === 20 || li === 22 ? 1 : 0;
+    }
+  };
+  if (st === IDLE) idle();
+  else if (st === MOVE) {                                     // 发条顿步：迈一步停一拍，钥匙每步转 1/4 圈
+    mixPose(K_IDLE, K_IDLE, 0);
+    const half = DUR[MOVE] / 2, back = tq >= half, fi = Math.min(9, Math.floor((back ? tq - half : tq) * 12 + 1e-6)), f = GAIT_F[fi];
+    P.walk = 1; P.step = WALK_STEP[f]; P.wup = WALK_UP[f]; P.bob = WALK_BOB[f]; P.sway = WALK_SWAY[f]; P.beard = WALK_BEARD[f];
+    P.a = K_IDLE.a + P.step * ASTEP; P.pend = P.step; P.key = ((fi >= 5 ? 1 : 0) + (back ? 2 : 0)) & 3;   // 第二次接触时钥匙转 1/4 圈
+    const q = GAIT_C[fi] / GAIT_C[9]; if (!back) P.mx = Math.round(WALK_DIST * q); else { P.flip = 1; P.mx = Math.round(WALK_DIST * (1 - q)); }
+  }
+  else if (st === ATTACK) {
+    if (tq < 0.12) { mixPose(K_IDLE, K_AIM, easeOut(tq / 0.12)); P.crank = fs; }
+    else if (tq < 0.2) { mixPose(K_FIRE, K_FIRE, 0); P.bx = -1; P.beard = -1; P.sway = -1; P.crank = 2; }
+    else if (tq < 0.45) { mixPose(K_FIRE, K_AIM, easeOut((tq - 0.2) / 0.25)); P.bx = tq < 0.3 ? -1 : 0; P.crank = 3; P.beard = -1; }
+    else { mixPose(K_AIM, K_IDLE, easeInOut(clamp01((tq - 0.45) / 0.3))); }
+  } else if (st === CHARGE) {
+    const tt = fs === 5 || fs === 9 ? tq - 2 / 12 : tq;         // 倒放感：第 5、9 帧动作回跳 2 帧
+    const q = easeInOut(clamp01(tt / 0.7)); mixPose(K_IDLE, K_CHARGE, q);
+    P.watch = fs < 1 ? 0 : q > 0.3 ? 2 : 1; P.back = P.watch ? 1 : 0; P.gem = tq < 0.3 ? 0 : tq < 0.5 ? 1 : tq < 1.15 ? ((f12 & 1) ? 2 : 1) : 2; P.rim = tq < 0.3 ? 1 : 2;
+    P.hand = (8 - (fs % 8)) & 7; P.key = (4 - (fs & 3)) & 3; P.pend = (fs & 1) ? 1 : -1;   // 背箱分针飞速倒转、钥匙倒拧、摆锤急摆
+    P.beard = q > 0.9 && (f12 & 1) ? -1 : 0; P.sway = q > 0.4 ? ((f12 & 1) ? -1 : 0) : 0;
+  } else if (st === CAST) {
+    if (tq < 1 / 12) mixPose(K_CHARGE, K_CAST, 0.5); else mixPose(K_CAST, K_CAST, 0);
+    P.watch = 2; P.gem = 3; P.rim = 3; P.beard = -1; P.sway = -1; P.hand = 0; P.key = 0;   // 停摆：背箱分针停在 12 点
+  } else if (st === RECOVER) {
+    const q = easeInOut(clamp01(tq / 0.6)); mixPose(K_CAST, K_IDLE, q);
+    P.watch = tq < 0.25 ? 2 : q < 0.8 ? 1 : 0; P.back = P.watch ? 1 : 0; P.gem = tq < 0.17 ? 2 : tq < 0.25 ? 1 : 0; P.rim = q < 0.4 ? 2 : q < 0.8 ? 1 : 0;
+    P.hand = fs & 7; P.key = fs & 3; P.pend = (fs & 1) ? -1 : 1; P.beard = q < 0.5 ? -1 : 0;   // 快进：分针顺时针快转、钥匙正拧
+  } else if (st === HURT) {
+    const h = tq - INCOMING;
+    if (h < 0) idle();
+    else if (h < 0.2) { mixPose(K_HURT, K_HURT, 0); P.bx = -2; P.eyes = 1; P.beard = 1; P.sway = 1; P.pend = 1; P.flash = h < 1 / 12 ? 1 : 0; }
+    else if (h < 0.35) { mixPose(K_HURT, K_IDLE, 0.5); P.bx = -1; P.eyes = 1; P.beard = 1; P.sway = -1; P.pend = -1; }
+    else mixPose(K_HURT, K_IDLE, easeInOut(clamp01((h - 0.35) / 0.15)));
+  } else if (st === DEATH) {                                  // 停摆散架：逐帧变慢 → 定格 → 钟面碎裂 → 侧翻倒地 → 护目镜滑落 → 怀表熄灭 → 消散
+    const d = tq - INCOMING;
+    if (d < 0) idle();
+    else if (d < 0.25) { mixPose(K_HURT, K_HURT, 0); P.bx = -2; P.eyes = 1; P.beard = 1; P.sway = 1; P.flash = d < 1 / 12 ? 1 : 0; P.key = 1; P.hand = 3; P.pend = 1; }
+    else if (d < 0.33) { mixPose(K_SAG1, K_SAG1, 0); P.bx = -2; P.eyes = 1; P.crouch = 1; P.key = 2; P.hand = 2; P.pend = -1; P.sway = -1; }
+    else if (d < 0.5) { mixPose(K_SAG2, K_SAG2, 0); P.bx = -2; P.eyes = 1; P.crouch = 2; P.key = 3; P.hand = 1; P.pend = 0; }
+    else if (d < 0.78) { mixPose(K_SAG3, K_SAG3, 0); P.bx = -2; P.eyes = 1; P.crouch = 3; P.key = 3; P.hand = 1; P.pend = 0; P.broken = d >= 0.66 ? 1 : 0; }
+    else {
+      mixPose(K_SAG3, K_SAG3, 0); P.lying = 1; P.bx = -2; P.eyes = 1; P.broken = 1; P.lift = d < 0.83 ? 3 : d < 0.9 ? 1 : 0;
+      const hq = clamp01((d - 0.95) / 0.25); P.hatX = Math.round(4 * hq); P.hatY = Math.round(Math.sin(hq * Math.PI) * 2);
+      P.gem = d < 1.0 ? 2 : d < 1.3 ? ((f12 % 3) === 0 ? 1 : 4) : 4;
+      if (d >= 1.6) P.dq = clamp01((d - 1.6) / 0.8);
+    }
+  } else if (st === REVIVE) {
+    idle(); P.bob = 0; P.ddir = 1;
+    if (tq < 0.4) P.dq = 1; else if (tq < 0.85) P.dq = 1 - (tq - 0.4) / 0.45; else P.glint = 1;
+  }
+  P.hx = Math.round(P.hx); P.hy = Math.round(P.hy) + P.bob; P.a = Math.round(P.a / ASTEP) * ASTEP; P.fx = Math.round(P.fx); P.fy = Math.round(P.fy);
+  P.lean = Math.round(P.lean); P.head = Math.round(P.head); P.back = Math.round(P.back); P.bend = Math.round(P.bend);
+  // 发光体（怀表面）与铳口的位置
+  if (P.lying) { P.gx = 5 + P.bx; P.gy = -2 - P.lift; P.mzx = 0; P.mzy = 0; }
+  else {
+    if (P.watch) { P.gx = P.hx + P.fx + 1 + P.bx; P.gy = P.hy + P.fy - 4; } else { P.gx = WAIST_X + P.bx; P.gy = WAIST_Y + P.crouch; }
+    const ca = Math.cos(P.a), sa = Math.sin(P.a), ox = P.hx + sa, oy = P.hy - ca; P.mzx = Math.round(ox + ca * 11.5) + P.bx; P.mzy = Math.round(oy + sa * 11.5 - 0.5);
+  }
+  // 缓存键：任何一个取整后的参数变了才重画
+  let k = P.hx + 32; k = k * 128 + P.hy + 64; k = k * 64 + Math.round(P.a / ASTEP) + 32; k = k * 4 + P.lean + 1; k = k * 4 + P.head + 1; k = k * 4 + P.back; k = k * 4 + P.bend; k = k * 2 + P.bob;
+  k = k * 32 + P.fx + 8; k = k * 64 + P.fy + 32; k = k * 4 + P.watch; k = k * 2 + P.tap; k = k * 4 + P.key; k = k * 8 + P.hand; k = k * 4 + P.pend + 1; k = k * 4 + P.crank; k = k * 2 + P.broken; P.k1 = k;
+  k = P.beard + 3; k = k * 4 + P.sway + 1; k = k * 8 + P.gem; k = k * 2 + P.glint; k = k * 4 + P.rim; k = k * 32 + P.bx + 16; k = k * 8 + P.crouch; k = k * 2 + P.eyes; k = k * 2 + P.flash; k = k * 4 + P.step + 1; k = k * 4 + P.wup;
+  k = k * 2 + P.lying; k = k * 8 + P.lift; k = k * 32 + P.hatX + 16; k = k * 16 + P.hatY; k = k * 128 + Math.round(P.dq * 48) + P.ddir * 64; P.k2 = k;
+}
+// ───── 绘制小工具：两段式 IK、细肢、袖子、铳的局部坐标 ─────
+let IKX = 0, IKY = 0;
+function ik(sx, sy, ex, ey, L1, L2, px0, py0) {             // 关节（肘 / 膝）朝 (px0, py0) 一侧弯
+  const dx = ex - sx, dy = ey - sy, d = Math.hypot(dx, dy) || 1;
+  if (d >= L1 + L2 - 0.01) { IKX = sx + dx * L1 / (L1 + L2); IKY = sy + dy * L1 / (L1 + L2); return; }
+  const a = (L1 * L1 - L2 * L2 + d * d) / (2 * d), h = Math.sqrt(Math.max(0, L1 * L1 - a * a));
+  let px = -dy / d, py = dx / d; if (px * px0 + py * py0 < 0) { px = -px; py = -py; }
+  IKX = sx + dx * a / d + px * h; IKY = sy + dy * a / d + py * h;
+}
+function limb2(x0, y0, x1, y1, m, t) {                        // 2 格粗的细腿
+  const dx = x1 - x0, dy = y1 - y0, n = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) * 2)), hor = Math.abs(dx) > Math.abs(dy);
+  for (let i = 0; i <= n; i++) { const x = x0 + dx * i / n, y = y0 + dy * i / n; sp(x, y, m, t); if (hor) sp(x, y + 1, m, t); else sp(x + 1, y, m, t); }
+}
+function sleeve(x0, y0, x1, y1, r0, r1, m) { for (let s = 0; s <= 1.001; s += 0.125) brush(x0 + (x1 - x0) * s, y0 + (y1 - y0) * s, r0 + (r1 - r0) * s, m, 0); }
+let GCA = 1, GSA = 0, GOX = 0, GOY = 0;
+function gunFrame() { GCA = Math.cos(P.a); GSA = Math.sin(P.a); GOX = P.hx + GSA; GOY = P.hy - GCA; }   // 铳的中轴线从握把上方 1 格穿过
+function gp(u, v, m, t) { sp(GOX + GCA * u - GSA * v, GOY + GSA * u + GCA * v, m, t); }
+function gRect(u0, u1, v0, v1, m, t) { for (let u = u0; u <= u1 + 0.001; u += 0.5) for (let v = v0; v <= v1 + 0.001; v += 0.5) gp(u, v, m, t); }
+// 驼背上身：[行（相对肩线）, 左, 右]（lean 时上面的行前移）
+const TORSO = [-3, -3, -1, -2, -4, 1, -1, -4, 3, 0, -4, 5, 1, -4, 5, 2, -4, 5, 3, -4, 5, 4, -4, 4, 5, -3, 4, 6, -3, 4, 7, -3, 3, 8, -3, 3, 9, -3, 3];
+const APRON = [2, 2, 5, 3, 1, 5, 4, 1, 5, 5, 0, 5, 6, 0, 5, 7, 0, 4, 8, -1, 4, 9, -1, 4];   // 皮围裙：[行, 左, 右]，胯线以下另画到 y = -7
+const HEADD = [0, -1, 0, 0, 1, 1, 1, 2];                         // head -1..2 → 头的 [dx, dy]
+const KEYB = [                                                   // 发条钥匙 4 个转角：每相位 3 行 [行, 左, 右, ...]
+  [-3, -3, -2, -3, 2, 3, -2, -3, 3, -1, -1, 1],
+  [-3, -3, -2, -3, 2, 2, -2, -3, 2, -1, -1, 1],
+  [-3, -1, 0, -2, -1, 0, -1, 0, 0],
+  [-3, -2, -2, -3, 2, 3, -2, -2, 3, -1, -1, 1],
+];
+function drawKey(X, Y) {                                         // (X, Y) = 钥匙杆底部
+  sp(X, Y, M_BRASS, 2); const b = KEYB[P.key], tilt = P.bend === 1 ? -1 : P.bend === 2 ? 1 : 0;
+  for (let i = 0; i < b.length; i += 3) run(Y + b[i], X + b[i + 1] + (b[i] === -3 ? tilt : 0), X + b[i + 2] + (b[i] === -3 ? tilt : 0), M_BRASS, 0);
+  sp(X + (P.key === 2 ? 0 : -2) + tilt, Y - 3, M_BRASS, 4);
+}
+function drawDial(X, Y, hand, broken) {                          // 7×7 钟面：铜圈、奶白面、刻度、分针 / 时针、中心轴
+  for (let j = -3; j <= 3; j++) for (let i = -3; i <= 3; i++) { const d2 = i * i + j * j; if (d2 <= 10) sp(X + i, Y + j, d2 >= 7 ? M_BRASS : M_FACE, 0); }
+  sp(X, Y - 2, M_FACE, 1); sp(X + 2, Y, M_FACE, 1); sp(X, Y + 2, M_FACE, 1); sp(X - 2, Y, M_FACE, 1);
+  const hx = DIR8[hand * 2], hy = DIR8[hand * 2 + 1]; sp(X + hx, Y + hy, M_INK, 1); sp(X + 2 * hx, Y + 2 * hy, M_INK, 1);   // 分针：从中心出发 2 格
+  let hr = (hand + 2) & 7; if (DIR8[hr * 2] === -hx && DIR8[hr * 2 + 1] === hy) hr = (hr + 1) & 7;                  // 时针 1 格：落后分针 90°，和分针关于竖轴对称时再错一格（不能像一对眼睛）
+  sp(X + DIR8[hr * 2], Y + DIR8[hr * 2 + 1], M_INK, 1); sp(X, Y, M_BRASS, 4);
+  if (broken) { sp(X - 1, Y - 2, M_CASE, 2); sp(X - 1, Y - 1, M_CASE, 2); sp(X - 2, Y, M_CASE, 2); sp(X - 1, Y + 1, M_CASE, 2); sp(X - 1, Y + 2, M_CASE, 2); sp(X - 2, Y - 1, M_HAIR, 4); }   // 玻璃裂：左半边一条折线裂纹 + 1 格反光
+}
+function drawCase(X, Y) {                                        // 落地钟式发条背箱：(X, Y) = 钟面中心
+  part();
+  run(Y - 5, X - 3, X + 3, M_CASE, 0); for (let y = Y - 4; y <= Y + 4; y++) run(y, X - 4, X + 4, M_CASE, 0);   // 圆拱顶 + 钟头
+  run(Y + 5, X - 4, X + 4, M_BRASS, 0);                                                                         // 腰线铜条
+  for (let y = Y + 6; y <= Y + 12; y++) run(y, X - 3, X + 3, M_CASE, 0);                                        // 箱身
+  run(Y + 13, X - 4, X + 4, M_CASE, 0); sp(X - 4, Y + 13, M_BRASS, 3); sp(X + 4, Y + 13, M_BRASS, 2); run(Y + 14, X - 4, X + 4, M_CASE, 0);   // 底座（黑漆，两角铜包角）
+  sp(X - 3, Y - 5, M_BRASS, 3); sp(X + 3, Y - 5, M_BRASS, 3); sp(X - 4, Y - 4, M_BRASS, 3); sp(X + 4, Y - 4, M_BRASS, 2);   // 拱顶铜角
+  for (let y = Y + 7; y <= Y + 11; y++) run(y, X - 1, X + 1, M_CASE, 1);                                         // 摆锤窗
+  sp(X, Y + 7, M_BRASS, 2); sp(X + (P.pend > 0 ? 1 : 0), Y + 8, M_BRASS, 2); sp(X + P.pend, Y + 9, M_BRASS, 2); sp(X + P.pend, Y + 10, M_BRASS, 4);   // 摆锤
+  drawDial(X, Y, P.hand, P.broken);
+  if (P.broken) { sp(X - 4, Y - 4, M_BRASS, 4); sp(X - 5, Y - 5, M_BRASS, 3); sp(X - 4, Y - 6, M_BRASS, 4); sp(X - 5, Y - 7, M_BRASS, 3); sp(X - 6, Y - 8, M_BRASS, 4); }   // 崩出的弹簧
+  if (P.broken) sp(X, Y - 6, M_BRASS, 2); else drawKey(X, Y - 6);   // 散架时钥匙崩飞，只剩钥匙杆
+}
+function drawGun() {                                            // 黄铜发条铳：木托、机匣（小钟面 + 曲柄）、两道箍、铳管、喇叭口
+  part(); gunFrame();
+  gRect(-5, -1, 0, 1, M_WOOD, 0); gp(-5, -1, M_WOOD, 0);
+  gRect(-1, 3, -1, 1, M_BRASS, 0); gRect(4, 8.5, -1, 0, M_BRASS, 0);
+  gRect(9, 9, -1.5, 0.5, M_BRASS, 0); gRect(10, 10, -2.5, 1.5, M_BRASS, 0); gp(10, -0.5, M_BRASS, 2);
+  gp(5.5, -1, M_BRASS, 2); gp(5.5, 0, M_BRASS, 2); gp(7.5, -1, M_BRASS, 2); gp(7.5, 0, M_BRASS, 2);
+  gp(1, -1, M_FACE, 0); gp(2, -1, M_FACE, 0); gp(1, 0, M_FACE, 0); gp(2, 0, M_FACE, 0); gp(1, -1, M_INK, 1);
+  gp(0, -2, M_BRASS, 2); const CK = [-1, -2, 0, -3, 1, -2, 0, -2]; gp(CK[P.crank * 2], CK[P.crank * 2 + 1], M_BRASS, 4);
+}
+function drawChain(hx, hy) {                                    // 表链：从腰带扣到怀表顶（画在后臂那一层，被身体挡住的部分自然看不见）
+  const bx0 = 0, by0 = -10 + P.crouch, ex = hx, ey = hy - 5, n = Math.max(1, Math.round(Math.hypot(ex - bx0, ey - by0)));
+  for (let i = 1; i < n; i += 2) { const q = i / n; sp(bx0 + (ex - bx0) * q + Math.sin(q * 3.1416) * 1.5, by0 + (ey - by0) * q, M_BRASS, 3); }
+}
+function drawWatch() {                                          // 怀表（发光体）；最后画
+  part(); const c = P.crouch;
+  if (!P.watch) {                                               // 挂在腰间：3×3 合着的表 + 表冠 + 腰带扣
+    const X = WAIST_X + P.sway, Y = WAIST_Y + c;
+    sp(0, -10 + c, M_BRASS, 3); sp(X, Y - 2, M_BRASS, 3); rect(X - 1, Y - 1, 3, 3, M_BRASS, 0); sp(X - 1, Y - 1, M_BRASS, 2); sp(X + 1, Y + 1, M_BRASS, 2); sp(X, Y, M_BRASS, 4);
+    return;
+  }
+  const hx = P.hx + P.fx, hy = P.hy + P.fy, X = hx - 1, Y = hy - 5;   // 左手（2×2）在表下面托着，整只手露出来
+  sp(X + 1, Y - 1, M_BRASS, 3);
+  run(Y, X + 1, X + 2, M_BRASS, 0); run(Y + 1, X, X + 3, M_BRASS, 0); run(Y + 2, X, X + 3, M_BRASS, 0); run(Y + 3, X + 1, X + 2, M_BRASS, 0);
+  if (P.watch === 2) {
+    sp(X - 1, Y, M_BRASS, 4); sp(X - 2, Y + 1, M_BRASS, 3); sp(X - 2, Y + 2, M_BRASS, 3); sp(X - 1, Y + 3, M_BRASS, 2);   // 弹开的表盖
+    const L = WATCH_LV[P.gem]; sp(X + 1, Y + 1, L[0], L[1]); sp(X + 2, Y + 1, L[2], L[3]); sp(X + 1, Y + 2, L[4], L[5]); sp(X + 2, Y + 2, L[6], L[7]);
+    if (P.gem < 3) sp(X + 1, Y + 1, M_INK, 1);                 // 表针
+  } else { sp(X + 1, Y + 1, M_BRASS, 4); sp(X + 2, Y + 2, M_BRASS, 2); }
+  if (P.tap) sp(X + 2, Y + 1, M_HAND, 0); else sp(X + 3, Y + 3, M_HAND, 0);   // 敲表的拇指
+}
+const WATCH_LV = [
+  [M_WATCH, 2, M_WATCH, 2, M_WATCH, 1, M_WATCH, 1],
+  [M_WATCH, 4, M_WATCH, 3, M_WATCH, 3, M_WATCH, 2],
+  [M_GLOW, 3, M_WATCH, 4, M_WATCH, 4, M_WATCH, 3],
+  [M_GLOW, 3, M_GLOW, 3, M_GLOW, 3, M_WATCH, 4],
+  [M_WATCH, 1, M_WATCH, 1, M_WATCH, 2, M_WATCH, 1],             // 熄灭
+];
+// 站姿骨架：部件从后往前
+function drawStanding() {
+  const lean = P.lean, c = P.crouch, bob = P.bob, yS = -18 + bob + c, yH = -9 + c;
+  drawCase(-7 + Math.round(lean * 0.5), -23 + bob + c);         // 背箱：压在驼背上，下半截被身体挡住
+  gunFrame();
+  const hold = P.back === 1, bhx = hold ? P.hx + P.fx : Math.round(GOX + GCA * 6 - GSA * 1.5), bhy = hold ? P.hy + P.fy : Math.round(GOY + GSA * 6 + GCA * 1.5);
+  part();                                                     // 后臂（左手）：托铳管，或拿着怀表（手臂从头和身体后面过）
+  const bsx = lean, bsy = -17 + bob + c; ik(bsx, bsy, bhx, bhy, 5, 7, hold ? 0.3 : -0.3, 1);
+  sleeve(bsx, bsy, IKX, IKY, 1, 0.9, M_SLEEVE); sleeve(IKX, IKY, bhx - 1, bhy, 0.9, 0.9, M_SLEEVE);
+  if (hold) { rect(bhx - 1, bhy - 1, 2, 2, M_HAND, 0); if (P.watch) drawChain(bhx, bhy); } else rect(bhx - 1, bhy, 2, 2, M_HAND, 0);
+  // 走路：两腿对称摆幅，接触A 近侧 +1 / 远侧 -5，接触B 远侧 +1 / 近侧 -5，经过帧并到 -2 并抬起一只脚；待机保持原站姿（近侧 0 / 远侧 -4）
+  const fbx = P.walk ? Math.round(-2 + P.step * 3) : 0, bbx = P.walk ? Math.round(-2 - P.step * 3) : -4, upF = P.wup === 1 ? 1 : 0, upB = P.wup === 2 ? 1 : 0;
+  part();                                                     // 后腿：细、微屈
+  ik(-2, yH, bbx + 1, -2 - upB, 4, 4.5, 1, 0); limb2(-2, yH, IKX, IKY, M_LEG_B, 0); limb2(IKX, IKY, bbx + 1, -2 - upB, M_LEG_B, 0);
+  rect(bbx, -1 - upB, 3, 2, M_BOOT_B, 0); sp(bbx + 3, -upB, M_BOOT_B, 0);
+  part();                                                     // 前腿
+  ik(0, yH, fbx + 1, -2 - upF, 4, 4.5, 1, 0); limb2(0, yH, IKX, IKY, M_LEG, 0); limb2(IKX, IKY, fbx + 1, -2 - upF, M_LEG, 0);
+  rect(fbx, -1 - upF, 3, 2, M_BOOT, 0); sp(fbx + 3, -upF, M_BOOT, 0);
+  part();                                                     // 驼背上身：工装、背带（斜过肩 + 铜扣）、后背缝线、腰带、红领巾
+  for (let i = 0; i < TORSO.length; i += 3) { const r = TORSO[i], xs = Math.round(lean * (9 - r) / 10), y = yS + r - (r > 4 ? bob : 0); run(y, TORSO[i + 1] + xs, TORSO[i + 2] + xs, M_SUIT, 0); }
+  for (let i = 0; i < STRAP.length; i += 2) { const r = STRAP[i], xs = Math.round(lean * (9 - r) / 10); sp(STRAP[i + 1] + xs, yS + r, M_LEATHER, 0); }
+  sp(1 + Math.round(lean * 0.9), yS + 1, M_BRASS, 4);
+  for (let y = yS + 3; y <= yH - 2; y += 2) sp(-2, y, M_SUIT, 2);
+  run(yH - 1, -4, 0, M_LEATHER, 0);
+  sp(4 + lean, yS, M_RED, 0); sp(5 + lean, yS, M_RED, 0); sp(5 + lean, yS + 1, M_RED, 2);
+  part();                                                     // 皮围裙：胸兜、口袋、螺丝刀、缝线、下摆
+  for (let i = 0; i < APRON.length; i += 3) { const r = APRON[i], xs = Math.round(lean * (9 - r) / 10), y = yS + r - (r > 4 ? bob : 0); run(y, APRON[i + 1] + xs, APRON[i + 2] + xs, M_LEATHER, 0); }
+  for (let y = yH + 1; y <= -7; y++) { const s = y === -7 ? P.sway : 0; run(y, -1 + s, 4 + s, M_LEATHER, 0); if (y === -7) for (let x = 0; x <= 3; x++) if (((x + P.sway) & 1) === 0) sp(x + s, y, M_LEATHER, 2); }
+  for (let y = yS + 4; y <= yH; y += 2) sp(Math.round(lean * (9 - (y - yS)) / 10) + (y - yS > 5 ? 0 : 1), y, M_LEATHER, 2);
+  run(yH - 1, 1, 3, M_LEATHER, 1); sp(1, yH, M_LEATHER, 2); sp(3, yH, M_LEATHER, 2); run(yH + 1, 1, 3, M_LEATHER, 2);
+  sp(2, yH - 2, M_RED, 0); sp(2, yH - 3, M_RED, 4);
+  const hd = P.head + 1, hl = 4 + lean + HEADD[hd * 2], hb = yS + 1 + HEADD[hd * 2 + 1];
+  part();                                                     // 头（同一部件里画须和护目镜，小脸上不压分界线）：秃顶、一圈白发、耳、浓眉、眼、大鼻头、八字胡、护目镜
+  for (let y = hb - 5; y <= hb; y++) run(y, hl + (y === hb - 5 || y === hb ? 1 : 0), hl + 5 - (y === hb - 5 ? 1 : 0), M_SKIN, 0);
+  sp(hl + 2, hb - 5, M_FACE, 3);
+  run(hb - 3, hl - 1, hl + 1, M_HAIR, 0); run(hb - 2, hl, hl + 1, M_HAIR, 0); run(hb - 1, hl, hl + 1, M_HAIR, 0); sp(hl + 1, hb - 4, M_HAIR, 3); sp(hl - 1, hb - 3, M_HAIR, 3);
+  sp(hl + 2, hb - 3, M_SKIN, 1); sp(hl + 3, hb - 2, M_SKIN, 2);
+  run(hb - 4, hl + 3, hl + 6, M_HAIR, 4);
+  if (P.eyes) { sp(hl + 4, hb - 3, M_SKIN, 1); sp(hl + 5, hb - 3, M_SKIN, 1); } else { sp(hl + 4, hb - 3, M_INK, 1); sp(hl + 5, hb - 3, M_SKIN, 4); }
+  sp(hl + 6, hb - 3, M_SKIN, 3); sp(hl + 6, hb - 2, M_SKIN, 3); sp(hl + 7, hb - 2, M_SKIN, 3); sp(hl + 7, hb - 3, M_SKIN, 2);
+  const bt = P.beard;                                         // 翘起的白色八字胡：近侧往后翘，远侧从鼻前翘出；尖端随动作摆
+  run(hb - 1, hl + 3, hl + 7, M_HAIR, 0); run(hb, hl + 4, hl + 6, M_HAIR, 2);
+  sp(hl + 2, hb - 1 - (bt > 0 ? 1 : 0), M_HAIR, 3); sp(hl + 8, hb - 2 - (bt > 0 ? 1 : 0) + (bt < 0 ? 1 : 0), M_HAIR, 4); sp(hl + 8, hb - 1, M_HAIR, 3);
+  const tb = P.bend === 1 ? -1 : P.bend === 2 ? 1 : 0;       // 护目镜：绑带、镜杯 + 小副镜片、向前伸 3 格的长镜筒（惯性：尖端上甩 / 下垂）
+  sp(hl + 1, hb - 6, M_LEATHER, 0); sp(hl + 2, hb - 6, M_LEATHER, 0); sp(hl, hb - 5, M_LEATHER, 0); sp(hl - 1, hb - 4, M_LEATHER, 0);
+  rect(hl + 3, hb - 7, 3, 3, M_BRASS, 0); sp(hl + 4, hb - 6, M_LENS, P.glint ? 4 : 3); sp(hl + 3, hb - 8, M_BRASS, 0); sp(hl + 4, hb - 8, M_LENS, 2);
+  for (let i = 6; i <= 10; i++) { const d = i >= 9 ? tb : 0; sp(hl + i, hb - 7 + d, M_BRASS, i === 8 ? 2 : 0); sp(hl + i, hb - 6 + d, M_BRASS, i === 8 ? 2 : 0); }   // 长镜筒：比鼻尖多伸出 3 格，中间一道箍
+  sp(hl + 11, hb - 7 + tb, M_LENS, P.glint ? 4 : 3); sp(hl + 11, hb - 6 + tb, M_LENS, 2);
+  drawGun();
+  part();                                                     // 前臂（右手）→ 皮护腕 → 握扳机的手；铳托夹在腋下
+  const fsx = 2 + lean, fsy = -17 + bob + c, hx = P.hx, hy = P.hy;
+  ik(fsx, fsy, hx, hy, 5, 6.5, -0.4, 1);
+  const ux = hx - IKX, uy = hy - IKY, ul = Math.hypot(ux, uy) || 1, wx = hx - ux / ul * 1.6, wy = hy - uy / ul * 1.6;
+  sleeve(fsx, fsy, IKX, IKY, 1.1, 0.95, M_SLEEVE); sleeve(IKX, IKY, wx, wy, 0.95, 0.9, M_SLEEVE);
+  part(); brush(wx, wy, 0.9, M_LEATHER, 0);
+  part(); rect(hx - 1, hy - 1, 2, 2, M_HAND, 0);
+  drawWatch();
+}
+const STRAP = [-3, -2, -2, -1, -1, 0, 0, 1, 1, 1, 2, 2, 3, 2, 4, 3];   // 背带：[行, x]，从驼峰斜过肩到胸前
+// 倒地姿：像上完发条的玩偶整个向前侧翻——脚在左、头在右、背箱压在背上（钟面碎、弹簧崩出、钥匙已崩飞），铳掉在身前，怀表摔开在身下，护目镜滑落
+function drawLying() {
+  part();                                                     // 掉在身前地上的铳
+  rect(19, -2, 5, 2, M_WOOD, 0); rect(23, -3, 5, 3, M_BRASS, 0); rect(28, -3, 5, 2, M_BRASS, 0); run(-4, 33, 33, M_BRASS, 0); rect(33, -3, 1, 3, M_BRASS, 0); rect(34, -4, 1, 5, M_BRASS, 0);
+  sp(25, -3, M_FACE, 0); sp(26, -3, M_FACE, 0); sp(25, -3, M_INK, 1); sp(30, -3, M_BRASS, 2); sp(30, -2, M_BRASS, 2);
+  part();                                                     // 两条细腿：膝盖朝下弯，靴底朝左
+  limb2(1, -6, -3, -5, M_LEG, 0); limb2(-3, -5, -6, -7, M_LEG, 0); rect(-8, -9, 2, 3, M_BOOT, 0); sp(-7, -6, M_BOOT, 0);
+  part();
+  limb2(1, -3, -2, -1, M_LEG, 0); limb2(-2, -1, -6, -3, M_LEG, 0); rect(-8, -4, 2, 3, M_BOOT, 0); sp(-7, -1, M_BOOT, 0);
+  part();                                                     // 侧躺的上身（背朝上）+ 围裙露在下沿
+  run(-7, 3, 8, M_SUIT, 0); for (let y = -6; y <= -2; y++) run(y, 0, 10, M_SUIT, 0); run(-1, 1, 10, M_SUIT, 0);
+  run(-1, 2, 9, M_LEATHER, 0); run(-2, 3, 8, M_LEATHER, 2); sp(5, -1, M_RED, 0);
+  run(-5, 1, 1, M_LEATHER, 0); run(-4, 1, 1, M_LEATHER, 0); sp(4, -4, M_SUIT, 2); sp(6, -4, M_SUIT, 2);
+  part(); sleeve(7, -4, 10, -1, 1, 0.9, M_SLEEVE); rect(10, -1, 2, 2, M_SKIN, 0);      // 压在身下的手臂
+  part();                                                     // 脸朝下的头：秃顶朝右，白发朝上，八字胡贴地
+  for (let y = -6; y <= -1; y++) run(y, 10, 15 - (y === -6 || y === -1 ? 1 : 0), M_SKIN, 0);
+  run(-6, 11, 13, M_HAIR, 0); run(-5, 11, 12, M_HAIR, 0); sp(15, -4, M_FACE, 3); sp(12, -4, M_SKIN, 2);
+  sp(13, -2, M_SKIN, 1); sp(14, -2, M_SKIN, 1); run(-3, 13, 15, M_HAIR, 4); sp(14, 0, M_SKIN, 3);
+  part(); run(-1, 10, 13, M_HAIR, 0); run(0, 11, 13, M_HAIR, 0); sp(9, -1, M_HAIR, 3);    // 八字胡
+  part();                                                     // 压在背上的背箱：底座在左、钟头在右，钟面碎裂、弹簧崩出、钥匙朝右
+  for (let x = -1; x <= 16; x++) { const hood = x >= 8; for (let y = hood ? -15 : -14; y <= (hood ? -7 : -8); y++) sp(x, y, x === -1 || x === 7 ? M_BRASS : M_CASE, 0); }
+  sp(17, -14, M_CASE, 0); for (let y = -13; y <= -9; y++) sp(17, y, M_CASE, 0);
+  for (let x = 1; x <= 5; x++) { sp(x, -12, M_CASE, 1); sp(x, -11, M_CASE, 1); } sp(3, -11, M_BRASS, 4); sp(2, -11, M_BRASS, 2);
+  drawDial(12, -11, 2, 1);
+  sp(10, -15, M_BRASS, 4); sp(9, -16, M_BRASS, 3); sp(10, -17, M_BRASS, 4); sp(9, -18, M_BRASS, 3); sp(10, -19, M_BRASS, 4);   // 弹簧
+  sp(18, -11, M_BRASS, 2);                                    // 钥匙已经崩飞（落在身后地上），只剩钥匙杆，头和护目镜上方空出来
+  part();                                                     // 滑落的护目镜
+  const gx = 15 + P.hatX, gy = -5 + Math.round(P.hatX * 0.75) - P.hatY;
+  sp(gx - 1, gy + 1, M_LEATHER, 0); rect(gx, gy - 1, 3, 3, M_BRASS, 0); sp(gx + 1, gy, M_LENS, 3); run(gy - 1, gx + 3, gx + 4, M_BRASS, 0); run(gy, gx + 3, gx + 4, M_BRASS, 0); sp(gx + 5, gy - 1, M_LENS, 3); sp(gx + 5, gy, M_LENS, 2);
+  part();                                                     // 摔开的怀表（发光体：闪烁后熄灭）
+  const L = WATCH_LV[P.gem]; run(-3, 4, 5, M_BRASS, 0); run(-2, 3, 6, M_BRASS, 0); run(-1, 3, 6, M_BRASS, 0); run(0, 4, 5, M_BRASS, 0);
+  sp(4, -2, L[0], L[1]); sp(5, -2, L[2], L[3]); sp(4, -1, L[4], L[5]); sp(5, -1, L[6], L[7]); sp(2, -3, M_BRASS, 3); sp(2, -4, M_BRASS, 4);
+}
+function drawHero() { begin(hero, P.bx, -P.lift); if (P.lying) drawLying(); else drawStanding(); }
+function bakeHero() {
+  HERO_RIM.rim = P.rim; HERO_RIM.rx = P.gx - P.bx + hero.ox + P.bx; HERO_RIM.ry = P.gy + hero.oy; HERO_RIM.flash = P.flash; HERO_RIM.dq = P.dq; HERO_RIM.ddir = P.ddir;
+  bake(hero, HERO_RIM);
+}
+
+// ═════════════════════════ 4. 特效（换角色时按特效设定卡改这一节） ═════════════════════════
+// 粒子池：预分配、循环复用；按寿命在各自色阶里 白 → 主色 → 暗 逐级变化；画的时候吸附到网格
+const PN = 420, K_SPIRAL = 1, K_ORBIT = 2, K_BURST = 3, K_TRAIL = 4, K_EMBER = 5, K_RISE = 6, K_DUST = 7, K_SPIRAL_PT = 8;
+const pX = new Float32Array(PN), pY = new Float32Array(PN), pVX = new Float32Array(PN), pVY = new Float32Array(PN), pAge = new Float32Array(PN), pLife = new Float32Array(PN);
+const pA = new Float32Array(PN), pR = new Float32Array(PN), pW = new Float32Array(PN), pTX = new Float32Array(PN), pTY = new Float32Array(PN), pK = new Uint8Array(PN), pRamp = new Uint8Array(PN);
+let pHead = 0;
+function spawn(k, x, y, vx, vy, life, ramp, a, r, w) {
+  let i = pHead; for (let n = 0; n < PN; n++) { const j = (pHead + n) % PN; if (pK[j] === 0) { i = j; break; } }
+  pHead = (i + 1) % PN; pK[i] = k; pX[i] = x; pY[i] = y; pVX[i] = vx; pVY[i] = vy; pAge[i] = 0; pLife[i] = life; pRamp[i] = ramp; pA[i] = a || 0; pR[i] = r || 0; pW[i] = w || 0; pTX[i] = x; pTY[i] = y;
+}
+const DRAG = Math.exp(-3.4 * DT);
+function scrX(px) { return HX + P.mx + (P.flip ? -px : px); }
+let lastStep = 0;
+function burst(x, y, n, vmin, vmax, lmin, lmax, ramp, up) { for (let i = 0; i < n; i++) { const a = i / n * 6.2832 + Math.random() * 0.3, v = vmin + Math.random() * (vmax - vmin); spawn(K_BURST, x, y, Math.cos(a) * v, Math.sin(a) * v * 0.8 - (up || 0), lmin + Math.random() * (lmax - lmin), ramp); } }
+// 弹道：1 小齿轮（攻击）2 八齿大齿轮（技能）3 敌弹（受击）4 敌弹大（死亡）
+const PRN = 4, prOn = new Uint8Array(PRN), prK = new Uint8Array(PRN), prX = new Float32Array(PRN), prY = new Float32Array(PRN), prVX = new Float32Array(PRN), prTX = new Float32Array(PRN);
+function shoot(k, x, y, vx, tx) { let i = 0; for (; i < PRN - 1 && prOn[i]; i++); prOn[i] = 1; prK[i] = k; prX[i] = x; prY[i] = y; prVX[i] = vx; prTX[i] = tx; }
+const RN = 3, rgT = new Float32Array(RN).fill(9), rgX = new Float32Array(RN), rgY = new Float32Array(RN), rgBig = new Uint8Array(RN), rgRamp = new Uint8Array(RN);
+function ring(x, y, big, ramp) { let i = 0, o = 0; for (let k = 0; k < RN; k++) if (rgT[k] > rgT[o]) o = k; i = o; rgT[i] = 0; rgX[i] = x; rgY[i] = y; rgBig[i] = big; rgRamp[i] = ramp; }
+let smT = 9, smA0 = 0, smA1 = 0, smCX = 0, smCY = 0, mzT = 9, mzX = 0, mzY = 0;
+let shakeT = 0, shakeAmp = 0, sx = 0, sy = 0, flashT = 0, chargeAcc = 0, emberAcc = 0, soulAcc = 0;
+function shake(t, amp) { if (reduceMotion) return; shakeT = Math.max(shakeT, t); shakeAmp = Math.max(shakeAmp, amp); }
+// 钟表匠专属：停摆定格、散架碎片、场外「倒带」演示
+const FREEZE = 0.6, OFF_DUR = 2.6, TCX = HX + 1, TCY = HY - 15, TRX = 19, TRY = 16;   // 蓄力刻度圆：中心、半径
+let frzT = 9, frzX = 0, frzY = 0, offT = 9;
+const DBN = 4, dbOn = new Uint8Array(DBN), dbK = new Uint8Array(DBN), dbX = new Float32Array(DBN), dbY = new Float32Array(DBN), dbVX = new Float32Array(DBN), dbVY = new Float32Array(DBN), dbS = new Float32Array(DBN);
+function debris(i, k, x, y, vx, vy) { dbOn[i] = 1; dbK[i] = k; dbX[i] = x; dbY[i] = y; dbVX[i] = vx; dbVY[i] = vy; dbS[i] = 0; }
+addEventListener('keydown', (e) => { if (e.code === 'KeyR') offT = 0; });   // R：场外「倒带」演示（游戏里按空格）
+function onEnter(s) {
+  if (s === CAST) {
+    const wx = HX + K_CAST.hx + K_CAST.fx + 1, wy = HY + K_CAST.hy + K_CAST.fy - 4;
+    for (let i = 0; i < PN; i++) if (pK[i] === K_SPIRAL || pK[i] === K_ORBIT) { const v = 40 + Math.random() * 40; pK[i] = K_BURST; pVX[i] = Math.cos(pA[i]) * v; pVY[i] = Math.sin(pA[i]) * v * 0.75 - 10; pAge[i] = 0; pLife[i] = 0.3 + Math.random() * 0.3; }
+    for (let i = 0; i < 16; i++) { const a = i / 16 * 6.2832, x = TCX + Math.cos(a) * TRX, y = TCY + Math.sin(a) * TRY, v = 55 + Math.random() * 35; spawn(K_BURST, x, y, Math.cos(a) * v, Math.sin(a) * v * 0.8, 0.35 + Math.random() * 0.3, R_EL); }   // 刻度圆外爆成 16 颗青光
+    burst(wx, wy, 10, 30, 70, 0.2, 0.4, R_EL, 6);
+    shoot(2, wx + 3, wy, 120, DUMMY_X - 4); ring(wx, wy, 0, R_EL); shake(0.28, 2); flashT = 0.05;
+  } else if (s === HURT || s === DEATH) { const tx = HX + HIT_POINT[0] + 2; shoot(s === HURT ? 3 : 4, tx + 300 * INCOMING, HY + HIT_POINT[1] - (s === DEATH ? 1 : 0), -300, tx); }
+  else if (s === REVIVE) { dbOn.fill(0); for (let i = 0; i < 34; i++) { const a = Math.random() * 6.2832, r = 14 + Math.random() * 12; spawn(K_SPIRAL_PT, HX, HY - 14, r / (0.25 + Math.random() * 0.2), 0, 9, R_SOUL, a, r, 5 + Math.random() * 3); } }
+}
+function onTime(s, t) {
+  if (s === ATTACK && t === T_FIRE) {                          // 后坐那一帧：铳口喷青色蒸汽，射出小齿轮
+    mzT = 0; mzX = scrX(P.mzx); mzY = HY + P.mzy; shoot(1, mzX + 2, mzY, 170, DUMMY_X - 3);
+    for (let i = 0; i < 7; i++) spawn(K_EMBER, mzX + Math.random() * 3 - 1, mzY + Math.random() * 2 - 1, 8 + Math.random() * 22, -5 - Math.random() * 12, 0.3 + Math.random() * 0.3, R_EL);
+  }
+  if ((s === HURT || s === DEATH) && t === INCOMING) {
+    const hx = HX + HIT_POINT[0] - 1, hy = HY + HIT_POINT[1]; burst(hx, hy, s === DEATH ? 26 : 16, 50, 130, 0.25, 0.55, R_IMPACT, 20); shake(0.16, s === DEATH ? 2 : 1); if (s === DEATH) flashT = 0.04;
+  }
+  if (s === DEATH && t === T_SHATTER) {                        // 钟面玻璃碎裂：黄铜火花 + 金属火星 + 玻璃屑，齿轮和弹簧崩飞
+    const x = HX + P.bx - 7 + Math.round(P.lean * 0.5), y = HY - 23 + P.bob + P.crouch;
+    burst(x, y, 14, 50, 120, 0.3, 0.7, R_BRASS, 30); burst(x, y, 6, 90, 150, 0.2, 0.4, R_IMPACT, 20); burst(x, y, 6, 30, 70, 0.3, 0.5, R_EL, 10);
+    debris(0, 0, x - 2, y - 2, -16, -70); debris(1, 0, x + 2, y - 1, 32, -80); debris(2, 1, x, y - 3, -8, -95); debris(3, 2, x, y - 8, -30, -85); shake(0.12, 1);   // 发条钥匙往身后崩飞
+  }
+  if (s === DEATH && t === T_LAND) { for (let i = 0; i < 16; i++) { const x = HX - 10 + Math.random() * 30; spawn(K_DUST, x, HY - 1, (Math.random() - 0.5) * 30, -8 - Math.random() * 14, 0.4 + Math.random() * 0.4, R_DUST); } shake(0.1, 1); }
+  if (s === REVIVE && t === 0.84) { ring(HX + 1, HY - 14, 0, R_SOUL); burst(HX + 1, HY - 16, 14, 30, 70, 0.3, 0.5, R_EL, 10); }
+}
+const EVENTS = [[], [], [T_FIRE], [], [], [], [INCOMING], [INCOMING, T_SHATTER, T_LAND], [0.84]];
+function impactOn(k, x, y) {
+  if (k === 1) { burst(x, y, 4, 40, 90, 0.3, 0.5, R_BRASS, 24); burst(x, y, 3, 20, 50, 0.12, 0.25, R_EL, 6); hitDummy(0); }   // 齿轮碎成 4 颗黄铜碎屑
+  else if (k === 2) { frzT = 0; frzX = x; frzY = y; burst(x, y, 6, 20, 45, 0.15, 0.3, R_EL, 0); }                              // 齿轮嵌进假人：停摆定格开始
+}
+function stepFX(dt) {
+  const gx = scrX(P.gx), gy = HY + P.gy;
+  if (state === CHARGE) { chargeAcc += dt * (10 + 22 * clamp01(stT / DUR[CHARGE])); while (chargeAcc >= 1) { chargeAcc -= 1; const r = 11 + Math.random() * 8, a = Math.random() * 6.2832; spawn(K_SPIRAL, gx, gy, (r - 3.5) / (0.3 + Math.random() * 0.35), 0, 9, R_EL, a, r, -(4 + Math.random() * 3)); } }   // 逆时针收进怀表
+  if (state === MOVE && P.step !== lastStep) { if (P.step !== 0) spawn(K_DUST, scrX(P.step > 0 ? 2 : -3) + (Math.random() - 0.5) * 2, HY, (Math.random() - 0.5) * 14, -4 - Math.random() * 5, 0.3 + Math.random() * 0.2, R_DUST); lastStep = P.step; }
+  if ((state === IDLE && P.watch === 2) || (state === RECOVER && P.watch)) { emberAcc += dt * (state === IDLE ? 3 : 6); while (emberAcc >= 1) { emberAcc -= 1; spawn(K_EMBER, gx + Math.round(Math.random() * 2 - 1), gy - 1, Math.random() * 8 - 4, -6 - Math.random() * 8, 0.5 + Math.random() * 0.5, R_EL); } }
+  if (state === DEATH && stT > INCOMING + 1.6 && stT < INCOMING + 2.4) { soulAcc += dt * 30; while (soulAcc >= 1) { soulAcc -= 1; spawn(K_RISE, HX - 10 + Math.random() * 30, HY - 1 - Math.random() * 12, (Math.random() - 0.5) * 6, -14 - Math.random() * 16, 0.8 + Math.random() * 0.8, R_SOUL); } }
+  if (frzT < 9) {
+    const was = frzT; frzT += dt;
+    if (was < 0.25 && frzT >= 0.25) burst(DUMMY_X, HY - 38, 4, 15, 30, 0.12, 0.25, R_EL, 0);                                   // 表盘指针「咔」地停住
+    if (was < FREEZE && frzT >= FREEZE) { hitDummy(1, 1); burst(frzX, frzY, 20, 60, 140, 0.3, 0.7, R_EL, 14); ring(frzX, frzY, 1, R_EL); shake(0.12, 1); frzT = 9; }   // 定格结束：闪白 + 大摇 + 击退
+  }
+  for (let i = 0; i < DBN; i++) {
+    if (!dbOn[i]) continue; dbVY[i] += 300 * dt; dbX[i] += dbVX[i] * dt; dbY[i] += dbVY[i] * dt; dbS[i] += dt * Math.abs(dbVX[i]) * 0.4;
+    if (dbY[i] >= HY - 1) { dbY[i] = HY - 1; if (dbVY[i] > 30) { dbVY[i] *= -0.4; dbVX[i] *= 0.6; } else { dbVY[i] = 0; dbVX[i] *= 0.7; } }
+  }
+  if (offT < 9) offT += dt;
+  for (let i = 0; i < PN; i++) {
+    const k = pK[i]; if (!k) continue; pAge[i] += dt;
+    if (k === K_SPIRAL || k === K_SPIRAL_PT) {
+      const tx = k === K_SPIRAL ? gx : pTX[i], ty = k === K_SPIRAL ? gy : pTY[i];
+      pA[i] += pW[i] * dt; pR[i] -= pVX[i] * dt;
+      if (pR[i] <= 3.5) { if (k === K_SPIRAL) { pK[i] = K_ORBIT; pR[i] = 3 + (i % 3); } else { pK[i] = 0; continue; } }
+      pX[i] = tx + Math.cos(pA[i]) * pR[i]; pY[i] = ty + Math.sin(pA[i]) * pR[i] * 0.75; continue;
+    }
+    if (k === K_ORBIT) { pA[i] -= 8.5 * dt; pX[i] = gx + Math.cos(pA[i]) * pR[i]; pY[i] = gy + Math.sin(pA[i]) * pR[i] * 0.75; continue; }
+    if (pAge[i] >= pLife[i]) { pK[i] = 0; continue; }
+    if (k === K_BURST) { pVX[i] *= DRAG; pVY[i] = pVY[i] * DRAG + 46 * dt; }
+    else if (k === K_TRAIL) { pVX[i] *= DRAG; pVY[i] *= DRAG; }
+    else if (k === K_DUST) { pVX[i] *= DRAG; pVY[i] = pVY[i] * DRAG + 10 * dt; }
+    else if (k === K_RISE) { pVX[i] += Math.sin(pAge[i] * 7 + i) * 10 * dt; }
+    else pVX[i] += Math.sin(pAge[i] * 9 + i) * 14 * dt;
+    pX[i] += pVX[i] * dt; pY[i] += pVY[i] * dt;
+  }
+  for (let i = 0; i < PRN; i++) {
+    if (!prOn[i]) continue; prX[i] += prVX[i] * dt; const k = prK[i], ramp = k >= 3 ? R_ENEMY : R_EL;
+    if (k !== 1) spawn(K_TRAIL, prX[i] - Math.sign(prVX[i]) * (k === 2 ? 4 : 2), prY[i] + Math.random() * 2 - 1, -Math.sign(prVX[i]) * (12 + Math.random() * 20), Math.random() * 10 - 5, 0.15 + Math.random() * (k === 2 ? 0.25 : 0.15), ramp);
+    if ((prVX[i] > 0 && prX[i] >= prTX[i]) || (prVX[i] < 0 && prX[i] <= prTX[i])) { prOn[i] = 0; impactOn(k, prX[i], prY[i]); }
+  }
+  if (shakeT > 0) { shakeT -= dt; if ((stepN & 1) === 0) { const a = shakeT > 0.12 ? shakeAmp : 1; sx = Math.floor(Math.random() * (2 * a + 1)) - a; sy = Math.floor(Math.random() * (2 * a + 1)) - a; } } else { sx = 0; sy = 0; shakeAmp = 0; }
+  if (flashT > 0) flashT -= dt;
+  smT += dt; mzT += dt; for (let i = 0; i < RN; i++) rgT[i] += dt;
+}
+
+// ───── 绘制钩子：本角色的画面效果都写在这里，第 6 节的 render 只调用它们 ─────
+const EL = FXR[R_EL], BR = FXR[R_BRASS];
+function fxReset() {
+  pK.fill(0); prOn.fill(0); rgT.fill(9); smT = 9; mzT = 9; shakeT = 0; shakeAmp = 0; sx = 0; sy = 0; flashT = 0; chargeAcc = 0; emberAcc = 0; soulAcc = 0; lastStep = 0;
+  frzT = 9; offT = 9; dbOn.fill(0);
+}
+function fxBack(f12) {        // 地面映光（怀表 / 大齿轮经过）
+  const gx = scrX(P.gx);
+  if (P.rim >= 2 && !P.lying) { const span = P.rim === 3 ? 14 : 7; for (let x = gx - span; x <= gx + span; x++) { const d = Math.abs(x - gx); if (P.rim === 3 ? d < span : ((x + f12) & 1) === 0) put(x, FLOOR, P.rim === 3 && d < 6 ? EL[1] : d < span * 0.5 ? EL[2] : EL[3]); } }
+  if (state === CHARGE && stT >= 0.1) for (let i = 0; i < 96; i++) { if (i % 3) continue; const a = i / 96 * 6.2832; put(Math.round(TCX + Math.cos(a) * TRX), Math.round(TCY + Math.sin(a) * TRY), EL[4]); }   // 刻度圆的暗色虚线圈
+  for (let i = 0; i < PRN; i++) if (prOn[i] && prK[i] !== 1) for (let x = Math.round(prX[i]) - 3; x <= Math.round(prX[i]) + 3; x++) if (((x + f12) & 1) === 0) put(x, FLOOR, prK[i] >= 3 ? FXR[R_ENEMY][2] : EL[3]);
+}
+function dOn(x, y) { return x >= 0 && y >= 0 && x < dummy.w && y < dummy.h && dummy.out[y * dummy.w + x] !== 255; }
+function bigGear(x, y, f, spin) {   // 5×5 八齿大齿轮：齿在两组位置间切换（转 22.5°），轮毂辐条每帧转 45°
+  for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) { const d2 = i * i + j * j; if (d2 > 5) continue; put(x + i, y + j, d2 === 0 ? EL[0] : d2 <= 2 ? EL[1] : EL[2]); }
+  const T = (f & 1) ? GEAR_B : GEAR_A; for (let n = 0; n < 16; n += 2) put(x + T[n], y + T[n + 1], EL[3]);
+  if (spin) { const k = f & 7, dx = DIR8[k * 2], dy = DIR8[k * 2 + 1]; put(x + dx, y + dy, EL[3]); if (!(dx && dy)) put(x + 2 * dx, y + 2 * dy, EL[4]); }
+}
+const GEAR_A = [3, 0, 2, 2, 0, 3, -2, 2, -3, 0, -2, -2, 0, -3, 2, -2], GEAR_B = [3, 1, 1, 3, -1, 3, -3, 1, -3, -1, -1, -3, 1, -3, 3, -1];
+function fxMid(f12) {         // 假人前、角色后：停摆定格（描边 + 嵌入的齿轮 + 头顶小表盘）、快进残影
+  if (frzT < FREEZE) {
+    const x0 = DUMMY_X - dummy.ox, y0 = HY - dummy.oy, c = frzT < 1 / 12 ? EL[0] : EL[1];
+    for (let y = -1; y <= dummy.h; y++) for (let x = -1; x <= dummy.w; x++) {
+      if (dOn(x, y)) { if (((x + y) & 3) === 0) put(x0 + x, y0 + y, EL[3]); continue; }
+      if (dOn(x + 1, y) || dOn(x - 1, y) || dOn(x, y + 1) || dOn(x, y - 1)) put(x0 + x, y0 + y, c);
+    }
+    bigGear(Math.round(frzX), Math.round(frzY), 0, 0);
+    const dx = DUMMY_X, dy = HY - 38;
+    for (let j = -3; j <= 3; j++) for (let i = -3; i <= 3; i++) { const d2 = i * i + j * j; if (d2 > 10) continue; put(dx + i, dy + j, d2 >= 7 ? (frzT < 1 / 12 ? EL[0] : EL[2]) : EL[4]); }
+    put(dx, dy - 2, EL[3]); put(dx + 2, dy, EL[3]); put(dx, dy + 2, EL[3]); put(dx - 2, dy, EL[3]);
+    const k = frzT < 0.25 ? (f12 * 3) & 7 : 0, hx = DIR8[k * 2], hy = DIR8[k * 2 + 1], hc = frzT >= 0.25 && frzT < 0.33 ? EL[0] : EL[1];
+    put(dx, dy, EL[0]); put(dx + hx, dy + hy, hc); if (!(hx && hy)) put(dx + 2 * hx, dy + 2 * hy, hc);
+  }
+  if (state === RECOVER && stT < 0.42) { const q = stT / 0.42, o = f12 & 1, d = P.flip ? 1 : -1; blitShape(hero, HX + P.mx + d * (8 + o), HY, P.flip, EL[3], 0.25 + q * 0.75); blitShape(hero, HX + P.mx + d * (4 + o), HY, P.flip, EL[2], q * 0.9); }
+  if (offT > 0.5 && offT < OFF_DUR && !P.lying) { const o = f12 & 1, d = P.flip ? 1 : -1, fade = clamp01((offT - OFF_DUR + 0.5) / 0.5); blitShape(hero, HX + P.mx + d * (8 + o), HY, P.flip, EL[3], 0.35 + fade * 0.65); blitShape(hero, HX + P.mx + d * (4 + o), HY, P.flip, EL[2], 0.15 + fade * 0.85); }
+}
+const RING8 = [3, 0, 2, 2, 0, 3, -2, 2, -3, 0, -2, -2, 0, -3, 2, -2];
+function fxFront(f12) {       // 角色前面：怀表光、蓄力刻度圆、铳口蒸汽、散架碎片、场外倒带钟面
+  const gx = scrX(P.gx), gy = HY + P.gy;
+  if (P.gem >= 2 && P.gem <= 3 && !P.lying && P.dq < 1) {
+    if (P.gem === 2) { for (let i = 0; i < 8; i++) if (((i + f12) & 1) === 0) put(gx + RING8[i * 2], gy + RING8[i * 2 + 1], (i & 2) ? EL[2] : EL[1]); }
+    else { for (let i = 0; i < 12; i++) { const a = i / 12 * 6.2832; put(Math.round(gx + Math.cos(a) * 5), Math.round(gy + Math.sin(a) * 5), (i % 3) === 0 ? EL[0] : EL[2]); } for (let r = 1; r <= 4; r++) put(gx, gy - r, r < 3 ? EL[0] : EL[1]); for (let r = 1; r <= 3; r++) put(gx - r, gy, r < 2 ? EL[0] : EL[1]); }
+  }
+  if (state === CHARGE) {       // 身周 12 个表盘刻度点，从 12 点起逆时针逐个点亮
+    for (let i = 0; i < 12; i++) {
+      const lt = 0.12 + i * 0.09, a = -Math.PI / 2 - i * Math.PI / 6, x = Math.round(TCX + Math.cos(a) * TRX), y = Math.round(TCY + Math.sin(a) * TRY);
+      if (stT < 0.1) continue; let c;
+      if (stT < lt) c = EL[4]; else if (stT - lt < 1 / 12) c = EL[0]; else c = stT > 1.2 ? (((i + f12) % 3) === 0 ? EL[0] : EL[1]) : EL[2];
+      put(x, y, c); if (stT >= lt) put(Math.round(TCX + Math.cos(a) * (TRX - 1.5)), Math.round(TCY + Math.sin(a) * (TRY - 1.5)), c);   // 点亮后成短刻度
+      if (i % 3 === 0) { put(Math.round(TCX + Math.cos(a) * (TRX + 1.2)), Math.round(TCY + Math.sin(a) * (TRY + 1.2)), c); if (stT >= lt) put(Math.round(TCX + Math.cos(a) * (TRX - 3)), Math.round(TCY + Math.sin(a) * (TRY - 3)), c === EL[4] ? EL[4] : EL[2]); }   // 12/3/6/9 点为长刻度
+    }
+  }
+  if (mzT < 2 / 12) {           // 铳口青色蒸汽：第 1 帧 3×3 白芯 + 一圈淡青 / 青薄荷（5×5）+ 上冒的两团；第 2 帧散成断续的大环
+    const cx = mzX + 1, cy = mzY;
+    if (mzT < 1 / 12) {
+      for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) put(cx + i, cy + j, EL[0]);
+      for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) { if (Math.abs(i) < 2 && Math.abs(j) < 2) continue; if (Math.abs(i) === 2 && Math.abs(j) === 2) continue; put(cx + i, cy + j, i + j < 0 ? EL[1] : EL[2]); }
+      put(cx + 3, cy, EL[1]); put(cx - 1, cy - 3, EL[2]); put(cx + 1, cy - 3, EL[1]); put(cx + 2, cy - 3, EL[2]);
+    } else {
+      for (let i = 0; i < 16; i++) { if ((i + f12) & 1) continue; const a = i / 16 * 6.2832; put(Math.round(cx + Math.cos(a) * 4), Math.round(cy - 1 + Math.sin(a) * 3), i < 8 ? EL[2] : EL[1]); }
+      put(cx, cy - 1, EL[1]); put(cx + 1, cy - 1, EL[2]); put(cx, cy, EL[2]); put(cx - 1, cy - 4, EL[3]); put(cx + 2, cy - 5, EL[2]); put(cx + 1, cy - 5, EL[3]);
+    }
+  }
+  if (state === DEATH) for (let i = 0; i < DBN; i++) {        // 崩飞的齿轮和弹簧
+    if (!dbOn[i]) continue; const x = Math.round(dbX[i]), y = Math.round(dbY[i]), dq = P.dq;
+    if (dbK[i] === 0) { const sd = Math.floor(dbS[i]) & 1; for (let j = -1; j <= 1; j++) for (let k = -1; k <= 1; k++) if (B8[((y + j) & 7) * 8 + ((x + k) & 7)] >= dq) put(x + k, y + j, j === 0 && k === 0 ? BR[4] : j + k < 0 ? BR[1] : BR[2]); if (B8[(y & 7) * 8 + (x & 7)] >= dq) { if (sd) { put(x + 2, y, BR[3]); put(x - 2, y, BR[3]); put(x, y + 2, BR[3]); put(x, y - 2, BR[3]); } else { put(x + 2, y + 2, BR[3]); put(x - 2, y - 2, BR[3]); put(x + 2, y - 2, BR[3]); put(x - 2, y + 2, BR[3]); } } }
+    else if (dbK[i] === 1) { if (B8[(y & 7) * 8 + (x & 7)] >= dq) { put(x, y, BR[1]); put(x + 1, y - 1, BR[2]); put(x, y - 2, BR[1]); put(x + 1, y - 3, BR[2]); put(x, y - 4, BR[1]); } }
+    else if (B8[(y & 7) * 8 + (x & 7)] >= dq) {                // 发条钥匙：空中竖 / 横翻滚，落地后横躺
+      const lay = dbVY[i] === 0 || (Math.floor(dbS[i]) & 1), K = lay ? KEY_LAY : KEY_UP, yy = y - 2;
+      for (let n = 0; n < K.length; n += 3) put(x + K[n], yy + K[n + 1], BR[K[n + 2]]);
+    }
+  }
+  if (offT < OFF_DUR) drawOffField(f12);
+}
+const KEY_UP = [0, 0, 1, 0, 1, 2, 0, 2, 3, -1, -1, 2, -2, -1, 3, 1, -1, 2, 2, -1, 3, -2, -2, 2, 2, -2, 2], KEY_LAY = [0, 0, 1, -1, 0, 2, -2, 0, 3, 1, -1, 2, 1, -2, 3, 1, 1, 2, 1, 2, 3, 2, -2, 2, 2, 2, 2];   // 崩飞的发条钥匙 [dx, dy, 黄铜档]
+function drawOffField(f12) {  // 场外「倒带」：1 帧隔行扫描线 → 中央隔点大钟面，指针先逆时针飞转一圈、再顺时针加速
+  const t = offT, cx = 64, cy = 40, R = 22, fade = t > OFF_DUR - 0.4 ? (f12 & 1) : 0;
+  if (t < 1 / 12) { for (let y = 0; y < H; y += 2) { const row = y * W; for (let x = W - 1; x >= 3; x--) fb[row + x] = fb[row + x - 3]; } }
+  if (fade) return;
+  for (let i = 0; i < 120; i++) { const a = i / 120 * 6.2832, x = Math.round(cx + Math.cos(a) * R), y = Math.round(cy + Math.sin(a) * R * 0.9); if (((x + y) & 1) === 0) put(x, y, EL[2]); }
+  for (let i = 0; i < 12; i++) { const a = i / 12 * 6.2832 - Math.PI / 2; for (let r = R - 4; r <= R - 2; r++) { if (i % 3 && r < R - 3) continue; put(Math.round(cx + Math.cos(a) * r), Math.round(cy + Math.sin(a) * r * 0.9), i % 3 ? EL[2] : EL[1]); } }
+  const th = t < 0.7 ? -6.2832 * (t / 0.7) : 6.2832 * 1.6 * Math.pow((t - 0.7) / 1.2, 2);
+  for (let r = 2; r <= R - 5; r++) { const a = th - Math.PI / 2; if ((r & 1) === 0) put(Math.round(cx + Math.cos(a) * r), Math.round(cy + Math.sin(a) * r * 0.9), r > R - 8 ? EL[0] : EL[1]); }
+  for (let r = 2; r <= R - 11; r++) { const a = th / 12 - Math.PI / 2; if ((r & 1) === 0) put(Math.round(cx + Math.cos(a) * r), Math.round(cy + Math.sin(a) * r * 0.9), EL[1]); }
+  put(cx, cy, EL[0]); put(cx + 1, cy, EL[1]); put(cx, cy + 1, EL[1]);
+}
+function drawShot(k, x, y, d, f12) {   // 弹道外形：k 弹道种类，d 朝向（1 向右 / -1 向左）
+  if (k === 1) {                        // 3×3 黄铜小齿轮，齿在正 / 斜两组位置间切换；1 格青色拖尾
+    for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) put(x + i, y + j, i === 0 && j === 0 ? BR[3] : i + j < 0 ? BR[1] : BR[2]);
+    if (f12 & 1) { put(x + 2, y, BR[2]); put(x - 2, y, BR[2]); put(x, y + 2, BR[2]); put(x, y - 2, BR[2]); } else { put(x + 2, y + 2, BR[2]); put(x - 2, y - 2, BR[2]); put(x + 2, y - 2, BR[2]); put(x - 2, y + 2, BR[2]); }
+    put(x - 3 * d, y, EL[2]);
+  } else if (k === 2) bigGear(x, y, f12, 1);
+  else { const R = FXR[R_ENEMY]; if (k === 3) { put(x, y, R[0]); put(x + d, y, R[0]); put(x - d, y, R[1]); put(x, y - 1, R[1]); put(x, y + 1, R[1]); put(x - 2 * d, y, R[2]); }
+    else { put(x - 3 * d, y, R[2]); put(x - 2 * d, y, R[1]); put(x - d, y, R[1]); put(x, y, R[0]); put(x + d, y, R[0]); put(x + 2 * d, y, R[1]); put(x + 3 * d, y, R[2]); put(x, y - 1, R[1]); put(x + d, y - 1, R[1]); put(x, y + 1, R[1]); put(x + d, y + 1, R[1]); put(x, y - 2, R[2]); put(x, y + 2, R[2]); if (f12 & 1) { put(x + d, y - 2, R[0]); put(x - d, y + 2, R[0]); } } }
+}
+
+// ═════════════════════════ 5. 舞台：抖动夜空、月亮、远山、石地；训练假人（同一引擎的第二个角色） ═════════════════════════
+const fb = new Uint8Array(W * H), bg = new Uint8Array(W * H);
+let seed = 1337; const rnd = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5], bayer = (x, y) => (BAYER[(y & 3) * 4 + (x & 3)] + 0.5) / 16;
+const HORIZON = 72, FLOOR = 80, MX = 70, MY = 17, MR = 8.5;
+(function paintBackground() {
+  const SKY = [1, 2, 3, 4];
+  for (let y = 0; y < FLOOR; y++) for (let x = 0; x < W; x++) { const v = Math.pow(Math.min(1, y / HORIZON), 1.35) * 3, b = Math.floor(v) + (v - Math.floor(v) > bayer(x, y) ? 1 : 0); bg[y * W + x] = SKY[Math.min(3, b)]; }
+  for (let y = 0; y < 40; y++) for (let x = 44; x < 100; x++) { const d = Math.hypot(x - MX, y - MY), i = y * W + x; if (d > MR && d < MR + 4.5 && ((x + y) & 1) === 0 && bg[i] < 3) bg[i] = d < MR + 2.5 ? 3 : bg[i] + 1; if (d <= MR) { let c = 6; if (Math.hypot(x - MX + 2.5, y - MY + 2.5) < MR - 2.2) c = 5; if ((x - MX) + (y - MY) > MR * 0.95) c = 7; bg[i] = c; } }
+  [[2, -1], [3, -1], [-3, 3], [1, 4], [2, 4], [-1, -4]].forEach(([dx, dy]) => { bg[(MY + dy) * W + MX + dx] = 7; });
+  for (let x = 0; x < W; x++) { const h1 = Math.round(69 + 3 * Math.sin(x * 0.07 + 1) + 2 * Math.sin(x * 0.19)), h2 = Math.round(74 + 2 * Math.sin(x * 0.11 + 3) + 1.5 * Math.sin(x * 0.29)); for (let y = h1; y < FLOOR; y++) bg[y * W + x] = 2; for (let y = h2; y < FLOOR; y++) bg[y * W + x] = 1; }
+  for (let y = FLOOR; y < H; y++) for (let x = 0; x < W; x++) { const r = y - FLOOR, row = r >> 2, ox = (row & 1) * 4 + (row * 3 & 7), lx = (x + ox) & 7, ly = r & 3; let c = 9; if (lx === 0 || ly === 3) c = 8; else if (ly === 0 || lx === 1) c = 10; if (c === 9 && ((x * 7 + y * 13) % 11) === 0) c = 8; const fade = (y - FLOOR - 6) / 10; if (fade > bayer(x, y)) c = c === 10 ? 9 : 8; if (fade - 0.6 > bayer(x, y)) c = 0; bg[y * W + x] = c; }
+  for (let x = 0; x < W; x++) bg[FLOOR * W + x] = ((x & 7) === 0) ? 9 : 10;
+  for (const cx of [HX, 98]) { for (let x = cx - 8; x <= cx + 8; x++) bg[FLOOR * W + x] = Math.abs(x - cx) < 7 ? 8 : 9; for (let x = cx - 5; x <= cx + 6; x++) bg[(FLOOR + 1) * W + x] = 8; }
+})();
+const NS = 34, starX = new Uint8Array(NS), starY = new Uint8Array(NS), starPh = new Float32Array(NS), starSp = new Float32Array(NS), starBig = new Uint8Array(NS);
+for (let i = 0; i < NS; i++) { let x, y; do { x = 2 + Math.floor(rnd() * 124); y = 2 + Math.floor(rnd() * 56); } while (Math.hypot(x - MX, y - MY) < MR + 6); starX[i] = x; starY[i] = y; starPh[i] = rnd() * 6.28; starSp[i] = 0.25 + rnd() * 0.6; starBig[i] = rnd() < 0.18 ? 1 : 0; }
+// 训练假人：木桩 + 横杆 + 麻袋身 + 靶心 + 草束 + 缝线脸；受击白闪 + 摇晃
+const D_WOOD = defMat([0, 20, 19, 16], 1), D_SACK = defMat([20, 7, 6, 5], 1), D_STRAW = defMat([20, 19, 14, 5], 1), D_RED = defMat([11, 12, 13, 26], 1), D_INK = defMat([0, 0, 0, 0], 1, 1);
+const dummy = new Sprite(28, 36, 14, 33), DUMMY_X = 98;
+const DUM = { rim: 0, rx: 0, ry: 0, rimR: [0, 0, 0, 0], rimRamp: FXR[R_MAGIC], flash: 0, dq: 0, ddir: 0, skip: new Uint8Array(MBAND.length + 4) };
+let dumHitT = 9, dumBig = 0, dumK = -1;
+const WOB_S = [1, -1, 1, 0], WOB_B = [3, -2, 2, -1, 1, 0];
+let dumDir = 1;
+function hitDummy(big, dir) { dumHitT = 0; dumBig = big; dumDir = dir || 1; }   // dir：1 从左边打来（往右倒），-1 从右边打来
+function drawDummy(wob, knock) {
+  begin(dummy, knock, 0); shear = wob;
+  part(); rect(-4, -1, 9, 2, D_WOOD, 2); rect(-1, -26, 2, 25, D_WOOD, 0);
+  part(); rect(-8, -20, 17, 2, D_WOOD, 0); sp(-9, -20, D_STRAW, 0); sp(-9, -19, D_STRAW, 0); sp(9, -20, D_STRAW, 0); sp(9, -19, D_STRAW, 0); sp(-10, -18, D_STRAW, 3); sp(10, -21, D_STRAW, 3);
+  part(); for (let y = -21; y <= -9; y++) { const q = (y + 15) / 7, w = Math.round(5.2 * Math.sqrt(Math.max(0, 1 - q * q * 0.45))); run(y, -w, w, D_SACK, 0); }
+  run(-20, -4, 4, D_WOOD, 2); run(-10, -4, 4, D_WOOD, 2);
+  for (let y = -18; y <= -12; y++) for (let x = -3; x <= 3; x++) { const d = Math.hypot(x, y + 15); if (d <= 3.3 && d > 2.2) sp(x, y, D_RED, 0); else if (d <= 1.1) sp(x, y, D_RED, 3); }
+  for (const x of [-4, -2, 1, 3]) { sp(x, -8, D_STRAW, 0); sp(x + (x & 1), -7, D_STRAW, 3); }
+  part(); for (let y = -28; y <= -22; y++) { const w = y === -28 || y === -22 ? 2 : 3; run(y, -w, w, D_SACK, 0); } run(-22, -1, 1, D_WOOD, 2);
+  sp(-2, -26, D_INK); sp(-1, -25, D_INK); sp(-2, -24, D_INK); sp(1, -26, D_INK); sp(2, -25, D_INK); sp(1, -24, D_INK); run(-23, -1, 1, D_INK); sp(-2, -29, D_STRAW, 3); sp(0, -30, D_STRAW, 4); sp(2, -29, D_STRAW, 3);
+}
+
+// ═════════════════════════ 6. 循环：固定 60Hz 更新 + rAF 渲染；逻辑画布 → 色板 → 整数倍放大 ═════════════════════════
+const disp = document.getElementById('screen'), dctx = disp.getContext('2d', { alpha: false });
+const off = document.createElement('canvas'); off.width = W; off.height = H; const octx = off.getContext('2d', { alpha: false });
+const img = octx.createImageData(W, H), px32 = new Uint32Array(img.data.buffer);
+let dw = 0, dh = 0, scale = 1, offX = 0, offY = 0;
+function resize() { const dpr = window.devicePixelRatio || 1; dw = Math.max(1, Math.floor(innerWidth * dpr)); dh = Math.max(1, Math.floor(innerHeight * dpr)); disp.width = dw; disp.height = dh; scale = Math.max(1, Math.floor(Math.min(dw / W, dh / H))); offX = Math.floor((dw - W * scale) / 2); offY = Math.floor((dh - H * scale) / 2); dctx.imageSmoothingEnabled = false; }
+addEventListener('resize', resize); resize();
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const REEL = [IDLE, MOVE, IDLE, ATTACK, IDLE, CHARGE, IDLE, HURT, IDLE, DEATH];
+let state = IDLE, stT = 0, simT = 0, stepN = 0, reelI = 0, auto = true;
+function enter(s) { state = s; stT = 0; onEnter(s); }
+function nextState() {
+  if (CHAIN[state] >= 0) return enter(CHAIN[state]);
+  if (auto) { reelI = (reelI + 1) % REEL.length; return enter(REEL[reelI]); }
+  enter(IDLE);
+}
+function update() {
+  simT += DT; stepN++; const prev = stT; stT += DT;
+  const ev = EVENTS[state]; for (let i = 0; i < ev.length; i++) if (prev < ev[i] && stT >= ev[i]) { poseAt(state, stT, simT); onTime(state, ev[i]); }
+  if (stT >= DUR[state]) nextState();
+  poseAt(state, stT, simT);
+  stepFX(DT);
+  dumHitT += DT;
+}
+function blitShape(s, X, Y, flip, c, dq) { const x0 = X - s.ox, y0 = Y - s.oy, o = s.out; for (let y = 0; y < s.h; y++) { const yy = y0 + y; if (yy < 0 || yy >= H) continue; for (let x = 0; x < s.w; x++) { if (o[y * s.w + x] === 255 || B8[(y & 7) * 8 + (x & 7)] < dq) continue; const xx = flip ? X + s.ox - x : x0 + x; if (xx >= 0 && xx < W) fb[yy * W + xx] = c; } } }   // 单色剪影（残影 / 化影），dq 0–1 按 Bayer 抖动消散
+function put(x, y, c) { if (x >= 0 && y >= 0 && x < W && y < H) fb[y * W + x] = c; }
+function blit(s, X, Y, flip) { const x0 = X - s.ox, y0 = Y - s.oy, o = s.out; for (let y = 0; y < s.h; y++) { const yy = y0 + y; if (yy < 0 || yy >= H) continue; for (let x = 0; x < s.w; x++) { const c = o[y * s.w + x]; if (c !== 255) { const xx = flip ? X + s.ox - x : x0 + x; if (xx >= 0 && xx < W) fb[yy * W + xx] = c; } } } }
+function render() {
+  if (P.k1 !== hero.k1 || P.k2 !== hero.k2) { drawHero(); bakeHero(); hero.k1 = P.k1; hero.k2 = P.k2; }
+  const df = Math.floor(dumHitT * 12), seq = dumBig ? WOB_B : WOB_S, wob = (df < seq.length ? seq[df] : 0) * dumDir, dflash = df === 0 ? 1 : 0, dk = (dumBig && df < 3 ? 1 : 0) * dumDir, dkey = ((wob + 4) * 4 + dflash * 2) * 4 + dk + 1;
+  if (dkey !== dumK) { drawDummy(wob, dk); DUM.flash = dflash; bake(dummy, DUM); dumK = dkey; }
+  fb.set(bg);
+  const f8 = Math.floor(simT * 8), f12 = Math.floor(simT * 12);
+  for (let i = 0; i < NS; i++) { const b = Math.sin(f8 / 8 * starSp[i] * 6 + starPh[i]); if (b < -0.3) continue; const x = starX[i], y = starY[i]; if (b > 0.75) { put(x, y, 5); if (starBig[i]) { put(x - 1, y, 3); put(x + 1, y, 3); put(x, y - 1, 3); put(x, y + 1, 3); } } else put(x, y, 6); }
+  fxBack(f12);
+  blit(dummy, DUMMY_X, HY, 0);
+  fxMid(f12);
+  blit(hero, HX + P.mx, HY, P.flip);
+  fxFront(f12);
+  for (let k = 0; k < RN; k++) { const t = rgT[k], life = rgBig[k] ? 0.22 : 0.16; if (t >= life) continue; const R = FXR[rgRamp[k]], r = 2 + t * (rgBig[k] ? 62 : 48), c = t < life * 0.3 ? R[0] : t < life * 0.65 ? R[1] : R[2], n = Math.ceil(r * 6.3); for (let i = 0; i < n; i++) { if (((i + f12) & 3) === 3 && t > life * 0.5) continue; const a = i / n * 6.2832; put(Math.round(rgX[k] + Math.cos(a) * r), Math.round(rgY[k] + Math.sin(a) * r * 0.8), c); } }
+  for (let i = 0; i < PN; i++) {
+    const k = pK[i]; if (!k) continue; let c; const R = FXR[pRamp[i]];
+    if (k === K_SPIRAL || k === K_ORBIT || k === K_SPIRAL_PT) { const s = (i + f12) % 6; c = s < 1 ? R[0] : s < 3 ? R[1] : R[2]; }
+    else { const q = pAge[i] / pLife[i]; c = R[q < 0.15 ? 0 : q < 0.35 ? 1 : q < 0.6 ? 2 : q < 0.82 ? 3 : 4]; }
+    put(Math.round(pX[i]), Math.round(pY[i]), c);
+  }
+  for (let i = 0; i < PRN; i++) if (prOn[i]) drawShot(prK[i], Math.round(prX[i]), Math.round(prY[i]), prVX[i] > 0 ? 1 : -1, f12);
+  const lut = flashT > 0 ? LUTF : LUT;
+  for (let i = 0; i < W * H; i++) px32[i] = lut[fb[i]];
+  octx.putImageData(img, 0, 0);
+  dctx.fillStyle = '#0b0a18'; dctx.fillRect(0, 0, dw, dh);
+  dctx.drawImage(off, offX + sx * scale, offY + sy * scale, W * scale, H * scale);
+}
+
+// ───── 动作表：每个状态按 12 fps 取样逐帧排开，用来审核姿势与细节 ─────
+const SHEET = [[IDLE, [0, 0.4, 0.8, 1.2, 1.7, 1.85]], [MOVE, [0, 3.5 / 12, 5.5 / 12, 8.5 / 12]], [ATTACK, null], [CHARGE, 'step2'], [CAST, null], [RECOVER, 'step2'], [HURT, 'hurt'], [DEATH, [0.34, 0.42, 0.6, 0.7, 0.9, 1.1, 1.3, 1.95, 2.15, 2.35]], [REVIVE, [0.45, 0.55, 0.65, 0.75, 0.9]]];
+function buildSheet() {
+  const box = document.getElementById('sheet'); box.textContent = '';
+  const fr = new Uint8ClampedArray(hero.w * hero.h * 4), tmp = new ImageData(fr, hero.w, hero.h);
+  for (const [st, spec] of SHEET) {
+    let ts = []; if (Array.isArray(spec)) ts = spec; else { const step = spec === 'step2' ? 2 / 12 : 1 / 12, t0 = spec === 'hurt' ? INCOMING : 0; for (let t = t0; t < DUR[st] - 1e-6; t += step) ts.push(t); }
+    const h = document.createElement('h2'); h.textContent = NAMES[st] + ' · ' + ts.length + ' 帧 · ' + DUR[st].toFixed(2) + ' 秒'; box.appendChild(h);
+    const row = document.createElement('div'); row.className = 'frames'; box.appendChild(row);
+    for (const t of ts) {
+      poseAt(st, t, t); drawHero(); bakeHero();
+      for (let i = 0; i < hero.w * hero.h; i++) { const c = hero.out[i]; const v = LUT[c === 255 ? (Math.floor(i / hero.w) === hero.oy + 1 ? 10 : 2) : c]; fr[i * 4] = v & 255; fr[i * 4 + 1] = (v >> 8) & 255; fr[i * 4 + 2] = (v >> 16) & 255; fr[i * 4 + 3] = 255; }
+      const cv = document.createElement('canvas'); cv.width = hero.w; cv.height = hero.h; cv.style.width = hero.w * 3 + 'px'; cv.style.height = hero.h * 3 + 'px'; cv.title = t.toFixed(2) + 's'; cv.getContext('2d').putImageData(tmp, 0, 0); row.appendChild(cv);
+    }
+  }
+  hero.k1 = hero.k2 = -1; poseAt(state, stT, simT);
+}
+function toggleSheet(on) { const box = document.getElementById('sheet'); const show = on == null ? box.hidden : on; if (show) buildSheet(); box.hidden = !show; }
+
+// ───── 输入与状态显示 ─────
+const stateEl = document.getElementById('state');
+let acc = 0, last = performance.now(), paused = false, slow = false, lastLabel = '';
+function play(s) { auto = false; if (s === IDLE || s === MOVE || s === ATTACK || s === CHARGE || s === HURT || s === DEATH) enter(s); }
+addEventListener('keydown', (e) => {
+  const k = e.code;
+  if (k === 'Space') { e.preventDefault(); paused = !paused; }
+  else if (k === 'ArrowRight' && paused) { for (let i = 0; i < 5; i++) update(); }
+  else if (k === 'KeyS') slow = !slow;
+  else if (k === 'KeyA') { auto = !auto; if (auto) { reelI = 0; enter(REEL[0]); } }
+  else if (k === 'KeyT') toggleSheet();
+  else if (k === 'Digit1') play(IDLE); else if (k === 'Digit2') play(MOVE); else if (k === 'Digit3') play(ATTACK); else if (k === 'Digit4') play(CHARGE); else if (k === 'Digit5') play(HURT); else if (k === 'Digit6') play(DEATH);
+});
+disp.addEventListener('click', () => { paused = !paused; });
+function frame(now) {
+  let dt = (now - last) / 1000; last = now; if (dt > 0.25) dt = 0.25;
+  if (!paused) { acc += slow ? dt * 0.25 : dt; let n = 0; while (acc >= DT && n < 8) { update(); acc -= DT; n++; } if (n === 8) acc = 0; }
+  render();
+  const label = NAMES[state] + (paused ? ' · 暂停' : slow ? ' · 慢放' : '') + (auto ? '' : ' · 手动');
+  if (label !== lastLabel) { stateEl.textContent = label; lastLabel = label; }
+  requestAnimationFrame(frame);
+}
+// ───── 验收接口：自动检查、色板检查、数据导出（scripts/shoot.mjs、以后的 HD-2D 与游戏替换都用它） ─────
+const AUDIT = [[IDLE, 2], [MOVE, 4], [ATTACK, 4], [CHARGE, 3], [CAST, 2], [RECOVER, 2], [HURT, 3], [DEATH, 6]];
+const GLOW_SET = new Uint8Array(MBAND.length + 4); for (const m of GLOW_MATS) GLOW_SET[m] = 1;
+function frameHash(o) { let h = 2166136261; for (let i = 0; i < o.length; i++) { h ^= o[i]; h = Math.imul(h, 16777619); } return h >>> 0; }
+function bboxOf(o) { let x0 = 999, y0 = 999, x1 = -1, y1 = -1, n = 0, edge = false, bad = 0; for (let y = 0; y < hero.h; y++) for (let x = 0; x < hero.w; x++) { const c = o[y * hero.w + x]; if (c === 255) continue; n++; if (c >= PAL.length) bad++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; if (x === 0 || y === 0 || x === hero.w - 1 || y === hero.h - 1) edge = true; } return { x0, y0, x1, y1, n, edge, bad }; }
+function audit() {
+  const res = { name: document.title, states: {}, problems: [] };
+  for (const [st, min] of AUDIT) {
+    const seen = new Set(); let edge = false, bad = 0, X0 = 999, Y0 = 999, X1 = -1, Y1 = -1;
+    for (let t = 0; t < DUR[st] - 1e-6; t += 1 / 12) { poseAt(st, t, t); drawHero(); bakeHero(); seen.add(frameHash(hero.out)); const b = bboxOf(hero.out); edge = edge || b.edge; bad += b.bad; if (b.n) { X0 = Math.min(X0, b.x0); Y0 = Math.min(Y0, b.y0); X1 = Math.max(X1, b.x1); Y1 = Math.max(Y1, b.y1); } }
+    res.states[NAMES[st]] = { distinctFrames: seen.size, bbox: [X0 - hero.ox, Y0 - hero.oy, X1 - hero.ox, Y1 - hero.oy], clipped: edge };
+    if (seen.size < min) res.problems.push(NAMES[st] + '：只有 ' + seen.size + ' 个不同帧（至少 ' + min + '）');
+    if (edge) res.problems.push(NAMES[st] + '：画到了缓冲边缘，会被裁掉（加大 Sprite 尺寸）');
+    if (bad) res.problems.push(NAMES[st] + '：' + bad + ' 个像素不在色板里');
+  }
+  poseAt(IDLE, 0, 0); drawHero(); bakeHero(); const b = bboxOf(hero.out);
+  res.idle = { w: b.x1 - b.x0 + 1, h: b.y1 - b.y0 + 1, pixels: b.n };
+  if (res.idle.h < 16 || res.idle.h > 44) res.problems.push('待机高度 ' + res.idle.h + ' 格，超出 16–44');
+  res.pass = res.problems.length === 0; hero.k1 = hero.k2 = -1; poseAt(state, stT, simT); return res;
+}
+function paletteCheck() { const ok = new Set(); for (let i = 0; i < LUT.length; i++) { ok.add(LUT[i]); ok.add(LUTF[i]); } let bad = 0; for (let i = 0; i < px32.length; i++) if (!ok.has(px32[i])) bad++; return bad; }
+function b64(u8) { let s = ''; for (let i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]); return btoa(s); }
+// 导出：每个状态按 12 fps 的逐帧色板下标、发光遮罩、发光体位置；外加尺寸、脚底锚点、受击点、色板
+function exportData() {
+  const out = { name: document.title, palette: PAL, w: hero.w, h: hero.h, ox: hero.ox, oy: hero.oy, hitPoint: HIT_POINT, states: {} }, glow = new Uint8Array(hero.w * hero.h);
+  for (const [st] of AUDIT.concat([[REVIVE, 0]])) {
+    const frames = [];
+    for (let t = 0; t < DUR[st] - 1e-6; t += 1 / 12) { poseAt(st, t, t); drawHero(); bakeHero(); for (let i = 0; i < glow.length; i++) glow[i] = GLOW_SET[hero.mat[i]] && hero.out[i] !== 255 ? 1 : 0; frames.push({ t: +t.toFixed(3), px: b64(hero.out), glow: b64(glow), focus: [P.gx, P.gy], mx: P.mx, flip: P.flip }); }
+    out.states[NAMES[st]] = { dur: DUR[st], frames };
+  }
+  hero.k1 = hero.k2 = -1; poseAt(state, stT, simT); return out;
+}
+// 确定性跳帧：暂停，清空特效，从状态开头按固定步长推进 t 秒并渲染（截图、审核用；skill 会自动走完蓄力 → 施放 → 收招）
+const STATE_OF = { idle: IDLE, move: MOVE, attack: ATTACK, skill: CHARGE, hurt: HURT, death: DEATH };
+function at(name, t) { const s = STATE_OF[name]; if (s == null) return null; paused = true; auto = false; fxReset(); dumHitT = 9; enter(s); const n = Math.round(t / DT); for (let i = 0; i < n; i++) update(); render(); return NAMES[state] + ' +' + stT.toFixed(2) + 's'; }
+window.__pc = { play: (n) => play(STATE_OF[n]), at, resume: () => { paused = false; }, sheet: toggleSheet, audit, exportData, paletteCheck, get state() { return NAMES[state]; } };
+poseAt(IDLE, 0, 0); requestAnimationFrame(frame);
+})();
+</script>
