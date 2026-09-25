@@ -116,10 +116,10 @@ U.marquee = (x, s, cx, cy, o = {}) => {
   U.box(x, X, Y, w, h, P.wine); R(x, X, Y, w, 6, P.red); R(x, X, Y + h - 6, w, 6, P.umber);
   U.chase(x, X + 9, Y - 12, w - 18, t); U.chase(x, X + 9, Y + h + 6, w - 18, t, true);
   let px = cx - tw / 2;
-  chars.forEach((ch, i) => { const ph = ((t * 1.25 + (chars.length - i) * 0.12) % 1), dy = PJ.reduced ? 0 : [0, -0.14, 0, 0.05][Math.floor(ph * 4)] * size; U.text(x, ch, px + cw[i] / 2, cy + dy, size, P.gold, { ramp: true, outline: true }); px += cw[i] + gap; });
+  chars.forEach((ch, i) => { const ph = ((t * 1.25 + (chars.length - i) * 0.12) % 1), dy = PJ.reduced ? 0 : (-0.045 - 0.095 * Math.sin(ph * 2 * Math.PI)) * size; U.text(x, ch, px + cw[i] / 2, cy + dy, size, P.gold, { ramp: true, outline: true }); px += cw[i] + gap; });
   return { x: X, y: Y, w, h };
 };
-// 横幅（战斗通告、胜利、袭击……）：整条酒红 / 金 / 青底带，中间大字
+// 横幅（战斗通告、胜利、混沌来袭……）：整条酒红 / 金 / 青底带，中间大字
 U.banner = (x, s, cy, o = {}) => {
   const size = o.size || T.hero, kind = o.kind || 'wine', h = Math.round(size * 1.7), C = { wine: [P.wine, P.red, P.umber], gold: [P.amber, P.gold, P.brown], teal: [P.tealDeep, P.teal, P.night], red: [P.red, P.pink, P.wine], dark: [P.night, P.dusk, P.abyss] }[kind];
   const Y = cy - h / 2; R(x, 0, Y - 6, 1920, h + 12, P.ink); R(x, 0, Y, 1920, h, C[0]); R(x, 0, Y, 1920, 6, C[1]); R(x, 0, Y + h - 9, 1920, 9, C[2]);

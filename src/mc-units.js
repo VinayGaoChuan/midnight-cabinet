@@ -8,7 +8,7 @@ M.RACES = { 兽人:'#8fd060', 不死:'#8fe0ff', 骷髅:'#e8e0cc', 人类:'#ffd98
 M.VOCS = {}; Object.keys(M.VOC || {}).forEach(v => { M.VOCS[v] = M.VOC[v].c; });
 // custom unit demonstrating a race-count trait
 DB.JadeBeast = { n:'宝玉兽', q:1, g:'优质', voc:'商人', race:'兽人', type:'Summon', cost:90, hp:900, atk:34, as:100, spd:320, ranged:0, rad:256, tr:['JadeBeastTrait'], desc:'身上长着玉石的兽，同族越多越值钱。' };
-TDB.JadeBeastTrait = { n:'玉石共鸣', d:'场上存在2个兽人单位时，倍率+0.1；存在3个兽人单位时，倍率再+0.1', cls:'JadeBeast', lines:[{ need:2, t:'2 个兽人：倍率 +0.1' }, { need:3, t:'3 个兽人：倍率再 +0.1' }] };
+TDB.JadeBeastTrait = { n:'玉石共鸣', d:'场上存在2个兽人单位时，积分倍率+0.1；存在3个兽人单位时，积分倍率再+0.1', cls:'JadeBeast', lines:[{ need:2, t:'2 个兽人：积分倍率 +0.1' }, { need:3, t:'3 个兽人：积分倍率再 +0.1' }] };
 // UNITS_PROXY: legacy code reads M.UNITS[k].name/tags/desc
 Object.keys(M.UNITS).forEach(k => { if (!DB[k]) delete M.UNITS[k]; });
 Object.keys(DB).forEach(k => { const d = DB[k]; if (d.type !== 'Summon' && d.type !== 'Derivant') return; M.UNITS[k] = { name: d.n, tags: [d.race, d.voc].filter(Boolean), tier: d.q + 1, hp: d.hp, atk: d.atk, desc: d.desc || '', q: d.q }; });
@@ -19,7 +19,7 @@ M.SHOP_POOL = Object.keys(DB).filter(k => DB[k].type === 'Summon' && DB[k].cost 
 M.unitName = (k) => DB[k] ? DB[k].n : k;
 M.unitPower = (k, u) => { const d = DB[k]; return Math.round((d.hp + (u ? u.bHp || 0 : 0)) * 0.1 + (d.atk + (u ? u.bAtk || 0 : 0)) * (d.as || 100) / 100 * 1.6); };
 // ───────── rich text ─────────
-const KW = [['法力值', '#6fb8ff'], ['法力', '#6fb8ff'], ['攻击速度', '#ffd060'], ['攻速', '#ffd060'], ['技能伤害', '#d890ff'], ['最大生命值', '#7fff9a'], ['生命值', '#7fff9a'], ['生命', '#7fff9a'], ['防御', '#9fc8ff'], ['攻击力', '#ff9a6a'], ['吸血', '#ff5a6a'], ['召唤', '#c890ff'], ['光环', '#ffe08a'], ['闪避', '#b8f0ff'], ['积分', '#ffcc33'], ['倍率', '#ffcc33'], ['连击', '#ff9a6a'], ['治疗', '#7fff9a'], ['恢复', '#7fff9a'], ['隐身', '#b8b8ff'], ['复活', '#7fff9a'], ['进化', '#ffcc33'], ['升级', '#ffcc33'], ['永久', '#ffcc33'], ['反弹', '#9cff7a'], ['弹射', '#6fe0ff'], ['溅射', '#ff9a6a'], ['降低', '#ff7a7a'], ['减少', '#9fc8ff']];
+const KW = [['法力值', '#6fb8ff'], ['法力', '#6fb8ff'], ['攻击速度', '#ffd060'], ['攻速', '#ffd060'], ['技能伤害', '#d890ff'], ['最大生命值', '#7fff9a'], ['生命值', '#7fff9a'], ['生命', '#7fff9a'], ['防御', '#9fc8ff'], ['攻击力', '#ff9a6a'], ['吸血', '#ff5a6a'], ['召唤', '#c890ff'], ['光环', '#ffe08a'], ['闪避', '#b8f0ff'], ['积分', '#ffcc33'], ['积分倍率', '#ffcc33'], ['连击', '#ff9a6a'], ['治疗', '#7fff9a'], ['恢复', '#7fff9a'], ['隐身', '#b8b8ff'], ['复活', '#7fff9a'], ['进化', '#ffcc33'], ['升级', '#ffcc33'], ['永久', '#ffcc33'], ['反弹', '#9cff7a'], ['弹射', '#6fe0ff'], ['溅射', '#ff9a6a'], ['降低', '#ff7a7a'], ['减少', '#9fc8ff']];
 M.rich = function (s, base) {
   const out = []; let i = 0, buf = ''; s = String(s || '');
   const flush = () => { if (buf) { out.push({ t: buf, c: base || '#d8cfc0' }); buf = ''; } };
@@ -48,8 +48,8 @@ M.unitTip = function (k, u, run) {
   return { title: d.n, c: q.c, kind: q.n + ' · ' + (d.cost ? '价格 ' + d.cost : ''), d: d.desc || '', lines };
 };
 // ───────── roster (no merging, no stars) ─────────
-M.ROSTER_CAP = 10;
-M.canAdd = (run) => run.roster.length < M.ROSTER_CAP;
+M.ROSTER_CAP = Infinity;   // user ruling 2026-09-24: recruit as many as you can pay for
+M.canAdd = () => true;
 M.addUnit = function (run, type) { if (!M.canAdd(run)) return null; run.roster.push({ uid: M.rid(), type, star: 1, bAtk: 0, bHp: 0, lv: 1, battles: 0, kills: 0, mana: 0, bonusAtk: 0 }); return null; };
 M.wouldMerge = () => false;
 M.sellValue = (run, u) => Math.round((DB[u.type].cost || 10) * 0.5);
@@ -68,11 +68,11 @@ M.LEGION = {
   cleric:{ name:'牧师战旗', q:1, icon:'flag', cost:90, desc:'牧师单位法力恢复 +30%', m:{ voc:'牧师', mana:0.3 } },
   summoner:{ name:'召唤师战旗', q:1, icon:'flag', cost:90, desc:'召唤师单位法力恢复 +30%', m:{ voc:'召唤师', mana:0.3 } },
   merchant:{ name:'商人战旗', q:1, icon:'flag', cost:90, desc:'击杀获得的基础积分 +15%', m:{ base:0.15 } },
-  zeal:{ name:'狂热战旗', q:2, icon:'flag', cost:140, desc:'每场战斗初始倍率 +0.1', m:{ mult:0.1 } },
-  bounty:{ name:'赏金战旗', q:2, icon:'flag', cost:140, desc:'击杀精英或首领时，倍率额外 +0.1', m:{ eliteMult:0.1 } },
+  zeal:{ name:'狂热战旗', q:2, icon:'flag', cost:140, desc:'每场战斗初始积分倍率 +0.1', m:{ mult:0.1 } },
+  bounty:{ name:'赏金战旗', q:2, icon:'flag', cost:140, desc:'击杀精英或首领时，积分倍率额外 +0.1', m:{ eliteMult:0.1 } },
   bulwark:{ name:'壁垒战旗', q:2, icon:'flag', cost:150, desc:'战斗开始时，全体获得 15% 生命的护盾', m:{ shield:0.15 } },
   fury:{ name:'血怒战旗', q:3, icon:'flag', cost:220, desc:'全体攻击 +12%，攻击速度 +8%', m:{ atk:0.12, as:0.08 } },
-  crown:{ name:'王冠战旗', q:3, icon:'flag', cost:240, desc:'每击杀 15 个敌人，倍率 +0.1', m:{ killMult:15 } },
+  crown:{ name:'王冠战旗', q:3, icon:'flag', cost:240, desc:'每击杀 15 个敌人，积分倍率 +0.1', m:{ killMult:15 } },
 };
 M.FIELDS = {};
 M.legionMods = function (run, d) {
@@ -132,7 +132,8 @@ M.makeBattleCfg = function (run, node) {
 const B = M.BUILDINGS;
 B.tavern = { n:'酒馆', q:0, cat:'recruit', style:'medieval', pw:-1, cost:60, days:1, recruit:{}, d:'花物资招募新领袖。' };
 Object.keys(B).forEach(k => { if (!B[k].fixed && !B[k].specialDays) B[k].days = B[k].q + 1; });
-M.LIGHT_R = (m, x) => x.b === 'core' ? 3 : x.b ? [1, 2, 2, 3][M.BUILDINGS[x.b].q] : x.dug ? 1 : 0;
+// light (user ruling 2026-09-24): the core and epic / legendary rooms light 2 cells around them, common / rare rooms and empty rooms 1
+M.LIGHT_R = (m, x) => x.b === 'core' ? 2 : x.b ? (M.BUILDINGS[x.b].q >= 2 ? 2 : 1) : x.dug ? 1 : 0;
 // ───────── heroes scaled to the new stat range ─────────
 Object.keys(M.HEROES).forEach(k => { const H = M.HEROES[k]; if (!H._s) { H._s = 1; H.hp *= 5; H.atk *= 3; H.range = H.ranged ? 420 : 70; } });
 // ───────── meta v4 ─────────

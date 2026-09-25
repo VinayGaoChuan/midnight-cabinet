@@ -123,7 +123,7 @@ MINI.tree = { title: '世界树', img: 'e_tree', col: C.green, text: '树根扎�
 
 // ═════════════════════ 塔罗 / 砸金蛋 · pick from covered things ═════════════════════
 const TAROT = [
-  { n: '太阳', c: C.gold, ic: 'u_star', good: 1, f(g) { return g.buffRun('mult', 0.3, '倍率 +0.3', C.magenta); } },
+  { n: '太阳', c: C.gold, ic: 'u_star', good: 1, f(g) { return g.buffRun('mult', 0.3, '积分倍率 +0.3', C.magenta); } },
   { n: '月亮', c: C.ice, ic: 't_eye', good: 1, f(g) { return g.buffRun('eventLuck', 0.15, '事件好运 +15%', C.ice); } },
   { n: '星星', c: C.violet, ic: 'gem', good: 1, f(g, mg) { const got = g.award([K.item(g.run, mg.P)], mg.from); return got.join(''); } },
   { n: '力量', c: C.amber, ic: 't_sword', good: 1, f(g) { return g.buffRun('unitAtk', 0.1, '部队攻击 +10%', C.amber); } },
@@ -222,12 +222,12 @@ MINI.fate = { title: '命运之轮', img: 'e_fate', col: C.red, text: '石头做
   btns(mg) { if (mg.phase !== 'idle') return []; return [{ t: '以血转动', sub: '领袖 -12% 生命', danger: 1, fn: () => MINI.fate.spin.call(this, mg) }, { t: '离开', leave: 1, fn: () => this.miniFinish('你没有碰它。石轮自己转了半圈。', '#8d8496') }]; },
   spin(mg) {
     this.heroHurt(0.12); this.miniSet('spin'); const run = this.run;
-    const outs = [{ n: '空', c: C.haze, w: 16 }, { n: '倍率 +0.4', c: C.magenta, w: 16 }, { n: '部队', c: C.blue, w: 16 }, { n: '道具', c: C.violet, w: 14 }, { n: '图纸', c: C.tan, w: 12 }, { n: '积分 ×', c: C.gold, w: 16 }, { n: '诅咒', c: C.red, w: 10 }];
+    const outs = [{ n: '空', c: C.haze, w: 16 }, { n: '积分倍率 +0.4', c: C.magenta, w: 16 }, { n: '部队', c: C.blue, w: 16 }, { n: '道具', c: C.violet, w: 14 }, { n: '图纸', c: C.tan, w: 12 }, { n: '积分 ×', c: C.gold, w: 16 }, { n: '诅咒', c: C.red, w: 10 }];
     const idx = outs.indexOf(M.wpick(outs, o => o.w)), P = mg.P, C0 = { x: 960, y: 520 };
     setTimeout(() => this.mini === mg && this.startReel({ title: '命运之轮', iconKey: 'e_fate', tiles: outs.map(o => ({ n: o.n, sub: '', c: o.c })), land: idx, ups: 0, onDone: () => {
       let tx = '', col = outs[idx].c, g = [];
       if (idx === 0) tx = '石轮停在空白处。血白流了。';
-      if (idx === 1) { run.runBuff.mult = (run.runBuff.mult || 0) + 0.4; tx = '本局初始倍率 +0.4。'; }
+      if (idx === 1) { run.runBuff.mult = (run.runBuff.mult || 0) + 0.4; tx = '本局初始积分倍率 +0.4。'; }
       if (idx === 2) { const t = M.pickUnitQ(run); if (M.canAdd(run, t)) { g.push({ k: 'unit', type: t }); tx = '石轮上走下来一个 ' + M.DB[t].n + '。'; } else { g.push({ k: 'wallet', v: M.nice(P * 6) }); tx = '队伍满了，名字化成了积分。'; } }
       if (idx === 3) { g.push(K.item(run, P)); tx = '石缝里滚出一个瓶子。'; }
       if (idx === 4) { g.push(K.bp(null, 1)); tx = '一张刻在石片上的图纸。'; }

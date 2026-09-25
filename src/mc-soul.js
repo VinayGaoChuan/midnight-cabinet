@@ -62,7 +62,7 @@ G.startRaid = function () {
     // pick the defenders first: weak (普通 / 稀有) leaders are ticked by default
     const low = m.heroes.filter(h => (h.rarity || 0) <= 1), sel = {}; (low.length ? low : m.heroes).forEach(h => { sel[h.id] = true; });
     this.raidPrep = { sel }; m.raidPending = m.day; this.save(); this.panel = null; this.openPanel({ kind: 'raidPrep' }); this.bv.focusDoor && this.bv.focusDoor(); M.Sfx.alarm();
-    this.banner({ kind: 'win', text: '袭击来了！', col: '#ff5a4a', col2: '#6a0a0a', sub: '选出今晚守城的领袖。', life: 1.8, y: 440 });
+    this.banner({ kind: 'win', text: '混沌来袭！', col: '#ff5a4a', col2: '#6a0a0a', sub: '选出今晚守城的领袖。', life: 1.8, y: 440 });
     return;
   }
   this.raidGo = false; const pr = this.raidPrep; this.raidPrep = null; m.raidPending = null;
@@ -77,10 +77,10 @@ G.raidLaunch = function () { if (!this.raidPrep) return; M.Sfx.click(); this.rai
 G.raidToggle = function (id) { const pr = this.raidPrep; if (!pr) return; pr.sel[id] = !pr.sel[id]; M.Sfx.click(); };
 // nothing else happens while the defenders are being chosen
 const oOP = G.openPanel;
-G.openPanel = function (p) { if (this.raidPrep && (!p || p.kind !== 'raidPrep')) { this.toast('袭击就要来了：先选好守城的领袖', '#ff6a5a'); return; } return oOP.apply(this, arguments); };
+G.openPanel = function (p) { if (this.raidPrep && (!p || p.kind !== 'raidPrep')) { this.toast('混沌来袭：先选好守城的领袖', '#ff6a5a'); return; } return oOP.apply(this, arguments); };
 const oCP = G.closePanel;
-G.closePanel = function () { if (this.raidPrep && this.panel && this.panel.kind === 'raidPrep') { this.toast('袭击躲不掉：选好领袖，点「开始守城」', '#ff6a5a'); return; } return oCP.apply(this, arguments); };
-['passDay', 'restDay', 'toRoom'].forEach(k => { const o = G[k]; if (!o) return; G[k] = function () { if (this.raidPrep) { this.toast('袭击就要来了：先选好守城的领袖', '#ff6a5a'); return; } return o.apply(this, arguments); }; });
+G.closePanel = function () { if (this.raidPrep && this.panel && this.panel.kind === 'raidPrep') { this.toast('混沌来袭躲不掉：选好领袖，点「开始守城」', '#ff6a5a'); return; } return oCP.apply(this, arguments); };
+['passDay', 'restDay', 'toRoom'].forEach(k => { const o = G[k]; if (!o) return; G[k] = function () { if (this.raidPrep) { this.toast('混沌来袭：先选好守城的领袖', '#ff6a5a'); return; } return o.apply(this, arguments); }; });
 // whatever cleared the base (a reset, a new game, a screen change) must not strand the choice: reopen it, or drop it once the raid is no longer today's
 const oTick = G.tick;
 G.tick = function () { const r = oTick.apply(this, arguments), m = this.meta; if (this.raidPrep && this.screen === 'base' && !this.raid && !this.panel && m) { if (m.raidPending !== m.day || !m.heroes.length) { this.raidPrep = null; this.raidGo = false; } else oOP.call(this, { kind: 'raidPrep' }); } return r; };
@@ -138,7 +138,7 @@ G.view = function () {
   const v = oView.call(this), p = this.panel, m = this.meta, pn = v.pn;
   if (pn && p && p.kind === 'raidPrep' && this.raidPrep) {
     const sel = this.raidPrep.sel, n = m.heroes.filter(h => sel[h.id]).length;
-    Object.assign(pn, { isRaidPrep: true, title: '今夜袭击', titleColor: '#ff6a5a', sub: '第 ' + m.day + ' 天',
+    Object.assign(pn, { isRaidPrep: true, title: '今夜混沌来袭', titleColor: '#ff6a5a', sub: '第 ' + m.day + ' 天',
       rpTxt: '选守城的领袖。守城阵亡的领袖永久死亡，留下灵魂碎片。',
       rpHeroes: m.heroes.map(h => { const on = !!sel[h.id], mx = M.heroMaxHp(h, m), P = M.PSKILL && M.PSKILL[h.cls];
         return { img: M.spriteURL(M.HEROES[h.cls].sprite, 4), n: M.heroN(h), c: M.qc(h.rarity), sub: 'Lv ' + h.lv + ' · 生命 ' + Math.round(h.hp) + '/' + mx, sh: '阵亡留下 ' + M.deathShards(h, m) + ' 碎片',

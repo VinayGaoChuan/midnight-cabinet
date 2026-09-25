@@ -44,9 +44,9 @@ Object.assign(SP, {
 // ───────── heroes: exactly one active skill each, cooldown counted in nodes ─────────
 const SK = {
   watchman:{ nodeCd:3, v:(lv) => 2 + 0.25 * lv, d:(v) => '所有敌人停顿 ' + v.toFixed(1) + ' 秒' },
-  widow:{ nodeCd:3, v:(lv) => 0.08 + 0.02 * lv, d:(v) => '8 秒内每次击杀，倍率 +' + v.toFixed(2) },
+  widow:{ nodeCd:3, v:(lv) => 0.08 + 0.02 * lv, d:(v) => '8 秒内每次击杀，积分倍率 +' + v.toFixed(2) },
   nun:{ nodeCd:3, v:(lv) => 0.3 + 0.03 * lv, d:(v) => '全队回复 ' + Math.round(v * 100) + '% 生命' },
-  butcherlord:{ nodeCd:4, v:(lv) => 0.8 + 0.15 * lv, d:(v) => '献祭生命最低的部队，倍率 +' + v.toFixed(2) },
+  butcherlord:{ nodeCd:4, v:(lv) => 0.8 + 0.15 * lv, d:(v) => '献祭生命最低的部队，积分倍率 +' + v.toFixed(2) },
   clockmaker:{ nodeCd:3, v:(lv) => 0.5 + 0.05 * lv, d:(v) => '部队攻速 +' + Math.round(v * 100) + '%，持续 6 秒' },
   cremator:{ nodeCd:3, v:(lv) => 0.5 + 0.08 * lv, d:(v) => '点燃所有敌人，每秒 ' + Math.round(v * 100) + '% 领袖攻击' },
 };
@@ -76,14 +76,14 @@ M.relicText = (r) => r.lines.map(l => M.statText(l.k, l.v)).join('，');
 
 // ───────── buildings (rooms). Generic rooms have no names of their own; wonders do ─────────
 const STYLE = { core:'主基地', steam:'蒸汽', magic:'魔法', nature:'自然', water:'水域', fantasy:'玄幻', scifi:'科幻', medieval:'中世纪', cartoon:'卡通' };
-const CAT = { core:'核心', power:'电力', forge:'锻造', med:'医疗', recruit:'招募', train:'训练', store:'后勤', defense:'防御', luck:'运势', misc:'特殊' };
+const CAT = { core:'核心', power:'生产', forge:'锻造', med:'医疗', recruit:'招募', train:'训练', store:'后勤', defense:'防御', luck:'运势', misc:'特殊' };
 const BUILDINGS = {
   core:{ n:'主基地', q:0, cat:'core', style:'core', pw:4, cost:0, days:0, fixed:1, d:'所有物资、图纸和宝物都在这里。' },
-  generator:{ n:'发电机', q:0, cat:'power', style:'steam', pw:4, cost:80, days:1, d:'提供 4 点电力。' },
+  generator:{ n:'蒸汽工坊', q:0, cat:'power', style:'steam', pw:0, cost:80, days:1, fx:{ supplyDaily:15 }, d:'每天产出 15 物资。' },
   smithy:{ n:'铁匠铺', q:0, cat:'forge', style:'medieval', pw:-1, cost:100, days:2, forge:{}, d:'用宝物图纸打造宝物，品质随机。' },
   hospital:{ n:'医院', q:0, cat:'med', style:'scifi', pw:-1, cost:100, days:2, fx:{ heal:0.35 }, d:'领袖每天回复 35% 生命。' },
   altar:{ n:'招魂台', q:0, cat:'recruit', style:'magic', pw:-1, cost:120, days:2, recruit:{}, d:'花物资招募新领袖。' },
-  training:{ n:'训练场', q:0, cat:'train', style:'medieval', pw:-1, cost:90, days:1, train:{}, fx:{ orbMul:0.5 }, d:'把经验球灌给领袖，效率 +50%。' },
+  training:{ n:'训练场', q:0, cat:'train', style:'medieval', pw:-1, cost:90, days:1, train:{}, fx:{ orbMul:0.5 }, d:'升级少花三分之一经验球。' },
   storage:{ n:'储藏室', q:0, cat:'store', style:'cartoon', pw:0, cost:60, days:1, fx:{ startItem:1 }, d:'每次出征开局多带 1 个支援道具。' },
   farm:{ n:'水培农场', q:0, cat:'store', style:'nature', pw:-1, cost:80, days:1, fx:{ supplyDaily:15 }, d:'每天产出 15 物资。' },
   pool:{ n:'净水池', q:0, cat:'med', style:'water', pw:-1, cost:80, days:1, fx:{ heal:0.1 }, d:'医院回复额外 +10%。' },
@@ -96,14 +96,14 @@ const BUILDINGS = {
   // ── wonders ──
   wolfsburg:{ n:'沃尔夫斯堡工厂', q:3, cat:'forge', style:'steam', pw:-3, cost:420, days:5, forge:{ qUp:1 }, d:'传说级锻造厂。打造出的宝物品质 +1。' },
   venice:{ n:'威尼斯兵工厂', q:2, cat:'forge', style:'medieval', pw:-2, cost:300, days:4, forge:{ twice:0.35 }, d:'打造时 35% 概率额外得到一件同名宝物。' },
-  ruhr:{ n:'鲁尔区', q:2, cat:'power', style:'steam', pw:10, cost:280, days:4, d:'提供 10 点电力。' },
-  eiffel:{ n:'埃菲尔铁塔', q:3, cat:'power', style:'steam', pw:6, cost:400, days:5, fx:{ defDmg:0.3 }, d:'提供 6 点电力，所有武器房间伤害 +30%。' },
-  machu:{ n:'马丘比丘', q:1, cat:'power', style:'nature', pw:6, cost:200, days:3, fx:{ supplyDaily:10 }, d:'提供 6 点电力，每天产出 10 物资。' },
+  ruhr:{ n:'鲁尔区', q:2, cat:'power', style:'steam', pw:0, cost:280, days:4, fx:{ supplyDaily:45 }, d:'每天产出 45 物资。' },
+  eiffel:{ n:'埃菲尔铁塔', q:3, cat:'power', style:'steam', pw:0, cost:400, days:5, fx:{ defDmg:0.3, shardDaily:4 }, d:'每天产出 4 灵魂碎片，所有武器房间伤害 +30%。' },
+  machu:{ n:'马丘比丘', q:1, cat:'power', style:'nature', pw:0, cost:200, days:3, fx:{ supplyDaily:15, orbDaily:20 }, d:'每天产出 15 物资、20 经验球。' },
   pyramids:{ n:'金字塔', q:2, cat:'misc', style:'fantasy', pw:-1, cost:320, days:4, fx:{ buildDays:-1 }, d:'所有建造花费的探索日 -1（最少 1）。' },
   stonehenge:{ n:'巨石阵', q:1, cat:'recruit', style:'nature', pw:-1, cost:220, days:3, recruit:{ qUp:1 }, d:'招募的领袖至少为「稀有」。' },
   gardens:{ n:'空中花园', q:2, cat:'med', style:'nature', pw:-2, cost:300, days:4, fx:{ heal:0.45 }, d:'医院回复额外 +45%。' },
   artemis:{ n:'阿尔忒弥斯神庙', q:1, cat:'store', style:'nature', pw:-1, cost:220, days:3, fx:{ supplyDaily:30 }, d:'每天产出 30 物资。' },
-  library:{ n:'亚历山大图书馆', q:2, cat:'train', style:'magic', pw:-2, cost:300, days:4, train:{}, fx:{ orbMul:1, newHeroLv:2 }, d:'经验球效率 +100%，新领袖从 3 级开始。' },
+  library:{ n:'亚历山大图书馆', q:2, cat:'train', style:'magic', pw:-2, cost:300, days:4, train:{}, fx:{ orbMul:1, newHeroLv:2 }, d:'升级少花一半经验球，新领袖从 3 级开始。' },
   colossus:{ n:'罗德岛巨像', q:2, cat:'defense', style:'water', pw:-3, cost:340, days:4, weapon:{ range:5, dmg:90, cd:2.4, kind:'colossus', splash:140 }, d:'巨像会砸向地面。' },
   terracotta:{ n:'兵马俑', q:3, cat:'defense', style:'fantasy', pw:-2, cost:420, days:5, fx:{ defArmy:4 }, d:'守城时，4 名陶俑士兵加入战斗。' },
   zeus:{ n:'奥林匹亚宙斯神像', q:2, cat:'defense', style:'fantasy', pw:-3, cost:360, days:4, weapon:{ range:4, dmg:70, cd:1.8, kind:'zeus', chain:4 }, d:'召唤落雷，连锁 4 个敌人。' },
@@ -113,7 +113,7 @@ const BUILDINGS = {
   taj:{ n:'泰姬陵', q:2, cat:'misc', style:'fantasy', pw:-1, cost:280, days:4, fx:{ deathShards:1 }, d:'领袖死亡时，灵魂碎片 +100%。' },
   bigben:{ n:'大本钟', q:1, cat:'store', style:'steam', pw:-1, cost:220, days:3, fx:{ supplyDaily:15, craftCost:-0.3 }, d:'每天 +15 物资，打造费用 -30%。' },
   liberty:{ n:'自由女神像', q:2, cat:'luck', style:'water', pw:-1, cost:300, days:4, fx:{ tower:1, lootSup:0.3 }, d:'出征时地图全亮，物资收益 +30%。' },
-  opera:{ n:'悉尼歌剧院', q:1, cat:'luck', style:'cartoon', pw:-1, cost:200, days:3, fx:{ startMult:0.3 }, d:'每场战斗初始倍率 +0.3。' },
+  opera:{ n:'悉尼歌剧院', q:1, cat:'luck', style:'cartoon', pw:-1, cost:200, days:3, fx:{ startMult:0.3 }, d:'每场战斗初始积分倍率 +0.3。' },
   goldengate:{ n:'金门大桥', q:1, cat:'misc', style:'steam', pw:-1, cost:180, days:2, fx:{ digCost:-0.5 }, d:'挖掘费用 -50%。' },
   amundsen:{ n:'阿蒙森-斯科特科考站', q:3, cat:'misc', style:'scifi', pw:-3, cost:420, days:5, fx:{ tileX2:1 }, d:'所有特殊地格的加成翻倍。' },
   potala:{ n:'布达拉宫', q:2, cat:'luck', style:'magic', pw:-2, cost:300, days:4, fx:{ skillNodeCd:-1 }, d:'所有领袖技能冷却 -1 个节点。' },
@@ -202,17 +202,18 @@ M.power = function (m) {
   for (let r = 0; r < BROWS; r++) for (let c = 0; c < BCOLS; c++) { const x = m.base.cells[r][c]; const k = x.b || (x.job && x.job.kind === 'build' ? x.job.key : null); if (!k) continue; const p = M.roomPw(m, c, r, k); if (x.b && p > 0) made += p; if (p < 0) used -= p; }
   return { made, used, free: made - used };
 };
-M.digCost = (m) => Math.round(50 * (1 + (M.baseMods(m).digCost || 0)));
+// special terrain costs more to break open (user ruling 2026-09-24): base × (1 + its 开垦 days), so it is a choice, not a must
+M.digCost = (m, c, r) => { const x = c != null ? M.cell(m, c, r) : null, t = x && x.tile && !x.dug && !(M.tileHidden && M.tileHidden(m, c, r)) ? 1 + (M.digDays ? M.digDays(m, c, r) : 1) : 1; return Math.round(50 * t * (1 + (M.baseMods(m).digCost || 0))); };
 M.buildDays = function (m, c, r, key) { const B = BUILDINGS[key]; let d = B.days + (M.baseMods(m).buildDays || 0); if (M.tileMod(m, c, r, key).halfDays) d = Math.ceil(d / 2); return Math.max(1, d); };
 M.buildOptions = function (m, c, r) {
   const pw = M.power(m);
   return Object.keys(m.inv).filter(k => k.startsWith('bbp:')).map(k => {
     const key = k.slice(4), B = BUILDINGS[key], need = M.roomPw(m, c, r, key);
-    let why = ''; if (m.supplies < B.cost) why = '物资不足'; else if (need < 0 && pw.free + need < 0) why = '电力不足';
+    let why = ''; if (m.supplies < B.cost) why = '物资不足';
     return { key, B, count: m.inv[k], cost: B.cost, days: M.buildDays(m, c, r, key), pw: need, tile: M.tileMod(m, c, r, key), why };
   }).sort((a, b) => (a.why ? 1 : 0) - (b.why ? 1 : 0) || b.B.q - a.B.q);
 };
-M.startDig = function (m, c, r) { const cost = M.digCost(m); if (m.supplies < cost || !M.canDig(m, c, r)) return false; m.supplies -= cost; M.cell(m, c, r).job = { kind: 'dig', days: 1, total: 1 }; return true; };
+M.startDig = function (m, c, r) { const cost = M.digCost(m, c, r); if (m.supplies < cost || !M.canDig(m, c, r)) return false; m.supplies -= cost; M.cell(m, c, r).job = { kind: 'dig', days: 1, total: 1 }; return true; };
 M.startBuild = function (m, c, r, key) {
   const o = M.buildOptions(m, c, r).find(x => x.key === key); if (!o || o.why) return false;
   m.supplies -= o.cost; M.invAdd(m, 'bbp:' + key, -1); M.cell(m, c, r).job = { kind: 'build', key, days: o.days, total: o.days }; return true;

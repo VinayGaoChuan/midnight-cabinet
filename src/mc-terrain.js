@@ -39,22 +39,22 @@ IC.l_unknown = (x) => { const P = (M.PJ && M.PJ.PAL) || {}; rect(x, 2, 2, 28, 28
 const isW = (B) => !!B.weapon, st = (...s) => (B) => s.includes(B.style), cat = (...s) => (B) => s.includes(B.cat);
 const noPw = (B) => (B.pw < 0 ? { pw: -B.pw } : {});
 const DEF = {
-  geo:     { n: '地热', hue: '#ff7a3a', any: { pw: 3 }, anyD: '这个房间 +3 电力', fitN: '电力', fit: cat('power'), fitFx: () => ({ pw: 5 }), fitD: '再 +5 电力' },
+  geo:     { n: '地热', hue: '#ff7a3a', any: { orbDaily: 15 }, anyD: '基地每天 +15 经验球', fitN: '生产', fit: cat('power'), fitFx: () => ({ prodMul: 1 }), fitD: '这个房间自己的产出 ×2' },
   fossil:  { n: '化石层', hue: '#d8c8a0', any: { supplyDaily: 25 }, anyD: '基地每天 +25 物资', fitN: '后勤', fit: (B) => B.cat === 'store' && !!B.fx, fitFx: () => ({ prodMul: 1 }), fitD: '这个房间自己的效果 ×2' },
   clay:    { n: '陶土层', hue: '#c8845a', any: { portalHp: 0.3 }, anyD: '传送门耐久 +30%', fitN: '防御', fit: cat('defense'), fitFx: () => ({ defArmy: 3 }), fitD: '守城时 3 名陶土守卫加入战斗' },
   ruin:    { n: '古遗迹', hue: '#e8c070', any: { halfDays: 1, refund: 0.3 }, anyD: '建造时间减半，建成返还 30% 物资', fitN: '奇观', fit: (B) => B.q > 0, fitFx: () => ({ refund: 0.5 }), fitD: '返还提高到 80%' },
   spring:  { n: '地下泉', hue: '#6fd0ff', any: { healAll: 0.15 }, anyD: '所有领袖每天回复 15% 生命（不需要医院）', fitN: '医疗 / 水域', fit: (B) => B.cat === 'med' || B.style === 'water', fitFx: (B) => (B.weapon ? { heal: 0.3, range: 1 } : { heal: 0.3 }), fitD: '医院回复 +30%；水域武器射程 +1' },
   mole:    { n: '松软土层', hue: '#b89a70', any: { digCost: -0.4 }, anyD: '挖掘费用 -40%', fitN: '特殊', fit: cat('misc'), fitFx: () => ({ buildDays: -1 }), fitD: '所有建造少花 1 天' },
-  crystal: { n: '晶簇', hue: '#7fe0ff', any: { noPw: 1, pw: 1 }, anyD: '这个房间不耗电，还多发 1 电', fitN: '科幻', fit: st('scifi'), fitFx: () => ({ pw: 3 }), fitD: '再发电 +3' },
-  ley:     { n: '灵脉', hue: '#b86bff', any: { shardDaily: 2, deathShards: 0.3 }, anyD: '基地每天 +2 灵魂碎片，领袖阵亡的碎片 +30%', fitN: '招募 / 魔法', fit: (B) => B.cat === 'recruit' || B.style === 'magic' || B.style === 'fantasy', fitFx: (B) => Object.assign({ recruitMin: 1 }, noPw(B)), fitD: '不耗电；招募的领袖至少为「稀有」' },
-  amber:   { n: '琥珀层', hue: '#ffb03a', any: { orbDaily: 30 }, anyD: '基地每天 +30 经验球', fitN: '训练', fit: cat('train'), fitFx: () => ({ orbMul: 1 }), fitD: '经验球效率 +100%' },
-  mint:    { n: '金脉', hue: '#ffd650', any: { lootSup: 0.25 }, anyD: '出征带回的物资 +25%', fitN: '运势', fit: cat('luck'), fitFx: () => ({ lootSup: 0.3, startMult: 0.2 }), fitD: '物资再 +30%，每场战斗初始倍率 +0.2' },
+  crystal: { n: '晶簇', hue: '#7fe0ff', any: { bpLuck: 0.2 }, anyD: '图纸掉率 +20%', fitN: '科幻', fit: st('scifi'), fitFx: () => ({ shardDaily: 1 }), fitD: '基地每天 +1 灵魂碎片' },
+  ley:     { n: '灵脉', hue: '#b86bff', any: { shardDaily: 2, deathShards: 0.3 }, anyD: '基地每天 +2 灵魂碎片，领袖阵亡的碎片 +30%', fitN: '招募 / 魔法', fit: (B) => B.cat === 'recruit' || B.style === 'magic' || B.style === 'fantasy', fitFx: () => ({ recruitMin: 1 }), fitD: '招募的领袖至少为「稀有」' },
+  amber:   { n: '琥珀层', hue: '#ffb03a', any: { orbDaily: 30 }, anyD: '基地每天 +30 经验球', fitN: '训练', fit: cat('train'), fitFx: () => ({ orbMul: 1 }), fitD: '升级少花一半经验球' },
+  mint:    { n: '金脉', hue: '#ffd650', any: { lootSup: 0.25 }, anyD: '出征带回的物资 +25%', fitN: '运势', fit: cat('luck'), fitFx: () => ({ lootSup: 0.3, startMult: 0.2 }), fitD: '物资再 +30%，每场战斗初始积分倍率 +0.2' },
   rift:    { n: '裂隙', hue: '#9cff7a', any: { defDmg: 0.2 }, anyD: '所有武器房间伤害 +20%', fitN: '武器', fit: isW, fitFx: () => ({ range: 1, wcd: 0.5 }), fitD: '射程 +1，攻速 +50%' },
   ore:     { n: '富矿脉', hue: '#e0904a', any: { craftCost: -0.3 }, anyD: '宝物打造费用 -30%', fitN: '锻造 / 武器', fit: (B) => !!B.forge || !!B.weapon, fitFx: (B) => (B.forge ? { forgeLuck: 0.6 } : { dmg: 0.5 }), fitD: '锻造：60% 概率品质 +1；武器：伤害 +50%' },
-  wind:    { n: '风穴', hue: '#bfefff', any: { vision: 1, startMult: 0.1 }, anyD: '出征视野 +1，初始倍率 +0.1', fitN: '运势 / 特殊', fit: cat('luck', 'misc'), fitFx: () => ({ tower: 1, startMult: 0.1 }), fitD: '出征地图一开始就全亮，倍率再 +0.1' },
-  dragon:  { n: '龙骨', hue: '#ff5a3a', any: { unitAtk: 0.1 }, anyD: '出征部队攻击 +10%', fitN: '训练', fit: cat('train'), fitFx: () => ({ orbMul: 0.6, newHeroLv: 1 }), fitD: '经验球效率 +60%，新领袖多 1 级' },
+  wind:    { n: '风穴', hue: '#bfefff', any: { vision: 1, startMult: 0.1 }, anyD: '出征视野 +1，初始积分倍率 +0.1', fitN: '运势 / 特殊', fit: cat('luck', 'misc'), fitFx: () => ({ tower: 1, startMult: 0.1 }), fitD: '出征地图一开始就全亮，积分倍率再 +0.1' },
+  dragon:  { n: '龙骨', hue: '#ff5a3a', any: { unitAtk: 0.1 }, anyD: '出征部队攻击 +10%', fitN: '训练', fit: cat('train'), fitFx: () => ({ orbMul: 0.6, newHeroLv: 1 }), fitD: '升级少花 38% 经验球，新领袖多 1 级' },
   heart:   { n: '大地之心', hue: '#ff6a8a', any: { unitHp: 0.12 }, anyD: '出征部队生命 +12%', fitN: '医疗', fit: cat('med'), fitFx: () => ({ heal: 0.3, healAll: 0.1 }), fitD: '医院回复 +30%，所有领袖每天再回 10%' },
-  star:    { n: '陨星坑', hue: '#9fb8ff', any: { startMult: 0.25 }, anyD: '每场战斗初始倍率 +0.25', fitN: '锻造', fit: (B) => !!B.forge, fitFx: () => ({ forgeQUp: 1 }), fitD: '打造的宝物品质必定 +1' },
+  star:    { n: '陨星坑', hue: '#9fb8ff', any: { startMult: 0.25 }, anyD: '每场战斗初始积分倍率 +0.25', fitN: '锻造', fit: (B) => !!B.forge, fitFx: () => ({ forgeQUp: 1 }), fitD: '打造的宝物品质必定 +1' },
   storm:   { n: '雷暴核心', hue: '#8ff6ff', any: { heroAtk: 0.12 }, anyD: '所有领袖攻击 +12%', fitN: '武器', fit: isW, fitFx: () => ({ xChain: 3, dmg: 0.2 }), fitD: '伤害 +20%，每次攻击放出连锁闪电（跳 3 个敌人）' },
   bones:   { n: '英灵冢', hue: '#e8e0ff', any: { heroHp: 0.15, deathShards: 0.3 }, anyD: '所有领袖生命 +15%，阵亡的碎片 +30%', fitN: '招募', fit: cat('recruit'), fitFx: () => ({ recruitMin: 2 }), fitD: '招募的领袖至少为「史诗」' },
   hourglass: { n: '时之沙', hue: '#ffe08a', any: { skillNodeCd: -1 }, anyD: '所有领袖军团技能冷却 -1 个节点', fitN: '运势', fit: cat('luck'), fitFx: () => ({ startItemQ: 1 }), fitD: '出征开局多带 1 个支援道具（至少转出「史诗」效果）' },
@@ -193,7 +193,7 @@ G.cellTip = function (p) {
   const t = oCT.call(this, p), m = this.meta, x = p && !p.door && M.cell(m, p.c, p.r); if (!t || !x || !x.tile || x.b) return t;
   const tt = M.tileTip(m, p.c, p.r), days = M.digDays ? M.digDays(m, p.c, p.r) : 1;
   // rock that is terrain: named and explained as the terrain; digging it is 开垦 with the terrain's own days
-  if (!x.dug && !x.job) { const hid = M.tileHidden(m, p.c, p.r); return Object.assign(tt, { d: hid ? tt.d : M.canDig(m, p.c, p.r) ? '开垦：' + M.digCost(m) + ' 物资，' + days + ' 天。' : '' }); }
+  if (!x.dug && !x.job) { const hid = M.tileHidden(m, p.c, p.r); return Object.assign(tt, { d: hid ? tt.d : M.canDig(m, p.c, p.r) ? '开垦：' + M.digCost(m, p.c, p.r) + ' 物资，' + days + ' 天。' : '' }); }
   if (x.job && x.job.kind === 'dig') return Object.assign(tt, { title: '开垦中 · ' + tt.title, d: '还需 ' + x.job.days + ' 天。' });
   t.lines = (tt.lines || []).map(l => Object.assign({}, l)); t.lines.unshift({ t: tt.title, c: tt.c });
   return t;
@@ -217,7 +217,7 @@ G.view = function () {
   const x = M.cell(m, p.c, p.r); if (!x || !x.tile) return v; const T = TILES[x.tile];
   if (pn.isDig) {
     const hid = M.tileHidden(m, p.c, p.r), days = M.digDays(m, p.c, p.r);
-    pn.title = hid ? '未勘明的地脉' : T.n; pn.titleColor = hid ? '#cfc6b8' : T.c; pn.digBtn = '开垦 · ' + M.digCost(m) + ' 物资 · ' + days + ' 天';
+    pn.title = hid ? '未勘明的地脉' : T.n; pn.titleColor = hid ? '#cfc6b8' : T.c; pn.digBtn = '开垦 · ' + M.digCost(m, p.c, p.r) + ' 物资 · ' + days + ' 天';
     pn.tileTxt = hid ? '挖开旁边一格就能看清。' : '任何房间：' + T.anyD + '　·　契合「' + T.fitN + '」：' + T.fitD; pn.tileC = hid ? '#cfc6b8' : '#e8dcc4';
   }
   if (pn.isBuild) {

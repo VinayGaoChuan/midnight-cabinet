@@ -42,7 +42,7 @@ G.endBack = function () {
   const steps = [], gifts = info.gifts || [], tiles = info.newTiles || [];
   // 1. the haul: resources and blueprints fly in, crystals land in the rock, keepsakes take effect
   steps.push({ run: () => this.lootFly(gain, { x: 960, y: 560 }), wait: (gain.msup || gain.msh || gain.morb || (gain.bp || []).length || gain.exp) ? 2.2 : 0.3 });
-  tiles.forEach(t => steps.push({ run: () => { const p = this.cellPos(t.c, t.r), T = M.TILES[t.t]; this.fx.rays(p.x, p.y, T.c, 1.5, { r: 260 }); this.fx.pop(p.x, p.y, '新地格 · ' + T.n, T.c, 44); S.up(2); }, wait: 0.7 }));
+  tiles.forEach(t => steps.push(...this.tileReveal(t.c, t.r, t.t)));
   gifts.forEach((r, i) => steps.push({ run: () => { const p = r.cc != null ? this.cellPos(r.cc, r.cr) : r.door ? { x: 960, y: 250 } : { x: 960, y: 420 + (i % 3) * 60 }; this.fx.rays && this.fx.rays(p.x, p.y, r.col, 1.2, { r: 220 }); this.fx.pop(p.x, p.y - 40, r.n + ' · ' + r.t, r.col, 36); S.up && S.up(2); }, wait: 0.8 }));
   if (info.coreHeal) steps.push({ run: () => { const p = this.fxPos('core') || this.corePos(); this.fx.rays(p.x, p.y, '#9cff7a', 1.4, { r: 200 }); this.fx.pop(p.x, p.y + 60, '基地核心 +1', '#9cff7a', 44); S.heal(); this.pulse.core = performance.now(); }, wait: 1.0 });
   // 2. a fallen leader: the card tears (its shards already flew in above), then the core takes the blow
@@ -57,7 +57,7 @@ G.endBack = function () {
 
 // ───────── a day passes: level-ups from the rooms, finished buildings, the calendar, then the raid ─────────
 G.passDay = function () {
-  if (this.raidPrep) { this.toast('袭击就要来了：先选好守城的领袖', '#ff6a5a'); return []; }
+  if (this.raidPrep) { this.toast('混沌来袭：先选好守城的领袖', '#ff6a5a'); return []; }
   const m = this.meta, from = m.day, logs = M.advanceDay(m);
   m.portal.hp = Math.min(M.portalMax(m), m.portal.hp + M.portalMax(m) * 0.15); this.save();
   const ups = m._lvUps || []; m._lvUps = null; const steps = [];
@@ -65,15 +65,16 @@ G.passDay = function () {
   logs.filter(l => l.c != null).forEach(l => steps.push({ run: () => { const p = this.cellPos(l.c, l.r); this.fx.rays(p.x, p.y, '#ffd060', 1.4, { r: 300 }); this.fx.pop(p.x, p.y - 40, l.t, '#ffe08a', 50, { slam: 1 }); this.fx.explode(p.x, p.y, '#ffd060', 1.6); S.up(2); }, wait: 1.0 }));
   const news = logs.filter(l => l.c == null && !/升到 Lv/.test(l.t || ''));
   if (news.length) steps.push({ run: () => news.forEach((l, i) => setTimeout(() => this.toast(l.t, '#9ccc6a'), i * 350)), wait: 0.4 + news.length * 0.35 });
-  steps.push({ run: () => {
-    const raid = m.day % M.RAID_EVERY === 0 && m.lastRaid !== m.day && m.heroes.length > 0, raidIn = raid ? 0 : M.RAID_EVERY - (m.day % M.RAID_EVERY);
-    this.dayFx = { t: 0, from, to: m.day, raidIn, raid, logs }; this.closePanel && this.closePanel(); this.tipData = null; S.whoosh(0.6); S.stamp && S.stamp();
-  }, until: () => !this.dayFx });
+  steps.push({ run: () => this.tlStart(from, m.day), until: () => !this.tlFx });
+  steps.push({ run: () => { const k = M.eventOn(m, m.day); if (k && k !== 'raid') this.dayEvent(k); }, until: () => !this.modal });
   steps.push({ run: () => this.checkRaid(), wait: 0 });
   this.homeQueue(steps);
   return logs;
 };
 G.restDay = function () { if (this.homeQ) return; this.closePanel(); this.passDay(); };
+
+// ───────── once digging or building has started, the panel closes (user ruling 2026-09-24) ─────────
+['doDig', 'doBuild'].forEach(k => { const o = G[k]; if (!o) return; G[k] = function (c, r) { const x0 = M.cell(this.meta, c, r), had = !!(x0 && x0.job), res = o.apply(this, arguments), x = M.cell(this.meta, c, r); if (!had && x && x.job && this.panel) setTimeout(() => { if (this.panel) this.closePanel(); }, 450); return res; }; });
 
 // ───────── what a find is for ─────────
 M.lootTip = function (key) {

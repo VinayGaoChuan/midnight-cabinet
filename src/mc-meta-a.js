@@ -49,15 +49,15 @@ M.FURN = [
   { k: 'radio', icon: 'e_music', names: ['收音机', '唱片机', '点唱机'], cost: [90, 220, 450], what: '有音乐的夜晚，运气会好一点。', lv: [
     { d: '出征时事件好运 +10%', fx: { eventLuck: 0.1 } },
     { d: '事件好运 +10%；每次出征自带一面随机战旗', fx: { eventLuck: 0.1, runBanner: 1 } },
-    { d: '事件好运 +15%；自带战旗；初始倍率 +0.2', fx: { eventLuck: 0.15, runBanner: 1, startMult: 0.2 } }] },
+    { d: '事件好运 +15%；自带战旗；初始积分倍率 +0.2', fx: { eventLuck: 0.15, runBanner: 1, startMult: 0.2 } }] },
   { k: 'clock', icon: 't_hourglass', names: ['挂钟', '落地钟', '时之沙'], cost: [110, 260, 500], what: '机台里的时间，走得比外面快。', lv: [
     { d: '建造时间 -1 天', fx: { buildDays: -1 } },
     { d: '建造时间 -1 天；挖掘立刻完成', fx: { buildDays: -1, digInstant: 1 } },
     { d: '建造时间 -2 天；挖掘立刻完成', fx: { buildDays: -2, digInstant: 1 } }] },
-  { k: 'calendar', icon: 'r_skel', names: ['挂历', '行事历', '预言历'], cost: [120, 280, 520], what: '把袭击的日子圈出来。', lv: [
-    { d: '袭击间隔 5 天 → 6 天', fx: { raidEvery: 6 } },
-    { d: '袭击间隔 7 天', fx: { raidEvery: 7 } },
-    { d: '袭击间隔 7 天；袭击时武器房间伤害 +40%', fx: { raidEvery: 7, defDmg: 0.4 } }] },
+  { k: 'calendar', icon: 'r_skel', names: ['挂历', '行事历', '预言历'], cost: [120, 280, 520], what: '把混沌来袭的日子圈出来。', lv: [
+    { d: '混沌来袭间隔 5 天 → 6 天', fx: { raidEvery: 6 } },
+    { d: '混沌来袭间隔 7 天', fx: { raidEvery: 7 } },
+    { d: '混沌来袭间隔 7 天；混沌来袭时武器房间伤害 +40%', fx: { raidEvery: 7, defDmg: 0.4 } }] },
   { k: 'photo', icon: 't_heart', names: ['相框', '照片墙', '纪念碑'], cost: [100, 240, 480], what: '记住每一个没回来的人。', lv: [
     { d: '领袖阵亡时，多留下 50% 经验球', fx: { deathOrbsX: 0.5 } },
     { d: '阵亡多留 50% 经验球；阵亡时宝物全部保住', fx: { deathOrbsX: 0.5, bank: 9 } },
@@ -80,7 +80,7 @@ M.FURN_BY = {}; M.FURN.forEach(f => M.FURN_BY[f.k] = f);
 M.ACH = [
   { k: 'first_clear', n: '初次通关', d: '通关任意一个世界', r: '每局开局多一张「稀有」以上的建筑图纸', fx: { startBpQ: 1 }, ok: (m) => Object.keys(m.cleared).length >= 1 },
   { k: 'veteran', n: '老兵', d: '把一名领袖升到 8 级', r: '招魂至少招来「稀有」领袖', fx: { recruitMinRar: 1 }, ok: (m) => m.heroes.some(h => h.lv >= 8) },
-  { k: 'warden', n: '守夜人', d: '一局里守住 3 次袭击', r: '传送门耐久 +25%', fx: { portalHp: 0.25 }, ok: (m) => (m.st.raidsWon || 0) >= 3 },
+  { k: 'warden', n: '守夜人', d: '一局里守住 3 次混沌来袭', r: '传送门耐久 +25%', fx: { portalHp: 0.25 }, ok: (m) => (m.st.raidsWon || 0) >= 3 },
   { k: 'architect', n: '建筑师', d: '一局里建成 8 座建筑', r: '建造花费 -15%', fx: { buildCost: -0.15 }, ok: (m) => (m.st.built || 0) >= 8 },
   { k: 'wonder', n: '奇观', d: '建成一座奇观', r: '每局开局送一张奇观图纸', fx: { startWonder: 1 }, ok: (m) => { let f = false; M.eachBuilt(m, (b) => { if (M.BUILDINGS[b].q > 0 && b !== 'core') f = true; }); return f; } },
   { k: 'hunter', n: '猎头', d: '一局里击败 8 个精英', r: '精英必掉图纸', fx: { eliteBp: 1 }, ok: (m) => (m.st.elite || 0) >= 8 },
@@ -269,7 +269,7 @@ M.settleRows = function (m) {
     { k: 'clears', n: '通关世界', ic: 'r_hero', v: Object.keys(m.cleared).length, per: 40 },
     { k: 'boss', n: '击败首领', ic: 'r_demon', v: st.boss || 0, per: 15 },
     { k: 'elite', n: '击败精英', ic: 't_claw', v: st.elite || 0, per: 6 },
-    { k: 'raids', n: '守住袭击', ic: 'f_defense', v: st.raidsWon || 0, per: 12 },
+    { k: 'raids', n: '守住混沌来袭', ic: 'f_defense', v: st.raidsWon || 0, per: 12 },
     { k: 'built', n: '建成建筑', ic: 'u_hammer', v: st.built || 0, per: 5 },
     { k: 'bp', n: '带回图纸', ic: 'scroll', v: st.bp || 0, per: 4 },
     { k: 'minis', n: '完成奇遇', ic: 'e_card', v: st.minis || 0, per: 2 },

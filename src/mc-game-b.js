@@ -15,12 +15,11 @@ Object.assign(G, {
     if (x.b) return this.bldTip(x.b, p.c, p.r);
     if (x.job) return { title: x.job.kind === 'dig' ? '挖掘中' : M.BUILDINGS[x.job.key].n + '（建造中）', c: '#ffd060', d: '还需 ' + x.job.days + ' 天。', lines: tl };
     if (x.dug) return { title: '空房间', c: '#e8dcc4', d: '可以建造。', lines: tl };
-    if (M.canDig(m, p.c, p.r)) return { title: '岩层', c: '#f2c14e', d: '挖掘：' + M.digCost(m) + ' 物资，1 天。', lines: tl };
+    if (M.canDig(m, p.c, p.r)) return { title: '岩层', c: '#f2c14e', d: '挖掘：' + M.digCost(m, p.c, p.r) + ' 物资，1 天。', lines: tl };
     return { title: '岩层', c: '#8d8496', lines: tl };
   },
   bldTip(key, c, r) {
     const B = M.BUILDINGS[key], m = this.meta, lines = [{ t: M.QUALITY[B.q].n + ' · ' + M.STYLE[B.style] + ' · ' + M.CAT[B.cat], c: M.QUALITY[B.q].c }];
-    const pw = c != null ? M.roomPw(m, c, r, key) : B.pw; lines.push({ t: pw >= 0 ? '电力 +' + pw : '耗电 ' + (-pw), c: pw >= 0 ? '#9cff7a' : '#ff9a6a' });
     if (B.weapon) lines.push({ t: '射程 ' + (c != null ? M.weaponStats(m, c, r).range : B.weapon.range) + ' 格', c: '#ff8a8a' });
     if (c != null) { const x = M.cell(m, c, r); if (x.tile) lines.push({ t: M.TILES[x.tile].n + '：' + M.TILES[x.tile].d, c: M.TILES[x.tile].c }); }
     return { title: B.n, c: B.q ? M.QUALITY[B.q].c : '#e8dcc4', kind: B.q ? '奇观' : '建筑', d: B.d, lines };
@@ -52,10 +51,10 @@ Object.assign(G, {
     if (m.baseTut === 0 && m.tutDone) { m.baseTut = 1; this.save(); }
     if (m.baseTut === 1) { const p = this.corePos(); this.coach('这是你的地下基地。点击「主基地」，打开仓库看看。', p.x, p.y + 220, p.x, p.y); }
     if (m.baseTut === 3) { const p = this.cellPos(M.CORE.c, M.CORE.r + 1); this.coach('点击主基地左、右、下方的岩层，挖出新房间（花物资和 1 个探索日）。发光的岩层是特殊地格，建在上面会有加成。', p.x, p.y + 200, p.x, p.y); }
-    if (m.baseTut === 4) { const p = this.bv.toScreen(M.BASE_GEO.DOOR_X, -130); this.coach('每次出征，基地就过去 1 天，挖掘和建造也跟着推进。点击地面上的「传送门」，再点升起的碑出发。每 ' + M.RAID_EVERY + ' 天基地会遭到袭击，记得在地下造武器房间。', p.x, p.y + 330, p.x, p.y); }
+    if (m.baseTut === 4) { const p = this.bv.toScreen(M.BASE_GEO.DOOR_X, -130); this.coach('每次出征，基地就过去 1 天，挖掘和建造也跟着推进。点击地面上的「传送门」，再点升起的碑出发。每 ' + M.RAID_EVERY + ' 天会有混沌来袭，记得在地下造武器房间。', p.x, p.y + 330, p.x, p.y); }
   },
   doDig(c, r) {
-    const m = this.meta, cost = M.digCost(m);
+    const m = this.meta, cost = M.digCost(m, c, r);
     if (m.supplies < cost) { this.toast('物资不足', '#d0453c'); return; }
     this.hold('msup', m.supplies); M.startDig(m, c, r); this.release('msup');
     const p = this.cellPos(c, r); M.Sfx.dig(); this.fx.explode(p.x, p.y, '#ffb050', 1.3); this.fx.burst(p.x, p.y, '#8a6a40', 30, { v: 600 }); this.fx.pop(p.x, p.y - 60, '开始挖掘 · 1 天', '#ffd060', 44);
@@ -137,7 +136,7 @@ Object.assign(G, {
   },
   startRaid() {
     this.panel = null; this.coachData = null; this.bv.raidCam(); this.raid = new M.Raid(this.meta); this.go('raid'); M.Sfx.alarm();
-    this.banner({ kind: 'win', text: '袭击！', col: '#ff5a4a', col2: '#6a0a0a', sub: '第 ' + this.meta.day + ' 天夜里，怪物朝传送门涌来。', life: 2.4, y: 440 });
+    this.banner({ kind: 'win', text: '混沌来袭！', col: '#ff5a4a', col2: '#6a0a0a', sub: '第 ' + this.meta.day + ' 天夜里，怪物朝传送门涌来。', life: 2.4, y: 440 });
   },
   raidEnd() {
     const r = this.raid, m = this.meta; r.done = true;

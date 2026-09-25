@@ -40,11 +40,10 @@ const CONCEPTS = [
   { id: 'furn', cat: '房间', icon: 'u_star', title: '家具', line: '用一局结束时换来的代币解锁、升级家具，每件都是永久加成。', scr: 'room', sel: '[data-tip="r-tokens"]', when: (g) => g.prof && g.prof.stats && g.prof.stats.games > 0 },
   // ── 基地 ──
   { id: 'core', cat: '基地', icon: 't_heart', title: '基地核心', line: '整局只有 3 点：领袖在出征中阵亡 -1，归零这一局结束；通关一个世界 +1。', scr: 'base', sel: '[data-tip="b-core"]' },
-  { id: 'raid', cat: '基地', icon: 't_sword', title: '袭击倒计时', line: '每 5 天怪物来袭：挑领袖守城，守城阵亡的领袖会永久死亡。', scr: 'base', sel: '[data-g="raid"]' },
+  { id: 'raid', cat: '基地', icon: 't_sword', title: '时间轴', line: '今天和之后 9 天：哪天混沌来袭，哪天有别的事件。', scr: 'base', sel: '[data-g="timeline"]' },
   { id: 'sup', cat: '基地', img: () => sprite('sack'), title: '物资', line: '挖岩层、建房间、招领袖、打造宝物都花它。出征和守城带回来。', scr: 'base', sel: '[data-fx="msup"]' },
   { id: 'shard', cat: '基地', img: () => sprite('shard'), title: '灵魂碎片', line: '高端材料：建史诗 / 传说建筑、精铸宝物时要用。领袖阵亡时留下。', scr: 'base', sel: '[data-fx="msh"]' },
   { id: 'orb', cat: '基地', img: () => sprite('orb'), title: '经验球', line: '在领袖详情里点「升级」花掉，领袖立刻升一级。', scr: 'base', sel: '[data-fx="morb"]' },
-  { id: 'power', cat: '基地', icon: 'f_power', title: '电力', line: '房间要耗电，发电类建筑产电。电不够就建不了新的耗电房间。', scr: 'base', sel: '[data-g="power"]' },
   { id: 'heroes', cat: '领袖', icon: 't_command', title: '领袖', line: '出征带队、守城作战。点卡片看天赋和升级；卡片上的黄点 = 有没用的天赋点。', scr: 'base', sel: '[data-tip="b-herocap"]' },
   { id: 'tile', cat: '基地', icon: 'l_geo', title: '特殊地格', line: '和岩层不同的地形。开垦天数各不相同；在上面建房间有加成，建筑「契合」时更强。悬浮看效果。', scr: 'base', at: (g) => (M.terrainAt ? M.terrainAt(g) : null) },
   { id: 'rtags', cat: '基地', icon: 's_steam', title: '房间标签', line: '房间角上两个图标：风格 + 功能。地格和奇观按它们挑「契合」的建筑。', scr: 'base', at: (g) => bvIcon(g, t => t.tag) },
@@ -74,7 +73,7 @@ const CONCEPTS = [
   { id: 'legion', cat: '领袖', icon: 't_skill', title: '领袖技能', line: '每个职业一个技能。在场外指挥时按空格放，冷却按走过的站数算；亲自上场后，它自己攒满、有敌人在范围里就放。', scr: ['base', 'world'], sel: '[data-tip="tal-root"],[data-g="w-skill"]' },
   // ── 战斗 ──
   { id: 'bmode', cat: '战斗', icon: 't_sword', title: '战斗目标', line: '普通战：消灭所有敌人；坚守战：撑过倒计时。', scr: 'battle', sel: '[data-tip="b-mode"]', freeze: 1 },
-  { id: 'score', cat: '战斗', icon: 't_mult', title: '积分 = 基础 × 倍率', line: '击杀得基础分；精英、首领、战旗、宝物会加倍率。积分就是这一局的钱。', scr: 'battle', sel: '[data-tip="b-score"]', freeze: 1 },
+  { id: 'score', cat: '战斗', icon: 't_mult', title: '积分 = 基础 × 积分倍率', line: '击杀得基础分；精英、首领、战旗、宝物会加积分倍率。积分就是这一局的钱。', scr: 'battle', sel: '[data-tip="b-score"]', freeze: 1 },
   { id: 'bhero', cat: '战斗', icon: 't_command', title: '指挥位', line: '领袖站在左边不参战；部队全灭后亲自上场，倒下就永久死亡。', scr: 'battle', sel: '[data-tip="b-hero"]', freeze: 1 },
   { id: 'bskill', cat: '战斗', icon: 't_skill', title: '领袖技能', line: '按空格放。领袖亲自上场后改为自动释放。', scr: 'battle', sel: '[data-g="b-skill"]', freeze: 1, when: (g) => g.battle && g.battle.hero && g.battle.hero.bench },
   { id: 'voc', cat: '标签与品质', icon: 'v_archer', title: '职业标签', line: '决定打法：先锋、守护者扛伤，战士近战，射手远程，刺客爆发，法师技能，牧师、圣骑士治疗，祭司强化和削弱，召唤师召唤，商人赚钱。', scr: ['shop', 'world', 'battle', 'base'], sel: '[data-tip^="tag-voc-"]' },
@@ -133,7 +132,7 @@ const LOOP = [
   { icon: 'u_pick', t: '基地', d: '在地下挖岩层、盖房间：发电、打造、招募、训练、防御。' },
   { icon: 'g_gate', t: '出征', d: '穿过传送门进入异世界，一站站往前走：战斗、夜市、奇遇。' },
   { icon: 'g_pack', t: '带回', d: '撤离或打败首领，把物资、经验、图纸带回基地；领袖阵亡就全丢。' },
-  { icon: 't_shield', t: '守城', d: '每 5 天一次袭击。传送门被打破，或者核心归零，这一局结束。' },
+  { icon: 't_shield', t: '守城', d: '每 5 天一次混沌来袭。传送门被打破，或者核心归零，这一局结束。' },
 ];
 const CATS = ['房间', '基地', '领袖', '出征', '战斗', '夜市', '守城', '标签与品质'];
 let glossC = null;
@@ -152,15 +151,15 @@ G.view = function () {
   // battle: the legion card shows its name and key; what it does is one Ctrl away (or on hover)
   // base top bar: the raid is tonight while the defenders are being picked; tips say what is true now
   if (v.b && m) {
-    if (this.raidPrep || m.raidPending === m.day) { v.b.raidTxt = '今晚袭击'; v.b.raidC = '#ff5a4a'; }
-    v.raidTip = this.tipFn({ title: '袭击', c: '#ff6a5a', d: '第 ' + M.nextRaid(m) + ' 天夜里，怪物攻打传送门。' });
+    if (this.raidPrep || m.raidPending === m.day) { v.b.raidTxt = '今晚混沌来袭'; v.b.raidC = '#ff5a4a'; }
+    v.raidTip = this.tipFn({ title: '混沌来袭', c: '#ff6a5a', d: '第 ' + M.nextRaid(m) + ' 天夜里，怪物攻打传送门。' });
     if (v.b.res && v.b.res[2]) v.b.res[2].tipOn = this.tipFn({ title: '经验球', c: '#b8ff9a', d: '给领袖升级用。' });
   }
   // panels: details are shown directly; only the leaders' own lines keep a Ctrl layer
   const pn = v.pn;
   if (pn) {
     if (pn.isBuild) {
-      const pw = M.power(m); pn.sub = '⚡ 剩余 ' + pw.free;
+      pn.sub = '';
       (pn.opts || []).forEach(o => { const s = o.meta || '', seg = []; let x;
         if ((x = /(\d+) 物资/.exec(s))) seg.push({ img: sprite('sack'), t: x[1] }); if ((x = /(\d+) 碎片/.exec(s))) seg.push({ img: sprite('shard'), t: x[1] });
         if ((x = /(\d+) 天/.exec(s))) seg.push({ img: icon('t_hourglass'), t: x[1] + ' 天' }); if ((x = /电力 \+(\d+)/.exec(s))) seg.push({ img: icon('f_power'), t: '+' + x[1] }); else if ((x = /耗电 (\d+)/.exec(s))) seg.push({ img: icon('f_power'), t: '-' + x[1] });

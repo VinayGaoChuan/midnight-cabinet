@@ -8,7 +8,7 @@ const cl = (v, a, b) => Math.max(a, Math.min(b, v));
 const eo = (p) => 1 - Math.pow(1 - cl(p, 0, 1), 3), eb = (p) => M.ease.eback(cl(p, 0, 1));
 // Pixel Juice（docs/design.md §11.5）：红 / 墨 / 奶油三色勒索信，像素字，动作按 12 帧一格一格走
 const U = M.UI, P = M.PJ.PAL, RED = P.red, INK = P.ink, PAPER = P.cream, WINE = P.wine;
-const RM = () => !!M.PJ.reduced, stepT = (t, f) => (RM() ? t : Math.floor(t * f) / f);
+const RM = () => !!M.PJ.reduced, stepT = (t) => t;
 
 // ═════════════════════ day ceremony ═════════════════════
 const DAY_LEN = 2.9, RAID_LEN = 3.6;
@@ -25,14 +25,14 @@ function halftone(x, a, b, w, h, al) { if (!HT) { HT = document.createElement('c
 // 像素箭头（朝下）：一行一行缩短，3px 墨边
 function downArrow(x, cx, top, col) { const Wd = [60, 42, 24, 6]; Wd.forEach((w, i) => { x.fillStyle = INK; x.fillRect(cx - w / 2 - 3, top + i * 12 - 3, w + 6, 18); }); Wd.forEach((w, i) => { x.fillStyle = col; x.fillRect(cx - w / 2, top + i * 12, w, 12); }); }
 M.drawDayFx = function (ctx, g) {
-  const D = g.dayFx; if (!D) return; const t = D.t, ts = stepT(t, 12), L = D.raid ? RAID_LEN : DAY_LEN, out = cl((ts - (L - 0.45)) / 0.45, 0, 1), inQ = eo(ts / 0.22), ox = Math.round(out * out * 2400 / 6) * 6;
+  const D = g.dayFx; if (!D) return; const t = D.t, ts = stepT(t, 12), L = D.raid ? RAID_LEN : DAY_LEN, out = cl((ts - (L - 0.45)) / 0.45, 0, 1), inQ = eo(ts / 0.22), ox = Math.round(out * out * 2400);
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
   M.fxDim(ctx, 0.76 * cl(ts / 0.15, 0, 1) * (1 - out));
   ctx.translate(ox, 0);
   // red slash band (wine hard shadow, 6px dither), ink shards
   const pulse = D.raid && t > 1.3 ? 0.5 + 0.5 * Math.sin(t * 18) : 0;
   const band = () => { ctx.beginPath(); ctx.moveTo(0, 300); ctx.lineTo(1920, 120); ctx.lineTo(1920, 700); ctx.lineTo(0, 900); ctx.closePath(); };
-  ctx.save(); ctx.translate(Math.round(-1920 * (1 - inQ) / 6) * 6, 0);
+  ctx.save(); ctx.translate(Math.round(-1920 * (1 - inQ)), 0);
   ctx.save(); ctx.translate(0, 12); ctx.fillStyle = WINE; band(); ctx.fill(); ctx.restore();
   ctx.fillStyle = RED; band(); ctx.fill();
   ctx.save(); ctx.clip(); halftone(ctx, 0, 120, 1920, 780, 0.22); ctx.restore();
@@ -50,14 +50,14 @@ M.drawDayFx = function (ctx, g) {
   ransom(ctx, '第', nx - 250, ny - 150, 70, 3); ransom(ctx, '天', nx + 250, ny + 150, 70, 7);
   // raid countdown on the right: one key cap per day of the cycle (used days are pressed in)
   const rx = 1330, ry = 380, E = M.RAID_EVERY, st = cl((ts - 0.45) / 0.3, 0, 1);
-  if (st > 0) { ctx.save(); ctx.globalAlpha = st; ctx.translate(Math.round((1 - eo(st)) * 300 / 6) * 6, 0);
-    ransom(ctx, D.raid ? '今晚·袭击' : '袭击倒计时', rx, ry - 120, D.raid ? 76 : 52, 11, D.raid ? { pal: [INK, RED, INK] } : null);
+  if (st > 0) { ctx.save(); ctx.globalAlpha = st; ctx.translate(Math.round((1 - eo(st)) * 300), 0);
+    ransom(ctx, D.raid ? '今晚·混沌来袭' : '混沌来袭倒计时', rx, ry - 120, D.raid ? 76 : 52, 11, D.raid ? { pal: [INK, RED, INK] } : null);
     const pos0 = ((D.from - 1) % E + E) % E, pos1 = ((D.to - 1) % E + E) % E, wrap = pos1 < pos0, arrive = eo((ts - (wrap ? 1.3 : 1.0)) / (wrap ? 0.45 : 0.4)), mk = pos0 + (pos1 - pos0) * arrive;
     for (let i = 0; i < E; i++) { const sx = rx - (E - 1) * 70 + i * 140, last = i === E - 1;
       // a new cycle: the used slots flip over one by one and come back lit
       const rl = wrap ? eo((ts - 1.0 - i * 0.07) / 0.18) : 1, dark = wrap ? (rl < 0.5 ? i <= pos0 : i <= pos1 && arrive > 0.95) : i <= mk, fs = wrap ? Math.max(0.08, Math.abs(1 - 2 * rl)) : 1;
       ctx.save(); ctx.translate(sx, ry + 40); ctx.rotate(-0.08 + (i % 2) * 0.05); ctx.scale(1, fs);
-      // 键帽：3px 墨框 + 6px 墨投影；袭击夜 = 红键；用过的天 = 按下去的暗键（陷下 6px、没有投影）
+      // 键帽：3px 墨框 + 6px 墨投影；混沌来袭夜 = 红键；用过的天 = 按下去的暗键（陷下 6px、没有投影）
       const k = last ? 'red' : dark ? 'dn' : 'cap', F = { red: [RED, P.pink, WINE], cap: [PAPER, null, P.lavender], dn: [P.night, null, null] }[k], oy = k === 'dn' ? 6 : 0;
       ctx.fillStyle = INK; if (k !== 'dn') ctx.fillRect(-53, -47, 106, 106); ctx.fillRect(-53, -53 + oy, 106, 106);
       ctx.fillStyle = F[0]; ctx.fillRect(-50, -50 + oy, 100, 100);
@@ -66,7 +66,7 @@ M.drawDayFx = function (ctx, g) {
       if (k === 'dn') { ctx.fillStyle = P.abyss; ctx.fillRect(-50, -44, 100, 6); }
       if (last) { const ic = M.iconCanvas('r_skel', 3); if (ic) { ctx.imageSmoothingEnabled = false; ctx.drawImage(ic, -38, -42, 76, 76); } } else U.text(ctx, String(i + 1), 0, oy - 4, 52, k === 'dn' ? P.haze : INK, { num: true, shadow: false });
       ctx.restore(); }
-    const mxp = Math.round((rx - (E - 1) * 70 + mk * 140) / 3) * 3; downArrow(ctx, mxp, ry - 60, PAPER); ctx.strokeStyle = PAPER; ctx.lineWidth = 6; ctx.strokeRect(mxp - 58, ry - 18, 116, 116);
+    const mxp = Math.round((rx - (E - 1) * 70 + mk * 140)); downArrow(ctx, mxp, ry - 60, PAPER); ctx.strokeStyle = PAPER; ctx.lineWidth = 6; ctx.strokeRect(mxp - 58, ry - 18, 116, 116);
     const left = D.raidIn; ransom(ctx, D.raid ? '准备迎战' : left === 1 ? '明晚来袭' : '还有' + left + '天', rx, ry + 180, 60, 19, D.raid ? { pal: [RED, INK, RED] } : null);
     ctx.restore(); }
   if (D.raid && t > 1.3 && pulse > 0.5) { ctx.globalAlpha = 0.2; ctx.fillStyle = RED; ctx.fillRect(-ox, 0, 1920, 1080); ctx.globalAlpha = 1; }

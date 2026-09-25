@@ -77,15 +77,15 @@ M.drawTear = function (ctx, g) {
   const t = T.t, d = T.dead, card = cardCanvas(d), CX = 960, CY = 500, st = T.start || (T.start = g.fxPos('heroes') || { x: 240, y: 960 });
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
   const dim = t < T_END - 0.6 ? cl(t / 0.4, 0, 1) : cl((T_END - t) / 0.6, 0, 1);
-  M.fxDim(ctx, 0.88 * Math.round(dim * 4) / 4);
+  M.fxDim(ctx, 0.88 * dim);
   // title: 红色像素大字 + 八向墨描边，副行薰衣草色
-  if (t > 0.4 && t < T_END - 0.3) { const a = cl((t - 0.4) / 0.3, 0, 1) * cl((T_END - 0.3 - t) / 0.4, 0, 1); ctx.globalAlpha = Math.round(a * 4) / 4; U.text(ctx, '领袖阵亡', CX, 150, 96, P.red, { outline: true }); U.text(ctx, d.name + ' 永远留在了' + d.region, CX, 232, 30, P.lavender); ctx.globalAlpha = 1; }
+  if (t > 0.4 && t < T_END - 0.3) { const a = cl((t - 0.4) / 0.3, 0, 1) * cl((T_END - 0.3 - t) / 0.4, 0, 1); ctx.globalAlpha = a; U.text(ctx, '领袖阵亡', CX, 150, 96, P.red, { outline: true }); U.text(ctx, d.name + ' 永远留在了' + d.region, CX, 232, 30, P.lavender); ctx.globalAlpha = 1; }
   const tp = T.path || (T.path = tearPath(T.seed));
   if (t < T_RIP) {
     // fly in, then strain: the card trembles harder and a crack runs down it
     const q = eo(cl(t / T_FLY, 0, 1)), x = st.x + (CX - st.x) * q, y = st.y + (CY - st.y) * q - Math.sin(q * Math.PI) * 160, sc = 0.35 + 0.65 * eback(cl(t / T_FLY, 0, 1));
     const strain = cl((t - T_FLY) / (T_HOLD - T_FLY), 0, 1), sh = strain * strain * 12, rot = (1 - q) * -0.5 + (Math.random() - 0.5) * strain * 0.05;
-    const jig = () => (RM() ? 0 : Math.round((Math.random() - 0.5) * sh / 3) * 3);
+    const jig = () => (RM() ? 0 : Math.round((Math.random() - 0.5) * sh));
     ctx.translate(x + jig(), y + jig()); ctx.rotate(rot); ctx.scale(sc, sc);
     M.pxGlow && M.pxGlow(ctx, 0, 0, 260, U.pal(M.RARITY[d.rarity].c), 0.25 + strain * 0.3);
     ctx.drawImage(card, -150, -210);

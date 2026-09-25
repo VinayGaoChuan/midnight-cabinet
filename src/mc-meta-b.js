@@ -208,7 +208,7 @@ G.view = function () {
 };
 const oTipFor = G.tipFor;
 G.tipFor = function (key) {
-  if (key === 'b-core') { const m = this.meta, c = m.core == null ? 3 : m.core; return { title: '基地核心 ' + c + ' / 3', c: '#ff8ab0', kind: '整局只有 3 点', d: '领袖每阵亡一次，核心 -1。核心归零，基地爆炸，这一局结束，回到房间结算。每通关一个世界恢复 1 点，上限不会增加。', icon: 't_heart' }; }
+  if (key === 'b-core') { const m = this.meta, c = m.core == null ? 3 : m.core; return { title: '基地核心 ' + c + '/3', c: '#ff8ab0', icon: 't_heart', d: '领袖死亡 -1，通关世界 +1', lines: [{ t: '为 0 时游戏结束', c: '#ff8a8a' }] }; }
   if (key === 'r-tokens') return { title: '机台代币 ' + this.prof.tokens, c: '#ffcc33', d: '一局结束时按表现结算。用来解锁和升级房间里的家具，每件家具都会改变机台里的规则。', icon: 'e_coin' };
   return oTipFor.call(this, key);
 };

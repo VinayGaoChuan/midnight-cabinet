@@ -469,7 +469,7 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
   const icons = bv.icons = [], S = Math.round(clamp(40 * bv.z * 1.25, 30, 72)), pad = Math.round(S * 0.22);
   // 标签徽章：深渊底 + 3px 墨框（悬停金框、两档步进放大）+ 3px 标签色内圈
   const badge = (ic, x0, y0, col, tip, hot) => {
-    const pu = hot && !PJ.reduced && Math.floor(t * 4) % 2 ? 1.08 : 1, s = Math.round(S * pu), xx = Math.round(x0 - (s - S) / 2), yy = Math.round(y0 - (s - S) / 2);
+    const pu = hot && !PJ.reduced ? 1.04 + 0.04 * Math.sin(t * 4 * Math.PI) : 1, s = Math.round(S * pu), xx = Math.round(x0 - (s - S) / 2), yy = Math.round(y0 - (s - S) / 2);
     ctx.fillStyle = hot ? PP.gold : PP.ink; ctx.fillRect(xx - 3, yy - 3, s + 6, s + 6); ctx.fillStyle = PP.abyss; ctx.fillRect(xx, yy, s, s);
     ctx.fillStyle = U ? U.pal(col) : col; ctx.fillRect(xx, yy, s, 3); ctx.fillRect(xx, yy + s - 3, s, 3); ctx.fillRect(xx, yy, 3, s); ctx.fillRect(xx + s - 3, yy, 3, s);
     const im = M.iconCanvas(ic, 2); if (im) ctx.drawImage(im, xx + s * 0.12, yy + s * 0.12, s * 0.76, s * 0.76);
@@ -587,12 +587,12 @@ M.Raid = class {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     const left = this.total - this.spawnI + this.ents.filter(e => e.alive && e.side === 'E').length, U = M.UI;
     const stat = '剩余敌人 ' + left + '　·　传送门 ' + Math.max(0, Math.round(this.portal.hp)) + '/' + this.portal.max + '　·　武器房间 ' + this.turrets.length;
-    if (!U) { ctx.fillStyle = 'rgba(8,6,10,0.85)'; ctx.fillRect(560, 110, 800, 110); ctx.strokeStyle = '#d0453c'; ctx.lineWidth = 4; ctx.strokeRect(562, 112, 796, 106); ctx.textAlign = 'center'; ctx.font = `46px ${CNF}`; ctx.fillStyle = '#ff6a5a'; ctx.fillText('基地遭到袭击 · 守住传送门', 960, 162); ctx.font = `28px ${CNF}`; ctx.fillStyle = '#e8dcc4'; ctx.fillText(stat, 960, 202); return; }
-    // 袭击面板：机箱面板 + 红色内圈，两侧红色警灯 1 秒一闪；标题红字墨描边，下面一行战况
+    if (!U) { ctx.fillStyle = 'rgba(8,6,10,0.85)'; ctx.fillRect(560, 110, 800, 110); ctx.strokeStyle = '#d0453c'; ctx.lineWidth = 4; ctx.strokeRect(562, 112, 796, 106); ctx.textAlign = 'center'; ctx.font = `46px ${CNF}`; ctx.fillStyle = '#ff6a5a'; ctx.fillText('混沌来袭 · 守住传送门', 960, 162); ctx.font = `28px ${CNF}`; ctx.fillStyle = '#e8dcc4'; ctx.fillText(stat, 960, 202); return; }
+    // 混沌来袭面板：机箱面板 + 红色内圈，两侧红色警灯 1 秒一闪；标题红字墨描边，下面一行战况
     U.plate(ctx, 560, 110, 800, 110, { ring: PP.red });
-    const on = PJ.reduced || Math.floor(this.t * 2) % 2 === 0;
-    [606, 1296].forEach(lx => { U.box(ctx, lx, 139, 18, 18, on ? PP.red : PP.wine); if (on) { U.R(ctx, lx, 139, 6, 6, PP.pink); U.R(ctx, lx + 12, 151, 6, 6, PP.wine); } });
-    U.text(ctx, '基地遭到袭击 · 守住传送门', 960, 148, U.T.title, PP.red, { outline: true });
+    const glow = PJ.reduced ? 1 : 0.5 + 0.5 * Math.cos(this.t * 2 * Math.PI);
+    [606, 1296].forEach(lx => { U.box(ctx, lx, 139, 18, 18, PP.wine); ctx.save(); ctx.globalAlpha *= glow; U.box(ctx, lx, 139, 18, 18, PP.red); U.R(ctx, lx, 139, 6, 6, PP.pink); U.R(ctx, lx + 12, 151, 6, 6, PP.wine); ctx.restore(); });
+    U.text(ctx, '混沌来袭 · 守住传送门', 960, 148, U.T.title, PP.red, { outline: true });
     U.text(ctx, stat, 960, 194, U.T.body, PP.cream);
   }
 };

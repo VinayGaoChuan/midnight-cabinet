@@ -42,8 +42,8 @@ G.lvNext = function () {
 };
 const DUR = 3.6;
 // Pixel Juice（docs/design.md §11.5）：墨色压暗、硬边光芒、Silkscreen 绿色色带大字、机箱面板里的战斗力
-const U = M.UI, P = M.PJ.PAL, RM = () => !!M.PJ.reduced, stepT = (t, f) => (RM() ? t : Math.floor(t * f) / f), st4 = (v) => Math.round(cl(v, 0, 1) * 4) / 4;
-const seq = (A, d, dt) => (RM() || d >= A.length * dt ? A[A.length - 1] : A[Math.max(0, Math.floor(d / dt))]), POP = [1.45, 0.9, 1.06, 1];
+const U = M.UI, P = M.PJ.PAL, RM = () => !!M.PJ.reduced, stepT = (t) => t, st4 = (v) => cl(v, 0, 1);
+const seq = (A, d, dt) => { if (RM() || d >= (A.length - 1) * dt) return A[A.length - 1]; if (d <= 0) return A[0]; const f = d / dt, i = Math.floor(f), k = f - i, e = k * k * (3 - 2 * k); return A[i] + (A[i + 1] - A[i]) * e; }, POP = [1.45, 0.9, 1.06, 1];
 // 竖向硬边色带：cols = [[起点, 颜色]…]
 const bands = (x, y0, y1, cols) => { const g = x.createLinearGradient(0, y0, 0, y1); cols.forEach(([p, c], i) => { g.addColorStop(p, c); g.addColorStop(i + 1 < cols.length ? cols[i + 1][0] - 0.001 : 1, c); }); return g; };
 const GREEN = [[0, P.white], [0.22, P.lime], [0.5, P.green], [0.78, P.greenDeep]];
@@ -68,7 +68,7 @@ const drawLv = function (ctx, g) {
   ctx.globalAlpha = 1; ctx.fillStyle = U.rg(ctx, cx, cy, 10, 420, [[0, 'rgba(182,242,138,' + (0.55 * a0).toFixed(2) + ')'], [1, 'rgba(182,242,138,0)']], 4); ctx.beginPath(); ctx.arc(cx, cy, 420, 0, Math.PI * 2); ctx.fill();
   ctx.globalCompositeOperation = 'source-over';
   // the leader jumps in: 有半身像就放进品质色框（夜色底、3px 墨框、6px 品质色内圈、9px 硬投影），没有就用精灵
-  const hq = seq([0.4, 0.8, 1.12, 0.96, 1], t - 0.05, 0.09), bob = RM() ? 0 : Math.floor(t * 2.5) % 2 ? -6 : 0;
+  const hq = seq([0.4, 0.8, 1.12, 0.96, 1], t - 0.05, 0.09), bob = RM() ? 0 : -3 + 3 * Math.cos(t * 2.5 * Math.PI);
   const bi = bustImg((M.HEROES[L.h.cls] || {}).sprite), qc = U.pal(L.col);
   if (bi) {
     const F = 256, S0 = F + 18, by = 240 + S0 / 2; ctx.save(); ctx.globalAlpha = a0; ctx.translate(cx, by); ctx.scale(hq, hq);
@@ -101,7 +101,7 @@ const drawLv = function (ctx, g) {
   if (t > 1.2) {
     const pa = (t < 1.3 ? 0.5 : 1) * fin, v = Math.round(L.p0 + (L.p1 - L.p0) * eo(pq)), d = L.p1 - L.p0;
     ctx.globalAlpha = pa; U.plate(ctx, x0, y0, pw, ph); U.tab(ctx, '战斗力', x0 + 36, y0 - 24, { size: 30 });
-    const ns = pq < 1 ? (RM() || Math.floor(t * 15) % 2 ? 1 : 1.06) : seq(POP, t - 2.3, 0.06);
+    const ns = pq < 1 ? (RM() ? 1 : 1.03 + 0.03 * Math.sin(t * 15 * Math.PI)) : seq(POP, t - 2.3, 0.06);
     ctx.save(); ctx.translate(x0 + 40, y0 + 62); ctx.scale(ns, ns); U.text(ctx, M.fmt(v), 0, 0, 52, pq >= 1 ? P.gold : P.white, { num: true, align: 'left', outline: true }); ctx.restore();
     U.text(ctx, '▲ +' + M.fmt(Math.round(d * eo(pq))), x0 + pw - 40, y0 + 62, 40, P.lime, { num: true, align: 'right' });
     const frac = cl(L.p1 ? v / L.p1 : 1, 0, 1); bw = Math.round(680 * frac); U.bar(ctx, x0 + 40, y0 + 102, 680, 24, frac, { col: P.green, hi: P.lime, lo: P.greenDeep, seg: 36 });
@@ -150,7 +150,7 @@ G.view = function () {
       Object.assign(pn, { powerTxt: M.fmt(M.heroPower(h, m)), powerSc: (1 + 0.3 * pp).toFixed(3), powerC: pp > 0 ? P.lime : P.gold,
         lvTxt: h.lv >= 10 ? '已满级' : can ? '升级 · ' + need + ' 经验球' : '升级需要 ' + need + ' 经验球（现有 ' + m.orbs + '）',
         lvBg: can ? P.green : P.night, lvColor: can ? P.ink : P.haze, lvBorder: can ? P.lime : P.dusk,
-        lvAnim: can ? 'talPulse 1s steps(2) infinite' : 'none', lvUp: () => { M.Sfx.click(); this.heroLvUp(h.id); } });
+        lvAnim: can ? 'talPulse 1s ease-in-out infinite' : 'none', lvUp: () => { M.Sfx.click(); this.heroLvUp(h.id); } });
     }
   }
   return v;
@@ -159,7 +159,7 @@ const oTF = G.tipFor;
 G.tipFor = function (key) {
   const p = this.panel, m = this.meta, h = p && p.kind === 'hero' && m && m.heroes.find(x => x.id === p.id);
   if (h && key === 'hs-power') return { title: '战斗力 ' + M.fmt(M.heroPower(h, m)), c: '#ffe08a', d: '由攻击、生命、天赋和宝物折算。', icon: 't_sword' };
-  if (h && key === 'hs-lvup') { const mul = 1 + (M.baseMods(m).orbMul || 0); return { title: h.lv >= 10 ? '已满级' : '升到 Lv ' + (h.lv + 1), c: '#9cff7a', d: '花经验球升一级。', lines: [{ t: '当前经验球效率 ×' + mul.toFixed(1) + '（训练场、图书馆、琥珀层能提高）', c: '#a89ca8' }, { t: '现有经验球 ' + m.orbs, c: '#b8ff9a' }], icon: 't_orb' }; }
+  if (h && key === 'hs-lvup') return null;   // the button already says how many orbs the next level costs
   return oTF.call(this, key);
 };
 })();

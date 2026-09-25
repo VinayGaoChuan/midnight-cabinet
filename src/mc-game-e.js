@@ -12,7 +12,7 @@ Object.assign(G, {
     if (p.kind === 'room') {
       const B = M.BUILDINGS[p.key], x = M.cell(m, p.c, p.r), pw = M.roomPw(m, p.c, p.r, p.key);
       Object.assign(pn, { isRoom: true, title: B.n, titleColor: B.q ? M.QUALITY[B.q].c : '#ffe8b0', sub: (B.q ? '奇观 · ' : '') + M.QUALITY[B.q].n + ' · ' + M.STYLE[B.style] + ' · ' + M.CAT[B.cat], d: B.d, thumb: M.roomThumb(p.key),
-        chips: [{ t: pw >= 0 ? '电力 +' + pw : '耗电 ' + (-pw), c: pw >= 0 ? '#9cff7a' : '#ff9a6a' }].concat(x.tile ? [{ t: '地格 · ' + M.TILES[x.tile].n, c: M.TILES[x.tile].c }] : []).concat(B.weapon ? [{ t: '射程 ' + M.weaponStats(m, p.c, p.r).range + ' · 伤害 ' + Math.round(M.weaponStats(m, p.c, p.r).dmg), c: '#ff8a8a' }] : []),
+        chips: [].concat(x.tile ? [{ t: '地格 · ' + M.TILES[x.tile].n, c: M.TILES[x.tile].c }] : []).concat(B.weapon ? [{ t: '射程 ' + M.weaponStats(m, p.c, p.r).range + ' · 伤害 ' + Math.round(M.weaponStats(m, p.c, p.r).dmg), c: '#ff8a8a' }] : []),
         tileTxt: x.tile ? M.TILES[x.tile].n + '：' + M.TILES[x.tile].d : '', hasTile: !!x.tile,
         isCore: p.key === 'core', isForge: !!B.forge, isRecruit: !!B.recruit, isTrain: !!B.train, isMed: B.cat === 'med', isWeapon: !!B.weapon });
       if (pn.isCore || pn.isForge || pn.isRecruit) pn.d = '';
@@ -29,10 +29,10 @@ Object.assign(G, {
     }
     if (p.kind === 'build') {
       const x = M.cell(m, p.c, p.r), opts = M.buildOptions(m, p.c, p.r), pw = M.power(m);
-      Object.assign(pn, { isBuild: true, title: '空房间', sub: '⚡ 剩余 ' + pw.free, hasTile: !!x.tile, tileTxt: x.tile ? M.TILES[x.tile].n + '：' + M.TILES[x.tile].d : '', empty: !opts.length,
-        opts: opts.map(o => { const tb = Object.keys(o.tile).length; return { thumb: M.roomThumb(o.key), n: o.B.n + (o.count > 1 ? ' ×' + o.count : ''), c: o.B.q ? M.QUALITY[o.B.q].c : '#ffe8b0', meta: o.cost + ' 物资 · ' + o.days + ' 天 · ' + (o.pw >= 0 ? '电力 +' + o.pw : '耗电 ' + (-o.pw)), why: o.why, hasWhy: !!o.why, bonus: tb ? '★ 地格加成' : '', op: o.why ? 0.5 : 1, border: o.why ? '#2a2230' : o.B.q ? M.QUALITY[o.B.q].c : '#8a6a3a', onClick: () => { M.Sfx.click(); this.doBuild(p.c, p.r, o.key); }, tipOn: this.tipFn(() => { const t = this.bldTip(o.key, p.c, p.r); return t; }) }; }) });
+      Object.assign(pn, { isBuild: true, title: '空房间', sub: '', hasTile: !!x.tile, tileTxt: x.tile ? M.TILES[x.tile].n + '：' + M.TILES[x.tile].d : '', empty: !opts.length,
+        opts: opts.map(o => { const tb = Object.keys(o.tile).length; return { thumb: M.roomThumb(o.key), n: o.B.n + (o.count > 1 ? ' ×' + o.count : ''), c: o.B.q ? M.QUALITY[o.B.q].c : '#ffe8b0', meta: o.cost + ' 物资 · ' + o.days + ' 天', why: o.why, hasWhy: !!o.why, bonus: tb ? '★ 地格加成' : '', op: o.why ? 0.5 : 1, border: o.why ? '#2a2230' : o.B.q ? M.QUALITY[o.B.q].c : '#8a6a3a', onClick: () => { M.Sfx.click(); this.doBuild(p.c, p.r, o.key); }, tipOn: this.tipFn(() => { const t = this.bldTip(o.key, p.c, p.r); return t; }) }; }) });
     }
-    if (p.kind === 'dig') { const x = M.cell(m, p.c, p.r), cost = M.digCost(m); Object.assign(pn, { isDig: true, title: '岩层', sub: '', hasTile: !!x.tile, tileTxt: x.tile ? '特殊地格「' + M.TILES[x.tile].n + '」：' + M.TILES[x.tile].d : '', tileC: x.tile ? M.TILES[x.tile].c : '#8d8496', digBtn: '挖掘 · ' + cost + ' 物资 · ' + (M.digDays ? M.digDays(m, p.c, p.r) : 1) + ' 天', digOk: m.supplies >= cost }); }
+    if (p.kind === 'dig') { const x = M.cell(m, p.c, p.r), cost = M.digCost(m, p.c, p.r); Object.assign(pn, { isDig: true, title: '岩层', sub: '', hasTile: !!x.tile, tileTxt: x.tile ? '特殊地格「' + M.TILES[x.tile].n + '」：' + M.TILES[x.tile].d : '', tileC: x.tile ? M.TILES[x.tile].c : '#8d8496', digBtn: '挖掘 · ' + cost + ' 物资 · ' + (M.digDays ? M.digDays(m, p.c, p.r) : 1) + ' 天', digOk: m.supplies >= cost }); }
     if (p.kind === 'job') { const x = M.cell(m, p.c, p.r), j = x.job; if (!j) { this.panel = null; return v; } Object.assign(pn, { isJob: true, title: j.kind === 'dig' ? '挖掘中' : M.BUILDINGS[j.key].n, sub: '还需 ' + j.days + ' 天', jobW: Math.round((1 - j.days / j.total) * 100) + '%' }); }
     if (p.kind === 'loadout') {
       const W = M.WORLDS[p.world], h = m.heroes.find(x => x.id === p.hero), slots = M.relicSlots(h, m);

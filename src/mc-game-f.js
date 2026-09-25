@@ -29,7 +29,7 @@ G.beginBattle = function (n) {
   this.introBanner = this.banners[this.banners.length - 1];
   M.Sfx.whoosh(0.5); if (n.type === 'boss') M.Sfx.impact();
   if (run.tut) {
-    const T = { 1: ['b1', '部队会自动上场作战。领袖站在左边的指挥位，部队全灭后，领袖会亲自上场。鼠标悬浮在单位上能看到它的特性。'], 3: ['b3', '每场战斗的收益 = 基础积分 × 倍率。击杀敌人得到基础积分；精英、首领和部分特性能提高倍率，每次 +0.1。'], 5: ['b5', '这一场试试下方的支援道具：点击后滚轮会决定它的品质。'], 6: ['b6', '精英战！精英更强，击杀后倍率 +0.1。战斗胜利后，倒下的部队会全部复活。'], 9: ['boss', '最终首领！打败它，序章就结束了。'] }[n.col];
+    const T = { 1: ['b1', '部队会自动上场作战。领袖站在左边的指挥位，部队全灭后，领袖会亲自上场。鼠标悬浮在单位上能看到它的特性。'], 3: ['b3', '每场战斗的收益 = 基础积分 × 积分倍率。击杀敌人得到基础积分；精英、首领和部分特性能提高积分倍率，每次 +0.1。'], 5: ['b5', '这一场试试下方的支援道具：点击后滚轮会决定它的品质。'], 6: ['b6', '精英战！精英更强，击杀后积分倍率 +0.1。战斗胜利后，倒下的部队会全部复活。'], 9: ['boss', '最终首领！打败它，序章就结束了。'] }[n.col];
     if (T) setTimeout(() => this.coachOnce(T[0], T[1], 960, 300), 1600);
   }
 };
@@ -101,7 +101,7 @@ G.baseTutStep = function () {
   if (m.baseTut === 1) { const p = cp(C.c, C.r); this.coach('这是你的地下基地。主基地会照亮周围 3 格。点击「主基地」打开仓库，看看你带回了什么。', p.x, p.y + 230, p.x, p.y); }
   if (m.baseTut === 3) { const p = cp(C.c - 1, C.r); this.coach('主基地两边各有一个空房间。点击左边的空房间，用「酒馆图纸」建造酒馆。普通品质的建筑只要 1 天。', p.x, p.y + 230, p.x, p.y); }
   if (m.baseTut === 4) { const p = cp(C.c, C.r + 1); this.coach('再点击主基地下方的岩层，挖出一块新空地。新挖的房间自带光亮，能照亮周围 1 格。发光的岩层是特殊地格。', p.x, p.y + 230, p.x, p.y); }
-  if (m.baseTut === 5) { const p = this.bv.toScreen(M.BASE_GEO.DOOR_X, -130); this.coach('每次出征，基地就过去 1 天，挖掘和建造也会推进。点击地面上的「传送门」，再来一局！每 ' + M.RAID_EVERY + ' 天基地会遭到袭击，记得在地下造武器房间。', p.x, p.y + 330, p.x, p.y); }
+  if (m.baseTut === 5) { const p = this.bv.toScreen(M.BASE_GEO.DOOR_X, -130); this.coach('每次出征，基地就过去 1 天，挖掘和建造也会推进。点击地面上的「传送门」，再来一局！每 ' + M.RAID_EVERY + ' 天会有混沌来袭，记得在地下造武器房间。', p.x, p.y + 330, p.x, p.y); }
 };
 const oldClose = G.closePanel;
 G.closePanel = function () { const was = this.panel; const b0 = this.meta.baseTut; oldClose.call(this); const m = this.meta; if (was && was.key === 'core' && m.baseTut === 3) { this.coachData = null; setTimeout(() => this.baseTutStep(), 750); } };
@@ -126,9 +126,9 @@ G.view = function () {
   if (this.tipData && v.tip) v.tip.lines = (this.tipData.lines || []).map(l => ({ segs: l.rich || [{ t: l.t, c: l.c }] }));
   if (v.w && run) {
     v.w.roster = run.roster.filter(u => !this.hideU.has(u.uid)).map(u => { const d = DB[u.type]; return { img: M.spriteURL(u.type, 4), q: d.q, bg: qBg(d.q), glow: qGlow(d.q), stars: u.lv > 1 ? 'Lv' + u.lv : '', tipOn: this.tipFn(() => M.unitTip(u.type, u, run)), border: this.sel === u.uid ? '#ffffff' : Q[d.q].c, onClick: () => { if (this.screen === 'shop') { this.sel = this.sel === u.uid ? null : u.uid; M.Sfx.click(); this.bump(); } } }; });
-    v.w.items = run.items.map((k, i) => ({ has: !!k && !this.hideI.has(i), img: k ? M.spriteURL(M.ITEMS[k].icon, 5) : '', border: k ? M.ITEM_C : '#3a3040', bg: k ? ITEM_BG : '#100c14', glow: k ? ITEM_GLOW : 'none', tipOn: this.tipFn(k ? this.itemTip(k) : { title: '空道具栏', d: '宝箱、商店、事件都能获得支援道具。' }) }));
-    v.w.rosterN = run.roster.length + ' / ' + M.ROSTER_CAP;
-    v.w.banners = Object.keys(run.legion).map(k => { const L = M.LEGION[k]; return { n: L.name.replace('战旗', ''), tipOn: this.tipFn({ title: L.name, c: Q[L.q].c, kind: Q[L.q].n + ' · 战旗', d: L.desc }) }; });
+    v.w.items = run.items.map((k, i) => ({ type: k ? M.ITEMS[k].type || '' : '', has: !!k && !this.hideI.has(i), img: k ? M.spriteURL(M.ITEMS[k].icon, 5) : '', border: k ? M.ITEM_C : '#3a3040', bg: k ? ITEM_BG : '#100c14', glow: k ? ITEM_GLOW : 'none', tipOn: this.tipFn(k ? this.itemTip(k) : { title: '空道具栏', d: '宝箱、商店、事件都能获得支援道具。' }) }));
+    v.w.rosterN = String(run.roster.length);
+    v.w.banners = Object.keys(run.legion).map(k => { const L = M.LEGION[k]; return { n: L.name.replace('战旗', ''), tipOn: this.tipFn({ title: L.name, c: Q[L.q].c, d: L.desc }) }; });
     v.w.hasBanners = v.w.banners.length > 0; v.w.banSc = this.ps('banners');
   }
   if (s === 'shop' && run && run.shop && run.shop.units) {
@@ -137,8 +137,8 @@ G.view = function () {
       return { fx: 'card' + id, q: c.q, qn: Q[c.q].n, qc: Q[c.q].c, bg: qBg(c.q), glow: qGlow(c.q), price: M.fmt(c.cost), priceC: ok ? '#ffe08a' : '#ff6a5a', sold: !!c.sold, stampSc: 1 + 1.5 * (1 - M.ease.eo(sq)), dy: Math.round((1 - M.ease.eback(dq)) * 90) + 0, op: dq, sh, onBuy: () => this.buy(zone, i) }; };
     v.s = { wallet: v.w.wallet, walSc: v.w.walSc, refreshText: '刷新 · ' + M.refreshCost(run), refreshBorder: run.wallet >= M.refreshCost(run) ? '#e8dcc4' : '#3a3040' };
     v.s.units = run.shop.units.map((c, i) => { const d = DB[c.type]; return Object.assign(card('units', c, i, i), { img: M.spriteURL(c.type, 10), n: d.n, race: d.race, rc: M.RACES[d.race] || '#fff', voc: d.voc, vc: M.VOCS[d.voc] || '#aaa', trait: M.traitsOf(c.type).map(T => T.n).join(' · ') || '无特性', pw: '战力 ' + M.unitPower(c.type), tipOn: this.tipFn(() => { const t = M.unitTip(c.type, null, run); t.kind = Q[c.q].n + ' · 价格 ' + c.cost + ' · 点击购买'; return t; }) }); });
-    v.s.banners = run.shop.banners.map((c, i) => { const L = M.LEGION[c.key]; return Object.assign(card('banners', c, i, 6 + i), { n: L.name, emb: L.name.slice(0, 1), desc: L.desc, tipOn: this.tipFn({ title: L.name, c: Q[c.q].c, kind: Q[c.q].n + ' · 战旗 · 价格 ' + c.cost, d: L.desc + '。本局一直生效。', lines: [{ rich: M.rich(L.desc) }] }) }); });
-    v.s.items = run.shop.items.map((c, i) => Object.assign(card('items', c, i, 8 + i), { qc: M.ITEM_C, bg: ITEM_BG, glow: ITEM_GLOW, img: M.spriteURL(M.ITEMS[c.key].icon, 8), n: M.ITEMS[c.key].name, tipOn: this.tipFn(() => this.itemTip(c.key)) }));
+    v.s.banners = run.shop.banners.map((c, i) => { const L = M.LEGION[c.key]; return Object.assign(card('banners', c, i, 6 + i), { n: L.name, emb: L.name.slice(0, 1), desc: L.desc, tipOn: this.tipFn({ title: L.name, c: Q[c.q].c, lines: [{ rich: M.rich(L.desc) }] }) }); });
+    v.s.items = run.shop.items.map((c, i) => Object.assign(card('items', c, i, 8 + i), { qc: M.ITEM_C, bg: ITEM_BG, glow: ITEM_GLOW, img: M.spriteURL(M.ITEMS[c.key].icon, 8), n: M.ITEMS[c.key].name, type: M.ITEMS[c.key].type || '', tipOn: this.tipFn(() => this.itemTip(c.key)) }));
     v.s.noBanner = !v.s.banners.length;
     const u = run.roster.find(x => x.uid === this.sel); v.s.selOn = !!u; v.s.sell = u ? '卖出 ' + DB[u.type].n + ' +' + M.fmt(M.sellValue(run, u)) : '';
   }

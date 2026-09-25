@@ -71,8 +71,8 @@ const TAGS = {
   '火': { color:'#ff9a3c', th:[2,3], desc:['燃烧伤害 ×2', '燃烧中死亡的敌人会爆炸'] },
   '铁': { color:'#a8b0bc', th:[2,4], desc:['【铁】生命 +40%', '【铁】受到伤害 -40%'] },
   '兽': { color:'#e06a50', th:[2,3], desc:['【兽】攻速 +30%', '【兽】击杀后回复 20% 生命'] },
-  '诅咒': { color:'#8fc8ff', th:[2,4], desc:['敌人生命 -15%', '部队阵亡时，倍率额外 +0.5'] },
-  '赌': { color:'#ffcc33', th:[2,3], desc:['全队 10% 暴击（2 倍伤害）', '暴击击杀时，倍率 +0.05'] },
+  '诅咒': { color:'#8fc8ff', th:[2,4], desc:['敌人生命 -15%', '部队阵亡时，积分倍率额外 +0.5'] },
+  '赌': { color:'#ffcc33', th:[2,3], desc:['全队 10% 暴击（2 倍伤害）', '暴击击杀时，积分倍率 +0.05'] },
   '灵': { color:'#b86bff', th:[2,4], desc:['召唤物属性 +50%', '每波开始召唤 2 只怨灵'] },
 };
 const UNITS = {
@@ -80,16 +80,16 @@ const UNITS = {
   wick:{ name:'烛芯术士', tags:['火'], tier:1, hp:60, atk:8, cd:1.1, range:420, spd:70, ranged:1, desc:'攻击会点燃敌人' },
   hound:{ name:'缝合犬', tags:['兽'], tier:1, hp:85, atk:10, cd:0.6, range:50, spd:170, desc:'专咬血量最低的敌人' },
   dice:{ name:'骨牌赌徒', tags:['赌'], tier:1, hp:60, atk:9, cd:1.0, range:400, spd:70, ranged:1, desc:'每次攻击 1/6 概率造成 6 倍伤害' },
-  doll:{ name:'哭泣人偶', tags:['诅咒'], tier:2, hp:70, atk:5, cd:1.2, range:360, spd:60, ranged:1, desc:'队友阵亡时，倍率 +0.5（按星级翻倍）' },
+  doll:{ name:'哭泣人偶', tags:['诅咒'], tier:2, hp:70, atk:5, cd:1.2, range:360, spd:60, ranged:1, desc:'队友阵亡时，积分倍率 +0.5（按星级翻倍）' },
   grave:{ name:'守墓人', tags:['铁','诅咒'], tier:2, hp:240, atk:8, cd:1.2, range:55, spd:70, desc:'嘲讽：敌人优先攻击它' },
   lantern:{ name:'灯笼鬼', tags:['灵','火'], tier:2, hp:55, atk:7, cd:0.8, range:380, spd:80, ranged:1, desc:'每击杀 2 个敌人，召唤一只火小鬼' },
   rat:{ name:'鼠王', tags:['兽'], tier:2, hp:110, atk:9, cd:0.8, range:50, spd:120, desc:'开战召唤老鼠（2 / 3 / 5 只）' },
   priest:{ name:'白烛祭司', tags:['诅咒','灵'], tier:3, hp:80, atk:4, cd:1.5, range:380, spd:60, ranged:1, desc:'每 3 秒治疗最虚弱的队友', locked:1 },
   clock:{ name:'发条兵', tags:['铁','赌'], tier:2, hp:150, atk:11, cd:0.8, range:55, spd:90, desc:'每第 3 次攻击造成 4 倍伤害', locked:1 },
   furnace:{ name:'焚化炉', tags:['火','铁'], tier:3, hp:300, atk:10, cd:1.3, range:65, spd:60, desc:'持续点燃身边所有敌人', locked:1 },
-  mirror:{ name:'镜中人', tags:['灵','赌'], tier:3, hp:70, atk:14, cd:1.2, range:450, spd:70, ranged:1, desc:'击杀精英或首领时，倍率额外 +1', locked:1 },
+  mirror:{ name:'镜中人', tags:['灵','赌'], tier:3, hp:70, atk:14, cd:1.2, range:450, spd:70, ranged:1, desc:'击杀精英或首领时，积分倍率额外 +1', locked:1 },
   butcher:{ name:'屠夫', tags:['兽','诅咒'], tier:3, hp:200, atk:20, cd:1.3, range:60, spd:100, desc:'亲手击杀的敌人，基础积分 ×2', locked:1 },
-  bride:{ name:'纸新娘', tags:['诅咒','灵'], tier:3, hp:90, atk:9, cd:1.0, range:380, spd:70, ranged:1, desc:'阵亡时倍率 +2，并留下 3 个纸人', locked:1 },
+  bride:{ name:'纸新娘', tags:['诅咒','灵'], tier:3, hp:90, atk:9, cd:1.0, range:380, spd:70, ranged:1, desc:'阵亡时积分倍率 +2，并留下 3 个纸人', locked:1 },
 };
 const BASE_UNITS = Object.keys(UNITS).filter(k => !UNITS[k].locked);
 const SUMMONS = {
@@ -118,38 +118,38 @@ const LEGION = {
   steel:{ name:'钢钉', desc:'【铁】部队攻击 +40%', icon:'up' },
   rabies:{ name:'狂犬病', desc:'【兽】部队攻速 +30%', icon:'up' },
   greed:{ name:'贪婪', desc:'击杀获得的基础积分 +25%', icon:'coin' },
-  bloodpact:{ name:'血契', desc:'精英和首领给的倍率 +50%', icon:'up' },
-  fullhouse:{ name:'满堂红', desc:'每波开始时倍率 +0.3', icon:'die' },
+  bloodpact:{ name:'血契', desc:'精英和首领给的积分倍率 +50%', icon:'up' },
+  fullhouse:{ name:'满堂红', desc:'每波开始时积分倍率 +0.3', icon:'die' },
   bone:{ name:'骨甲', desc:'全队生命 +30%', icon:'up' },
   haste:{ name:'急躁', desc:'全队攻速 +20%', icon:'up' },
-  wake:{ name:'守灵夜', desc:'部队阵亡时，倍率额外 +0.3', icon:'candle' },
+  wake:{ name:'守灵夜', desc:'部队阵亡时，积分倍率额外 +0.3', icon:'candle' },
 };
 const FIELDS = {
   wet:{ name:'潮湿地板', desc:'敌人移速 -30%，但火焰伤害减半', icon:'puddle' },
   kerosene:{ name:'煤油地板', desc:'燃烧伤害 ×2，我方生命 -15%', icon:'drop' },
-  moon:{ name:'满月', desc:'每波多出 2 名精英（更多倍率）', icon:'moon' },
-  chime:{ name:'午夜钟声', desc:'战斗中每 8 秒，倍率 +0.2', icon:'bell' },
+  moon:{ name:'满月', desc:'每波多出 2 名精英（更多积分倍率）', icon:'moon' },
+  chime:{ name:'午夜钟声', desc:'战斗中每 8 秒，积分倍率 +0.2', icon:'bell' },
   cemetery:{ name:'墓地', desc:'敌人死亡时 20% 爬起为你作战的骷髅', icon:'tomb' },
 };
 const TIERS = [
   { n:'青铜', c:'#c98f5a' }, { n:'白银', c:'#c4ccd9' }, { n:'黄金', c:'#ffcf4a' }, { n:'传说', c:'#b86bff' },
 ];
 const ITEMS = {
-  bolt:{ name:'闪电风暴', icon:'bolt', desc:'召唤落雷劈向敌人，有概率连锁、附带冲击波', tiers:['2 道细雷','5 道分叉连锁','8 道粗雷 + 冲击波','12 道紫色雷暴'] },
-  heal:{ name:'回魂烛', icon:'candle', desc:'治疗全队，有概率增加护盾、复活', tiers:['回复 20%','回复 50%','回满 + 护盾','回满 + 护盾 + 复活 1 名'] },
-  frame:{ name:'旧相框', icon:'frame', desc:'从相框里召唤帮手，有概率召出巨型怨灵', tiers:['1 只火小鬼','3 只火小鬼','1 只巨型怨灵','2 只怨灵 + 3 只小鬼'] },
-  bell:{ name:'招魂铃', icon:'bell', desc:'震慑敌人，有概率让它们自相残杀', tiers:['敌人停顿 1 秒','停顿 2 秒','停顿 3.5 秒','敌人互相攻击 5 秒'] },
-  cup:{ name:'骰盅', icon:'die', desc:'直接加倍率，运气好能加很多', tiers:['倍率 +0.2','倍率 +0.5','倍率 +1','倍率 +2.5'] },
+  bolt:{ name:'闪电风暴', icon:'bolt', desc:'召唤落雷劈向敌人，有概率连锁、附带冲击波', type:'输出类', tiers:['2 道细雷','5 道分叉连锁','8 道粗雷 + 冲击波','12 道紫色雷暴'] },
+  heal:{ name:'回魂烛', icon:'candle', desc:'治疗全队，有概率增加护盾、复活', type:'恢复类', tiers:['回复 20%','回复 50%','回满 + 护盾','回满 + 护盾 + 复活 1 名'] },
+  frame:{ name:'旧相框', icon:'frame', desc:'召唤帮手作战，有概率召出巨型怨灵', type:'召唤类', tiers:['1 只火小鬼','3 只火小鬼','1 只巨型怨灵','2 只怨灵 + 3 只小鬼'] },
+  bell:{ name:'招魂铃', icon:'bell', desc:'眩晕敌人，有概率让敌人自相残杀', type:'控制类', tiers:['敌人停顿 1 秒','停顿 2 秒','停顿 3.5 秒','敌人互相攻击 5 秒'] },
+  cup:{ name:'骰盅', icon:'die', desc:'提高积分倍率，有概率大幅提高', type:'收益类', tiers:['积分倍率 +0.2','积分倍率 +0.5','积分倍率 +1','积分倍率 +2.5'] },
 };
 // every support item is the same colour: dark gold
 const ITEM_C = '#c9a24a';
 const WHEEL = [
   { n:'什么都没有', c:'#6b6570', w:22 }, { n:'返还 ×2', c:'#ffcc33', w:24 }, { n:'随机部队', c:'#6fa8dc', w:20 },
-  { n:'倍率 +0.3', c:'#ff9a3c', w:16 }, { n:'随机道具', c:'#b86bff', w:18 },
+  { n:'积分倍率 +0.3', c:'#ff9a3c', w:16 }, { n:'随机道具', c:'#b86bff', w:18 },
 ];
 const PERKS = {
   wallet:{ name:'旧钱包', desc:'每次结算，积分收入 +10%', max:5, icon:'coin' },
-  redstring:{ name:'红绳', desc:'初始倍率 +0.1', max:5, icon:'up' },
+  redstring:{ name:'红绳', desc:'初始积分倍率 +0.1', max:5, icon:'up' },
   coin:{ name:'旧硬币', desc:'商店刷新费用 -20%', max:3, icon:'coin' },
   drawer:{ name:'多一格抽屉', desc:'商店多一个格子', max:1, icon:'frame' },
   photo:{ name:'全家福', desc:'部队上限 +1', max:2, icon:'frame' },
@@ -289,7 +289,7 @@ function cardInfo(card) {
   if (card.kind === 'legion') { const L = LEGION[card.key]; return { cat:'军团强化', cc:'#ff9a3c', icon:L.icon, name:L.name, desc:L.desc, tags:[] }; }
   if (card.kind === 'field') { const F = FIELDS[card.key]; return { cat:'场地效果', cc:'#9ccc6a', icon:F.icon, name:F.name, desc:F.desc + '（替换当前场地）', tags:[] }; }
   if (card.kind === 'item') { const I = ITEMS[card.key]; return { cat:'支援道具', cc:'#ffcc33', icon:I.icon, name:I.name, desc:I.desc, tags:[] }; }
-  return { cat:'赌博滚轮', cc:'#b86bff', icon:'wheel', name:'转一次', desc:'空 / 返还双倍 / 随机部队 / 永久倍率 / 随机道具', tags:[] };
+  return { cat:'赌博滚轮', cc:'#b86bff', icon:'wheel', name:'转一次', desc:'空 / 返还双倍 / 随机部队 / 永久积分倍率 / 随机道具', tags:[] };
 }
 function rollTier(meta) {
   const luck = 0.05 * perk(meta, 'rabbit');

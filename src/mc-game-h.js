@@ -74,8 +74,8 @@ G.tipFor = function (key) {
   const m = this.meta, run = this.run, b = this.battle, kq = (a) => '「' + M.keyOf(a) + '」';
   const T = {
     'b-mode': () => { const cf = (b && b.cfg) || this.cfg || {}, hold = cf.mode === 'hold'; return { title: cf.type === 'boss' ? '首领战' : cf.type === 'elite' ? '精英战' : cf.type === 'extract' ? '撤离战' : hold ? '坚守战' : '普通战', c: '#f2c14e', d: hold ? '撑过倒计时就赢。' : cf.type === 'boss' ? '领袖和部队一起上，消灭所有敌人就赢。' : '消灭所有敌人就赢。' }; },
-    'b-base': () => ({ title: '基础积分', c: '#f5ead4', d: '击杀获得，乘以倍率就是本场积分。' }),
-    'b-mult': () => ({ title: '倍率', c: '#ffcc33', d: '击杀精英 +0.1，击杀首领 +0.3。' }),
+    'b-base': () => ({ title: '基础积分', c: '#f5ead4', d: '击杀获得，乘以积分倍率就是本场积分。' }),
+    'b-mult': () => ({ title: '积分倍率', c: '#ffcc33', d: '击杀精英 +0.1，击杀首领 +0.3。' }),
     'b-score': () => ({ title: '积分', c: '#ffcc33', d: '胜利后存进钱包，在夜市花。' }),
     'b-hero': () => ({ title: run ? 'Lv' + run.hero.lv + ' ' + M.heroN(run.hero) : '领袖', c: '#f2c14e', d: '部队全灭后亲自上场。' }),
     'b-count': () => ({ title: '战况', c: '#e8dcc4', d: '我方剩余部队 / 剩余敌人。' }),
@@ -88,7 +88,7 @@ G.tipFor = function (key) {
     'w-rsup': () => ({ title: '本局物资', c: '#e8c86a', d: '撤离后带回基地；领袖阵亡则丢失。' }),
     'w-rexp': () => ({ title: '本局经验', c: '#9cff7a', d: '撤离后给领袖。' }),
     'w-rshard': () => ({ title: '灵魂碎片', c: '#d8a0ff', d: '撤离后带回基地。' }),
-    'w-roster': () => ({ title: '部队 ' + (run ? run.roster.length : 0) + ' / ' + M.ROSTER_CAP, c: '#6fa8dc', d: '在夜市买卖。' }),
+    'w-roster': () => ({ title: '部队 ' + (run ? run.roster.length : 0), c: '#6fa8dc' }),
     'b-day': () => ({ title: '第 ' + m.day + ' 天', c: '#ffe08a', d: '出征或休整一天，过去 1 天。' }),
     'b-herocap': () => ({ title: '领袖 ' + m.heroes.length + ' / ' + M.heroCap(m), c: '#ffe08a', d: '领袖数 / 上限。' }),
     's-refresh': () => ({ title: '刷新', c: '#e8dcc4', d: '花积分换一批货，每次涨价。' }),

@@ -113,7 +113,7 @@ const oView = G.view;
 G.view = function () {
   const v = oView.call(this), p = this.panel, m = this.meta;
   // battle HUD: the folded legion bar shows the personal skill charging
-  const b = this.battle; if (v.h && b && this.run) { const s = b.psInit && b.psInit(); v.h.psOn = !!(s && !b.hero.bench); if (s) Object.assign(v.h, { psName: HEROES[this.run.hero.cls].skill.n, psRes: s.P.res === 'cd' ? Math.max(0, Math.ceil(s.P.max - s.v)) + ' 秒' : s.P.resN, psW: Math.round(s.v / s.P.max * 100) + '%', psC: s.P.col });  }
+  const b = this.battle; if (v.h && b && this.run) { const s = b.psInit && b.psInit(); v.h.psOn = false; /* the on-field skill is only for show (user ruling 2026-09-24): no bar, no name */ if (s) Object.assign(v.h, { psName: HEROES[this.run.hero.cls].skill.n, psRes: s.P.res === 'cd' ? Math.max(0, Math.ceil(s.P.max - s.v)) + ' 秒' : s.P.resN, psW: Math.round(s.v / s.P.max * 100) + '%', psC: s.P.col });  }
   return v;
 };
 })();

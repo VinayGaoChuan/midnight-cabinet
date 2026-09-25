@@ -6,7 +6,7 @@ const PX = M.PX, RCOL = M.RACES, FW = 1920, FH = 720;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const eo = (t) => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
 const rnd = (i) => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
-const BAL = M.BAL = { MANA_MUL: 2.0, ALLY_FLOOR: 5, ENEMY_K: 1.7 };   // batch G rebalance: a shopping player won everything at 1.15
+const BAL = M.BAL = { MANA_MUL: 2.0, ALLY_FLOOR: 5, ENEMY_K: 1.6 };   // batch G/H rebalance: a shopping player won everything at 1.15
 let { MANA_MUL, ALLY_FLOOR } = BAL;
 M.setBal = (o) => { Object.assign(BAL, o); ({ MANA_MUL, ALLY_FLOOR } = BAL); };
 // enemies are a little tougher outside the tutorial
@@ -101,8 +101,8 @@ function rampChar(ch, size) {
 function drawTitle(ctx, f, T, p) {
   const e = f.ent, big = f.tier >= 2, U = M.bUI, PL = U.P, g2 = U.g2, still = M.PJ && M.PJ.reduced, a = p > 0.8 ? (1 - p) / 0.2 : 1;
   // 出场按 4 步弹一下（1.45 → 0.9 → 1.06 → 1），淡出也按阶
-  const pop = p < 0.12 && !still ? [1.45, 0.9, 1.06, 1][Math.min(3, Math.floor(p / 0.03))] : 1, Tq = still ? 0 : Math.floor(T * 12) / 12;
-  ctx.save(); ctx.globalAlpha *= Math.ceil(a * 4) / 4;
+  const pop = p < 0.12 && !still ? (k => { const f = Math.min(2.999, p / 0.03), i = Math.floor(f), e = (f - i) * (f - i) * (3 - 2 * (f - i)); return k[i] + (k[i + 1] - k[i]) * e; })([1.45, 0.9, 1.06, 1]) : 1, Tq = still ? 0 : T;
+  ctx.save(); ctx.globalAlpha *= a;
   if (big) {
     // 招牌横条：我方酒红（上沿红、下沿棕）、敌方红底（上沿粉、下沿酒红），4px 墨框，上下跑马灯；字逐个跳，我方果汁色带、敌方奶油色
     const y = 96, S = f.tier >= 3 ? 72 : 48, foe = f.side === 'E', size = g2(S * pop), chars = [...String(f.text)];

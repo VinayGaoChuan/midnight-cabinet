@@ -176,7 +176,7 @@ function stele(ctx, x, y, W, t, i, hov, sel) {
   ctx.lineWidth = 5; ctx.strokeStyle = sel ? P.gold : hov ? P.white : P.ink; slab(ctx, x, y, SW, SH); ctx.stroke();
   ctx.fillStyle = 'rgba(7,6,15,0.55)'; slab(ctx, x, y + 14, SW - 28, SH - 26); ctx.fill();
   // 内圈：世界色 3px 硬线，两档明暗步进
-  const a0 = ctx.globalAlpha; ctx.globalAlpha = a0 * (PJ.reduced ? 0.6 : Math.floor(t * 2 + i) % 2 ? 0.7 : 0.45); ctx.lineWidth = 3; ctx.strokeStyle = wl; slab(ctx, x, y + 14, SW - 28, SH - 26); ctx.stroke(); ctx.globalAlpha = a0;
+  const a0 = ctx.globalAlpha; ctx.globalAlpha = a0 * (PJ.reduced ? 0.6 : 0.575 + 0.125 * Math.sin((t * 2 + i) * Math.PI)); ctx.lineWidth = 3; ctx.strokeStyle = wl; slab(ctx, x, y + 14, SW - 28, SH - 26); ctx.stroke(); ctx.globalAlpha = a0;
   ctx.strokeStyle = 'rgba(7,6,15,0.45)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - SW / 2 + 6, y + 120); ctx.lineTo(x - SW / 2 + 22, y + 138); ctx.lineTo(x - SW / 2 + 16, y + 160); ctx.moveTo(x + SW / 2 - 8, y + 70); ctx.lineTo(x + SW / 2 - 20, y + 84); ctx.stroke();
   // 顶上的宝石：墨框方块 + 世界色 + 左上白高光
   ctx.fillStyle = P.ink; ctx.fillRect(x - 14, y + 8, 28, 28); ctx.fillStyle = wl; ctx.fillRect(x - 10, y + 12, 20, 20); ctx.fillStyle = P.white; ctx.fillRect(x - 8, y + 14, 6, 6);

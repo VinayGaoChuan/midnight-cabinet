@@ -23,7 +23,7 @@ M.itemInfo = function (key) { const I = oInfo.call(this, key); if (key && key.st
 const powerSeg = (pw) => ({ t: pw >= 0 ? '电力 +' + pw : '耗电 ' + (-pw), c: pw >= 0 ? '#9cff7a' : '#ff9a6a', b: 1 });
 M.bldTop = function (key, pw) {
   const B = M.BUILDINGS[key], st = TG.style(B.style), ct = TG.cat(B.cat);
-  return [{ img: M.iconURL(st.icon, 1) }, { t: st.n, c: st.c, b: 1 }, { t: '　' }, { img: M.iconURL(ct.icon, 1) }, { t: ct.n, c: ct.c, b: 1 }, { t: '　' }, powerSeg(pw)];
+  return [{ img: M.iconURL(st.icon, 1) }, { t: st.n, c: st.c, b: 1 }, { t: '　' }, { img: M.iconURL(ct.icon, 1) }, { t: ct.n, c: ct.c, b: 1 }];
 };
 const oBT = G.bldTip;
 G.bldTip = function (key, c, r) {
@@ -49,7 +49,6 @@ G.view = function () {
   if (v.pn && this.panel) {
     const p = this.panel, pn = v.pn;
     if (pn.isRoom) { const B = M.BUILDINGS[p.key], pw = M.roomPw(m, p.c, p.r, p.key); pn.title = M.qn(B.n, B.q); pn.titleColor = M.qc(B.q); pn.sub = '';
-      pn.tags = (pn.tags || []).concat([{ img: M.iconURL('f_power', 2), tip: 'b-power', c: pw >= 0 ? '#9cff7a' : '#ff9a6a', n: pw >= 0 ? '电力 +' + pw : '耗电 ' + (-pw) }]); pn.hasTags = true;
       pn.chips = (pn.chips || []).filter(ch => !/^(电力 \+|耗电 )/.test(ch.t)); }
     if (pn.isBuild && pn.opts) { const opts = M.buildOptions(m, p.c, p.r); pn.opts.forEach((o, i) => { const x = opts[i]; if (!x) return; o.n = M.qn(x.B.n, x.B.q) + (x.count > 1 ? ' ×' + x.count : ''); o.c = M.qc(x.B.q); }); }
     if (pn.isHero) { const h = m.heroes.find(x => x.id === p.id); if (h) { pn.title = M.heroN(h); pn.titleColor = M.qc(h.rarity); } }

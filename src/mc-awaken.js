@@ -59,7 +59,7 @@ const TR = {
   SummonGhostWalkerTrait: ['stealth', '受到的普通攻击伤害减少'], SummonDeathStareTrait: ['curse', '盯住一个目标越打越痛'], SummonSummonFroggoTrait: ['summon', '召唤蛙人'],
   SummonPotOHoneyTrait: ['heal', '死亡时为身边友军回血'], SummonLeadershipAuraTrait: ['aura_atk', '让身边友军伤害提高，但更脆'], SummonSafetyAuraTrait: ['aura_guard', '让身边友军受到的伤害减少'],
   SummonPlunderTrait: ['gold', '击杀时抢积分'], SummonDiabolicDuoTrait: ['summon', '成对出现'], SummonHealingAuraTrait: ['aura_heal', '让身边友军持续回血'], SummonMaulTrait: ['curse', '攻击会减慢目标的攻速'],
-  SummonSelfDestructInfantryTrait: ['fire', '冲上去自爆'], SummonRaiseImpTrait: ['summon', '召唤小鬼'], JadeBeastTrait: ['gold', '场上商人越多，倍率越高'],
+  SummonSelfDestructInfantryTrait: ['fire', '冲上去自爆'], SummonRaiseImpTrait: ['summon', '召唤小鬼'], JadeBeastTrait: ['gold', '场上商人越多，积分倍率越高'],
 };
 M.TRAIT_AW = TR;
 // what the no-trait units are for, by vocation
@@ -82,7 +82,7 @@ M.unitTip = function (k, u) {
   return { title: d.n, c: q.c, brief: [row], d: M.unitLine(k) };
 };
 // a race-count trait would be invisible now that cards show no race: 宝玉兽 counts merchants instead
-if (TDB.JadeBeastTrait) Object.assign(TDB.JadeBeastTrait, { d: '场上存在2个商人单位时，倍率+0.1；存在3个商人单位时，倍率再+0.1', lines: null });
+if (TDB.JadeBeastTrait) Object.assign(TDB.JadeBeastTrait, { d: '场上存在2个商人单位时，积分倍率+0.1；存在3个商人单位时，积分倍率再+0.1', lines: null });
 if (DB.JadeBeast) DB.JadeBeast.desc = '身上长着玉石的兽，同行越多越值钱。';
 if (M.TRAIT_H && M.TRAIT_H.JadeBeast) M.TRAIT_H.JadeBeast.start = function (b, e) {
   const n = b.run.roster.filter(u => DB[u.type] && DB[u.type].voc === '商人').length; let m = 0; if (n >= 2) m += 0.1; if (n >= 3) m += 0.1;
@@ -173,7 +173,7 @@ const FL = {
 function auraLinks(ctx, a, q, P, b) { const e = a.e; if (!b) return; const allies = b.ents.filter(o => o.alive && o !== e && o.side === e.side && Math.hypot(o.x - e.x, o.y - e.y) < 330); add(ctx, () => { allies.forEach((o, i) => { const k = cl((q - i * 0.05) * 1.8, 0, 1); if (k <= 0) return; ctx.globalAlpha = (1 - q) * 0.9; ctx.strokeStyle = a.col; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(P.x, P.chest); ctx.lineTo(P.x + (o.x - P.x) * k, P.chest + (o.y - 44 * o.sz - P.chest) * k); ctx.stroke(); if (k >= 1) glow(ctx, o.x, o.y - 44 * o.sz, 50, a.col, 0.5 * (1 - q)); });
   for (let i = 0; i < 2; i++) { ctx.save(); ctx.translate(P.x, P.y); ctx.scale(1, 0.32); ctx.globalAlpha = (1 - q) * (i ? 0.5 : 0.9); ctx.strokeStyle = a.col; ctx.lineWidth = 6 - i * 2; ctx.beginPath(); ctx.arc(0, 0, 330 * eo(cl(q * 1.5 - i * 0.2, 0, 1)), 0, 7); ctx.stroke(); ctx.restore(); } }); }
 // 头顶的特性徽记：墨底小方块 + 2px 特性色圈（战场是半分辨率层，尺寸取偶数），不用柔光
-function emblemAt(ctx, ic, x, y, s, col, a) { const cv = icc(ic, 2); if (!cv) return; const U = M.UI, P = M.PJ.PAL, w = Math.round(30 * s / 2) * 2, X = Math.round((x - w / 2) / 2) * 2, Y = Math.round((y - w / 2) / 2) * 2; ctx.save(); ctx.globalAlpha = Math.ceil(a * 4) / 4; U.R(ctx, X - 6, Y - 6, w + 12, w + 12, P.ink); U.R(ctx, X - 4, Y - 4, w + 8, w + 8, col); U.R(ctx, X - 2, Y - 2, w + 4, w + 4, P.abyss); ctx.imageSmoothingEnabled = false; ctx.drawImage(cv, X, Y, w, w); ctx.restore(); }
+function emblemAt(ctx, ic, x, y, s, col, a) { const cv = icc(ic, 2); if (!cv) return; const U = M.UI, P = M.PJ.PAL, w = Math.round(30 * s), X = Math.round((x - w / 2)), Y = Math.round((y - w / 2)); ctx.save(); ctx.globalAlpha = a; U.R(ctx, X - 6, Y - 6, w + 12, w + 12, P.ink); U.R(ctx, X - 4, Y - 4, w + 8, w + 8, col); U.R(ctx, X - 2, Y - 2, w + 4, w + 4, P.abyss); ctx.imageSmoothingEnabled = false; ctx.drawImage(cv, X, Y, w, w); ctx.restore(); }
 function drawAwake(ctx, a, T, b) {
   const e = a.e, d = T - a.t0; if (d < 0) return true; if (d > AW_LEN || !e.alive) return false;
   const P = where(e, T), big = a.big;
@@ -195,11 +195,14 @@ function drawAwake(ctx, a, T, b) {
   return true;
 }
 // the emblem stays over the head; it flares when the trait fires
+// (user ruling 2026-09-24) no emblem stays over the heads: it settles after the awakening and fades, and shows again
+// only for a moment when the trait fires
 function drawEmblem(ctx, e, T) {
-  const E = e._emb; if (!E || T < E.t0 + RISE1 || !e.alive || e.bench) return; const P = where(e, T), p = E.pulse != null ? cl((T - E.pulse) / 0.5, 0, 1) : 1;
-  const s = 0.9 + (p < 1 ? 0.6 * Math.sin(p * Math.PI) : 0), bob = Math.sin(T * 2.2 + e.id) * 3;
-  emblemAt(ctx, E.ic, P.x, P.head + bob, s * (E.big ? 1.1 : 1), E.col, e.stealth ? 0.4 : 1);
-  if (p < 1) add(ctx, () => { ctx.globalAlpha = 1 - p; ctx.strokeStyle = E.col; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(P.x, P.head + bob, 20 + 50 * p, 0, 7); ctx.stroke(); });
+  const E = e._emb; if (!E || T < E.t0 + RISE1 || !e.alive || e.bench) return; const P = where(e, T), p = E.pulse != null ? cl((T - E.pulse) / 0.8, 0, 1) : 1;
+  const settle = cl((T - E.t0 - RISE1) / 0.6, 0, 1), a = Math.max(p < 1 ? 1 - p : 0, 1 - settle); if (a <= 0.01) return;
+  const s = 0.9 + (p < 1 ? 0.6 * Math.sin(Math.min(1, p * 1.6) * Math.PI) : 0);
+  emblemAt(ctx, E.ic, P.x, P.head - 6 * (1 - a), s * (E.big ? 1.1 : 1), E.col, (e.stealth ? 0.4 : 1) * a);
+  if (p < 1) add(ctx, () => { ctx.globalAlpha = 1 - p; ctx.strokeStyle = E.col; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(P.x, P.head, 20 + 50 * p, 0, 7); ctx.stroke(); });
 }
 // a death trait's emblem leaves the body: to the killer (poison, curses) or up into a burst
 function drawRelease(ctx, r, T) {
@@ -228,9 +231,12 @@ if (P) {
 const oHud = M.drawBattleHudPx;
 M.drawBattleHudPx = function (ctx, b, T) {
   try {
-    if (b.awk && b.awk.length) b.awk = b.awk.filter(a => drawAwake(ctx, a, T, b));
-    for (const e of b.ents) if (e._emb) drawEmblem(ctx, e, T);
-    if (b.awr && b.awr.length) b.awr = b.awr.filter(r => drawRelease(ctx, r, T));
+    // these hang on the units: draw them once, in the world pass (under the battle camera), never again in the HUD pass
+    if (M._camPass !== 'hud') {
+      if (b.awk && b.awk.length) b.awk = b.awk.filter(a => drawAwake(ctx, a, T, b));
+      for (const e of b.ents) if (e._emb) drawEmblem(ctx, e, T);
+      if (b.awr && b.awr.length) b.awr = b.awr.filter(r => drawRelease(ctx, r, T));
+    }
   } catch (err) { (window.__mcErrs = window.__mcErrs || []).push('awaken: ' + (err && err.message)); }
   return oHud ? oHud.apply(this, arguments) : undefined;
 };

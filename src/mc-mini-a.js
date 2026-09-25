@@ -17,7 +17,7 @@ K.CI = (x, a, b, r, c) => { x.fillStyle = pc(c); x.beginPath(); x.arc(a, b, Math
 K.EL = (x, a, b, rx, ry, c, rot) => { x.fillStyle = pc(c); x.beginPath(); x.ellipse(a, b, Math.max(0, rx), Math.max(0, ry), rot || 0, 0, 7); x.fill(); };
 K.PL = (x, pts, c) => { x.fillStyle = pc(c); x.beginPath(); pts.forEach(([a, b], i) => (i ? x.lineTo(a, b) : x.moveTo(a, b))); x.closePath(); x.fill(); };
 K.LN = (x, a, b, c, d, w, col) => { x.strokeStyle = pc(col); x.lineWidth = w; x.lineCap = 'square'; x.beginPath(); x.moveTo(a, b); x.lineTo(c, d); x.stroke(); };
-K.RR = (x, a, b, w, h, r, c, st, sw) => { if (c) { x.fillStyle = pc(c); x.fillRect(a, b, w, h); } if (st) { const lw = Math.max(3, Math.round((sw || 2) / 3) * 3); x.strokeStyle = pc(st); x.lineWidth = lw; x.strokeRect(a + lw / 2, b + lw / 2, w - lw, h - lw); } };
+K.RR = (x, a, b, w, h, r, c, st, sw) => { if (c) { x.fillStyle = pc(c); x.fillRect(a, b, w, h); } if (st) { const lw = Math.max(3, Math.round((sw || 2))); x.strokeStyle = pc(st); x.lineWidth = lw; x.strokeRect(a + lw / 2, b + lw / 2, w - lw, h - lw); } };
 K.LG = (x, x0, y0, x1, y1, stops) => (U ? U.lg(x, x0, y0, x1, y1, stops) : stops[0][1]);
 K.RG = (x, a, b, r0, r1, stops) => (U ? U.rg(x, a, b, r0, r1, stops) : stops[0][1]);
 K.TX = (x, s, a, b, size, col, o = {}) => { if (U) { U.text(x, s, a, b, size, col, { align: o.al || 'center', shadow: o.sh !== 0 }); return; } x.font = size + "px 'Noto Serif SC', serif"; x.textAlign = o.al || 'center'; x.textBaseline = 'middle'; x.fillStyle = col; x.fillText(s, a, b); };

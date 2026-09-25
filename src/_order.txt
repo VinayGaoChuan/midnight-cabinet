@@ -53,6 +53,8 @@ mc-save.js
 mc-guide.js
 mc-flow.js
 mc-home.js
+mc-timeline.js
+mc-shops.js
 mc-portal.js
 mc-vision.js
 mc-recruit.js

@@ -129,7 +129,7 @@ M.saveCheck = { checkMeta, checkProfile };
 
 // ───────── the shredding ─────────
 // Pixel Juice（docs/design.md §11.5）：存档卡 = 机台维修模式的小屏（石板色机框、深渊色屏幕、青色字、扫描线）
-const U = M.UI, P = M.PJ.PAL, RM = () => !!M.PJ.reduced, stepT = (t, f) => (RM() ? t : Math.floor(t * f) / f), st4 = (v) => Math.round(cl(v, 0, 1) * 4) / 4;
+const U = M.UI, P = M.PJ.PAL, RM = () => !!M.PJ.reduced, stepT = (t) => t, st4 = (v) => cl(v, 0, 1);
 const frame = (x, a, b, w, h, k, c) => { U.R(x, a, b, w, k, c); U.R(x, a, b + h - k, w, k, c); U.R(x, a, b, k, h, c); U.R(x, a + w - k, b, k, h, c); };
 const CARD = { w: 620, x: 650, y: 250 };
 const drawSave = function (ctx, g) {
@@ -142,7 +142,7 @@ const drawSave = function (ctx, g) {
   // title
   ctx.globalAlpha = fin; U.text(ctx, t < T_TEAR ? '正在检测存档……' : wipeAll ? '存档与当前版本不兼容，已粉碎' : '不兼容的部分已粉碎，其余存档保留', 960, y0 - 70, 40, P.cream);
   // the card, row by row; broken rows are torn off and shattered
-  const slide = eo(cl(ts / 0.4, 0, 1)), cx = x0, cy = y0 + Math.round((1 - slide) * 80 / 6) * 6;
+  const slide = eo(cl(ts / 0.4, 0, 1)), cx = x0, cy = y0 + Math.round((1 - slide) * 80);
   const split = wipeAll ? eo(cl((ts - T_TEAR) / 0.5, 0, 1)) : 0;
   const drawRow = (r, i, dx, dy, rot, alpha) => {
     const ry = cy + 110 + i * rowH; ctx.save(); ctx.globalAlpha = alpha * fin; ctx.translate(cx + CARD.w / 2 + dx, ry + rowH / 2 + dy); ctx.rotate(rot);
@@ -173,7 +173,7 @@ const drawSave = function (ctx, g) {
   // scan line: 3px 冰青硬条 + 3px 青色余光，按 3px 一格往下走
   if (t > T_SCAN && t < T_TEAR) { const sy = Math.min(cy + h - 36, Math.round((cy + 110 + ((t - T_SCAN) / (T_TEAR - T_SCAN - 0.3)) * all.length * rowH) / 3) * 3); ctx.globalAlpha = 0.8 * fin; U.R(ctx, cx + 30, sy - 3, CARD.w - 60, 3, P.ice); ctx.globalAlpha = 0.4 * fin; U.R(ctx, cx + 30, sy, CARD.w - 60, 3, P.teal); ctx.globalAlpha = fin; }
   // CRT 扫描线：每 6px 一条 3px 墨色横纹，两格跳
-  if (!(wipeAll && split > 0)) { const off = RM() ? 0 : (Math.floor(t * 5) % 2) * 3; ctx.save(); ctx.globalAlpha = 0.3 * fin; ctx.fillStyle = P.ink; for (let yy = cy + 30 + off; yy < cy + h - 33; yy += 6) ctx.fillRect(cx + 30, yy, CARD.w - 60, 3); ctx.restore(); }
+  if (!(wipeAll && split > 0)) { const off = RM() ? 0 : 1.5 - 1.5 * Math.cos(t * 5 * Math.PI); ctx.save(); ctx.globalAlpha = 0.3 * fin; ctx.fillStyle = P.ink; for (let yy = cy + 30 + off; yy < cy + h - 33; yy += 6) ctx.fillRect(cx + 30, yy, CARD.w - 60, 3); ctx.restore(); }
   if (wipeAll && split >= 1 && !F.shards.all) { F.shards.all = []; for (let k = 0; k < 220; k++) F.shards.all.push({ x: cx + Math.random() * CARD.w, y: cy + Math.random() * h, vx: (Math.random() - 0.5) * 1400, vy: -500 - Math.random() * 700, s: 8 + Math.random() * 22, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 14, col: [P.slate, P.steel, P.teal, P.red, P.abyss][k % 5], t0: t }); try { S.impact && S.impact(); S.shatter && S.shatter(); } catch (e) {} if (g.fx && g.fx.flash) g.fx.flash(P.red, 0.5); if (g.fx && g.fx.kick) g.fx.kick(26); }
   Object.values(F.shards).forEach(list => (list || []).forEach(p => { const k = t - p.t0; if (k > 2.4) return; ctx.save(); ctx.globalAlpha = st4(1 - k / 2.4) * fin; ctx.translate(p.x + p.vx * k, p.y + p.vy * k + 1400 * k * k); ctx.rotate(p.rot + p.vr * k); ctx.fillStyle = p.col; ctx.beginPath(); ctx.moveTo(-p.s / 2, -p.s / 3); ctx.lineTo(p.s / 2, -p.s / 2); ctx.lineTo(p.s / 3, p.s / 2); ctx.closePath(); ctx.fill(); ctx.restore(); }));
   // verdict

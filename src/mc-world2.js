@@ -5,7 +5,7 @@ const { SP, C, spriteCanvas, pick, wpick, NODE } = M;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 // 界面件（站牌、箭头键、锁定框、小地图）画在半分辨率像素层里（mc-game-g.js）：坐标、线宽都取偶数，1 格 = 2 舞台像素，边才是硬的
 const PJ = M.PJ || {}, P = PJ.PAL || {};
-const E = (v) => Math.round(v / 2) * 2;
+const E = (v) => Math.round(v);
 const PR = (x, a, b, w, h, c) => { x.fillStyle = c; x.fillRect(E(a), E(b), E(w), E(h)); };
 // 站点类型 → 调色板含义色（撤离青、首领红、商店金、奇遇紫……）
 const NODE_C = { extract: 'teal', hold: 'teal', camp: 'amber', chest: 'gold', shop: 'gold', boss: 'red', elite: 'red', event: 'violet', recruit: 'blue', normal: 'pink', start: 'cream' };
@@ -20,7 +20,7 @@ function nodeTag(ctx, n, p) {
 // 方向键：金色街机键（上黄油高光、下琥珀暗阶、墨框、垂直硬投影），悬停抬起 4px、白框；箭头用像素块拼
 const ARW = ['....#...', '....##..', '#######.', '########', '#######.', '....##..', '....#...'];
 function arrowKey(ctx, dir, p, hot, T) {
-  const kw = 68, kh = 60, gy = E(p.y - kh / 2), off = hot ? -4 : PJ.reduced ? 0 : (Math.floor(T * 3) % 2) * -4, X = E(p.x - kw / 2), Y = gy + off;
+  const kw = 68, kh = 60, gy = E(p.y - kh / 2), off = hot ? -4 : PJ.reduced ? 0 : -2 + 2 * Math.cos(T * 3 * Math.PI), X = E(p.x - kw / 2), Y = gy + off;
   PR(ctx, X - 4, Y + kh + 4, kw + 8, 8 - off, P.ink);
   PR(ctx, X - 4, Y - 4, kw + 8, kh + 8, hot ? P.white : P.ink); PR(ctx, X, Y, kw, kh, P.gold); PR(ctx, X, Y, kw, 6, P.butter); PR(ctx, X, Y + kh - 8, kw, 8, P.amber);
   const u = 4, gw = dir === 'right' ? 8 : 7, gh = dir === 'right' ? 7 : 8, g0 = E(X + kw / 2 - gw * u / 2), h0 = E(Y + (kh - 2) / 2 - gh * u / 2);
@@ -28,7 +28,7 @@ function arrowKey(ctx, dir, p, hot, T) {
 }
 // 悬停时锁定目标站：四角金色括号（墨边），两档步进缩放
 function lockOn(ctx, cx, cy, T) {
-  const r = 78 + (PJ.reduced ? 0 : (Math.floor(T * 4) % 2) * 6), L = 30, t = 6;
+  const r = 78 + (PJ.reduced ? 0 : 3 - 3 * Math.cos(T * 4 * Math.PI)), L = 30, t = 6;
   const brk = (rr, LL, tt, c) => [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => { const X = cx + sx * rr, Y = cy + sy * rr; PR(ctx, sx < 0 ? X : X - LL, sy < 0 ? Y : Y - tt, LL, tt, c); PR(ctx, sx < 0 ? X : X - tt, sy < 0 ? Y : Y - LL, tt, LL, c); });
   brk(r + 2, L + 4, t + 4, P.ink); brk(r, L, t, P.gold);
 }

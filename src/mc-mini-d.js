@@ -186,7 +186,7 @@ MINI.camp = { title: '营火', img: 'e_camp', col: C.amber, text: '火堆还温�
     for (let i = 0; i < 3; i++) { const f = 0.8 + 0.25 * Math.sin(t * 13 + i * 2); x.fillStyle = [C.amber, C.gold, C.butter][i]; x.beginPath(); x.moveTo(fx0 - 40 + i * 12, fy0); x.quadraticCurveTo(fx0 - 30 + i * 10, fy0 - 60 * f, fx0 + Math.sin(t * 7 + i) * 8, fy0 - (120 - i * 30) * f); x.quadraticCurveTo(fx0 + 30 - i * 10, fy0 - 60 * f, fx0 + 40 - i * 12, fy0); x.fill(); }
     for (let i = 0; i < 10; i++) { const q = (t * 0.6 + i / 10) % 1; K.R(x, fx0 + Math.sin(i * 3 + q * 5) * 40, fy0 - 60 - q * 300, 3, 3, 'rgba(255,200,90,' + (1 - q) + ')'); }
     // 睡觉的 Z：冰蓝像素字，按 6px 一格往上飘、分四档变淡
-    if (rest) { K.SP(x, heroSp(this), CX - 220, FLOOR + 10, 150); for (let i = 0; i < 3; i++) { const q = (t * 0.5 + i / 3) % 1; x.save(); x.globalAlpha *= Math.ceil((1 - q) * 4) / 4; U.text(x, 'Z', Math.round((CX - 200 + q * 60) / 6) * 6, Math.round((FLOOR - 170 - q * 90) / 6) * 6, [T.cap, T.btn, T.title][i], C.ice, { num: true }); x.restore(); } }
+    if (rest) { K.SP(x, heroSp(this), CX - 220, FLOOR + 10, 150); for (let i = 0; i < 3; i++) { const q = (t * 0.5 + i / 3) % 1; x.save(); x.globalAlpha *= Math.ceil((1 - q) * 4) / 4; U.text(x, 'Z', Math.round((CX - 200 + q * 60)), Math.round((FLOOR - 170 - q * 90)), [T.cap, T.btn, T.title][i], C.ice, { num: true }); x.restore(); } }
     else { K.SP(x, heroSp(this), CX - 230, FLOOR, 180); }
     // 磨刀条：石板槽 + 琥珀目标区 + 奶油中线，火星是方块
     if (mg.phase === 'sharpen' || mg.phase === 'sharpDone') { const q = (mg.pt * 1.1) % 1, bx = Math.round(CX - 260 + q * 520); U.box(x, CX - 280, SY + 300, 560, 40, C.slate); K.R(x, CX - 42, SY + 300, 84, 40, C.amber); K.R(x, CX - 3, SY + 296, 6, 48, C.butter);

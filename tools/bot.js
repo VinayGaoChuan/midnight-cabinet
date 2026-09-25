@@ -38,7 +38,8 @@ window.__bot = async function (secs, opts = {}) {
       else if (s === 'over') { log.push('over'); break; }
       else if (s === 'base') {
         if (opts.stopAtBase && nodes > 2) break;
-        if (g.homeQ || g.lvFx || g.dayFx) { for (let i = 0; i < 40; i++) g.tick(1 / 30); await sleep(40); continue; }   // the return home plays in order: let it
+        if (g.modal && g.modal.choices && !g.modal.over) { const ch = g.modal.choices.find(c => !c.dis) || g.modal.choices[g.modal.choices.length - 1]; events++; ch.fn(); if (g.modal && g.modal.title === '流浪商人') g.modal.choices[g.modal.choices.length - 1].fn(); for (let i = 0; i < 10; i++) g.tick(1 / 30); continue; }   // calendar events: take the first thing on offer
+        if (g.homeQ || g.lvFx || g.dayFx || g.tlFx) { for (let i = 0; i < 40; i++) g.tick(1 / 30); await sleep(40); continue; }   // the return home plays in order: let it
         if (!g.panel) { if (!g.portalOn || !g.portalOn()) g.openWorlds(); else if (!g.bv.drop) { const st = (g.bv.steles || [])[0]; if (st) g.steleDrop(st.k, st.wx, st.wy); else if (g.bv.sv > 0.9 || !g.bv.steles) g.pickWorld(M.worldsOpen(g.meta)[0]); } } else if (g.panel.kind === 'loadout') g.launch(); else if (g.panel.kind === 'raidPrep') { raids++; g.raidLaunch(); } else g.closePanel();
         await sleep(900);
       }

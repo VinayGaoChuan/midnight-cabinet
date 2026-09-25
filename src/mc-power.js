@@ -52,7 +52,7 @@ M.oddsWord = (mine, theirs) => { const r = mine / Math.max(1, theirs); return r 
 // ───────── the map: badges over the fights and over the leader ─────────
 // 地图画在半分辨率层：尺寸取偶数（4px 墨框、24px 字），夜色小牌 + 顶边胜算色条 + 6px 硬投影
 function badge(ctx, x, y, ic, txt, col) {
-  const U = M.UI, P = M.PJ.PAL, e = (v) => Math.round(v / 2) * 2; ctx.save(); ctx.font = U.font(24, true);
+  const U = M.UI, P = M.PJ.PAL, e = (v) => Math.round(v); ctx.save(); ctx.font = U.font(24, true);
   const w = e(ctx.measureText(txt).width + 48), h = 36, X = e(x - w / 2), Y = e(y - h / 2);
   U.R(ctx, X + 2, Y + 6, w + 4, h + 4, P.ink); U.R(ctx, X - 4, Y - 4, w + 8, h + 8, P.ink); U.R(ctx, X, Y, w, h, P.night); U.R(ctx, X, Y, w, 4, col); U.R(ctx, X, Y + h - 4, w, 4, P.abyss);
   const cv = M.iconCanvas(ic, 2); if (cv) { ctx.imageSmoothingEnabled = false; ctx.drawImage(cv, X + 6, e(y - 12), 24, 24); }
@@ -65,8 +65,8 @@ M.drawWorld2 = function (ctx, run, walker, opts = {}) {
     if (run && run.map && walker && !run.region.tut) {
       const z = opts.zoom || 1, toS = (x, y) => ({ x: 960 + (x - walker.camX) * z, y: 560 + (y - walker.camY) * z }), mine = M.runPower(run), map = run.map;
       const cur = walker.edge ? walker.edge.b : walker.node, curCol = map.nodes[cur] ? map.nodes[cur].col : 0;
-      map.nodes.forEach(n => { if (!n.seen || n.done || !FIGHT[n.type] || (n.col <= curCol && n.id !== cur)) return; const p = toS(n.x, n.y - 178); if (p.x < -100 || p.x > 2020 || p.y < -60 || p.y > 1140) return; const pw = M.nodePower(run, n); badge(ctx, p.x, p.y, 't_sword', String(pw), M.oddsCol(mine, pw)); });
-      const w = toS(walker.x, walker.y - 150); badge(ctx, w.x, w.y, 'u_star', String(mine), '#ffcf4a');
+      map.nodes.forEach(n => { if (!n.seen || n.done || !FIGHT[n.type] || (n.col <= curCol && n.id !== cur)) return; const p = toS(n.x, n.y - 128); if (p.x < -100 || p.x > 2020 || p.y < -60 || p.y > 1140) return; const pw = M.nodePower(run, n); badge(ctx, p.x, p.y, 't_sword', String(pw), M.oddsCol(mine, pw)); });
+      const w = toS(walker.x, walker.y - 104); badge(ctx, w.x, w.y, 'u_star', String(mine), '#ffcf4a');
     }
   } catch (e) { (window.__mcErrs = window.__mcErrs || []).push('power badge: ' + (e && e.message)); }
   return r;

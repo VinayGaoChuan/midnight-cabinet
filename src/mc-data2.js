@@ -55,9 +55,9 @@ SP.b_empty = { pal:{ g:'#2a2230', G:'#1a1620' }, rows:["................",".....
 // ───────── heroes ─────────
 const HEROES = {
   watchman:{ n:'守夜人', sprite:'watchman', hp:420, atk:26, cd:0.9, range:60, spd:110, skill:{ n:'照夜', d:'所有敌人停顿 2.5 秒', cd:18 } },
-  widow:{ n:'赌徒寡妇', sprite:'widow', hp:300, atk:30, cd:0.8, range:380, ranged:1, spd:100, skill:{ n:'梭哈', d:'8 秒内每次击杀，倍率 +0.1', cd:24 } },
+  widow:{ n:'赌徒寡妇', sprite:'widow', hp:300, atk:30, cd:0.8, range:380, ranged:1, spd:100, skill:{ n:'梭哈', d:'8 秒内每次击杀，积分倍率 +0.1', cd:24 } },
   nun:{ n:'驱魔修女', sprite:'nun', hp:340, atk:22, cd:1.0, range:360, ranged:1, spd:100, skill:{ n:'圣咏', d:'全队回复 35% 生命', cd:20 } },
-  butcherlord:{ n:'屠宰场主', sprite:'butcherlord', hp:480, atk:36, cd:1.2, range:65, spd:95, skill:{ n:'血祭', d:'献祭生命最低的部队，倍率 +1', cd:22 } },
+  butcherlord:{ n:'屠宰场主', sprite:'butcherlord', hp:480, atk:36, cd:1.2, range:65, spd:95, skill:{ n:'血祭', d:'献祭生命最低的部队，积分倍率 +1', cd:22 } },
   clockmaker:{ n:'钟表匠', sprite:'clockmaker', hp:320, atk:24, cd:0.7, range:340, ranged:1, spd:100, skill:{ n:'倒带', d:'部队攻速 +60%，持续 6 秒', cd:22 } },
   cremator:{ n:'焚尸人', sprite:'cremator', hp:380, atk:28, cd:1.0, range:70, spd:105, skill:{ n:'火葬', d:'点燃所有敌人', cd:20 } },
 };
@@ -72,7 +72,7 @@ const TALENTS = {
     { n:'铁壁', d:'先锋部队生命 +25%', m:{ vanHp:0.25 } }, { n:'坚壁', d:'守护者部队生命 +25%', m:{ guaHp:0.25 } }, { n:'祷言', d:'祭司部队生命 +25%', m:{ priHp:0.25 } }, { n:'保险柜', d:'死亡不掉落的宝物格 +1', m:{ bank:1 } }, { n:'好体质', d:'医院疗养速度 +50%', m:{ hospital:0.5 } },
     { n:'护盾', d:'部队开局获得 15% 护盾', m:{ shield:0.15 } }, { n:'耐心', d:'坚守时间 -20%', m:{ hold:-0.2 } } ],
   luck: [
-    { n:'红运', d:'初始倍率 +0.2', m:{ startMult:0.2 } }, { n:'砍价', d:'商店价格 -12%', m:{ shop:-0.12 } }, { n:'赌性', d:'道具转出好效果的概率 +8%', m:{ tier:0.08 } },
+    { n:'红运', d:'初始积分倍率 +0.2', m:{ startMult:0.2 } }, { n:'砍价', d:'商店价格 -12%', m:{ shop:-0.12 } }, { n:'赌性', d:'道具转出好效果的概率 +8%', m:{ tier:0.08 } },
     { n:'殉道', d:'死亡时灵魂碎片 +60%', m:{ deathShards:0.6 } }, { n:'传承', d:'死亡时经验球 +60%', m:{ deathOrbs:0.6 } }, { n:'寻宝', d:'宝箱积分 +40%', m:{ chest:0.4 } },
     { n:'直觉', d:'事件好结果概率 +15%', m:{ eventLuck:0.15 } }, { n:'拾荒', d:'获得物资 +25%', m:{ supplies:0.25 } } ],
 };
@@ -86,7 +86,7 @@ const STATS = {
   heroAtk:{ d:'领袖攻击 +{v}%', b:0.15, pct:1 }, unitAtk:{ d:'部队攻击 +{v}%', b:0.08, pct:1 }, crit:{ d:'暴击 +{v}%', b:0.05, pct:1 },
   skillCd:{ d:'技能冷却 -{v}%', b:-0.12, pct:1 }, heroHp:{ d:'领袖生命 +{v}%', b:0.15, pct:1 }, unitHp:{ d:'部队生命 +{v}%', b:0.08, pct:1 },
   postHeal:{ d:'战后回复 {v}% 生命', b:0.04, pct:1 }, shield:{ d:'部队开局护盾 {v}%', b:0.08, pct:1 },
-  startMult:{ d:'初始倍率 +{v}', b:0.15 }, baseScore:{ d:'基础积分 +{v}%', b:0.1, pct:1 }, tier:{ d:'道具好效果 +{v}%', b:0.05, pct:1 }, shop:{ d:'商店价格 -{v}%', b:-0.08, pct:1 },
+  startMult:{ d:'初始积分倍率 +{v}', b:0.15 }, baseScore:{ d:'基础积分 +{v}%', b:0.1, pct:1 }, tier:{ d:'道具好效果 +{v}%', b:0.05, pct:1 }, shop:{ d:'商店价格 -{v}%', b:-0.08, pct:1 },
 };
 const QUALITY = [ { n:'普通', c:'#cfd8e3', m:1 }, { n:'精良', c:'#9ccc6a', m:1.5 }, { n:'稀有', c:'#6fa8dc', m:2.2 }, { n:'传说', c:'#ffcc33', m:3.2 } ];
 const BUILDINGS = {

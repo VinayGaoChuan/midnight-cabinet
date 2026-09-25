@@ -128,7 +128,7 @@ class B3 extends M.Battle2 {
     this.hero = this.mk({ side: 'A', kind: 'hero', hd: M.hdDef(Hh.sprite), sz: 1.25, x: HERO_POS.x, y: HERO_POS.y, hp: run.hero.hp, maxHp: M.heroMaxHp(run.hero, run.M), atk: M.heroAtk(run.hero, run.M) * (1 + (run.runBuff.heroAtk || 0)), iv: Hh.cd, range: Hh.range, spd: Hh.spd, ranged: !!Hh.ranged, isHero: true, bench: true, d: { race: '英雄', voc: '', q: 2 } });
     const melee = [], ranged = [], still = [];
     run.roster.forEach(u => { const d = DB[u.type]; if (!d) return; (d.ranged === 2 ? still : d.ranged ? ranged : melee).push(u); });
-    let k = 0; const place = (arr, x) => arr.forEach((u, i) => { const n = arr.length; this.addUnit(u, x + (i % 2) * 44, 110 + (i + 0.5) * (540 / n), k++ * 0.13); });
+    let k = 0; const place = (arr, x) => arr.forEach((u, i) => { const per = 8, n = Math.min(arr.length, per), col = Math.floor(i / per), j = i % per; this.addUnit(u, x + (j % 2) * 44 - col * 96, 110 + (j + 0.5) * (540 / n), k++ * Math.min(0.13, 2.4 / Math.max(1, arr.length))); });
     place(melee, 720); place(ranged, 500); place(still, 330);
     // enemies take the field at the same time, on screen, in formation
     const L = cfg.list, opening = (s) => cfg.mode !== 'hold' || s.spawn < 3, first = L.filter(opening), later = L.filter(s => !opening(s));
@@ -344,7 +344,7 @@ class B3 extends M.Battle2 {
     else { if (src && src.alive) this.call(src, 'kill', e); if (!e.summon && !e.evolved) { this.deadUids.push(e.uid); this.float(e.x, e.y + 30, '倒下', '#ff8a8a', 26); } Sfx.die(); }
   }
   explode(x, y, dmg, src) { this.fxp({ k: 'boom', x, y, life: 0.4 }); this.shake = Math.max(this.shake, 10); Sfx.boom(); this.ents.forEach(o => { if (this.active(o) && o.side === 'E' && Math.hypot(o.x - x, o.y - y) < 150) this.deal(src || this.hero, o, dmg, { skill: 1 }); }); }
-  addMult(m, x, y, label) { m = Math.round(m * 10) / 10; if (!m) return; this.mult = Math.round((this.mult + m) * 10) / 10; this.float(x, y, (label ? label + ' ' : '') + '倍率 +' + m, PL.magenta, 40); this.fxp({ k: 'rays', x, y: y + 20, col: '#ffcc33', life: 0.6, r: 90 }); Sfx.mult(); }
+  addMult(m, x, y, label) { m = Math.round(m * 10) / 10; if (!m) return; this.mult = Math.round((this.mult + m) * 10) / 10; this.float(x, y, (label ? label + ' ' : '') + '积分倍率 +' + m, PL.magenta, 40); this.fxp({ k: 'rays', x, y: y + 20, col: '#ffcc33', life: 0.6, r: 90 }); Sfx.mult(); }
   itemEffect(key, tier) {
     const T = this.t, hs = Math.max(200, this.cfg.budget * 2.4) * this.ek;
     const foes = () => this.ents.filter(e => this.active(e) && e.side === 'E' && e.x < 1900);
@@ -442,7 +442,7 @@ function drawBars(ctx, e, T, b) {
   const fw = w * clamp(e.hp / e.maxHp, 0, 1); if (fw > 0) { U.R(ctx, x, top, fw, 6, hc); U.R(ctx, x, top, fw, 2, hh); U.R(ctx, x, top + 4, fw, 2, hl); }
   if (e.shield > 0) U.R(ctx, x, top, w * clamp(e.shield / e.maxHp, 0, 1), 2, PL.ice);
   if (e.hasMana) { const ch = b.skillCharge ? b.skillCharge(e) : e.mana, ready = ch >= 100 && !e.casting && e.alive;
-    if (ready && Math.floor(T * 4) % 2) { U.R(ctx, x - 2, top + 6, w + 4, 8, PL.butter); U.R(ctx, x, top + 8, w, 4, PL.ink); }   // a ready skill waiting for its trigger: the bar's frame blinks
+    if (ready) { ctx.save(); ctx.globalAlpha *= 0.5 + 0.5 * Math.sin(T * 4 * Math.PI); U.R(ctx, x - 2, top + 6, w + 4, 8, PL.butter); U.R(ctx, x, top + 8, w, 4, PL.ink); ctx.restore(); }   // a ready skill waiting for its trigger: the bar's frame blinks
     const mw = w * clamp(ch / 100, 0, 1); if (mw > 0) { U.R(ctx, x, top + 8, mw, 4, PL.teal); U.R(ctx, x, top + 8, mw, 2, PL.ice); } }
   // 品质菱形：品质色像素菱形，墨色大一圈垫底，顶格亮一阶
   if (e.d.q >= 1 && !e.isHero) { const q = M.UI.Q[Math.min(3, e.d.q)], dx = x - 10, dy = top + 2;

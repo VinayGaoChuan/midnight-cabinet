@@ -186,7 +186,7 @@ class Battle {
     tg.burn = { dps: dps * m, t: 3, src };
   }
   healE(o, amt) { o.hp = Math.min(o.maxHp, o.hp + amt); for (let i = 0; i < 4; i++) this.fx.push({ k:'plus', x:o.x - 20 + i * 14, y:o.y - 40, t0:this.t + i * 0.05, life:0.8 }); }
-  addMult(m, x, y, label) { m = Math.round(m * 100) / 100; this.mult += m; this.float(x, y, (label ? label + ' ' : '') + '倍率 +' + m, C.gold, 40); Sfx.mult(); this.lastScore = this.t; }
+  addMult(m, x, y, label) { m = Math.round(m * 100) / 100; this.mult += m; this.float(x, y, (label ? label + ' ' : '') + '积分倍率 +' + m, C.gold, 40); Sfx.mult(); this.lastScore = this.t; }
   kill(e, src, crit) {
     if (!e.alive) return;
     e.alive = false; e.deadT = this.t;
