@@ -40,6 +40,7 @@ const CONCEPTS = [
   { id: 'furn', cat: '房间', icon: 'u_star', title: '家具', line: '用一局结束时换来的代币解锁、升级家具，每件都是永久加成。', scr: 'room', sel: '[data-tip="r-tokens"]', when: (g) => g.prof && g.prof.stats && g.prof.stats.games > 0 },
   // ── 基地 ──
   { id: 'core', cat: '基地', icon: 't_heart', title: '基地核心', line: '整局只有 3 点：领袖在出征中阵亡 -1，归零这一局结束；通关一个世界 +1。', scr: 'base', sel: '[data-tip="b-core"]' },
+  { id: 'dayev', cat: '基地', icon: 't_clover', title: '日程事件', line: '时间轴上带图标的日子：到那天就发生，悬浮看它做什么。', scr: 'base', sel: '[data-g="timeline"]' },
   { id: 'raid', cat: '基地', icon: 't_sword', title: '时间轴', line: '今天和之后 9 天：哪天混沌来袭，哪天有别的事件。', scr: 'base', sel: '[data-g="timeline"]' },
   { id: 'sup', cat: '基地', img: () => sprite('sack'), title: '物资', line: '挖岩层、建房间、招领袖、打造宝物都花它。出征和守城带回来。', scr: 'base', sel: '[data-fx="msup"]' },
   { id: 'shard', cat: '基地', img: () => sprite('shard'), title: '灵魂碎片', line: '高端材料：建史诗 / 传说建筑、精铸宝物时要用。领袖阵亡时留下。', scr: 'base', sel: '[data-fx="msh"]' },
@@ -52,7 +53,6 @@ const CONCEPTS = [
   { id: 'portal', cat: '出征', icon: 'g_gate', title: '传送门', line: '点它打开，上方升起今天能去的世界碑，点碑出征。被怪物打破，这一局结束。', scr: 'base', at: (g) => { if (g.panel || !g.bv || !M.BASE_GEO) return null; const p = g.bv.toScreen(M.BASE_GEO.DOOR_X, -130); return { x: p.x - 100, y: p.y - 110, w: 200, h: 230 }; } },
   { id: 'danger', cat: '出征', img: () => sprite('skull'), title: '危险度', line: '碑上的低 / 中 / 高：按你最强领袖的战斗力算。', scr: 'base', at: (g) => M.STELE_AT && M.STELE_AT.danger(g) },
   { id: 'loot', cat: '出征', img: () => sprite('sack'), title: '世界特产', line: '碑下方的图标：这个世界多给的东西。悬浮看详情。', scr: 'base', at: (g) => M.STELE_AT && M.STELE_AT.loot(g) },
-  { id: 'rest', cat: '基地', icon: 't_hourglass', title: '休整一天', line: '不出征，直接过一天：挖掘、建造推进 1 天。', scr: 'base', sel: '[data-tip="b-rest"]' },
   { id: 'relic', cat: '领袖', icon: 't_eye', title: '宝物', line: '出征时带在身上的装备，领袖阵亡就丢了（保险库能保住第 1 件）。', scr: 'base', sel: '[data-g="relics"]' },
   { id: 'lvup', cat: '领袖', img: () => sprite('orb'), title: '升级', line: '花经验球立刻升一级，生命、攻击都涨，还给 1 个天赋点。', scr: 'base', sel: '[data-tip="hs-lvup"]' },
   { id: 'talent', cat: '领袖', icon: 't_clover', title: '天赋树', line: '三条路线：杀伐、坚忍、运数。从中间往外点，每级 1 点。', scr: 'base', sel: '[data-tip^="tal-"]:not([data-tip="tal-root"])' },
@@ -65,22 +65,22 @@ const CONCEPTS = [
   { id: 'wallet', cat: '出征', img: () => sprite('coin', 4), title: '积分', line: '这一局的钱：打赢战斗得到，在夜市和奇遇里花。回基地就清零。', scr: 'world', sel: '[data-tip="w-wallet"]' },
   { id: 'haul', cat: '出征', img: () => sprite('sack'), title: '本次收获', line: '物资、经验、图纸要撤离或通关才带得回基地；领袖阵亡就全丢。', scr: 'world', sel: '[data-tip="w-rsup"]' },
   { id: 'roster', cat: '出征', icon: 'v_warrior', title: '部队', line: '战斗里自动作战。在夜市买、招募旗领，最多 10 支。', scr: 'world', sel: '[data-tip="w-roster"]' },
-  { id: 'items', cat: '出征', icon: 't_chest', title: '支援道具', line: '战斗中按 Q W E 由领袖放出。用的时候转一下，转出这次的效果。', scr: ['world', 'battle'], sel: '[data-tip="b-items"]' },
+  { id: 'items', cat: '出征', icon: 't_chest', title: '支援道具', line: '战斗中按 Q W E 由领袖放出。用的时候转一下，转出这次的效果；图片下面写着它是哪一类。', scr: ['world', 'battle'], sel: '[data-tip="b-items"]' },
   { id: 'banners', cat: '出征', img: () => sprite('flag'), title: '战旗', line: '整支部队的常驻加成，比如「射手战旗」让所有射手更强。', scr: ['world', 'shop'], sel: '[data-fx="banners"],[data-g="shop-banners"]' },
   { id: 'minimap', cat: '出征', icon: 'e_path', title: '小地图', line: '整条路线的缩略图。越往右越深，最右边是首领。', scr: 'world', at: () => ({ x: 1330, y: 30, w: 560, h: 250 }), when: (g) => g.run && !g.run.tut },
   { id: 'wpower', cat: '出征', icon: 'u_star', title: '战斗力', line: '敌人头上是它的战斗力，你头上是你的。颜色：绿稳赢，黄有风险，红很危险。', scr: 'world', sel: '[data-tip="w-power"]' },
   { id: 'hcap', cat: '领袖', icon: 't_command', title: '扩建', line: '在招募房间里花物资扩建，领袖上限 +1。', scr: 'base', sel: '[data-g="hcap"]' },
-  { id: 'legion', cat: '领袖', icon: 't_skill', title: '领袖技能', line: '每个职业一个技能。在场外指挥时按空格放，冷却按走过的站数算；亲自上场后，它自己攒满、有敌人在范围里就放。', scr: ['base', 'world'], sel: '[data-tip="tal-root"],[data-g="w-skill"]' },
+  { id: 'legion', cat: '领袖', icon: 't_skill', title: '领袖技能', line: '每个职业一个技能：在场外指挥时按空格放，冷却按走过的站数算。', scr: ['base', 'world'], sel: '[data-tip="tal-root"],[data-g="w-skill"]' },
   // ── 战斗 ──
   { id: 'bmode', cat: '战斗', icon: 't_sword', title: '战斗目标', line: '普通战：消灭所有敌人；坚守战：撑过倒计时。', scr: 'battle', sel: '[data-tip="b-mode"]', freeze: 1 },
   { id: 'score', cat: '战斗', icon: 't_mult', title: '积分 = 基础 × 积分倍率', line: '击杀得基础分；精英、首领、战旗、宝物会加积分倍率。积分就是这一局的钱。', scr: 'battle', sel: '[data-tip="b-score"]', freeze: 1 },
-  { id: 'bhero', cat: '战斗', icon: 't_command', title: '指挥位', line: '领袖站在左边不参战；部队全灭后亲自上场，倒下就永久死亡。', scr: 'battle', sel: '[data-tip="b-hero"]', freeze: 1 },
-  { id: 'bskill', cat: '战斗', icon: 't_skill', title: '领袖技能', line: '按空格放。领袖亲自上场后改为自动释放。', scr: 'battle', sel: '[data-g="b-skill"]', freeze: 1, when: (g) => g.battle && g.battle.hero && g.battle.hero.bench },
+  { id: 'bhero', cat: '战斗', icon: 't_command', title: '指挥位', line: '领袖站在左边不参战；部队全灭或首领战时亲自上场，倒下就永久死亡。', scr: 'battle', sel: '[data-tip="b-hero"]', freeze: 1 },
+  { id: 'bskill', cat: '战斗', icon: 't_skill', title: '领袖技能', line: '按空格放。', scr: 'battle', sel: '[data-g="b-skill"]', freeze: 1, when: (g) => g.battle && g.battle.hero && g.battle.hero.bench },
   { id: 'voc', cat: '标签与品质', icon: 'v_archer', title: '职业标签', line: '决定打法：先锋、守护者扛伤，战士近战，射手远程，刺客爆发，法师技能，牧师、圣骑士治疗，祭司强化和削弱，召唤师召唤，商人赚钱。', scr: ['shop', 'world', 'battle', 'base'], sel: '[data-tip^="tag-voc-"]' },
   { id: 'trait', cat: '战斗', icon: 'e_skull', title: '特性', line: '卡片上那一句话就是这支部队的本事。开战时它的图标从身上亮出来，停在头顶，生效时会闪。', scr: ['shop', 'world'], sel: '[data-g="trait"]' },
   { id: 'upower', cat: '标签与品质', icon: 'u_star', title: '战斗力', line: '部队有多强。先挑缺的职业，再在里面挑战斗力高、买得起的。', scr: ['shop'], sel: '[data-g="upower"]' },
   // ── 夜市 ──
-  { id: 'shop', cat: '夜市', icon: 'e_market', title: '夜市', line: '部队、战旗、道具三个区，点击直接买。点自己的部队可以半价卖掉。', scr: 'shop', sel: '[data-g="shop-units"]' },
+  { id: 'shop', cat: '夜市', icon: 'e_market', title: '商店', line: '每家店卖的不一样：部队、战旗或道具，招牌旁边写着它的特点和代价。点自己的部队可以半价卖掉。', scr: 'shop', sel: '[data-g="shop-units"]' },
   // ── 守城 ──
   { id: 'raidfield', cat: '守城', icon: 'f_defense', title: '武器房间', line: '越靠上的武器房间打得越远；每往下一层，地面覆盖少一格。', scr: 'raid', at: () => ({ x: 860, y: 600, w: 200, h: 120 }) },
 ];
