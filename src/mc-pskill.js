@@ -49,7 +49,7 @@ M.pskillLine = (h) => { const P = PS[h.cls]; return P ? '亲自上场后，' + P
 // the one skill, in one sentence: what the button does, then what it keeps doing on the field
 // the skill button (map HUD, battle): the skill itself, said straight away — no Ctrl layer
 G.skillTipOf = function (h) { return h && HEROES[h.cls] ? { title: HEROES[h.cls].skill.n, c: '#ffe08a', icon: (M.SKILL_IC || {})[h.cls] || 't_skill', d: M.heroSkillD(h, this.meta) } : null; };
-M.heroSkillD = (h, m) => { const H = HEROES[h.cls], P = PS[h.cls]; return M.skillDesc(h) + '（冷却 ' + M.skillNodeCd(h, m) + ' 个节点）。' + (P ? '上场后：' + P.d + '。' : ''); };
+M.heroSkillD = (h, m) => M.skillDesc(h) + '，冷却 ' + M.skillNodeCd(h, m) + ' 个节点。';
 // ready to fire on the field: enough enemies inside the skill's own reach, measured the way the cast measures it
 M.psReady = function (b, h, cls) { const P = PS[cls]; if (!P) return false; const foes = b.ents.filter(o => b.active(o) && o.side === 'E'); if (!foes.length) return false;
   if (cls === 'nun') return b.ents.some(o => o.alive && o.side === 'A' && !o.bench && o.hp / o.maxHp <= 0.75) || near(foes, h.x, h.y, P.r).length >= Math.min(P.min, foes.length);

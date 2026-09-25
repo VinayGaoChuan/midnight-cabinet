@@ -63,7 +63,7 @@ const TR = {
 };
 M.TRAIT_AW = TR;
 // what the no-trait units are for, by vocation
-const VOC_LINE = { 先锋: '站在前排扛伤害', 战士: '近战输出', 射手: '远程输出', 法师: '法术输出', 祭司: '支援友军', 商人: '能赚积分' };
+const VOC_LINE = { 先锋: '站在前排扛伤害', 守护者: '站在前排保护友军', 战士: '近战输出', 圣骑士: '站在前排给友军回血', 射手: '远程输出', 刺客: '爆发输出', 法师: '法术输出', 牧师: '给友军回血', 祭司: '支援友军', 召唤师: '召唤帮手', 商人: '能赚积分' };
 const names = (s) => s.replace(/[A-Z][A-Za-z]+/g, (w) => (DB[w] ? DB[w].n : w));
 // the one sentence: the unit's first two traits, or what its vocation does
 M.unitLine = function (k) {

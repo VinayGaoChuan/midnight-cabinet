@@ -54,7 +54,7 @@ const DEF = {
   star:    { n: '陨星坑', hue: '#9fb8ff', any: { startMult: 0.25 }, anyD: '每场战斗初始倍率 +0.25', fitN: '锻造', fit: (B) => !!B.forge, fitFx: () => ({ forgeQUp: 1 }), fitD: '打造的宝物品质必定 +1' },
   storm:   { n: '雷暴核心', hue: '#8ff6ff', any: { heroAtk: 0.12 }, anyD: '所有领袖攻击 +12%', fitN: '武器', fit: isW, fitFx: () => ({ xChain: 3, dmg: 0.2 }), fitD: '伤害 +20%，每次攻击放出连锁闪电（跳 3 个敌人）' },
   bones:   { n: '英灵冢', hue: '#e8e0ff', any: { heroHp: 0.15, deathShards: 0.3 }, anyD: '所有领袖生命 +15%，阵亡的碎片 +30%', fitN: '招募', fit: cat('recruit'), fitFx: () => ({ recruitMin: 2 }), fitD: '招募的领袖至少为「史诗」' },
-  hourglass: { n: '时之沙', hue: '#ffe08a', any: { skillNodeCd: -1 }, anyD: '所有领袖军团技能冷却 -1 个节点', fitN: '运势', fit: cat('luck'), fitFx: () => ({ startItemQ: 1 }), fitD: '出征开局多带 1 个「史诗」道具' },
+  hourglass: { n: '时之沙', hue: '#ffe08a', any: { skillNodeCd: -1 }, anyD: '所有领袖军团技能冷却 -1 个节点', fitN: '运势', fit: cat('luck'), fitFx: () => ({ startItemQ: 1 }), fitD: '出征开局多带 1 个支援道具（至少转出「史诗」效果）' },
   dream:   { n: '梦境裂隙', hue: '#ff3aa0', any: { bpLuck: 0.4 }, anyD: '图纸掉率 +40%', fitN: '锻造', fit: (B) => !!B.forge, fitFx: () => ({ forgeTwice: 0.4 }), fitD: '打造时 40% 概率多得一件' },
   ygg:     { n: '世界树根', hue: '#7aff9a', any: { supplyDaily: 15, orbDaily: 15 }, anyD: '基地每天 +15 物资、+15 经验球', fitN: '后勤 / 自然', fit: (B) => (B.cat === 'store' || B.style === 'nature') && !!B.fx, fitFx: () => ({ prodMul: 1 }), fitD: '这个房间自己的效果 ×2' },
   crown:   { n: '王座遗骸', hue: '#ffcc33', any: { relicSlot: 1 }, anyD: '每名领袖出征多带 1 件宝物', fitN: '防御', fit: cat('defense'), fitFx: (B) => (B.weapon ? { dmg: 0.4, xSplash: 130, xSlow: 1 } : { defArmy: 3 }), fitD: '武器：伤害 +40%，命中溅射并减速；其它：再多 3 名守卫' },

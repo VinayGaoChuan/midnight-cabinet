@@ -9,6 +9,7 @@ Object.keys(M.BUILDINGS).forEach(k => { const w = M.BUILDINGS[k].weapon; if (w &
 const qGlow = (q) => q >= 3 ? '0 0 26px ' + Q[3].c + ', 0 0 60px rgba(255,200,60,0.45)' : q === 2 ? '0 0 22px rgba(232,240,250,0.55)' : q === 1 ? '0 0 10px rgba(224,144,74,0.4)' : 'none';
 const qBg = (q) => 'radial-gradient(ellipse at 50% 78%,' + Q[q].c + (q >= 2 ? '66' : '33') + ' 0%,rgba(20,14,24,0.95) 62%)';
 M.qGlow = qGlow; M.qBg = qBg;
+const ITEM_BG = 'radial-gradient(ellipse at 50% 78%,#c9a24a44 0%,rgba(20,14,24,0.95) 62%)', ITEM_GLOW = '0 0 12px rgba(201,162,74,0.35)';
 const oldBase = G.bldTip;
 G.bldTip = function (key, c, r) {
   const m = this.meta, B = M.BUILDINGS[key];
@@ -72,7 +73,7 @@ G.buy = function (zone, i) {
   M.Sfx.coin(); M.Sfx.stamp(); if (this.fx.explode) this.fx.explode(from.x, from.y, Q[c.q].c, 0.8 + c.q * 0.25); else this.fx.burst(from.x, from.y, Q[c.q].c, 30); if (this.fx.coins) this.fx.coins(from.x, from.y, 8, { v: 600 });
   if (c.q >= 2) { this.fx.rays(from.x, from.y, Q[c.q].c, 0.9, { r: 260 }); this.fx.kick(8 + c.q * 3); }
   if (c.kind === 'unit') this.award([{ k: 'unit', type: c.type }], from);
-  if (c.kind === 'item') this.award([{ k: 'item', key: c.key, q: c.q }], from);
+  if (c.kind === 'item') this.award([{ k: 'item', key: c.key }], from);
   if (c.kind === 'legion') { run.legion[c.key] = true; this.fly(M.spriteCanvas('flag', 8), from, 'banners', Q[c.q].c, () => { this.pulse.banners = now(); M.Sfx.up(1); }); }
   this.bump();
 };
@@ -125,7 +126,7 @@ G.view = function () {
   if (this.tipData && v.tip) v.tip.lines = (this.tipData.lines || []).map(l => ({ segs: l.rich || [{ t: l.t, c: l.c }] }));
   if (v.w && run) {
     v.w.roster = run.roster.filter(u => !this.hideU.has(u.uid)).map(u => { const d = DB[u.type]; return { img: M.spriteURL(u.type, 4), q: d.q, bg: qBg(d.q), glow: qGlow(d.q), stars: u.lv > 1 ? 'Lv' + u.lv : '', tipOn: this.tipFn(() => M.unitTip(u.type, u, run)), border: this.sel === u.uid ? '#ffffff' : Q[d.q].c, onClick: () => { if (this.screen === 'shop') { this.sel = this.sel === u.uid ? null : u.uid; M.Sfx.click(); this.bump(); } } }; });
-    v.w.items = run.items.map((k, i) => ({ has: !!k && !this.hideI.has(i), img: k ? M.spriteURL(M.ITEMS[k].icon, 5) : '', border: k ? Q[run.itemQ[i] || 0].c : '#3a3040', bg: k ? qBg(run.itemQ[i] || 0) : '#100c14', glow: k ? qGlow(run.itemQ[i] || 0) : 'none', tipOn: this.tipFn(k ? this.itemTip(k, run.itemQ[i]) : { title: '空道具栏', d: '宝箱、商店、事件都能获得支援道具。' }) }));
+    v.w.items = run.items.map((k, i) => ({ has: !!k && !this.hideI.has(i), img: k ? M.spriteURL(M.ITEMS[k].icon, 5) : '', border: k ? M.ITEM_C : '#3a3040', bg: k ? ITEM_BG : '#100c14', glow: k ? ITEM_GLOW : 'none', tipOn: this.tipFn(k ? this.itemTip(k) : { title: '空道具栏', d: '宝箱、商店、事件都能获得支援道具。' }) }));
     v.w.rosterN = run.roster.length + ' / ' + M.ROSTER_CAP;
     v.w.banners = Object.keys(run.legion).map(k => { const L = M.LEGION[k]; return { n: L.name.replace('战旗', ''), c: Q[L.q].c, glow: qGlow(L.q), tipOn: this.tipFn({ title: L.name, c: Q[L.q].c, kind: Q[L.q].n + ' · 战旗', d: L.desc }) }; });
     v.w.hasBanners = v.w.banners.length > 0; v.w.banSc = this.ps('banners');
@@ -137,7 +138,7 @@ G.view = function () {
     v.s = { wallet: v.w.wallet, walSc: v.w.walSc, refreshText: '刷新 · ' + M.refreshCost(run), refreshBorder: run.wallet >= M.refreshCost(run) ? '#e8dcc4' : '#3a3040' };
     v.s.units = run.shop.units.map((c, i) => { const d = DB[c.type]; return Object.assign(card('units', c, i, i), { img: M.spriteURL(c.type, 10), n: d.n, race: d.race, rc: M.RACES[d.race] || '#fff', voc: d.voc, vc: M.VOCS[d.voc] || '#aaa', trait: M.traitsOf(c.type).map(T => T.n).join(' · ') || '无特性', pw: '战力 ' + M.unitPower(c.type), tipOn: this.tipFn(() => { const t = M.unitTip(c.type, null, run); t.kind = Q[c.q].n + ' · 价格 ' + c.cost + ' · 点击购买'; return t; }) }); });
     v.s.banners = run.shop.banners.map((c, i) => { const L = M.LEGION[c.key]; return Object.assign(card('banners', c, i, 6 + i), { n: L.name, emb: L.name.slice(0, 1), desc: L.desc, tipOn: this.tipFn({ title: L.name, c: Q[c.q].c, kind: Q[c.q].n + ' · 战旗 · 价格 ' + c.cost, d: L.desc + '。本局一直生效。', lines: [{ rich: M.rich(L.desc) }] }) }); });
-    v.s.items = run.shop.items.map((c, i) => Object.assign(card('items', c, i, 8 + i), { img: M.spriteURL(M.ITEMS[c.key].icon, 8), n: M.ITEMS[c.key].name, tipOn: this.tipFn(() => this.itemTip(c.key, c.q)) }));
+    v.s.items = run.shop.items.map((c, i) => Object.assign(card('items', c, i, 8 + i), { qc: M.ITEM_C, bg: ITEM_BG, glow: ITEM_GLOW, img: M.spriteURL(M.ITEMS[c.key].icon, 8), n: M.ITEMS[c.key].name, tipOn: this.tipFn(() => this.itemTip(c.key)) }));
     v.s.noBanner = !v.s.banners.length;
     const u = run.roster.find(x => x.uid === this.sel); v.s.selOn = !!u; v.s.sell = u ? '卖出 ' + DB[u.type].n + ' +' + M.fmt(M.sellValue(run, u)) : '';
   }

@@ -5,7 +5,7 @@ const { pick, wpick, nice } = M;
 const DB = M.DB, TDB = M.TDB, Q = M.QUALITY;
 // ───────── races / vocations ─────────
 M.RACES = { 兽人:'#8fd060', 不死:'#8fe0ff', 骷髅:'#e8e0cc', 人类:'#ffd98a', 精灵:'#b8ff90', 僵尸:'#c8e070', 科技:'#6ff0ff', 恶魔:'#ff6a4a', 自然:'#d8ff70', 虚空:'#c890ff', 混沌:'#ff4a4a', 野兽:'#ffb060', 英雄:'#ffd060' };
-M.VOCS = { 先锋:'#7fb0ff', 战士:'#ff8a6a', 射手:'#ffd060', 法师:'#c890ff', 祭司:'#9cffb0', 商人:'#ffcc33' };
+M.VOCS = {}; Object.keys(M.VOC || {}).forEach(v => { M.VOCS[v] = M.VOC[v].c; });
 // custom unit demonstrating a race-count trait
 DB.JadeBeast = { n:'宝玉兽', q:1, g:'优质', voc:'商人', race:'兽人', type:'Summon', cost:90, hp:900, atk:34, as:100, spd:320, ranged:0, rad:256, tr:['JadeBeastTrait'], desc:'身上长着玉石的兽，同族越多越值钱。' };
 TDB.JadeBeastTrait = { n:'玉石共鸣', d:'场上存在2个兽人单位时，倍率+0.1；存在3个兽人单位时，倍率再+0.1', cls:'JadeBeast', lines:[{ need:2, t:'2 个兽人：倍率 +0.1' }, { need:3, t:'3 个兽人：倍率再 +0.1' }] };
@@ -62,6 +62,11 @@ M.LEGION = {
   archer:{ name:'射手战旗', q:0, icon:'flag', cost:60, desc:'射手单位攻击速度 +15%', m:{ voc:'射手', as:0.15 } },
   mage:{ name:'法师战旗', q:1, icon:'flag', cost:90, desc:'法师单位法力恢复 +30%', m:{ voc:'法师', mana:0.3 } },
   priest:{ name:'祭司战旗', q:1, icon:'flag', cost:90, desc:'祭司单位生命与攻击 +15%', m:{ voc:'祭司', hp:0.15, atk:0.15 } },
+  guardian:{ name:'守护者战旗', q:0, icon:'flag', cost:60, desc:'守护者单位生命 +20%', m:{ voc:'守护者', hp:0.2 } },
+  assassin:{ name:'刺客战旗', q:1, icon:'flag', cost:90, desc:'刺客单位攻击 +20%', m:{ voc:'刺客', atk:0.2 } },
+  paladin:{ name:'圣骑士战旗', q:1, icon:'flag', cost:90, desc:'圣骑士单位生命与攻击 +12%', m:{ voc:'圣骑士', hp:0.12, atk:0.12 } },
+  cleric:{ name:'牧师战旗', q:1, icon:'flag', cost:90, desc:'牧师单位法力恢复 +30%', m:{ voc:'牧师', mana:0.3 } },
+  summoner:{ name:'召唤师战旗', q:1, icon:'flag', cost:90, desc:'召唤师单位法力恢复 +30%', m:{ voc:'召唤师', mana:0.3 } },
   merchant:{ name:'商人战旗', q:1, icon:'flag', cost:90, desc:'击杀获得的基础积分 +15%', m:{ base:0.15 } },
   zeal:{ name:'狂热战旗', q:2, icon:'flag', cost:140, desc:'每场战斗初始倍率 +0.1', m:{ mult:0.1 } },
   bounty:{ name:'赏金战旗', q:2, icon:'flag', cost:140, desc:'击杀精英或首领时，倍率额外 +0.1', m:{ eliteMult:0.1 } },
@@ -76,18 +81,18 @@ M.legionMods = function (run, d) {
   return o;
 };
 // leader talents aimed at one vocation: rngAtk / warAs / magMana / vanHp / priHp …
-const VK = { 先锋: 'van', 战士: 'war', 射手: 'rng', 法师: 'mag', 祭司: 'pri', 商人: 'mer' };
+const VK = { 先锋: 'van', 守护者: 'gua', 战士: 'war', 圣骑士: 'pal', 射手: 'rng', 刺客: 'ass', 法师: 'mag', 牧师: 'cle', 祭司: 'pri', 召唤师: 'sum', 商人: 'mer' };
 M.vocMods = function (md, d) { const k = VK[d && d.voc]; if (!k || !md) return { hp: 0, atk: 0, as: 0, mana: 0 }; return { hp: md[k + 'Hp'] || 0, atk: md[k + 'Atk'] || 0, as: md[k + 'As'] || 0, mana: md[k + 'Mana'] || 0 }; };
 M.legionSum = (run, key) => Object.keys(run.legion || {}).reduce((a, k) => a + ((M.LEGION[k] && M.LEGION[k].m[key]) || 0), 0);
 // ───────── shop ─────────
 M.shopQW = function (run) { const L = Math.max(0, run.lastL || 0); return [Math.max(8, 70 - L * 9), 26 + L * 2, 6 + L * 3.2, Math.max(0, -3 + L * 1.6)]; };
-M.itemPrice = (q) => [40, 70, 120, 200][q];
+M.itemPrice = () => 55;
 M.rollShop = function (run) {
   const qw = M.shopQW(run), pool = M.SHOP_POOL.concat(['JadeBeast']);
   const units = []; for (let i = 0; i < 6; i++) { const q = wpick([0, 1, 2, 3], x => qw[x]); const c = pool.filter(k => DB[k].q === q && !units.some(u => u.type === k)); const k = pick(c.length ? c : pool); units.push({ kind: 'unit', type: k, q: DB[k].q, cost: Math.max(10, Math.round(DB[k].cost * M.priceMul(run))) }); }
   const lk = Object.keys(M.LEGION).filter(k => !run.legion[k]).sort(() => Math.random() - 0.5).slice(0, 2);
   const banners = lk.map(k => ({ kind: 'legion', key: k, q: M.LEGION[k].q, cost: Math.round(M.LEGION[k].cost * M.priceMul(run)) }));
-  const items = []; for (let i = 0; i < 3; i++) { const q = wpick([0, 1, 2, 3], x => [60, 28, 10, 2][x]); items.push({ kind: 'item', key: pick(Object.keys(M.ITEMS)), q, cost: Math.round(M.itemPrice(q) * M.priceMul(run)) }); }
+  const items = []; for (let i = 0; i < 3; i++) items.push({ kind: 'item', key: pick(Object.keys(M.ITEMS)), q: 0, cost: Math.round(M.itemPrice() * M.priceMul(run)) });
   run.shop = { units, banners, items };
 };
 M.refreshCost = (run) => 10 + 5 * (run.refreshN || 0);
@@ -149,9 +154,10 @@ M.newRun3 = function (meta, hero, worldKey, relicIds) {
   run.roster = []; run.legion = {}; run.field = null; run.refreshN = 0; run.meta.unlocked = M.SHOP_POOL.slice();
   const starters = M.SHOP_POOL.filter(k => DB[k].q === 0 && DB[k].cost >= 15 && DB[k].cost <= 60 && DB[k].ranged !== 2).sort(() => Math.random() - 0.5);
   const tut = run.region.tut;
-  (tut ? ['FootSoldier', 'Ranger', 'Guard'] : starters.slice(0, 3)).forEach(k => M.addUnit(run, k));
+  const defS = starters.filter(k => M.isDefVoc && M.isDefVoc(DB[k].voc)), rest = starters.filter(k => !defS.includes(k));
+  (tut ? ['FootSoldier', 'Ranger', 'Guard'] : (defS.length ? [defS[0]] : []).concat(rest).slice(0, 3)).forEach(k => M.addUnit(run, k));
   run.startMult = Math.round(((run.startMult || 0)) * 10) / 10;
-  const df = run.region.diff || 0; run.lvl0 = tut ? 0.3 : 0.5 + df * 0.2 + Math.min(0.8, (meta.day - 1) * 0.03); const endL = tut ? 1.5 : Math.min(11, 3 + df * 1.0 + run.len.cols * 0.12); run.lvlStep = Math.max(0.12, (endL - run.lvl0) / Math.max(1, run.len.cols - 1));
+  const df = run.region.diff || 0; run.lvl0 = tut ? 0.3 : 0.5 + df * 0.2 + Math.min(0.8, (meta.day - 1) * 0.03); const endL = tut ? 1.5 : Math.min(11.5, 3 + df * 1.0 + run.len.cols * 0.16); run.lvlStep = Math.max(0.12, (endL - run.lvl0) / Math.max(1, run.len.cols - 1));
   if (tut) { run.len = { n: '序章', cols: 10, ex: 0, elite: [1, 1], boss: 1 }; run.map = M.genMap2(run, meta); }
   return run;
 };

@@ -81,7 +81,7 @@ G.tipFor = function (key) {
     'b-count': () => ({ title: '战况', c: '#e8dcc4', d: '我方剩余部队 / 剩余敌人。' }),
     'b-pause': () => ({ title: '暂停 ' + kq('pause'), c: '#e8dcc4' }),
     'b-speed': () => ({ title: '战斗速度 ' + kq('speed'), c: '#f2c14e' }),
-    'b-items': () => ({ title: '支援道具', c: '#ffcc33', d: '使用时随机品质，至少是道具本身的品质。' }),
+    'b-items': () => ({ title: '支援道具', c: M.ITEM_C, d: '用的时候转一下，转出这次的效果。' }),
     'w-hero': () => run && this.heroTip(run.hero),
     'w-hp': () => ({ title: '领袖生命', c: '#f2c14e', d: '不会自动恢复，归零领袖永久死亡。' }),
     'w-wallet': () => ({ title: '积分', c: '#ffcc33', d: '这次出征的钱，回基地后清空。' }),
@@ -175,7 +175,7 @@ G.startSettle = function () {
     if (th.shards) { const sh = Math.round((2 + cfg.w * 1.5) * (n.type === 'boss' ? 4 : n.type === 'elite' ? 2 : 1)); this.hold('rshard', run.loot.shards); run.loot.shards += sh; tiles.push({ icon: 'shard', v: sh, c: '#d8a0ff', to: 'rshard' }); }
     const bpHold = () => this.hold('rbp', run.loot.bp.length);
     const pb = (n.type === 'boss' ? 1 : n.type === 'elite' ? 0.45 : run.tut ? 0 : 0.06) + (th.rbp || 0) * (n.type === 'normal' ? 1 : 0);
-    const drop = (k) => { bpHold(); run.loot.bp.push(k); const I = M.itemInfo(k); tiles.push({ icon: I.icon === 'scroll' || I.icon === 'gem' ? I.icon : I.icon, v: 1, c: I.c, to: 'rbp', n: I.n }); };
+    const drop = (k) => { bpHold(); run.loot.bp.push(k); const I = M.itemInfo(k); tiles.push({ icon: I.icon, v: 1, c: I.c, to: 'rbp', n: I.n, key: k }); };
     if (Math.random() < pb && !run.tut) drop(th.rbp && Math.random() < 0.5 ? 'rbp:' + M.pick(Object.keys(M.RELICS)) : M.dropBp(n.type === 'boss' ? 1 : 0.3, run.theme && run.theme.style, th.bpq));
     if (!run.tut && Math.random() < (n.type === 'boss' ? 0.3 : 0) + (th.tile || 0)) drop('tile:' + M.dropTile());
     const heal = (run.mods.postHeal || 0) + (th.heal || 0); if (heal) { const v = Math.round(mx * heal); this.hold('hp', Math.round(h.hp)); h.hp = Math.min(mx, h.hp + v); tiles.push({ icon: 'r_heart', v: '+' + v, c: '#9cff7a', to: 'hp' }); }

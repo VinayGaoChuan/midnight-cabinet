@@ -29,8 +29,7 @@ M.tileBrief = function (key) {
 };
 
 // ───────── leaders (user ruling 2026-09-24) ─────────
-//   Lv2 驱魔修女 / life bar 1864/1870 / skill icon + name / blinking 按住 Ctrl… / blinking 有 N 个天赋点可用
-// With Ctrl only the skill changes: it unfolds into its sentence; everything else stays where it was.
+//   Lv2 驱魔修女 / life bar 1864/1870 / skill icon + name + its one sentence (the legion skill only) / blinking 有 N 个天赋点可用
 const oHT = G.heroTip;
 G.heroTip = function (h) {
   const t = oHT.apply(this, arguments); if (!t || !h) return t;
@@ -38,11 +37,10 @@ G.heroTip = function (h) {
   const bar = [{ bar: f, bc: f < 0.35 ? '#ff5a4a' : '#9cff7a', bw: 190 }, { t: hp + '/' + mx, c: '#e8dcc4' }];
   const s1 = { img: IC((M.SKILL_IC || {})[h.cls] || 't_skill'), t: H.skill.n, c: '#ffe08a' };
   t.title = t.briefTitle = 'Lv' + h.lv + ' ' + H.n;
-  t.brief = [bar, [s1]];
-  t.briefDet = [bar, { parts: [s1], desc: M.heroSkillD(h, m) }];
+  t.brief = [bar, { parts: [s1], desc: M.heroSkillD(h, m) }];
   t.kind = ''; t.d = ''; t.lines = [];
   t.alert = h.points > 0 ? { t: '有 ' + h.points + ' 个天赋点可用', c: '#f2c14e' } : null;
-  t.ctrl = true;
+  t.ctrl = true;   // compact: title + icon rows only
   return t;
 };
 
@@ -66,10 +64,8 @@ G.view = function () {
     T.hasPic = !!tip.pic && !T.hasIcon; T.pic = tip.pic || '';
     T.hasAlert = !!tip.alert; T.alertTxt = tip.alert ? tip.alert.t : ''; T.alertC = tip.alert ? tip.alert.c || '#f2c14e' : '#f2c14e';
     const more = !!(tip.kind || tip.d || (tip.lines && tip.lines.length) || tip.briefDet);
-    if (cmp && !det) { if (tip.briefTitle) T.title = tip.briefTitle; T.hasKind = false; T.hasD = false; T.lines = []; }
-    // items: the sentence stays, the per-quality lines wait for Ctrl
-    const lnCtrl = !!tip.ctrlLines && !!(tip.lines && tip.lines.length); if (lnCtrl && !det) T.lines = [];
-    T.hint = ((cmp && more) || lnCtrl) && !det; T.hintTxt = hintTxt;
+    if (cmp) { if (tip.briefTitle) T.title = tip.briefTitle; T.hasKind = false; T.hasD = false; T.lines = []; }
+    T.hint = false; T.hintTxt = '';
   }
   // shop cards (see mc-awaken.js for the rest)
   if (v.s && this.run && this.run.shop) (v.s.units || []).forEach((su, i) => { const c = this.run.shop.units[i], sk = c && M.unitSkill && M.unitSkill(c.type); su.pwN = String(su.pw || '').replace(/[^\d.,万k]/g, '') || su.pw; su.hasSk = !!sk; });
@@ -85,7 +81,7 @@ G.view = function () {
       pn.tileTxt = hid ? '' : T.d; }
   }
   if (pn) {
-    pn.hint = !det && !!(this._dtHas); pn.hintTxt = hintTxt;
+    pn.hint = false; pn.hintTxt = '';
   }
   return v;
 };

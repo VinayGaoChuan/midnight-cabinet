@@ -37,6 +37,11 @@ IC.v_warrior = (x) => { sword(x); };
 IC.v_archer = (x) => { arc(x, 8, 16, 13, -1.25, 1.25, 2.6, '#a8743a'); line(x, 12, 4, 12, 28, 1, '#f5ecd8'); line(x, 6, 16, 28, 16, 2, '#e8dcc4'); poly(x, [[30, 16], [25, 13], [25, 19]], '#dfe6f0'); poly(x, [[6, 16], [3, 13], [3, 19]], '#d0453c'); };
 IC.v_mage = (x) => { line(x, 10, 28, 20, 10, 3, '#8a5a3a'); circ(x, 22, 8, 5.5, '#c890ff'); circ(x, 21, 7, 2.5, '#ffffff'); star(x, 9, 9, 4, 1.4, 4, '#e8d0ff'); };
 IC.v_priest = (x) => { circ(x, 16, 16, 12, '#fff2a0'); rect(x, 14, 5, 4, 22, '#fffbe8'); rect(x, 8, 11, 16, 4, '#fffbe8'); circ(x, 16, 13, 2, '#ffcc33'); };
+IC.v_guardian = (x) => { arc(x, 16, 16, 14, 3.6, 5.8, 2, '#dff0ff'); poly(x, [[8, 7], [24, 7], [24, 22], [16, 29], [8, 22]], '#6a9ad8'); poly(x, [[11, 10], [21, 10], [21, 21], [16, 25], [11, 21]], '#b8dcff'); rect(x, 15, 11, 2, 12, '#3a5a8a'); rect(x, 12, 15, 8, 2, '#3a5a8a'); };
+IC.v_paladin = (x) => { line(x, 9, 27, 20, 12, 3, '#8a6a3a'); poly(x, [[16, 6], [27, 11], [23, 18], [13, 13]], '#dfe6f0'); rect(x, 5, 5, 3, 9, '#ffe08a'); rect(x, 2, 8, 9, 3, '#ffe08a'); };
+IC.v_assassin = (x) => { poly(x, [[25, 4], [27, 6], [13, 20], [11, 18]], '#e8eef8'); line(x, 9, 16, 15, 22, 2.6, '#c83a5a'); line(x, 11, 20, 6, 25, 3, '#3a2a30'); poly(x, [[7, 4], [5, 6], [19, 20], [21, 18]], '#b8c0cc'); line(x, 23, 16, 17, 22, 2.6, '#c83a5a'); line(x, 21, 20, 26, 25, 3, '#3a2a30'); };
+IC.v_cleric = (x) => { circ(x, 16, 16, 12, '#2a5a3a'); circ(x, 16, 16, 10, '#9cffb0'); rect(x, 13, 8, 6, 16, '#ffffff'); rect(x, 8, 13, 16, 6, '#ffffff'); };
+IC.v_summoner = (x) => { arc(x, 16, 18, 11, 0, 7, 2, '#b8a0ff'); star(x, 16, 18, 9, 3.6, 5, '#7a5ad8'); circ(x, 16, 18, 3, '#e8dcff'); ell(x, 16, 7, 5, 3, '#d8c8ff'); circ(x, 16, 7, 1.6, '#3a2060'); };
 IC.v_merchant = (x) => { poly(x, [[9, 12], [23, 12], [27, 27], [5, 27]], '#a07040'); rect(x, 12, 8, 8, 5, '#8a5a30'); coin(x, 16, 20, 5.5); };
 // ── building styles
 IC.s_core = (x) => { rect(x, 6, 6, 20, 22, '#6a5a70'); rect(x, 9, 9, 14, 19, '#1a1420'); ell(x, 16, 18, 5, 8, '#5fd0c0'); ell(x, 16, 18, 2.5, 4, '#e0fff5'); rect(x, 4, 4, 24, 4, '#caa84a'); };
@@ -126,7 +131,7 @@ M.iconURL = function (key, s) { const c = M.iconCanvas(key, s); return c ? c.toD
 // ── tags: races, vocations, building styles & functions share one presentation
 const RC = M.RACES, VC = M.VOCS;
 const RACE_IC = { 兽人: 'r_orc', 不死: 'r_undead', 骷髅: 'r_skel', 人类: 'r_human', 精灵: 'r_elf', 僵尸: 'r_zombie', 科技: 'r_tech', 恶魔: 'r_demon', 自然: 'r_nature', 虚空: 'r_void', 混沌: 'r_chaos', 野兽: 'r_beast', 英雄: 'r_hero' };
-const VOC_IC = { 先锋: 'v_vanguard', 战士: 'v_warrior', 射手: 'v_archer', 法师: 'v_mage', 祭司: 'v_priest', 商人: 'v_merchant' };
+const VOC_IC = {}; Object.keys(M.VOC || {}).forEach(v => { VOC_IC[v] = M.VOC[v].ic; });
 M.STYLE_COL = { core: '#ffe08a', steam: '#e0904a', magic: '#c890ff', nature: '#9cdc6a', water: '#6fd0ff', fantasy: '#ffcc33', scifi: '#4af0ff', medieval: '#d8c0a0', cartoon: '#ff8ac0' };
 M.CAT_COL = { core: '#e8c86a', power: '#ffd23a', forge: '#b8c0cc', med: '#ff6a6a', recruit: '#7fb0ff', train: '#ffa060', store: '#c8a060', defense: '#ff6a5a', luck: '#7fe060', misc: '#d0a0ff' };
 M.CAT.core = '仓库';
@@ -142,7 +147,8 @@ M.TAG = {
 };
 // one sentence in context, the tag's name in its colour (the title row already shows icon + name)
 const TAG_LINE = { race: ['该部队属于', '种族'], voc: ['该部队的职业是', ''], style: ['该建筑具有', '风格'], cat: ['该建筑用于', ''] };
-M.tagTip = (t) => t && { title: t.n, c: t.c, icon: t.icon, lines: [{ rich: [{ t: TAG_LINE[t.kind][0], c: '#e8dcc4' }, { t: t.n, c: t.c, b: 1 }, { t: TAG_LINE[t.kind][1], c: '#e8dcc4' }] }] };
+const vocRich = (n, c) => { const d = (M.VOC && M.VOC[n] && M.VOC[n].d) || '', m = /^(.*擅长)([^，。]+)(.*)$/.exec(d); return m ? [{ t: m[1], c: '#e8dcc4' }, { t: m[2], c, b: 1 }, { t: m[3], c: '#e8dcc4' }] : [{ t: d, c: '#e8dcc4' }]; };
+M.tagTip = (t) => t && { title: t.n, c: t.c, icon: t.icon, lines: [{ rich: t.kind === 'voc' ? vocRich(t.n, t.c) : [{ t: TAG_LINE[t.kind][0], c: '#e8dcc4' }, { t: t.n, c: t.c, b: 1 }, { t: TAG_LINE[t.kind][1], c: '#e8dcc4' }] }] };
 const byName = { style: {}, cat: {} }; Object.keys(STYLE_IC).forEach(k => { if (k !== 'core') byName.style[M.STYLE[k]] = k; }); Object.keys(CAT_IC).forEach(k => { byName.cat[M.CAT[k]] = k; });
 // words recognised inside rich text; ctx 'bld' prefers building meanings for words shared with races (自然)
 const WORDS = Object.keys(RACE_IC).filter(n => n !== '英雄').map(n => ['race', n]).concat(Object.keys(VOC_IC).map(n => ['voc', n]), Object.keys(byName.style).map(n => ['style', n]), Object.keys(byName.cat).map(n => ['cat', n])).sort((a, b) => b[1].length - a[1].length);

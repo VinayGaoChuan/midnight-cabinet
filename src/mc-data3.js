@@ -108,7 +108,7 @@ const BUILDINGS = {
   terracotta:{ n:'兵马俑', q:3, cat:'defense', style:'fantasy', pw:-2, cost:420, days:5, fx:{ defArmy:4 }, d:'守城时，4 名陶俑士兵加入战斗。' },
   zeus:{ n:'奥林匹亚宙斯神像', q:2, cat:'defense', style:'fantasy', pw:-3, cost:360, days:4, weapon:{ range:4, dmg:70, cd:1.8, kind:'zeus', chain:4 }, d:'召唤落雷，连锁 4 个敌人。' },
   kotoku:{ n:'高德院', q:1, cat:'defense', style:'fantasy', pw:-1, cost:200, days:3, fx:{ defArmy:2 }, d:'守城时，2 名武僧加入战斗。' },
-  hagia:{ n:'圣索菲亚大教堂', q:2, cat:'luck', style:'fantasy', pw:-2, cost:300, days:4, fx:{ startItemQ:1 }, d:'出征开局获得 1 个支援道具，至少为「史诗」。' },
+  hagia:{ n:'圣索菲亚大教堂', q:2, cat:'luck', style:'fantasy', pw:-2, cost:300, days:4, fx:{ startItemQ:1 }, d:'出征开局获得 1 个支援道具，第一次用至少转出「史诗」效果。' },
   forbidden:{ n:'紫禁城', q:3, cat:'misc', style:'medieval', pw:-2, cost:440, days:5, fx:{ relicSlot:1 }, d:'每名领袖出征可多带 1 件宝物。' },
   taj:{ n:'泰姬陵', q:2, cat:'misc', style:'fantasy', pw:-1, cost:280, days:4, fx:{ deathShards:1 }, d:'领袖死亡时，灵魂碎片 +100%。' },
   bigben:{ n:'大本钟', q:1, cat:'store', style:'steam', pw:-1, cost:220, days:3, fx:{ supplyDaily:15, craftCost:-0.3 }, d:'每天 +15 物资，打造费用 -30%。' },
@@ -147,7 +147,8 @@ const WORLDS = {
   hell:{ n:'地狱', diff:5, unlock:{ day:18, after:'ward' }, bg:'#1a0806', road:'#4a1a10', tile:'#260c08', deco:['spike','tomb','spike','lamp'], amb:'ash', light:'#ff5a2a', grade:['#ff5020','#300000'], boss:'dealer', desc:'热风从地底吹上来。' },
   casino:{ n:'地下赌场', diff:6, unlock:{ after:'hell' }, bg:'#140d0d', road:'#3a2020', tile:'#1b1111', deco:['slot','crate','lamp','horse'], amb:'motes', light:'#ffcc33', grade:['#ffcc60','#301010'], boss:'dealer', desc:'庄家在最里面等你。一切的尽头。', final:1 },
 };
-const LENGTH = [ { n:'短', cols:7, ex:1, elite:[0, 1], boss:1, w:30 }, { n:'中', cols:10, ex:2, elite:[1, 2], boss:1, w:35 }, { n:'长', cols:13, ex:3, elite:[2, 3], boss:2, w:25 }, { n:'极长', cols:17, ex:4, elite:[3, 5], boss:3, w:10 } ];
+// a map's length is its number of bosses; mid = random columns before each segment's shop; elite = weights for 0 / 1 / 2 elites per segment
+const LENGTH = [ { n:'短', boss:1, mid:[2, 3], elite:[3, 5, 2], w:30 }, { n:'中', boss:2, mid:[2, 3], elite:[3, 5, 3], w:35 }, { n:'长', boss:3, mid:[2, 3], elite:[2, 5, 4], w:25 }, { n:'极长', boss:4, mid:[2, 3], elite:[2, 4, 5], w:10 } ];
 const RAID_EVERY = 5;
 Object.assign(M, { QUALITY, RARITY, RELICS, BUILDINGS, TILES, STYLE, CAT, WORLDS, LENGTH, BCOLS, BROWS, CORE, RAID_EVERY });
 

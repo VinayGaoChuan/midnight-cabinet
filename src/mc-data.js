@@ -134,12 +134,14 @@ const TIERS = [
   { n:'青铜', c:'#c07a45' }, { n:'白银', c:'#cfd8e3' }, { n:'黄金', c:'#ffcc33' }, { n:'传说', c:'#b86bff' },
 ];
 const ITEMS = {
-  bolt:{ name:'闪电风暴', icon:'bolt', desc:'召唤落雷，劈向敌人', tiers:['2 道细雷','5 道分叉连锁','8 道粗雷 + 冲击波','12 道紫色雷暴'] },
-  heal:{ name:'回魂烛', icon:'candle', desc:'治疗全队', tiers:['回复 20%','回复 50%','回满 + 护盾','回满 + 护盾 + 复活 1 名'] },
-  frame:{ name:'旧相框', icon:'frame', desc:'从相框里召唤帮手', tiers:['1 只火小鬼','3 只火小鬼','1 只巨型怨灵','2 只怨灵 + 3 只小鬼'] },
-  bell:{ name:'招魂铃', icon:'bell', desc:'震慑敌人', tiers:['敌人停顿 1 秒','停顿 2 秒','停顿 3.5 秒','敌人互相攻击 5 秒'] },
-  cup:{ name:'骰盅', icon:'die', desc:'直接加倍率', tiers:['倍率 +0.2','倍率 +0.5','倍率 +1','倍率 +2.5'] },
+  bolt:{ name:'闪电风暴', icon:'bolt', desc:'召唤落雷劈向敌人，有概率连锁、附带冲击波', tiers:['2 道细雷','5 道分叉连锁','8 道粗雷 + 冲击波','12 道紫色雷暴'] },
+  heal:{ name:'回魂烛', icon:'candle', desc:'治疗全队，有概率增加护盾、复活', tiers:['回复 20%','回复 50%','回满 + 护盾','回满 + 护盾 + 复活 1 名'] },
+  frame:{ name:'旧相框', icon:'frame', desc:'从相框里召唤帮手，有概率召出巨型怨灵', tiers:['1 只火小鬼','3 只火小鬼','1 只巨型怨灵','2 只怨灵 + 3 只小鬼'] },
+  bell:{ name:'招魂铃', icon:'bell', desc:'震慑敌人，有概率让它们自相残杀', tiers:['敌人停顿 1 秒','停顿 2 秒','停顿 3.5 秒','敌人互相攻击 5 秒'] },
+  cup:{ name:'骰盅', icon:'die', desc:'直接加倍率，运气好能加很多', tiers:['倍率 +0.2','倍率 +0.5','倍率 +1','倍率 +2.5'] },
 };
+// every support item is the same colour: dark gold
+const ITEM_C = '#c9a24a';
 const WHEEL = [
   { n:'什么都没有', c:'#6b6570', w:22 }, { n:'返还 ×2', c:'#ffcc33', w:24 }, { n:'随机部队', c:'#6fa8dc', w:20 },
   { n:'倍率 +0.3', c:'#ff9a3c', w:16 }, { n:'随机道具', c:'#b86bff', w:18 },
@@ -151,7 +153,7 @@ const PERKS = {
   drawer:{ name:'多一格抽屉', desc:'商店多一个格子', max:1, icon:'frame' },
   photo:{ name:'全家福', desc:'部队上限 +1', max:2, icon:'frame' },
   pocket:{ name:'口袋', desc:'开局获得 1 个随机支援道具', max:1, icon:'candle' },
-  rabbit:{ name:'兔脚', desc:'支援道具升品概率 +5%', max:3, icon:'die' },
+  rabbit:{ name:'兔脚', desc:'支援道具转出好效果的概率 +5%', max:3, icon:'die' },
 };
 
 // ───────── helpers ─────────
@@ -295,7 +297,7 @@ function rollTier(meta) {
   return t;
 }
 
-window.MC=Object.assign(window.MC||{},{C,SP,spriteDims,spriteCanvas,spriteURL,TAGS,UNITS,BASE_UNITS,SUMMONS,ENEMIES,BOSS_AT,MAX_WAVE,LEGION,FIELDS,TIERS,ITEMS,WHEEL,PERKS,nice,fmt,pick,wpick,hpS,atkS,baseS,defaultMeta,loadMeta,saveMeta,perk,GACHA_COST,gachaPool,gachaPull,GRID,cellXY,unitCap,wouldMerge,canAdd,addUnit,newRun,synergies,makeWave,refreshCost,sellValue,rollShop,cardInfo,rollTier});
+window.MC=Object.assign(window.MC||{},{C,SP,spriteDims,spriteCanvas,spriteURL,TAGS,UNITS,BASE_UNITS,SUMMONS,ENEMIES,BOSS_AT,MAX_WAVE,LEGION,FIELDS,TIERS,ITEMS,ITEM_C,WHEEL,PERKS,nice,fmt,pick,wpick,hpS,atkS,baseS,defaultMeta,loadMeta,saveMeta,perk,GACHA_COST,gachaPool,gachaPull,GRID,cellXY,unitCap,wouldMerge,canAdd,addUnit,newRun,synergies,makeWave,refreshCost,sellValue,rollShop,cardInfo,rollTier});
 })();
 
 ;

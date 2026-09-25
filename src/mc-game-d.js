@@ -6,7 +6,7 @@ const cl = (v, a, b) => Math.max(a, Math.min(b, v));
 Object.assign(G, {
   tipFn(o) { return () => { this.tipData = typeof o === 'function' ? o() : o; M.Sfx.hover(); this.bump(); }; },
   unitTip(type, star) { const U = M.UNITS[type]; return { title: U.name + (star ? ' ' + '★'.repeat(star) : ''), c: '#6fa8dc', kind: U.tags.map(t => '【' + t + '】').join('') + ' · 生命 ' + U.hp + ' · 攻击 ' + U.atk, d: U.desc }; },
-  itemTip(key, q) { const I = M.ITEMS[key]; return { title: I.name, c: M.QUALITY[q || 0].c, kind: '', ctrlLines: true, d: I.desc, lines: I.tiers.map((t, i) => ({ t: M.QUALITY[i].n + '：' + t, c: i >= (q || 0) ? M.QUALITY[i].c : '#5a5460' })) }; },
+  itemTip(key) { const I = M.ITEMS[key]; return { title: I.name, c: M.ITEM_C, kind: '', d: I.desc }; },
   relicTip(r) { const R = M.RELICS[r.key]; return { title: R.n, c: M.QUALITY[r.q].c, kind: '', d: R.d, lines: R.lines.map((l, i) => ({ t: M.QUALITY[i].n + '：' + M.statText(l.k, l.v) + (i <= r.q ? '' : '（未达到）'), c: i <= r.q ? M.QUALITY[i].c : '#5a5460' })) }; },
   relicBpTip(key, owned) { const R = M.RELICS[key]; return { title: R.n, c: owned ? '#ffe8b0' : '#8d8496', kind: owned ? '图纸 × ' + owned : '没有图纸', d: R.d, lines: R.lines.map((l, i) => ({ t: M.QUALITY[i].n + '：' + M.statText(l.k, l.v), c: M.QUALITY[i].c })) }; },
   heroTip(h) { const m = this.meta, H = M.HEROES[h.cls]; return { title: 'Lv' + h.lv + ' ' + H.n, c: M.RARITY[h.rarity].c, kind: '生命 ' + Math.round(h.hp) + '/' + M.heroMaxHp(h, m), d: '技能「' + H.skill.n + '」' + M.skillDesc(h) + '，冷却 ' + M.skillNodeCd(h, m) + ' 个节点。', lines: h.points ? [{ t: '有 ' + h.points + ' 个天赋点可用', c: '#f2c14e' }] : [] }; },
@@ -47,7 +47,7 @@ Object.assign(G, {
         pips: [...Array(M.skillNodeCd(h, m))].map((_, i) => ({ c: i < M.skillNodeCd(h, m) - run.skillCd ? '#ffcf4a' : '#2a2230' })),
         rosterN: run.roster.length, rosSc: this.ps('roster'), itSc: this.ps('items'),
         roster: run.roster.filter(u => !this.hideU.has(u.uid)).map(u => ({ img: M.spriteURL(u.type, 4), stars: '★'.repeat(u.star), tipOn: this.tipFn(this.unitTip(u.type, u.star)), sel: this.sel === u.uid, border: this.sel === u.uid ? '#f2c14e' : 'transparent', onClick: () => { if (this.screen === 'shop') { this.sel = this.sel === u.uid ? null : u.uid; M.Sfx.click(); this.bump(); } } })),
-        items: run.items.map((k, i) => ({ has: !!k && !this.hideI.has(i), img: k ? M.spriteURL(M.ITEMS[k].icon, 5) : '', border: k ? M.QUALITY[run.itemQ[i] || 0].c : '#3a3040', tipOn: this.tipFn(k ? this.itemTip(k, run.itemQ[i]) : { title: '空道具栏', d: '宝箱、商店、事件都能获得支援道具。' }) })),
+        items: run.items.map((k, i) => ({ has: !!k && !this.hideI.has(i), img: k ? M.spriteURL(M.ITEMS[k].icon, 5) : '', border: k ? M.ITEM_C : '#3a3040', tipOn: this.tipFn(k ? this.itemTip(k, run.itemQ[i]) : { title: '空道具栏', d: '宝箱、商店、事件都能获得支援道具。' }) })),
         region: run.region.n };
       v.skillTip = this.tipFn(() => this.skillTipOf(h));
       v.bpTip = this.tipFn(() => ({ title: '本局收获', c: '#e0904a', kind: '撤离或通关后带回基地', d: run.loot.bp.length ? '' : '还没有找到图纸。', lines: run.loot.bp.map(k => { const I = M.itemInfo(k); return { t: I.n, c: I.c }; }) }));
@@ -63,7 +63,7 @@ Object.assign(G, {
       v.h = { mode: modeN, modeColor: cfg.type === 'boss' || cfg.type === 'elite' ? '#ff6a5a' : cfg.type === 'extract' ? '#5fd0c0' : '#f2c14e', goal, base: M.fmt(this.tv('bbase', b.base)), mult: multR.toFixed(2), multSc: this.ps('mult'), scoreSc: this.ps('bscore'), score: M.fmt(this.tv('bscore', score)),
         scoreLabel: cfg.target ? (ok ? '积分 · 已达标' : '积分') : '积分', scoreColor: ok ? '#9cff7a' : '#f2c14e', bar: cfg.target ? Math.min(100, score / cfg.target * 100) + '%' : '100%', barC: ok ? '#9cff7a' : '#f2c14e',
         heroName: h.name, heroState: b.hero.bench ? '场外指挥' : b.hero.alive ? '亲自上场！' : '倒下', hp: Math.max(0, Math.round(b.hero.hp)) + ' / ' + Math.round(b.hero.maxHp), hpW: Math.max(0, b.hero.hp / b.hero.maxHp * 100) + '%', alive, left,
-        items: run.items.map((k, i) => ({ has: !!k, img: k ? M.spriteURL(M.ITEMS[k].icon, 7) : '', border: k ? M.QUALITY[run.itemQ[i] || 0].c : '#3a3040', bg: k ? '#2a1e14' : '#141018', onClick: () => this.useSlot(i), tipOn: this.tipFn(k ? this.itemTip(k, run.itemQ[i]) : { title: '空道具栏' }) })),
+        items: run.items.map((k, i) => ({ has: !!k, img: k ? M.spriteURL(M.ITEMS[k].icon, 7) : '', border: k ? M.ITEM_C : '#3a3040', bg: k ? '#2a1e14' : '#141018', onClick: () => this.useSlot(i), tipOn: this.tipFn(k ? this.itemTip(k, run.itemQ[i]) : { title: '空道具栏' }) })),
         skillName: H.skill.n, skillSub: ready ? M.skillDesc(h) : b.skillUsed ? '本场已使用 · 冷却 ' + cd + ' 节点' : cd > 0 ? '冷却中：还要 ' + cd + ' 个节点' : '准备中……', skillBorder: ready ? '#ffcf4a' : '#3a3040', skillBg: ready ? 'linear-gradient(180deg,#4a3418,#2a1c0e)' : 'linear-gradient(180deg,#1a1520,#100c14)', skillColor: ready ? '#ffe08a' : '#6b6570', skillGlow: ready ? '0 0 ' + Math.round(20 + 14 * Math.sin(t0 / 150)) + 'px rgba(255,200,80,0.7)' : 'none', skillImg: M.spriteURL(H.sprite, 4) };
       // leader on the field: the skill panel folds down and stays folded for the rest of the battle
       const fold = !b.hero.bench; if (fold && !b.foldAt) b.foldAt = t0; const fe = fold ? M.ease.eo(cl((t0 - b.foldAt) / 450, 0, 1)) : 0;

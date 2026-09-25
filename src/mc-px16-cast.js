@@ -242,7 +242,7 @@ Object.assign(SP, {
   militia: { race: '人类', hat: 'helm', weapon: 'spear', mat: { cloth: 'leather', metal: 'iron' } },
 });
 // anything not listed: race + vocation decide
-const VOC = { 先锋: { body: 'armor', hat: 'helm', weapon: 'sword', shield: 'round' }, 战士: { weapon: 'axe' }, 射手: { weapon: 'bow', quiver: 1 }, 法师: { body: 'robe', hat: 'hood', weapon: 'staff' }, 祭司: { body: 'priest', weapon: 'book' }, 商人: { weapon: 'bag' } };
+const VOC = { 先锋: { body: 'armor', hat: 'helm', weapon: 'sword', shield: 'round' }, 守护者: { body: 'heavyarmor', hat: 'greathelm', weapon: 'mace', shield: 'tower' }, 战士: { weapon: 'axe' }, 圣骑士: { body: 'armor', hat: 'helm', weapon: 'hammer', shield: 'kite' }, 射手: { weapon: 'bow', quiver: 1 }, 刺客: { body: 'vest', hat: 'mask', weapon: 'dagger' }, 法师: { body: 'robe', hat: 'hood', weapon: 'staff' }, 牧师: { body: 'priest', hat: 'miter', weapon: 'staff' }, 祭司: { body: 'priest', weapon: 'book' }, 召唤师: { body: 'robe', hat: 'wizard', weapon: 'orb' }, 商人: { weapon: 'bag' } };
 P16.autoSpec = function (key) {
   const d = M.DB && M.DB[key]; if (!d) return null;
   const k = M.hdKind ? M.hdKind(key) : 'hum';

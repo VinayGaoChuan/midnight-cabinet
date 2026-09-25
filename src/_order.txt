@@ -7,6 +7,7 @@ mc-engine.js
 mc-data2.js
 mc-data3.js
 mc-db.js
+mc-voc.js
 mc-units.js
 mc-icons.js
 mc-fx.js
@@ -48,6 +49,7 @@ mc-lvup.js
 mc-save.js
 mc-guide.js
 mc-flow.js
+mc-home.js
 mc-portal.js
 mc-vision.js
 mc-recruit.js

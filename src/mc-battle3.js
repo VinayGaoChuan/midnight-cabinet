@@ -159,14 +159,14 @@ class B3 extends M.Battle2 {
     e.pw = M.unitPower(key, u);
     if (L.shield) e.shield = e.maxHp * L.shield;
     if (md.shield) e.shield += e.maxHp * md.shield;
-    if (d.voc === '射手' && d.race === '科技') e.pstyle = 'bullet'; else if (d.voc === '射手') e.pstyle = 'arrow'; else if (d.voc === '法师') e.pstyle = 'orb'; else if (d.voc === '祭司') e.pstyle = 'holy'; else if (side === 'E') e.pstyle = 'acid'; else e.pstyle = 'orb';
+    if (d.voc === '射手' && d.race === '科技') e.pstyle = 'bullet'; else if (d.voc === '射手') e.pstyle = 'arrow'; else if (d.voc === '法师') e.pstyle = 'orb'; else if (d.voc === '祭司' || d.voc === '牧师') e.pstyle = 'holy'; else if (d.voc === '召唤师') e.pstyle = 'orb'; else if (side === 'E') e.pstyle = 'acid'; else e.pstyle = 'orb';
     traits.forEach(t => { const h = H[t.cls]; if (h && h.proj) e.pstyle = h.proj; });
     this.call(e, 'init');
     return e;
   }
   addUnit(u, x, y, delay) {
     const e = this.unitStats(u.type, 'A', x, y, { unit: u });
-    e.entry = { 先锋: 'drop', 战士: 'march', 射手: 'leap', 法师: 'portal', 祭司: 'descend', 商人: 'march' }[e.d.voc] || 'fade';
+    e.entry = { 先锋: 'drop', 守护者: 'drop', 战士: 'march', 圣骑士: 'descend', 射手: 'leap', 刺客: 'leap', 法师: 'portal', 牧师: 'descend', 祭司: 'descend', 召唤师: 'portal', 商人: 'march' }[e.d.voc] || 'fade';
     e.entryT = 0.4 + delay; e.readyAt = e.entryT + 0.9;
     this.later(e.entryT + (e.entry === 'drop' ? 0.55 : 0.4), () => this.entryLand(e));
     return e;

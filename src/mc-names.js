@@ -12,7 +12,7 @@ const named = (t, name, q) => { if (!t) return t; t.title = M.qn(name, q); t.c =
 // ───────── tooltips ─────────
 const oUT = M.unitTip;
 M.unitTip = function (k, u, run) { const t = oUT.call(this, k, u, run), d = M.DB[k]; return d ? named(t, d.n, d.q) : t; };
-const oIT = G.itemTip; G.itemTip = function (key, q) { const t = oIT.call(this, key, q), I = M.ITEMS[key]; return I ? named(t, I.name, q || 0) : t; };
+// items keep their dark gold: they have no quality
 const oRT = G.relicTip; G.relicTip = function (r) { const t = oRT.call(this, r); return r ? named(t, M.RELICS[r.key].n, r.q) : t; };
 const oHT = G.heroTip; G.heroTip = function (h) { const t = oHT.call(this, h); if (!t || !h) return t; t.title = 'Lv' + h.lv + ' ' + M.heroN(h); t.c = M.qc(h.rarity); t.kind = stripQ(t.kind); return t; };
 // blueprints carry the building's quality in their name

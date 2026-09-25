@@ -13,7 +13,8 @@ const icon = (k) => M.iconURL(k, 3), sprite = (k) => M.spriteURL(k, 4);
 // ───────── 详情层 ─────────
 // the page evaluates the bundle twice: the switch state and its key listeners live once, on window
 const DS = window.__mcDetail || (window.__mcDetail = { hold: false, pin: false });
-const detailOn = () => DS.hold || DS.pin;
+// the Ctrl / ⓘ detail layer was removed (user ruling 2026-09-24): every view shows its one short form
+const detailOn = () => false;
 const sync = () => { document.documentElement.classList.toggle('mc-detail', detailOn()); const g = M._g; if (g) g.bump(); };
 G.detailOn = function () { return detailOn(); };
 G.D = function (brief, full) { if (full && full !== brief) this._dtHas = true; return detailOn() ? (full || brief) : brief; };
@@ -23,11 +24,8 @@ M.firstSentence = firstSentence;
 if (!DS.bound) {
   DS.bound = true;
   window.addEventListener('keydown', (e) => {
-    if ((e.code === 'ControlLeft' || e.code === 'ControlRight') && !DS.hold) { DS.hold = true; sync(); }
     if (e.code === 'F1') { e.preventDefault(); const g = M._g; if (g) { g.rulesOpen = !g.rulesOpen; M.Sfx.click(); g.bump(); } }
   }, true);
-  window.addEventListener('keyup', (e) => { if ((e.code === 'ControlLeft' || e.code === 'ControlRight') && DS.hold) { DS.hold = false; sync(); } }, true);
-  window.addEventListener('blur', () => { if (DS.hold) { DS.hold = false; sync(); } });
   try { const st = document.createElement('style'); st.textContent = 'html:not(.mc-detail) [data-detail]{display:none!important}html.mc-detail [data-brief]{display:none!important}'; document.head.appendChild(st); } catch (e) {}
 }
 
@@ -68,7 +66,7 @@ const CONCEPTS = [
   { id: 'wallet', cat: '出征', img: () => sprite('coin', 4), title: '积分', line: '这一局的钱：打赢战斗得到，在夜市和奇遇里花。回基地就清零。', scr: 'world', sel: '[data-tip="w-wallet"]' },
   { id: 'haul', cat: '出征', img: () => sprite('sack'), title: '本次收获', line: '物资、经验、图纸要撤离或通关才带得回基地；领袖阵亡就全丢。', scr: 'world', sel: '[data-tip="w-rsup"]' },
   { id: 'roster', cat: '出征', icon: 'v_warrior', title: '部队', line: '战斗里自动作战。在夜市买、招募旗领，最多 10 支。', scr: 'world', sel: '[data-tip="w-roster"]' },
-  { id: 'items', cat: '出征', icon: 't_chest', title: '支援道具', line: '战斗中按 Q W E 由领袖放出。用的时候转一下，决定这次的品质。', scr: ['world', 'battle'], sel: '[data-tip="b-items"]' },
+  { id: 'items', cat: '出征', icon: 't_chest', title: '支援道具', line: '战斗中按 Q W E 由领袖放出。用的时候转一下，转出这次的效果。', scr: ['world', 'battle'], sel: '[data-tip="b-items"]' },
   { id: 'banners', cat: '出征', img: () => sprite('flag'), title: '战旗', line: '整支部队的常驻加成，比如「射手战旗」让所有射手更强。', scr: ['world', 'shop'], sel: '[data-fx="banners"],[data-g="shop-banners"]' },
   { id: 'minimap', cat: '出征', icon: 'e_path', title: '小地图', line: '整条路线的缩略图。越往右越深，最右边是首领。', scr: 'world', at: () => ({ x: 1330, y: 30, w: 560, h: 250 }), when: (g) => g.run && !g.run.tut },
   { id: 'wpower', cat: '出征', icon: 'u_star', title: '战斗力', line: '敌人头上是它的战斗力，你头上是你的。颜色：绿稳赢，黄有风险，红很危险。', scr: 'world', sel: '[data-tip="w-power"]' },
@@ -79,7 +77,7 @@ const CONCEPTS = [
   { id: 'score', cat: '战斗', icon: 't_mult', title: '积分 = 基础 × 倍率', line: '击杀得基础分；精英、首领、战旗、宝物会加倍率。积分就是这一局的钱。', scr: 'battle', sel: '[data-tip="b-score"]', freeze: 1 },
   { id: 'bhero', cat: '战斗', icon: 't_command', title: '指挥位', line: '领袖站在左边不参战；部队全灭后亲自上场，倒下就永久死亡。', scr: 'battle', sel: '[data-tip="b-hero"]', freeze: 1 },
   { id: 'bskill', cat: '战斗', icon: 't_skill', title: '领袖技能', line: '按空格放。领袖亲自上场后改为自动释放。', scr: 'battle', sel: '[data-g="b-skill"]', freeze: 1, when: (g) => g.battle && g.battle.hero && g.battle.hero.bench },
-  { id: 'voc', cat: '标签与品质', icon: 'v_archer', title: '职业标签', line: '决定打法：先锋扛伤、战士近战、射手远程、法师范围、祭司治疗、商人赚钱。', scr: ['shop', 'world', 'battle', 'base'], sel: '[data-tip^="tag-voc-"]' },
+  { id: 'voc', cat: '标签与品质', icon: 'v_archer', title: '职业标签', line: '决定打法：先锋、守护者扛伤，战士近战，射手远程，刺客爆发，法师技能，牧师、圣骑士治疗，祭司强化和削弱，召唤师召唤，商人赚钱。', scr: ['shop', 'world', 'battle', 'base'], sel: '[data-tip^="tag-voc-"]' },
   { id: 'trait', cat: '战斗', icon: 'e_skull', title: '特性', line: '卡片上那一句话就是这支部队的本事。开战时它的图标从身上亮出来，停在头顶，生效时会闪。', scr: ['shop', 'world'], sel: '[data-g="trait"]' },
   { id: 'upower', cat: '标签与品质', icon: 'u_star', title: '战斗力', line: '部队有多强。先挑缺的职业，再在里面挑战斗力高、买得起的。', scr: ['shop'], sel: '[data-g="upower"]' },
   // ── 夜市 ──
@@ -116,7 +114,7 @@ G.guideScan = function () {
 const oTick = G.tick;
 G.tick = function (dt) {
   oTick.apply(this, arguments);
-  const t = now(); if (t - (this._gScan || 0) > 250) { this._gScan = t; this._domDt = !!document.querySelector('[data-detail]'); if (!this.guideOff) this.guideScan(); }
+  const t = now(); if (t - (this._gScan || 0) > 250) { this._gScan = t; this._domDt = !!document.querySelector('[data-detail]'); }   // first-time cards no longer pop up (onboarding removed, user ruling 2026-09-24); 玩法说明 still lists them
   const gd = this.guide; if (gd) { if (this.guideBusy() && !gd.c.freeze) { this.guide = null; M._guideFreeze = false; this.guideNext = t + 600; } else if (t - gd.at > 20000) this.guideClose(); else { const r = this.guideRect(gd.c); if (r) gd.r = r; } }
 };
 if (M.Battle3) { const BP = M.Battle3.prototype, oStep = BP.step; BP.step = function () { if (M._guideFreeze) return; return oStep.apply(this, arguments); }; }
@@ -124,10 +122,10 @@ const oBack = G.backAction;
 G.backAction = function () { if (this.guide) { this.guideClose(); return; } if (this.rulesOpen) { this.rulesOpen = false; this.bump(); return; } return oBack.apply(this, arguments); };
 
 // ───────── tags say what they are for, not just what they are ─────────
-const VOC_D = { 先锋: '站最前面扛伤害，招牌技能「冲锋盾击」。', 战士: '近身砍杀，招牌技能「旋风斩」。', 射手: '后排远程点杀，招牌技能「箭雨」。', 法师: '范围魔法，招牌技能是陨石、霜冻或闪电链。', 祭司: '治疗和增益，招牌技能「圣光审判」。', 商人: '打仗顺便赚积分，招牌技能「金币风暴」。' };
+const VOC_D = {};   // vocations say it in one line (M.VOC)
 const oRace = M.TAG.race, oVoc = M.TAG.voc, oStyle = M.TAG.style;
 M.TAG.race = (n) => { const t = oRace(n); if (t) t.d = '种族只是分类：战旗、特性、事件写到「' + n + '」时，带这个图标的单位才算数。'; return t; };
-M.TAG.voc = (n) => { const t = oVoc(n); if (t) t.d = (VOC_D[n] || '') + '「' + n + '战旗」只加这个职业。'; return t; };
+M.TAG.voc = (n) => { const t = oVoc(n); if (t) t.d = (M.VOC && M.VOC[n] && M.VOC[n].d) || ''; return t; };
 M.TAG.style = (k) => { const t = oStyle(k); if (t) t.d = '建筑风格：地格和奇观写着「契合某风格」时，风格对上的房间才有额外效果。'; return t; };
 
 // ───────── 玩法说明：the loop in four steps, then every card by topic ─────────
@@ -175,7 +173,7 @@ G.view = function () {
   }
   // the ⓘ switch shows up only where there is something behind it
   const dtAny = this._dtHas || this._domDt;
-  v.dtOn = !!dtAny && this.screen !== 'intro' && !this.rulesOpen; const on = this.detailOn();
+  v.dtOn = false && !!dtAny; const on = this.detailOn();
   const kbm = !M.inputMode || M.inputMode(this) === 'kbm'; v.dtTxt = on ? (DS.pin ? 'ⓘ 详情 · 已展开' : 'ⓘ 详情') : kbm ? 'ⓘ 按住 Ctrl 看详情' : 'ⓘ 详情'; v.dtC = on ? '#ffe08a' : '#8d8496';
   v.dtToggle = () => { DS.pin = !DS.pin; M.Sfx.click(); sync(); };
   v.helpOn = this.screen !== 'intro'; v.helpOpen = () => { this.rulesOpen = true; M.Sfx.click(); this.bump(); };

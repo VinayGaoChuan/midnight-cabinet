@@ -25,14 +25,15 @@ M.sideE = function (run, cfg) {
   cfg.list.forEach(s => { const d = DB[s.type]; if (!d) return; const ek = ek0 * (s.elite ? 1.15 : 1); hp += d.hp * ek * (s.hpMul || 1) * ((d.tr || []).includes('SummonBossTrait') ? 1.3 : 1); dps += d.atk * ek * (s.atkMul || 1) * (d.as || 100) / 100; });
   return { hp, dps };
 };
-// bosses are measured against the elite fight at the same step: a mid-map boss is 1.1× that, the final one 1.3×
+// bosses are measured against the elite fight at the same step: the first segment's boss 1.0× that, later mid-map bosses 1.3×, the final one 1.45×
 // (before this an early boss was three times the fights around it — the wall players kept dying at). Only the boss
 // itself is scaled (hpMul / atkMul, read by spawnEnemy).
 const oCfg = M.makeBattleCfg;
 function tuneBoss(run, node, cfg) {
   const bs = cfg.list.filter(s => s.boss); if (!bs.length || run.region.tut) return cfg;
   let el = 0; for (let i = 0; i < 4; i++) el += M.powerOf(M.sideE(run, oCfg.call(M, run, { col: node.col, type: 'elite' }))); el /= 4;
-  const target = el * (node.final ? 1.3 : 1.1); let lo = 0.15, hi = 1.3;
+  // the first segment's boss meets an army of ~5 bought at one shop: it is only as strong as an elite there
+  const target = el * (!node.seg ? 1.0 : node.final ? 1.45 : 1.3); let lo = 0.15, hi = 3;
   for (let k = 0; k < 18; k++) { const f = (lo + hi) / 2; bs.forEach(s => { s.hpMul = f; s.atkMul = f; }); if (M.powerOf(M.sideE(run, cfg)) > target) hi = f; else lo = f; }
   const f = +((lo + hi) / 2).toFixed(3); bs.forEach(s => { s.hpMul = f; s.atkMul = f; }); return cfg;
 }

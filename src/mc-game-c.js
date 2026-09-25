@@ -41,7 +41,7 @@ Object.assign(G, {
     const sc = Math.round(P * 18 * (1 + (run.mods.chest || 0))), items = [];
     items.push({ n: '积分 ' + M.fmt(sc), c: '#ffcc33', img: M.spriteCanvas('coin', 12), award: { k: 'wallet', v: sc } });
     items.push({ n: '物资', c: '#caa84a', img: M.spriteCanvas('sack', 12), award: { k: 'rsup', v: 30 } });
-    if (run.tut || Math.random() < 0.3) { const k = M.pick(Object.keys(M.ITEMS)), q = M.rollTier2(run); items.push({ n: M.ITEMS[k].name, sub: M.QUALITY[q].n, c: M.QUALITY[q].c, img: M.spriteCanvas(M.ITEMS[k].icon, 12), award: { k: 'item', key: k, q } }); }
+    if (run.tut || Math.random() < 0.3) { const k = M.pick(Object.keys(M.ITEMS)), q = 0; items.push({ n: M.ITEMS[k].name, sub: '支援道具', c: M.ITEM_C, img: M.spriteCanvas(M.ITEMS[k].icon, 12), award: { k: 'item', key: k, q } }); }
     if (run.tut || Math.random() < 0.25) { const b = M.dropBp(); const I = M.itemInfo(b); items.push({ n: I.n, sub: I.kind, c: I.c, img: M.spriteCanvas(I.icon, 12), award: { k: 'bp', key: b } }); }
     if (!run.tut && Math.random() < 0.05) { const t = 'tile:' + M.dropTile(); const I = M.itemInfo(t); items.push({ n: I.n, sub: '地脉结晶', c: I.c, img: M.spriteCanvas('gem', 12), award: { k: 'bp', key: t } }); }
     const best = items.reduce((a, b) => (M.QUALITY.findIndex(q => q.c === b.c) > M.QUALITY.findIndex(q => q.c === a.c) ? b : a), items[0]);

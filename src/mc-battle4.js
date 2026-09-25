@@ -6,7 +6,7 @@ const PX = M.PX, RCOL = M.RACES, FW = 1920, FH = 720;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const eo = (t) => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
 const rnd = (i) => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
-const BAL = M.BAL = { MANA_MUL: 2.0, ALLY_FLOOR: 5, ENEMY_K: 1.15 };
+const BAL = M.BAL = { MANA_MUL: 2.0, ALLY_FLOOR: 5, ENEMY_K: 1.7 };   // batch G rebalance: a shopping player won everything at 1.15
 let { MANA_MUL, ALLY_FLOOR } = BAL;
 M.setBal = (o) => { Object.assign(BAL, o); ({ MANA_MUL, ALLY_FLOOR } = BAL); };
 // enemies are a little tougher outside the tutorial

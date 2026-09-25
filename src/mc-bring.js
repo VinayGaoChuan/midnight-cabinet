@@ -53,8 +53,8 @@ const GIFTS = {
     apply(g, m) { m.freeRecruit = (m.freeRecruit || 0) + 1; return ok('下一次招募免费，至少「稀有」'); } },
   cell:   { n: '蓄能核心', ic: 'g_battery', c: '#9cff7a', w: 7, d: '基地电力永久 +2。',
     apply(g, m) { m.bonusPw = (m.bonusPw || 0) + 2; return ok('基地电力永久 +2（现在 +' + m.bonusPw + '）'); } },
-  kit:    { n: '行军包', ic: 'g_pack', c: '#caa84a', w: 9, d: '下次出征开局多带 1 个「稀有」道具。',
-    apply(g, m) { m.nextKit = Math.min(3, (m.nextKit || 0) + 1); return ok('下次出征多带 ' + m.nextKit + ' 个稀有道具'); } },
+  kit:    { n: '行军包', ic: 'g_pack', c: '#caa84a', w: 9, d: '下次出征开局多带 1 个支援道具。',
+    apply(g, m) { m.nextKit = Math.min(3, (m.nextKit || 0) + 1); return ok('下次出征多带 ' + m.nextKit + ' 个支援道具'); } },
 };
 M.GIFTS = GIFTS;
 M.dropGift = () => 'gift:' + M.wpick(Object.keys(GIFTS), k => GIFTS[k].w);
@@ -84,9 +84,9 @@ G.runWin = function (kind) {
   if (run) run.loot.bp = run.loot.bp.filter(k => !k.startsWith('gift:'));
   oWin.apply(this, arguments); if (!gifts.length) return;
   const m = this.meta, res = [];
-  gifts.forEach(k => { const K = GIFTS[k.slice(5)]; if (!K) return; const r = K.apply(this, m, run) || ok(''); r.n = K.n; r.icon = K.ic; r.col = r.col || K.c; res.push(r); });
+  gifts.forEach(k => { const K = GIFTS[k.slice(5)]; if (!K) return; const r = K.apply(this, m, run) || ok(''); r.n = K.n; r.icon = K.ic; r.col = r.col || K.c; r.key = k; res.push(r); });
   this.save(); try { M.T && M.T.ev('gift', { kinds: gifts.map(k => k.slice(5)) }); } catch (e) {}
-  if (this.endInfo) { this.endInfo.tiles = (this.endInfo.tiles || []).concat(res.map(r => ({ img: M.spriteURL(r.icon, 7), n: r.n, v: '带回', c: r.col, icon: r.icon }))); const shown = res.slice(0, 4).map(r => ({ k: r.n, v: r.t, c: r.col })); if (res.length > 4) shown.push({ k: '还有 ' + (res.length - 4) + ' 项', v: res.slice(4).map(r => r.n).join('、') + '（回基地时逐个显示）', c: '#a89ca8' }); this.endInfo.lines = (this.endInfo.lines || []).concat(shown); this.endInfo.gifts = res; }
+  if (this.endInfo) { this.endInfo.tiles = (this.endInfo.tiles || []).concat(res.map(r => ({ img: M.spriteURL(r.icon, 7), n: r.n, v: '带回', c: r.col, icon: r.icon, key: r.key }))); const shown = res.slice(0, 4).map(r => ({ k: r.n, v: r.t, c: r.col })); if (res.length > 4) shown.push({ k: '还有 ' + (res.length - 4) + ' 项', v: res.slice(4).map(r => r.n).join('、') + '（回基地时逐个显示）', c: '#a89ca8' }); this.endInfo.lines = (this.endInfo.lines || []).concat(shown); this.endInfo.gifts = res; }
 };
 const oBack = G.endBack;
 G.endBack = function () {
@@ -105,7 +105,7 @@ M.startBuild = function (m, c, r, key) { const ok2 = oSB.apply(this, arguments);
 const oNR = M.newRun3;
 M.newRun3 = function (meta, hero, worldKey, relicIds) {
   const run = oNR.apply(this, arguments);
-  for (let i = 0; i < (meta.nextKit || 0); i++) { const s = run.items.indexOf(null); if (s < 0) break; run.items[s] = M.pick(Object.keys(M.ITEMS)); run.itemQ[s] = 1; }
+  for (let i = 0; i < (meta.nextKit || 0); i++) { const s = run.items.indexOf(null); if (s < 0) break; run.items[s] = M.pick(Object.keys(M.ITEMS)); run.itemQ[s] = 0; }
   meta.nextKit = 0; return run;
 };
 const oSR = G.startRaid;

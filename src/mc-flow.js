@@ -66,12 +66,14 @@ G.runWin = function (kind) {
   try { const g = tut && this.endInfo && this.endInfo.gain; if (g && this.prof) { this.prof.tutGift = { sup: Math.max(0, g.msup || 0), sh: Math.max(0, g.msh || 0), orb: Math.max(0, g.morb || 0), exp: Math.max(0, g.exp || 0), bp: (g.bp || []).filter(k => k !== 'bbp:tavern') }; this.saveProfile(); } } catch (e) {}
   return r;
 };
+// the tavern the tutorial pays for stands next to the core
+M.preTavern = function (m) { const x = M.cell(m, M.CORE.c - 1, M.CORE.r); if (x && !x.b) { x.dug = true; x.b = 'tavern'; x.job = null; if (x.tile === 'ruin') x.tile = null; return true; } return false; };
 M.tutGift = function (m, g) {
   g = g || { sup: 100, sh: 0, orb: 0, exp: 100, bp: [M.dropBp()] };
   m.supplies += g.sup || 0; m.shards += g.sh || 0; m.orbs += g.orb || 0;
   (g.bp || []).forEach(k => { if (k) M.invAdd(m, k, 1); });
   const h = m.heroes[0]; if (h && g.exp) { M.addExp(h, g.exp); h.hp = M.heroMaxHp(h, m); }
-  const x = M.cell(m, M.CORE.c - 1, M.CORE.r); if (x && !x.b) { x.dug = true; x.b = 'tavern'; x.job = null; if (x.tile === 'ruin') x.tile = null; }
+  M.preTavern(m);
 };
 const oNew = G.newGame;
 const oRestart = G.restart;
@@ -83,3 +85,22 @@ if (!M.META_ROOM && M.GUIDE) for (let i = M.GUIDE.length - 1; i >= 0; i--) if (M
 })();
 
 ;
+
+// ───────── no onboarding for now (user ruling 2026-09-24: it was too busy; it will be designed again) ─────────
+// No coach bubbles (tutorial hints, base steps, "building ready" notes), no base tutorial, no first-time cards popping up.
+// The 序章 is still the first expedition, without hints; the tavern it used to have you build is built for you.
+(function () {
+  const M = window.MC, G = M.Game.prototype;
+  G.coach = function () {}; G.coachOnce = function () {};
+  G.baseTutStep = function () { const m = this.meta; if (m && m.tutDone && m.baseTut !== 99) { m.baseTut = 99; this.save(); } };
+  const oWin = G.runWin;
+  G.runWin = function (kind) {
+    const tut = !!(this.run && this.run.region && this.run.region.tut), r = oWin.apply(this, arguments), m = this.meta;
+    if (tut && m) {
+      if (m.inv['bbp:tavern']) M.invAdd(m, 'bbp:tavern', -1);
+      M.preTavern(m); m.baseTut = 99; this.save();
+      const e = this.endInfo; if (e && e.tiles) e.tiles = e.tiles.map(t => t.n === '酒馆图纸' ? Object.assign({}, t, { n: '酒馆', v: '已建好', img: M.spriteURL('b_tavern', 7) || t.img, tip: { title: '酒馆', c: '#ffe08a', d: M.BUILDINGS.tavern.d } }) : t);
+    }
+    return r;
+  };
+})();

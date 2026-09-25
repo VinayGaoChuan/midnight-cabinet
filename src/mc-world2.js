@@ -6,49 +6,63 @@ const CNF = "'Noto Serif SC', serif";
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const COLW = 520, ROWH = 270, Y0 = 700, STUB = 130;
 
+// The map (user ruling 2026-09-24): a run is one or more segments, each ending in a boss — the length of a map is how
+// many bosses it has. A segment is a few random columns, then a shop (every road meets it: the last chance to spend
+// before the fight), then the boss. Right after a boss that is not the last one, the next column offers 撤离 (the only
+// place it ever appears) next to the road on. At most 2 elites in a segment. Rows, links and stop types are random.
+const MIDW = { normal: 26, hold: 9, shop: 4, camp: 6, chest: 9, event: 16, recruit: 6 };
 M.genMap2 = function (run, meta) {
-  const R = run.region, L = run.len, cols = L.cols, tut = R.tut;
-  const nodes = [], byCol = [];
-  const bossCols = [];
-  if (!tut) { for (let i = 1; i < L.boss; i++) bossCols.push(Math.round(cols * i / L.boss) - 1); }
+  const R = run.region, tut = R.tut;
+  let L = run.len;
+  const nodes = [], byCol = [], plan = [];
+  if (tut) { for (let c = 0; c < L.cols; c++) plan.push({ k: c === 0 ? 'start' : c === L.cols - 1 ? 'boss' : 'tut', seg: 0, final: c === L.cols - 1 }); }
+  else {
+    plan.push({ k: 'start', seg: 0 });
+    for (let s = 0; s < L.boss; s++) {
+      if (s > 0) plan.push({ k: 'after', seg: s });
+      const mids = L.mid[0] + Math.floor(Math.random() * (L.mid[1] - L.mid[0] + 1));
+      for (let i = 0; i < mids; i++) plan.push({ k: 'mid', seg: s, first: s === 0 && i === 0 });
+      plan.push({ k: 'shop', seg: s });
+      plan.push({ k: 'boss', seg: s, final: s === L.boss - 1 });
+    }
+    L = run.len = Object.assign({}, L, { cols: plan.length });
+  }
+  const cols = plan.length;
   for (let c = 0; c < cols; c++) {
-    let rows;
-    if (c === 0 || c === cols - 1 || bossCols.includes(c)) rows = [0];
+    const P = plan[c]; let rows, exRow = null;
+    if (P.k === 'start' || P.k === 'shop' || P.k === 'boss') rows = [0];
     else if (tut) rows = c === 3 ? [-1, 1] : [0];
-    else rows = wpick([[0], [-1, 1], [-1, 0], [0, 1], [-1, 0, 1]], x => x.length === 1 ? 2 : x.length === 2 ? 3 : 3);
-    if (c === cols - 2 && !tut && rows.length > 2) rows = [-1, 1];
-    byCol[c] = rows.map(r => { const n = { id: nodes.length, col: c, row: r, x: 300 + c * COLW, y: Y0 + r * ROWH, type: 'normal', done: false, seen: false, out: [] }; nodes.push(n); return n; });
+    else if (P.k === 'after') { exRow = Math.random() < 0.5 ? -1 : 1; rows = Math.random() < 0.5 ? [0, exRow] : [-1, 0, 1]; }
+    else rows = wpick([[0], [-1, 1], [-1, 0], [0, 1], [-1, 0, 1]], x => x.length === 1 ? 2 : 3);
+    byCol[c] = rows.map(r => { const n = { id: nodes.length, col: c, row: r, seg: P.seg, x: 300 + c * COLW, y: Y0 + r * ROWH, type: 'normal', done: false, seen: false, out: [] }; if (r === exRow) n.type = 'extract'; nodes.push(n); return n; });
   }
   const edges = [];
   const dirOf = (a, b) => b.row < a.row ? 'up' : b.row > a.row ? 'down' : 'right';
-  const link = (a, b) => { const d = dirOf(a, b); if (a.out.some(e => edges[e].dir === d)) return false; const pts = d === 'right' ? [[a.x, a.y], [b.x, b.y]] : [[a.x, a.y], [a.x + STUB, a.y], [a.x + STUB, b.y], [b.x, b.y]]; let len = 0; for (let i = 1; i < pts.length; i++) len += Math.abs(pts[i][0] - pts[i - 1][0]) + Math.abs(pts[i][1] - pts[i - 1][1]); edges.push({ a: a.id, b: b.id, dir: d, pts, len }); a.out.push(edges.length - 1); return true; };
+  const link = (a, b) => { const d = dirOf(a, b); if (a.out.some(e => edges[e].dir === d)) return false; const pts = d === 'right' ? [[a.x, a.y], [b.x, b.y]] : [[a.x, a.y], [a.x + STUB, a.y], [a.x + STUB, b.y], [b.x, b.y]]; let len = 0; for (let i = 1; i < pts.length; i++) len += Math.abs(pts[i][0] - pts[i - 1][0]) + Math.abs(pts[i][1] - pts[i - 1][1]); a.out.push(edges.length); edges.push({ a: a.id, b: b.id, pts, len, dir: d }); return true; };
   for (let c = 0; c < cols - 1; c++) {
-    const A = byCol[c], B = byCol[c + 1];
+    const A = byCol[c].filter(n => n.type !== 'extract'), B = byCol[c + 1];   // 撤离 ends the run: nothing leaves it
     B.forEach(b => { const cand = A.slice().sort((x, y) => Math.abs(x.row - b.row) - Math.abs(y.row - b.row)); for (const a of cand) if (link(a, b)) break; });
     A.forEach(a => { if (!a.out.length) { const cand = B.slice().sort((x, y) => Math.abs(x.row - a.row) - Math.abs(y.row - a.row)); for (const b of cand) if (link(a, b)) break; } });
     if (!tut && Math.random() < 0.45) { const a = pick(A), b = pick(B); link(a, b); }
   }
   // types
   nodes.forEach(n => {
-    if (n.col === 0) { n.type = 'start'; n.done = true; return; }
-    if (n.col === cols - 1) { n.type = 'boss'; n.final = true; return; }
-    if (bossCols.includes(n.col)) { n.type = 'boss'; return; }
+    const P = plan[n.col];
+    if (P.k === 'start') { n.type = 'start'; n.done = true; return; }
+    if (P.k === 'boss') { n.type = 'boss'; if (P.final) n.final = true; return; }
+    if (P.k === 'shop') { n.type = 'shop'; return; }
     if (tut) { n.type = ['start', 'normal', 'event', 'normal', 'shop', 'normal', 'elite', 'camp', 'shop', 'boss'][n.col] || 'normal'; if (n.col === 3) n.type = n.row < 0 ? 'normal' : 'chest'; if (n.col === 2) n.ev = 'musician'; return; }
-    if (n.col === 1) { n.type = 'normal'; return; }
-    if (bossCols.includes(n.col + 1)) { n.type = byCol[n.col].indexOf(n) === 0 ? 'camp' : 'shop'; return; }
-    n.type = wpick(['normal', 'hold', 'shop', 'camp', 'chest', 'event', 'recruit'], t => ({ normal: 26, hold: 9, shop: 8, camp: 5, chest: 9, event: 16, recruit: 6 })[t]);
+    if (n.type === 'extract') return;
+    if (P.first) { n.type = 'normal'; return; }
+    n.type = wpick(Object.keys(MIDW), t => MIDW[t]);
   });
   if (!tut) {
-    const mids = nodes.filter(n => n.col >= 2 && n.col <= cols - 2 && n.type !== 'boss');
-    const nEl = L.elite[0] + Math.floor(Math.random() * (L.elite[1] - L.elite[0] + 1));
-    mids.filter(n => n.col >= 3).sort(() => Math.random() - 0.5).slice(0, nEl).forEach(n => n.type = 'elite');
-    const exCols = [];
-    for (let i = 0; i < L.ex; i++) {
-      const cand = mids.filter(n => !exCols.includes(n.col) && n.type !== 'extract' && n.type !== 'elite' && byCol[n.col].length > 1 && n.col >= 3);
-      const pool = cand.length ? cand : mids.filter(n => n.type !== 'extract' && !exCols.includes(n.col));
-      if (!pool.length) break; const n = pick(pool); n.type = 'extract'; exCols.push(n.col);
+    // elites: 0–2 per segment, never on the first fight of the run, at most one per column
+    for (let s = 0; s < L.boss; s++) {
+      const k = s === 0 ? 0 : wpick([0, 1, 2], x => (L.elite || [1, 1, 1])[x]); const used = new Set();   // the first segment is a warm-up: the army is still 3 units and the only shop is before the boss
+      nodes.filter(n => n.seg === s && plan[n.col].k !== 'boss' && plan[n.col].k !== 'shop' && plan[n.col].k !== 'start' && !plan[n.col].first && n.type !== 'extract').sort(() => Math.random() - 0.5)
+        .forEach(n => { if (used.size < k && !used.has(n.col)) { n.type = 'elite'; used.add(n.col); } });
     }
-    if (!nodes.some(n => n.type === 'shop' && n.col < cols / 2)) { const c = nodes.filter(n => n.col === 2 || n.col === 3); if (c.length) c[0].type = 'shop'; }
   }
   nodes.forEach(n => { if (n.type === 'event' && !n.ev) n.ev = pick(Object.keys(M.EVENTS)); });
   const tower = !!M.baseMods(meta).tower;
@@ -231,7 +245,7 @@ M.drawMinimap2 = function (ctx, run, walker) {
   });
   const hx = px(walker.x), hy = py(walker.y);
   ctx.fillStyle = Math.floor(walker.t * 3) % 2 ? C.candle : '#fff'; ctx.fillRect(hx - 6, hy - 24, 12, 12);
-  ctx.font = `24px ${CNF}`; ctx.textAlign = 'left'; ctx.fillStyle = C.dim; ctx.fillText(run.region.n + ' · ' + run.len.n + ' · 第 ' + (curCol + 1) + '/' + map.cols + ' 站', X + 16, Y + 34);
+  ctx.font = `24px ${CNF}`; ctx.textAlign = 'left'; ctx.fillStyle = C.dim; ctx.fillText(run.region.n + ' · ' + (run.len.boss ? run.len.boss + ' 个首领' : run.len.n) + ' · 第 ' + (curCol + 1) + '/' + map.cols + ' 站', X + 16, Y + 34);
 };
 })();
 
