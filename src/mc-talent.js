@@ -31,7 +31,7 @@ const T = {
   mystic:    { n: '神秘术', sc: 'self', ic: 't_hourglass', ...X_({ 3: 1, 6: 2 }), d: (v) => '本领袖的技能冷却少 ' + v + ' 个节点。', m: (v) => ({ skillNode: -v }) },
   rage:      { n: '狂怒', sc: 'self', ic: 't_rage', ...X_({ 3: 5, 5: 8 }), d: (v) => '本领袖亲自上场后 ' + v + ' 秒内，伤害翻倍。', m: (v) => ({ rage: v }) },
   slayer:    { n: '处刑', sc: 'self', ic: 't_claw', ...X_({ 2: 0.05, 3: 0.07, 4: 0.09, 5: 0.12, 6: 0.15 }), d: (v) => '每击倒一个精英或首领，本领袖回复 ' + pct(v) + ' 生命。', m: (v) => ({ eliteHeal: v }) },
-  learning:  { n: '学习术', sc: 'self', ic: 'g_scroll', ...S_(0.2), d: (v) => '本领袖出征得到的经验 +' + pct(v) + '。', m: (v) => ({ exp: v }) },
+  learning:  { n: '学习术', sc: 'self', ic: 'e_up', ...S_(0.2), d: (v) => '本领袖出征得到的经验 +' + pct(v) + '。', m: (v) => ({ exp: v }) },
   hardy:     { n: '好体质', sc: 'self', ic: 't_cross', ...S_(0.5), d: (v) => '本领袖住院时，每天回复的生命 +' + pct(v) + '。', m: (v) => ({ hospital: v }) },
   vault:     { n: '护宝术', sc: 'self', ic: 't_coinShield', ...X_({ 2: 1, 5: 2 }), d: (v) => '本领袖阵亡时，带着的前 ' + v + ' 件宝物不会丢。', m: (v) => ({ bank: v }) },
   martyr:    { n: '殉道', sc: 'self', ic: 't_shard', ...S_(0.6), d: (v) => '本领袖阵亡时，留下的灵魂碎片 +' + pct(v) + '。', m: (v) => ({ deathShards: v }) },
@@ -58,6 +58,7 @@ const T = {
   patience:  { n: '坚守术', sc: 'run', ic: 'l_hourglass', ...X_({ 1: 0.1, 2: 0.15, 3: 0.2, 4: 0.25, 5: 0.3, 6: 0.35 }), d: (v) => '本领袖出征时，坚守战的时间 -' + pct(v) + '。', m: (v) => ({ hold: -v }) },
   bounty:    { n: '赏金', sc: 'run', strat: 1, ic: 'e_fang', ...X_({ 2: 0.2, 3: 0.3, 4: 0.4, 5: 0.55, 6: 0.7 }), d: (v) => '本领袖出征时，精英战和首领战得到的积分 +' + pct(v) + '。', m: (v) => ({ eliteScore: v }) },
   peddler:   { n: '货郎', sc: 'run', strat: 1, ic: 'e_market', ...X_({ 2: 1, 4: 2, 6: 3 }), d: (v) => '本领袖出征时，卖部队的商店多摆 ' + v + ' 支部队。', m: (v) => ({ shopUnits: v }) },
+  scholar:   { n: '考古学', sc: 'run', strat: 1, ic: 'g_scroll', ...X_({ 1: 0.2, 2: 0.3, 3: 0.45, 4: 0.6, 5: 0.8, 6: 1 }), d: (v) => '本领袖出征时，掉图纸的概率 +' + pct(v) + '。', m: (v) => ({ bpFind: v }) },
   forage:    { n: '狩猎', sc: 'run', strat: 1, ic: 'e_bottle', ...X_({ 2: 0.1, 3: 0.15, 4: 0.2, 5: 0.25, 6: 0.3 }), d: (v) => '本领袖出征时，每赢一场仗，有 ' + pct(v) + ' 概率捡到一个支援道具。', m: (v) => ({ forage: v }) },
   // ── the whole base (works every day while this leader is alive)
   estates:   { n: '理财术', sc: 'base', ic: 'f_store', ...I_(12), d: (v) => '基地每天多产 ' + v + ' 物资。', m: (v) => ({ supplyDaily: v }) },

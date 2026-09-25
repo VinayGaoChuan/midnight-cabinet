@@ -41,7 +41,10 @@ const VOC_OF = {}; Object.keys(ASSIGN).forEach(v => ASSIGN[v].split(/\s+/).filte
 // splash, horses that only fed mana)
 const SWAP = { VikingWarrior: 'SummonStoneskinTrait', Troll: 'SummonBoneRegenerationTrait', SickleWorm: 'SummonBarbsTrait', Ogre: 'SummonHardenTrait', Rooster: 'SummonRangedDamageReductionTrait',
   Pikeman: 'SummonRangedDamageReductionTrait', ChainmailPikeman: 'SummonHardenTrait', Pulsebot: 'SummonGraniteSkinTrait', YellowManeHorse: 'SummonThickHideTrait', SweatBloodHorse: 'SummonThickHideTrait' };
-const curve = (cost) => 1.44 * Math.pow(Math.max(5, cost), 1.068);
+// power = price (user ruling 2026-09-25): a unit's power is exactly its price, so the shop never has to show it.
+// Stats are K × price split between life and damage by the vocation; every power number in the game is divided by K.
+const K = M.POWER_K = 1.8;
+const curve = (cost) => K * Math.max(5, cost);
 M.vocPowerOf = curve;
 M.applyVocations = function () {
   Object.keys(VOC_OF).forEach(k => {
@@ -49,9 +52,8 @@ M.applyVocations = function () {
     if (SWAP[k] && TDB[SWAP[k]]) d.tr = [SWAP[k]];
     d.voc = v; d._voc = 1;
     if (!d.as || !d.atk || !d.cost) return;                         // eggs and towers that never attack keep their body
-    const pw0 = Math.sqrt(d.hp * d.atk * d.as / 100), c = curve(d.cost), own = Math.min(1.3, Math.max(0.7, Math.sqrt(pw0 / c)));
-    const P = c * own * V.f, hp = P * Math.sqrt(V.r), dps = P / Math.sqrt(V.r);
-    d.hp = Math.max(40, Math.round(hp / 10) * 10); d.atk = Math.max(1, Math.round(dps * 100 / d.as));
+    const P = curve(d.cost), hp = Math.max(40, Math.round(P * Math.sqrt(V.r) / 10) * 10);
+    d.hp = hp; d.atk = Math.round(P * P / hp * 100 / d.as * 100) / 100;   // damage takes up the rounding of life, so √(life × dps) = K × price
     if (v === '射手') d.ranged = 1;
   });
 };

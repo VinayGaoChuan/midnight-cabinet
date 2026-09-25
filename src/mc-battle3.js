@@ -126,10 +126,14 @@ class B3 extends M.Battle2 {
     this.ek = (run.region.tut ? 0.75 : 1) * (1 + (run.M.day - 1) * 0.02);
     const Hh = HEROES[run.hero.cls];
     this.hero = this.mk({ side: 'A', kind: 'hero', hd: M.hdDef(Hh.sprite), sz: 1.25, x: HERO_POS.x, y: HERO_POS.y, hp: run.hero.hp, maxHp: M.heroMaxHp(run.hero, run.M), atk: M.heroAtk(run.hero, run.M) * (1 + (run.runBuff.heroAtk || 0)), iv: Hh.cd, range: Hh.range, spd: Hh.spd, ranged: !!Hh.ranged, isHero: true, bench: true, d: { race: '英雄', voc: '', q: 2 } });
-    const melee = [], ranged = [], still = [];
-    run.roster.forEach(u => { const d = DB[u.type]; if (!d) return; (d.ranged === 2 ? still : d.ranged ? ranged : melee).push(u); });
-    let k = 0; const place = (arr, x) => arr.forEach((u, i) => { const per = 8, n = Math.min(arr.length, per), col = Math.floor(i / per), j = i % per; this.addUnit(u, x + (j % 2) * 44 - col * 96, 110 + (j + 0.5) * (540 / n), k++ * Math.min(0.13, 2.4 / Math.max(1, arr.length))); });
-    place(melee, 720); place(ranged, 500); place(still, 330);
+    // formation by vocation (user ruling 2026-09-25): 先锋 in front, the simple defenders (守护者 / 战士 / 圣骑士)
+    // behind them, then 刺客, then the shooters (射手 / 法师), the supports at the back, towers last
+    const RANK = { 先锋: 0, 守护者: 1, 战士: 1, 圣骑士: 1, 刺客: 2, 射手: 3, 法师: 3, 牧师: 4, 祭司: 4, 召唤师: 4, 商人: 4 }, RX = [790, 670, 565, 455, 345, 250];
+    const ranks = RX.map(() => []);
+    run.roster.forEach(u => { const d = DB[u.type]; if (!d) return; const r = d.ranged === 2 ? 5 : RANK[d.voc] != null ? RANK[d.voc] : d.ranged ? 3 : 1; ranks[r].push(u); });
+    const total = run.roster.length; let k = 0;
+    const place = (arr, x) => arr.forEach((u, i) => { const per = 8, n = Math.min(arr.length, per), col = Math.floor(i / per), j = i % per; this.addUnit(u, x + (j % 2) * 30 - col * 56, 110 + (j + 0.5) * (540 / n), k++ * Math.min(0.13, 2.4 / Math.max(1, total))); });
+    ranks.forEach((arr, r) => place(arr, RX[r]));
     // enemies take the field at the same time, on screen, in formation
     const L = cfg.list, opening = (s) => cfg.mode !== 'hold' || s.spawn < 3, first = L.filter(opening), later = L.filter(s => !opening(s));
     const em = first.filter(s => !s.boss && (DB[s.type] || {}).ranged !== 1), er = first.filter(s => !s.boss && (DB[s.type] || {}).ranged === 1);
@@ -271,7 +275,7 @@ class B3 extends M.Battle2 {
       const armies = this.ents.filter(e => e.alive && e.side === 'A' && !e.isHero).length;
       if (armies === 0 && this.hero.bench && this.hero.alive && T > this.entryEnd) this.heroEnter();
       const left = this.ents.filter(e => e.alive && e.side === 'E').length + (this.cfg.list.length - this.spawnI);
-      if (!this.hero.alive) this.end('dead');
+      if (!this.hero.alive && armies === 0) this.end('dead');   // the army standing keeps the fight going (user ruling 2026-09-25)
       else if (this.mode === 'hold') { if (T >= this.cfg.dur + this.fightT0) { this.finish(); this.end('survived'); this.ents.forEach(e => { if (e.alive && e.side === 'E') { e.alive = false; this.burst(e.x, e.y - 30, '#3a2a4a', 6); } }); } }
       else if (left === 0) { this.finish(); this.end('clear'); }
       else if (T >= 150) this.end('time');

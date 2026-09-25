@@ -186,21 +186,16 @@ G.startSettle = function () {
   const drop = (k) => { this.hold('rbp', run.loot.bp.length); run.loot.bp.push(k); const I = M.itemInfo(k); st.tiles.push({ icon: I.icon, v: 1, c: I.c, to: 'rbp', n: I.n, key: k }); };
   const style = run.theme && run.theme.style, dbl = (run.blood ? 2 : 1) * (1 + (M.baseMods(m).bpLuck || 0));
   const bbp = (bias, qUp) => { let k = M.dropBp(bias, style, qUp); for (let i = 0; i < 6 && !k.startsWith('bbp:'); i++) k = M.dropBp(bias, style, qUp); return k.startsWith('bbp:') ? k : wonderBp(0); };
-  if (n.type === 'boss') {
-    if (!has('bbp:')) drop(bbp(1, n.final ? 1 : 0));
-    if (!has('rbp:')) drop('rbp:' + M.pick(Object.keys(M.RELICS)));
-    if (n.final) drop(bbp(1.5, 1));
-    for (let i = 0; i < (P.bossBp || 0); i++) drop(bbp(1, 1));
-  } else if (n.type === 'elite') { if (!has() && (P.eliteBp || rnd() < 0.6 * dbl)) drop(rnd() < 0.65 ? bbp(0.5) : 'rbp:' + M.pick(Object.keys(M.RELICS))); }
-  else if (n.type === 'extract') drop(bbp(0.6));
-  else if (!has() && rnd() < 0.12 * dbl) drop(rnd() < 0.6 ? bbp(0.2) : 'rbp:' + M.pick(Object.keys(M.RELICS)));
+  // fixed: clearing the world (its final boss) pays one random building blueprint (user ruling 2026-09-25)
+  if (n.type === 'boss' && n.final) drop(M.oneBldBp(style));
+  for (let i = 0; i < (P.bossBp || 0) && n.type === 'boss'; i++) drop(bbp(1, 1));
   this.achCheck();
 };
 // chests: a better chance of a blueprint
 const oChest = G.openChest;
 G.openChest = function (items, col, done) {
   const run = this.run, P = M.perks();
-  if (run && !run.tut && !items.some(it => it.award && it.award.k === 'bp') && rnd() < (0.22 * (P.chestBp ? 2 : 1) * (run.blood ? 2 : 1) * (1 + (M.baseMods(this.meta).bpLuck || 0)))) { const b = M.dropBp(0.4, run.theme && run.theme.style), I = M.itemInfo(b); items.push({ n: I.n, sub: I.kind, c: I.c, img: M.spriteCanvas(I.icon, 12), award: { k: 'bp', key: b } }); }
+  if (run && !run.tut && P.chestBp && !items.some(it => it.award && it.award.k === 'bp') && rnd() < M.bpChance(run, 'chest')) { const b = M.dropBp(0.4, run.theme && run.theme.style), I = M.itemInfo(b); items.push({ n: I.n, sub: I.kind, c: I.c, img: M.spriteCanvas(I.icon, 12), award: { k: 'bp', key: b } }); }
   return oChest.call(this, items, col, done);
 };
 // claw machine: grip bonus and a lifetime counter

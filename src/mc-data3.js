@@ -322,8 +322,8 @@ M.unitPool3 = (m) => { const n = Object.keys(m.cleared).length; const tiers = ['
 M.dropBp = function (bias) {
   if (Math.random() < 0.5) return 'rbp:' + pick(Object.keys(RELICS));
   const ks = Object.keys(BUILDINGS).filter(k => !BUILDINGS[k].fixed);
-  const w = [60, 25, 11, 4].map((x, i) => i === 0 ? x : x * (1 + (bias || 0)));
-  const q = wpick([0, 1, 2, 3], i => w[i]);
+  const w = M.bpWeights ? M.bpWeights(bias, 0) : [60, 25, 11, 4].map((x, i) => i === 0 ? x : x * (1 + (bias || 0)));   // quality by the run's danger (mc-danger.js)
+  const q = wpick([0, 1, 2, 3], i => (ks.some(k => BUILDINGS[k].q === i) ? w[i] : 0));
   return 'bbp:' + pick(ks.filter(k => BUILDINGS[k].q === q));
 };
 M.craftRelic3 = function (meta, key, forge) {

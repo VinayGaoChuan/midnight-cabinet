@@ -166,6 +166,7 @@ const BLESS = [
   { n: '开局多带 2 个支援道具', f: (run) => { for (let i = 0; i < 2; i++) { const s = run.items.indexOf(null); if (s >= 0) { run.items[s] = pick(Object.keys(M.ITEMS)); run.itemQ[s] = 0; } } } },
   { n: '每场战斗初始积分倍率 +0.5', f: (run) => { run.startMult = (run.startMult || 0) + 0.5; } },
   { n: '领袖出发时回满生命', f: (run) => { run.hero.hp = M.heroMaxHp(run.hero, run.M); } },
+  { n: '掉图纸的概率翻倍', f: (run) => { run.bpMul = (run.bpMul || 1) * 2; } },
 ];
 M.BLESS = BLESS;
 G.dayEvent = function (k) {
@@ -182,6 +183,23 @@ G.dayEvent = function (k) {
   if (k === 'harvest') { let n = 0; for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) { const x = m.base.cells[r][c]; if (!x.job) continue; n++; x.job.days -= 1; if (x.job.days <= 0) { if (x.job.kind === 'dig') x.dug = true; else { x.b = x.job.key; x.dug = true; } x.job = null; const p = this.cellPos(c, r); this.fx.rays(p.x, p.y, E.c, 1.2, { r: 240 }); } }
     this.save(); this.toast(n ? E.n + '：' + n + ' 项工程各推进 1 天' : E.n + '：现在没有工程', E.c); return; }
   if (k === 'ley') { const at = M.tileSpot && M.tileSpot(m); if (!at) { this.toast(E.n + '：没有能变的岩层', E.c); return; } const [c, r] = at, tk = M.dropTile(); M.cell(m, c, r).tile = tk; this.save(); this.homeQueue(this.tileReveal(c, r, tk)); }
+};
+// ───────── effects waiting to happen, in a row under the top bar (user ruling 2026-09-25) ─────────
+// what a keepsake or an event promised for later is shown until it is used: next raid weaker, next recruit free …
+M.pendingFx = function (m) {
+  const G_ = M.GIFTS || {}, out = [], gi = (k) => G_[k] || {};
+  if (m.bless != null && BLESS[m.bless]) out.push({ ic: 't_clover', c: EV.star.c, t: BLESS[m.bless].n, title: EV.star.n, d: '下一次出征：' + BLESS[m.bless].n + '。' });
+  if (m.raidWeak) out.push({ ic: gi('decoy').ic || 'g_powder', c: gi('decoy').c || '#c8b0ff', t: '混沌来袭 -' + Math.round(m.raidWeak * 100) + '%', title: gi('decoy').n || '迷踪粉', d: '下一次混沌来袭的怪物减少 ' + Math.round(m.raidWeak * 100) + '%。' });
+  if (m.freeRecruit) out.push({ ic: 'g_letter', c: EV.recruit.c, t: '免费招募 ×' + m.freeRecruit, title: '免费招募', d: '下一次招募领袖免费，至少「稀有」。' });
+  if (m.nextKit) out.push({ ic: gi('kit').ic || 'g_pack', c: gi('kit').c || '#caa84a', t: '支援道具 +' + m.nextKit, title: gi('kit').n || '行军包', d: '下次出征开局多带 ' + m.nextKit + ' 个支援道具。' });
+  if (m.buildBoost) out.push({ ic: gi('mason').ic || 'g_mason', c: gi('mason').c || '#ff9a6a', t: '工期 -' + m.buildBoost + ' 天', title: gi('mason').n || '工匠', d: '下一项工程少 ' + m.buildBoost + ' 天。' });
+  return out;
+};
+const oViewB = G.view;
+G.view = function () {
+  const v = oViewB.call(this), m = this.meta;
+  if (v.b && m && this.screen === 'base') { const L = M.pendingFx(m); v.b.hasBuffs = L.length > 0; v.b.buffs = L.map(o => ({ img: M.iconURL(o.ic, 2), t: o.t, c: o.c, tipOn: this.tipFn({ title: o.title, c: o.c, icon: o.ic, d: o.d }) })); }
+  return v;
 };
 // a blessing waits for the next expedition
 const oNR = M.newRun3;

@@ -58,9 +58,11 @@ MINI.trap = { title: '地雷阵', img: 'e_trap', col: C.amber, text: '对面有�
       U.box(x, px + 6, py + 6, TW - 12, TH - 12, op ? C.night : C.umber); if (!op) K.R(x, px + 6, py + 6, TW - 12, 3, C.brown); if (can) K.RR(x, px + 6, py + 6, TW - 12, TH - 12, 0, null, hov ? C.gold : C.amber, 3);
       if (!op) { for (let i = 0; i < 3; i++) K.R(x, px + 20 + i * 38, py + 30 + (i % 2) * 40, 18, 6, 'rgba(0,0,0,0.2)'); }
       else if (mg.mine[r][c]) { K.CI(x, px + TW / 2, py + TH / 2, 26, C.slate); K.CI(x, px + TW / 2, py + TH / 2, 8, C.red); }
-      else { const n = MINI.trap.cnt(mg, r, c); U.text(x, n ? String(n) : '·', px + TW / 2, py + TH / 2, T.num, [C.lime, C.gold, C.amber, C.red, C.red][n] || C.white, { num: true, outline: true }); } }
+    }
     K.chipC(x, '起点', mg.x0 - 60, mg.y0 + TR * TH / 2, C.cream); K.IC(x, 'chest', mg.x0 + TC * TW + 70, mg.y0 + TR * TH / 2, 90); K.GL(x, mg.x0 + TC * TW + 70, mg.y0 + TR * TH / 2, 90, C.gold, 0.4 + 0.2 * Math.sin(t * 3));
     const hp = mg.at ? { x: mg.x0 + mg.at.c * TW + TW / 2, y: mg.y0 + mg.at.r * TH + TH - 10 } : { x: mg.x0 - 60, y: mg.y0 + TR * TH / 2 + 80 }; K.SP(x, heroSp(this), hp.x, hp.y, 110);
+    // the numbers sit above the leader standing on them (user ruling 2026-09-25)
+    for (let r = 0; r < TR; r++) for (let c = 0; c < TC; c++) { if (!mg.open[r][c] || mg.mine[r][c]) continue; const px = mg.x0 + c * TW, py = mg.y0 + r * TH, n = MINI.trap.cnt(mg, r, c); U.text(x, n ? String(n) : '·', px + TW / 2, py + TH / 2, T.num, [C.lime, C.gold, C.amber, C.red, C.red][n] || C.white, { num: true, outline: true }); }
     for (let i = 0; i < 3; i++) K.IC(x, 't_heart', SX + 90 + i * 50, SY + 130, 40 * (i < 3 - mg.hp ? 1 : 0.4));
   } };
 
@@ -109,21 +111,22 @@ MINI.market = { title: '黑市', img: 'e_market', col: C.violet, text: '斗篷�
   } };
 
 // ═════════════════════ 特训 · mash to train a soldier ═════════════════════
-MINI.trainer = { title: '地下拳馆', img: 'e_trainer', col: C.amber, text: '教练叼着烟：「交钱，挑个人，打沙袋。打得越狠，练得越壮。」',
+MINI.trainer = { title: '地下拳馆', img: 'e_trainer', col: C.amber, text: '教练叼着烟：「交钱，上来打沙袋。打得越狠，练得越壮。」',
+  // the leader steps in itself (user ruling 2026-09-25): no picking a unit, the gain is the leader's
   init(mg) { mg.hits = 0; mg.bag = 0; },
-  cards(mg) { const R = this.run.roster.slice(0, 8), n = R.length, w = 120; return R.map((u, i) => ({ u, x: CX - (n - 1) * (w + 14) / 2 + i * (w + 14), y: SY + 380 })); },
   punch(mg) { if (mg.phase !== 'mash') return; mg.hits++; mg.bag = 1; S.hit(); this.fx.kick(2 + Math.min(8, mg.hits / 4)); this.fx.spark(CX + 170, SY + 330, '#ffe08a', 4, { dir: 0, spread: 1, v: 400 }); },
-  down(mg, px, py) { if (mg.phase === 'select') { const c = MINI.trainer.cards.call(this, mg).find(c => Math.abs(px - c.x) < 60 && Math.abs(py - c.y) < 80); if (c) { if (!this.miniPay(mg.pay)) return; mg.u = c.u; this.miniSet('count'); } } else MINI.trainer.punch.call(this, mg); },
+  down(mg) { MINI.trainer.punch.call(this, mg); },
   key(mg, k, down) { if (k === 'act' && down && mg.phase === 'mash') { MINI.trainer.punch.call(this, mg); return true; } },
-  btns(mg) { if (mg.phase === 'idle') return [{ t: '挑一名部队', sub: mg.pay + ' 积分 · 4 秒疯狂出拳', gold: 1, dis: !this.run.roster.length || this.run.wallet < mg.pay, why: this.run.roster.length ? '积分不够' : '你没有部队', fn: () => this.miniSet('select') }, { t: '离开', leave: 1, fn: () => this.miniFinish('教练把烟头弹进了沙袋里。', '#8d8496') }];
-    if (mg.phase === 'select') return [{ t: '算了', leave: 1, fn: () => this.miniFinish('教练把烟头弹进了沙袋里。', '#8d8496') }]; if (mg.phase === 'mash') return [{ t: '出拳！', sub: '连点 / 连按空格', gold: 1, fn: () => MINI.trainer.punch.call(this, mg) }]; return []; },
+  btns(mg) { if (mg.phase === 'idle') return [{ t: '领袖上场', sub: mg.pay + ' 积分 · 4 秒疯狂出拳', gold: 1, dis: this.run.wallet < mg.pay, why: '积分不够', fn: () => { if (!this.miniPay(mg.pay)) return; this.miniSet('count'); } }, { t: '离开', leave: 1, fn: () => this.miniFinish('教练把烟头弹进了沙袋里。', '#8d8496') }];
+    if (mg.phase === 'mash') return [{ t: '出拳！', sub: '连点 / 连按空格', gold: 1, fn: () => MINI.trainer.punch.call(this, mg) }]; return []; },
   tick(mg, dt) { mg.bag = Math.max(0, mg.bag - dt * 6); if (mg.phase === 'count' && mg.pt > 1.5) this.miniSet('mash');
-    if (mg.phase === 'mash' && mg.pt > 4 && !mg.fin) { mg.fin = true; const u = mg.u, k = Math.min(0.6, mg.hits * 0.018), D = M.DB[u.type]; u.bHp = (u.bHp || 0) + Math.round(D.hp * k); u.bAtk = (u.bAtk || 0) + Math.round(D.atk * k); if (mg.hits >= 26) u.lv = (u.lv || 1) + 1; S.up(3); this.miniFinish(mg.hits + ' 拳！' + D.n + ' 生命、攻击各 +' + Math.round(k * 100) + '%' + (mg.hits >= 26 ? '，等级 +1' : '') + '。', '#ff8a3a'); } },
+    if (mg.phase === 'mash' && mg.pt > 4 && !mg.fin) { mg.fin = true; const run = this.run, h = run.hero, k = Math.min(0.3, mg.hits * 0.009), mx = M.heroMaxHp(h, run.M), heal = Math.round(mx * k);
+      run.runBuff.heroAtk = (run.runBuff.heroAtk || 0) + k; this.hold && this.hold('hp', Math.round(h.hp)); h.hp = Math.min(mx, h.hp + heal); this.release && this.release('hp'); S.up(3);
+      this.miniFinish(mg.hits + ' 拳！领袖本局攻击 +' + Math.round(k * 100) + '%，回复 ' + heal + ' 生命。', '#ff8a3a'); } },
   draw(x, mg) {
     const t = mg.t; bgv(x, '#2a1a10', '#0c0806'); K.GL(x, CX, SY + 120, 300, '#ffd080', 0.3); K.LN(x, CX, SY, CX, SY + 120, 3, '#8a8a9a');
-    if (mg.phase === 'select' || mg.phase === 'idle') { MINI.trainer.cards.call(this, mg).forEach(c => { const hov = mg.phase === 'select' && Math.abs(mg.mx - c.x) < 60 && Math.abs(mg.my - c.y) < 80; K.card(x, c.x - 60, c.y - 80 - (hov ? 12 : 0), 120, 160, M.QUALITY[M.DB[c.u.type].q].c, hov, C.abyss); K.SP(x, c.u.type, c.x, c.y + 60 - (hov ? 12 : 0), 110); }); if (mg.phase === 'select') K.sign(x, '选一名部队', CX, SY + 200, { kind: 'wine', size: T.title }); return; }
     const bx = CX + 170, sw = Math.sin(mg.bag * Math.PI) * 0.3; K.LN(x, bx, SY + 90, bx + Math.sin(sw) * 200, SY + 200, 4, '#8a8a9a'); x.save(); x.translate(bx, SY + 90); x.rotate(-sw); U.box(x, -50, 110, 100, 240, C.wine); K.R(x, -50, 150, 100, 10, C.umber); K.R(x, -50, 300, 100, 10, C.umber); x.restore();
-    K.SP(x, mg.u.type, CX - 80 + mg.bag * 30, FLOOR, 200);
+    K.SP(x, heroSp(this), CX - 80 + mg.bag * 30, FLOOR, 200);
     // 倒数每跳一个数弹一下；出拳数每打一拳弹一下
     if (mg.phase === 'count') K.big(x, String(Math.max(1, 3 - Math.floor(mg.pt * 2))), CX, SY + 250, 120, C.gold, mg.pt % 0.5, { num: true });
     if (mg.phase === 'mash') { K.big(x, mg.hits + ' 拳', CX - 300, SY + 200, T.hero, C.gold, mg.bag > 0 ? (1 - mg.bag) / 6 : 9); U.bar(x, CX - 450, SY + 262, 300, 14, cl(1 - mg.pt / 4, 0, 1), { col: C.amber }); K.R(x, CX - 450 + 300 * 26 / 40, SY + 252, 3, 34, C.white); } // 时间条放在拳数下面，不压说明文字
@@ -194,8 +197,20 @@ MINI.camp = { title: '营火', img: 'e_camp', col: C.amber, text: '火堆还温�
   } };
 
 // ═════════════════════ 招募旗 · curtains lift one by one ═════════════════════
+// the three figures are about equally strong (power = price): the choice is which vocation, not which is best
+// (user ruling 2026-09-25); within ±15 % of the first, widening only if the pool has nothing that close
+M.recruitTrio = function (run) {
+  const a = M.pickUnitQ(run), c0 = M.DB[a].cost, out = [a];
+  for (const w of [0.15, 0.25, 0.4, 9]) {
+    const near = M.SHOP_POOL.filter(k => M.DB[k] && !out.includes(k) && Math.abs(M.DB[k].cost - c0) <= c0 * w).sort(() => Math.random() - 0.5);
+    near.sort((x, y) => (out.some(o => M.DB[o].voc === M.DB[x].voc) ? 1 : 0) - (out.some(o => M.DB[o].voc === M.DB[y].voc) ? 1 : 0));
+    while (out.length < 3 && near.length) out.push(near.shift());
+    if (out.length >= 3) break;
+  }
+  return out;
+};
 MINI.recruit = { title: '招募旗', img: 'e_flag', col: C.blue, text: '旗子下面站着三个人影。帘子一掀开，只有一个能跟你走。',
-  init(mg) { const run = this.run; if (this.node) run.lastL = M.levelAt(run, this.node); mg.pool = []; for (let i = 0; i < 16 && mg.pool.length < 3; i++) { const t = M.pickUnitQ(run); if (!mg.pool.includes(t)) mg.pool.push(t); } mg.cards = mg.pool.map((k, i) => ({ k, x: CX - 330 + i * 330, y: SY + 380, lift: 0 })); },
+  init(mg) { const run = this.run; if (this.node) run.lastL = M.levelAt(run, this.node); mg.pool = M.recruitTrio(run); mg.cards = mg.pool.map((k, i) => ({ k, x: CX - 330 + i * 330, y: SY + 380, lift: 0 })); },
   take(mg, i) { if (mg.phase !== 'idle') return; const c = mg.cards[i], run = this.run; if (!M.canAdd(run, c.k)) { this.toast('队伍满了', '#d0453c'); return; } mg.cur = i; this.miniSet('take'); S.up(2); this.fx.rays(c.x, c.y - 60, M.QUALITY[M.DB[c.k].q].c, 1, { r: 260 }); },
   down(mg, px, py) { mg.cards.forEach((c, i) => { if (Math.abs(px - c.x) < 130 && Math.abs(py - c.y) < 190) MINI.recruit.take.call(this, mg, i); }); },
   btns(mg) { if (mg.phase !== 'idle') return []; return mg.cards.map((c, i) => ({ t: '选 ' + M.DB[c.k].n, sub: (M.DB[c.k].voc || '') + ' · 战力 ' + M.unitPower(c.k), dis: !M.canAdd(this.run, c.k), why: '队伍满了', fn: () => MINI.recruit.take.call(this, mg, i) })).concat([{ t: '都不要', leave: 1, fn: () => this.miniFinish('旗子在风里响了一会儿。', '#8d8496') }]); },

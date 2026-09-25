@@ -102,8 +102,8 @@ G.raidEnd = function () {
   const killR = r.total ? r.kills / r.total : 1, keep = r.portal0 ? Math.max(0, Math.min(1, r.portal.hp / r.portal0)) : 1, sc = 0.55 * killR + 0.45 * keep;
   const gi = sc >= 0.97 ? 0 : sc >= 0.85 ? 1 : sc >= 0.7 ? 2 : 3, GR = GRADE[gi];
   const sup = Math.round((80 + m.day * 12) * GR.m), orb = Math.round(r.kills * 4 * GR.m), bps = [];
-  const style = null; if (gi === 0) bps.push(bldBp(m, 1, style), relicBp(m)); else if (gi === 1) bps.push(bldBp(m, 0.5, style)); else if (gi === 2 && Math.random() < 0.6) bps.push(M.dropBp(0.3));
-  const boss = r.ents.some(e => e.side === 'E' && e.boss && !e.alive); if (boss) bps.push(bldBp(m, 1.5, style));
+  bps.push(M.oneBldBp(null));   // fixed: one random building blueprint for holding (user ruling 2026-09-25); the grade still scales supplies and exp
+  const boss = r.ents.some(e => e.side === 'E' && e.boss && !e.alive);
   // pay out (the HUD numbers are held until the icons land)
   ['msup', 'msh', 'morb'].forEach((k, i) => this.hold(k, [m.supplies, m.shards, m.orbs][i]));
   const falls = fallenH.map(h => M.raidFall(m, h));

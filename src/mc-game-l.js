@@ -41,7 +41,7 @@ G.lootFly = function (gain, from) {
   const seq = [['sack', 'msup', P.gold, gain.msup], ['shard', 'msh', P.violet, gain.msh], ['orb', 'morb', P.lime, gain.morb]].filter(x => x[3] > 0);
   seq.forEach(([ic, k, col, v], i) => {
     const n = cl(Math.round(3 + v / 40), 3, 8), d0 = 0.1 + i * 0.3;
-    for (let j = 0; j < n; j++) this.fly(ic, jit(160), k, col, j === n - 1 ? () => { if (this.held[k] != null) this.release(k); const p = this.fxPos(k); if (p) this.fx.pop(p.x, p.y + 50, '+' + M.fmt(v), col, 32, { num: 1 }); } : null, d0 + j * 0.07);
+    for (let j = 0; j < n; j++) { const part = Math.round(v * (j + 1) / n) - Math.round(v * j / n); this.fly(ic, jit(160), k, col, j === n - 1 ? () => { if (this.held[k] != null) this.release(k); const p = this.fxPos(k); if (p) this.fx.pop(p.x, p.y + 50, '+' + M.fmt(v), col, 32, { num: 1 }); } : () => { if (this.held[k] != null) { this.held[k] += part; this.pulse[k] = performance.now(); M.Sfx.coin && M.Sfx.coin(); } }, d0 + j * 0.07); }
     setTimeout(() => { if (this.held[k] != null) this.release(k); }, (d0 + 2.6) * 1000);
   });
   if (gain.exp > 0 && gain.heroId) { const sel = 'hero-' + gain.heroId, d0 = 0.2 + seq.length * 0.3; for (let j = 0; j < 5; j++) this.fly('orb', jit(140), sel, P.lime, j === 4 ? () => { const p = this.fxPos(sel); if (p) { this.fx.pop(p.x, p.y - 90, gain.ups ? '升级！Lv +' + gain.ups : '经验 +' + gain.exp, P.lime, gain.ups ? 52 : 32); if (gain.ups) { this.fx.rays(p.x, p.y, P.lime, 1, { r: 180 }); M.Sfx.up(2); } } } : null, d0 + j * 0.08); }

@@ -6,9 +6,12 @@
 //   ours ÷ theirs ≥ 1.25 wins ~99 %, 1.1–1.25 ~90 %, 1.0–1.1 ~65 %, below 0.9 mostly loses.
 // The map shows every visible fight's power over it, coloured by that ratio, and ours over the leader.
 const M = window.MC, G = M.Game.prototype, DB = M.DB, sq = Math.sqrt;
-M.unitPower = (k, u) => { const d = DB[k]; if (!d) return 0; return Math.round(sq((d.hp + (u ? u.bHp || 0 : 0)) * (d.atk + (u ? u.bAtk || 0 : 0)) * (d.as || 100) / 100)); };
-M.heroPower = (h, m) => h && M.HEROES[h.cls] ? Math.round(sq(M.heroMaxHp(h, m) * M.heroAtk(h, m) / (M.HEROES[h.cls].cd || 1))) : 0;
-M.powerOf = (s) => Math.round(sq(Math.max(0, s.hp) * Math.max(0, s.dps)));
+const PK = () => M.POWER_K || 1;   // power is counted in price units (mc-voc.js)
+M.unitPower = (k, u) => { const d = DB[k]; if (!d) return 0; return Math.round(sq((d.hp + (u ? u.bHp || 0 : 0)) * (d.atk + (u ? u.bAtk || 0 : 0)) * (d.as || 100) / 100) / PK()); };
+M.heroPower = (h, m) => h && M.HEROES[h.cls] ? Math.round(sq(M.heroMaxHp(h, m) * M.heroAtk(h, m) / (M.HEROES[h.cls].cd || 1)) / PK()) : 0;
+// every unit's power is its price, including the few units tuned after mc-voc.js (玉石兽 …)
+Object.keys(DB).forEach(k => { const d = DB[k]; if (d.type !== 'Summon' || !(d.cost > 0) || !(d.atk > 0) || !d.hp) return; const p = sq(d.hp * d.atk * (d.as || 100) / 100) / PK(); if (Math.abs(p - d.cost) > 0.5) d.atk = Math.round(d.atk * Math.pow(d.cost / p, 2) * 100) / 100; });
+M.powerOf = (s) => Math.round(sq(Math.max(0, s.hp) * Math.max(0, s.dps)) / PK());
 // our side: every unit as the battle will build it, and the leader with the life it has now
 M.sideA = function (run) {
   let hp = 0, dps = 0; const md = run.mods || {}, rb = run.runBuff || {};
@@ -45,7 +48,10 @@ M.makeBattleCfg = function (run, node) {
 };
 const FIGHT = { normal: 1, elite: 1, boss: 1, hold: 1, extract: 1 };
 // survive-the-clock fights (坚守 / 撤离) only need holding out: their waves count 0.7 (they were won at a raw 0.93)
-M.nodePower = function (run, n) { if (!FIGHT[n.type] || run.region.tut) return 0; if (n._pw == null) n._pw = Math.round(M.powerOf(M.sideE(run, M.makeBattleCfg(run, n))) * (n.type === 'hold' || n.type === 'extract' ? 0.7 : 1)); return n._pw; };
+// shown boss power counts the leader fighting from the first second (user ruling 2026-09-25: "equal power, yet I
+// crushed it"): measured on 300 headless boss fights, a boss at 0.75× its raw power plays like an elite at 1× (.ai/sim-boss2.js)
+M.BOSS_SHOW = 0.75;
+M.nodePower = function (run, n) { if (!FIGHT[n.type] || run.region.tut) return 0; if (n._pw == null) n._pw = Math.round(M.powerOf(M.sideE(run, M.makeBattleCfg(run, n))) * (n.type === 'hold' || n.type === 'extract' ? 0.7 : n.type === 'boss' ? M.BOSS_SHOW : 1)); return n._pw; };
 M.oddsCol = (mine, theirs) => { const r = mine / Math.max(1, theirs); return r >= 1.25 ? '#b6f28a' : r >= 1 ? '#ffcf4a' : '#e8434f'; };
 M.oddsWord = (mine, theirs) => { const r = mine / Math.max(1, theirs); return r >= 1.25 ? '稳赢' : r >= 1 ? '有风险' : '很危险'; };
 

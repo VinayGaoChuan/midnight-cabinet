@@ -252,8 +252,10 @@ M.worldPick = function (run, walker, sx, sy) {
   map.nodes.forEach(n => { const x = 960 + (n.x - walker.camX), y = 560 + (n.y - 60 - walker.camY); const d = Math.hypot(x - sx, y - sy); if (d < bd) { bd = d; best = n; } });
   return best;
 };
+// the minimap sits on the left, over ground already walked (user ruling 2026-09-25: the right is where you look)
+M.MMAP = { x: 24, y: 410, w: 560, h: 250 };
 M.drawMinimap2 = function (ctx, run, walker) {
-  const map = run.map, X = 1330, Y = 30, Wd = 560, Ht = 250;
+  const map = run.map, X = M.MMAP.x, Y = M.MMAP.y, Wd = 560, Ht = 250;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   // 机箱面板：右下 12px 硬投影 + 墨框 + 斜面（上左亮、下右暗）+ 四角铆钉；里面是网点凹槽
   PR(ctx, X + 8, Y + 8, Wd + 8, Ht + 8, P.ink); PR(ctx, X - 4, Y - 4, Wd + 8, Ht + 8, P.ink); PR(ctx, X, Y, Wd, Ht, P.night);

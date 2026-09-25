@@ -148,7 +148,7 @@ const oDrop = M.dropBp;
 M.dropBp = function (bias, style, qUp) {
   if (!style || Math.random() < 0.4) return oDrop(bias);
   if (Math.random() < 0.45) return 'rbp:' + M.pick(Object.keys(M.RELICS));
-  const w = [60, 25, 11, 4].map((x, i) => i === 0 ? x : x * (1 + (bias || 0) + (qUp || 0) * 0.8));
+  const w = M.bpWeights ? M.bpWeights(bias, qUp) : [60, 25, 11, 4].map((x, i) => i === 0 ? x : x * (1 + (bias || 0) + (qUp || 0) * 0.8));
   const ks = Object.keys(M.BUILDINGS).filter(k => !M.BUILDINGS[k].fixed && M.BUILDINGS[k].style === style); if (!ks.length) return oDrop(bias);
   const q = M.wpick([0, 1, 2, 3], i => ks.some(k => M.BUILDINGS[k].q === i) ? w[i] : 0);
   return 'bbp:' + M.pick(ks.filter(k => M.BUILDINGS[k].q === q));
@@ -164,7 +164,7 @@ M.newRun3 = function (meta, hero, worldKey, relicIds) {
 const TILE_TO = { coin: 'wallet', sack: 'rsup', orb: 'rexp', shard: 'rshard', scroll: 'rbp', gem: 'rbp', heal: 'hp', unit: 'roster' };
 G.startSettle = function () {
   const b = this.battle, run = this.run, cfg = this.cfg, h = run.hero, m = this.meta, n = this.node, score = b.score, mx = M.heroMaxHp(h, m), th = (run.theme && run.theme.loot) || {};
-  h.hp = Math.max(0, b.hero.alive ? b.hero.hp : 0);
+  h.hp = Math.max(0, b.hero.alive ? b.hero.hp : b.over !== 'dead' ? 1 : 0); if (!b.hero.alive && b.over !== 'dead') this.toast && this.toast('领袖撑过来了：生命 1', '#ffcf4a');
   let good = b.over !== 'dead', title = '胜利', col = '#ffd970'; const tiles = [];
   if (run.tut && h.hp <= 0) { h.hp = Math.round(mx * 0.3); good = true; }
   if (!good) { title = '领袖倒下'; col = '#ff4a4a'; }
@@ -174,10 +174,10 @@ G.startSettle = function () {
     const ex = Math.round((b.kills * 3 + 10 * cfg.w) * (1 + (run.mods.exp || 0)) * (th.exp || 1)); this.hold('rexp', run.loot.exp); run.loot.exp += ex; tiles.push({ icon: 'orb', v: ex, c: '#9cff7a', to: 'rexp' });
     if (th.shards) { const sh = Math.round((2 + cfg.w * 1.5) * (n.type === 'boss' ? 4 : n.type === 'elite' ? 2 : 1)); this.hold('rshard', run.loot.shards); run.loot.shards += sh; tiles.push({ icon: 'shard', v: sh, c: '#d8a0ff', to: 'rshard' }); }
     const bpHold = () => this.hold('rbp', run.loot.bp.length);
-    const pb = (n.type === 'boss' ? 1 : n.type === 'elite' ? 0.45 : run.tut ? 0 : 0.06) + (th.rbp || 0) * (n.type === 'normal' ? 1 : 0);
+    const pb = n.type === 'boss' && n.final ? 0 : M.bpChance(run, n.type);   // rare (mc-danger.js); clearing the world pays its own fixed blueprint
     const drop = (k) => { bpHold(); run.loot.bp.push(k); const I = M.itemInfo(k); tiles.push({ icon: I.icon, v: 1, c: I.c, to: 'rbp', n: I.n, key: k }); };
-    if (Math.random() < pb && !run.tut) drop(th.rbp && Math.random() < 0.5 ? 'rbp:' + M.pick(Object.keys(M.RELICS)) : M.dropBp(n.type === 'boss' ? 1 : 0.3, run.theme && run.theme.style, th.bpq));
-    if (!run.tut && Math.random() < (n.type === 'boss' ? 0.3 : 0) + (th.tile || 0)) drop('tile:' + M.dropTile());
+    if (Math.random() < pb && !run.tut) drop(th.rbp && Math.random() < 0.6 ? 'rbp:' + M.pick(Object.keys(M.RELICS)) : M.dropBp(0, run.theme && run.theme.style, th.bpq));
+    if (!run.tut && Math.random() < (n.type === 'boss' ? 0.15 : 0) + (th.tile || 0)) drop('tile:' + M.dropTile());
     const heal = (run.mods.postHeal || 0) + (th.heal || 0); if (heal) { const v = Math.round(mx * heal); this.hold('hp', Math.round(h.hp)); h.hp = Math.min(mx, h.hp + v); tiles.push({ icon: 'r_heart', v: '+' + v, c: '#9cff7a', to: 'hp' }); }
     run.roster.forEach(u => { u.battles = (u.battles || 0) + 1; (DB[u.type].tr || []).forEach(t => { const T = M.TDB[t]; if (!T) return; const hh = M.TRAIT_H[T.cls.replace(/^Summon|Trait$/g, '')]; if (hh && hh.post) hh.post(b, null, T.v, u); }); });
     (b.grew || []).forEach(g => tiles.push({ icon: g.type, v: g.v, c: '#ffcc33', to: 'roster', unit: 1 }));
@@ -240,8 +240,9 @@ FLP.draw = function (ctx, noClear) { this.items = this.items.filter(it => it.k =
 // ───────── minimap hover: every node can be inspected, including ones only visible on the minimap ─────────
 const oldWM = G.worldMove;
 G.worldMove = function (sx, sy) {
-  if (this.walker && sx >= 1330 && sx <= 1890 && sy >= 30 && sy <= 280) {
-    const map = this.run.map, X = 1330, Y = 30, Wd = 560, Ht = 250, COLW = 520, ROWH = 270, Y0 = 700, sxk = (Wd - 70) / (map.W - 500), syk = (Ht - 90) / (ROWH * 2.4);
+  const MM = M.MMAP || { x: 1330, y: 30 };
+  if (this.walker && sx >= MM.x && sx <= MM.x + 560 && sy >= MM.y && sy <= MM.y + 250) {
+    const map = this.run.map, X = MM.x, Y = MM.y, Wd = 560, Ht = 250, COLW = 520, ROWH = 270, Y0 = 700, sxk = (Wd - 70) / (map.W - 500), syk = (Ht - 90) / (ROWH * 2.4);
     let best = null, bd = 18; map.nodes.forEach(n => { const cx = X + 35 + (n.x - 300) * sxk, cy = Y + 60 + (n.y - (Y0 - ROWH * 1.2)) * syk, d = Math.hypot(cx - sx, cy - sy); if (d < bd) { bd = d; best = n; } });
     if (best) { const n = best, cur = this.walker.edge ? this.walker.edge.b : this.walker.node; this.tipData = { title: M.nodeLabel(n), c: !n.seen ? '#8d8496' : n.type === 'boss' || n.type === 'elite' ? '#ff6a5a' : n.type === 'extract' ? '#5fd0c0' : '#f2c14e', kind: (n.id === cur ? '你在这里 · ' : n.done ? '已经过 · ' : '') + '第 ' + (n.col + 1) + ' 站', d: n.seen ? M.nodeDesc(n) : '在视野之外。' }; this.tipKey = null; return; }
     this.tipData = { title: '小地图', c: '#e8dcc4', d: '整张地图。', lines: [R('当前视野：前方 ' + (this.run.vision || 1) + ' 步')] }; return;

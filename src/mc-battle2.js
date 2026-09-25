@@ -112,7 +112,9 @@ class Battle {
     // taking the field no longer fires the legion skill; the leader's personal skill (mc-pskill.js) takes over
   }
   // the leader's skill is cast from the sidelines; once the leader takes the field the skill is folded away for this battle
-  canCast() { return this.hero.alive && this.hero.bench && !this.over && !this.skillUsed && (this.run.skillCd || 0) <= 0 && this.t > this.entryEnd * 0.5; }
+  // the skill stays usable after the leader takes the field (user ruling 2026-09-25); 血祭 needs a unit to give
+  skillNoTarget() { return this.run.hero.cls === 'butcherlord' && !this.ents.some(o => this.active(o) && o.side === 'A' && !o.isHero); }
+  canCast() { return this.hero.alive && !this.over && !this.skillUsed && (this.run.skillCd || 0) <= 0 && this.t > this.entryEnd * 0.5 && !this.skillNoTarget(); }
   castAnim(fn, tx, ty, col) {
     const h = this.hero; h.castT = this.t;
     this.ring(h.x, h.y - 50, 10, 90, col || C.candle, 6, 0.35);

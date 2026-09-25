@@ -42,7 +42,7 @@ Object.assign(G, {
     items.push({ n: '积分 ' + M.fmt(sc), c: '#ffcc33', img: M.spriteCanvas('coin', 12), award: { k: 'wallet', v: sc } });
     items.push({ n: '物资', c: '#caa84a', img: M.spriteCanvas('sack', 12), award: { k: 'rsup', v: 30 } });
     if (run.tut || Math.random() < 0.3) { const k = M.pick(Object.keys(M.ITEMS)), q = 0; items.push({ n: M.ITEMS[k].name, sub: '支援道具', c: M.ITEM_C, img: M.spriteCanvas(M.ITEMS[k].icon, 12), award: { k: 'item', key: k, q } }); }
-    if (run.tut || Math.random() < 0.25) { const b = M.dropBp(); const I = M.itemInfo(b); items.push({ n: I.n, sub: I.kind, c: I.c, img: M.spriteCanvas(I.icon, 12), award: { k: 'bp', key: b } }); }
+    if (run.tut || Math.random() < M.bpChance(run, 'chest')) { const b = M.dropBp(); const I = M.itemInfo(b); items.push({ n: I.n, sub: I.kind, c: I.c, img: M.spriteCanvas(I.icon, 12), award: { k: 'bp', key: b } }); }
     if (!run.tut && Math.random() < 0.05) { const t = 'tile:' + M.dropTile(); const I = M.itemInfo(t); items.push({ n: I.n, sub: '地脉结晶', c: I.c, img: M.spriteCanvas('gem', 12), award: { k: 'bp', key: t } }); }
     const best = items.reduce((a, b) => (M.QUALITY.findIndex(q => q.c === b.c) > M.QUALITY.findIndex(q => q.c === a.c) ? b : a), items[0]);
     this.openChest(items, best.c === '#caa84a' ? '#ffcc33' : best.c, () => this.finishNode());
@@ -118,7 +118,7 @@ Object.assign(G, {
     if (this.settle) this.settleTick(dt); else if (b.over && b.overT > 1.0) this.startSettle();
     const c = this.ui.cv('field'); if (c) b.render(c.getContext('2d'), { slow: this.reel ? 1 : 0 });
   },
-  castSkill() { const b = this.battle, run = this.run; if (this.reel || this.settle || !b) return; if (!b.hero.bench) { this.toast('领袖已经上场，技能收起了', '#8d8496'); return; } if (run.skillCd > 0) { this.toast('技能冷却中：还要 ' + run.skillCd + ' 个节点', '#8d8496'); return; } if (b.skillUsed) { this.toast('本场已经用过技能了', '#8d8496'); return; } if (!b.castSkill()) this.toast('现在还不能释放', '#8d8496'); else this.coachData = null; },
+  castSkill() { const b = this.battle, run = this.run; if (this.reel || this.settle || !b) return; if (!b.hero.alive) { this.toast('领袖倒下了', '#8d8496'); return; } if (b.skillNoTarget && b.skillNoTarget()) { this.toast('没有能献祭的部队', '#8d8496'); return; } if (run.skillCd > 0) { this.toast('技能冷却中：还要 ' + run.skillCd + ' 个节点', '#8d8496'); return; } if (b.skillUsed) { this.toast('本场已经用过技能了', '#8d8496'); return; } if (!b.castSkill()) this.toast('现在还不能释放', '#8d8496'); else this.coachData = null; },
   useSlot(i) {
     const run = this.run, b = this.battle; if (this.reel || this.settle || !b || b.over || !run.items[i]) return;
     const key = run.items[i], q0 = run.itemQ[i] || 0; run.items[i] = null; M.Sfx.click();

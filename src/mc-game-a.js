@@ -20,7 +20,8 @@ class Game {
     const a = st.getBoundingClientRect(), b = el.getBoundingClientRect(), s = this.ui.scale();
     return { x: (b.left + b.width / 2 - a.left) / s, y: (b.top + b.height / 2 - a.top) / s };
   }
-  corePos() { const p = M.cellCenter(M.CORE.c, M.CORE.r); return this.bv.toScreen(p.x, p.y); }
+  // where the core room will be once the camera has settled (things fly there while it is still moving)
+  corePos() { const p = M.cellCenter(M.CORE.c, M.CORE.r), b = this.bv, x = b.tx != null ? b.tx : b.x, y = b.ty != null ? b.ty : b.y, z = b.tz != null ? b.tz : b.z; return { x: Math.max(80, Math.min(1840, (p.x - x) * z + 960)), y: Math.max(80, Math.min(1000, (p.y - y) * z + 540)) }; }
   cellPos(c, r) { const p = M.cellCenter(c, r); return this.bv.toScreen(p.x, p.y); }
   hold(k, v) { if (this.held[k] == null) this.held[k] = v; }
   release(k) { delete this.held[k]; this.pulse[k] = now(); M.Sfx.coin(); }

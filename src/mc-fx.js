@@ -212,6 +212,7 @@ M.FxLayer = class {
   coins(x, y, n, o = {}) { for (let i = 0; i < n; i++) { const a = -Math.PI / 2 + (Math.random() - 0.5) * (o.spread || 1.3), v = (o.v || 900) * (0.5 + Math.random() * 0.6); this.add({ k: 'coin', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, ph: Math.random() * 6, life: 1.4 + Math.random() * 0.6, delay: (o.delay || 0) + Math.random() * (o.spreadT || 0.4) }); } }
   add(o) { o.t0 = this.t + (o.delay || 0); if (typeof o.col === 'string') o.col = palC(o.col); this.items.push(o); return o; } // 颜色一进来就贴到调色板
   fly(img, from, to, o = {}) {
+    if (to && isFinite(to.x) && isFinite(to.y)) to = { x: Math.max(40, Math.min(1880, to.x)), y: Math.max(40, Math.min(1040, to.y)) };   // never off the screen (user ruling 2026-09-25)
     const cx = (from.x + to.x) / 2 + (o.curve == null ? (Math.random() - 0.5) * 300 : o.curve), cy = Math.min(from.y, to.y) - (o.arc == null ? 260 : o.arc);
     return this.add({ k: 'fly', img, from, to, cx, cy, life: o.dur || 0.75, s0: o.s0 || 1, s1: o.s1 == null ? 0.45 : o.s1, col: o.col || P.gold, onLand: o.onLand, delay: o.delay, landed: false, trail: [] });
   }

@@ -844,7 +844,7 @@
 </style>
 <script src="c6426465-2029-48c4-b4b6-48f1694ed343"></script>
 <script src="a41355fa-4761-4b6d-911e-fe1fa4cb8db2"></script>
-<style>html,body{margin:0;height:100%;background:#07060f;overflow:hidden}@keyframes talNew{0%{transform:scale(0);opacity:0}60%{transform:scale(1.25);opacity:1}100%{transform:scale(1);opacity:1}}@keyframes talPulse{0%,100%{box-shadow:0 0 0 3px #fff3b0,0 0 0 6px #07060f}50%{box-shadow:0 0 0 9px #ffcf4a,0 0 0 12px #07060f}}@keyframes pjBlink{0%,49%{opacity:1}50%,100%{opacity:0}}@keyframes talBob{0%,100%{translate:0 0}50%{translate:0 -7px}}*::-webkit-scrollbar{width:14px;height:14px}*::-webkit-scrollbar-track{background:#0d0b1e;border-left:2px solid #3d3a8c;box-shadow:inset 3px 0 0 #07060f}*::-webkit-scrollbar-thumb{background:linear-gradient(90deg,#ffcf4a 0 3px,#3d3a8c 3px 11px,#3d3a8c 11px);border:2px solid #07060f;min-height:40px}*::-webkit-scrollbar-thumb:hover{background:linear-gradient(90deg,#ffcf4a 0 3px,#ffcf4a 3px 11px,#3d3a8c 11px)}*::-webkit-scrollbar-thumb:active{background:linear-gradient(90deg,#fff3b0 0 3px,#ffcf4a 3px 11px,#3d3a8c 11px)}*::-webkit-scrollbar-button{display:none}*::-webkit-scrollbar-corner{background:#0d0b1e}a{color:#ffcf4a}a:hover{color:#ffcf4a}img{image-rendering:auto;display:block}canvas{image-rendering:auto}</style>
+<style>html,body{margin:0;height:100%;background:#07060f;overflow:hidden}@keyframes fitBlink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(1.08)}}@keyframes endSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes talNew{0%{transform:scale(0);opacity:0}60%{transform:scale(1.25);opacity:1}100%{transform:scale(1);opacity:1}}@keyframes talPulse{0%,100%{box-shadow:0 0 0 3px #fff3b0,0 0 0 6px #07060f}50%{box-shadow:0 0 0 9px #ffcf4a,0 0 0 12px #07060f}}@keyframes pjBlink{0%,49%{opacity:1}50%,100%{opacity:0}}@keyframes talBob{0%,100%{translate:0 0}50%{translate:0 -7px}}*::-webkit-scrollbar{width:14px;height:14px}*::-webkit-scrollbar-track{background:#0d0b1e;border-left:2px solid #3d3a8c;box-shadow:inset 3px 0 0 #07060f}*::-webkit-scrollbar-thumb{background:linear-gradient(90deg,#ffcf4a 0 3px,#3d3a8c 3px 11px,#3d3a8c 11px);border:2px solid #07060f;min-height:40px}*::-webkit-scrollbar-thumb:hover{background:linear-gradient(90deg,#ffcf4a 0 3px,#ffcf4a 3px 11px,#3d3a8c 11px)}*::-webkit-scrollbar-thumb:active{background:linear-gradient(90deg,#fff3b0 0 3px,#ffcf4a 3px 11px,#3d3a8c 11px)}*::-webkit-scrollbar-button{display:none}*::-webkit-scrollbar-corner{background:#0d0b1e}a{color:#ffcf4a}a:hover{color:#ffcf4a}img{image-rendering:auto;display:block}canvas{image-rendering:auto}</style>
 </helmet>
 <div style="position:fixed;inset:0;background:#07060f;overflow:hidden;font-family:'Fusion Pixel 12px Proportional SC','Fusion Pixel 12px Proportional SC','Noto Serif SC',serif;font-weight:400;user-select:none;-webkit-user-select:none">
 <div data-pj-stage="1" ref="{{stageRef}}" sc-camel-on-mouse-move="{{onMove}}" sc-camel-on-mouse-down="{{onPress}}" sc-camel-on-mouse-over="{{onOver}}" style="position:absolute;left:50%;top:50%;width:1920px;height:1080px;margin-left:-960px;margin-top:-540px;transform:translate({{shx}}px,{{shy}}px) rotate({{shr}}deg) scale({{scale}});background:#0d0b1e;overflow:hidden;color:#f4efe0">
@@ -944,6 +944,7 @@
     <div style="flex:1"></div>
     <div sc-camel-on-click="{{abandon}}" data-pj="key dark" style="--kt:#ff9aa8;padding:8px 18px 14px;font-size:26px">放弃</div>
   </div>
+  <sc-if value="{{b.hasBuffs}}" hint-placeholder-val="{{false}}"><div data-g="buffs" style="position:absolute;left:30px;top:112px;display:flex;gap:10px;flex-wrap:wrap;max-width:1000px;pointer-events:auto"><sc-for list="{{b.buffs}}" as="bf" hint-placeholder-count="0"><div sc-camel-on-mouse-enter="{{bf.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" data-pj="ink" style="--q:{{bf.c}};display:flex;align-items:center;gap:8px;padding:4px 12px 6px 8px"><m-img src="{{bf.img}}" style="width:30px;height:30px"></m-img><span style="font-size:22px;color:{{bf.c}};text-shadow:3px 3px 0 #07060f">{{bf.t}}</span></div></sc-for></div></sc-if>
   <sc-if value="{{tlShadeOn}}" hint-placeholder-val="{{false}}"><div style="position:absolute;inset:0;background:rgba(7,6,15,{{tlShade}});pointer-events:none;z-index:50"></div></sc-if>
   <sc-if value="{{tl.banner}}" hint-placeholder-val="{{false}}"><div style="position:absolute;left:0;right:0;top:{{tl.bannerY}}px;display:flex;flex-direction:column;align-items:center;gap:14px;pointer-events:none;z-index:61;opacity:{{tl.bannerOp}};transform:scale({{tl.bannerSc}})"><div style="font-size:96px;color:{{tl.bannerC}};text-shadow:6px 6px 0 #07060f,0 0 40px {{tl.bannerC}}">{{tl.bannerTxt}}</div><div style="font-size:34px;color:{{tl.bannerSubC}};text-shadow:3px 3px 0 #07060f">{{tl.bannerSub}}</div></div></sc-if>
 <sc-if value="{{isRaid}}" hint-placeholder-val="{{false}}">
@@ -1038,7 +1039,7 @@
             <div sc-camel-on-click="{{op.onClick}}" sc-camel-on-mouse-enter="{{op.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" data-pj="opt" style="--q:{{op.border}};display:flex;gap:14px;align-items:center;padding:12px;opacity:{{op.op}}" style-hover="transform:translateX(6px);background:#2b2461" style-active="transform:translateY(4px)">
               <div style="position:relative;flex:none"><m-img src="{{op.thumb}}" style="width:120px;height:84px"></m-img><m-img data-tip="{{op.si.tip}}" src="{{op.si.img}}" style="position:absolute;left:-6px;top:-6px;width:30px;height:30px;background:#07060f;border:3px solid {{op.si.c}}"></m-img><m-img data-tip="{{op.ci.tip}}" src="{{op.ci.img}}" style="position:absolute;right:-6px;bottom:-6px;width:30px;height:30px;background:#07060f;border:3px solid {{op.ci.c}}"></m-img></div>
               <div style="flex:1;display:flex;flex-direction:column;gap:4px">
-                <div style="font-size:30px;color:{{op.c}}">{{op.n}} <span style="font-size:20px;color:#ffcf4a">{{op.bonus}}</span></div>
+                <div style="font-size:30px;color:{{op.c}}">{{op.n}} <span style="display:inline-block;font-size:22px;color:#ffcf4a;text-shadow:0 0 10px #ffcf4a;animation:{{op.banim}}">{{op.bonus}}</span></div>
                 <div style="display:flex;align-items:center;gap:14px;font-size:22px;color:#a9a3c9"><sc-for list="{{op.ms}}" as="om" hint-placeholder-count="0"><span style="display:inline-flex;align-items:center;gap:4px"><m-img src="{{om.img}}" style="width:26px;height:26px"></m-img>{{om.t}}</span></sc-for></div>
                 <sc-if value="{{op.hasWhy}}"><div style="font-size:22px;color:#e8434f">{{op.why}}</div></sc-if>
               </div>
@@ -1050,6 +1051,17 @@
 
       <sc-if value="{{pn.isDig}}" hint-placeholder-val="{{false}}">
         <sc-if value="{{pn.hasTileRow}}"><div data-pj="ink" style="--q:{{pn.tileC}};display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px"><sc-for list="{{pn.tileRow}}" as="tw" hint-placeholder-count="0"><div style="display:flex;align-items:center;gap:6px"><sc-if value="{{tw.hasImg}}"><m-img src="{{tw.img}}" style="width:34px;height:34px"></m-img></sc-if><span style="font-size:24px;color:{{tw.c}}">{{tw.t}}</span></div></sc-for></div></sc-if><sc-if value="{{pn.hasTile}}"><div style="font-size:26px;line-height:1.45;color:{{pn.tileC}}">{{pn.tileTxt}}</div></sc-if>
+        <sc-if value="{{pn.hasDigOpts}}"><div style="font-size:22px;color:#a9a3c9">你的图纸</div><div style="display:flex;flex-direction:column;gap:8px;overflow-y:auto;max-height:430px;padding-right:6px">
+          <sc-for list="{{pn.digOpts}}" as="dq" hint-placeholder-count="0">
+            <div sc-camel-on-mouse-enter="{{dq.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" data-pj="opt" style="--q:{{dq.border}};display:flex;gap:14px;align-items:center;padding:10px">
+              <div style="position:relative;flex:none"><m-img src="{{dq.thumb}}" style="width:100px;height:70px"></m-img><m-img data-tip="{{dq.si.tip}}" src="{{dq.si.img}}" style="position:absolute;left:-6px;top:-6px;width:26px;height:26px;background:#07060f;border:3px solid {{dq.si.c}}"></m-img><m-img data-tip="{{dq.ci.tip}}" src="{{dq.ci.img}}" style="position:absolute;right:-6px;bottom:-6px;width:26px;height:26px;background:#07060f;border:3px solid {{dq.ci.c}}"></m-img></div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+                <div style="font-size:26px;color:{{dq.c}}">{{dq.n}} <span style="display:inline-block;font-size:22px;color:#ffcf4a;text-shadow:0 0 10px #ffcf4a;animation:{{dq.banim}}">{{dq.bonus}}</span></div>
+                <div style="display:flex;align-items:center;gap:14px;font-size:20px;color:#a9a3c9"><sc-for list="{{dq.ms}}" as="dm" hint-placeholder-count="0"><span style="display:inline-flex;align-items:center;gap:4px"><m-img src="{{dm.img}}" style="width:24px;height:24px"></m-img>{{dm.t}}</span></sc-for></div>
+              </div>
+            </div>
+          </sc-for>
+        </div></sc-if>
         <div data-g="dig" sc-camel-on-click="{{doDig}}" data-pj="key gold cta" style="padding:20px 0;text-align:center;font-size:38px" style-hover="translate:0 -3px;transform:translateY(-2px)">⛏ {{pn.digBtn}}</div>
       </sc-if>
 
@@ -1247,9 +1259,9 @@
             <sc-if value="{{su.hasV}}"><div data-tip="{{su.vi.tip}}" data-pj="ink" style="--q:{{su.vi.c}};position:absolute;right:9px;top:9px;padding:3px"><m-img src="{{su.vi.img}}" style="width:40px;height:40px"></m-img></div></sc-if>
             <mc-anim src="{{su.img}}" style="width:220px;height:124px"></mc-anim>
             <div style="font-size:30px;line-height:1.1;color:{{su.qc}};text-shadow:3px 3px 0 #07060f">{{su.n}}</div>
-            <div style="display:flex;gap:16px;font-size:24px;align-items:center;text-shadow:3px 3px 0 #07060f"><span data-tip="tag-voc-{{su.vn}}" style="display:flex;align-items:center;gap:6px;color:{{su.vc}}"><m-img src="{{su.vIc}}" style="width:28px;height:28px"></m-img>{{su.vn}}</span><span data-g="upower" style="display:flex;align-items:center;gap:6px;color:#ffcf4a"><m-img src="{{pwIc}}" style="width:26px;height:26px"></m-img>{{su.pwN}}</span></div>
+            <div style="display:flex;gap:16px;font-size:24px;align-items:center;text-shadow:3px 3px 0 #07060f"><span data-tip="tag-voc-{{su.vn}}" style="display:flex;align-items:center;gap:6px;color:{{su.vc}}"><m-img src="{{su.vIc}}" style="width:28px;height:28px"></m-img>{{su.vn}}</span></div>
             <div data-g="trait" style="font-size:20px;line-height:1.3;color:#f4efe0;text-align:center;max-width:330px;min-height:52px;text-wrap:pretty">{{su.line}}</div>
-            <div style="margin-top:6px;display:flex;align-items:center;gap:8px;padding:4px 14px 6px;background:#07060f"><i data-pj="coin" style="--s:21px;box-shadow:inset 3px 3px 0 0 #fff3b0,inset -3px -3px 0 0 #e0781f"></i><mc-num v="{{su.price}}" style="font-size:28px;color:{{su.priceC}}"></mc-num></div>
+            <div style="margin-top:6px;display:flex;align-items:center;gap:8px;padding:4px 14px 6px;background:#07060f"><i data-pj="coin" style="--s:21px;box-shadow:inset 3px 3px 0 0 #fff3b0,inset -3px -3px 0 0 #e0781f"></i><mc-num v="{{su.price}}" style="font-size:28px;color:{{su.priceC}}"></mc-num><sc-if value="{{su.saleOn}}"><span style="padding:0 8px;font-size:20px;color:#07060f;background:#ff5a4a;box-shadow:0 0 0 3px #07060f;animation:fitBlink 1s ease-in-out infinite">{{su.sale}}</span></sc-if></div>
             <sc-if value="{{su.sold}}"><div style="position:absolute;inset:0;background:rgba(7,6,15,0.8);display:flex;align-items:center;justify-content:center"><span data-pj="pop" style="font-size:52px;color:#e8434f;box-shadow:0 0 0 6px #e8434f;padding:6px 22px;transform:rotate(-12deg) scale({{su.stampSc}});text-shadow:3px 0px 0 #07060f,-3px 0px 0 #07060f,0px 3px 0 #07060f,0px -3px 0 #07060f,3px 3px 0 #07060f,-3px 3px 0 #07060f,3px -3px 0 #07060f,-3px -3px 0 #07060f,0 6px 0 #07060f,3px 6px 0 #07060f,-3px 6px 0 #07060f"><mc-wave t="已购"></mc-wave></span></div></sc-if>
           </div>
         </sc-for>
@@ -1262,7 +1274,7 @@
           <div data-fx="{{sb.fx}}" sc-camel-on-click="{{sb.onBuy}}" sc-camel-on-mouse-enter="{{sb.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" data-pj="well" style="--q:{{sb.qc}};position:relative;flex:1;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:12px;cursor:pointer;transform:translate({{sb.sh}}px,{{sb.dy}}px);opacity:{{sb.op}}">
             <mc-flag data-tip="{{sb.icTip}}" n="{{sb.n}}" style="width:96px;height:132px"></mc-flag>
             <div style="font-size:26px;color:{{sb.qc}}">{{sb.n}}</div>
-            <div style="display:flex;align-items:center;gap:6px;padding:2px 12px 4px;background:#07060f"><i data-pj="coin" style="--s:18px;box-shadow:inset 3px 3px 0 0 #fff3b0,inset -3px -3px 0 0 #e0781f"></i><mc-num v="{{sb.price}}" style="font-size:22px;color:{{sb.priceC}}"></mc-num></div>
+            <div style="display:flex;align-items:center;gap:6px;padding:2px 12px 4px;background:#07060f"><i data-pj="coin" style="--s:18px;box-shadow:inset 3px 3px 0 0 #fff3b0,inset -3px -3px 0 0 #e0781f"></i><mc-num v="{{sb.price}}" style="font-size:22px;color:{{sb.priceC}}"></mc-num><sc-if value="{{sb.saleOn}}"><span style="padding:0 8px;font-size:20px;color:#07060f;background:#ff5a4a;box-shadow:0 0 0 3px #07060f;animation:fitBlink 1s ease-in-out infinite">{{sb.sale}}</span></sc-if></div>
             <sc-if value="{{sb.sold}}"><div style="position:absolute;inset:0;background:rgba(7,6,15,0.8);display:flex;align-items:center;justify-content:center"><span data-pj="pop" style="font-size:44px;color:#e8434f;box-shadow:0 0 0 6px #e8434f;padding:4px 18px;transform:rotate(-12deg) scale({{sb.stampSc}});text-shadow:3px 0px 0 #07060f,-3px 0px 0 #07060f,0px 3px 0 #07060f,0px -3px 0 #07060f,3px 3px 0 #07060f,-3px 3px 0 #07060f,3px -3px 0 #07060f,-3px -3px 0 #07060f,0 6px 0 #07060f,3px 6px 0 #07060f,-3px 6px 0 #07060f">已购</span></div></sc-if>
           </div>
         </sc-for>
@@ -1278,7 +1290,7 @@
               <sc-if value="{{si.sold}}"><div style="position:absolute;inset:0;background:rgba(7,6,15,0.78);display:flex;align-items:center;justify-content:center"><span data-pj="pop" style="font-size:34px;color:#e8434f;box-shadow:0 0 0 4px #e8434f;padding:2px 12px;transform:rotate(-12deg)">已购</span></div></sc-if>
             </div>
             <div style="font-size:20px;color:#c9a24a;text-shadow:2px 2px 0 #07060f">{{si.type}}</div>
-            <div style="display:flex;align-items:center;gap:6px"><m-img src="{{coinImg}}" style="width:22px;height:22px"></m-img><mc-num v="{{si.price}}" style="font-family:'Silkscreen','Fusion Pixel 12px Proportional SC',monospace;font-size:22px;color:{{si.priceC}}"></mc-num></div>
+            <div style="display:flex;align-items:center;gap:6px"><m-img src="{{coinImg}}" style="width:22px;height:22px"></m-img><mc-num v="{{si.price}}" style="font-family:'Silkscreen','Fusion Pixel 12px Proportional SC',monospace;font-size:22px;color:{{si.priceC}}"></mc-num><sc-if value="{{si.saleOn}}"><span style="padding:0 8px;font-size:20px;color:#07060f;background:#ff5a4a;box-shadow:0 0 0 3px #07060f;animation:fitBlink 1s ease-in-out infinite">{{si.sale}}</span></sc-if></div>
           </div>
         </sc-for>
       </div>
@@ -1322,24 +1334,25 @@
 </sc-if>
 
 <sc-if value="{{isEnd}}" hint-placeholder-val="{{false}}">
-  <div sc-camel-on-click="{{endBack}}" style="position:absolute;inset:0;background:linear-gradient(180deg,#07060f 0 34%,#0d0b1e 34% 58%,#1a1640 58% 76%,#2b2461 76% 90%,#3d3a8c 90% 100%);cursor:pointer">
-    <div style="position:absolute;left:560px;top:36px;width:800px;height:72px;background:#4b5268;box-shadow:0 -3px 0 0 #07060f,0 3px 0 0 #07060f,-3px 0 0 0 #07060f,3px 0 0 0 #07060f,inset 0 6px 0 0 #8791a6,inset 0 -6px 0 0 #2b2461"><div style="position:absolute;left:60px;right:60px;top:30px;height:18px;background:#07060f"></div></div>
-    <div data-pj="paper ticket" style="position:absolute;left:600px;top:84px;width:720px;box-sizing:border-box;padding:44px 44px 48px;display:flex;flex-direction:column;gap:16px;transform:scale({{end.sc}});transform-origin:50% 0;opacity:{{end.op}}">
-      <div style="text-align:center;font-family:'Silkscreen',monospace;font-size:26px;letter-spacing:4px">* MIDNIGHT CABINET *</div>
-      <div style="text-align:center;font-size:56px;line-height:1.05;color:#8c1f3a"><mc-wave t="{{end.title}}"></mc-wave></div>
-      <div style="text-align:center;font-size:24px;line-height:1.45;color:#4f2f22;text-wrap:pretty">{{end.sub}}</div>
-      <div style="height:3px;background:repeating-linear-gradient(90deg,#07060f 0 6px,transparent 6px 12px)"></div>
-      <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:14px">
-        <sc-for list="{{end.tiles}}" as="et" hint-placeholder-count="0">
-          <div sc-camel-on-mouse-enter="{{et.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" style="width:112px;height:128px;box-sizing:border-box;padding:8px 6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:#f4efe0;box-shadow:0 0 0 3px #07060f,inset 0 -6px 0 0 #a9a3c9,inset 0 0 0 3px {{et.c}};opacity:{{et.op}};transform:scale({{et.sc}})">
-            <m-img src="{{et.img}}" style="max-width:56px;max-height:56px"></m-img><div style="font-size:20px;color:#07060f;text-align:center;line-height:1.1">{{et.n}}</div><div style="font-family:'Silkscreen','Fusion Pixel 12px Proportional SC',monospace;font-size:18px;color:#6a6394">{{et.v}}</div>
-          </div>
-        </sc-for>
-      </div>
-      <div style="height:3px;background:repeating-linear-gradient(90deg,#07060f 0 6px,transparent 6px 12px)"></div>
-      <sc-for list="{{end.lines}}" as="el" hint-placeholder-count="2"><div style="display:flex;align-items:center;gap:14px;font-size:28px"><span style="flex:1">{{el.k}}</span><span style="width:12px;height:12px;background:{{el.c}};box-shadow:0 0 0 3px #07060f"></span><span style="font-family:'Silkscreen','Fusion Pixel 12px Proportional SC',monospace;font-size:28px;text-align:right">{{el.v}}</span></div></sc-for>
+  <div sc-camel-on-click="{{endBack}}" style="position:absolute;inset:0;background:#07060f;overflow:hidden;cursor:pointer">
+    <div style="position:absolute;left:960px;top:250px;width:2600px;height:2600px;margin:-1300px 0 0 -1300px;border-radius:50%;background:repeating-conic-gradient({{end.glow}} 0deg 5deg,transparent 5deg 15deg);-webkit-mask:radial-gradient(circle,#000 0 18%,transparent 55%);mask:radial-gradient(circle,#000 0 18%,transparent 55%);animation:endSpin 30s linear infinite;pointer-events:none"></div>
+    <div style="position:absolute;inset:0;background:radial-gradient(ellipse 60% 45% at 50% 24%,{{end.glowA}},transparent 70%);pointer-events:none"></div>
+    <div style="position:absolute;left:0;right:0;top:0;height:6px;background:{{end.col}};box-shadow:0 0 30px {{end.col}}"></div>
+    <div style="position:absolute;left:0;right:0;top:{{end.top}}px;height:520px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;opacity:{{end.op}}">
+      <div style="font-size:150px;line-height:1;color:{{end.col}};text-shadow:6px 0px 0 #07060f,-6px 0px 0 #07060f,0px 6px 0 #07060f,0px -6px 0 #07060f,6px 6px 0 #07060f,-6px 6px 0 #07060f,6px -6px 0 #07060f,-6px -6px 0 #07060f,0 12px 0 #07060f,0 0 60px {{end.col}};transform:scale({{end.tsc}})"><mc-wave t="{{end.title}}"></mc-wave></div>
+      <div style="max-width:1100px;text-align:center;font-size:32px;line-height:1.45;color:#f4efe0;text-shadow:3px 3px 0 #07060f;text-wrap:pretty">{{end.sub}}</div>
     </div>
-    <div data-pj="key gold cta pulse" style="position:absolute;left:760px;top:936px;width:400px;height:104px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:40px">回到基地</div>
+    <div style="position:absolute;left:180px;right:180px;top:470px;display:flex;flex-wrap:wrap;justify-content:center;gap:18px">
+      <sc-for list="{{end.tiles}}" as="et" hint-placeholder-count="0">
+        <div sc-camel-on-mouse-enter="{{et.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" style="width:150px;height:170px;box-sizing:border-box;padding:10px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:#1a1640;box-shadow:0 0 0 3px #07060f,inset 0 0 0 4px {{et.c}},inset 0 -9px 0 0 #0d0b1e,0 0 28px {{et.glow}};opacity:{{et.op}};transform:scale({{et.sc}})">
+          <m-img src="{{et.img}}" style="max-width:72px;max-height:72px"></m-img><div style="font-size:22px;color:#f4efe0;text-align:center;line-height:1.1;text-shadow:2px 2px 0 #07060f">{{et.n}}</div><div style="font-family:'Silkscreen','Fusion Pixel 12px Proportional SC',monospace;font-size:24px;color:{{et.c}};text-shadow:2px 2px 0 #07060f">{{et.v}}</div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="position:absolute;left:560px;width:800px;top:846px;display:flex;flex-direction:column;gap:6px;opacity:{{end.op}}">
+      <sc-for list="{{end.lines}}" as="el" hint-placeholder-count="2"><div style="display:flex;align-items:center;gap:14px;font-size:28px;color:#e8dcc4;text-shadow:3px 3px 0 #07060f"><span style="flex:1">{{el.k}}</span><span style="width:12px;height:12px;background:{{el.c}};box-shadow:0 0 0 3px #07060f"></span><span style="font-family:'Silkscreen','Fusion Pixel 12px Proportional SC',monospace;font-size:28px;text-align:right;color:{{el.c}}">{{el.v}}</span></div></sc-for>
+    </div>
+    <div data-pj="key gold cta pulse" style="position:absolute;left:1480px;top:920px;width:380px;height:88px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:40px">回到基地</div>
   </div>
 </sc-if>
 

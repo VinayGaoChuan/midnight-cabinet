@@ -52,6 +52,7 @@ mc-lvup.js
 mc-talent.js
 mc-save.js
 mc-guide.js
+mc-buildui.js
 mc-flow.js
 mc-home.js
 mc-timeline.js
@@ -60,6 +61,8 @@ mc-portal.js
 mc-vision.js
 mc-recruit.js
 mc-power.js
+mc-danger.js
+mc-bigfx.js
 mc-tipcompact.js
 mc-awaken.js
 mc-px16.js
