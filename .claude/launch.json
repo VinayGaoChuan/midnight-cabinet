@@ -1,0 +1,59 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "game",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8000"
+      ],
+      "port": 8000
+    },
+    {
+      "name": "hd2d",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8023",
+        "--directory",
+        "/private/tmp/claude-501/-Users-yseer-Code-midnight-cabinet/13f22f2b-add8-437d-b104-6a4258587925/scratchpad/hd2d"
+      ],
+      "port": 8023
+    },
+    {
+      "name": "music",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8031",
+        "--directory",
+        "/private/tmp/claude-501/-Users-yseer-Code-midnight-cabinet/972586df-76fa-4919-8d33-3a629edc991a/scratchpad"
+      ],
+      "port": 8031
+    },
+    {
+      "name": "game-juice",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8041"
+      ],
+      "port": 8041
+    },
+    {
+      "name": "game-sfx",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8051"
+      ],
+      "port": 8051
+    }
+  ]
+}

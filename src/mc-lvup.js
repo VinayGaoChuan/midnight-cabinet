@@ -22,8 +22,8 @@ M.heroPowerAt = (h, m, lv) => M.heroPower(Object.assign({}, h, { lv }), m);
 M.lvOrbs = function (h, m) { if (h.lv >= 10) return 0; const mul = 1 + (M.baseMods(m).orbMul || 0); return Math.max(1, Math.ceil((M.expNeed(h.lv) - h.exp) / mul)); };
 G.heroLvUp = function (id) {
   const m = this.meta, h = m.heroes.find(x => x.id === id); if (!h) return;
-  if (h.lv >= 10) { this.toast('已经满级了', '#8d8496'); return; }
-  const need = M.lvOrbs(h, m); if (m.orbs < need) { this.toast('经验球不够：升级要 ' + need + ' 个（现有 ' + m.orbs + '）', '#d0453c'); return; }
+  if (h.lv >= 10) { this.deny('已经满级了', '#8d8496'); return; }
+  const need = M.lvOrbs(h, m); if (m.orbs < need) { this.deny('经验球不够：升级要 ' + need + ' 个（现有 ' + m.orbs + '）', '#d0453c'); return; }
   const mul = 1 + (M.baseMods(m).orbMul || 0), lv0 = h.lv, p0 = M.heroPower(h, m), mx0 = M.heroMaxHp(h, m);
   this.hold('morb', m.orbs); m.orbs -= need; this.release('morb');
   M.addExp(h, need * mul); h.hp = Math.min(M.heroMaxHp(h, m), h.hp + (M.heroMaxHp(h, m) - mx0)); this.save();
@@ -41,7 +41,7 @@ G.lvUpFx = function (h, lv0, lv1, p0, p1) {
 G.lvNext = function () {
   const it = this.lvQ && this.lvQ.shift(); if (!it) { this.lvFx = null; return; }
   this.lvFx = Object.assign(it, { t0: now(), sounds: {}, parts: [] });
-  S.whoosh && S.whoosh(0.4);
+  S.lv('in', it.lv1);   // 升级的声音逐拍跟着 drawLv 的 t 走（mc-audio.js 的 LV：闪光、落定、等级、滚动、变金、天赋）
 };
 const DUR = 3.6;
 // Pixel Juice（docs/design.md §11.5）：墨色压暗、硬边光芒、Silkscreen 绿色色带大字、机箱面板里的战斗力
@@ -57,11 +57,12 @@ const drawLv = function (ctx, g) {
   const D = L.dur || DUR;
   if (t > D) { g.lvNext(); if (g.pulse) g.pulse.heroPower = now(); return; }
   const snd = (k, at, fn) => { if (t >= at && !L.sounds[k]) { L.sounds[k] = 1; try { fn(); } catch (e) {} } };
-  snd('boom', 0.12, () => { S.impact && S.impact(); g.fx.flash && g.fx.flash(P.white, 0.5); g.fx.confetti && g.fx.confetti(120, { x: 960, y: 380, cols: [P.lime, P.gold, P.white] }); });
-  snd('fan', 0.35, () => S.fanfare && S.fanfare());
-  snd('lv', 0.7, () => S.up && S.up(3));
-  snd('pw', 1.35, () => S.sparkle && S.sparkle());
-  snd('pw2', 2.3, () => { S.coin && S.coin(); g.fx.rays && g.fx.rays(960, 760, P.gold, 1.4, { r: 420 }); });
+  snd('boom', 0.12, () => { S.lv('flash'); g.fx.flash && g.fx.flash(P.white, 0.5); g.fx.confetti && g.fx.confetti(120, { x: 960, y: 380, cols: [P.lime, P.gold, P.white] }); });
+  snd('slam', 0.36, () => S.lv('slam'));
+  snd('lv', 0.7, () => S.lv('num'));
+  snd('panel', 1.18, () => S.lv('panel'));
+  snd('roll', 1.3, () => S.lv('roll', 1.0));   // 数字滚动时压着属和弦，停住变金时解决
+  snd('pw2', 2.3, () => { S.lv('gold'); g.fx.rays && g.fx.rays(960, 760, P.gold, 1.4, { r: 420 }); });
   const fin = t > D - 0.45 ? st4((D - t) / 0.45) : 1, a0 = st4(eo(cl(t / 0.25, 0, 1))) * fin;
   ctx.save();
   // veil and light: 墨色压暗 + 纯色光芒（转角一格一格走）+ 4 段硬边光晕
@@ -87,7 +88,7 @@ const drawLv = function (ctx, g) {
   if (tq >= 0) {
     ctx.save(); ctx.translate(cx, 150); ctx.scale(ts, ts); ctx.globalAlpha = (tq < 0.08 ? 0.5 : 1) * fin;
     const ch = [...'LEVEL UP'], cw = ch.map(c => U.measure(ctx, c, 120, true)), tw = cw.reduce((a, c) => a + c, 0) + 4 * (ch.length - 1), wave = tq > 0.48 && !RM();
-    let px = -tw / 2; ch.forEach((c, i) => { const ph = (t * 1.25 + (ch.length - i) * 0.12) % 1, dy = wave ? [0, -9, 0, 3][Math.floor(ph * 4)] : 0; U.text(ctx, c, px + cw[i] / 2, dy, 120, bands(ctx, dy - 60, dy + 60, GREEN), { outline: true, num: true }); px += cw[i] + 4; });
+    let px = -tw / 2; ch.forEach((c, i) => { const ph = (t * 1.25 + (ch.length - i) * 0.12) % 1, dy = wave ? (-6 * Math.sin(ph * Math.PI * 2) - 3 * Math.max(0, Math.sin(ph * Math.PI * 2))) : 0; U.text(ctx, c, px + cw[i] / 2, dy, 120, bands(ctx, dy - 60, dy + 60, GREEN), { outline: true, num: true }); px += cw[i] + 4; });
     ctx.restore();
   }
   // name and level
@@ -101,6 +102,7 @@ const drawLv = function (ctx, g) {
   }
   // combat power rolls up: 机箱面板 + 「战斗力」标题牌，数字滚动时白、停下变金并弹一下，绿色分格条
   const pq = cl((t - 1.3) / 1.0, 0, 1), x0 = cx - 380, y0 = 712, pw = 760, ph = 150;
+  { const tk = Math.floor(eo(pq) * 16); if (pq > 0 && pq < 1 && tk > (L.tk || 0)) { L.tk = tk; S.lv('tick', tk / 16); } }   // 数字每跳一格一声，音越来越高
   let bw = 0;
   if (t > 1.2) {
     const pa = (t < 1.3 ? 0.5 : 1) * fin, v = Math.round(L.p0 + (L.p1 - L.p0) * eo(pq)), d = L.p1 - L.p0;
@@ -113,11 +115,12 @@ const drawLv = function (ctx, g) {
     ctx.globalAlpha = 1;
   }
   // new talents: 「第 N 层天赋」 and the layer's nodes popping in one by one, each with its name in its reach colour
+  if (L.newNodes) snd('talT', 2.55, () => S.lv('talTitle'));
   if (L.newNodes && t > 2.55) {
     const ns = L.newNodes, n = ns.length, is = n > 6 ? 72 : 84, gap = n > 6 ? 22 : 30, rw = n * is + (n - 1) * gap, rx = cx - rw / 2, ry = 918;
     ctx.globalAlpha = st4((t - 2.55) / 0.2) * fin; U.text(ctx, '第 ' + L.newL + ' 层天赋', cx, ry - 30, 34, P.gold, { outline: true });
     ns.forEach((i, k) => {
-      const T = L.h.tree[i], k0 = 2.75 + k * 0.12, q = t - k0; if (!T || q < 0) return; snd('tal' + k, k0, () => S.up && S.up(1 + k * 0.2));
+      const T = L.h.tree[i], k0 = 2.75 + k * 0.12, q = t - k0; if (!T || q < 0) return; snd('tal' + k, k0, () => S.lv('tal', k));
       const sc = seq(POP, q, 0.07), c = M.talScope(T).c, x = rx + k * (is + gap) + is / 2, y = ry + is / 2, cv = M.iconCanvas(M.talIcon(T), 3);
       ctx.save(); ctx.globalAlpha = fin; ctx.translate(x, y); ctx.scale(sc, sc); U.box(ctx, -is / 2, -is / 2, is, is, P.night);
       [[-is / 2, -is / 2, is, 5], [-is / 2, is / 2 - 5, is, 5], [-is / 2, -is / 2, 5, is], [is / 2 - 5, -is / 2, 5, is]].forEach(([a, b, w, h]) => U.R(ctx, a, b, w, h, c));

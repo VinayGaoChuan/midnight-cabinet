@@ -13,7 +13,7 @@ M.CAP_MAX = 4;
 M.capCost = (m) => 200 * (1 + (m.capBuy || 0));
 G.buyCap = function () {
   const m = this.meta, cost = M.capCost(m); if ((m.capBuy || 0) >= M.CAP_MAX) return;
-  if (m.supplies < cost) { this.toast('物资不足', '#d0453c'); return; }
+  if (m.supplies < cost) { this.deny('物资不足', '#d0453c'); return; }
   this.hold('msup', m.supplies); m.supplies -= cost; this.release('msup'); m.capBuy = (m.capBuy || 0) + 1; m.heroCapBonus = (m.heroCapBonus || 0) + 1; this.save();
   M.Sfx.up && M.Sfx.up(2); this.pulse.heroes = now(); this.toast('领袖上限 +1（' + M.heroCap(m) + '）', '#ffe08a');
 };
@@ -27,7 +27,7 @@ G.recruitCard = function (h, rar, done) {
   const cracks = []; for (let i = 0; i < 9; i++) { let a = i / 9 * 6.283 + Math.random() * 0.4, x = 0, y = 0; const pts = [[0, 0]]; for (let s = 0; s < 7; s++) { a += (Math.random() - 0.5) * 0.9; x += Math.cos(a) * 26; y += Math.sin(a) * 26; pts.push([x, y]); } cracks.push(pts); }
   const idx = this.meta.heroes.indexOf(h), to = { x: 24 + Math.max(0, idx) * 122 + 56, y: 1080 - 24 - 66 };
   this.cardFx = { t: 0, h, rar, done, shards, cracks, to, img: M.spriteCanvas(M.HEROES[h.cls].sprite, 16), ic: M.iconCanvas('c_' + h.cls, 4), boom: false, ticks: 0 };
-  S.whoosh && S.whoosh(0.5); this.bump();
+  S.rc('in'); this.bump();
 };
 const RC = () => M.RARITY.map(r => r.c);
 const U = M.UI, P = M.PJ.PAL, RM = () => !!M.PJ.reduced, st = (t) => (RM() ? 0 : t);   // continuous (user ruling 2026-09-24: no frame-stepped motion)
@@ -52,9 +52,13 @@ function drawCard(ctx, F) {
   const dim = t < T_REVEAL ? cl(t / 0.3, 0, 1) : 1 - cl((t - T_REVEAL) / (T_END - T_REVEAL), 0, 1); U.dim(ctx, dim);
   // 光一档档爬过经过的品质，停在自己的品质
   const tier = t < T_IN ? 0 : Math.min(F.rar, Math.floor((t - T_IN) / ((T_CHARGE - T_IN) / (F.rar + 1)))), glowC = U.pal(cols[tier]);
+  // 声音逐拍跟着 F.t 走（可以点击快进）：蓄力开始、光每爬一档品质一声、碎开、飞走、落地
+  const sb = (k, at, fn) => { const s = F._s || (F._s = {}); if (t >= at && !s[k]) { s[k] = 1; fn(); } };
+  sb('ch', T_IN, () => S.rc('charge', { dur: T_CHARGE - T_IN, rar: F.rar })); if (t >= T_IN && t < T_CHARGE && tier !== F._tier) { F._tier = tier; S.rc('tier', tier); }
+  sb('fly', T_REVEAL, () => S.rc('fly'));
   if (t < T_CHARGE) {
     const qi = eo(cl(t / T_IN, 0, 1)), qc = cl((t - T_IN) / (T_CHARGE - T_IN), 0, 1), shake = qc * qc * (6 + F.rar * 5);
-    const x = Math.round((960 + (CX - 960) * qi + (Math.random() - 0.5) * shake) / 3) * 3, y = Math.round((1000 + (CY - 1000) * qi + (Math.random() - 0.5) * shake) / 3) * 3, s = 0.3 + 0.7 * eb(qi);
+    const x = Math.round(960 + (CX - 960) * qi + (Math.random() - 0.5) * shake), y = Math.round(1000 + (CY - 1000) * qi + (Math.random() - 0.5) * shake), s = 0.3 + 0.7 * eb(qi);
     if (qc > 0) { const r = Math.round(180 + 260 * qc); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.3 + 0.35 * qc; ctx.fillStyle = U.rg(ctx, x, y, 20, r, [[0, glowC], [1, 'rgba(0,0,0,0)']], 4); ctx.fillRect(x - r, y - r, r * 2, r * 2); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
     ctx.save(); ctx.translate(x, y); ctx.scale(s * Math.max(0.08, Math.abs(Math.cos((1 - qi) * Math.PI * 2))), s); ctx.rotate((1 - qi) * 0.4); cardBack(ctx, t, glowC, qc);
     // 裂纹从中心往外爬：6px 方头硬线，外面一圈墨
@@ -63,17 +67,17 @@ function drawCard(ctx, F) {
     ctx.restore();
   }
   // 碎开
-  if (t >= T_CHARGE && !F.boom) { F.boom = true; S.boom && S.boom(); S.fanfare && S.fanfare(); if (F.g) { F.g.fx.kick(22 + F.rar * 6); F.g.fx.rays && F.g.fx.rays(CX, CY, rc, 2.2); } }
+  if (t >= T_CHARGE && !F.boom) { F.boom = true; S.rc('shatter', F.rar); if (F.g) { F.g.fx.kick(22 + F.rar * 6); F.g.fx.rays && F.g.fx.rays(CX, CY, rc, 2.2); } }
   if (t >= T_CHARGE) {
     const d = t - T_CHARGE;
-    if (d < 0.35) { ctx.globalAlpha = 0.85 * (1 - Math.floor(d / 0.35 * 3) / 3); ctx.fillStyle = P.white; ctx.fillRect(0, 0, 1920, 1080); ctx.globalAlpha = 1; }
-    if (d < 0.7) { const e = Math.floor(d / 0.7 * 6) / 6, rw = Math.round((60 + e * 1400)), rh = Math.round((40 + e * 800)), lw = e < 0.5 ? 12 : 6; ctx.lineWidth = lw; ctx.strokeStyle = P.ink; ctx.beginPath(); ctx.ellipse(CX, CY, rw + lw, rh + lw, 0, 0, 7); ctx.stroke(); ctx.strokeStyle = rc; ctx.beginPath(); ctx.ellipse(CX, CY, rw, rh, 0, 0, 7); ctx.stroke(); }
-    if (d < 1.3) F.shards.forEach(p => { ctx.save(); ctx.globalAlpha = Math.ceil(cl(1 - d / 1.3, 0, 1) * 4) / 4; ctx.translate(Math.round(CX + p.cx + p.vx * d), Math.round(CY + p.cy + p.vy * d + 900 * d * d)); ctx.rotate(Math.round(p.vr * d / 0.4) * 0.4); ctx.translate(-p.cx, -p.cy); ctx.fillStyle = (p.cx + p.cy) % 3 > 1 ? P.night : P.wine; ctx.strokeStyle = rc; ctx.lineWidth = 3; ctx.lineJoin = 'miter'; ctx.beginPath(); p.tri.forEach(([a, b], i) => (i ? ctx.lineTo(a, b) : ctx.moveTo(a, b))); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); });
+    if (d < 0.35) { ctx.globalAlpha = 0.85 * (1 - d / 0.35); ctx.fillStyle = P.white; ctx.fillRect(0, 0, 1920, 1080); ctx.globalAlpha = 1; }
+    if (d < 0.7) { const e = eo(d / 0.7), rw = Math.round((60 + e * 1400)), rh = Math.round((40 + e * 800)), lw = e < 0.5 ? 12 : 6; ctx.lineWidth = lw; ctx.strokeStyle = P.ink; ctx.beginPath(); ctx.ellipse(CX, CY, rw + lw, rh + lw, 0, 0, 7); ctx.stroke(); ctx.strokeStyle = rc; ctx.beginPath(); ctx.ellipse(CX, CY, rw, rh, 0, 0, 7); ctx.stroke(); }
+    if (d < 1.3) F.shards.forEach(p => { ctx.save(); ctx.globalAlpha = cl(1 - d / 1.3, 0, 1); ctx.translate(Math.round(CX + p.cx + p.vx * d), Math.round(CY + p.cy + p.vy * d + 900 * d * d)); ctx.rotate(p.vr * d); ctx.translate(-p.cx, -p.cy); ctx.fillStyle = (p.cx + p.cy) % 3 > 1 ? P.night : P.wine; ctx.strokeStyle = rc; ctx.lineWidth = 3; ctx.lineJoin = 'miter'; ctx.beginPath(); p.tri.forEach(([a, b], i) => (i ? ctx.lineTo(a, b) : ctx.moveTo(a, b))); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); });
     // 真容：光束、领袖像素半身像（没有就用精灵）、职业徽记和名字——然后飞进领袖栏
     const fl = cl((t - T_REVEAL) / (T_END - T_REVEAL - 0.1), 0, 1), q = eo(fl), rv = eb(cl(d / 0.5, 0, 1));
     const x = Math.round(CX + (F.to.x - CX) * q), y = Math.round(CY + (F.to.y - CY) * q - Math.sin(q * Math.PI) * 160), sc = (1 - 0.8 * q) * rv;
     if (fl < 1) {
-      if (q < 0.5) { ctx.save(); ctx.translate(CX, CY); ctx.rotate(Math.round(st(t, 6) * 0.5 / (Math.PI / 16)) * (Math.PI / 16)); ctx.globalAlpha = Math.ceil((1 - q * 2) * 3) / 3 * 0.5; for (let i = 0; i < 16; i++) { ctx.rotate(Math.PI / 8); ctx.fillStyle = i % 2 ? rc : P.butter; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-30, -700); ctx.lineTo(30, -700); ctx.fill(); } ctx.restore(); }
+      if (q < 0.5) { ctx.save(); ctx.translate(CX, CY); ctx.rotate(st(t) * 0.5); ctx.globalAlpha = (1 - q * 2) * 0.5; for (let i = 0; i < 16; i++) { ctx.rotate(Math.PI / 8); ctx.fillStyle = i % 2 ? rc : P.butter; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-30, -700); ctx.lineTo(30, -700); ctx.fill(); } ctx.restore(); }
       const bi = U.bust(H.sprite);
       if (bi) { const w = Math.round(256 * sc), hh = w; ctx.save(); ctx.imageSmoothingEnabled = false; U.R(ctx, x - w / 2 + 9 * sc, y - hh / 2 + 9 * sc, w + 6, hh + 6, P.ink); U.box(ctx, x - w / 2, y - hh / 2, w, hh, P.indigo); ctx.drawImage(bi, x - w / 2, y - hh / 2, w, hh); U.R(ctx, x - w / 2, y + hh / 2 - 6, w, 6, rc); ctx.restore(); }
       else if (F.img) { const w = F.img.width * 1.1 * sc, hh = F.img.height * 1.1 * sc; ctx.save(); ctx.imageSmoothingEnabled = false; ctx.drawImage(F.img, x - w / 2, y - hh / 2, w, hh); ctx.restore(); }
@@ -87,8 +91,7 @@ const oTick = G.tick;
 G.tick = function (dt) {
   oTick.call(this, dt); const F = this.cardFx; if (!F) return; F.g = this; F.t += dt;
   const fc = this.ui && this.ui.cv('fx'); if (fc) drawCard(fc.getContext('2d'), F);
-  if (F.t >= T_END) { this.cardFx = null; this.pulse.heroes = now(); if (this.fx) this.fx.burst && this.fx.burst(F.to.x, F.to.y, M.RARITY[F.rar].c, 20); S.land && S.land(2 + F.rar); if (F.done) F.done(); }
-  this.bump();
+  if (F.t >= T_END) { this.cardFx = null; this.pulse.heroes = now(); if (this.fx) this.fx.burst && this.fx.burst(F.to.x, F.to.y, M.RARITY[F.rar].c, 20); S.rc('land', F.rar); if (F.done) F.done(); this.bump(); }   // 卡画在特效画布上：只在开始和结束时重画界面
 };
 // nothing else is clicked while the card plays
 ['baseClick', 'openPanel'].forEach(k => { const o = G[k]; if (o) G[k] = function () { if (this.cardFx) return; return o.apply(this, arguments); }; });
@@ -100,6 +103,15 @@ G.view = function () {
   if (pn && pn.isRecruit && m) { const n = m.capBuy || 0, cost = M.capCost(m); pn.capOn = n < M.CAP_MAX; pn.capBtn = '扩建：花 ' + cost + ' 物资，领袖上限 +1'; pn.capOk = m.supplies >= cost; pn.capOp = pn.capOk ? 1 : 0.5; pn.buyCap = () => { M.Sfx.click(); this.buyCap(); }; }
   return v;
 };
+
+// ───────── 点一下就快进（§11.6）：长演出里点击不会白点——回家的一串、招募碎卡、升级、转盘、胜利、阵亡卡都加速到 3 倍 ─────────
+// 这是最外层的 tick 包装，要留在所有 tick 包装之后（本文件在 _order.txt 里排在它们后面）
+G.longShow = function () { const st = this.settle; return !!(this.homeQ || this.cardFx || this.lvFx || this.reel || this.tlFx || this.tear || this.coreFx || (st && st.t < 1.8)); };
+G.hurry = function () { if (!this.longShow()) return false; if (!(this.rushUntil > now())) { if (!(M.Sfx.cue && M.Sfx.cue('ui_rush'))) M.Sfx.tick(8); } this.rushUntil = now() + 1200; return true; };
+const oTickR = G.tick;
+G.tick = function (dt) { if (this.rushUntil > now() && this.screen !== 'battle' && this.longShow()) dt = (dt || 0) * 3; else if (this.rushUntil > now() && this.reel) dt = (dt || 0) * 3; return oTickR.call(this, dt); };
+const oPress = G.uiPress;
+G.uiPress = function (t, x, y) { this.hurry(); return oPress.apply(this, arguments); };
 })();
 
 ;

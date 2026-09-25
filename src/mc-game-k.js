@@ -103,8 +103,6 @@ G.tipFor = function (key) {
 };
 
 // ───────── press & hold to learn ─────────
-S.charge = function (p) { if (S.lim && !S.lim('charge', 60)) return; S.tone(300 + p * 900, 0.06, 'triangle', 0.05 + p * 0.05); };
-S.boing = function () { S.tone(220, 0.12, 'sine', 0.12, 160); S.tone(330, 0.1, 'triangle', 0.05, -120, 0.05); };
 function talState(g, id) {
   const p = g.panel, h = p && p.kind === 'hero' && g.meta.heroes.find(x => x.id === p.id); if (!h) return null;
   if (id === 'root') return { h, root: 1 };
@@ -129,7 +127,7 @@ G.talTick = function () {
   if (step > c.last && p < 1) { c.last = step; S.charge(p); }
   if (p >= 1) { this.talCharge = null; const h = this.meta.heroes.find(x => x.id === this.panel.id), T = h.tree[c.i]; this.takeTalent(h.id, c.i);
     const pos = this.fxPos('tal-' + c.i); if (pos && T) { const col = M.talScope(T).c; this.fx.explode(pos.x, pos.y, col, 1.2); this.fx.rays(pos.x, pos.y, col, 0.9, { r: 220 }); this.fx.pop(pos.x, pos.y - 60, M.talName(T), col, 40); this.fx.kick(8); }
-    M.Sfx.mult(); this.punchSel('tal-' + c.i, 1.4); }
+    M.Sfx.mult(); this.punchSel('tal-' + c.i, 1.4); setTimeout(() => this.punchSel('hero-' + h.id, 0.8), 140); }   // 节点炸开 → 领袖卡跟着鼓一下
   this.bump();
 };
 const padHeld = () => { try { const P = M.settings.pad, gp = [...(navigator.getGamepads ? navigator.getGamepads() : [])].find(Boolean); return !!(gp && P && gp.buttons[P.confirm] && gp.buttons[P.confirm].pressed); } catch (e) { return false; } };

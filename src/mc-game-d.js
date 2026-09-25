@@ -97,7 +97,7 @@ Object.assign(G, {
       // 奇遇有像素插画时用「立绘 + 对话框」版式（设计稿 1d），否则是居中的机箱面板
       const art = md.img && M.PJ && M.PJ.EVART ? M.PJ.EVART[md.img] : null;
       v.md = { title: md.title, titleColor: md.titleColor || '#ffe8b0', text: md.text || '', hasImg: !!art, noImg: !art, art: art ? art + '#x0.2p' : '', hasIcon: !!md.img && !art, img: md.img ? M.spriteURL(md.img, 14) : '', border: md.border || '#8a6a3a', sc: 0.85 + 0.15 * M.ease.eback(q), op: q, glow: md.titleColor || '#ffcc66',
-        choices: (md.choices || []).map(c => ({ t: c.t, sub: c.sub || '', hasSub: !!c.sub, ring: c.dis ? '#2b2461' : c.gold ? '#ffcf4a' : c.danger ? '#e8434f' : '#3d3a8c', op: c.dis ? 0.45 : 1, color: c.dis ? '#6a6394' : c.gold ? '#fff3b0' : c.danger ? '#ff9aa8' : '#f4efe0', onClick: () => { if (c.dis) { this.toast('条件不足', '#8d8496'); return; } M.Sfx.click(); c.fn(); this.bump(); } })) }; }
+        choices: (md.choices || []).map(c => ({ t: c.t, sub: c.sub || '', hasSub: !!c.sub, ring: c.dis ? '#2b2461' : c.gold ? '#ffcf4a' : c.danger ? '#e8434f' : '#3d3a8c', op: c.dis ? 0.45 : 1, color: c.dis ? '#6a6394' : c.gold ? '#fff3b0' : c.danger ? '#ff9aa8' : '#f4efe0', onClick: () => { if (c.dis) { this.deny('条件不足', '#8d8496'); return; } M.Sfx.click(); c.fn(); this.bump(); } })) }; }
     return v;
   },
 });

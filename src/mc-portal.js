@@ -48,7 +48,7 @@ G.openWorlds = function () {
   if (this.portalOn()) return this.closePortal();
   if (this.panel) this.closePanel();
   const bv = this.bv; bv.portalOpen = true; bv.pickW = null; bv.drop = null; bv.theme = null; bv.keepFree(); CAM(bv);
-  M.Sfx.portal(); M.Sfx.whoosh && M.Sfx.whoosh(0.5);
+  M.Sfx.portalOpen(); M.worldsOpen(this.meta).forEach((k, i) => setTimeout(() => { if (this.portalOn()) M.Sfx.steleRise(i); }, 200 + i * 90));   // 门开，世界碑一块块升起，一块比一块高
   if (this.meta.baseTut === 4 || this.meta.baseTut === 5) { this.meta.baseTut = 99; this.coachData = null; this.save(); }
   this.bump();
 };
@@ -71,10 +71,10 @@ G.pickWorld = function (k) { const r = oPick.apply(this, arguments); if (this.pa
 // choosing a stele: it lifts, drops into the portal and shatters; the portal opens onto that world; then the loadout panel
 const DROP = 0.46;
 G.steleDrop = function (k, x, y) {
-  const m = this.meta; if (!m.heroes.some(h => h.hp > 0)) { this.toast('没有能出征的领袖', '#d0453c'); return; }
+  const m = this.meta; if (!m.heroes.some(h => h.hp > 0)) { this.deny('没有能出征的领袖', '#d0453c'); return; }
   const bv = this.bv, W = M.WORLDS[k]; bv.pickW = k; bv.drop = { k, x, y, t0: bv.t }; bv.hoverSt = null; this.tipData = null;
-  M.Sfx.whoosh && M.Sfx.whoosh(0.7);
-  bv.onImpact = () => { M.Sfx.boom && M.Sfx.boom(); M.Sfx.portal && M.Sfx.portal(); this.fx.kick(18); this.fx.flash && this.fx.flash(W.light, 0.35); this.bump(); };
+  M.Sfx.steleLift();
+  bv.onImpact = () => { M.Sfx.steleHit(); const th = M.WTHEME && M.WTHEME[k]; if (th) setTimeout(() => M.Sfx.worldTheme(th.k), 120); this.fx.kick(18); this.fx.flash && this.fx.flash(W.light, 0.35); this.bump(); };
   setTimeout(() => { if (bv.pickW === k && this.portalOn() && !(this.panel && this.panel.kind === 'loadout')) this.pickWorld(k); }, 1000);
   this.bump();
 };

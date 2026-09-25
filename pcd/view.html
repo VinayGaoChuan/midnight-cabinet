@@ -1,0 +1,32 @@
+<meta charset="utf-8">
+<title>像素人物</title>
+<style>
+  :root { color-scheme: dark; --ink: #0b0a18; --hint: #5d5883; --label: #cdc5a3; --panel: #12132e; --line: #242b5f; }
+  html, body { height: 100%; margin: 0; background: var(--ink); overflow: hidden; }
+  #screen { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; background: var(--ink); image-rendering: crisp-edges; image-rendering: pixelated; }
+  .note { position: fixed; font: 12px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; letter-spacing: .05em; user-select: none; pointer-events: none; }
+  #state { left: 16px; top: calc(12px + env(safe-area-inset-top, 0px)); color: var(--label); white-space: pre; }
+  #hint { left: 16px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); color: var(--hint); }
+  #sheet { position: fixed; inset: 0; overflow: auto; background: var(--ink); color: var(--label); font: 12px/1.5 ui-monospace, "SF Mono", Menlo, monospace; padding-block: 16px; padding-inline: 16px; box-sizing: border-box; }
+  #sheet h2 { font-size: 12px; font-weight: 600; margin: 18px 0 8px; letter-spacing: .08em; }
+  #sheet .frames { display: flex; flex-wrap: wrap; gap: 6px; }
+  #sheet canvas { image-rendering: pixelated; background: var(--panel); border: 1px solid var(--line); max-width: 100%; }
+  @media (max-width: 600px) { #hint { display: none; } }
+</style>
+<canvas id="screen" aria-label="像素人物动作演示"></canvas>
+<div class="note" id="state"></div>
+<div class="note" id="hint">1 待机 · 2 移动 · 3 攻击 · 4 技能 · 5 受击 · 6 死亡 · A 自动 · T 动作表 · 空格 暂停 · → 单步 · S 慢放</div>
+<div id="sheet" hidden></div>
+<script src="lib/pcd.js"></script>
+<script src="lib/parts.js"></script>
+<script src="lib/parts-beast.js"></script>
+<script>
+// view.html?c=<角色 key>：加载 chars/<key>.js 并运行；默认范式角色星辉巫师
+(function () {
+  const q = new URLSearchParams(location.search), key = (q.get('c') || 'star-wizard').replace(/[^A-Za-z0-9_-]/g, '');
+  const load = (src, ok, bad) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = bad; document.body.appendChild(s); };
+  const go = () => load('chars/' + key + '.js', () => PCD.start(key), () => { document.getElementById('state').textContent = '找不到角色模块 chars/' + key + '.js'; });
+  // ?sfx=1：先加载音效库 lib/sfx.js（它设置 PCD.sfxOut = (事件, 参数) => 播放），验收时能听到角色的音效
+  if (q.get('sfx')) load('lib/sfx.js', go, go); else go();
+})();
+</script>

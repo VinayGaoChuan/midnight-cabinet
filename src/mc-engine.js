@@ -12,56 +12,8 @@ const eo = (t) => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
 const rnd = (i) => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 
 // ───────── audio ─────────
-let ac = null, master = null, droneNodes = null;
-const Sfx = {
-  muted: false,
-  init() { if (ac) { if (ac.state === 'suspended') ac.resume(); return; } try { ac = new (window.AudioContext || window.webkitAudioContext)(); master = ac.createGain(); master.gain.value = 0.32; master.connect(ac.destination); } catch (e) {} },
-  setMuted(m) { this.muted = m; if (master) master.gain.value = m ? 0 : 0.32; },
-  tone(f, dur, type = 'square', vol = 0.15, slide = 0, delay = 0) {
-    if (!ac || this.muted) return; const t0 = ac.currentTime + delay;
-    const o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.setValueAtTime(f, t0);
-    if (slide) o.frequency.linearRampToValueAtTime(Math.max(20, f + slide), t0 + dur);
-    g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
-    o.connect(g); g.connect(master); o.start(t0); o.stop(t0 + dur + 0.02);
-  },
-  noise(dur, vol = 0.2, freq = 1200, delay = 0) {
-    if (!ac || this.muted) return; const t0 = ac.currentTime + delay;
-    const n = Math.floor(ac.sampleRate * dur), b = ac.createBuffer(1, n, ac.sampleRate), d = b.getChannelData(0);
-    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
-    const s = ac.createBufferSource(); s.buffer = b; const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = freq;
-    const g = ac.createGain(); g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
-    s.connect(f); f.connect(g); g.connect(master); s.start(t0);
-  },
-  _last: {},
-  lim(k, gap) { const n = performance.now(); if (this._last[k] && n - this._last[k] < gap) return false; this._last[k] = n; return true; },
-  hit() { if (this.lim('hit', 50)) this.noise(0.05, 0.12, 2200); },
-  shoot() { if (this.lim('shoot', 60)) this.tone(880, 0.05, 'square', 0.05, -300); },
-  kill() { if (this.lim('kill', 40)) this.tone(520, 0.12, 'square', 0.1, -300); },
-  crit() { this.tone(1200, 0.08, 'square', 0.1); this.tone(1600, 0.1, 'square', 0.08, 0, 0.05); },
-  mult() { [784, 988, 1319].forEach((f, i) => this.tone(f, 0.09, 'square', 0.1, 0, i * 0.05)); },
-  coin() { this.tone(988, 0.06, 'square', 0.1); this.tone(1319, 0.12, 'square', 0.1, 0, 0.06); },
-  click() { this.tone(660, 0.03, 'square', 0.07); },
-  tick() { if (this.lim('tick', 30)) this.tone(1500, 0.02, 'square', 0.05); },
-  up(i = 0) { [523, 659, 784, 1047, 1319].slice(0, 3 + i).forEach((f, k) => this.tone(f * (1 + i * 0.12), 0.1, 'square', 0.13, 0, k * 0.06)); },
-  bolt(tier) { this.noise(0.25 + tier * 0.15, 0.2 + tier * 0.08, 900 + tier * 500); this.tone(90, 0.3 + tier * 0.1, 'sawtooth', 0.15 + tier * 0.04, -50); },
-  boom() { if (this.lim('boom', 80)) { this.noise(0.35, 0.25, 500); this.tone(60, 0.3, 'sine', 0.3, -30); } },
-  die() { this.tone(330, 0.5, 'triangle', 0.18, -220); this.tone(165, 0.6, 'triangle', 0.12, -80, 0.1); },
-  heal() { [659, 880, 1175].forEach((f, i) => this.tone(f, 0.15, 'triangle', 0.1, 0, i * 0.08)); },
-  win() { [523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.18, 'square', 0.12, 0, i * 0.1)); },
-  lose() { [392, 330, 262, 196].forEach((f, i) => this.tone(f, 0.3, 'triangle', 0.15, -20, i * 0.18)); },
-  stamp() { this.noise(0.15, 0.3, 400); this.tone(80, 0.2, 'square', 0.2, -30); },
-  drone(on) {
-    if (!ac) return;
-    if (on && !droneNodes) {
-      const g = ac.createGain(); g.gain.value = 0.05; g.connect(master);
-      const o1 = ac.createOscillator(), o2 = ac.createOscillator(), lfo = ac.createOscillator(), lg = ac.createGain();
-      o1.frequency.value = 55; o2.frequency.value = 55.8; o1.type = 'sine'; o2.type = 'triangle';
-      lfo.frequency.value = 0.15; lg.gain.value = 0.03; lfo.connect(lg); lg.connect(g.gain);
-      o1.connect(g); o2.connect(g); o1.start(); o2.start(); lfo.start();
-      droneNodes = [o1, o2, lfo, g];
-    } else if (!on && droneNodes) { droneNodes.slice(0, 3).forEach(o => o.stop()); droneNodes = null; }
-  },
-};
+// M.Sfx：这里只放一个空壳，音效的实现在 mc-audio.js（加载顺序在 mc-fx.js 之后）
+const Sfx = { muted: false, lim() { return true; } };
 
 // ───────── battle ─────────
 class Battle {
@@ -422,7 +374,7 @@ function drawFront(ctx, t, z, fy, k) {
   let px = 960 - (cw.reduce((a, b) => a + b, 0) + gap * (ch.length - 1)) / 2;
   ch.forEach((c, i) => { const q = (st * 1.25 + (ch.length - i) * 0.12) % 1, dy = still ? 0 : [0, -0.14, 0, 0.05][Math.floor(q * 4)] * fs; XU.text(ctx, c, px + cw[i] / 2, ym + dy, fs, PP.gold, { ramp: true, outline: true }); px += cw[i] + gap; });
   spaced(ctx, 'MIDNIGHT CABINET', 960, ty + 36 - 12 * k, XU.T.tag, PP.magenta, 3);
-  if (k < 1 && (still || Math.floor(t * 2) % 2)) { ctx.globalAlpha = Math.ceil((1 - k) * 4) / 4; XU.text(ctx, '— 投币开始 —', 960, 511, XU.T.body, PP.butter); ctx.globalAlpha = 1; }
+  if (k < 1) { ctx.globalAlpha = (1 - k) * (still ? 1 : 0.55 + 0.45 * Math.sin(t * Math.PI * 2)); XU.text(ctx, '— 投币开始 —', 960, 511, XU.T.body, PP.butter); ctx.globalAlpha = 1; }
   // 玻璃扫描线：墨色 3px、每 6px 一道，两步滚动
   ctx.globalAlpha = 0.22; ctx.fillStyle = PP.ink; for (let y = SCR.y + (still ? 0 : (Math.floor(t * 5) % 2) * 3); y < SCR.y + SCR.h; y += 6) ctx.fillRect(SCR.x, y, SCR.w, Math.min(3, SCR.y + SCR.h - y)); ctx.globalAlpha = 1;
   XU.text(ctx, 'MIDNIGHT', 960, 198, XU.T.title, PP.pink, { num: true, outline: true });

@@ -185,18 +185,21 @@ G.startSettle = function () {
   run.battles++;
   this.settle = { t: 0, good, title, col, tiles, shown: 0, score, base: b.base, mult: b.mult, target: 0, pass: true, lines: [], final: !good ? 'fail' : n.type === 'boss' && n.final ? 'clear' : n.type === 'extract' ? 'extract' : null };
   this.banner({ kind: 'win', text: title, col, col2: good ? '#8a4a10' : '#3a0000', life: 1.7, y: 420 });
-  if (good) { M.Sfx.fanfare(); this.fx.confetti(150); this.fx.rays(960, 420, '#ffcc33', 1.7, { r: 800 }); this.fx.kick(20); } else { M.Sfx.lose(); this.fx.flash('#ff0000', 0.35); this.fx.kick(18); }
+  if (good) { this.fx.confetti(150); this.fx.kick(20); }   // the rays come with the victory banner (mc-bigfx.js) else { M.Sfx.lose(); this.fx.flash('#ff0000', 0.35); this.fx.kick(18); }
   this.bump();
 };
-G.settleTick = function (dt) { const st = this.settle; st.t += dt; const k = Math.floor((st.t - 1.7) / 0.16) + 1; if (st.t > 1.2 && st.t - dt <= 1.2) M.Sfx.whoosh(0.3); if (k > st.shown && st.shown < st.tiles.length && st.t > 1.7) { st.shown++; M.Sfx.land(st.shown); } };
+G.settleTick = function (dt) { const st = this.settle; st.t += dt; const k = Math.floor((st.t - 1.7) / 0.16) + 1; if (st.t > 1.2 && st.t - dt <= 1.2) M.Sfx.panelOpen(); if (k > st.shown && st.shown < st.tiles.length && st.t > 1.7) { st.shown++; M.Sfx.land(st.shown); } };
 G.settleNext = function () {
   const st = this.settle; if (!st || st.t < 1.8) return; if (st.shown < st.tiles.length) { st.shown = st.tiles.length; return; }
   M.Sfx.click(); this.node.done = true; this.settle = null; this.battle = null;
   if (st.final === 'fail') return this.runFail(); if (st.final || (this.run.tut && this.node.final)) return this.runWin(st.final || 'clear');
   this.enterWorld();
   // rewards fly out of the middle into their HUD slots; each slot ticks up when its icon lands
-  setTimeout(() => st.tiles.forEach((t, i) => { const img = M.spriteCanvas(t.icon, t.unit ? 5 : 8), from = { x: 960 + (i - (st.tiles.length - 1) / 2) * 110, y: 520 }; this.fly(img, from, t.to, t.c, () => this.release(t.to), 0.05 + i * 0.09); }), 380);
+  setTimeout(() => st.tiles.forEach((t, i) => { const img = M.spriteCanvas(t.icon, t.unit ? 5 : 8), from = M.settleCardPos(i, st.tiles.length); this.fly(img, from, t.to, t.c, () => this.release(t.to), 0.05 + i * 0.09); }), 380);
 };
+// the reward cards on the victory stage (mc-bigfx.js): 168×200, 28 apart, 7 to a row, the band starts at y 392
+M.settleCardPos = function (i, n) { const row = Math.floor(i / 7), len = Math.min(7, n - row * 7); return { x: 960 + (i % 7 - (len - 1) / 2) * 196, y: 392 + 30 + 100 + row * 228 }; };
+const TILE_N = { coin: '积分', sack: '物资', orb: '经验', shard: '灵魂碎片', r_heart: '生命' };
 // the world HUD now also shows run exp and shards
 const oldView = G.view;
 G.view = function () {
@@ -204,7 +207,16 @@ G.view = function () {
   if (v.w && run) { v.w.rexp = this.tv('rexp', run.loot.exp); v.w.rexpSc = this.ps('rexp'); v.w.rshard = this.tv('rshard', run.loot.shards || 0); v.w.rshardSc = this.ps('rshard'); v.w.hasShard = (run.loot.shards || 0) > 0 || !!(run.theme && run.theme.loot.shards); v.w.orbImg = M.spriteURL('orb', 4); v.w.shardImg = M.spriteURL('shard', 4); v.w.hp = this.tv('hp', Math.round(run.hero.hp)) + ' / ' + M.heroMaxHp(run.hero, this.meta); }
   if (st && v.st) {
     const q = cl((st.t - 1.4) / 0.8, 0, 1);
-    v.st.tiles = st.tiles.slice(0, st.shown).map((t, i) => { const age = st.t - 1.7 - i * 0.16, s = 1 + 0.35 * Math.exp(-Math.max(0, age) * 9) * Math.cos(Math.max(0, age) * 22); return { img: M.spriteURL(t.icon, t.unit ? 5 : 7), v: String(t.v), c: t.c, border: t.c, sc: s.toFixed(3), op: cl(age / 0.1 + 1, 0, 1), glow: '0 0 18px ' + t.c + '66', n: t.n || '', hasN: !!t.n, tipOn: this.tipFn(t.n ? { title: t.n, c: t.c } : null) }; });
+    // each card drops in from above, tilted, lands with a white flash and a ring, its number rolls up, a shine crosses it
+    // every card has its place from the start (the row doesn't shift as they land); the ones still to come are hidden
+    v.st.tiles = st.tiles.map((t, i) => {
+      const age = i < st.shown ? Math.max(0, st.t - 1.7 - i * 0.16) : 0, q = cl(age / 0.26, 0, 1), la = Math.max(0, age - 0.26), n = t.n || TILE_N[t.icon] || (t.unit && DB[t.icon] ? DB[t.icon].n : '');
+      const m = /^(\+?)(\d+)$/.exec(String(t.v)), val = t.n && t.v === 1 ? '' : m ? '+' + Math.round(+m[2] * M.ease.eo(la / 0.5)) : String(t.v);
+      const qi = (M.QUALITY || []).findIndex(Q => Q.c === t.c), rare = !!t.key && qi >= 2, wob = q < 1 ? 1.3 - 0.3 * M.ease.eback(q) : 1 + 0.12 * Math.exp(-la * 7) * Math.cos(la * 24);
+      return { img: M.spriteURL(t.icon, t.unit ? 6 : 11), v: val, c: t.c, n, nfs: n.length <= 6 ? 22 : n.length <= 8 ? 19 : 17, dy: Math.round(q < 1 ? -150 * (1 - M.ease.eback(q)) : Math.sin(st.t * 2.2 + i * 0.9) * 3), rot: (q < 1 ? (i % 2 ? 9 : -9) * (1 - q) : 0).toFixed(2), sc: wob.toFixed(3), op: i < st.shown ? cl(q * 4, 0, 1) : 0,
+        fl: q < 1 ? 0 : (0.85 * (1 - M.ease.eo(la / 0.22))).toFixed(3), ringIn: -Math.round(4 + 46 * M.ease.eo(la / 0.45)), ringOp: q < 1 ? 0 : (1 - M.ease.eo(la / 0.45)).toFixed(3), shX: Math.round(-90 + 360 * cl((la - 0.15) / 0.45, 0, 1)), isc: (1 + 0.18 * Math.exp(-la * 8)).toFixed(3),
+        bgc: t.c + '48', glow: t.c + (rare ? 'aa' : '55'), gw: Math.round((rare ? 44 : 22) + 30 * Math.exp(-la * 4)), rare, halo: t.c + '66', tipOn: this.tipFn(n && i < st.shown ? { title: n, c: t.c } : null) };
+    });
     v.st.hasTiles = v.st.tiles.length > 0; v.st.eqOn = st.good; v.st.base = M.fmt(st.base); v.st.mult = (Math.round(st.mult * 100) / 100).toFixed(2); v.st.score = M.fmt(st.score * M.ease.eo(q));
     v.st.btn = st.shown < st.tiles.length ? '跳过' : st.final === 'fail' ? '结束' : st.final ? '带着收获回家' : '继续前进';
   }
@@ -240,7 +252,7 @@ FLP.draw = function (ctx, noClear) { this.items = this.items.filter(it => it.k =
 // ───────── minimap hover: every node can be inspected, including ones only visible on the minimap ─────────
 const oldWM = G.worldMove;
 G.worldMove = function (sx, sy) {
-  const MM = M.MMAP || { x: 1330, y: 30 };
+  const MM = M.MMAP || { x: 1320, y: 48 };
   if (this.walker && sx >= MM.x && sx <= MM.x + 560 && sy >= MM.y && sy <= MM.y + 250) {
     const map = this.run.map, X = MM.x, Y = MM.y, Wd = 560, Ht = 250, COLW = 520, ROWH = 270, Y0 = 700, sxk = (Wd - 70) / (map.W - 500), syk = (Ht - 90) / (ROWH * 2.4);
     let best = null, bd = 18; map.nodes.forEach(n => { const cx = X + 35 + (n.x - 300) * sxk, cy = Y + 60 + (n.y - (Y0 - ROWH * 1.2)) * syk, d = Math.hypot(cx - sx, cy - sy); if (d < bd) { bd = d; best = n; } });

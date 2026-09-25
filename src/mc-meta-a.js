@@ -207,8 +207,8 @@ const oRec = G.recruit;
 G.recruit = function () {
   // recruiting costs supplies (soul shards are the high-end material now)
   const P = M.perks(), m = this.meta, cost = M.recruitCost ? M.recruitCost(m) : 120; this._recN0 = m.heroes.length;
-  if (m.heroes.length >= M.heroCap(m)) { this.toast('领袖已满（上限 ' + M.heroCap(m) + '）', '#d0453c'); return; }
-  if (m.supplies < cost) { this.toast('物资不足：招募要 ' + cost + ' 物资', '#d0453c'); return; }
+  if (m.heroes.length >= M.heroCap(m)) { this.deny('领袖已满（上限 ' + M.heroCap(m) + '）', '#d0453c'); return; }
+  if (m.supplies < cost) { this.deny('物资不足：招募要 ' + cost + ' 物资', '#d0453c'); return; }
   this.hold('msup', m.supplies); m.supplies -= cost; this.release('msup');
   let rar = M.RARITY.indexOf(M.wpick(M.RARITY, r => r.w)); if (M.hasBuilt(m, B => B.recruit && B.recruit.qUp) || P.recruitMinRar) rar = Math.max(1, rar); rar = Math.max(rar, M.baseMods(m).recruitMin || 0);
   // the leader exists at once (saved), then the card plays: charge, shatter, the true face flies to the leader bar (mc-recruit.js)

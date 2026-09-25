@@ -66,8 +66,9 @@ const CONCEPTS = [
   { id: 'roster', cat: '出征', icon: 'v_warrior', title: '部队', line: '战斗里自动作战。在夜市买、招募旗领，最多 10 支。', scr: 'world', sel: '[data-tip="w-roster"]' },
   { id: 'items', cat: '出征', icon: 't_chest', title: '支援道具', line: '战斗中按 Q W E 由领袖放出。用的时候转一下，转出这次的效果；图片下面写着它是哪一类。', scr: ['world', 'battle'], sel: '[data-tip="b-items"]' },
   { id: 'banners', cat: '出征', img: () => sprite('flag'), title: '战旗', line: '整支部队的常驻加成，比如「射手战旗」让所有射手更强。', scr: ['world', 'shop'], sel: '[data-fx="banners"],[data-g="shop-banners"]' },
-  { id: 'minimap', cat: '出征', icon: 'e_path', title: '小地图', line: '整条路线的缩略图。越往右越深，最右边是首领。', scr: 'world', at: () => Object.assign({}, M.MMAP || { x: 24, y: 410 }, { w: 560, h: 250 }), when: (g) => g.run && !g.run.tut },
+  { id: 'minimap', cat: '出征', icon: 'e_path', title: '小地图', line: '整条路线的缩略图。越往右越深，最右边是首领。', scr: 'world', at: () => Object.assign({}, M.MMAP || { x: 1320, y: 48 }, { w: 560, h: 250 }), when: (g) => g.run && !g.run.tut },
   { id: 'wpower', cat: '出征', icon: 'u_star', title: '战斗力', line: '敌人头上是它的战斗力，你头上是你的。颜色：绿稳赢，黄有风险，红很危险。', scr: 'world', sel: '[data-tip="w-power"]' },
+  { id: 'gogo', cat: '出征', icon: 'u_star', title: 'GOGO 灯', line: '水果机顶上的灯。拉杆时亮了，这一把一定中铃铛以上。', scr: 'world', at: (g) => g.mini && g.mini.kind === 'fruit' ? { x: 1110, y: 202, w: 100, h: 64 } : null },
   { id: 'legion', cat: '领袖', icon: 't_skill', title: '领袖技能', line: '每个职业一个技能：在场外指挥时按空格放，冷却按走过的站数算。', scr: ['base', 'world'], sel: '[data-tip="tal-root"],[data-g="w-skill"]' },
   // ── 战斗 ──
   { id: 'bmode', cat: '战斗', icon: 't_sword', title: '战斗目标', line: '普通战：消灭所有敌人；坚守战：撑过倒计时。', scr: 'battle', sel: '[data-tip="b-mode"]', freeze: 1 },

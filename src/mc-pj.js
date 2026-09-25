@@ -1,4 +1,4 @@
-// Pixel Juice 皮肤：32 色调色板、像素字体、机台数码 <mc-num>、界面打击感（按压形变 + 像素迸发）。
+// Pixel Juice 皮肤：32 色调色板、像素字体、机台数码 <mc-num>、界面打击感开关（分档见 Game.juice）。
 // 放在 _order.txt 第二行（_pre0.js 之后），必须早于所有画布代码加载。关掉：MC.PJ.on = false（刷新后生效）。
 (function () {
 'use strict';
@@ -257,54 +257,10 @@ if (W.customElements && !W.customElements.get('mc-num')) {
   W.customElements.define('mc-num', McNum);
 }
 
-// ───────── 界面打击感：按下形变 + 像素迸发 + 硬边冲击框 ─────────
+// ───────── 界面打击感：分档，在 Game.juice（src/mc-game-a.js）；这里只留减少动态效果的开关 ─────────
 PJ.reduced = !!(W.matchMedia && W.matchMedia('(prefers-reduced-motion: reduce)').matches);
-const stageEl = () => document.querySelector('[data-pj-stage]');
 // 舞台是 overflow:hidden，但 scrollIntoView / 焦点仍会把它卷走一截：有位移就归零
 document.addEventListener('scroll', (ev) => { const st = ev.target; if (st && st.nodeType === 1 && st.hasAttribute && st.hasAttribute('data-pj-stage') && (st.scrollLeft || st.scrollTop)) st.scrollTo(0, 0); }, true);
-let layer = null;
-function fxLayer(st) {
-  if (layer && layer.parentNode === st) return layer;
-  layer = document.createElement('div'); layer.style.cssText = 'position:absolute;left:0;top:0;width:1920px;height:1080px;pointer-events:none;z-index:2000;overflow:hidden';
-  st.appendChild(layer); return layer;
-}
-const BURST = [P.gold, P.butter, P.cream, P.white, P.amber];
-function burst(st, x, y, accent) {
-  const L = fxLayer(st), parts = [], n = 12;
-  const ring = document.createElement('div');
-  ring.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:0;height:0;box-shadow:0 0 0 6px ${P.white},0 0 0 12px ${P.ink}`;
-  L.appendChild(ring);
-  for (let i = 0; i < n; i++) {
-    const d = document.createElement('div'), s = [9, 12, 15][i % 3], a = (i / n) * Math.PI * 2 + Math.random() * 0.5, sp = 380 + Math.random() * 520;
-    const col = i % 4 === 0 && accent ? accent : BURST[i % BURST.length];
-    d.style.cssText = `position:absolute;left:0;top:0;width:${s}px;height:${s}px;background:${col};box-shadow:0 0 0 3px ${P.ink}`;
-    L.appendChild(d); parts.push({ d, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 260, x, y });
-  }
-  const t0 = performance.now();
-  const step = (t) => {
-    const e = (t - t0) / 1000;
-    if (e > 0.5) { parts.forEach(p => p.d.remove()); ring.remove(); return; }
-    const r = Math.round((e * 260 + 12)), ra = e < 0.16;
-    ring.style.display = ra ? 'block' : 'none';
-    ring.style.left = x - r + 'px'; ring.style.top = y - r + 'px'; ring.style.width = ring.style.height = 2 * r + 'px';
-    ring.style.boxShadow = `inset 0 0 0 6px ${e < 0.05 ? P.white : P.gold},0 0 0 3px ${P.ink}`;
-    for (const p of parts) {
-      const px = p.x + p.vx * e, py = p.y + p.vy * e + 1400 * e * e;
-      p.d.style.transform = `translate(${Math.round(px)}px,${Math.round(py)}px)`;
-      p.d.style.opacity = e > 0.36 ? (Math.floor((0.5 - e) / 0.035) % 2 ? '1' : '0') : '1';
-    }
-    requestAnimationFrame(step);
-  };
-  requestAnimationFrame(step);
-}
-function pressable(t, st) {
-  for (let el = t; el && el !== st; el = el.parentElement) {
-    if (el.tagName === 'CANVAS') return null;
-    if (el.nodeType === 1 && getComputedStyle(el).cursor === 'pointer') return el;
-  }
-  return null;
-}
-PJ.burst = burst;
 
 // ───────── 设计稿落地：机箱面板、扫光按键、跑马灯、逐字跳标题、动画部队、像素战旗、领袖半身像 ─────────
 const CSS = `
@@ -316,6 +272,23 @@ const CSS = `
 @keyframes pjLamp{0%,100%{background:#ffcf4a}50%{background:#e0781f}}
 @keyframes pjScan{from{background-position:0 0}to{background-position:0 12px}}
 @keyframes pjBlink{0%,100%{opacity:1}50%{opacity:.25}}
+/* 分层入场（§11.6）：外框先到，标题牌随后压下，内容一行一行跟上；插入页面时自己播，不用每帧重画 */
+@keyframes pjInSide{from{transform:translateX(90px);opacity:0}70%{transform:translateX(-6px);opacity:1}to{transform:none;opacity:1}}
+@keyframes pjInPop{from{transform:scale(.86);opacity:0}65%{transform:scale(1.03);opacity:1}to{transform:none;opacity:1}}
+@keyframes pjInUp{from{transform:translateY(60px);opacity:0}70%{transform:translateY(-4px);opacity:1}to{transform:none;opacity:1}}
+@keyframes pjInLeft{from{transform:translateX(-80px);opacity:0}to{transform:none;opacity:1}}
+@keyframes pjInDrop{from{transform:translateY(-30px);opacity:0}60%{transform:translateY(4px);opacity:1}to{transform:none;opacity:1}}
+@keyframes pjInFade{from{opacity:0}to{opacity:1}}
+@keyframes pjRowIn{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+[data-enter]{animation:pjInFade .2s ease-out backwards;animation-delay:var(--d,0s)}
+[data-enter=side]{animation:pjInSide .26s cubic-bezier(.2,.9,.3,1) backwards;animation-delay:var(--d,0s)}
+[data-enter=pop]{animation:pjInPop .26s cubic-bezier(.2,.9,.3,1) backwards;animation-delay:var(--d,0s)}
+[data-enter=up]{animation:pjInUp .28s cubic-bezier(.2,.9,.3,1) backwards;animation-delay:var(--d,0s)}
+[data-enter=left]{animation:pjInLeft .3s cubic-bezier(.2,.9,.3,1) backwards;animation-delay:var(--d,0s)}
+[data-enter=drop]{animation:pjInDrop .24s cubic-bezier(.2,.9,.3,1) backwards;animation-delay:var(--d,0s)}
+[data-enter-rows]>*{animation:pjRowIn .22s cubic-bezier(.2,.9,.3,1) backwards}
+[data-enter-rows]>[data-pj~=tab]{animation-name:pjInDrop}
+[data-enter-rows]>:nth-child(1){animation-delay:calc(var(--rd,.1s) + 0.000s)}[data-enter-rows]>:nth-child(2){animation-delay:calc(var(--rd,.1s) + 0.040s)}[data-enter-rows]>:nth-child(3){animation-delay:calc(var(--rd,.1s) + 0.080s)}[data-enter-rows]>:nth-child(4){animation-delay:calc(var(--rd,.1s) + 0.120s)}[data-enter-rows]>:nth-child(5){animation-delay:calc(var(--rd,.1s) + 0.160s)}[data-enter-rows]>:nth-child(6){animation-delay:calc(var(--rd,.1s) + 0.200s)}[data-enter-rows]>:nth-child(7){animation-delay:calc(var(--rd,.1s) + 0.240s)}[data-enter-rows]>:nth-child(8){animation-delay:calc(var(--rd,.1s) + 0.280s)}[data-enter-rows]>:nth-child(9){animation-delay:calc(var(--rd,.1s) + 0.320s)}[data-enter-rows]>:nth-child(10){animation-delay:calc(var(--rd,.1s) + 0.360s)}[data-enter-rows]>:nth-child(11){animation-delay:calc(var(--rd,.1s) + 0.400s)}[data-enter-rows]>:nth-child(12){animation-delay:calc(var(--rd,.1s) + 0.440s)}
 [data-pj~=plate]{position:relative}
 [data-pj~=plate]::before,[data-pj~=plate]::after{content:'';position:absolute;left:12px;right:12px;height:9px;pointer-events:none;z-index:1;background:linear-gradient(90deg,#c4ccd9 0 3px,#8791a6 3px 9px,transparent 9px calc(100% - 9px),#c4ccd9 calc(100% - 9px) calc(100% - 6px),#8791a6 calc(100% - 6px))}
 [data-pj~=plate]::before{top:12px}[data-pj~=plate]::after{bottom:15px}
@@ -569,15 +542,4 @@ defineEl('mc-bust', class extends HTMLElement {
     this.appendChild(im);
   }
 });
-document.addEventListener('pointerdown', (ev) => {
-  if (!PJ.on || PJ.reduced || ev.button > 0) return;
-  const st = stageEl(); if (!st || !st.contains(ev.target)) return;
-  const el = pressable(ev.target, st); if (!el) return;
-  const r = st.getBoundingClientRect(), sc = r.width / 1920 || 1;
-  const x = (ev.clientX - r.left) / sc, y = (ev.clientY - r.top) / sc;
-  const cs = getComputedStyle(el), bc = parseColor(cs.backgroundColor), acc = bc && bc[3] > 0.5 ? palHex(bc[0], bc[1], bc[2]) : null;
-  burst(st, x, y, acc);
-  const base = cs.transform && cs.transform !== 'none' ? cs.transform + ' ' : '';
-  if (el.animate && el.offsetWidth < 900) el.animate([{ transform: base + 'scale(1.06,0.88)' }, { transform: base + 'scale(0.96,1.06)' }, { transform: base + 'scale(1,1)' }], { duration: 220, easing: 'cubic-bezier(.2,.9,.3,1)' });
-}, true);
 })();

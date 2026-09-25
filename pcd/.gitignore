@@ -1,0 +1,14 @@
+# 截图和自检输出：随时可以用 shoot.mjs 重新生成，不进 git
+**/shots/
+**/orig-shots/
+**/review-*/
+**/frames/
+**/v[0-9]*/
+*.png
+ref.json
+sprite.json
+.chrome/
+# 核对用的临时导出
+convert/_beast-fix/
+**/*-before/
+**/*-after/

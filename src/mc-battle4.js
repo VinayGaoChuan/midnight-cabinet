@@ -52,7 +52,9 @@ P.beginCast = function (e, o = {}) {
   const ttl = this.fxp({ k: 'ctitle', ent: e, text: sp.n, col: sp.col, tier: sp.tier, side: e.side, life: dur + (sp.tier >= 2 ? 1.1 : 0.8) }); if (sp.tier >= 2) this._bigTitle = ttl;
   for (let i = 0; i < 6 + sp.tier * 6; i++) { const a = Math.random() * Math.PI * 2, r = (90 + Math.random() * 90) * (1 + sp.tier * 0.25); this.fxp({ k: 'charge', x: e.x + Math.cos(a) * r, y: e.y - 44 * e.sz + Math.sin(a) * r * 0.6, tx: e.x, ty: e.y - 44 * e.sz, col: sp.col, t0: this.t + Math.random() * dur * 0.5, life: dur * 0.7 }); }
   if (sp.tier >= 2) { this.slow = Math.max(this.slow || 0, 0.12 + sp.tier * 0.08); this.focus = { ent: e, t0: this.t, until: this.t + dur + 0.25, col: sp.col }; }
-  Sfx.cast(); if (sp.tier >= 3) Sfx.whoosh(0.7);
+  // 有配方的技能由 castFx 出声（mc-px16-fx.js）；没有配方的用通用蓄力
+  if (!e._fxRec) Sfx.skillFx('charge', 'spiral', e.side === 'E' ? 'blood' : 'holy', sp.tier, dur, Sfx.panX(e.x));
+  if (sp.tier >= 2) Sfx.skillTitle(e.side === 'E' ? 'blood' : 'holy');
 };
 P.fireCast = function (e) {
   const sp = e.casting.sp; e.casting = null; e.castPose = this.t;
@@ -62,6 +64,7 @@ P.fireCast = function (e) {
   this.ring(e.x, e.y - 30 * e.sz, 10, [80, 120, 170, 240][sp.tier] * e.sz, sp.col, 4 + sp.tier * 2, 0.35);
   this.fxp({ k: 'pxburst', x: e.x, y: e.y - 44 * e.sz, col: sp.col, n: 10 + sp.tier * 8, life: 0.55 });
   if (sp.tier >= 2) this.hs = 0.04 + sp.tier * 0.025;
+  if (!e._fxRec) Sfx.skillFx('cast', 'nova', e.side === 'E' ? 'blood' : 'holy', sp.tier, 0, Sfx.panX(e.x));
   if (sp.tier >= 3) { this.flash = Math.max(this.flash, 0.3); this.flashCol = sp.col; Sfx.impact(); }
 };
 const oldDeal = P.deal;

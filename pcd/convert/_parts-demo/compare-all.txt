@@ -1,0 +1,78 @@
+{
+  "compared": 15,
+  "flagged": [],
+  "closest": [
+    {
+      "a": "部件演示 · 屠夫",
+      "b": "部件演示 · 弩手",
+      "idleIoU": 0.746,
+      "castIoU": 0.342,
+      "color": 0.809,
+      "tooSimilar": false,
+      "why": []
+    },
+    {
+      "a": "部件演示 · 冰法师",
+      "b": "部件演示 · 朝圣枪兵",
+      "idleIoU": 0.735,
+      "castIoU": 0.4,
+      "color": 0.204,
+      "tooSimilar": false,
+      "why": []
+    },
+    {
+      "a": "部件演示 · 屠夫",
+      "b": "部件演示 · 铁匠",
+      "idleIoU": 0.733,
+      "castIoU": 0.78,
+      "color": 0.702,
+      "tooSimilar": false,
+      "why": []
+    },
+    {
+      "a": "部件演示 · 火枪手",
+      "b": "部件演示 · 贵妇",
+      "idleIoU": 0.713,
+      "castIoU": 0.619,
+      "color": 0.548,
+      "tooSimilar": false,
+      "why": []
+    },
+    {
+      "a": "部件演示 · 火枪手",
+      "b": "部件演示 · 弩手",
+      "idleIoU": 0.71,
+      "castIoU": 0.698,
+      "color": 0.719,
+      "tooSimilar": false,
+      "why": []
+    },
+    {
+      "a": "部件演示 · 骑士",
+      "b": "部件演示 · 朝圣枪兵",
+      "idleIoU": 0.707,
+      "castIoU": 0.656,
+      "color": 0.388,
+      "tooSimilar": false,
+      "why": []
+    },
+    {
+      "a": "部件演示 · 游侠",
+      "b": "部件演示 · 刺客",
+      "idleIoU": 0.707,
+      "castIoU": 0.376,
+      "color": 0.598,
+      "tooSimilar": false,
+      "why": []
+    },
+    {
+      "a": "部件演示 · 贵妇",
+      "b": "部件演示 · 弩手",
+      "idleIoU": 0.698,
+      "castIoU": 0.534,
+      "color": 0.607,
+      "tooSimilar": false,
+      "why": []
+    }
+  ]
+}

@@ -43,7 +43,7 @@ M.craftRelic3 = function (meta, key, forge) {
 const oCraft = G.craft;
 G.craft = function (key, c, r) {
   const m = this.meta; if (!this.fineOn) return oCraft.call(this, key, c, r);
-  if (m.shards < M.FINE_SH) { this.toast('灵魂碎片不足：精铸要 ' + M.FINE_SH + ' 碎片', '#d0453c'); return; }
+  if (m.shards < M.FINE_SH) { this.deny('灵魂碎片不足：精铸要 ' + M.FINE_SH + ' 碎片', '#d0453c'); return; }
   const s0 = m.supplies; this._fine = 1; try { oCraft.call(this, key, c, r); } finally { this._fine = 0; }
   if (m.supplies < s0) { this.hold('msh', m.shards); m.shards -= M.FINE_SH; this.release('msh'); this.save(); }
 };
@@ -59,7 +59,7 @@ const oSR = G.startRaid;
 G.startRaid = function () {
   const m = this.meta;
   // no choosing any more (user ruling 2026-09-25): the one leader goes out by itself, without relics
-  if (m.heroes.length) { m.heroes.forEach(h => { h.relics = []; }); this.banner({ kind: 'win', text: '混沌来袭！', col: '#ff5a4a', col2: '#6a0a0a', life: 1.6, y: 440 }); M.Sfx.alarm && M.Sfx.alarm(); }
+  if (m.heroes.length) { m.heroes.forEach(h => { h.relics = []; }); this.banner({ kind: 'win', text: '混沌来袭！', col: '#ff5a4a', col2: '#6a0a0a', life: 1.6, y: 440 }); }   // 警铃由 startRaid（mc-game-b.js）响一遍
   this.raidGo = false; const pr = this.raidPrep; this.raidPrep = null; m.raidPending = null;
   oSR.call(this); const R = this.raid; if (!R) return;
   if (pr) R.ents = R.ents.filter(e => !e.hero || pr.sel[e.hero.id]);
@@ -72,10 +72,10 @@ G.raidLaunch = function () { if (!this.raidPrep) return; M.Sfx.click(); this.rai
 G.raidToggle = function (id) { const pr = this.raidPrep; if (!pr) return; pr.sel[id] = !pr.sel[id]; M.Sfx.click(); };
 // nothing else happens while the defenders are being chosen
 const oOP = G.openPanel;
-G.openPanel = function (p) { if (this.raidPrep && (!p || p.kind !== 'raidPrep')) { this.toast('混沌来袭：先选好守城的领袖', '#ff6a5a'); return; } return oOP.apply(this, arguments); };
+G.openPanel = function (p) { if (this.raidPrep && (!p || p.kind !== 'raidPrep')) { this.deny('混沌来袭：先选好守城的领袖', '#ff6a5a'); return; } return oOP.apply(this, arguments); };
 const oCP = G.closePanel;
-G.closePanel = function () { if (this.raidPrep && this.panel && this.panel.kind === 'raidPrep') { this.toast('混沌来袭躲不掉：选好领袖，点「开始守城」', '#ff6a5a'); return; } return oCP.apply(this, arguments); };
-['passDay', 'restDay', 'toRoom'].forEach(k => { const o = G[k]; if (!o) return; G[k] = function () { if (this.raidPrep) { this.toast('混沌来袭：先选好守城的领袖', '#ff6a5a'); return; } return o.apply(this, arguments); }; });
+G.closePanel = function () { if (this.raidPrep && this.panel && this.panel.kind === 'raidPrep') { this.deny('混沌来袭躲不掉：选好领袖，点「开始守城」', '#ff6a5a'); return; } return oCP.apply(this, arguments); };
+['passDay', 'restDay', 'toRoom'].forEach(k => { const o = G[k]; if (!o) return; G[k] = function () { if (this.raidPrep) { this.deny('混沌来袭：先选好守城的领袖', '#ff6a5a'); return; } return o.apply(this, arguments); }; });
 // whatever cleared the base (a reset, a new game, a screen change) must not strand the choice: reopen it, or drop it once the raid is no longer today's
 const oTick = G.tick;
 G.tick = function () { const r = oTick.apply(this, arguments), m = this.meta; if (this.raidPrep && this.screen === 'base' && !this.raid && !this.panel && m) { if (m.raidPending !== m.day || !m.heroes.length) { this.raidPrep = null; this.raidGo = false; } else oOP.call(this, { kind: 'raidPrep' }); } return r; };
@@ -91,7 +91,7 @@ G.raidEnd = function () {
   const fallenH = [];
   r.ents.forEach(e => { if (!e.hero) return; if (e.alive) e.hero.hp = Math.max(1, Math.round(e.hp)); else fallenH.push(e.hero); });
   m.portal.hp = Math.max(0, Math.round(r.portal.hp)); m.lastRaid = m.day; m.raids++; m.raidPending = null;
-  if (r.over === 'lose') { r.result = { grade: 'X', fallen: fallenH.length }; this.save(); this.banner({ kind: 'win', text: '主基地被攻破', col: '#ff4a4a', col2: '#3a0000', life: 2.5 }); M.Sfx.lose(); setTimeout(() => { this.raid = null; this.go('over'); }, 2200); return; }
+  if (r.over === 'lose') { r.result = { grade: 'X', fallen: fallenH.length }; this.save(); this.banner({ kind: 'win', text: '主基地被攻破', col: '#ff4a4a', col2: '#3a0000', life: 2.5 }); M.Sfx.portalCollapse(); setTimeout(() => { this.raid = null; this.go('over'); }, 2200); return; }
   m.st.raidsWon = (m.st.raidsWon || 0) + 1;
   // the grade: how many monsters fell, and how much of the portal was kept
   const killR = r.total ? r.kills / r.total : 1, keep = r.portal0 ? Math.max(0, Math.min(1, r.portal.hp / r.portal0)) : 1, sc = 0.55 * killR + 0.45 * keep;
@@ -107,7 +107,7 @@ G.raidEnd = function () {
   const shT = shK, orbT = orb;
   r.result = { grade: GR.g, score: Math.round(sc * 100) / 100, defenders: r.defenders, fallen: falls.length, sup, orb: orbT, sh: shT, bp: bps.slice(), boss };
   this.save();
-  this.banner({ kind: 'win', text: '守住了！', col: '#ffd970', life: 2.2, sub: '评价 ' + GR.g + ' · 击退 ' + r.kills + ' / ' + r.total }); M.Sfx.fanfare(); this.fx.confetti(160); this.fx.rays(960, 470, GR.c, 2);
+  this.banner({ kind: 'win', text: '守住了！', col: '#ffd970', life: 2.2, sub: '评价 ' + GR.g + ' · 击退 ' + r.kills + ' / ' + r.total }); M.Sfx.raidWin(GR.g); this.fx.confetti(160); this.fx.rays(960, 470, GR.c, 2);
   const lines = ['击退 ' + r.kills + ' / ' + r.total + ' · 主基地保住 ' + Math.round(keep * 100) + '%', '物资 +' + sup + ' · 灵魂碎片 +' + shK + ' · 领袖经验 +' + orb];
   if (bps.length) lines.push('图纸：' + bps.map(k => M.itemInfo(k).n).join('、'));
   if (falls.length) lines.push(M.heroN(falls[0].h) + ' 倒下过，守完以 1 点生命站起来。');

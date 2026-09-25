@@ -175,7 +175,7 @@ class B3 extends M.Battle2 {
     this.later(e.entryT + (e.entry === 'drop' ? 0.55 : 0.4), () => this.entryLand(e));
     return e;
   }
-  entryLand(e) { const c = RCOL[e.d.race] || '#fff'; if (e.entry === 'bossdrop') { this.shake = 30; this.flash = 0.3; this.flashCol = '#ff5a4a'; Sfx.impact(); this.dust(e.x, e.y, 26); this.ring(e.x, e.y - 6, 20, 320, '#ff6a4a', 12, 0.5); this.fxp({ k: 'crack', x: e.x, y: e.y, life: 2.5 }); return; } if (e.entry === 'emerge') { this.dust(e.x, e.y, 10); Sfx.stamp(); return; } if (e.entry === 'rift') { this.ring(e.x, e.y - 40, 10, 90, '#c890ff', 6, 0.4); Sfx.portal(); return; } if (e.entry === 'drop') { this.shake = Math.max(this.shake, 8 + e.d.q * 4); Sfx.stamp(); this.dust(e.x, e.y, 12); this.ring(e.x, e.y - 6, 10, 90 * e.sz, '#d8c8a8', 6, 0.3); } else if (e.entry === 'leap') { this.dust(e.x, e.y, 6); Sfx.hit(); } else if (e.entry === 'portal') { this.ring(e.x, e.y - 40, 10, 100, c, 8, 0.45); Sfx.sparkle(); } else if (e.entry === 'descend') { this.fxp({ k: 'pillar', x: e.x, w: 34, col: '#fff2c0', life: 0.5 }); Sfx.heal(); } else { this.dust(e.x, e.y, 4); Sfx.tick(); } if (e.d.q >= 2) { this.fxp({ k: 'rays', x: e.x, y: e.y - 40 * e.sz, col: M.QUALITY[e.d.q].c, life: 0.7, r: 120 * e.sz }); } }
+  entryLand(e) { const c = RCOL[e.d.race] || '#fff'; if (e.entry === 'bossdrop') { this.shake = 30; this.flash = 0.3; this.flashCol = '#ff5a4a'; Sfx.impact(); Sfx.entry && Sfx.entry('drop'); this.dust(e.x, e.y, 26); this.ring(e.x, e.y - 6, 20, 320, '#ff6a4a', 12, 0.5); this.fxp({ k: 'crack', x: e.x, y: e.y, life: 2.5 }); return; } if (e.entry === 'emerge') { this.dust(e.x, e.y, 10); Sfx.entry('rise'); return; } if (e.entry === 'rift') { this.ring(e.x, e.y - 40, 10, 90, '#c890ff', 6, 0.4); Sfx.entry('flash'); return; } if (e.entry === 'drop') { this.shake = Math.max(this.shake, 8 + e.d.q * 4); Sfx.entry('drop'); this.dust(e.x, e.y, 12); this.ring(e.x, e.y - 6, 10, 90 * e.sz, '#d8c8a8', 6, 0.3); } else if (e.entry === 'leap') { this.dust(e.x, e.y, 6); Sfx.entry('leap'); } else if (e.entry === 'portal') { this.ring(e.x, e.y - 40, 10, 100, c, 8, 0.45); Sfx.entry('flash'); } else if (e.entry === 'descend') { this.fxp({ k: 'pillar', x: e.x, w: 34, col: '#fff2c0', life: 0.5 }); Sfx.entry('descend'); } else { this.dust(e.x, e.y, 4); Sfx.entry('walk'); } if (e.d.q >= 2) { this.fxp({ k: 'rays', x: e.x, y: e.y - 40 * e.sz, col: M.QUALITY[e.d.q].c, life: 0.7, r: 120 * e.sz }); } }
   spawnEnemy(s) {
     const e = this.unitStats(s.type, 'E', s.x || 1250 + Math.random() * 500, s.y, { elite: s.elite, boss: s.boss, hpMul: s.hpMul, atkMul: s.atkMul });
     const r = e.d.race; e.entry = e.boss ? 'bossdrop' : e.elite ? 'rift' : /不死|骷髅|僵尸|自然/.test(r) ? 'emerge' : /混沌|恶魔|虚空/.test(r) ? 'rift' : 'drop';
@@ -186,7 +186,7 @@ class B3 extends M.Battle2 {
     if (e.boss) { this.float(1500, 150, '首领 · ' + e.d.n, '#ff5a4a', 60); } else if (e.elite) this.float(e.x, 120, '精英 · ' + e.d.n, '#ffb060', 36);
     return e;
   }
-  summon(key, side, x, y, life, src) { if (!DB[key]) return null; if (this.ents.filter(e => e.alive && e.summon && e.side === side).length > 14) return null; const lvl = src && src.side === 'E' ? 1 : 1; const e = this.unitStats(key, side, clamp(x, 170, 2000), clamp(y, 60, 690), { summon: 1, life, hpMul: lvl }); e.lifeEnd = this.t + (life || 999); e.readyAt = this.t + 0.3; e.entryT = this.t; e.entry = 'summon'; this.ring(e.x, e.y - 30, 10, 70, RCOL[e.d.race] || '#c890ff', 6, 0.4); this.call(e, 'start'); return e; }
+  summon(key, side, x, y, life, src) { if (!DB[key]) return null; if (this.ents.filter(e => e.alive && e.summon && e.side === side).length > 14) return null; Sfx.summonIn(Sfx.panX(x)); const lvl = src && src.side === 'E' ? 1 : 1; const e = this.unitStats(key, side, clamp(x, 170, 2000), clamp(y, 60, 690), { summon: 1, life, hpMul: lvl }); e.lifeEnd = this.t + (life || 999); e.readyAt = this.t + 0.3; e.entryT = this.t; e.entry = 'summon'; this.ring(e.x, e.y - 30, 10, 70, RCOL[e.d.race] || '#c890ff', 6, 0.4); this.call(e, 'start'); return e; }
   call(e, hook, x) { let r; for (const t of e.traits) { const h = H[t.cls]; if (!h || !h[hook]) continue; const y = hook === 'tick' ? h.tick(this, e, t.v, x, t) : (hook === 'near' || hook === 'death' || hook === 'kill') ? h[hook](this, e, x, t.v, t) : h[hook](this, e, t.v, t); if (y !== undefined) r = y; } return r; }
   later(dt, fn) { this.pending.push({ t: this.t + dt, fn }); }
   fxp(o) { o.t0 = o.t0 || this.t; this.fx.push(o); return o; }
@@ -197,7 +197,7 @@ class B3 extends M.Battle2 {
   lowest(e) { return this.allies(e).filter(o => o.hp < o.maxHp).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]; }
   mana(e, amt, perSec) { if (!e.alive) return; e.mana = Math.min(100, e.mana + amt * (perSec ? (e.manaMul || 1) * (1 + (e.au.mreg || 0)) : 1)); }
   gainBase(g, e, label) { this.base += g; this.float(e.x, e.y - 90 * e.sz, (label ? label + ' ' : '') + '+' + fmt(g), '#ffcc33', 28, true); }
-  coins(x, y, n) { for (let i = 0; i < n; i++) { const a = -Math.PI / 2 + (Math.random() - 0.5) * 1.6, v = 260 + Math.random() * 260; this.fxp({ k: 'coinup', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.9 + Math.random() * 0.3 }); } Sfx.coin(); }
+  coins(x, y, n) { for (let i = 0; i < n; i++) { const a = -Math.PI / 2 + (Math.random() - 0.5) * 1.6, v = 260 + Math.random() * 260; this.fxp({ k: 'coinup', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.9 + Math.random() * 0.3 }); } Sfx.coin(n); }
   dust(x, y, n) { for (let i = 0; i < n; i++) this.fxp({ k: 'dust', x: x + (Math.random() - 0.5) * 50, y, vx: (Math.random() - 0.5) * 220, vy: -40 - Math.random() * 80, life: 0.6 }); }
   orb(a, b2, col) { this.fxp({ k: 'orb', x1: a.x, y1: a.y - 50, x2: b2.x, y2: b2.y - 40, col, life: 0.45 }); this.later(0.45, () => this.ring(b2.x, b2.y - 40, 6, 60, col, 5, 0.3)); }
   link(a, b2, col) { if (b2) this.fxp({ k: 'arc', x1: a.x, y1: a.y - 40, x2: b2.x, y2: b2.y - 40, col, life: 0.2, w: 3 }); }
@@ -211,6 +211,7 @@ class B3 extends M.Battle2 {
   evolveU(u, to, e) { if (!u) return; to = to || (DB[u.type].up || '').split(',')[0]; if (!DB[to]) return; const from = DB[u.type].n; u.type = to; u.lv = 1; u.battles = 0; if (e) { const ne = this.unitStats(to, 'A', e.x, e.y, { unit: u }); ne.hp = ne.maxHp; ne.readyAt = this.t + 0.3; ne.mana = e.mana / 2; e.alive = false; e.evolved = 1; this.fxp({ k: 'pillar', x: e.x, w: 70, col: '#ffcc33', life: 0.9 }); this.fxp({ k: 'rays', x: e.x, y: e.y - 50, col: '#ffcc33', life: 1.2, r: 220 }); this.float(e.x, e.y - 140, '进化！' + DB[to].n, '#ffcc33', 44); this.shake = Math.max(this.shake, 12); Sfx.fanfare(); } else this.growLog.push(from + ' 进化为 ' + DB[to].n); }
   aoe(src, x, y, r, dmg, col, fn, skip) { this.ents.forEach(o => { if (o !== skip && this.active(o) && o.side !== src.side && Math.hypot(o.x - x, (o.y - y) * 1.2) < r) { this.deal(src, o, dmg, { skill: 1, col, small: 1 }); fn && fn(o); } }); }
   shell(e, tg, fn) { this.proj.push({ x: e.x, y: e.y - 60, x0: e.x, y0: e.y - 60, tx: tg.x, ty: tg.y - 20, arc: 1, t0: this.t, dur: 0.6, col: '#ffa040', style: 'boulder', fn, src: e, size: 16, trail: [] }); }
+  atkSnd(e) { if (e._atkS) return e._atkS; const P = M.P16, sp = e.hd && P && P.spec && P.spec(e.hd.key); return (e._atkS = sp && sp.weapon ? Sfx.atkKind(sp.weapon) : e.ranged ? (e.pstyle === 'bullet' ? 'gun' : e.pstyle === 'orb' ? 'staff' : 'bow') : 'claw'); }
   shootP(e, tg, o) { this.proj.push(Object.assign({ x: (o.from || e).x + (e.side === 'A' ? 24 : -24), y: (o.from || e).y - 40 * e.sz, tgt: tg, src: e, col: o.col || RCOL[e.d.race] || '#fff', size: 12, trail: [], speed: 1150 }, o)); }
   pickTarget(e) {
     const a = this.call(e, 'pick'); if (a) return a;
@@ -266,7 +267,7 @@ class B3 extends M.Battle2 {
       if (!p.tgt.alive) { this.proj.splice(i, 1); continue; }
       const tx = p.tgt.x, ty = p.tgt.y - 36 * p.tgt.sz, dx = tx - p.x, dy = ty - p.y, d = Math.hypot(dx, dy), v = p.speed * dt;
       p.trail.unshift([p.x, p.y]); if (p.trail.length > 6) p.trail.pop();
-      if (d <= v + 8) { this.proj.splice(i, 1); if (p.dmg != null) this.deal(p.src, p.tgt, p.dmg, { skill: p.skill, col: p.col, ranged: 1, small: 1 }); else this.strike(p.src, p.tgt, true); }
+      if (d <= v + 8) { this.proj.splice(i, 1); Sfx.proj(Sfx.projKind(p.style), Sfx.panX(tx)); if (p.dmg != null) this.deal(p.src, p.tgt, p.dmg, { skill: p.skill, col: p.col, ranged: 1, small: 1 }); else this.strike(p.src, p.tgt, true); }
       else { p.x += dx / d * v; p.y += dy / d * v; }
     }
     this.shake = Math.max(0, this.shake - dt * 60); this.flash = Math.max(0, this.flash - dt * 3);
@@ -286,7 +287,7 @@ class B3 extends M.Battle2 {
     e.lunge = this.t;
     const hits = 1 + e.combo;
     for (let i = 0; i < hits; i++) {
-      const go = () => { if (!tg.alive || !e.alive) return; if (e.ranged) { this.shootP(e, tg, { style: e.pstyle, size: e.isHero ? 18 : 10 + e.d.q * 3 }); if (i === 0) Sfx.shoot(); } else { this.fxp({ k: 'slash', x: tg.x, y: tg.y - 34 * tg.sz, life: 0.14, big: e.d.q >= 2 || e.isHero, col: RCOL[e.d.race] }); this.strike(e, tg, false); } };
+      const go = () => { if (!tg.alive || !e.alive) return; if (i === 0) Sfx.atk(this.atkSnd(e), Sfx.panX(e.x), e.isHero || e.boss || e.elite || e.d.q >= 2 ? 1 : 0.3); if (e.ranged) { this.shootP(e, tg, { style: e.pstyle, size: e.isHero ? 18 : 10 + e.d.q * 3 }); } else { this.fxp({ k: 'slash', x: tg.x, y: tg.y - 34 * tg.sz, life: 0.14, big: e.d.q >= 2 || e.isHero, col: RCOL[e.d.race] }); this.strike(e, tg, false); } };
       if (i === 0) go(); else this.later(i * 0.09, go);
     }
   }
@@ -303,7 +304,7 @@ class B3 extends M.Battle2 {
   }
   deal(src, tg, amt, o = {}) {
     if (!tg.alive || !(amt > 0)) return 0;   // also refuses NaN: a bad number must never poison a life bar
-    if (o.auto && tg.dodge && Math.random() < tg.dodge) { this.float(tg.x, tg.y - 80 * tg.sz, '闪避', '#b8f0ff', 24); tg.dodgeFx = this.t; for (const t of tg.traits) { const h = H[t.cls]; if (h && h.dodged) h.dodged(this, tg, t.v); } return 0; }
+    if (o.auto && tg.dodge && Math.random() < tg.dodge) { this.float(tg.x, tg.y - 80 * tg.sz, '闪避', '#b8f0ff', 24); tg.dodgeFx = this.t; Sfx.dodge(Sfx.panX(tg.x)); for (const t of tg.traits) { const h = H[t.cls]; if (h && h.dodged) h.dodged(this, tg, t.v); } return 0; }
     let d = amt;
     if (src && src.dmgDown) d = Math.max(d * 0.2, d - src.dmgDown);
     if (src && src.plasma) d *= 1 - src.plasma * 0.02;
@@ -318,7 +319,7 @@ class B3 extends M.Battle2 {
     if (tg.isHero) this.heroDmgTaken += d;
     if (!o.silent && (o.skill || o.crit || o.big || Math.random() < 0.5)) this.float(tg.x + (Math.random() - 0.5) * 30, tg.y - 70 * tg.sz, fmt(d), o.crit ? '#ff5a4a' : o.col || (o.skill ? '#d890ff' : tg.side === 'A' ? '#ff8a8a' : '#ffffff'), o.big || o.crit ? 40 : o.small ? 20 : 26, true);
     if (!o.silent && !o.small) for (let i = 0; i < 3; i++) { const a = Math.random() * Math.PI * 2, v = 200 + Math.random() * 260; this.fxp({ k: 'pt', x: tg.x, y: tg.y - 40, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 100, col: o.col || (tg.side === 'E' ? '#ffd080' : '#8fc8ff'), life: 0.35 }); }
-    if (o.crit || o.big) { Sfx.crit(); this.shake = Math.max(this.shake, 8); this.ring(tg.x, tg.y - 40, 10, 110, o.col || '#ffe08a', 7, 0.25); } else if (!o.silent && !o.small) Sfx.hit();
+    if (o.crit || o.big) { Sfx.critAt(Sfx.panX(tg.x)); this.shake = Math.max(this.shake, 8); this.ring(tg.x, tg.y - 40, 10, 110, o.col || '#ffe08a', 7, 0.25); } else if (!o.silent && !o.small) { if (tg.shield > 0 || (tg.au && tg.au.flat)) Sfx.armorHit(Sfx.panX(tg.x)); else Sfx.hitAt(Sfx.panX(tg.x), o.ranged ? .6 : 1, src && src.d ? this.atkSnd(src) : null); }
     if (src && src.alive && src.au && src.au.leech && !o.reflect) { const h = d * src.au.leech; src.hp = Math.min(src.maxHp, src.hp + h); if (Math.random() < 0.15) this.fxp({ k: 'orb', x1: tg.x, y1: tg.y - 40, x2: src.x, y2: src.y - 40, col: '#ff4a5a', life: 0.3 }); }
     if (tg.hp <= 0) this.kill(tg, src);
     return d;
@@ -343,9 +344,9 @@ class B3 extends M.Battle2 {
       if (e.boss) { this.shake = 30; this.flash = 0.6; this.flashCol = '#ffffff'; this.slow = 0.8; Sfx.impact(); } else if (e.elite) { this.shake = Math.max(this.shake, 14); this.slow = Math.max(this.slow || 0, 0.25); }
       if (src && src.side === 'A' && (e.elite || e.boss) && this.mods.eliteHeal && this.hero.alive) this.heal(this.hero, this.hero.maxHp * this.mods.eliteHeal);
       if (src && src.side === 'A' && src.alive) { src.kills++; if (src.unit) src.unit.kills = (src.unit.kills || 0) + 1; this.call(src, 'kill', e); if (src.isHero && this.mods.killHeal) this.heal(src, src.maxHp * this.mods.killHeal); }
-      Sfx.kill();
+      Sfx.killAt(Sfx.panX(e.x));
     } else if (e.isHero) { this.float(e.x, e.y - 120, '领袖倒下了', '#d0453c', 56); this.shake = 30; Sfx.die(); }
-    else { if (src && src.alive) this.call(src, 'kill', e); if (!e.summon && !e.evolved) { this.deadUids.push(e.uid); this.float(e.x, e.y + 30, '倒下', '#ff8a8a', 26); } Sfx.die(); }
+    else { if (src && src.alive) this.call(src, 'kill', e); if (!e.summon && !e.evolved) { this.deadUids.push(e.uid); this.float(e.x, e.y + 30, '倒下', '#ff8a8a', 26); } Sfx.allyDie(Sfx.panX(e.x)); }
   }
   explode(x, y, dmg, src) { this.fxp({ k: 'boom', x, y, life: 0.4 }); this.shake = Math.max(this.shake, 10); Sfx.boom(); this.ents.forEach(o => { if (this.active(o) && o.side === 'E' && Math.hypot(o.x - x, o.y - y) < 150) this.deal(src || this.hero, o, dmg, { skill: 1 }); }); }
   addMult(m, x, y, label) { m = Math.round(m * 10) / 10; if (!m) return; this.mult = Math.round((this.mult + m) * 10) / 10; this.float(x, y, (label ? label + ' ' : '') + '积分倍率 +' + m, PL.magenta, 40); this.fxp({ k: 'rays', x, y: y + 20, col: '#ffcc33', life: 0.6, r: 90 }); Sfx.mult(); }
@@ -356,10 +357,10 @@ class B3 extends M.Battle2 {
       const n = [2, 5, 8, 12][tier], dmg = [0.6, 0.9, 1.4, 2.2][tier] * hs, struck = new Set();
       for (let i = 0; i < n; i++) this.later(0.05 + i * 0.12, () => { let list = foes().filter(e => !struck.has(e.id)); if (!list.length) list = foes(); if (!list.length) return; const tg = pick(list); struck.add(tg.id); this.fxp({ k: 'bolt', x: tg.x, y: tg.y, tier, seed: Math.random() * 1000, life: [0.3, 0.38, 0.5, 0.6][tier] }); this.shake = Math.max(this.shake, [3, 8, 24, 34][tier]); if (tier >= 2) { this.flash = Math.max(this.flash, 0.4); this.flashCol = tier === 3 ? '#e0c0ff' : '#fff8d8'; } Sfx.bolt(tier); this.deal(this.hero, tg, dmg, { skill: 1, col: '#e0e8ff', big: tier >= 2 }); if (tier >= 2) { const r = tier === 3 ? 190 : 130; this.ring(tg.x, tg.y, 20, r, tier === 3 ? '#b86bff' : '#ffcc33', 10, 0.45); this.aoe(this.hero, tg.x, tg.y, r, dmg * 0.5, '#e0e8ff', tier === 3 ? (o => o.stun = Math.max(o.stun, 1)) : null, tg); } });
     }
-    if (key === 'heal') { const pct = [0.25, 0.5, 1, 1][tier]; this.ents.forEach(o => { if (o.alive && o.side === 'A' && !o.isHero) { this.heal(o, o.maxHp * pct); if (tier >= 2) o.shield = o.maxHp * 0.3; } }); if (tier === 3) this.ents.filter(o => !o.alive && o.side === 'A' && !o.isHero && !o.summon && !o.evolved).forEach(o => { o.alive = true; o.hp = o.maxHp * 0.6; this.deadUids = this.deadUids.filter(x => x !== o.uid); this.float(o.x, o.y - 90, '复活！', '#7fff9a', 40); this.fxp({ k: 'pillar', x: o.x, w: 50, col: '#b8ffb0', life: 0.7 }); }); this.heal(this.hero, this.hero.maxHp * pct * 0.25); this.flash = 0.25; this.flashCol = '#c0ffc0'; Sfx.heal(); }
-    if (key === 'frame') { const list = [['GrayWolf'], ['GrayWolf', 'GrayWolf', 'DireWolf'], ['DireWolf', 'VengefulDragon'], ['BoneDragon', 'DireWolf', 'DireWolf', 'VengefulDragon']][tier]; list.forEach((k, i) => this.later(i * 0.18, () => { const x = 520 + Math.random() * 200, y = 150 + Math.random() * 420; this.fxp({ k: 'circle', x, y: y + 6, col: '#c890ff', life: 0.8 }); this.later(0.25, () => { const s = this.summon(k, 'A', x, y, 60); if (s) { s.maxHp *= 1 + this.w * 0.3; s.hp = s.maxHp; s.atk *= 1 + this.w * 0.3; } }); Sfx.portal(); })); }
-    if (key === 'bell') { const f = foes(); if (tier === 3) f.forEach(o => { o.charm = 5; o.target = null; }); else f.forEach(o => o.stun = Math.max(o.stun, [1, 2, 3.5][tier])); for (let i = 0; i < 3; i++) this.later(i * 0.15, () => this.ring(960, 380, 40, 900, tier === 3 ? '#ff80c0' : '#caa84a', 8, 0.7)); Sfx.up(1); }
-    if (key === 'cup') this.addMult([0.1, 0.2, 0.3, 0.5][tier], 960, 300, '骰盅');
+    if (key === 'heal') { const pct = [0.25, 0.5, 1, 1][tier]; this.ents.forEach(o => { if (o.alive && o.side === 'A' && !o.isHero) { this.heal(o, o.maxHp * pct); if (tier >= 2) o.shield = o.maxHp * 0.3; } }); if (tier === 3) this.ents.filter(o => !o.alive && o.side === 'A' && !o.isHero && !o.summon && !o.evolved).forEach(o => { o.alive = true; o.hp = o.maxHp * 0.6; this.deadUids = this.deadUids.filter(x => x !== o.uid); this.float(o.x, o.y - 90, '复活！', '#7fff9a', 40); this.fxp({ k: 'pillar', x: o.x, w: 50, col: '#b8ffb0', life: 0.7 }); }); this.heal(this.hero, this.hero.maxHp * pct * 0.25); this.flash = 0.25; this.flashCol = '#c0ffc0'; Sfx.itemUse('candle', tier); }
+    if (key === 'frame') { const list = [['GrayWolf'], ['GrayWolf', 'GrayWolf', 'DireWolf'], ['DireWolf', 'VengefulDragon'], ['BoneDragon', 'DireWolf', 'DireWolf', 'VengefulDragon']][tier]; list.forEach((k, i) => this.later(i * 0.18, () => { const x = 520 + Math.random() * 200, y = 150 + Math.random() * 420; this.fxp({ k: 'circle', x, y: y + 6, col: '#c890ff', life: 0.8 }); this.later(0.25, () => { const s = this.summon(k, 'A', x, y, 60); if (s) { s.maxHp *= 1 + this.w * 0.3; s.hp = s.maxHp; s.atk *= 1 + this.w * 0.3; } }); Sfx.itemUse('frame', tier); })); }
+    if (key === 'bell') { const f = foes(); if (tier === 3) f.forEach(o => { o.charm = 5; o.target = null; }); else f.forEach(o => o.stun = Math.max(o.stun, [1, 2, 3.5][tier])); for (let i = 0; i < 3; i++) this.later(i * 0.15, () => this.ring(960, 380, 40, 900, tier === 3 ? '#ff80c0' : '#caa84a', 8, 0.7)); Sfx.itemUse('bell', tier); }
+    if (key === 'cup') { Sfx.itemUse('dice', tier); this.addMult([0.1, 0.2, 0.3, 0.5][tier], 960, 300, '骰盅'); }
   }
   render(ctx, opts = {}) {
     const T = this.t;

@@ -23,7 +23,7 @@ G.view = function () {
 };
 G.menuGo = function () {
   if (this.menuDive || this.modal) return;
-  M.Sfx.init(); M.Sfx.click(); M.Sfx.whoosh && M.Sfx.whoosh(0.8); this.menuDive = { t: 0 }; this.bump();
+  M.Sfx.init(); M.Sfx.coinInsert(); M.Sfx.screenDive(); this.menuDive = { t: 0 };   // 投币、镜头推进屏幕（房间的雨声由音效导演按场景收掉） this.bump();
 };
 const oGo = G.go;
 G.go = function (s) { if (s === 'menu') { this.menuT = 0; this.menuDive = null; } return oGo.apply(this, arguments); };

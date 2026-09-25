@@ -1,0 +1,92 @@
+{
+  "name": "圣骑士",
+  "states": {
+    "IDLE 待机": {
+      "distinctFrames": 9,
+      "bbox": [
+        -13,
+        -34,
+        11,
+        1
+      ],
+      "clipped": false
+    },
+    "MOVE 移动": {
+      "distinctFrames": 4,
+      "bbox": [
+        -14,
+        -32,
+        13,
+        1
+      ],
+      "clipped": false
+    },
+    "ATTACK 攻击": {
+      "distinctFrames": 7,
+      "bbox": [
+        -13,
+        -32,
+        27,
+        1
+      ],
+      "clipped": false
+    },
+    "SKILL 圣光审判 · 蓄力": {
+      "distinctFrames": 9,
+      "bbox": [
+        -15,
+        -43,
+        11,
+        1
+      ],
+      "clipped": false
+    },
+    "SKILL 圣光审判 · 施放": {
+      "distinctFrames": 3,
+      "bbox": [
+        -16,
+        -43,
+        20,
+        1
+      ],
+      "clipped": false
+    },
+    "SKILL 圣光审判 · 收招": {
+      "distinctFrames": 8,
+      "bbox": [
+        -15,
+        -32,
+        22,
+        1
+      ],
+      "clipped": false
+    },
+    "HURT 受击": {
+      "distinctFrames": 7,
+      "bbox": [
+        -14,
+        -32,
+        11,
+        1
+      ],
+      "clipped": false
+    },
+    "DEATH 死亡": {
+      "distinctFrames": 22,
+      "bbox": [
+        -33,
+        -32,
+        25,
+        1
+      ],
+      "clipped": false
+    }
+  },
+  "problems": [],
+  "idle": {
+    "w": 25,
+    "h": 34,
+    "pixels": 550
+  },
+  "pass": true
+}

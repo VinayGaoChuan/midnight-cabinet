@@ -127,7 +127,7 @@ class Battle {
     if (!free) { this.skillUsed = true; this.run.skillCd = M.skillNodeCd(h0, this.run.M); }
     const col = { watchman:'#ffcf4a', widow:'#ffcc33', nun:'#b8ffb0', butcherlord:'#ff3a3a', clockmaker:'#9fd8c8', cremator:'#ff6a2a' }[cls];
     this.cutin = { at: performance.now(), text: (free ? '上场 · ' : '') + H.skill.n, sub: M.skillDesc(h0), col, sprite: H.sprite };
-    this.slow = 0.9; Sfx.cast();
+    this.slow = 0.9;
     const h = this.hero; h.castT = this.t;
     for (let i = 0; i < 22; i++) { const a = Math.random() * Math.PI * 2, r = 160 + Math.random() * 120; this.fx.push({ k:'charge', x:h.x + Math.cos(a) * r, y:h.y - 50 + Math.sin(a) * r, tx:h.x, ty:h.y - 50, col, t0:this.t + Math.random() * 0.15, life:0.4 }); }
     this.ring(h.x, h.y - 50, 180, 10, col, 8, 0.45);
