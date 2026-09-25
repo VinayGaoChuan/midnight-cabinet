@@ -12,11 +12,17 @@ BUILD.mkdir(exist_ok=True)
 import hashlib
 code = ''.join((SRC / n).read_text(encoding='utf-8') for n in order)
 tpl_text = (SRC / 'template.html').read_text(encoding='utf-8')
+fonts_css = (SRC / 'fonts.css').read_text(encoding='utf-8')
 # build id = content hash of the sources: identical sources always give an identical index.html
-build_id = hashlib.sha1((code + tpl_text).encode('utf-8')).hexdigest()[:8]
+build_id = hashlib.sha1((code + tpl_text + fonts_css).encode('utf-8')).hexdigest()[:8]
 (BUILD / 'game.js').write_text('window.MC_BUILD = "' + build_id + '";\n' + code, encoding='utf-8')
-for n in ('template.html', 'mimg.js'):
-    (BUILD / n).write_text((SRC / n).read_text(encoding='utf-8'), encoding='utf-8')
+(BUILD / 'mimg.js').write_text((SRC / 'mimg.js').read_text(encoding='utf-8'), encoding='utf-8')
+# the pixel fonts go inline (src/fonts.css from tools/fonts.py): the page loads no font from the network
+assert '/*@FONTS@*/' in tpl_text, 'src/template.html lost its /*@FONTS@*/ marker'
+(BUILD / 'template.html').write_text(tpl_text.replace('/*@FONTS@*/', fonts_css), encoding='utf-8')
+sys.path.insert(0, str(ROOT / 'tools')); import fonts
+miss = sorted(c for c in fonts.used_chars() - fonts.covered(fonts_css) if 0x3000 <= c <= 0x9FFE or 0xFF00 <= c <= 0xFFEF)
+if miss: print('warning: %d characters are not in the inlined pixel font (%s): run python3 tools/fonts.py' % (len(miss), ''.join(map(chr, miss[:20]))))
 for f in ('game.js', 'mimg.js'):
     r = subprocess.run(['node', '--check', str(BUILD / f)], capture_output=True, text=True)
     if r.returncode:

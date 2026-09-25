@@ -283,6 +283,7 @@ import android.util.Log;
 import android.view.WindowManager;
 import android.webkit.ConsoleMessage;
 import android.webkit.WebView;
+import androidx.activity.OnBackPressedCallback;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
@@ -326,8 +327,24 @@ public class MainActivity extends BridgeActivity {
                 }
             });
         }
+        // 返回键 / 返回手势：先问游戏。页面里的 window.__wgpBack() 返回 true 表示游戏自己用掉了这一下（关掉面板、提示再按一次退出）；
+        // 没有这个函数或返回 false，才按系统默认退出
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                WebView wv = getBridge() != null ? getBridge().getWebView() : null;
+                if (wv == null) { leave(this); return; }
+                wv.evaluateJavascript("(function(){try{return !!(window.__wgpBack&&window.__wgpBack());}catch(e){return false;}})()", v -> { if (!"true".equals(v)) leave(this); });
+            }
+        });
         hideSystemBars();
         if (WgpBuild.DEBUG_LOG) handler.postDelayed(monitor, 4000);
+    }
+
+    private void leave(OnBackPressedCallback cb) {
+        cb.setEnabled(false);
+        getOnBackPressedDispatcher().onBackPressed();
+        cb.setEnabled(true);
     }
 
     private final Runnable monitor = new Runnable() {

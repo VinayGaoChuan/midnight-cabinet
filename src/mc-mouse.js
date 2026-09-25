@@ -10,6 +10,17 @@ G.backAction = function () {
   if (this.modal && this.modal.back) { this.modal.back(); this.bump && this.bump(); return; }
   this.closePanel();
 };
+// ───────── Android back key / back gesture (packaged app) ─────────
+// the Android shell asks window.__wgpBack() before leaving; true = the game used the press. Anything open closes exactly
+// like Esc / right click; on a bare screen the first press only warns and a second one within 2 s leaves the app.
+const openSig = (g) => [g.guide, g.rulesOpen, g.settingsOpen, g.modal, g.panel, g.portalOn && g.portalOn(), g.coachData].map(v => v ? 1 : 0).join('');
+window.__wgpBack = function () {
+  const g = window.__mcg || M._g; if (!g) return false;
+  if (g.mini) { g.backAction(); return true; }
+  const was = openSig(g); g.backAction(); if (openSig(g) !== was) return true;
+  const t = Date.now(); if (g.exitArmed && t - g.exitArmed < 2000) return false;
+  g.exitArmed = t; g.toast('再按一次返回键退出游戏', '#f4efe0'); return true;
+};
 // the page evaluates the bundle twice, so this listener exists twice: only the first one acts on a given click
 window.addEventListener('contextmenu', (ev) => { const g = M._g; if (!g || ev.defaultPrevented) return; ev.preventDefault();
   if (ev.ctrlKey && ev.button !== 2) return; /* macOS turns Ctrl + click into a context menu: while Ctrl shows details, that is not "back" */ if (g.rebind) return; g.lastInput = 'kbm'; g.backAction(); });

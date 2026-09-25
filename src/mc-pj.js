@@ -153,9 +153,7 @@ if (W.setInterval) { const iv = W.setInterval(() => { if (hookView()) W.clearInt
 if (typeof document === 'undefined') return;
 
 // ───────── 字体 ─────────
-function addLink(href) { if (document.querySelector('link[href="' + href + '"]')) return; const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = href; document.head.appendChild(l); }
-addLink('https://cdn.jsdelivr.net/npm/@fontsource/fusion-pixel-12px-proportional-sc@5/index.css');
-addLink('https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap');
+// both pixel fonts are inlined into the page by tools/mk.py (src/fonts.css, made by tools/fonts.py): nothing loads from the network
 if (document.fonts && document.fonts.load) setTimeout(() => { document.fonts.load('24px ' + FONT_PX, '午夜机台第天代币生命技能开始0123456789').catch(() => {}); document.fonts.load('24px ' + FONT_NUM, '0123456789').catch(() => {}); }, 0);
 
 // ───────── 画布：字体换成像素字，去掉模糊发光 ─────────
