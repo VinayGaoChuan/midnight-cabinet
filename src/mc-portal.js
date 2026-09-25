@@ -15,7 +15,7 @@ const PJ = M.PJ || {}, P = PJ.PAL || {};   // 调色板（界面件只用这 32 
 M.bestLeader = (m) => m.heroes.filter(h => h.hp > 0).reduce((b, h) => (!b || M.heroPower(h, m) > M.heroPower(b, m) ? h : b), null);
 M.parPower = function (m, k, cls) {
   const W = M.WORLDS[k], lv = cl(Math.round(1 + (W.diff - 1) * 1.8 + Math.min(0.8, (m.day - 1) * 0.03) * 2), 1, 10);
-  return M.heroPower({ cls: cls || 'watchman', rarity: 0, lv, tree: { atk: [], def: [], luck: [] }, taken: { atk: 0, def: 0, luck: 0 }, relics: [] }, m);
+  return M.heroPower({ cls: cls || 'watchman', rarity: 0, lv, tree: [], taken: [], relics: [] }, m);
 };
 M.worldDanger = function (m, k) {
   const b = M.bestLeader(m), mine = b ? M.heroPower(b, m) : 0, par = M.parPower(m, k, b && b.cls), r = mine / Math.max(1, par);
@@ -62,6 +62,10 @@ G.closePanel = function () {
   if (was.kind === 'loadout' && this.portalOn()) { const bv = this.bv; bv.pickW = null; bv.drop = null; themeOut(bv); CAM(bv); }
   return r;
 };
+// clicking anything else leaves the portal first (user ruling 2026-09-25): opening a leader card, a room or any
+// other panel closes the open portal instead of stacking on top of it
+const oOpen = G.openPanel;
+G.openPanel = function (p) { if (p && p.kind !== 'loadout' && p.kind !== 'raidPrep' && this.portalOn()) this.closePortal(); return oOpen.apply(this, arguments); };
 const oPick = G.pickWorld;
 G.pickWorld = function (k) { const r = oPick.apply(this, arguments); if (this.panel && this.panel.kind === 'loadout') { this.bv.pickW = k; CAM(this.bv); } else if (this.bv) { this.bv.pickW = null; themeOut(this.bv); } return r; };
 // choosing a stele: it lifts, drops into the portal and shatters; the portal opens onto that world; then the loadout panel
@@ -265,7 +269,8 @@ const oClick = G.baseClick;
 G.baseClick = function (sx, sy) {
   if (!this.raid && !this.reel && this.portalOn()) {
     const st = hitS(this, sx, sy); if (st) { M.Sfx.init(); M.Sfx.click(); this.fx.clickBurst(sx, sy, M.WORLDS[st.k].light); return this.steleDrop(st.k, st.wx, st.wy); }
-    if (this.bv.drop && !(this.panel && this.panel.kind === 'loadout')) return;   // the chosen stele is still falling
+    // the chosen stele is still falling; if its world never opened (something else took over), let go of it
+    if (this.bv.drop && !(this.panel && this.panel.kind === 'loadout')) { if (this.bv.t - this.bv.drop.t0 < 1.6) return; this.bv.drop = null; this.bv.pickW = null; }
     const p = this.bv.pick(sx, sy); if (!p || !p.door) { this.closePortal(); if (!p) return; }
   }
   return oClick.apply(this, arguments);

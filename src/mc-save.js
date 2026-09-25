@@ -50,11 +50,8 @@ function checkMeta(raw) {
   // leaders
   const okHero = (h) => {
     if (!isObj(h) || !M.HEROES[h.cls] || !intIn(h.rarity, 0, 3) || !intIn(h.lv, 1, 10) || !isNum(h.exp) || !isNum(h.hp) || typeof h.name !== 'string') return false;
-    if (!isObj(h.tree) || !isObj(h.taken)) return false;
-    for (const b of ['atk', 'def', 'luck']) { const t = h.tree[b]; if (!Array.isArray(t) || t.some(x => !isObj(x) || !isObj(x.m))) return false; if (!intIn(h.taken[b], 0, t.length)) return false; }
-    return true;
+    return true;   // talents: a broken or old-style tree is replaced below, not a reason to drop the leader
   };
-  const TAL_SWAP = { fire: 'rngAtk', beastAs: 'warAs', shortRed: 'vanHp' }, TAL_BY = {}; Object.keys(M.TALENTS).forEach(b => M.TALENTS[b].forEach(t => { TAL_BY[Object.keys(t.m)[0]] = t; }));
   relics.forEach(r => { if (r.lines.some(l => l.k === 'shortRed')) { r.lines = M.relicLines(r.key, r.q); mig = true; } });
   const heroes = m.heroes.filter(okHero);
   if (heroes.length < m.heroes.length) note('领袖', m.heroes.length - heroes.length);
@@ -62,8 +59,12 @@ function checkMeta(raw) {
     if (!intIn(h.points, 0, 20)) h.points = 0;
     // personalities and personal names were removed from the design: drop them without reporting damage
     if ('quirks' in h || h.name !== M.heroN(h) || (isObj(h.status) && h.status.kind === 'sanitarium')) mig = true;
-    // talents: refresh words from the table, replace the ones whose effect no longer exists (火 / 兽 tags, score targets)
-    Object.keys(h.tree).forEach(b => h.tree[b].forEach(t => { const k0 = Object.keys(t.m)[0], k = TAL_SWAP[k0] || k0, T = TAL_BY[k]; if (!T) return; if (t.n !== T.n || t.d !== T.d || k !== k0) { t.n = T.n; t.d = T.d; t.m = Object.assign({}, T.m); mig = true; } }));
+    // talents (2026-09-25): the three-branch trees became one random layered tree per leader; an old or broken tree
+    // is grown again for the leader's quality and every point it had comes back
+    if (!M.talValid(h)) {
+      const old = !Array.isArray(h.tree), back = old ? (isObj(h.taken) ? ['atk', 'def', 'luck'].reduce((a, b) => a + (intIn(h.taken[b], 0, 20) ? h.taken[b] : 0), 0) : 0) : (Array.isArray(h.taken) ? h.taken.length : 0), pts = h.points;
+      M.talReset(h); h.points = Math.min(20, pts + back); if (old) mig = true; else note('天赋');
+    }
     delete h.quirks; h.name = M.heroN(h); if (isObj(h.status) && h.status.kind === 'sanitarium') h.status = null;
     h.relics = (Array.isArray(h.relics) ? h.relics : []).filter(id => rid.has(id));
     if (h.status != null && !isObj(h.status)) h.status = null; if (!isNum(h.runs)) h.runs = 0;

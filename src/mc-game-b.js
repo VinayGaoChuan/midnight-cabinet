@@ -111,7 +111,6 @@ Object.assign(G, {
     this.hold('msup', m.supplies); m.supplies -= 40; this.release('msup'); h.hp = Math.min(mx, h.hp + mx * 0.3); this.save(); M.Sfx.heal();
     const p = this.fxPos('hero-' + id); if (p) { this.fx.pop(p.x, p.y - 80, '+' + Math.round(mx * 0.3), '#9cff7a', 44, { num: 1 }); this.fx.burst(p.x, p.y, '#9cff7a', 16); }
   },
-  takeTalent(id, b) { const m = this.meta, h = m.heroes.find(x => x.id === id); if (!h || h.points <= 0 || h.taken[b] >= h.tree[b].length) return; h.points--; h.taken[b]++; h.hp = Math.min(h.hp, M.heroMaxHp(h, m)); this.save(); M.Sfx.up(1); const p = this.fxPos('tal-' + b + '-' + (h.taken[b] - 1)); if (p) { this.fx.burst(p.x, p.y, M.BRANCH[b].c, 24); this.fx.ring(p.x, p.y, 10, 120, M.BRANCH[b].c, 6, 0.4); } },
   openHero(id) { this.openPanel({ kind: 'hero', id }); },
   pickWorld(k) { const m = this.meta, ok = m.heroes.filter(h => !h.status && h.hp > 0); if (!ok.length) { this.toast('没有能出征的领袖', '#d0453c'); return; } this.openPanel({ kind: 'loadout', world: k, hero: ok[0].id, relics: [] }); },
   toggleRelic(rid) { const p = this.panel, m = this.meta, h = m.heroes.find(x => x.id === p.hero), slots = M.relicSlots(h, m); const i = p.relics.indexOf(rid); if (i >= 0) p.relics.splice(i, 1); else if (p.relics.length < slots) { p.relics.push(rid); M.Sfx.land(p.relics.length); } else this.toast('这名领袖最多带 ' + slots + ' 件宝物', '#8d8496'); this.bump(); },

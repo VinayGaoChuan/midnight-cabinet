@@ -1,15 +1,15 @@
 // ==== mc-data3.js ====
 (function () {
 const M = window.MC;
-const { SP, UNITS, pick, wpick, nice, baseS, ENEMIES, TIERS, HEROES, TALENTS, STATS } = M;
+const { SP, UNITS, pick, wpick, nice, baseS, ENEMIES, TIERS, HEROES, STATS } = M;
 
 // ───────── unified quality: 普通（白）/ 稀有（蓝）/ 史诗（紫）/ 传说（金）; names always show as 名字（品质） in the quality colour ─────────
 const QUALITY = [ { n:'普通', c:'#c4ccd9', m:1 }, { n:'稀有', c:'#47d6c1', m:1.5 }, { n:'史诗', c:'#b86bff', m:2.2 }, { n:'传说', c:'#ffcf4a', m:3.2 } ];
 TIERS.splice(0, TIERS.length, ...QUALITY.map(q => ({ n: q.n, c: q.c })));
-const RARITY = [ { n:'普通', c:QUALITY[0].c, w:55, tiers:3, stat:1 }, { n:'稀有', c:QUALITY[1].c, w:30, tiers:3, stat:1.08 }, { n:'史诗', c:QUALITY[2].c, w:12, tiers:4, stat:1.18 }, { n:'传说', c:QUALITY[3].c, w:3, tiers:4, stat:1.3 } ];
+const RARITY = [ { n:'普通', c:QUALITY[0].c, w:55, tiers:3, stat:1 }, { n:'稀有', c:QUALITY[1].c, w:30, tiers:4, stat:1.08 }, { n:'史诗', c:QUALITY[2].c, w:12, tiers:5, stat:1.18 }, { n:'传说', c:QUALITY[3].c, w:3, tiers:6, stat:1.3 } ];   // tiers = layers of the talent tree
 Object.assign(STATS, {
-  supplies:{ d:'获得物资 +{v}%', b:0.1, pct:1 }, exp:{ d:'获得经验 +{v}%', b:0.1, pct:1 }, eventLuck:{ d:'事件好结果 +{v}%', b:0.05, pct:1 }, chest:{ d:'宝箱积分 +{v}%', b:0.15, pct:1 },
-  killHeal:{ d:'领袖击杀回复 {v}% 生命', b:0.02, pct:1 },
+  supplies:{ d:'打仗得到的物资 +{v}%', b:0.1, pct:1 }, exp:{ d:'领袖出征得到的经验 +{v}%', b:0.1, pct:1 }, eventLuck:{ d:'奇遇出好结果的概率 +{v}%', b:0.05, pct:1 }, chest:{ d:'宝箱里的积分 +{v}%', b:0.15, pct:1 },
+  killHeal:{ d:'领袖每次击杀回复 {v}% 生命', b:0.02, pct:1 },
 });
 
 // ───────── sprites ─────────
@@ -53,7 +53,7 @@ const SK = {
 Object.keys(HEROES).forEach(k => Object.assign(HEROES[k].skill, SK[k]));
 M.skillVal = (h) => HEROES[h.cls].skill.v(h.lv);
 M.skillDesc = (h) => HEROES[h.cls].skill.d(M.skillVal(h));
-M.skillNodeCd = (h, meta) => Math.max(1, HEROES[h.cls].skill.nodeCd + (M.baseMods(meta).skillNodeCd || 0) + Math.round((M.heroMods(h, meta).skillCd || 0) * 3));
+M.skillNodeCd = (h, meta) => { const hm = M.heroMods(h, meta); return Math.max(1, HEROES[h.cls].skill.nodeCd + (M.baseMods(meta).skillNodeCd || 0) + (hm.skillNode || 0) - (hm.skillCd < 0 ? Math.ceil(-hm.skillCd * 3 - 0.2) : 0)); };
 
 // ───────── treasures: each is concrete; quality stacks lines ─────────
 const RELICS = {
@@ -232,9 +232,7 @@ M.relicSlots = (h, m) => (h.lv >= 8 ? 3 : h.lv >= 4 ? 2 : 1) + (m ? (M.baseMods(
 M.newHero = function (meta, cls, rarity) {
   cls = cls || pick(Object.keys(HEROES));
   rarity = rarity == null ? RARITY.indexOf(wpick(RARITY, r => r.w)) : rarity;
-  const R = RARITY[rarity], tree = {};
-  Object.keys(TALENTS).forEach(b => { const pool = TALENTS[b].slice().sort(() => Math.random() - 0.5); tree[b] = pool.slice(0, R.tiers).map((t, i) => ({ n: t.n, d: t.d, m: t.m, big: rarity >= 2 && i === 3 })); });
-  const h = { id: M.rid(), cls, name: HEROES[cls].n, rarity, lv: 1, exp: 0, points: 0, tree, taken: { atk: 0, def: 0, luck: 0 }, relics: [], status: null, hp: 0, runs: 0 };
+  const h = { id: M.rid(), cls, name: HEROES[cls].n, rarity, lv: 1, exp: 0, points: 0, tree: M.talentTree(rarity), taken: [], relics: [], status: null, hp: 0, runs: 0 };
   const lv = meta ? (M.baseMods(meta).newHeroLv || 0) : 0; for (let i = 0; i < lv; i++) { h.lv++; h.points++; }
   h.hp = M.heroMaxHp(h, meta);
   return h;

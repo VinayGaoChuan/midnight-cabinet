@@ -14,7 +14,6 @@ M.visionParts = function (run) {
 };
 M.visionOf = (run) => Math.max(1, M.visionParts(run).reduce((a, p) => a + p[1], 0));
 // a talent that reaches further
-if (M.TALENTS && M.TALENTS.luck && !M.TALENTS.luck.some(t => t.m && t.m.vision)) M.TALENTS.luck.push({ n: '鹰眼', d: '出征视野 +1', m: { vision: 1 } });
 // events can move it mid-run: award { k: 'vision', v: ±1 }
 const oAward = G.award;
 G.award = function (list, from) {

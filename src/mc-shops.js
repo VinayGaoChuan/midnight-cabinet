@@ -50,6 +50,9 @@ M.rollShop = function (run) {
   const items = []; for (let i = 0; i < (S.items || 0); i++) items.push({ kind: 'item', key: pick(Object.keys(M.ITEMS)), q: 0, cost: Math.max(5, Math.round(M.itemPrice() * pm * (S.price || 1) * wild())) });
   run.shop = { units, banners, items };
 };
+// leader talents may add to any stock (货郎, mc-talent.js)
+const oRoll2 = M.rollShop;
+M.rollShop = function (run) { const r = oRoll2.apply(this, arguments); if (M.talShopExtra) M.talShopExtra(run); return r; };
 const oOpen = G.openShop;
 G.openShop = function (n) { const run = this.run; if (run) run.shopKind = (n && n.shop) || M.shopKindFor(n, run); return oOpen.apply(this, arguments); };
 // the quartermaster's gift is one banner, not one per refresh

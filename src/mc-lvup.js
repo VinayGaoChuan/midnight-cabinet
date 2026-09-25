@@ -17,7 +17,7 @@ Object.assign(B, {
 });
 
 // ───────── combat power ─────────
-M.heroPower = function (h, m) { if (!h) return 0; const taken = Object.values(h.taken || {}).reduce((a, b) => a + b, 0); return Math.round(M.heroAtk(h, m) * 6 + M.heroMaxHp(h, m) * 0.5 + taken * 40 + (h.relics || []).length * 60); };
+M.heroPower = function (h, m) { if (!h) return 0; return Math.round(M.heroAtk(h, m) * 6 + M.heroMaxHp(h, m) * 0.5 + M.talPower(h) + (h.relics || []).length * 60); };
 M.heroPowerAt = (h, m, lv) => M.heroPower(Object.assign({}, h, { lv }), m);
 M.lvOrbs = function (h, m) { if (h.lv >= 10) return 0; const mul = 1 + (M.baseMods(m).orbMul || 0); return Math.max(1, Math.ceil((M.expNeed(h.lv) - h.exp) / mul)); };
 G.heroLvUp = function (id) {
@@ -32,7 +32,10 @@ G.heroLvUp = function (id) {
 
 // ───────── the ceremony ─────────
 G.lvUpFx = function (h, lv0, lv1, p0, p1) {
-  const H = M.HEROES[h.cls], item = { h, lv0, lv1, p0, p1, name: M.heroN(h), col: M.qc(h.rarity), img: M.spriteCanvas(H.sprite, 16) };
+  const H = M.HEROES[h.cls], item = { h, lv0, lv1, p0, p1, name: M.heroN(h), col: M.qc(h.rarity), img: M.spriteCanvas(H.sprite, 16), dur: DUR };
+  // the talent layers this level reveals (layer k at Lv k+1) land at the end of the ceremony, and pop on the hero page
+  const hi = M.talHeight(h), a = Math.min(hi, Math.max(0, lv0 - 1)), b = Math.min(hi, Math.max(0, lv1 - 1));
+  if (b > a) { item.newNodes = h.tree.map((n, i) => i).filter(i => h.tree[i].L > a && h.tree[i].L <= b).slice(0, 9); item.newL = b > a + 1 ? (a + 1) + '–' + b : String(b); item.dur = DUR + 2.1; this.talNew = this.talNew || {}; const o = this.talNew[h.id]; this.talNew[h.id] = { from: o ? Math.min(o.from, a) : a }; }
   this.lvQ = this.lvQ || []; this.lvQ.push(item); if (!this.lvFx) this.lvNext();
 };
 G.lvNext = function () {
@@ -51,14 +54,15 @@ const GREEN = [[0, P.white], [0.22, P.lime], [0.5, P.green], [0.78, P.greenDeep]
 const bustImg = (k) => M.UI.bust(k);
 const drawLv = function (ctx, g) {
   const L = g.lvFx; if (!L) return; const t = (now() - L.t0) / 1000;
-  if (t > DUR) { g.lvNext(); if (g.pulse) g.pulse.heroPower = now(); return; }
+  const D = L.dur || DUR;
+  if (t > D) { g.lvNext(); if (g.pulse) g.pulse.heroPower = now(); return; }
   const snd = (k, at, fn) => { if (t >= at && !L.sounds[k]) { L.sounds[k] = 1; try { fn(); } catch (e) {} } };
   snd('boom', 0.12, () => { S.impact && S.impact(); g.fx.flash && g.fx.flash(P.white, 0.5); g.fx.confetti && g.fx.confetti(120, { x: 960, y: 380, cols: [P.lime, P.gold, P.white] }); });
   snd('fan', 0.35, () => S.fanfare && S.fanfare());
   snd('lv', 0.7, () => S.up && S.up(3));
   snd('pw', 1.35, () => S.sparkle && S.sparkle());
   snd('pw2', 2.3, () => { S.coin && S.coin(); g.fx.rays && g.fx.rays(960, 760, P.gold, 1.4, { r: 420 }); });
-  const fin = t > DUR - 0.45 ? st4((DUR - t) / 0.45) : 1, a0 = st4(eo(cl(t / 0.25, 0, 1))) * fin;
+  const fin = t > D - 0.45 ? st4((D - t) / 0.45) : 1, a0 = st4(eo(cl(t / 0.25, 0, 1))) * fin;
   ctx.save();
   // veil and light: 墨色压暗 + 纯色光芒（转角一格一格走）+ 4 段硬边光晕
   M.fxDim(ctx, 0.95 * a0);
@@ -106,6 +110,20 @@ const drawLv = function (ctx, g) {
     U.text(ctx, '▲ +' + M.fmt(Math.round(d * eo(pq))), x0 + pw - 40, y0 + 62, 40, P.lime, { num: true, align: 'right' });
     const frac = cl(L.p1 ? v / L.p1 : 1, 0, 1); bw = Math.round(680 * frac); U.bar(ctx, x0 + 40, y0 + 102, 680, 24, frac, { col: P.green, hi: P.lime, lo: P.greenDeep, seg: 36 });
     if (pq < 1 && Math.random() < 0.7) L.parts.push({ x: x0 + 40 + bw, y: y0 + 114, vx: (Math.random() - 0.3) * 300, vy: -200 - Math.random() * 300, t0: t });
+    ctx.globalAlpha = 1;
+  }
+  // new talents: 「第 N 层天赋」 and the layer's nodes popping in one by one, each with its name in its reach colour
+  if (L.newNodes && t > 2.55) {
+    const ns = L.newNodes, n = ns.length, is = n > 6 ? 72 : 84, gap = n > 6 ? 22 : 30, rw = n * is + (n - 1) * gap, rx = cx - rw / 2, ry = 918;
+    ctx.globalAlpha = st4((t - 2.55) / 0.2) * fin; U.text(ctx, '第 ' + L.newL + ' 层天赋', cx, ry - 30, 34, P.gold, { outline: true });
+    ns.forEach((i, k) => {
+      const T = L.h.tree[i], k0 = 2.75 + k * 0.12, q = t - k0; if (!T || q < 0) return; snd('tal' + k, k0, () => S.up && S.up(1 + k * 0.2));
+      const sc = seq(POP, q, 0.07), c = M.talScope(T).c, x = rx + k * (is + gap) + is / 2, y = ry + is / 2, cv = M.iconCanvas(M.talIcon(T), 3);
+      ctx.save(); ctx.globalAlpha = fin; ctx.translate(x, y); ctx.scale(sc, sc); U.box(ctx, -is / 2, -is / 2, is, is, P.night);
+      [[-is / 2, -is / 2, is, 5], [-is / 2, is / 2 - 5, is, 5], [-is / 2, -is / 2, 5, is], [is / 2 - 5, -is / 2, 5, is]].forEach(([a, b, w, h]) => U.R(ctx, a, b, w, h, c));
+      if (cv) { const z = (is - 22) / Math.max(cv.width, cv.height); ctx.imageSmoothingEnabled = false; ctx.drawImage(cv, -cv.width * z / 2, -cv.height * z / 2, cv.width * z, cv.height * z); }
+      ctx.restore(); ctx.globalAlpha = st4(q / 0.2) * fin; U.text(ctx, M.talName(T), x, ry + is + 24, n > 6 ? 18 : 22, c, { outline: true });
+    });
     ctx.globalAlpha = 1;
   }
   L.parts = L.parts.filter(p => t - p.t0 < 0.7); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = P.butter;

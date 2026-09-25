@@ -20,7 +20,7 @@ function botShop(g, M) {
   (run.shop.items || []).forEach((c, i) => { if (!c.sold && c.cost <= run.wallet * 0.5 && run.items.indexOf(null) >= 0) g.buy('items', i); });
 }
 window.__bot = async function (secs, opts = {}) {
-  const g = window.__mcg, M = window.MC, log = [], T0 = performance.now(); const minis = {}; let guides = 0, games = 0, raids = 0, viewErrs = 0, steps = 0, battles = 0, shops = 0, events = 0, chests = 0, settles = 0, nodes = 0;
+  const g = window.__mcg, M = window.MC, log = [], T0 = performance.now(); const minis = {}; let guides = 0, games = 0, raids = 0, viewErrs = 0, talents = 0, steps = 0, battles = 0, shops = 0, events = 0, chests = 0, settles = 0, nodes = 0;
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   while (performance.now() - T0 < secs * 1000) {
     steps++;
@@ -40,6 +40,8 @@ window.__bot = async function (secs, opts = {}) {
         if (opts.stopAtBase && nodes > 2) break;
         if (g.modal && g.modal.choices && !g.modal.over) { const ch = g.modal.choices.find(c => !c.dis) || g.modal.choices[g.modal.choices.length - 1]; events++; ch.fn(); if (g.modal && g.modal.title === '流浪商人') g.modal.choices[g.modal.choices.length - 1].fn(); for (let i = 0; i < 10; i++) g.tick(1 / 30); continue; }   // calendar events: take the first thing on offer
         if (g.homeQ || g.lvFx || g.dayFx || g.tlFx) { for (let i = 0; i < 40; i++) g.tick(1 / 30); await sleep(40); continue; }   // the return home plays in order: let it
+        // leaders grow like a plain player grows them: level up when the orbs are there, spend every talent point
+        if (opts.grow !== false && !g.panel) { let lv = false; g.meta.heroes.forEach(h => { if (!lv && h.lv < 10 && M.lvOrbs(h, g.meta) <= g.meta.orbs) { g.heroLvUp(h.id); lv = true; } for (let k = 0; k < 20 && h.points > 0; k++) { const c = (h.tree || []).map((_, i) => i).filter(i => M.talCan(h, i)); if (!c.length) break; g.takeTalent(h.id, c[Math.floor(Math.random() * c.length)]); talents++; } }); if (lv) continue; }
         if (!g.panel) { if (!g.portalOn || !g.portalOn()) g.openWorlds(); else if (!g.bv.drop) { const st = (g.bv.steles || [])[0]; if (st) g.steleDrop(st.k, st.wx, st.wy); else if (g.bv.sv > 0.9 || !g.bv.steles) g.pickWorld(M.worldsOpen(g.meta)[0]); } } else if (g.panel.kind === 'loadout') g.launch(); else if (g.panel.kind === 'raidPrep') { raids++; g.raidLaunch(); } else g.closePanel();
         await sleep(900);
       }
@@ -63,5 +65,5 @@ window.__bot = async function (secs, opts = {}) {
     } catch (e) { log.push('ERR ' + s + ': ' + (e.stack || e).toString().slice(0, 300)); break; }
     await sleep(opts.sleep || 5);
   }
-  return { guides, games, raids, viewErrs, tokens: g.prof && g.prof.tokens, minis, steps, battles, settles, shops, events, chests, screen: g.screen, day: g.meta.day, heroes: g.meta.heroes.length, errs: (window.__mcErrs || []).slice(0, 5), log: log.slice(0, 10) };
+  return { guides, games, raids, viewErrs, talents, tokens: g.prof && g.prof.tokens, minis, steps, battles, settles, shops, events, chests, screen: g.screen, day: g.meta.day, heroes: g.meta.heroes.length, errs: (window.__mcErrs || []).slice(0, 5), log: log.slice(0, 10) };
 };

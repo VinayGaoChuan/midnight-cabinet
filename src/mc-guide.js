@@ -41,7 +41,7 @@ const CONCEPTS = [
   // ── 基地 ──
   { id: 'core', cat: '基地', icon: 't_heart', title: '基地核心', line: '整局只有 3 点：领袖在出征中阵亡 -1，归零这一局结束；通关一个世界 +1。', scr: 'base', sel: '[data-tip="b-core"]' },
   { id: 'dayev', cat: '基地', icon: 't_clover', title: '日程事件', line: '时间轴上带图标的日子：到那天就发生，悬浮看它做什么。', scr: 'base', sel: '[data-g="timeline"]' },
-  { id: 'raid', cat: '基地', icon: 't_sword', title: '时间轴', line: '今天和之后 9 天：哪天混沌来袭，哪天有别的事件。', scr: 'base', sel: '[data-g="timeline"]' },
+  { id: 'raid', cat: '基地', icon: 't_sword', title: '时间轴', line: '这 5 天和下 5 天：哪天混沌来袭，哪天有别的事件。', scr: 'base', sel: '[data-g="timeline"]' },
   { id: 'sup', cat: '基地', img: () => sprite('sack'), title: '物资', line: '挖岩层、建房间、招领袖、打造宝物都花它。出征和守城带回来。', scr: 'base', sel: '[data-fx="msup"]' },
   { id: 'shard', cat: '基地', img: () => sprite('shard'), title: '灵魂碎片', line: '高端材料：建史诗 / 传说建筑、精铸宝物时要用。领袖阵亡时留下。', scr: 'base', sel: '[data-fx="msh"]' },
   { id: 'orb', cat: '基地', img: () => sprite('orb'), title: '经验球', line: '在领袖详情里点「升级」花掉，领袖立刻升一级。', scr: 'base', sel: '[data-fx="morb"]' },
@@ -55,7 +55,7 @@ const CONCEPTS = [
   { id: 'loot', cat: '出征', img: () => sprite('sack'), title: '世界特产', line: '碑下方的图标：这个世界多给的东西。悬浮看详情。', scr: 'base', at: (g) => M.STELE_AT && M.STELE_AT.loot(g) },
   { id: 'relic', cat: '领袖', icon: 't_eye', title: '宝物', line: '出征时带在身上的装备，领袖阵亡就丢了（保险库能保住第 1 件）。', scr: 'base', sel: '[data-g="relics"]' },
   { id: 'lvup', cat: '领袖', img: () => sprite('orb'), title: '升级', line: '花经验球立刻升一级，生命、攻击都涨，还给 1 个天赋点。', scr: 'base', sel: '[data-tip="hs-lvup"]' },
-  { id: 'talent', cat: '领袖', icon: 't_clover', title: '天赋树', line: '三条路线：杀伐、坚忍、运数。从中间往外点，每级 1 点。', scr: 'base', sel: '[data-tip^="tal-"]:not([data-tip="tal-root"])' },
+  { id: 'talent', cat: '领袖', icon: 't_clover', title: '天赋树', line: '每名领袖一棵自己的树，每升一级长出一层，越往上越强。', scr: 'base', sel: '[data-tip^="tal-"]:not([data-tip="tal-root"])' },
   { id: 'hclass', cat: '领袖', icon: 'c_nun', title: '职业', line: '头像左上角是领袖的职业。职业决定两个技能：同一职业，技能永远一样。', scr: 'base', sel: '[data-g="hclass"]' },
   { id: 'rarity', cat: '标签与品质', icon: 'u_star', title: '品质', line: '白 普通 → 蓝 稀有 → 紫 史诗 → 金 传说。名字和边框的颜色就是品质。', scr: ['base', 'shop'], sel: '[data-tip="hs-rar"],[data-g="shop-units"]' },
   { id: 'defend', cat: '守城', icon: 't_shield', title: '守城', line: '选中的领袖在地面作战，地下的武器房间向地面开火。传送门被打破这一局就结束。', scr: 'base', sel: '[data-g="raidprep"]' },

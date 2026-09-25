@@ -46,8 +46,7 @@ Object.assign(G, {
       const H = M.HEROES[h.cls], R = M.RARITY[h.rarity], mx = M.heroMaxHp(h, m);
       Object.assign(pn, { isHero: true, title: H.n, titleColor: R.c, sub: R.n + ' · Lv ' + h.lv + ' · 经验 ' + h.exp + '/' + M.expNeed(h.lv) + ' · 天赋点 ' + h.points, img: M.spriteURL(H.sprite, 10),
         stats: [{ k: '生命', v: Math.round(h.hp) + ' / ' + mx }, { k: '攻击', v: Math.round(M.heroAtk(h, m)) }, { k: '宝物格', v: M.relicSlots(h, m) }, { k: '出征', v: h.runs + ' 次' }],
-        skill: '「' + H.skill.n + '」' + M.skillDesc(h), skillCd: '冷却 ' + M.skillNodeCd(h, m) + ' 个节点 · 每场战斗最多 1 次 · 效果随等级提升',
-        tree: Object.keys(h.tree).map(b => ({ n: M.BRANCH[b].n, c: M.BRANCH[b].c, prog: h.taken[b] + '/' + h.tree[b].length, nodes: h.tree[b].map((t, i) => { const taken = i < h.taken[b], next = i === h.taken[b] && h.points > 0; return { fx: 'tal-' + b + '-' + i, n: t.n + (t.big ? ' ×2' : ''), d: t.d, border: taken ? M.BRANCH[b].c : next ? '#e8dcc4' : '#2a2230', bg: taken ? '#231a2a' : 'transparent', color: taken ? M.BRANCH[b].c : next ? '#e8dcc4' : '#6b6570', cursor: next ? 'pointer' : 'default', glow: next ? '0 0 16px rgba(255,230,160,0.5)' : 'none', onClick: () => { if (next) this.takeTalent(h.id, b); } }; }) })) });
+        skill: '「' + H.skill.n + '」' + M.skillDesc(h), skillCd: '冷却 ' + M.skillNodeCd(h, m) + ' 个节点 · 每场战斗最多 1 次 · 效果随等级提升' });
     }
     return v;
   },
