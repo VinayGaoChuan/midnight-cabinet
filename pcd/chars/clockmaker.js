@@ -4,7 +4,7 @@
 PCD.define('clockmaker', (E) => {
   const { defMat, Sprite, begin, part, sp, run, rect, brush, bake, ease, clamp01, q12, f12of, color, fxRamp, FXR, FXI, H, HY, FLOOR, DUMMY_X, INCOMING, ASTEP, B8,
     IDLE, MOVE, ATTACK, CHARGE, CAST, RECOVER, HURT, DEATH, REVIVE, DEFAULT_DUR, K_BURST, K_TRAIL, K_EMBER, K_RISE, K_DUST,
-    spawn, burst, ring, shake, flash, hitDummy, put, blitShape, scrX, floorGlow, shotFloorGlow } = E;
+    spawn, burst, ring, shake, flash, hitDummy, put, blitShape, scrX, floorGlow, shotFloorGlow, sfx } = E;
   const fl = (x) => Math.floor(x + 1e-6);                       // 带容差取整（同 q12）：原版画法里的 Math.floor 一律换成它，整格边界不会因浮点误差少一格
   const easeInOut = ease.inOut, easeOut = ease.out;
 
@@ -379,29 +379,30 @@ PCD.define('clockmaker', (E) => {
     if (s === ATTACK && t === T_FIRE) {                          // 后坐那一帧：铳口喷青色蒸汽，射出小齿轮
       mzT = 0; mzX = scrX(P.mzx); mzY = HY + P.mzy; gShoot(1, mzX + 2, mzY, 170, DUMMY_X - 3);
       for (let i = 0; i < 7; i++) spawn(K_EMBER, mzX + Math.random() * 3 - 1, mzY + Math.random() * 2 - 1, 8 + Math.random() * 22, -5 - Math.random() * 12, 0.3 + Math.random() * 0.3, R_EL);
+      sfx('swing', { kind: 'gun', w: 0.4 }); sfx('shoot', { proj: 'bullet' });
     }
     if (s === DEATH && t === T_SHATTER) {                        // 钟面玻璃碎裂：黄铜火花 + 金属火星 + 玻璃屑，齿轮和弹簧崩飞
       const x = HX + P.bx - 7 + Math.round(P.lean * 0.5), y = HY - 23 + P.bob + P.crouch;
       burst(x, y, 14, 50, 120, 0.3, 0.7, R_BRASS, 30); burst(x, y, 6, 90, 150, 0.2, 0.4, R_IMPACT, 20); burst(x, y, 6, 30, 70, 0.3, 0.5, R_EL, 10);
       debris(0, 0, x - 2, y - 2, -16, -70); debris(1, 0, x + 2, y - 1, 32, -80); debris(2, 1, x, y - 3, -8, -95); debris(3, 2, x, y - 8, -30, -85); shake(0.12, 1);   // 发条钥匙往身后崩飞
     }
-    if (s === DEATH && t === T_LAND) { for (let i = 0; i < 16; i++) { const x = HX - 10 + Math.random() * 30; spawn(K_DUST, x, HY - 1, (Math.random() - 0.5) * 30, -8 - Math.random() * 14, 0.4 + Math.random() * 0.4, R_DUST); } shake(0.1, 1); }
+    if (s === DEATH && t === T_LAND) { for (let i = 0; i < 16; i++) { const x = HX - 10 + Math.random() * 30; spawn(K_DUST, x, HY - 1, (Math.random() - 0.5) * 30, -8 - Math.random() * 14, 0.4 + Math.random() * 0.4, R_DUST); } shake(0.1, 1); sfx('fall', { w: 0.6 }); }
   }
   const EVENTS = [[], [], [T_FIRE], [], [], [], [], [T_SHATTER, T_LAND], []];   // 受击 / 死亡的命中火花、震屏、闪白和复活收尾由引擎出
   function impactOn(k, x, y) {
-    if (k === 1) { burst(x, y, 4, 40, 90, 0.3, 0.5, R_BRASS, 24); burst(x, y, 3, 20, 50, 0.12, 0.25, R_EL, 6); hitDummy(0); }   // 齿轮碎成 4 颗黄铜碎屑
-    else if (k === 2) { frzT = 0; frzX = x; frzY = y; burst(x, y, 6, 20, 45, 0.15, 0.3, R_EL, 0); }                              // 齿轮嵌进假人：停摆定格开始
+    if (k === 1) { burst(x, y, 4, 40, 90, 0.3, 0.5, R_BRASS, 24); burst(x, y, 3, 20, 50, 0.12, 0.25, R_EL, 6); hitDummy(0); sfx('hit', { mat: 'metal', w: 0.3 }); }   // 齿轮碎成 4 颗黄铜碎屑
+    else if (k === 2) { frzT = 0; frzX = x; frzY = y; burst(x, y, 6, 20, 45, 0.15, 0.3, R_EL, 0); sfx('impact', { pal: 'time', w: 0.5 }); }                              // 齿轮嵌进假人：停摆定格开始
   }
   function stepFX(dt, state, stT) {
     const gx = scrX(P.gx), gy = HY + P.gy;
     if (state === CHARGE) { chargeAcc += dt * (10 + 22 * clamp01(stT / DUR[CHARGE])); while (chargeAcc >= 1) { chargeAcc -= 1; const r = 11 + Math.random() * 8, a = Math.random() * 6.2832; sSpawn(gx, gy, (r - 3.5) / (0.3 + Math.random() * 0.35), a, r, -(4 + Math.random() * 3)); } }   // 逆时针收进怀表
-    if (state === MOVE && P.step !== lastStep) { if (P.step !== 0) spawn(K_DUST, scrX(P.step > 0 ? 2 : -3) + (Math.random() - 0.5) * 2, HY, (Math.random() - 0.5) * 14, -4 - Math.random() * 5, 0.3 + Math.random() * 0.2, R_DUST); lastStep = P.step; }
+    if (state === MOVE && P.step !== lastStep) { if (P.step !== 0) { spawn(K_DUST, scrX(P.step > 0 ? 2 : -3) + (Math.random() - 0.5) * 2, HY, (Math.random() - 0.5) * 14, -4 - Math.random() * 5, 0.3 + Math.random() * 0.2, R_DUST); sfx('step', { w: 0.4 }); } lastStep = P.step; }
     if ((state === IDLE && P.watch === 2) || (state === RECOVER && P.watch)) { emberAcc += dt * (state === IDLE ? 3 : 6); while (emberAcc >= 1) { emberAcc -= 1; spawn(K_EMBER, gx + Math.round(Math.random() * 2 - 1), gy - 1, Math.random() * 8 - 4, -6 - Math.random() * 8, 0.5 + Math.random() * 0.5, R_EL); } }
     if (state === DEATH && stT > INCOMING + 1.6 && stT < INCOMING + 2.4) { soulAcc += dt * 30; while (soulAcc >= 1) { soulAcc -= 1; spawn(K_RISE, HX - 10 + Math.random() * 30, HY - 1 - Math.random() * 12, (Math.random() - 0.5) * 6, -14 - Math.random() * 16, 0.8 + Math.random() * 0.8, R_SOUL); } }
     if (frzT < 9) {
       const was = frzT; frzT += dt;
-      if (was < 0.25 && frzT >= 0.25) burst(DUMMY_X, HY - 38, 4, 15, 30, 0.12, 0.25, R_EL, 0);                                   // 表盘指针「咔」地停住
-      if (was < FREEZE && frzT >= FREEZE) { hitDummy(1, 1); burst(frzX, frzY, 20, 60, 140, 0.3, 0.7, R_EL, 14); ring(frzX, frzY, 1, R_EL); shake(0.12, 1); frzT = 9; }   // 定格结束：闪白 + 大摇 + 击退
+      if (was < 0.25 && frzT >= 0.25) { burst(DUMMY_X, HY - 38, 4, 15, 30, 0.12, 0.25, R_EL, 0); sfx('impact', { pal: 'time', w: 0.3 }); }                                   // 表盘指针「咔」地停住
+      if (was < FREEZE && frzT >= FREEZE) { hitDummy(1, 1); burst(frzX, frzY, 20, 60, 140, 0.3, 0.7, R_EL, 14); ring(frzX, frzY, 1, R_EL); shake(0.12, 1); sfx('impact', { pal: 'time', w: 0.9 }); frzT = 9; }   // 定格结束：闪白 + 大摇 + 击退
     }
     for (let i = 0; i < DBN; i++) {
       if (!dbOn[i]) continue; dbVY[i] += 300 * dt; dbX[i] += dbVX[i] * dt; dbY[i] += dbVY[i] * dt; dbS[i] += dt * Math.abs(dbVX[i]) * 0.4;
@@ -506,6 +507,8 @@ PCD.define('clockmaker', (E) => {
 
   return {
     name: '钟表匠', HX, R_EL, DUR, hero, P, GLOW_MATS, HIT_POINT, EVENTS,
+    // 音效声明：老工匠血肉之躯、停摆后向前侧翻；技能元素「倒带 · 时光青」→ time，逆时针螺旋收进怀表 → spiral；背箱发条铳偏重（charge / release / hurt / death 由引擎自动发）
+    SFX: { body: 'flesh', how: 'topple', pal: 'time', style: 'spiral', w: 0.7 },
     SHEET: [[IDLE, [0, 0.4, 0.8, 1.2, 1.7, 1.85]], [MOVE, [0, 3.5 / 12, 5.5 / 12, 8.5 / 12]], [ATTACK, null], [CHARGE, 'step2'], [CAST, null], [RECOVER, 'step2'], [HURT, 'hurt'], [DEATH, [0.34, 0.42, 0.6, 0.7, 0.9, 1.1, 1.3, 1.95, 2.15, 2.35]], [REVIVE, [0.45, 0.55, 0.65, 0.75, 0.9]]],
     poseAt, drawHero, bakeHero, onEnter, onTime, stepFX, fxReset, fxBack, fxMid, fxFront, offField,
   };

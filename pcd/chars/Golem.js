@@ -1,12 +1,13 @@
 // 魔像 Golem（衍生单位 · 不死 · 先锋 · 稀有 · 近战 272）：巨人战神死亡时崩下来的三块石头之一（战神特性「小九头蛇」：死亡时召唤 3 只魔像）。
-// 矮墩石块：一块圆角孔雀石大石头就是身体（占全身六成），顶上一块 4 格小石头当头、嵌一只魂火独眼；腿粗短；两只比头还大的圆石拳头垂到膝盖。
-// 身上带着战神的三分之一：头顶斜插一片蓝铜矿碎壳（战神碎壳盔上的一片）、后肩一块蓝铜碎壳、胸口一颗孔雀绿魂核（战神三核之一）外围一圈蓝铜晶簇。
-// 攻击：直拳（后引拳到肩后 1 帧 → 整个身体前倾，前拳直捣 4 格，拳面撞出碎石火花）。步态：双脚并跳（落地压扁 1 格、掉石屑），没有普通迈步。
+// 矮墩石块：一块平肩圆角的孔雀石大石头就是身体（占全身六成），顶上一块半埋在肩里的 4 格小石头当头、嵌一只魂火独眼；腿粗短；
+// 两只比头还大的圆石拳头前后各一只，垂到膝盖（拳下离地 3 格，剪影是 Π 字）；前臂从肩头一块圆石下面长出来。
+// 身上带着战神的三分之一：头顶斜插一片蓝铜矿碎壳（战神碎壳盔上的一片）、后背一块蓝铜碎壳、胸口一颗孔雀绿魂核（战神三核之一）前面一簇蓝铜晶簇。
+// 攻击：直拳（后引拳到肩后 → 整个身体前倾，前臂平伸、前拳直捣出去，拳面撞出碎石火花）。步态：双脚并跳（落地压扁 1 格、掉石屑，只在空中前进），没有普通迈步。
 // 技能（无特性的衍生单位，做符合身份的招式）：抱拳后跳 → 缩成一颗石球原地越转越快 → 弹射滚撞假人 → 反弹、半空展开、落地拍拍拳头。
 // 死亡：拳头先掉到地上 → 身体从上往下塌成一堆碎石（死亡套件 chunks，小块不外爆）→ 魂核从石堆里滚出来、闪几下熄灭。
-// 身体骨架用 parts.rig（child 改宽：sw 5、limb 1.6、head 4）；石身、巨石拳、碎壳、晶簇魂核、石球都在本模块里自绘（通用的标「候选部件」）。
+// 身体骨架用 parts.rig（child 改宽：leg 4、sw 5、limb 1.6、head 4）；石身、巨石拳、石柱臂、肩石、碎壳、晶簇魂核、石球都在本模块里自绘（通用的标「候选部件」）。
 PCD.define('Golem', (E) => {
-  const { parts, Sprite, begin, part, sp, bake, ease, clamp01, q12, f12of, walkDemo, fxRamp, keyer, FXI, FXR, HY, DUMMY_X, INCOMING, B8,
+  const { parts, Sprite, begin, part, sp, bake, ease, clamp01, q12, f12of, fxRamp, keyer, FXI, FXR, HY, DUMMY_X, INCOMING, B8,
     IDLE, MOVE, ATTACK, CHARGE, CAST, RECOVER, HURT, DEATH, REVIVE, DEFAULT_DUR, K_SPIRAL_PT, K_ORBIT_PT, K_RISE, K_DUST, K_PHYS, K_TRAIL, K_EMBER,
     spawn, spawnX, burst, releaseOrbit, ring, shake, flash, fx, death, hitDummy, put, scrX, floorGlow, shotFloorGlow, groundShadow, sfx } = E;
   const RD = Math.round;
@@ -17,17 +18,17 @@ PCD.define('Golem', (E) => {
   // ───── 材质：孔雀石绿石身、蓝铜矿碎壳（和神石 / 战神同一色阶）、苔藓、魂核（两档发光）─────
   const ROCK = ['#08221a', '#14543c', '#2a8a5e', '#5cc08a'], CU = ['#0a1438', '#1a3a8a', '#2e62c8', '#6aa0f0'];
   const M = parts.mats(E, {
-    body: { r: ROCK, band: 2 }, rock: ROCK, cu: CU, moss: 'moss',
+    body: { r: ROCK, band: 2 }, rock: ROCK, face: ROCK, cu: CU, moss: 'moss',
     core: { r: ['#0c3424', '#1e7a50', '#4ac080', '#b8f0c8'], flat: 1 }, hot: { r: ['#4ac080', '#b8f0c8', 21, 21], flat: 1 },
   });
   const OUT = FXR[R_PEB], CUI = CU.map((h) => E.color(h)), MOSS = E.RAMP.moss;                        // 死亡时石堆和魂核用的石色、蓝铜碎壳色
 
-  // 体型：child 改宽——胯高 3、躯干 11（一整块石头）、头 4×4、sw 5、四肢粗 1.6、腿粗 3；头往前偏 1
-  const BODY = { body: 'child', leg: 3, torso: 11, head: 4, headW: 4, sw: 5, limb: 1.6, lw: 3, arm: 7, headX: 1, stride: 0 };
+  // 体型：child 改宽——胯高 4（粗短腿露 4 行）、躯干 11（一整块石头，12 行）、头 4×4、sw 5、四肢粗 1.6、腿粗 3；头往前偏 2（低头前探）
+  const BODY = { body: 'child', leg: 4, torso: 11, head: 4, headW: 4, sw: 5, limb: 1.6, lw: 3, arm: 7, headX: 2, stride: 0 };
   const HX = 78, DUR = DEFAULT_DUR.slice();
   const hero = new Sprite(56, 46, 26, 40);
   const RIM = { rim: 0, rx: 0, ry: 0, rimR: [0, 6, 11, 16], rimRamp: EL, flash: 0, dq: 0, rimAll: 1, skip: new Uint8Array(256) };
-  for (const k of ['cu', 'core', 'hot', 'moss']) { RIM.skip[M[k]] = 1; RIM.skip[M[k + 'D']] = 1; }   // 魂核光只打在石头上
+  for (const k of ['cu', 'core', 'hot', 'moss', 'face']) { RIM.skip[M[k]] = 1; RIM.skip[M[k + 'D']] = 1; }   // 魂核光只打在石身和四肢上（小脸不吃光，免得眼睛被一圈绿边吃掉）
 
   // ───── 姿势 ─────
   // 前拳中心 ffx/ffy、后拳中心 rfx/rfy（本地坐标）；lean 上半身前倾；air 离地；legs 0 站 · 1 收腿 · 2 后蹬 · 3 前伸；feet 1 = 两脚并拢；
@@ -39,25 +40,26 @@ PCD.define('Golem', (E) => {
     ['ffx', -6, 16], ['ffy', -20, 2], ['rfx', -12, 8], ['rfy', -20, 2], ['legs', 0, 3], ['feet', 0, 1], ['ball', 0, 2], ['spin', 0, 3], ['hs', 0, 2], ['hug', 0, 1],
     ['gem', 0, 4], ['glint', 0, 1], ['rim', 0, 3], ['eyes', 0, 1], ['flash', 0, 1], ['dq48', 0, 48], ['fdrop', 0, 2], ['sway', -1, 1]]);
   const K = (ffx, ffy, rfx, rfy, lean, crouch) => ({ ffx, ffy, rfx, rfy, lean: lean || 0, crouch: crouch || 0 });
-  const K_IDLE = K(8, -4, -9, -4);                  // 两拳垂到膝盖，一前一后伸出身体
-  const K_WIND = K(0, -11, -7, -6, -1, 1);          // 前拳收到肩后、身体后坐
-  const K_PUNCH = K(10, -10, -4, -7, 1, 0);         // 直拳：整个身体前倾，前拳捣出 4 格
-  const K_HOLD = K(9, -9, -5, -6, 1, 0);
-  const K_HUG = K(6, -7, 2, -8, 0, 1);              // 抱拳（后拳抱到胸前）
-  const K_SPREAD = K(9, -10, -9, -10);              // 半空展开：两拳张开
-  const K_LAND = K(9, -3, -9, -3);                  // 落地压扁：两拳撑开
-  const K_CLAPO = K(8, -6, -1, -7), K_CLAPI = K(6, -6, 2, -7);   // 拍拍拳头：分开 / 合上
-  const K_HURT = K(9, -7, -6, -7, -1, 0);           // 受击：身体被打退，两拳惯性往前上甩
+  const K_IDLE = K(8, -6, -9, -6);                  // 两拳垂到膝盖（拳底离地 3 格），一前一后伸出身体
+  const K_WIND = K(-1, -12, -8, -9, -1, 1);         // 前拳收到肩后、身体后坐，后拳抬起护身
+  const K_PUNCH = K(11, -11, -5, -9, 1, 0);         // 直拳：整个身体前倾，前拳平着捣出去
+  const K_HOLD = K(10, -10, -6, -8, 1, 0);
+  const K_HUG = K(6, -9, 2, -10, 0, 1);             // 抱拳（后拳抱到胸前）
+  const K_SPREAD = K(9, -12, -9, -12);              // 半空展开：两拳张开
+  const K_LAND = K(9, -5, -9, -5);                  // 落地压扁：两拳撑开
+  const K_CLAPO = K(8, -8, -1, -9), K_CLAPI = K(6, -8, 2, -9);   // 拍拍拳头：分开 / 合上
+  const K_HURT = K(9, -9, -6, -9, -1, 0);           // 受击：身体被打退，两拳惯性往前上甩
   const FIELDS = ['ffx', 'ffy', 'rfx', 'rfy', 'lean', 'crouch'];
   const setK = (A, B, q) => E.mix(P, A, B == null ? A : B, q || 0, FIELDS);
   const SW = [0, 1, 0, -1];
   // 双脚并跳（6 fps 步态帧）：0 落地压扁 · 1 蹬地起跳 · 2 空中收腿 · 3 下落伸腿
   const HOP = [
-    { air: 0, bob: 1, sq: 1, legs: 0, lean: 0, k: K(9, -3, -10, -3) },
-    { air: 1, bob: 0, sq: 0, legs: 2, lean: 1, k: K(6, -6, -11, -5) },
-    { air: 3, bob: 0, sq: 0, legs: 1, lean: 0, k: K(10, -9, -7, -9) },
-    { air: 1, bob: 0, sq: 0, legs: 3, lean: 0, k: K(9, -6, -9, -6) },
+    { air: 0, bob: 1, sq: 1, legs: 0, lean: 0, k: K(9, -5, -10, -5) },
+    { air: 1, bob: 0, sq: 0, legs: 2, lean: 1, k: K(6, -8, -11, -7) },
+    { air: 3, bob: 0, sq: 0, legs: 1, lean: 0, k: K(10, -11, -7, -11) },
+    { air: 1, bob: 0, sq: 0, legs: 3, lean: 0, k: K(9, -8, -9, -8) },
   ];
+  const HOP_MX = [0, -2, -5, -7, -8, -6, -3, -1, 0, 2];                         // 移动演示（6 fps 步态帧）：先背对假人跳开一蹦（8 格），落地转身跳回
   const T_HIT = 2 / 12, T_HOP = 1 / 12, T_TOUCH = 3 / 12, T_CONTACT = 2 / 12, T_CLAP = [3 / 12, 5 / 12], T_PEBBLE = 1.75;
   const T_FISTS = INCOMING + 0.33, T_CRUMBLE = INCOMING + 0.5, T_PILE = T_CRUMBLE + 0.3, T_ROLL = T_CRUMBLE + 0.32, T_OUT = T_CRUMBLE + 1.0;
   const FADE_AT = 1.1, FADE_DUR = 0.6;
@@ -83,7 +85,7 @@ PCD.define('Golem', (E) => {
     if (st === IDLE) idle(tq, f12);
     else if (st === MOVE) {
       const f = E.gait(tq), h = HOP[f]; setK(h.k); P.air = h.air; P.bob = h.bob; P.sq = h.sq; P.legs = h.legs; P.lean = h.lean; P.feet = 1; P.sway = f === 0 ? 1 : f === 2 ? -1 : 0;
-      const w = walkDemo(Math.floor(tq * 6 + 1e-6) / 6, 12, -1); P.mx = w.mx; P.flip = w.flip;   // 只在每个步态帧换位置：一蹦一格，不滑
+      const k = Math.min(9, Math.floor(tq * 6 + 1e-6)); P.mx = HOP_MX[k]; P.flip = k < 5 ? 1 : 0;   // 一蹦一格：只在空中的三帧前进，落地那帧不滑；落地后转身跳回
     } else if (st === ATTACK) {
       if (tq < 1 / 12) { setK(K_IDLE, K_WIND, 0.5); P.bx = 0; }
       else if (tq < T_HIT - 1e-6) { setK(K_WIND); P.bx = -1; P.sway = 1; P.gem = 1; }
@@ -121,7 +123,7 @@ PCD.define('Golem', (E) => {
       else if (d < 0.2) { setK(K_HURT); P.bx = -2; P.eyes = 1; P.sway = 1; P.flash = d < 1 / 12 ? 1 : 0; P.crouch = d < 0.15 ? 0 : 1; P.gem = (f12 & 1) ? 1 : 4; }
       else if (d < 0.33 - 1e-6) {                                               // 手臂一软，两只拳头先脱落、往下掉
         setK(K_HURT); P.fdrop = 1; P.bx = -2; P.eyes = 1; P.crouch = 1; P.gem = (f12 & 1) ? 1 : 4;
-        const k = d < 0.28 ? 0 : 1; P.ffx = 9 + k; P.ffy = k ? -3 : -5; P.rfx = -7 - k; P.rfy = k ? -3 : -5;
+        const k = d < 0.28 ? 0 : 1; P.ffx = 9 + k; P.ffy = k ? -4 : -7; P.rfx = -7 - k; P.rfy = k ? -4 : -7;
       } else if (d < 0.5 - 1e-6) {                                               // 拳头落地往外滚一格；身体下沉、头往里缩，眼和核闪
         P.fdrop = 2; P.ffx = 11; P.ffy = -2; P.rfx = -10; P.rfy = -2; P.bx = -2; P.eyes = 1; P.crouch = d < 0.42 ? 1 : 2; P.hs = d < 0.42 ? 0 : 1; P.gem = (f12 % 3) === 0 ? 1 : 4;
       } else P.dq = 1;                                                           // 身体交给死亡套件（碎块从上往下塌成一堆）
@@ -137,37 +139,41 @@ PCD.define('Golem', (E) => {
 
   // ───── 几何（画和特效共用）─────
   const rigOf = () => parts.rig(P, BODY);
-  // 身体石块第 y 行的左右列：上宽下窄的圆角大石（最宽在肩下一行，上半超椭圆指数 3 = 平肩，下半 2.5 往下收）；前倾只推上半身
+  // 身体石块第 y 行的左右列（行号 i = y − 肩行，0..11）：平肩圆角、胸前略平，肩下最宽 14 格，往下收到 8 格；
+  // 前倾只推上半身；落地压扁（sq）时下面十行两侧各鼓 1 格
+  const BL = [-5, -6, -7, -7, -7, -7, -7, -7, -6, -6, -5, -4], BR = [3, 5, 6, 6, 6, 6, 6, 5, 5, 4, 4, 3];
   function rowSpan(R, y) {
-    const top = R.yS, bot = R.yHip, cw = top + 4, rt = cw - top + 0.5, rb = bot - cw + 1, rx = 6.4 + (P.sq ? 0.8 : 0), n = Math.max(1, bot - top);
-    const t = y < cw ? (cw - y) / rt : (y - cw) / rb, p = y < cw ? 3 : 2.5; if (t > 1) return null;
-    const hw = rx * Math.pow(Math.max(0, 1 - Math.pow(t, p)), 1 / p), sh = RD(P.lean * (bot - y) / n);
-    return [Math.ceil(-0.5 - hw + sh - 1e-6), Math.floor(-0.5 + hw + sh + 1e-6), sh];
+    const i = y - R.yS; if (i < 0 || i > 11) return null;
+    const sh = RD(P.lean * (11 - i) / 11), q = P.sq && i >= 2 ? 1 : 0;
+    return [BL[i] + sh - q, BR[i] + sh + q, sh];
   }
   const rot = (i, j, r) => (r === 0 ? [i, j] : r === 1 ? [-j, i] : r === 2 ? [-i, -j] : [j, -i]);   // 顺时针 90° 一档（向右滚）
-  function coreAt() {
+  function coreAt() {                                                            // 魂核 2×2 的左上格（胸口上部、靠前）
     if (P.ball === 2) { const q = rot(2, -3, P.spin); return [q[0], -7 + q[1]]; }
-    const R = rigOf(), y = R.yS + 3, s = rowSpan(R, y); return [4 + (s ? s[2] : 0), y];
+    const R = rigOf(), y = R.yS + 2, s = rowSpan(R, y); return [3 + (s ? s[2] : 0), y];
   }
 
   // ───── 画（部件从后往前）─────
-  // 候选部件：stoneFist（圆石巨拳 5×5：圆角、左上高光、朝前的一面两道指缝）
+  // 候选部件：stoneFist（圆石巨拳 5×5：圆角、左上高光、朝前的一面两道指缝、拳背一点苔藓）
   function stoneFist(cx, cy, m, front) {
     part();
     for (let dy = -2; dy <= 2; dy++) { const w = Math.abs(dy) === 2 ? 1 : 2; for (let dx = -w; dx <= w; dx++) sp(cx + dx, cy + dy, m, 0); }
-    sp(cx - 1, cy - 1, m, 4);                                                    // 圆石高光
-    if (front) { sp(cx + 1, cy - 1, m, 2); sp(cx + 2, cy - 1, m, 1); sp(cx + 1, cy + 1, m, 2); sp(cx + 2, cy + 1, m, 1); }   // 指缝
-    else sp(cx + 1, cy, m, 2);
+    sp(cx - 1, cy - 1, m, 4); sp(cx, cy - 1, m, 4);                              // 圆石高光
+    if (front) { sp(cx + 1, cy - 1, m, 2); sp(cx + 2, cy - 1, m, 1); sp(cx + 1, cy + 1, m, 2); sp(cx + 2, cy + 1, m, 1); sp(cx - 1, cy - 2, M.moss, 3); }   // 指缝 + 拳背苔藓
+    else { sp(cx + 1, cy, m, 2); sp(cx + 2, cy, m, 1); }
   }
-  // 候选部件：stoneArm（石柱短臂：3 格粗，从肩到拳心；stub 1 = 只剩肩上一截）
-  function stoneArm(sx, sy, fx, fy, m, stub) {
+  // 候选部件：stoneArm（石柱臂：从肩到拳心一根粗石柱，r 1.1 = 3 格、r 1.5 = 3×3 印章更粗；中段一道石缝；stub 1 = 只剩肩上一截）
+  function stoneArm(sx, sy, fx, fy, m, stub, r) {
     part();
-    const dx = fx - sx, dy = fy - sy, L = Math.hypot(dx, dy) || 1, len = stub ? 2 : Math.max(0, L - 2), n = Math.max(1, Math.ceil(len * 1.5));
-    for (let s = 0; s <= n; s++) E.brush(sx + dx / L * len * s / n, sy + dy / L * len * s / n, 1.1, m, 0);
+    const dx = fx - sx, dy = fy - sy, L = Math.hypot(dx, dy) || 1, len = stub ? 1 : Math.max(0, L - 2), n = Math.max(1, Math.ceil(len * 1.5));
+    for (let s = 0; s <= n; s++) E.brush(sx + dx / L * len * s / n, sy + dy / L * len * s / n, r || 1.1, m, 0);
+    if (!stub && len > 4) { const mx = sx + dx / L * len * 0.55, my = sy + dy / L * len * 0.55, px = -dy / L, py = dx / L; sp(mx + px, my + py, m, 2); sp(mx, my, m, 2); }   // 石缝
   }
+  // 候选部件：shoulderStone（肩头一块圆石，前臂从这里长出来）
+  function shoulderStone(x, y, m) { part(); E.brush(x, y, 2, m, 0); sp(x - 1, y - 1, m, 4); sp(x + 1, y + 1, m, 2); }
   function legs(R) {
     const top = R.yHip + 1, tuck = P.legs === 1 ? 1 : 0, ext = P.legs >= 2 ? 1 : 0, dx = P.legs === 2 ? -1 : P.legs === 3 ? 1 : 0, bot = -tuck + ext;
-    const col = (x0, m) => { part(); for (let y = top; y <= bot; y++) { const toe = y === bot ? 1 : 0; for (let x = x0; x <= x0 + 2 + toe; x++) sp(x, y, m, 0); } if (bot >= top) sp(x0, bot, m, 2); };
+    const col = (x0, m) => { part(); for (let y = top; y <= bot; y++) { const toe = y === bot ? 1 : 0; for (let x = x0; x <= x0 + 2 + toe; x++) sp(x, y, m, 0); } if (bot - 1 >= top) sp(x0 + 2, bot - 1, m, 2); };
     col((P.feet ? -1 : R.hipBx - 1) + dx, M.rockD);                              // 远侧腿（暗一级）
     col((P.feet ? 1 : R.hipFx - 1) + dx, M.rock);                               // 近侧腿
   }
@@ -176,30 +182,31 @@ PCD.define('Golem', (E) => {
     part();
     const top = R.yS, bot = R.yHip;
     for (let y = top; y <= bot; y++) { const s = rowSpan(R, y); if (s) for (let x = s[0]; x <= s[1]; x++) sp(x, y, M.body, 0); }
-    const bcx = -3, bcy = bot - 2;                                               // 孔雀石同心纹：以后下方为圆心的两道暗纹 + 一道亮纹
+    const bcx = -4, bcy = bot;                                                   // 孔雀石同心纹：以后下角为圆心的一道暗纹 + 一道亮纹
     for (let y = top + 1; y < bot; y++) {
       const s = rowSpan(R, y); if (!s) continue;
       for (let x = s[0] + 1; x < s[1]; x++) {
-        const d = Math.hypot(x - bcx - s[2], (y - bcy) * 1.15);
-        if (d >= 3.4 && d < 4.3) sp(x, y, M.body, 2);
-        else if (d >= 5.4 && d < 6.1 && y < bot - 3) sp(x, y, M.body, 4);
+        const d = Math.hypot(x - bcx - s[2], (y - bcy) * 1.1);
+        if (d >= 4.0 && d < 4.9) sp(x, y, M.body, 2);
+        else if (d >= 7.2 && d < 7.9 && x < s[1] - 2) sp(x, y, M.body, 4);
       }
     }
-    const s0 = rowSpan(R, top), s1 = rowSpan(R, top + 1), s2 = rowSpan(R, top + 2);
-    sp(s0[2] + 1, top, M.body, 1); sp(s0[2] + 1, top + 1, M.body, 1); sp(s0[2], top + 2, M.body, 1); sp(s0[2] + 2, top + 2, M.body, 2);   // 顶上的裂缝
-    sp(s0[0] + 1, top, M.moss, 4); sp(s0[0] + 2, top, M.moss, 3); sp(s1[0] + 1, top + 1, M.moss, 3); sp(s0[0] + 3, top, M.moss, 3);   // 背上的苔藓
-    const s4 = rowSpan(R, top + 4), tx = s4[0] - 1, sw = P.sway;                 // 背后垂下的一撮苔藓（尖端会摆）
-    sp(tx, top + 4, M.moss, 3); sp(tx, top + 5, M.moss, 2); sp(tx + (sw < 0 ? -1 : 0), top + 6, M.moss, 2); if (sw > 0) sp(tx + 1, top + 7, M.moss, 2);
-    sp(s2[1] - 1, top + 2, M.moss, 3);
+    const s0 = rowSpan(R, top), s1 = rowSpan(R, top + 1);
+    const s2 = rowSpan(R, top + 2), s3 = rowSpan(R, top + 3);
+    sp(s2[0] + 3, top + 2, M.body, 1); sp(s3[0] + 3, top + 3, M.body, 1); sp(s3[0] + 4, top + 3, M.body, 2); sp(s3[0] + 4, top + 4, M.body, 1);   // 背上一道裂缝（从战神身上崩下来的断口）
+    sp(s1[0] + 1, top + 1, M.moss, 4); sp(s1[0] + 2, top + 1, M.moss, 3); sp(s1[0], top + 2, M.moss, 3); sp(s1[0] + 1, top + 2, M.moss, 3);   // 背上的苔藓
+    const s5 = rowSpan(R, top + 5), tx = s5[0] - 1, sw = P.sway;                 // 背后垂下的一撮苔藓（尖端会摆）
+    sp(tx, top + 5, M.moss, 3); sp(tx, top + 6, M.moss, 2); sp(tx + (sw < 0 ? -1 : 0), top + 7, M.moss, 2); if (sw > 0) sp(tx + 1, top + 8, M.moss, 2);
+    const s9 = rowSpan(R, top + 9); sp(s9[0] + 2, top + 9, M.moss, 3); sp(s9[0] + 3, top + 9, M.moss, 2);   // 腰上一点苔藓碎屑
   }
-  // 候选部件：shellShard（蓝铜碎壳：后肩一块、头顶斜插一片，都是战神碎壳盔 / 肩甲上掉下来的）
-  function shoulderShell(R) {                                                    // 后肩：贴在背上的一块，往后鼓出 1 格
-    part(); const y = R.yS + 1, s = rowSpan(R, y), x = s[0];
-    sp(x, y, M.cu, 4); sp(x + 1, y, M.cu, 3);
-    sp(x - 1, y + 1, M.cu, 4); sp(x, y + 1, M.cu, 3); sp(x + 1, y + 1, M.cu, 2);
-    sp(x - 1, y + 2, M.cu, 3); sp(x, y + 2, M.cu, 2);
+  // 候选部件：shellShard（蓝铜碎壳：后背一块、头顶斜插一片，都是战神碎壳盔 / 肩甲上掉下来的）
+  function backShell(R) {                                                        // 后背中部嵌着一块，往后鼓出 1 格
+    part(); const y = R.yS + 4, s1 = rowSpan(R, y), s2 = rowSpan(R, y + 1), s3 = rowSpan(R, y + 2);
+    sp(s1[0] - 1, y, M.cu, 4); sp(s1[0], y, M.cu, 3);
+    sp(s2[0] - 1, y + 1, M.cu, 3); sp(s2[0], y + 1, M.cu, 3); sp(s2[0] + 1, y + 1, M.cu, 2);
+    sp(s3[0], y + 2, M.cu, 2);
   }
-  // 候选部件：soulCore（胸口魂核 2×2 + 外围一圈蓝铜晶簇：朝上、朝前、朝下三簇伸出身体 1–2 格）；gem 0 待机 · 1 蓄力 · 2 蓄满 · 3 施放 · 4 熄灭
+  // 候选部件：soulCore（胸口魂核 2×2 + 前面一簇蓝铜晶簇：斜上、朝前、斜下三簇伸出身体 1–2 格）；gem 0 待机 · 1 蓄力 · 2 蓄满 · 3 施放 · 4 熄灭
   const CORE_LV = [
     [[M.core, 4], [M.core, 3], [M.core, 3], [M.core, 2]],
     [[M.core, 4], [M.core, 4], [M.core, 3], [M.core, 3]],
@@ -207,33 +214,32 @@ PCD.define('Golem', (E) => {
     [[M.hot, 3], [M.hot, 3], [M.hot, 2], [M.hot, 2]],
     [[M.core, 2], [M.core, 1], [M.core, 1], [M.core, 1]],
   ];
-  const CRYSTALS = [[0, -1, 3], [1, -1, 3], [1, -2, 4], [2, -2, 3], [2, 0, 4], [2, 1, 2], [3, 0, 3], [0, 2, 2], [1, 2, 3], [2, 3, 3], [-1, 0, 2], [-1, 1, 1]];
+  const CRYSTALS = [[-1, 0, 2], [2, -1, 4], [2, 0, 4], [3, 0, 3], [2, 1, 3], [3, 1, 4], [4, 1, 2], [2, 2, 2], [3, 2, 3], [1, 2, 2]];
   function soulCore(cx, cy) {
     part(); const lv = CORE_LV[P.gem];
     for (const [dx, dy, t] of CRYSTALS) sp(cx + dx, cy + dy, M.cu, t);
     sp(cx, cy, lv[0][0], lv[0][1]); sp(cx + 1, cy, lv[1][0], lv[1][1]); sp(cx, cy + 1, lv[2][0], lv[2][1]); sp(cx + 1, cy + 1, lv[3][0], lv[3][1]);
   }
-  // 候选部件：pebbleHead（4×4 小石头当头：前额眉骨凸出 1 格、魂火独眼、头顶一点苔藓；hs 格以下缩进身体不画）
+  // 候选部件：pebbleHead（4×4 小石头当头，半截埋在肩上：前额眉骨凸出 1 格、眼窝 + 魂火独眼、下颌阴影；hs 格以下缩进身体不画）
+  function headXY(R) { return [R.hx0, R.yS - 3 + P.hs]; }
   function head(R) {
-    part(); const x0 = R.hx0, top = R.htop + P.hs, clip = P.hs ? R.yS : 99;
+    part(); const [x0, top] = headXY(R), clip = P.hs ? R.yS : 99;
     const S = (x, y, m, t) => { if (y < clip) sp(x, y, m, t); };
-    for (let x = x0 + 1; x <= x0 + 3; x++) S(x, top, M.rock, 0);
-    for (let y = top + 1; y <= top + 3; y++) for (let x = x0; x <= x0 + 3; x++) S(x, y, M.rock, 0);
-    S(x0 + 4, top + 1, M.rock, 4); S(x0 + 3, top + 1, M.rock, 4); S(x0 + 1, top + 3, M.rock, 2); S(x0 + 2, top + 3, M.rock, 2);   // 眉骨、下颌阴影
-    S(x0 + 1, top, M.moss, 3);
+    for (let x = x0 + 1; x <= x0 + 3; x++) S(x, top, M.face, 0);
+    for (let y = top + 1; y <= top + 3; y++) for (let x = x0; x <= x0 + 3; x++) S(x, y, M.face, 0);
+    S(x0 + 4, top + 1, M.face, 4); S(x0 + 3, top + 1, M.face, 4); S(x0 + 2, top + 3, M.face, 2); S(x0 + 3, top + 3, M.face, 2);   // 眉骨、下颌阴影
     const ey = top + 2, hot = P.gem >= 2 && P.gem <= 3, dead = P.gem === 4;
     const B = dead ? [M.core, 1] : hot || P.glint ? [M.hot, 3] : [M.core, 4], Mi = dead ? [M.core, 1] : hot ? [M.core, 4] : [M.core, 3];
-    if (P.eyes) { S(x0 + 2, ey, M.rock, 1); S(x0 + 3, ey, M.rock, 1); }
-    else if (P.look < 0) { S(x0, ey, B[0], B[1]); S(x0 + 1, ey, Mi[0], Mi[1]); S(x0 + 2, ey, M.rock, 1); }
-    else { S(x0 + 1, ey, M.rock, 1); S(x0 + 2, ey, Mi[0], Mi[1]); S(x0 + 3, ey, B[0], B[1]); }   // 眼窝 + 独眼
-    return [x0, top];
+    if (P.eyes) { S(x0 + 2, ey, M.face, 1); S(x0 + 3, ey, M.face, 1); }
+    else if (P.look < 0) { S(x0, ey, B[0], B[1]); S(x0 + 1, ey, Mi[0], Mi[1]); S(x0 + 2, ey, M.face, 1); }
+    else { S(x0 + 1, ey, M.face, 1); S(x0 + 2, ey, Mi[0], Mi[1]); S(x0 + 3, ey, B[0], B[1]); }   // 眼窝 + 独眼
   }
-  function headShard(x0, top) {                                                   // 头顶斜插的蓝铜碎壳，往后翘 4 格
-    part();
-    sp(x0 + 1, top - 1, M.cu, 4); sp(x0 + 2, top - 1, M.cu, 2);
-    sp(x0, top - 2, M.cu, 4); sp(x0 + 1, top - 2, M.cu, 3);
-    sp(x0 - 1, top - 3, M.cu, 4); sp(x0, top - 3, M.cu, 2);
-    sp(x0 - 1, top - 4, M.cu, 3);
+  function headShard(R) {                                                        // 头顶斜插的蓝铜碎壳（画在头后面，插口压在壳上），往后上方翘起 3 格
+    part(); const [x0, top] = headXY(R);
+    for (let x = x0 + 1; x <= x0 + 3; x++) sp(x, top - 1, M.cu, 2);                // 插口（压在头后面，成一道暗缝）
+    sp(x0, top - 2, M.cu, 4); sp(x0 + 1, top - 2, M.cu, 3); sp(x0 + 2, top - 2, M.cu, 3); sp(x0 + 3, top - 2, M.cu, 2);
+    sp(x0 - 1, top - 3, M.cu, 4); sp(x0, top - 3, M.cu, 4); sp(x0 + 1, top - 3, M.cu, 3); sp(x0 + 2, top - 3, M.cu, 2);
+    sp(x0 - 1, top - 4, M.cu, 4); sp(x0, top - 4, M.cu, 3);                   // 断口尖往后翘
   }
   // 候选部件：rollBall（缩成的石球：15 格圆盘，拳、头、碎壳、苔藓、孔雀石纹贴在球面上，按 spin 每档转 90°；魂核和晶簇单独一个部件一起转）
   const FIST_RING = [[-1, -2], [0, -2], [1, -2], [-2, -1], [-2, 0], [-2, 1], [-1, 2], [0, 2]];
@@ -258,16 +264,17 @@ PCD.define('Golem', (E) => {
   function drawHero() {
     begin(hero, P.bx, -P.air);
     if (P.ball === 2) { drawBall(); return; }
-    const R = rigOf(), sy = R.yS + 2, sFx = 1 + P.lean, sBx = -3 + P.lean, stub = P.fdrop > 0;
+    const R = rigOf(), sy = R.yS + 3, sFx = -1 + P.lean, sBx = -4 + P.lean, stub = P.fdrop > 0;
     stoneArm(sBx, sy, P.rfx, P.rfy, M.rockD, stub || P.hug);                   // 后臂（抱拳时只露肩上一截）
     if (!P.hug) stoneFist(P.rfx, P.rfy, M.rockD, 0);                             // 后拳
     legs(R);
     boulder(R);
-    shoulderShell(R);
+    backShell(R);
     const c = coreAt(); soulCore(c[0], c[1]);
-    const h = head(R); headShard(h[0], h[1]);
+    headShard(R); head(R);
     if (P.hug) stoneFist(P.rfx, P.rfy, M.rockD, 0);                              // 抱在胸前的后拳
-    stoneArm(sFx, sy, P.ffx, P.ffy, M.rock, stub);                               // 前臂
+    stoneArm(sFx, sy, P.ffx, P.ffy, M.rock, stub, 1.5);                          // 前臂（更粗，从肩石下面长出来）
+    shoulderStone(sFx, sy, M.rock);                                              // 前肩圆石
     stoneFist(P.ffx, P.ffy, M.rock, 1);                                          // 前拳
   }
   function bakeHero() { RIM.rim = P.rim; RIM.rx = P.gx + hero.ox; RIM.ry = P.gy + hero.oy; RIM.flash = P.flash; RIM.dq = P.dq; bake(hero, RIM); }
@@ -341,11 +348,11 @@ PCD.define('Golem', (E) => {
     } else lastGf = -1;
     if (state === CHARGE && stT > 0.42) {                                        // 石球越转越快：魂光绕球环转、脚下扬尘、甩出石屑
       const q = clamp01((stT - 0.42) / 0.98), bx = scrX(0), by = HY - 7;
-      spinAcc += dt * (10 + 26 * q);
+      spinAcc += dt * (26 + 50 * q);
       while (spinAcc >= 1) {
         spinAcc -= 1; const a = Math.random() * 6.2832;
-        if (Math.random() < 0.45) { const r = 13 + Math.random() * 8; spawnX(K_SPIRAL_PT, bx, by, (r - 3.5) / (0.3 + Math.random() * 0.3), 0, 9, R_EL, { a, r, w: 5 + Math.random() * 3, tx: bx, ty: by }); }   // 魂光往球心汇聚
-        else spawnX(K_ORBIT_PT, bx, by, 0, 0, 0.25 + Math.random() * 0.35, R_EL, { a, r: 9 + Math.random() * 1.5, tx: bx, ty: by, orbitW: 6 + 8 * q, squash: 0.8 });          // 绕球环转（顺时针，越转越快）
+        if (Math.random() < 0.4) { const r = 13 + Math.random() * 8; spawnX(K_SPIRAL_PT, bx, by, (r - 3.5) / (0.3 + Math.random() * 0.3), 0, 9, R_EL, { a, r, w: 5 + Math.random() * 3, tx: bx, ty: by }); }   // 魂光往球心汇聚
+        else spawnX(K_ORBIT_PT, bx, by, 0, 0, 0.35 + Math.random() * 0.4, R_EL, { a, r: 10.5 + Math.random() * 1.5, tx: bx, ty: by, orbitW: 6 + 8 * q, squash: 0.6 });          // 绕球环转（顺时针，越转越快）
       }
       dustAcc += dt * (8 + 34 * q);
       while (dustAcc >= 1) { dustAcc -= 1; spawn(K_DUST, bx - 3 - Math.random() * 4, HY - Math.random() * 2, -20 - Math.random() * 40 * (0.5 + q), -4 - Math.random() * 10, 0.3 + Math.random() * 0.3, FXI.dust); }

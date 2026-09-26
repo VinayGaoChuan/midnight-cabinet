@@ -1,0 +1,37 @@
+[跳帧] idle 0.5s → IDLE 待机 +0.50s
+[截图] 1_idle.png
+[跳帧] idle 1.8s → IDLE 待机 +1.80s
+[截图] 1_idle_personality.png
+[跳帧] move 0.4s → MOVE 移动 +0.40s
+[截图] 2_move_out.png
+[跳帧] move 1.25s → MOVE 移动 +1.25s
+[截图] 2_move_back.png
+[跳帧] attack 0.09s → ATTACK 攻击 +0.08s
+[截图] 3_attack_windup.png
+[跳帧] attack 0.2s → ATTACK 攻击 +0.20s
+[截图] 3_attack_strike.png
+[跳帧] attack 0.42s → ATTACK 攻击 +0.42s
+[截图] 3_attack_follow.png
+[跳帧] skill 0.9s → SKILL 技能 · 蓄力 +0.90s
+[截图] 4_skill_charge.png
+[跳帧] skill 1.45s → SKILL 技能 · 施放 +0.05s
+[截图] 5_skill_cast.png
+[跳帧] skill 1.62s → SKILL 技能 · 施放 +0.22s
+[截图] 5_skill_cast2.png
+[跳帧] skill 1.8s → SKILL 技能 · 施放 +0.40s
+[截图] 6_skill_hit.png
+[跳帧] skill 2.2s → SKILL 技能 · 收招 +0.30s
+[截图] 6_skill_after.png
+[跳帧] hurt 0.34s → HURT 受击 +0.33s
+[截图] 7_hurt_flash.png
+[跳帧] hurt 0.5s → HURT 受击 +0.50s
+[截图] 7_hurt.png
+[跳帧] death 0.7s → DEATH 死亡 +0.70s
+[截图] 8_death_kneel.png
+[跳帧] death 1.2s → DEATH 死亡 +1.20s
+[截图] 8_death_down.png
+[跳帧] death 2.2s → DEATH 死亡 +2.20s
+[截图] 9_death_dissolve.png
+[验收] 通过
+[截图] sheet_0.png
+[截图] sheet_1.png

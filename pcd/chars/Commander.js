@@ -17,16 +17,16 @@ PCD.define('Commander', (E) => {
   const ARMOR = ['#0c0c10', '#22232c', '#3c3e4a', '#62667a'], SKIN = ['#1e1622', '#3e3046', '#62526a', '#8c7c92'], FUR = ['#1e1814', '#423830', '#6a5c4c', '#94846c'];
   const M = parts.mats(E, {
     armor: ARMOR, plate: { r: ARMOR, band: 2 }, skin: SKIN, fur: FUR, cape: { r: FUR, band: 2 }, gold: 'gold', iron: 'iron', copper: 'leather',
-    pan: 'steel', wood: 'wood', cord: [20, 19, 61, 62], belt: 'leather', tusk: 'bone', ink: { r: 'ink', flat: 1 },
+    pan: 'steel', barrel: 'steel', furL: [FUR[0], FUR[2], FUR[3], '#b4a488'], wood: 'wood', cord: [20, 19, 61, 62], belt: 'leather', tusk: 'bone', ink: { r: 'ink', flat: 1 },
     eye: { r: [20, 61, 62, 5], flat: 1 }, fuse: { r: [44, 45, 47, 21], flat: 1 },
   });
   // 体型：巨型改——腿缩短（短粗腿）、驼背 1、肩厚 6、四肢粗 1.6；头 7 行高（盔檐下留一行，眼睛不被压黑）
-  const BODY = { body: 'giant', leg: 8, torso: 13, head: 7, headW: 6, sw: 6, hunch: 1, limb: 1.6, arm: 13, lw: 4, stride: 3, fall: 'front' };
+  const BODY = { body: 'giant', leg: 8, torso: 13, head: 7, headW: 6, sw: 6, hunch: 1, limb: 1.6, arm: 13, lw: 4, stride: 4, fall: 'front' };
   const R0 = parts.rig({}, BODY);
   const HX = 68, DUR = DEFAULT_DUR.slice();
   const hero = new Sprite(84, 64, 38, 54);
   const RIM = { rim: 0, rx: 0, ry: 0, rimR: [0, 7, 12, 17], rimRamp: EL, flash: 0, dq: 0, rimAll: 1, skip: new Uint8Array(256) };
-  for (const k of ['eye', 'ink', 'fuse', 'wood', 'cord', 'tusk', 'skin', 'gold']) { RIM.skip[M[k]] = 1; RIM.skip[M[k + 'D']] = 1; }
+  for (const k of ['eye', 'ink', 'fuse', 'wood', 'cord', 'tusk', 'skin', 'gold', 'iron', 'barrel', 'copper']) { RIM.skip[M[k]] = 1; RIM.skip[M[k + 'D']] = 1; }
 
   // ───── 姿势：前手（hx hy）握塔盾；后手（bhx bhy）；can 锅炮仰角档；fuse 引信剩余长度；fz 引信火档（0 暗 · 1 · 2 亮 · 3 爆闪 · 4 熄灭）─────
   const P = { hx: 0, hy: 0, a: 0, bhx: 0, bhy: 0, lean: 0, head: 0, crouch: 0, bob: 0, bx: 0, step: 0, wup: 0, walk: 0, beard: 0, sway: 0, bend: 0,
@@ -63,7 +63,7 @@ PCD.define('Commander', (E) => {
     P.dq = 0; P.bob = 0; P.flip = 0; P.mx = 0; P.can = 0; P.fuse = 3; P.fz = 0; P.tamp = 0; P.plant = 0;
     if (st === IDLE) idle(tq, f12);
     else if (st === MOVE) {                                          // 重甲顿步：接触帧整个人顿一下
-      setK(K_IDLE, K_IDLE, 0); const f = E.gait(tq); parts.gait(P, f); P.crouch = 1 + (f & 1 ? 0 : 1); P.bob = 0; P.hx += P.step; P.bhx -= P.step;
+      setK(K_IDLE, K_IDLE, 0); const f = E.gait(tq); parts.gait(P, f); P.crouch = f & 1 ? 0 : 1; P.bob = 0; P.hx += P.step; P.bhx -= P.step; P.hy -= 3;   // 走路时塔盾提离地面 3 格，露出前脚
       const w = walkDemo(tq, 12, -1); P.mx = w.mx; P.flip = w.flip;
     } else if (st === ATTACK) {
       if (tq < 1 / 12) setK(K_IDLE, K_IDLE, 0);
@@ -106,38 +106,44 @@ PCD.define('Commander', (E) => {
   }
 
   // ───── 本角色的部件（通用的标「候选部件」）─────
-  // 锅炮几何：锅（药室）坐在两肩后上方，炮管从锅前上方铆出，按 can 档仰起；引信插在锅后上方
+  // 锅炮几何：锅（药室）架在两肩后上方、比盔顶高 4 格，炮管从锅前上沿铆出，按 can 档仰起；引信插在锅后上方
   function canGeo(R) {
-    const cx = R.hx - 5, top = R.htop - 3, a = CAN_A[P.can], ca = Math.cos(a), sa = Math.sin(a), bx0 = cx + 3, by0 = top + 1, L = 9;
-    return { cx, top, a, b0: [bx0, by0], b1: [bx0 + ca * L, by0 - sa * L], mz: [RD(bx0 + ca * (L + 1.5)), RD(by0 - sa * (L + 1.5))], fuse: [cx - 4 - (P.fuse >> 1), top - P.fuse], ca, sa, L };
+    const cx = R.hx - 7, top = R.htop - 5, a = CAN_A[P.can], ca = Math.cos(a), sa = Math.sin(a), bx0 = cx + 3, by0 = top + 2, L = 11;
+    return { cx, top, a, b0: [bx0, by0], b1: [bx0 + ca * L, by0 - sa * L], mz: [RD(bx0 + ca * (L + 1.5)), RD(by0 - sa * (L + 1.5))], fuse: [cx - 5 - (P.fuse >> 1), top - P.fuse], ca, sa, L };
   }
-  // 候选部件：锅炮 potCannon —— 食人魔的铁锅铆上炮管（3 格粗、中段一道铜箍、炮口外翻 + 黑洞）和支架（斜拉到前肩），锅身一圈铆钉铜箍，锅后一根引信（火头是发光体）
+  // 候选部件：锅炮 potCannon —— 食人魔的铁锅铆上炮管（3 格粗的钢管、中段一道铜箍、炮口外翻 + 黑洞）和支架（斜拉到两肩），
+  //   锅身一圈铜箍 + 铆钉、锅沿高光，锅后一根引信（火头是发光体）。炮管用 steel 比夜空亮，剪影里一眼看出是炮
   function potCannon(R) {
     const G = canGeo(R), cx = G.cx, top = G.top;
-    E.part();                                                        // 支架：从锅底斜拉到前肩
-    parts.line(E, R, cx + 1, top + 7, R.sFx - 1, R.sFy - 2, M.iron, 2); parts.line(E, R, cx - 1, top + 7, R.sFx - 3, R.sFy - 1, M.iron, 3);
+    E.part();                                                        // 支架：从锅底斜拉到两肩
+    parts.line(E, R, cx + 2, top + 6, R.sFx - 2, R.sFy - 2, M.iron, 3); parts.line(E, R, cx - 3, top + 6, R.sBx, R.sBy - 1, M.iron, 2);
     E.part();
-    const rows = [[-4, 3], [-4, 3], [-5, 4], [-5, 4], [-5, 4], [-4, 3], [-3, 2]];
+    const rows = [[-5, 4], [-4, 3], [-5, 4], [-6, 5], [-6, 5], [-5, 4], [-3, 2]];                                            // 外翻锅沿 → 收颈 → 鼓腹 → 圆底
     for (let j = 0; j < rows.length; j++) run(E, R, top + j, cx + rows[j][0], cx + rows[j][1], M.iron, 0);
-    run(E, R, top, cx - 3, cx + 2, M.iron, 4); run(E, R, top + 1, cx - 3, cx + 2, M.iron, 2);
-    run(E, R, top + 3, cx - 5, cx + 4, M.copper, 0); for (let x = cx - 4; x <= cx + 3; x += 2) px(E, R, x, top + 3, M.copper, 4);   // 铜箍 + 铆钉
-    px(E, R, cx - 6, top + 2, M.iron, 0); px(E, R, cx - 4, top + 4, M.iron, 4);
-    E.part();                                                        // 炮管
+    run(E, R, top, cx - 4, cx + 3, M.iron, 4); run(E, R, top + 1, cx - 3, cx + 2, M.iron, 2);                              // 锅沿高光 + 沿下阴影
+    run(E, R, top + 3, cx - 6, cx + 5, M.copper, 0); for (let x = cx - 5; x <= cx + 4; x += 3) px(E, R, x, top + 3, M.copper, 4);   // 铜箍 + 铆钉
+    px(E, R, cx - 7, top + 2, M.iron, 0); px(E, R, cx - 7, top + 3, M.iron, 2); px(E, R, cx - 4, top + 4, M.iron, 4); px(E, R, cx - 3, top + 5, M.iron, 4);   // 锅耳、鼓腹高光
+    E.part();                                                        // 炮管（钢）
     const n = G.L * 2;
-    for (let k = 0; k <= n; k++) { const q = k / n, x = G.b0[0] + (G.b1[0] - G.b0[0]) * q, y = G.b0[1] + (G.b1[1] - G.b0[1]) * q; parts.brush(E, R, x, y, 1.1, Math.abs(q - 0.45) < 0.08 ? M.copper : M.iron, 0); }
-    parts.brush(E, R, G.b1[0] + G.ca, G.b1[1] - G.sa, 1.6, M.iron, 0);                                                          // 炮口外翻
-    px(E, R, G.mz[0], G.mz[1], M.ink, 1); px(E, R, G.b0[0] + 2, G.b0[1] - 2, M.iron, 4);
+    for (let k = 0; k <= n; k++) { const q = k / n, x = G.b0[0] + (G.b1[0] - G.b0[0]) * q, y = G.b0[1] + (G.b1[1] - G.b0[1]) * q; parts.brush(E, R, x, y, 1.2, Math.abs(q - 0.5) < 0.07 ? M.copper : M.barrel, 0); }
+    for (let k = 2; k < n - 2; k += 2) { const q = k / n; px(E, R, G.b0[0] + (G.b1[0] - G.b0[0]) * q - G.sa, G.b0[1] + (G.b1[1] - G.b0[1]) * q - G.ca, M.barrel, 4); }   // 管背高光
+    parts.brush(E, R, G.b1[0] + G.ca, G.b1[1] - G.sa, 1.7, M.barrel, 0);                                                        // 炮口外翻
+    px(E, R, G.mz[0], G.mz[1], M.ink, 1); px(E, R, G.mz[0] - 1, G.mz[1], M.ink, 1);
     E.part();                                                        // 引信 + 火头
-    for (let k = 0; k < P.fuse; k++) px(E, R, cx - 4 - (k >> 1), top - 1 - k, M.cord, k === P.fuse - 1 ? 3 : 2);
+    for (let k = 0; k < P.fuse; k++) px(E, R, cx - 5 - (k >> 1), top - 1 - k, M.cord, k === P.fuse - 1 ? 3 : 2);
     if (P.fz !== 4) { const f = G.fuse; px(E, R, f[0], f[1] - 1, M.fuse, [2, 3, 4, 4][P.fz]); if (P.fz >= 2) px(E, R, f[0] - 1, f[1] - 1, M.fuse, 2); }
   }
-  // 候选部件：熊头肩甲 bearPauldron —— 远侧肩上的熊头（朝后）：圆耳伸出肩线、熊吻朝后伸出、空眼窝；和身后的熊皮披风同一色阶
+  // 候选部件：熊头肩甲 bearPauldron —— 远侧肩上的整颗熊头（朝后）：两只圆耳高出肩线、熊吻朝后伸出背线、黑鼻头、空眼窝、一排白牙；
+  //   用亮一级的熊毛（和身后暗色披风分得开）
   function bearPauldron(R) {
     E.part();
-    const x = R.sBx - 1, y = R.sBy - 1, f = M.fur;
-    run(E, R, y - 3, x - 2, x + 2, f, 0); run(E, R, y - 2, x - 4, x + 3, f, 0); run(E, R, y - 1, x - 5, x + 3, f, 0); run(E, R, y, x - 5, x + 3, f, 0); run(E, R, y + 1, x - 3, x + 2, f, 0);
-    px(E, R, x - 1, y - 4, f, 0); px(E, R, x - 1, y - 5, f, 4); px(E, R, x + 1, y - 4, f, 0); px(E, R, x + 1, y - 5, f, 0);   // 两只圆耳伸出肩线
-    px(E, R, x - 5, y - 1, M.ink, 1); px(E, R, x - 3, y - 2, M.ink, 1); px(E, R, x - 4, y - 1, f, 4); px(E, R, x - 4, y + 1, M.tusk, 3);   // 熊鼻、眼窝、吻背、牙
+    const x = R.sBx - 3, y = R.sBy - 2, f = M.furL;
+    run(E, R, y - 3, x - 2, x + 3, f, 0); run(E, R, y - 2, x - 4, x + 4, f, 0); run(E, R, y - 1, x - 6, x + 4, f, 0); run(E, R, y, x - 6, x + 4, f, 0); run(E, R, y + 1, x - 5, x + 3, f, 0); run(E, R, y + 2, x - 3, x + 3, f, 0);
+    px(E, R, x - 1, y - 4, f, 0); px(E, R, x, y - 4, f, 0); px(E, R, x - 1, y - 5, f, 4); px(E, R, x, y - 5, f, 3);          // 近耳
+    px(E, R, x + 3, y - 4, f, 0); px(E, R, x + 4, y - 4, f, 2); px(E, R, x + 3, y - 5, f, 3); px(E, R, x + 4, y - 5, f, 2);  // 远耳（中间空 2 格 + 圆顶，剪影里两只）
+    px(E, R, x - 6, y - 1, M.ink, 1); px(E, R, x - 5, y - 2, f, 4); px(E, R, x - 4, y - 2, f, 4);                          // 黑鼻头、吻背亮
+    px(E, R, x - 2, y - 2, M.ink, 1); px(E, R, x - 1, y - 3, f, 4);                                                        // 空眼窝 + 眉
+    for (let k = 0; k < 3; k++) px(E, R, x - 5 + k * 2, y + 1, M.tusk, 3);                                                // 一排白牙
   }
   // 候选部件：巨型肩甲 bigPauldron —— 7 格宽的圆肩甲，下沿镶铁边 + 3 颗铆钉，上沿高光
   function bigPauldron(R, x, y) {
@@ -152,8 +158,9 @@ PCD.define('Commander', (E) => {
     const x0 = cx - 4, y0 = cy - 8;
     for (let j = 0; j < 18; j++) { const cut = j === 0 ? 1 : 0; for (let i = cut; i < 8 - cut; i++) { const edge = i === cut || i === 7 - cut || j === 0 || j === 17; px(E, T, x0 + i, y0 + j, edge ? M.iron : M.plate, edge && (j % 3) === 2 && (i === 0 || i === 7) ? 4 : 0); } }
     for (let j = 3; j <= 14; j++) px(E, T, x0 + 2, y0 + j, M.plate, 4);                                                 // 盾面冷光
-    const PAN = ['.XXXX.', 'XXXXXX', 'XXXXXX', 'XXXXXX', '.XXXX.'], px0 = cx - 3, py0 = cy - 4;
-    for (let j = 0; j < 5; j++) for (let i = 0; i < 6; i++) if (PAN[j][i] === 'X') { const inner = i >= 1 && i <= 4 && j >= 1 && j <= 3; px(E, T, px0 + i, py0 + j, M.pan, i === 1 && j === 1 ? 4 : inner ? ((i >= 3 && j >= 2) ? 1 : 2) : 0); }
+    const PAN = ['.RRRR.', 'RIIIIR', 'RIIIIR', 'RIIIIR', '.RRRR.'], px0 = cx - 3, py0 = cy - 4;               // 盾心的平底锅：亮锅沿一圈 + 黑锅底（和食人魔手里那把同一个样子）
+    for (let j = 0; j < 5; j++) for (let i = 0; i < 6; i++) { const c = PAN[j][i]; if (c === '.') continue; px(E, T, px0 + i, py0 + j, M.pan, c === 'I' ? ((i >= 3 && j >= 2) ? 1 : 2) : (i + j <= 2 ? 4 : 3)); }
+    px(E, T, px0 + 2, py0 + 1, M.pan, 3);
     for (let j = 5; j <= 7; j++) px(E, T, cx, py0 + j, M.wood, j === 7 ? 2 : 0);                                         // 锅柄朝下
     for (const [dx, dy] of [[-3, 0], [2, 0], [-3, 4], [2, 4]]) px(E, T, px0 + 3 + dx, py0 + dy, M.gold, 4);             // 四颗金铆钉把锅钉在盾上
   }
@@ -162,17 +169,17 @@ PCD.define('Commander', (E) => {
   function drawHero() {
     E.begin(hero, P.bx, 0); const R = parts.rig(P, BODY);
     parts.cape(E, R, P, { mat: M.cape, len: R.yHip + 3, flare: 3.5, style: 'tattered' });            // 熊皮披风
-    bearPauldron(R);                                                                                     // 远侧（左肩）熊头肩甲
     if (!P.tamp) parts.arm(E, R, P, { side: 'B', sleeve: 'plate', mat: M.armorD, hand: M.armorD, grip: 'big' });
+    bearPauldron(R);                                                                                     // 远侧（左肩）熊头肩甲：压在后臂上，熊耳、熊吻伸出肩线和背线
     parts.legs(E, R, P, { style: 'greave', mat: M.armor, matD: M.armorD, boot: M.iron, bootD: M.ironD, w: 4 });
     const tor = parts.torso(E, R, P, { style: 'plate', mat: M.armor, belt: M.iron, buckle: M.gold });
-    for (let k = 0; k < 3; k++) run(E, R, R.yS + 2 + k * 2, tor.chest[0] - 4, tor.chest[0] - 1, M.gold, k === 0 ? 4 : 3);   // 胸甲三道金色指挥官横杠（露在前臂后面）
     potCannon(R);
     if (P.tamp) {                                                                                        // 检炮：后手从头后举到炮口捣药（手臂藏在头后，拳头露在盔顶上方）
       const g = canGeo(R), at = [g.mz[0] - 1, g.mz[1] + (P.tamp === 2 ? 1 : -1)];
       parts.arm(E, R, P, { side: 'B', at, sleeve: 'plate', mat: M.armorD, hand: M.armor, grip: 'big' });
     }
     const af = parts.arm(E, R, P, { sleeve: 'plate', mat: M.armor, hand: M.armor, grip: 'big' });
+    E.part(); for (let k = 0; k < 3; k++) { run(E, R, R.yS + 3 + k * 2, tor.chest[0] - 5, tor.chest[0] - 2, M.gold, 3); px(E, R, tor.chest[0] - 5, R.yS + 3 + k * 2, M.gold, 4); }   // 胸甲三道金色指挥官横杠（单独一个部件，压在支架和胸甲线上）
     bigPauldron(R, R.sFx - 2, R.sFy + 2);
     const hd = parts.head(E, R, P, { mat: M.skin, face: 'square', age: 'rugged', nose: 'small', mouth: 'line', ear: 'none' });   // 小头压在两只肩甲之间
     if (!P.eyes) { px(E, R, hd.eye[0], hd.eye[1], M.eye, P.rim >= 2 ? 4 : 2); px(E, R, hd.x1, hd.ey, M.skin, 3); }

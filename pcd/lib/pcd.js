@@ -4,7 +4,19 @@
 (function () {
 'use strict';
 const PCD = window.PCD = window.PCD || {};
-const W = 128, H = 96, DT = 1 / 60;
+// 角色模块注册表和部件库全局共用；引擎本体可以开多份（createEngine），查看页开一份，游戏里每个在动作的单位各一份
+const defs = PCD._defs = PCD._defs || {};
+PCD.define = (key, factory) => { defs[key] = factory; };
+PCD.parts = PCD.parts || {};
+PCD.has = (key) => !!defs[key];
+PCD.keys = () => Object.keys(defs).filter((k) => k[0] !== '_');
+
+// opts：{ W 舞台宽（默认 128）, game 1 = 游戏模式（不画舞台、假人、来袭敌弹、受击火花，背景透明，震屏 / 闪白 / 音效 / 假人反应交给 out 回调）,
+//   out: { sfx(ev, e), shake(t, amp), flash(t), hit(big, dir), dummyFx(o), allies() → [{ x, y, top, mid }]（舞台坐标） } }
+function createEngine(opts) {
+opts = opts || {};
+const GAME = !!opts.game, OUT = opts.out || {};
+const W = opts.W || 128, H = 96, DT = 1 / 60;
 
 // ═════════════════════════ 1. 色板：全部角色共用，屏幕上每个像素都来自这里 ═════════════════════════
 const PAL = [
@@ -233,10 +245,10 @@ function shoot(k, x, y, vx, tx, ramp, vy, o) {
 const RN = 4, rgT = new Float32Array(RN).fill(9), rgX = new Float32Array(RN), rgY = new Float32Array(RN), rgBig = new Uint8Array(RN), rgRamp = new Uint8Array(RN);
 function ring(x, y, big, ramp) { let o = 0; for (let k = 0; k < RN; k++) if (rgT[k] > rgT[o]) o = k; rgT[o] = 0; rgX[o] = x; rgY[o] = y; rgBig[o] = big; rgRamp[o] = ramp; }
 let shakeT = 0, shakeAmp = 0, sx = 0, sy = 0, flashT = 0;
-function shake(t, amp) { if (reduceMotion) return; shakeT = Math.max(shakeT, t); shakeAmp = Math.max(shakeAmp, amp); }
-function flash(t) { flashT = Math.max(flashT, t); }
+function shake(t, amp) { if (GAME) { if (OUT.shake) OUT.shake(t, amp); return; } if (reduceMotion) return; shakeT = Math.max(shakeT, t); shakeAmp = Math.max(shakeAmp, amp); }
+function flash(t) { if (GAME) { if (OUT.flash) OUT.flash(t); return; } flashT = Math.max(flashT, t); }
 let dimT = 0;
-function dim(t) { dimT = Math.max(dimT, t); }   // 夜空压暗 t 秒（闪白优先）
+function dim(t) { if (GAME) return; dimT = Math.max(dimT, t); }   // 夜空压暗 t 秒（闪白优先）
 
 // ═════════════════════════ 5. 特效积木：光柱、光束、闪电、法阵、护盾、斩击弧、地裂、波浪、毒雾、连线、星芒 ═════════════════════════
 // 每个积木占一个槽，按寿命走色阶、后半段断续；layer 0 = 角色后面，1 = 假人与角色之间，2 = 角色前面
@@ -364,7 +376,8 @@ function stepAsh(dt) {
 const fb = new Uint8Array(W * H), bg = new Uint8Array(W * H);
 let seed = 1337; const rnd = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5], bayer = (x, y) => (BAYER[(y & 3) * 4 + (x & 3)] + 0.5) / 16;
-const HORIZON = 72, FLOOR = 80, HY = 79, MX = 70, MY = 17, MR = 8.5, DUMMY_X = 98;
+const HORIZON = 72, FLOOR = 80, HY = 79, MX = 70, MY = 17, MR = 8.5;
+let DUMMY_X = 98;
 let HX = 34;
 function paintBackground() {
   const SKY = [1, 2, 3, 4];
@@ -383,13 +396,13 @@ const dummy = new Sprite(28, 36, 14, 33);
 const DUM = { rim: 0, rx: 0, ry: 0, rimR: [0, 0, 0, 0], rimRamp: FX.magic, flash: 0, dq: 0 };
 let dumHitT = 9, dumBig = 0, dumK = -1, dumDir = 1;
 const WOB_S = [1, -1, 1, 0], WOB_B = [3, -2, 2, -1, 1, 0];
-function hitDummy(big, dir) { dumHitT = 0; dumBig = big; dumDir = dir || 1; }
+function hitDummy(big, dir) { if (GAME) { if (OUT.hit) OUT.hit(big, dir || 1); return; } dumHitT = 0; dumBig = big; dumDir = dir || 1; }
 // 假人身上的持续效果：o = { dur 秒, tint 特效色阶名或下标（按原色明暗映射成单色，最后 30% 闪烁褪去）, slow 0–1（摇晃变慢，表现「攻速降低」）,
 //   sink 格数（陷进地面）, stun 1（头顶转圈的星） }；再次调用会覆盖
 // 另有：outline 色阶（剪影外罩一圈描边）、fill 色阶（第 1 帧整片填色）、fade false（不做最后 30% 的闪烁褪去）、sinkEase 0（整段都下沉，不渐入渐出）
 let dfT = 9, dfDur = 0, dfTint = -1, dfSlow = 1, dfSink = 0, dfStun = 0, dfOut = -1, dfFill = -1, dfFade = 1, dfSinkE = 1;
 const rampOf = (r) => (r == null ? -1 : typeof r === 'string' ? FXI[r] : r);
-function dummyFx(o) { dfT = 0; dfDur = o.dur || 1.2; dfTint = rampOf(o.tint); dfSlow = o.slow || 1; dfSink = o.sink || 0; dfStun = o.stun ? 1 : 0; dfOut = rampOf(o.outline); dfFill = rampOf(o.fill); dfFade = o.fade === false ? 0 : 1; dfSinkE = o.sinkEase === 0 ? 0 : 1; }
+function dummyFx(o) { if (GAME) { if (OUT.dummyFx) OUT.dummyFx(o); return; } dfT = 0; dfDur = o.dur || 1.2; dfTint = rampOf(o.tint); dfSlow = o.slow || 1; dfSink = o.sink || 0; dfStun = o.stun ? 1 : 0; dfOut = rampOf(o.outline); dfFill = rampOf(o.fill); dfFade = o.fade === false ? 0 : 1; dfSinkE = o.sinkEase === 0 ? 0 : 1; }
 const FILLMAP = [];
 function fillMap(r) { if (FILLMAP[r]) return FILLMAP[r]; const m = new Uint8Array(256).fill(FXR[r][1]); m[255] = 255; return (FILLMAP[r] = m); }
 // 精灵剪影外罩一圈描边（画在已画好的精灵外面）
@@ -419,7 +432,12 @@ const ALLY_BAKE = { rim: 0, rx: 0, ry: 0, rimR: [0, 0, 0, 0], rimRamp: FX.magic,
 function bakeAllies() { for (let b = 0; b < 2; b++) { begin(allySpr[b], 0, 0); drawAlly(-b); bake(allySpr[b], ALLY_BAKE); } }   // 两帧呼吸（第 2 帧上身抬 1 格）
 function allyXs() { return C.ALLY_X || (HX > 50 ? [HX - 17, HX - 30] : [HX - 17, HX + 16]); }
 function allyShown() { if (allyForce != null) return !!allyForce; return C.ALLIES === true || (C.ALLIES === 'skill' && (state === CHARGE || state === CAST || state === RECOVER)); }
-function allyPoints() { return allyXs().map((x) => ({ x, y: HY, top: HY - 16, mid: HY - 8 })); }
+function allyPoints() {
+  const def = allyXs().map((x) => ({ x, y: HY, top: HY - 16, mid: HY - 8 }));
+  if (!GAME) return def;
+  const real = (OUT.allies && OUT.allies()) || [];   // 游戏里用真实友军的位置；不够 2 个时用身边的默认站位补齐（模块按至少 2 个写的）
+  return real.length >= 2 ? real : real.concat(def.slice(real.length));
+}
 function allyFx(o) { afT = 0; afDur = o.dur || 1.2; afOut = rampOf(o.outline); afTint = rampOf(o.tint); }
 function drawAllies(f12) {
   if (!allyShown()) return; const xs = allyXs(), on = afT < afDur, fading = on && afT / afDur > 0.7 && (f12 & 1);
@@ -473,7 +491,8 @@ const SFX_PAL_OF = { magic: 'arcane', holy: 'holy', frost: 'frost', fire: 'fire'
 function sfx(ev, p) {
   const e = Object.assign({ ev, state: STATE_KEY[state], t: +stT.toFixed(3), f: f12of(stT) }, p || {});
   if (sfxRec) { e.chain = sfxChain; e.ct = +((stepN - sfxBase) * DT).toFixed(3); sfxRec.push(e); }
-  if (typeof PCD.sfxOut === 'function') { try { PCD.sfxOut(ev, Object.assign({ key: C.key }, e)); } catch (err) { /* 音效库出错不影响画面 */ } }
+  const out = GAME ? OUT.sfx : PCD.sfxOut;
+  if (typeof out === 'function') { try { out(ev, Object.assign({ key: C.key }, e)); } catch (err) { /* 音效库出错不影响画面 */ } }
 }
 function sfxAuto(s) {
   const X = C.SFX; if (!X || X.auto === false) return;
@@ -493,14 +512,15 @@ function sfxTimeline() {
 function enter(s) {
   state = s; stT = 0; stN = 0; DK.on = 0;
   sfxAuto(s);
-  if (s === HURT || s === DEATH) { const tx = HX + C.HIT_POINT[0] + 2; shoot(s === HURT ? 3 : 4, tx + 300 * INCOMING, HY + C.HIT_POINT[1] - (s === DEATH ? 1 : 0), -300, tx, FXI.enemy); }   // 敌弹正好在 INCOMING 秒命中
+  if ((s === HURT || s === DEATH) && !GAME) { const tx = HX + C.HIT_POINT[0] + 2; shoot(s === HURT ? 3 : 4, tx + 300 * INCOMING, HY + C.HIT_POINT[1] - (s === DEATH ? 1 : 0), -300, tx, FXI.enemy); }   // 敌弹正好在 INCOMING 秒命中
   if (s === REVIVE) { const RV = C.REVIVE || {}, dy = RV.dy == null ? -12 : RV.dy, rr = RV.ramp == null ? FXI.soul : rampOf(RV.ramp); for (let i = 0; i < 34; i++) { const a = Math.random() * 6.2832, r = 14 + Math.random() * 12; spawn(K_SPIRAL_PT, HX, HY + dy, r / (0.25 + Math.random() * 0.2), 0, 9, rr, a, r, 5 + Math.random() * 3); } }
   if (C.onEnter) C.onEnter(s);
 }
-function nextState() { if (CHAIN[state] >= 0) return enter(CHAIN[state]); if (auto) { reelI = (reelI + 1) % REEL.length; return enter(REEL[reelI]); } enter(IDLE); }
+let done = false;
+function nextState() { if (GAME && state === DEATH) { done = true; return; } if (CHAIN[state] >= 0) return enter(CHAIN[state]); if (GAME) { done = true; return enter(IDLE); } if (auto) { reelI = (reelI + 1) % REEL.length; return enter(REEL[reelI]); } enter(IDLE); }
 function engineTime(s, t) {
   if ((s === HURT || s === DEATH) && Math.abs(t - INCOMING) < 1e-9 && C.SFX && C.SFX.auto !== false) { if (s === HURT) sfx('hurt', { body: C.SFX.body || 'flesh' }); else sfx('death', { how: C.SFX.how || 'collapse', body: C.SFX.body || 'flesh' }); }
-  if ((s === HURT || s === DEATH) && Math.abs(t - INCOMING) < 1e-9) { if (!(C.hurtFx && C.hurtFx(s))) { const hx = HX + C.HIT_POINT[0] - 1, hy = HY + C.HIT_POINT[1]; burst(hx, hy, s === DEATH ? 26 : 16, 50, 130, 0.25, 0.55, C.R_HURT == null ? FXI.impact : C.R_HURT, 20); shake(0.16, s === DEATH ? 2 : 1); if (s === DEATH) flash(0.04); } }
+  if ((s === HURT || s === DEATH) && Math.abs(t - INCOMING) < 1e-9 && !GAME) { if (!(C.hurtFx && C.hurtFx(s))) { const hx = HX + C.HIT_POINT[0] - 1, hy = HY + C.HIT_POINT[1]; burst(hx, hy, s === DEATH ? 26 : 16, 50, 130, 0.25, 0.55, C.R_HURT == null ? FXI.impact : C.R_HURT, 20); shake(0.16, s === DEATH ? 2 : 1); if (s === DEATH) flash(0.04); } }
   if (s === REVIVE && Math.abs(t - 0.84) < 1e-9) { const RV = C.REVIVE || {}, dy = RV.dy == null ? -12 : RV.dy; ring(HX + 1, HY + dy, RV.big ? 1 : 0, RV.ramp == null ? FXI.soul : rampOf(RV.ramp)); burst(HX + 1, HY + dy - 2, 14, 30, 70, 0.3, 0.5, C.R_EL, 10); }
 }
 const ENGINE_EVENTS = [[], [], [], [], [], [], [INCOMING], [INCOMING], [0.84]];   // 按状态下标：受击 / 死亡的命中、复活的收尾
@@ -600,7 +620,7 @@ function buildSheet() {
       const cv = document.createElement('canvas'); cv.width = s.w; cv.height = s.h; cv.style.width = s.w * 3 + 'px'; cv.style.height = s.h * 3 + 'px'; cv.title = t.toFixed(2) + 's'; cv.getContext('2d').putImageData(tmp, 0, 0); row.appendChild(cv);
     }
   }
-  if (C.deathKit) { const p = document.createElement('p'); p.textContent = '死亡：' + C.deathKit.mode + '（引擎死亡套件，从第 ' + C.deathKit.at + ' 秒开始，动作表里看不到碎片，请在画面里按 6 查看）'; box.appendChild(p); }
+  if (C.deathKit) { const p = document.createElement('p'); p.textContent = '死亡：' + C.deathKit.mode + '（死亡套件，从第 ' + C.deathKit.at + ' 秒开始，动作表里看不到碎片，请在画面里按 6 查看）'; box.appendChild(p); }
   C.hero.k1 = C.hero.k2 = -1; C.poseAt(state, stT, simT);
 }
 function toggleSheet(on) { const box = document.getElementById('sheet'); const show = on == null ? box.hidden : on; if (show) buildSheet(); box.hidden = !show; }
@@ -621,7 +641,7 @@ function audit() {
   C.poseAt(IDLE, 0, 0); C.drawHero(); C.bakeHero(); const b = bboxOf(s);
   res.idle = { w: b.x1 - b.x0 + 1, h: b.y1 - b.y0 + 1, pixels: b.n };
   if (res.idle.h < 12 || res.idle.h > 48) res.problems.push('待机高度 ' + res.idle.h + ' 格，超出 12–48');
-  res.ownColors = PAL.length - BASE_PAL; if (res.ownColors > 24) res.problems.push('专属色 ' + res.ownColors + ' 个，超过 24（和共享色接近的改用 near()）');
+  res.ownColors = PAL.length - BASE_PAL; if (res.ownColors > 24) res.problems.push('专属色 ' + res.ownColors + ' 个，超过 24（和共用色接近的改用 near()）');
   if (C.deathKit) res.deathKit = C.deathKit;
   if (C.SFX) {   // 声明了音效的模块：检查关键事件都有
     const tl = sfxTimeline(), has = (ch, ev) => tl.some((e) => e.chain === ch && e.ev === ev);
@@ -666,11 +686,9 @@ function frame(now) {
 }
 
 // ═════════════════════════ 10. 角色模块接口 ═════════════════════════
-const defs = {};
-PCD.define = (key, factory) => { defs[key] = factory; };
-PCD.PAL = PAL; PCD.RAMP = RAMP; PCD.FX = FX;
 const E = {
-  W, H, DT, HY, FLOOR, DUMMY_X, INCOMING, ASTEP, PAL, RAMP, FX, FXR, FXI, B8, BASE_PAL, color, near, ramp, fxRamp,
+  W, H, DT, HY, FLOOR, INCOMING, ASTEP, PAL, RAMP, FX, FXR, FXI, B8, BASE_PAL, color, near, ramp, fxRamp,
+  get DUMMY_X() { return DUMMY_X; },
   IDLE, MOVE, ATTACK, CHARGE, CAST, RECOVER, HURT, DEATH, REVIVE, NAMES, DEFAULT_DUR,
   K_SPIRAL, K_ORBIT, K_BURST, K_TRAIL, K_EMBER, K_RISE, K_DUST, K_SPIRAL_PT, K_FALL, K_STILL, K_PHYS, K_ORBIT_PT,
   defMat, Sprite, begin, part, sp, run, rect, line, brush, ellipse, bake, copySprite, setShear,
@@ -678,15 +696,52 @@ const E = {
   spawn, spawnX, burst, releaseOrbit, clearOrbit, fall, shoot, ring, shake, flash, dim, fx, groundShadow, bayer,
   allies: (v) => { allyForce = v; }, allyPoints, allyFx, outlineSprite, death: { start: deathStart, get active() { return !!DK.on; } },
   sfx, SFX_PAL, SFX_STYLE, hitDummy, dummyFx, put, blitShape, floorGlow, shotFloorGlow, drawShotDefault,
-  get fb() { return fb; }, get stepN() { return stepN; }, get dummy() { return dummy; },
+  get fb() { return fb; }, get stepN() { return stepN; }, get dummy() { return GAME ? EMPTY_DUMMY : dummy; },
   scrX: (px) => scrX(px), get HX() { return HX; }, get state() { return state; }, get stT() { return stT; }, get simT() { return simT; },
+  get game() { return GAME; },
 };
-PCD.parts = PCD.parts || {};
 E.parts = PCD.parts;
-PCD.start = function (key) {
+const EMPTY_DUMMY = new Sprite(28, 36, 14, 33); EMPTY_DUMMY.out.fill(255);   // 游戏里没有训练假人：模块要描假人剪影时拿到的是空精灵
+// 引擎自己的材质、色板、特效色阶长度：换角色时截回这里，角色模块追加的部分不会越积越多
+const BASE_MAT = MBAND.length, BASE_FXN = FXR.length, BASE_FXK = Object.keys(FXI);
+function loadModule(key, o) {
   const f = defs[key]; if (!f) throw new Error('没有这个角色模块：' + key);
-  C = f(E); C.key = key; buildLUT(); bakeAllies(); if (C.HX != null) HX = C.HX; if (C.DUR) DUR = C.DUR.slice(); if (C.R_EL == null) C.R_EL = FXI.magic;
+  o = o || {};
+  PAL.length = BASE_PAL; MRAMP.length = BASE_MAT * 4; MBAND.length = BASE_MAT; MFLAT.length = BASE_MAT;
+  FXR.length = BASE_FXN; for (const k of Object.keys(FXI)) if (!BASE_FXK.includes(k)) { delete FXI[k]; delete FX[k]; }
+  TINTMAP.length = 0; FILLMAP.length = 0;
+  DUMMY_X = o.dummyX != null ? o.dummyX : 98;
+  C = f(E); C.key = key; buildLUT(); if (C.HX != null) HX = C.HX; else HX = 34; DUR = C.DUR ? C.DUR.slice() : DEFAULT_DUR.slice(); if (C.R_EL == null) C.R_EL = FXI.magic;
   if (!C.HIT_POINT) C.HIT_POINT = [2, -13]; if (!C.EVENTS) C.EVENTS = [];
+  state = IDLE; stT = 0; stN = 0; stepN = 0; simT = 0; auto = !GAME; done = false; resetFX(); C.hero.k1 = C.hero.k2 = -1; C.poseAt(IDLE, 0, 0);
+  return C;
+}
+// 游戏模式的画面：背景透明（255），只画特效和角色，图层顺序同查看页
+function renderGame() {
+  const P = C.P;
+  if (P.k1 !== C.hero.k1 || P.k2 !== C.hero.k2) { C.drawHero(); C.bakeHero(); C.hero.k1 = P.k1; C.hero.k2 = P.k2; }
+  fb.fill(255);
+  const f12 = Math.floor(simT * 12);
+  if (C.fxBack) C.fxBack(f12); drawFx(0, f12);
+  if (C.fxMid) C.fxMid(f12); drawFx(1, f12);
+  if (DK.on) drawDeath(); else blit(C.hero, HX + P.mx, HY, P.flip);
+  if (C.fxFront) C.fxFront(f12); drawFx(2, f12);
+  for (let k = 0; k < RN; k++) { const t = rgT[k], life = rgBig[k] ? 0.22 : 0.16; if (t >= life) continue; const R = FXR[rgRamp[k]], r = 2 + t * (rgBig[k] ? 62 : 48), c = t < life * 0.3 ? R[0] : t < life * 0.65 ? R[1] : R[2], n = Math.ceil(r * 6.3); for (let i = 0; i < n; i++) { if (((i + f12) & 3) === 3 && t > life * 0.5) continue; const a = i / n * 6.2832; put(Math.round(rgX[k] + Math.cos(a) * r), Math.round(rgY[k] + Math.sin(a) * r * 0.8), c); } }
+  for (let i = 0; i < PN; i++) {
+    const k = pK[i]; if (!k) continue; let c; const R = FXR[pRamp[i]];
+    if (k === K_SPIRAL || k === K_ORBIT || k === K_SPIRAL_PT || k === K_ORBIT_PT) { const s = (i + f12) % 6; c = s < 1 ? R[0] : s < 3 ? R[1] : R[2]; }
+    else { const q = pAge[i] / pLife[i]; c = R[q < 0.15 ? 0 : q < 0.35 ? 1 : q < 0.6 ? 2 : q < 0.82 ? 3 : 4]; }
+    const x = Math.round(pX[i]), y = Math.round(pY[i]); put(x, y, c); if (pSz[i] > 1) { put(x + 1, y, c); put(x, y + 1, c); put(x + 1, y + 1, c); }
+  }
+  for (let i = 0; i < PRN; i++) if (prOn[i]) { const x = Math.round(prX[i]), y = Math.round(prY[i]), d = prVX[i] > 0 ? 1 : -1, R = FXR[prRamp[i]]; if (!(C.drawShot && C.drawShot(prK[i], x, y, d, f12, R))) drawShotDefault(prK[i], x, y, d, f12, R); }
+  if (C.fxTop) C.fxTop(f12);
+  return fb;
+}
+const STATE_BY_NAME = { idle: IDLE, move: MOVE, attack: ATTACK, charge: CHARGE, skill: CHARGE, cast: CAST, recover: RECOVER, hurt: HURT, death: DEATH, revive: REVIVE };
+let gAcc = 0;
+// 查看页：原来的 PCD.start
+function page(key) {
+  loadModule(key); bakeAllies();
   document.title = C.name || key;
   paintBackground();
   disp = document.getElementById('screen'); dctx = disp.getContext('2d', { alpha: false });
@@ -706,5 +761,25 @@ PCD.start = function (key) {
   window.__pc = { play: (n) => (n === 'off' ? playOff() : play(STATE_OF[n])), at, off: playOff, offAt: playOffAt, resume: () => { paused = false; }, sheet: toggleSheet, audit, exportData, paletteCheck, sfxTimeline, get state() { return NAMES[state]; } };
   if (C.offField) { const h = document.getElementById('hint'); if (h) h.textContent = h.textContent.replace(' · A 自动', ' · 7 场外 · A 自动'); }
   C.poseAt(IDLE, 0, 0); last = performance.now(); requestAnimationFrame(frame);
+}
+return {
+  E, page, W, H, HY, DT,
+  get C() { return C; }, get HX() { return HX; }, get DUMMY_X() { return DUMMY_X; }, get fb() { return fb; }, get pal() { return PAL; },
+  get lut() { return LUT; }, get state() { return STATE_KEY[state]; }, get stT() { return stT; }, get done() { return done; }, get dur() { return DUR; },
+  load: loadModule,
+  // 进入状态（名字：idle move attack charge/skill cast recover hurt death revive）；off = 领袖场外效果
+  enter(name) { done = false; if (name === 'off') { enter(IDLE); if (C.offField) C.offField(); return; } const s = STATE_BY_NAME[name]; if (s != null) enter(s); },
+  skip(t) { const n = Math.round(t / DT); for (let i = 0; i < n; i++) update(); },
+  // 按真实时间推进（固定 60Hz 步长），speed 用来压缩蓄力
+  step(dt, speed) { gAcc += dt * (speed || 1); let n = 0; while (gAcc >= DT && n < 30) { update(); gAcc -= DT; n++; } if (n === 30) gAcc = 0; },
+  render: renderGame,
+  // 只要身体：某状态某时刻的精灵（烘焙好的色板下标缓冲）
+  pose(name, t) { const s = STATE_BY_NAME[name]; C.poseAt(s == null ? IDLE : s, t, t); C.drawHero(); C.bakeHero(); C.hero.k1 = C.hero.k2 = -1; return C.hero; },
+  // 这一刻还有没有特效在飞（粒子、弹道、冲击环、特效积木、死亡碎片）
+  busy() { if (DK.on) return true; for (let i = 0; i < PN; i++) if (pK[i]) return true; for (let i = 0; i < PRN; i++) if (prOn[i]) return true; for (let i = 0; i < RN; i++) if (rgT[i] < 0.22) return true; for (let i = 0; i < XN; i++) if (xOn[i]) return true; return false; },
+  sfxTimeline,
 };
+}
+PCD.createEngine = createEngine;
+PCD.start = function (key) { const eng = createEngine({}); PCD.PAL = eng.pal; eng.page(key); return eng; };
 })();

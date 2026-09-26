@@ -4,7 +4,7 @@
 PCD.define('cremator', (E) => {
   const { defMat, Sprite, begin, part, sp, run, rect, line, brush, bake, ease, clamp01, q12, f12of, gait, walkDemo, color, fxRamp, FXR, FXI, W, HY, FLOOR, DUMMY_X, INCOMING, ASTEP,
     IDLE, MOVE, ATTACK, CHARGE, CAST, RECOVER, HURT, DEATH, REVIVE, DEFAULT_DUR, K_BURST, K_TRAIL, K_EMBER, K_RISE, K_DUST,
-    spawn, burst, shake, flash, hitDummy, put, scrX, shotFloorGlow } = E;
+    spawn, burst, shake, flash, hitDummy, put, scrX, shotFloorGlow, sfx } = E;
   const fl = (x) => Math.floor(x + 1e-6);                       // 带容差取整（同 q12）：原版画法里的 Math.floor 一律换成它，整格边界不会因浮点误差少一格
   const easeInOut = ease.inOut, easeOut = ease.out;
 
@@ -261,7 +261,7 @@ PCD.define('cremator', (E) => {
   function pillar(x, h) { let o = 0; for (let k = 0; k < PLN; k++) if (plT[k] > plT[o]) o = k; plT[o] = 0; plX[o] = Math.round(x); plH[o] = h; }
   function dflame(x, y, life) { let o = 0; for (let k = 0; k < DFN; k++) if (dfT[k] - dfL[k] > dfT[o] - dfL[o]) o = k; dfT[o] = 0; dfX[o] = x; dfY[o] = y; dfL[o] = life; }
   function landCoal(i) {
-    const x = cX[i], y = cY[i]; burst(x, y, 6, 20, 55, 0.2, 0.4, R_EL, 18);
+    const x = cX[i], y = cY[i]; burst(x, y, 6, 20, 55, 0.2, 0.4, R_EL, 18); sfx('impact', { pal: 'fire', w: cDum[i] && !dumLit ? 0.8 : 0.4 });
     if (cDum[i]) { dflame(Math.round(x), Math.round(y), 1.0); if (!dumLit) { dumLit = 1; hitDummy(1, 1); shake(0.12, 1); burst(x, y, 10, 40, 100, 0.2, 0.45, R_IMPACT, 14); skyT = 0.8; } }
     else { pillar(x, 3 + (i % 3)); for (let k = 0; k < 2; k++) spawn(K_DUST, x + (Math.random() - 0.5) * 3, FLOOR - 1, (Math.random() - 0.5) * 14, -5 - Math.random() * 6, 0.3 + Math.random() * 0.2, R_DUST); }
   }
@@ -279,9 +279,10 @@ PCD.define('cremator', (E) => {
       smA0 = K_WIND.a; smA1 = K_SWEEP.a; smCX = HX + K_SWEEP.hx + 2; smCY = HY + K_SWEEP.hy; smT = 0;
       for (let i = 0; i < 6; i++) { const a = smA0 + (smA1 - smA0) * (0.25 + i * 0.13), x = smCX + Math.sin(a) * 14.5, y = Math.min(FLOOR - 1, smCY + Math.cos(a) * 14.5 * 0.55 + 1); spawn(K_BURST, x, y, Math.cos(a) * 30 + 10, -Math.sin(a) * 20 - 12, 0.2 + Math.random() * 0.2, R_EL); }
       const hx = DUMMY_X - 4, hy = HY - 12; burst(hx, hy, 10, 40, 100, 0.15, 0.35, R_IMPACT, 10); burst(hx, hy, 6, 25, 60, 0.2, 0.4, R_EL, 16); hitDummy(0, 1); dflame(DUMMY_X - 3, HY - 11, 0.6);
+      sfx('swing', { kind: 'smash', w: 0.7 }); sfx('hit', { mat: 'metal', w: 0.7 });
     }
     if (s === CAST && t === 1 / 12) {                          // 抡铲定格：扬出 7 块燃烧炭块 + 一团骨灰；震屏 2 格 + 天空闪白
-      const x = castBladeX(), y = castBladeY(); fling(x, y);
+      const x = castBladeX(), y = castBladeY(); fling(x, y); sfx('shoot', { proj: 'fire' });
       burst(x, y, 14, 40, 110, 0.25, 0.6, R_EL, 18);
       for (let i = 0; i < 18; i++) spawn(K_DUST, x + (Math.random() - 0.5) * 6, y + (Math.random() - 0.5) * 4, 8 + Math.random() * 36, -18 - Math.random() * 30, 0.5 + Math.random() * 0.45, R_DUST);
       shake(0.28, 2); flash(0.05);
@@ -290,7 +291,7 @@ PCD.define('cremator', (E) => {
     if (s === DEATH && t === INCOMING + D_ASH1) {             // 塌成一堆灰：骨灰扬起 + 余烬 + 震屏 1 格
       for (let i = 0; i < 22; i++) spawn(K_DUST, scrX(-10 + Math.random() * 18 + P.bx), HY - 1 - Math.random() * 4, (Math.random() - 0.5) * 34, -8 - Math.random() * 20, 0.5 + Math.random() * 0.4, R_DUST);
       for (let i = 0; i < 8; i++) spawn(K_EMBER, scrX(-7 + Math.random() * 12 + P.bx), HY - 2 - Math.random() * 3, Math.random() * 8 - 4, -12 - Math.random() * 12, 0.5 + Math.random() * 0.5, R_EL);
-      shake(0.1, 1);
+      shake(0.1, 1); sfx('fall', { w: 0.5 });
     }
     if (s === DEATH && t === INCOMING + D_MASK) { const x = scrX(-1 + P.bx), y = HY - 5; burst(x, y, 5, 25, 55, 0.15, 0.3, R_IMPACT, 12); for (let i = 0; i < 4; i++) spawn(K_DUST, x + (Math.random() - 0.5) * 8, y + 1, (Math.random() - 0.5) * 20, -6 - Math.random() * 8, 0.3 + Math.random() * 0.3, R_DUST); }   // 面罩落在灰堆上
   }
@@ -314,7 +315,7 @@ PCD.define('cremator', (E) => {
       if (P.step !== 0) {
         const fx = scrX(P.step > 0 ? 3 : -3), tip = scrX(Math.round(P.hx + Math.sin(P.a) * 14)), dir = P.flip ? -1 : 1;
         for (let i = 0; i < 2; i++) spawn(K_DUST, fx + (Math.random() - 0.5) * 3, HY, (Math.random() - 0.5) * 16, -4 - Math.random() * 6, 0.3 + Math.random() * 0.2, R_DUST);
-        spawn(K_TRAIL, fx, FLOOR, 0, 0, 0.3, R_EL);
+        spawn(K_TRAIL, fx, FLOOR, 0, 0, 0.3, R_EL); sfx('step', { w: 0.6 });
         for (let i = 0; i < 2; i++) spawn(K_BURST, tip, HY - 1, -dir * (12 + Math.random() * 22), -10 - Math.random() * 16, 0.2 + Math.random() * 0.15, R_EL);
       }
       lastStep = P.step;
@@ -386,6 +387,8 @@ PCD.define('cremator', (E) => {
 
   return {
     name: '焚尸人', HX, R_EL, DUR, hero, P, GLOW_MATS, HIT_POINT, EVENTS,
+    // 音效声明：厚罩袍下的肉身、化灰倒塌、炉火元素（fxRamp 自建色阶，必须写 pal）、铲炭蓄力、重铲扬炭（charge / release / hurt / death 由引擎自动发）
+    SFX: { body: 'flesh', how: 'dissolve', pal: 'fire', style: 'fire', w: 0.8 },
     poseAt, drawHero, bakeHero, onEnter, onTime, stepFX, fxReset, fxBack, fxMid, fxFront,
   };
 });

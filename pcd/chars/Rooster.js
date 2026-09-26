@@ -16,7 +16,7 @@ PCD.define('Rooster', (E) => {
     eye: [27, 30, 31, 21], glow: [31, 31, 21, 21] });                                        // eye 平涂：tone 1 熄 · 2 钢灰 · 3 钢白 · 4 白
   m.steelFar = E.defMat(E.RAMP.steel, 1, 0, 1); m.plate = E.defMat([27, 28, 29, 30], 1); m.lit = E.defMat([27, 29, 30, 31], 1);   // 远翼暗一级；甲片亮起时换亮一级的色阶
   const o = F.shape({ alt: 6, rx: 5.5, ry: 4.5, head: 'bird', hr: 3, tail: 'none', wing: { span: 12, chord: 5, type: 'feather', fingers: 4 }, legLen: 6, m });
-  const LIFT0 = 2, PITCH0 = -2, HOP = 10;                                                              // alt 6 + 2 = 离地 8；身体竖起（胸在前上）
+  const LIFT0 = 4, PITCH0 = -2, HOP = 10;                                                              // alt 6 + 4 = 身体离地 10、脚尖离地 3–4 格（悬停，读得出在飞）；身体竖起（胸在前上）
 
   const HX = 74, DUR = DEFAULT_DUR.slice(), hero = new Sprite(72, 52, 34, 46);
   const RIM = { rim: 0, rx: 0, ry: 0, rimR: [0, 5, 14, 18], rimRamp: EL, flash: 0, dq: 0, rimAll: 1, skip: new Uint8Array(256) };
@@ -37,12 +37,12 @@ PCD.define('Rooster', (E) => {
   const F_ALL = ['lift', 'pitch', 'head', 'hdx', 'jaw', 'bx', 'kick', 'comb', 'wat'];
   const REST = { lift: LIFT0, pitch: PITCH0, head: 0, hdx: 0, jaw: 0, bx: 0, kick: 0, comb: 0, wat: 0 };
   const pose = (p) => Object.assign({}, REST, p);
-  const A_WIND = pose({ lift: 4, pitch: -2, head: -1, hdx: -1, bx: -2, comb: 1, wat: 1 });                   // 振翅后仰蓄势
-  const A_KICK = pose({ lift: 3, pitch: -2, head: 0, hdx: 0, bx: 8, kick: 2, comb: -1, wat: -1 });            // 前冲、双腿前蹬
-  const A_HOLD = pose({ lift: 2, pitch: -1, bx: 7, kick: 1, comb: 1 });
+  const A_WIND = pose({ lift: LIFT0 + 2, pitch: -2, head: -1, hdx: -1, bx: -2, comb: 1, wat: 1 });                   // 振翅后仰蓄势
+  const A_KICK = pose({ lift: LIFT0 + 1, pitch: -2, head: 0, hdx: 0, bx: 8, kick: 2, comb: -1, wat: -1 });            // 前冲、双腿前蹬
+  const A_HOLD = pose({ lift: LIFT0, pitch: -1, bx: 7, kick: 1, comb: 1 });
   const ATK = [[0, REST], [0.12, A_WIND, 'out'], [2 / 12, A_KICK, 'snap'], [0.25, A_KICK, 'lin'], [0.45, A_HOLD, 'out'], [0.75, REST, 'inOut']];
   const C_GUARD = pose({ lift: 0, pitch: -1, head: 1, hdx: -1, comb: 2 });                                   // 落低、缩头在盾后、鸡冠竖起
-  const S_OPEN = pose({ lift: 3, pitch: -2, head: -1, hdx: 0, jaw: 1, comb: -1, wat: -1 });                  // 双翼猛张
+  const S_OPEN = pose({ lift: LIFT0 + 1, pitch: -2, head: -1, hdx: 0, jaw: 1, comb: -1, wat: -1 });                  // 双翼猛张
   const T_HIT = 2 / 12, T_A = [0, 0.08, 0.16], T_OPEN = 4 / 12, T_FALL = INCOMING + 0.66, T_ASH = INCOMING + 1.5;
   const ARROW_V = 360, T_ARRIVE = [0.125, 0.205, 0.285], LSTEP_I = [0, 1, 0, -1], LSTEP_M = [1, 0, -1, 0];
   const tmp = {};
@@ -60,14 +60,14 @@ PCD.define('Rooster', (E) => {
     reset();
     if (st === IDLE) idle(tq, f12);
     else if (st === MOVE) {                                                                 // 低空重扑翼：翼大开大合，起伏 2 格，下沉时爪距掠地
-      const f = gait(tq); P.gf = f; P.bob = B.FLAP_BOB[f]; P.pitch = -1; P.lstep = LSTEP_M[f]; P.comb = f === 0 ? 1 : f === 2 ? -1 : 0; P.wat = -P.comb;
+      const f = gait(tq); P.gf = f; P.bob = B.FLAP_BOB[f]; P.pitch = -1; P.lift = [LIFT0 - 2, LIFT0 - 1, LIFT0, LIFT0 - 1][f]; P.lstep = LSTEP_M[f]; P.comb = f === 0 ? 1 : f === 2 ? -1 : 0; P.wat = -P.comb;   // 下沉那一拍脚尖贴地
       const w = walkDemo(tq, 14, -1); P.mx = w.mx; P.flip = w.flip;
     } else if (st === ATTACK) {
       keys(tq, ATK, tmp, F_ALL); apply(tmp);
       if (tq < 0.12) { P.gf = -1; P.wing = 1; } else if (tq < 0.25) { P.gf = -1; P.wing = 3; P.rim = 1; } else flap(f12);
     } else if (st === CHARGE) {                                                             // 两翼向前合拢成盾，钢羽从翼根到翼尖逐片亮银
       const q = ease.inOut(clamp01(tq / 0.7)); mix(tmp, REST, C_GUARD, q, F_ALL); apply(tmp);
-      P.lift = q > 0.25 ? (q > 0.6 ? 0 : 1) : 2; P.comb = q > 0.5 ? 2 : 0;
+      P.lift = q > 0.6 ? 0 : q > 0.4 ? 1 : q > 0.2 ? 2 : LIFT0 - 1; P.comb = q > 0.5 ? 2 : 0;
       P.gf = -1; P.wing = 4; P.shield = q < 0.3 ? 0 : q < 0.65 ? 1 : 2; P.legs = 0;
       P.lit = tq < 0.6 ? 0 : Math.min(6, 1 + Math.floor((tq - 0.6) / 0.12)); P.eyeLv = tq < 0.45 ? 1 : ((f12 & 1) ? 3 : 2); P.rim = 2;
       if (tq > 1.1) P.bx = -(f12 & 1);                                                      // 顶住：微微发抖
@@ -243,10 +243,10 @@ PCD.define('Rooster', (E) => {
   }
   function onTime(s, t) {
     if (s === ATTACK && t === T_HIT) {                                                      // 双腿前蹬：两道向下的爪距弧
-      const x = scrX(8 + P.bx), y = HY - 7;
+      const x = scrX(8 + P.bx), y = HY - 9;                                                  // 前蹬时爪距的高度（悬停抬高 2 格后）
       fx.slash(x - 3, y - 6, 7, 0.9, 2.4, R_EL, 0.17, 2, 2); fx.slash(x + 1, y - 5, 6, 1.0, 2.5, R_EL, 0.17, 1, 2);
-      smT = 0; smX = DUMMY_X - 4; smY = HY - 9;
-      hitDummy(0, 1); burst(DUMMY_X - 4, HY - 9, 10, 40, 100, 0.15, 0.35, FXI.impact, 10); burst(DUMMY_X - 4, HY - 9, 6, 40, 90, 0.15, 0.3, R_EL, 8);
+      smT = 0; smX = DUMMY_X - 4; smY = HY - 11;
+      hitDummy(0, 1); burst(DUMMY_X - 4, HY - 11, 10, 40, 100, 0.15, 0.35, FXI.impact, 10); burst(DUMMY_X - 4, HY - 11, 6, 40, 90, 0.15, 0.3, R_EL, 8);
       sfx('swing', { kind: 'claw', w: 0.5 }); sfx('hit', { mat: 'metal', w: 0.5 });
     }
     if (s === CAST && (t === T_A[1] || t === T_A[2])) obj(K_IN, 134, ARROW_Y[t === T_A[1] ? 1 : 2], -ARROW_V, 0, 0, 1, t === T_A[1] ? 1 : 2);

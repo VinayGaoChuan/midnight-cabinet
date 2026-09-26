@@ -128,14 +128,19 @@ PCD.define('TimeMage', (E) => {
     if (o.cuff) { E.part(); for (let yy = RD(wy) - 1; yy <= Math.min(bot, RD(wy) + 3); yy++) parts.px(E, R, RD(wx) + (yy > RD(wy) + 1 ? RD(b * 0.5) : 0), yy, o.cuff, yy === RD(wy) - 1 ? 4 : 0); }
     if (o.hand) { E.part(); parts.rect(E, R, hx - 1, hy - 1, 2, 2, o.hand, 0); parts.px(E, R, hx - 1, hy - 1, o.hand, 4); }
   }
-  // 候选部件：orbitShard —— 绕身转的陨石碎片（3×2 石块 + 1 格紫色裂纹）：P.orb 8 个相位，下半圈在身前（后画）、上半圈在身后（先画）
-  const ORB_R = 10, ORB_Y = -12;
-  function shardPos(k) { const a = (P.orb + k * 4) * Math.PI / 4; return [RD(Math.cos(a) * ORB_R), RD(ORB_Y + Math.sin(a) * 2.5), Math.sin(a) > 0.01]; }
+  // 候选部件：orbitShard —— 绕身转的陨石碎片（4×4 切角石块 + 一道斜贯的紫色裂纹，裂纹是发光体）：P.orb 8 个相位，
+  // 下半圈在身前（后画）、上半圈在身后（先画）；半径 13，转到两侧时整块伸出斗篷轮廓；每换一个相位石块转 90°（翻滚）。
+  const ORB_R = 13, ORB_Y = -13;
+  const SHARD = [[0, -2, 4], [1, -2, 3], [-1, -1, 4], [0, -1, 0], [1, -1, 0], [2, -1, 2], [-2, 0, 3], [-1, 0, 0], [0, 0, 0], [1, 0, 0], [2, 0, 2], [-1, 1, 0], [0, 1, 0], [1, 1, 2], [0, 2, 2]];
+  const CRACK = [[-1, -1], [0, 0], [1, 1]];
+  function shardPos(k) { const a = (P.orb + k * 4) * Math.PI / 4; return [RD(Math.cos(a) * ORB_R), RD(ORB_Y + Math.sin(a) * 3), Math.sin(a) > 0.01]; }
   function orbitShards(R, front) {
     if (P.orb > 7) return;
     for (let k = 0; k < 2; k++) {
       const [x, y, f] = shardPos(k); if (f !== front) continue;
-      E.part(); parts.run(E, R, y - 1, x - 1, x, M.rock, 0); parts.run(E, R, y, x - 1, x + 1, M.rock, 0); parts.run(E, R, y + 1, x, x + 1, M.rock, 0); parts.px(E, R, x - 1, y - 1, M.rock, 4); parts.px(E, R, x, y, M.sand, P.gem >= 2 ? 4 : 2); parts.px(E, R, x + 1, y + 1, M.sand, P.gem >= 2 ? 3 : 1);
+      const r = (P.orb + k) & 3, rx = (u, v) => (r === 0 ? u : r === 1 ? -v : r === 2 ? -u : v), ry = (u, v) => (r === 0 ? v : r === 1 ? u : r === 2 ? -v : -u);
+      E.part(); for (const [u, v, t] of SHARD) parts.px(E, R, x + rx(u, v), y + ry(u, v), M.rock, t);
+      const lit = P.gem >= 2 ? 4 : 3; CRACK.forEach(([u, v], i) => parts.px(E, R, x + rx(u, v), y + ry(u, v), M.sand, i === 1 ? lit : lit - 1));
     }
   }
 
@@ -310,7 +315,7 @@ PCD.define('TimeMage', (E) => {
         else { const r = 12 + Math.random() * 8, a = Math.random() * 6.2832; spawn(K_SPIRAL, gx, gy, (r - 3.5) / (0.35 + Math.random() * 0.35), 0, 9, R_EL, a, r, 4 + Math.random() * 3); }
       }
     }
-    if (state === MOVE) { grainAcc += dt * 9; while (grainAcc >= 1) { grainAcc -= 1; spawnX(K_PHYS, wx(-4 + Math.random() * 8), HY - P.fly - 1, (P.flip ? 1 : -1) * (4 + Math.random() * 6), 4, 0.45 + Math.random() * 0.2, R_EL, { g: 40, age0: 0.3 }); } }   // 身下落几粒星砂（不扬尘）
+    if (state === MOVE) { grainAcc += dt * 16; while (grainAcc >= 1) { grainAcc -= 1; spawnX(K_PHYS, wx(-6 + Math.random() * 10), HY - P.fly - 1, (P.flip ? 1 : -1) * (4 + Math.random() * 8), 6 + Math.random() * 6, 0.55 + Math.random() * 0.3, R_EL, { g: 50, age0: 0.12 + Math.random() * 0.2, floor: HY }); } }   // 身下一路落星砂（落地后走完色阶，不扬尘）
     if (state === IDLE) {
       emberAcc += dt * 2; while (emberAcc >= 1) { emberAcc -= 1; spawnX(K_PHYS, gx + RD(Math.random() * 2 - 1), gy + 4, (Math.random() - 0.5) * 4, 6, 0.5 + Math.random() * 0.4, R_EL, { g: 30, age0: 0.25 }); }
       const lp = q12(stT) % DUR[IDLE], f = lp >= 1.6 && lp < 2.0 ? Math.floor((lp - 1.6) * 12 + 1e-6) : -1;
@@ -324,7 +329,7 @@ PCD.define('TimeMage', (E) => {
     }
     if (met.on) {                                                    // 陨石：星门 → 目标，斜 45° 落下，紫焰尾
       met.t += dt; const q = Math.min(1, met.t / met.T), x = GATE[0] + (MET_TO[0] - GATE[0]) * q, y = GATE[1] + (MET_TO[1] - GATE[1]) * q;
-      for (let i = 0; i < 2; i++) spawnX(K_BURST, x - 2 - Math.random() * 2, y - 2 - Math.random() * 2, -20 - Math.random() * 20, -20 - Math.random() * 20, 0.25 + Math.random() * 0.2, R_EL, {});
+      for (let i = 0; i < 3; i++) { const j = (Math.random() - 0.5) * 4; spawnX(K_BURST, x - 4 - Math.random() * 3 + j, y - 4 - Math.random() * 3 - j, -20 - Math.random() * 20, -20 - Math.random() * 20, 0.25 + Math.random() * 0.25, R_EL, {}); }
       if (met.t >= met.T) { met.on = 0; meteorHit(); }
     }
     if (sandT >= 0) {                                                // 化沙：像素消失的地方落下星砂，堆成小沙堆
@@ -339,8 +344,13 @@ PCD.define('TimeMage', (E) => {
     mzT += dt; gateT += dt;
   }
   function fxReset() { mzT = 9; chargeAcc = 0; emberAcc = 0; soulAcc = 0; grainAcc = 0; gateT = 9; sandT = -1; ringT = -1; lastTap = -1; shot.on = 0; met.on = 0; dqPrev = 0; }
+  // 候选部件：hoverShadow —— 悬浮影子（特效层，画在 fxBack）：比 groundShadow 宽一档、深一级（中段墨色 + 下一行暗石），离地越高越窄。(x 中心, alt 离地格数)
+  function hoverShadow(x, alt) {
+    const w = Math.max(6, 14 - alt);
+    for (let dx = -w; dx <= w; dx++) { const a = Math.abs(dx); put(x + dx, HY + 1, a <= w - 4 ? 0 : a <= w - 1 ? 8 : 9); if (a <= w - 2) put(x + dx, HY + 2, a <= w - 5 ? 8 : 9); }
+  }
   function fxBack(f12) {
-    if (P.dq < 1 && sandT < 0) groundShadow(wx(1), 8, P.fly);
+    if (P.dq < 1 && sandT < 0) hoverShadow(wx(-2), P.fly);
     if (sandT < 0) floorGlow(wx(P.gx), P.rim, EL, f12);
     shotFloorGlow(f12);
     if (gateT < DUR[CHARGE] + DUR[CAST] + 0.45) {                     // 星门：左上天空一个慢慢张开的紫色圆环（刻点旋转），施放时闪白，收招时合上
@@ -356,15 +366,24 @@ PCD.define('TimeMage', (E) => {
   function fxMid() {
     if (sandT >= 0 && ringT < 0) blitOut(ringSpr, HX + P.mx, HY, 0);
   }
-  const MET = [[0, 0, 0], [1, 0, 0], [-1, 0, 1], [0, -1, 1], [0, 1, 1], [1, 1, 1], [1, -1, 1], [-1, -1, 2], [2, 0, 1], [0, 2, 2], [-1, 1, 2], [2, 1, 2]];
+  // 陨石本体（半径 3.3 的圆盘，迎风面 = 右下）：[dx, dy, 色阶级]；尾巴（沿左上方向的实心锥）：[dx, dy, 离中心的距离, 横向偏移]
+  const MET = [], MET_TAIL = [];
+  for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
+    const d = Math.hypot(dx, dy), u = (dx + dy) / Math.SQRT2;
+    if (d <= 3.3) MET.push([dx, dy, d <= 1.3 ? 0 : d <= 2.4 ? (u > -0.2 ? 0 : 1) : u > 0.8 ? 1 : u > -1.2 ? 2 : u > -2.4 ? 3 : 4]);
+  }
+  for (let dy = -16; dy <= 2; dy++) for (let dx = -16; dx <= 2; dx++) {
+    const al = -(dx + dy) / Math.SQRT2, ac = (dx - dy) / Math.SQRT2, w = 3.2 * (1 - al / 15);
+    if (al > 2.2 && al < 14 && Math.abs(ac) < w && Math.hypot(dx, dy) > 3.3) MET_TAIL.push([dx, dy, al, ac]);
+  }
   function fxFront(f12) {
     const gx = wx(P.gx), gy = wy(P.gy);
     if (P.gem >= 2 && P.gem <= 3 && P.dq < 1) { const L = P.gem === 3 ? 6 : 3 + (f12 & 1); for (let r = 4; r <= L; r++) { const c = P.gem === 3 ? (r <= 4 ? EL[0] : r <= 5 ? EL[1] : EL[2]) : (r === 4 ? EL[1] : EL[2]); put(gx + r, gy, c); put(gx - r, gy, c); put(gx, gy + r, c); put(gx, gy - r, c); } }
     if (mzT < 2 / 12) { const c = mzT < 1 / 12 ? EL[0] : EL[1]; for (let r = 1; r <= 3; r++) { put(mzX + r, mzY, r < 3 ? c : EL[2]); put(mzX, mzY - r, r < 2 ? c : EL[2]); put(mzX, mzY + r, r < 2 ? c : EL[2]); } put(mzX, mzY, EL[0]); }
     if (shot.on) { const t = shot.t, x = RD(shot.x0 + (shot.x1 - shot.x0) * t / shot.T), y = RD(shot.y0 + shot.vy * t + 0.5 * shot.g * t * t); put(x, y, EL[0]); put(x + 1, y, EL[0]); put(x, y + 1, EL[1]); put(x + 1, y + 1, EL[1]); put(x - 1, y, EL[2]); put(x + 2, y, EL[2]); put(x, y - 1, EL[2]); put(x + 1, y + 2, EL[3]); put(x - 2, y + (f12 & 1), EL[3]); }
-    if (met.on) {                                                    // 6 格陨石：白芯 + 淡金 / 紫壳，身后斜向上一条紫焰尾
+    if (met.on) {                                                    // 6–7 格陨石：白芯 + 淡金迎风面、紫壳、背风面深紫；身后斜向上一条逐渐收窄的紫焰尾
       const q = Math.min(1, met.t / met.T), x = RD(GATE[0] + (MET_TO[0] - GATE[0]) * q), y = RD(GATE[1] + (MET_TO[1] - GATE[1]) * q);
-      for (let k = 1; k <= 9; k++) { const c = k < 3 ? EL[1] : k < 5 ? EL[2] : k < 7 ? EL[3] : EL[4]; if (k > 6 && ((k + f12) & 1)) continue; put(x - k, y - k, c); if (k < 7) { put(x - k + 1, y - k, c); put(x - k, y - k + 1, EL[Math.min(4, 2 + (k >> 2))]); } }
+      for (const [dx, dy, al, ac] of MET_TAIL) { if (al > 9 && ((dx * 3 + dy * 5 + f12) & 3) === 0) continue; put(x + dx, y + dy, al < 5 ? EL[al < 3.5 && Math.abs(ac) < 1 ? 1 : 2] : al < 9 ? EL[3] : EL[4]); }
       for (const [dx, dy, c] of MET) put(x + dx, y + dy, EL[c]);
     }
     if (ringT >= 0) {                                                // 4 片月相碎片：落地弹一下，躺着，然后抖动消散

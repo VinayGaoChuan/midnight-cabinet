@@ -16,7 +16,8 @@ PCD.define('Chick', (E) => {
   const R_FLUFF = fxRamp('chickFluff', [C3, C2, 7, C1, C0]);                                 // 飘落的绒毛
   const m = B.mats(E, { main: FUZZ, feather: FUZZ, bone: 'bone', leg: [20, 19, C_BEAK, 14], beak: [20, 19, C_BEAK, 14],
     string: 'crimson', coin: 'gold', twine: 'sand', eye: [20, 14, 51, 21], glow: [51, 51, 21, 21] });   // eye 平涂：tone 1 熄 · 2 金 · 3 淡金 · 4 白
-  const o = F.shape({ alt: 3, rx: 5, ry: 4, head: 'bird', hr: 4, beak: 2, beakH: 2, hook: 0, crest: null, tail: 'none',
+  m.body = E.defMat(FUZZ, 1); m.belly = E.defMat([C0, C2, C3, C3], 1);                      // 小身体用 band 1（band 2 会整块发暗）；胸腹一块浅色绒毛
+  const o = F.shape({ alt: 3, rx: 5, ry: 4.5, head: 'bird', hr: 4, beak: 2, beakH: 2, hook: 0, crest: null, tail: 'none',
     wing: { span: 5, chord: 2, type: 'feather', fingers: 3 }, legLen: 2, talon: 1, m });
   const BONE_W = { span: 6, fingers: 3 }, LIFT0 = 3;                                         // 秃骨翅比绒毛远翼长一点，扑起来像爪子；LIFT0 + alt 3 = 离地 6
 
@@ -142,14 +143,12 @@ PCD.define('Chick', (E) => {
     part(); const C = rig.C, y = R(C.y + rig.ry + 0.4);
     for (const dx of [-2, 1]) U.dot(E, C.x + dx, y, m.leg, dx > 0 ? 4 : 3);
   }
-  function coinCenter() { return [rig.C.x + 4 + P.coin * 0.6, rig.C.y + rig.ry - 1 - Math.abs(P.coin) * 0.3]; }   // 挂在胸前下方，伸出前沿 2–3 格
-  function string() {                                                                       // 红绳：下巴 → 铜钱（并进身体部件，不压分界线）
-    const c = coinCenter(); U.seg(E, hd.x + 1, hd.y + hd.r - 0.5, c[0], c[1] - 2.5, 1, m.string, 3);
-  }
-  function coin() {                                                                         // 方孔铜钱 5×5（切角），方孔是墨
+  function coinCenter() { return [rig.C.x + rig.rx - 0.5 + P.coin * 0.5, rig.C.y + 0.5 - Math.abs(P.coin) * 0.3]; }   // 挂在胸前（身体前沿中下），伸出前沿 2 格
+  function coin() {                                                                         // 红绳（下巴 → 铜钱）+ 方孔铜钱 5×5（切角）：金面、内圈暗一级、方孔是墨、左上 1 格亮
     part(); const c = coinCenter(), cx = R(c[0]), cy = R(c[1]);
-    for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) { if (Math.abs(i) === 2 && Math.abs(j) === 2) continue; U.dot(E, cx + i, cy + j, m.coin, 0); }
-    U.dot(E, cx, cy, m.ink, 0); U.dot(E, cx - 1, cy - 1, m.coin, 4);
+    U.seg(E, hd.x + 1.5, hd.y + hd.r - 0.5, cx - 0.5, cy - 2.5, 1, m.string, 3);
+    for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) { if (Math.abs(i) === 2 && Math.abs(j) === 2) continue; U.dot(E, cx + i, cy + j, m.coin, i === 2 || j === 2 || i + j >= 2 ? 2 : 3); }   // 手工色调：不让自动明暗把整条上沿刷成奶油色
+    U.dot(E, cx, cy, m.ink, 0); U.dot(E, cx - 1, cy - 2, m.coin, 4); U.dot(E, cx - 2, cy - 1, m.coin, 4);
   }
   function head() {
     part();
@@ -177,11 +176,12 @@ PCD.define('Chick', (E) => {
     const wp = P.gf >= 0 ? B.FLAP[P.gf] : P.wing;
     B.wing(E, rig.wing.x + 1.5, rig.wing.y - 0.5, wp, o.wing, o.m, 1);                       // 远翼：普通绒毛小翅
     if (P.legs) F.legs(E, rig, P, o);                                                         // 受击 / 死亡时伸出的细腿（在身体后）
-    F.body(E, rig, P, o); fuzz(); stitches(); string();
+    F.body(E, rig, P, o); fuzz(); stitches();
     if (!P.legs) feet();
-    coin();
-    boneWing(rig.wing.x - 1, rig.wing.y + 1.5, wp, BONE_W, m.bone, m.limb);                 // 近翼：秃骨翅
+    const wr = U.toW(rig.C.x, rig.C.y, rig.C.a, -rig.rx * 0.5, -rig.ry * 0.4);
+    boneWing(wr[0], wr[1], wp, BONE_W, m.bone, m.limb);                                      // 近翼：秃骨翅（翼根在背后沿，骨指伸出轮廓，少压身体）
     head();
+    coin();                                                                                  // 铜钱挂在胸前，压在下巴和胸口前面
   }
   function bakeHero() { RIM.rim = P.rim; RIM.rx = P.gx + hero.ox; RIM.ry = P.gy + hero.oy; RIM.flash = P.flash; RIM.dq = P.dq; bake(hero, RIM); }
 

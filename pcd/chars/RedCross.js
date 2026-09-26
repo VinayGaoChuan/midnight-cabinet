@@ -22,15 +22,15 @@ PCD.define('RedCross', (E) => {
   // ───── 材质 ─────
   const STRAW = ['#221a0c', '#4e3e1e', '#7e6a38', '#aa965a'], SHELL = ['#141a0c', '#2e3a1a', '#4e5a2a', '#7a8446'], ROBE = ['#2e0a08', '#6e1a12', '#b0301c', '#e0603a'];
   const M = parts.mats(E, {
-    robe: { r: ROBE, band: 2 }, sleeve: ROBE, straw: { r: STRAW, band: 1 }, strawM: STRAW, hat: 'sand', skin: 'pale', pants: 'stone', rope: 'wood', basket: 'wood',
-    shell: SHELL, blood: 'blood', band: 'blood', steel: 'steel', iron: 'iron', wood: 'wood', cloth: 'crimson', net: [8, 7, 6, 18], lead: 'white', whet: 'stone',
+    robe: { r: ROBE, band: 2 }, sleeve: ROBE, straw: { r: STRAW, band: 1 }, hat: 'sand', skin: 'pale', pants: 'stone', rope: 'wood', basket: 'wood',
+    shell: SHELL, blood: 'blood', band: 'blood', steel: 'steel', iron: 'iron', wood: 'wood', cloth: 'crimson', net: [0, 8, 10, 7], lead: 'white', whet: 'stone',
     eyeA: { r: [55, 56, 57, 57], flat: 1 }, eyeB: { r: [55, 57, 58, 21], flat: 1 },                  // 魂火眼：长成了赤色
-    crossA: { r: [55, 57, 58, 58], flat: 1 }, crossB: { r: [56, 58, 21, 21], flat: 1 }, crossC: { r: [58, 21, 21, 21], flat: 1 },   // 背壳血十字的三档亮
+    crossA: { r: [55, 57, 58, 58], flat: 1 }, crossB: { r: [56, 58, 21, 21], flat: 1 }, crossC: { r: [58, 21, 21, 21], flat: 1 }, crossX: { r: [0, 55, 55, 56], flat: 1 },   // 背壳血十字的三档亮 + 熄灭档（干涸的暗血）
     fish: { r: [55, 56, 57, 58], flat: 1 },                                                             // 篓口 / 鱼绳上的赤魂鱼（发光体）
   });
   const BODY = { body: 'heroic' };
   const R0 = parts.rig({}, BODY);
-  const GL = { len: 11, back: 12 };
+  const GL = { len: 13, back: 12 };
   const HX = 76, DUR = DEFAULT_DUR.slice();
   const hero = new Sprite(96, 66, 44, 58);
   const RIM = { rim: 0, rx: 0, ry: 0, rimR: [0, 6, 11, 16], rimRamp: EL, flash: 0, dq: 0, rimAll: 1, skip: new Uint8Array(256) };
@@ -65,7 +65,7 @@ PCD.define('RedCross', (E) => {
       if (e > 0.6) t = ((i * 2 + j + 40) % 3 === 0) ? 2 : 0;
       else if (Math.abs(i) <= 1 && (j === -sy || j === sy)) t = 2;
       else if (Math.abs(i) === 2 && Math.abs(j) <= sy + 1) t = 2;
-      if (o.cross && e <= 0.72 && ((i >= -1 && i <= 0) || (j >= -2 && j <= -1))) { mm = o.cross; t = o.crossT || 0; }
+      if (o.cross && e <= 0.78 && ((i >= -1 && i <= 0) || (j >= -1 && j <= 0))) { mm = o.cross; t = o.crossT || 0; }   // 十字：竖横两臂都过壳心
       px(E, R, cx + i, cy + j, mm, t);
     }
   }
@@ -113,7 +113,7 @@ PCD.define('RedCross', (E) => {
       const mm = ch === 'I' ? o.iron : o.metal, t = ch === 'E' || ch === 'H' ? 4 : ch === 'm' ? 2 : 0;
       px(E, T, G.ax + d[0], G.ay + d[1], mm, t);
     }
-    if (P.glint && !o.free && o.shine) { const d = rotUV(G.q, 7, -5); px(E, T, G.ax + d[0], G.ay + d[1], o.shine, 4); const e = rotUV(G.q, 6, -6); px(E, T, G.ax + e[0], G.ay + e[1], o.shine, 4); }   // 刃口闪一格白光
+    if (P.glint && !o.free && o.shine) { const d = rotUV(G.q, 3, -5); px(E, T, G.ax + d[0], G.ay + d[1], o.shine, 4); const e = rotUV(G.q, 3, -4); px(E, T, G.ax + e[0], G.ay + e[1], o.shine, 3); }   // 刃口上两格白光
     const c = rotUV(G.q, 5, -4); return { head: [G.ax + c[0], G.ay + c[1]], socket: [G.ax, G.ay], butt: [bx, by] };
   }
 
@@ -122,7 +122,7 @@ PCD.define('RedCross', (E) => {
     gem: 0, glint: 0, rim: 0, eyes: 0, flash: 0, hatF: 0, hatX: 0, hatY: 0, hatR: 0, hatO: 0, dq: 0, dqi: 0, st: 0,
     two: 0, whet: 0, net: 1, fish: 0, tf: 0, gx: 0, gy: 0, cx: 0, cy: 0, flip: 0, mx: 0, k1: 0, k2: 0 };
   const K = (hx, hy, a, bhx, bhy, lean, head, crouch) => ({ hx, hy, a, bhx, bhy, lean: lean || 0, head: head || 0, crouch: crouch || 0 });
-  const K_IDLE = K(7, -12, 0.05, -4, -11, 0, 0);          // 钩镰拄在身前（柄尾点地）
+  const K_IDLE = K(10, -12, 0.1, -4, -11, 0, 0);          // 钩镰拄在身前（柄尾点地），刀头高过斗笠、背钩不碰帽檐
   const K_WALK = K(5, -17, -1.0, -4, -11, 0, 0);          // 扛在肩上，刀头在背后上方
   const K_WIND = K(0, -14, -1.5, 0, 0, -1, -1, 1);        // 双手把刀拉到身后，拧腰
   const K_SWEEP = K(9, -13, 1.55, 0, 0, 1, 1);            // 横扫到身前
@@ -140,7 +140,7 @@ PCD.define('RedCross', (E) => {
     ['eyes', 0, 1], ['flash', 0, 1], ['hatF', 0, 1], ['hatX', -2, 16], ['hatY', -2, 30], ['hatR', 0, 3], ['hatO', -1, 1], ['dqi', 0, 48], ['st', 0, 8],
     ['two', 0, 1], ['whet', 0, 2], ['net', 0, 1], ['fish', 0, 2], ['tf', 0, 1]]);
   const BEARD_IDLE = [0, 1, 0, -1], SWAY_IDLE = [0, 1, 0, -1];
-  const WHET = [[2, -25, 0], [2, -27, 1], [2, -25, 0], [2, -27, 1], [1, -22, 0]];   // 待机个性：磨石在刃上来回蹭两下（dx、手高、刃口闪光）
+  const WHET = [[1, -27, 0], [1, -30, 1], [1, -27, 0], [1, -30, 1], [0, -24, 0]];   // 待机个性：磨石在刃上来回蹭两下（dx、手高、刃口闪光）
   const T_SWEEP = 2 / 12, T_HOOKB = 3 / 12, T_NET = 0.2, FISH_T = [0.25, 0.3, 0.35], FISH_FLY = 0.12, T_KNEE = INCOMING + 0.42, T_ASH = INCOMING + 1.1;
 
   function poseAt(st, t, T) {
@@ -200,7 +200,7 @@ PCD.define('RedCross', (E) => {
     if (P.two) { const b = parts.onShaft(P, {}, -5); P.bhx = b[0]; P.bhy = b[1]; } else { P.bhx = RD(P.bhx); P.bhy = RD(P.bhy) + (P.whet ? 0 : yo); }
     P.lean = RD(P.lean); P.head = RD(P.head); P.crouch = RD(P.crouch); P.dqi = RD(P.dq * 48);
     const R = parts.rig(P, BODY), e = parts.edges(R, R.yS + 5);
-    P.gx = e[0] + P.bx; P.gy = R.yS + 4;                           // 发光体 = 背壳上的血十字
+    P.gx = e[0] - 2 + P.bx; P.gy = R.yS + 6;                       // 发光体 = 背壳上的血十字（壳心）
     P.cx = R.hipFx + 2 + P.bx; P.cy = R.yWaist + 3;                    // 鱼篓中心
     KEY(P);
   }
@@ -208,18 +208,17 @@ PCD.define('RedCross', (E) => {
   // ───── 画（部件从后往前）─────
   function drawHero() {
     E.begin(hero, P.bx, 0); const R = parts.rig(P, BODY), sk = M.skin, skD = M.skinD;
-    const eye = P.gem >= 4 ? 0 : P.gem >= 2 || P.glint ? M.eyeB : M.eyeA, cross = P.gem >= 3 ? M.crossC : P.gem === 2 ? M.crossB : P.gem === 1 ? M.crossA : M.blood;
+    const eye = P.gem >= 4 ? 0 : P.gem >= 2 || P.glint ? M.eyeB : M.eyeA, cross = P.gem >= 4 ? M.crossX : P.gem === 3 ? M.crossC : P.gem === 2 ? M.crossB : P.gem === 1 ? M.crossA : M.blood;
     const hatOn = !P.hatF, hatO = { mat: M.hat, band: M.band, off: P.hatO };
     if (hatOn) hatTails(E, R, P, { mat: M.band, len: 5, off: P.hatO });
     const armB = { side: 'B', sleeve: 'loose', mat: M.sleeveD, cuff: M.rope, hand: skD, grip: P.two ? 'none' : 'fist' };
     if (!P.tf) parts.arm(E, R, P, armB);
     parts.legs(E, R, P, { style: 'sandal', mat: M.pants, matD: M.pantsD, boot: M.rope, bootD: M.ropeD });
-    strawCoat(E, R, P, { mat: M.straw, hem: -5, flare: 2 });                                          // 蓑衣内衬（只露在罩衣下面）
-    parts.torso(E, R, P, { style: 'coat', mat: M.robe, hem: -7, flare: 1.5, strap: M.band, strap2: M.band, belt: M.rope });   // 暗朱红罩衣 + 胸前交叉朱红带
+    strawCoat(E, R, P, { mat: M.straw, hem: -7, flare: 2 });                                          // 蓑衣内衬（罩衣下面露出一圈稻草裙 + 草穗）
+    parts.torso(E, R, P, { style: 'coat', mat: M.robe, hem: -9, flare: 1.5, strap: M.band, strap2: M.band, belt: M.rope });   // 暗朱红罩衣（短到胯下，露出长腿）+ 胸前交叉朱红带
     const e = parts.edges(R, R.yS + 5);
-    turtleShell(E, R, e[0], R.yS + 6, 4, 6, { mat: M.shell, cross });                           // 背甲：压在背上、往后隆起 3 格，壳面血十字
-    creel(E, R, P, R.hipFx - 1, R.yWaist + 1, 6, 6, { mat: M.basket, fish: M.fish, wag: P.fish === 1, string: M.rope });
-    parts.mantle(E, R, P, { style: 'fur', mat: M.strawM, len: 3 });
+    turtleShell(E, R, e[0] - 1, R.yS + 6, 3.5, 6, { mat: M.shell, cross });                     // 背甲：贴在背上、往后隆起 4 格，壳面血十字
+    creel(E, R, P, R.hipFx - 1, R.yWaist + 2, 5, 6, { mat: M.basket, fish: P.gem >= 4 ? M.crossX : M.fish, wag: P.fish === 1, string: M.rope });
     if (P.net) netRoll(E, R, P, { mat: M.net, lead: M.lead });
     if (P.tf) parts.arm(E, R, P, armB);                                                               // 撒网 / 拽网的那只手甩到身前
     parts.head(E, R, P, { mat: sk, face: 'gaunt', eye: eye || sk, eyeStyle: eye ? 'glow' : 'dot', nose: 'small', mouth: 'line', ear: 'none', shade: 3 });

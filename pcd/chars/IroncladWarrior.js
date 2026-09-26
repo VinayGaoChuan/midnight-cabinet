@@ -3,8 +3,8 @@
 // 攻击 = 勾砸：盾往前一顶，撬棍越过盾沿由上往下勾砸；技能 = 特性「硬化」：开战时把盾砸进地里，灰绿皮肉从脚往上一段段变成铁灰，收招关节喷蒸汽（之后虚弱一波的代价）。
 // 升级成「钢铁军阀」（SteelWarlord.js）：同一个僵尸——水桶的提梁环、酸绿眼、灰绿皮肉 + 铆钉还在，棺材盖长成了全身铁处女外壳，撬棍长成战镐。
 PCD.define('IroncladWarrior', (E) => {
-  const { parts, Sprite, bake, ease, clamp01, q12, f12of, walkDemo, FXI, FXR, HY, DUMMY_X, INCOMING, ASTEP, copySprite, blitShape,
-    IDLE, MOVE, ATTACK, CHARGE, CAST, RECOVER, HURT, DEATH, REVIVE, DEFAULT_DUR, K_RISE, K_DUST, K_BURST, K_SPIRAL_PT,
+  const { parts, Sprite, bake, ease, clamp01, q12, f12of, walkDemo, FXI, FXR, HY, FLOOR, DUMMY_X, INCOMING, ASTEP, copySprite, blitShape,
+    IDLE, MOVE, ATTACK, CHARGE, CAST, RECOVER, HURT, DEATH, REVIVE, DEFAULT_DUR, K_RISE, K_DUST, K_BURST,
     spawn, spawnX, burst, ring, shake, flash, fx, hitDummy, put, scrX, floorGlow, shotFloorGlow, sfx } = E;
   const RD = Math.round, FL = (v) => Math.floor(v + 1e-6), HALF = Math.PI / 2;
   const px = parts.px, run = parts.run;
@@ -23,15 +23,19 @@ PCD.define('IroncladWarrior', (E) => {
   });
   const BODY = { body: 'stocky', leg: 7, torso: 9, sw: 5, limb: 1.3, fall: 'back' };
   const R0 = parts.rig({}, BODY);
-  const BAR = { hand: 'B', head: 'crook', metal: M.bar, wood: M.bar, len: 9, back: 4 };   // 铁撬棍：直柄 + 一端弯钩（借 crook 头，全铁）
+  const BAR = { hand: 'B', mat: M.bar, len: 9, back: 4 };           // 铁撬棍：直柄 + 一端弯钩（弯钩附近加粗到 2 格，见 crowbar）
   const HX = 76, DUR = DEFAULT_DUR.slice();
   const hero = new Sprite(78, 52, 38, 46);
-  const RIM = { rim: 0, rx: 0, ry: 0, rimR: [0, 8, 13, 17], rimRamp: EL, flash: 0, dq: 0, rimAll: 1, skip: new Uint8Array(256) };
-  for (const k of ['iron', 'bar', 'bone', 'eye', 'cross', 'skin', 'rivet']) { RIM.skip[M[k]] = 1; RIM.skip[M[k + 'D']] = 1; }
+  // 轮廓光：平时用元素色阶（rim 1 = 亮钢 30，rim 2 = 冷白 31 / 亮钢 30），铁件、皮肉不吃光；
+  // 蓄力后半段换「亮档」：白 21 / 冷白 31 两级、半径放大，盾的铁包边、撬棍、手臂也吃光（和铁包边的 29 / 30 拉开，看得出变亮）
+  const SKIP = new Uint8Array(256), SKIP_HI = new Uint8Array(256), RIMR = [0, 8, 13, 17], RIMR_HI = [0, 10, 16, 20], RAMP_HI = [21, 21, 31, 30, 29];
+  for (const k of ['iron', 'bar', 'bone', 'eye', 'cross', 'skin', 'rivet']) { SKIP[M[k]] = 1; SKIP[M[k + 'D']] = 1; }
+  for (const k of ['bone', 'eye', 'cross', 'rivet']) { SKIP_HI[M[k]] = 1; SKIP_HI[M[k + 'D']] = 1; }
+  const RIM = { rim: 0, rx: 0, ry: 0, rimR: RIMR, rimRamp: EL, flash: 0, dq: 0, rimAll: 1, skip: SKIP };
 
   // ───── 姿势：前手 = 棺材盖盾（盾心 = 手 +(1, 1)），后手 = 撬棍 ─────
   const P = { hx: 0, hy: 0, a: 0, bhx: 0, bhy: 0, ba: 0, lean: 0, head: 0, crouch: 0, bob: 0, bx: 0, step: 0, wup: 0, walk: 0, beard: 0, sway: 0, bend: 0,
-    gem: 0, glint: 0, rim: 0, eyes: 0, flash: 0, lying: 0, lift: 0, hatX: 0, hatY: 0, dq: 0, st: 0, jaw: 0, hard: 0, lid: 0, gx: 0, gy: 0, flip: 0, mx: 0, k1: 0, k2: 0 };
+    gem: 0, glint: 0, rim: 0, rimHi: 0, eyes: 0, flash: 0, lying: 0, lift: 0, hatX: 0, hatY: 0, dq: 0, st: 0, jaw: 0, hard: 0, lid: 0, gx: 0, gy: 0, flip: 0, mx: 0, k1: 0, k2: 0 };
   const K = (hx, hy, bhx, bhy, ba, lean, head, crouch) => ({ hx, hy, bhx, bhy, ba, lean: lean || 0, head: head || 0, crouch: crouch || 0 });
   const K_IDLE = K(9, -12, 8, -14, 0.2);                       // 盾竖在身前，撬棍藏在盾后、弯钩从盾沿上面探出
   const K_WALK = K(9, -13, 8, -15, 0.25);
@@ -46,7 +50,7 @@ PCD.define('IroncladWarrior', (E) => {
   const setK = (A, B, q) => E.mix(P, A, B, q, FIELDS);
   const KEY1 = parts.keyer([['hx', -32, 31], ['hy', -64, 15], ['bhx', -32, 31], ['bhy', -64, 15], ['ba', -32, 32, 1 / ASTEP], ['lean', -1, 2], ['head', -1, 2], ['crouch', 0, 7], ['bob', 0, 1]]);
   const KEY2 = parts.keyer([['step', -1, 1], ['wup', 0, 2], ['walk', 0, 1], ['beard', -3, 3], ['sway', -2, 2], ['gem', 0, 4], ['glint', 0, 1], ['rim', 0, 3], ['eyes', 0, 1], ['flash', 0, 1],
-    ['lying', 0, 1], ['lift', 0, 3], ['hatX', -32, 31], ['hatY', -2, 15], ['dq', 0, 48, 48], ['bx', -16, 15], ['st', 0, 8], ['jaw', 0, 1], ['hard', 0, 3], ['lid', 0, 5]]);
+    ['lying', 0, 1], ['lift', 0, 3], ['hatX', -32, 31], ['hatY', -2, 15], ['dq', 0, 48, 48], ['bx', -16, 15], ['st', 0, 8], ['jaw', 0, 1], ['hard', 0, 3], ['lid', 0, 5], ['rimHi', 0, 1]]);
   const W4 = [0, 1, 0, -1], JAW = [0, 1, 1, 0], T_STRIKE = 2 / 12, T_LAND = INCOMING + 0.66, T_SLAMLID = INCOMING + 0.75;
   const TAP = [0.5, 0.75, 0.38, 0.75, 0.3];                   // 待机个性：撬棍往前一倒，杆身敲在盾沿上角，两下
   // 硬化高光带：施放第 1 帧起每帧上移 4 格（从脚到头），带经过的地方皮肉变铁灰
@@ -56,7 +60,7 @@ PCD.define('IroncladWarrior', (E) => {
   function poseAt(st, t, T) {
     const tq = q12(t), f12 = f12of(T), TT = f12 / 12;
     P.st = st;
-    P.bx = 0; P.step = 0; P.wup = 0; P.walk = 0; P.beard = 0; P.sway = 0; P.bend = 0; P.gem = 0; P.glint = 0; P.rim = 0; P.eyes = 0; P.flash = 0; P.lying = 0; P.lift = 0;
+    P.bx = 0; P.step = 0; P.wup = 0; P.walk = 0; P.beard = 0; P.sway = 0; P.bend = 0; P.gem = 0; P.glint = 0; P.rim = 0; P.rimHi = 0; P.eyes = 0; P.flash = 0; P.lying = 0; P.lift = 0;
     P.hatX = 0; P.hatY = 0; P.dq = 0; P.bob = 0; P.flip = 0; P.mx = 0; P.jaw = 0; P.hard = 0; P.lid = 0;
     const idle = () => {
       setK(K_IDLE, K_IDLE, 0); const b = FL(TT * 2.5); P.bob = b & 1; P.beard = W4[(b + 1) & 3]; P.jaw = JAW[b & 3]; P.sway = W4[FL(TT * 1.25) & 3];
@@ -73,7 +77,8 @@ PCD.define('IroncladWarrior', (E) => {
       else { const q = ease.inOut(clamp01((tq - 0.45) / 0.3)); setK(K_HOLD, K_IDLE, q); P.bx = RD(3 * (1 - q)); }
     } else if (st === CHARGE) {                                        // 缩到盾后，十字补丁逐档变亮，后半段咬紧牙发抖
       const q = ease.inOut(clamp01(tq / 0.7)); setK(K_IDLE, K_CROUCH, q);
-      P.gem = tq < 0.45 ? 1 : ((f12 & 1) ? 2 : 1); P.rim = 2; P.beard = -1;
+      P.gem = tq < 0.45 ? 1 : ((f12 & 1) ? 2 : 1); P.beard = -1;
+      P.rim = tq < 0.2 ? 0 : tq < 0.7 ? 1 : 2; P.rimHi = tq >= 0.7 ? 1 : 0;   // 轮廓光两档：前半段亮钢 30 → 后半段白 21 / 冷白 31
       if (tq >= 0.9) { P.bx = (f12 & 1) ? 1 : 0; P.beard = (f12 & 1) ? 1 : -1; }
     } else if (st === CAST) {                                          // 盾砸进地里（定格），高光带从脚往上扫
       setK(K_SLAM, K_SLAM, 0); P.gem = 3; P.rim = 3; P.flash = tq < 1 / 12 ? 1 : 0; P.beard = 2; P.jaw = 1; P.hard = hardOf(bandY(CAST, tq));
@@ -143,26 +148,27 @@ PCD.define('IroncladWarrior', (E) => {
     if (P.glint && lv === 0) px(E, T, -1, 3 - LID_C, o.rivet, 4);
     return { center: parts.toSprite(T, 0, 0), rivets: riv };
   }
-  // 候选部件：bucketHelm 倒扣的铁水桶盔——上窄下宽的梯形桶身盖到鼻梁（6 行），顶上一圈桶底棱、中间一道箍、下沿卷边（铁），
+  // 候选部件：bucketHelm 倒扣的铁水桶盔——平顶、两侧直斜边（每 2 行外扩 1 格）的梯形桶身盖到鼻梁（6 行），顶上一行平的桶底棱、中间一道箍、下沿外翻卷边（铁），
   //   前面凿一个眼洞（1 格发光眼）；侧面的耳座挂着提梁弯环（下一个部件，垂在脑后，随 P.beard 摆）。o = { mat 桶身, rim 卷边 / 提梁, eye 眼光材质, eyeLv 0 暗 · 1 常亮 · 2 亮 }
   function bucketHelm(E, R, P, o) {
     const T = R, x0 = R.hx0, x1 = R.hx1, y0 = R.htop - 2, ey = R.ey, m = o.mat;
     E.part();
     lowerFace(E, R, P, o.skin);                                        // 桶沿下露出的下半张脸和桶同一部件：不在桶沿下压一条分界线（否则上牙那一行全黑）
-    const rows = [[x0 + 1, x1 - 1], [x0, x1], [x0, x1], [x0 - 1, x1 + 1], [x0 - 1, x1 + 1], [x0 - 2, x1 + 2]];   // 桶底 → 桶口（外翻的卷边）
+    const rows = [[x0 + 1, x1 - 1], [x0 + 1, x1 - 1], [x0, x1], [x0, x1], [x0 - 1, x1 + 1], [x0 - 2, x1 + 2]];   // 桶底（平顶）→ 桶口（外翻的卷边）：两侧每 2 行外扩 1 格，是直斜边
     for (let k = 0; k < 6; k++) run(E, T, y0 + k, rows[k][0], rows[k][1], k === 5 ? o.rim : m, 0);
+    run(E, T, y0, x0 + 1, x1 - 1, m, 4);                                                       // 平的桶底棱（整行受光）
     run(E, T, y0 + 2, x0 + 1, x1 - 1, m, 2);                                                   // 箍
-    px(E, T, x0 + 1, y0, m, 4); px(E, T, x0 + 2, y0, m, 4); px(E, T, x0, y0 + 1, m, 4); px(E, T, x0 - 1, y0 + 3, m, 4);   // 左上受光的棱
-    px(E, T, x0 + 1, y0 + 4, m, 2);                                                            // 锈斑凹坑
+    px(E, T, x0 + 1, y0 + 1, m, 4); px(E, T, x0, y0 + 2, m, 4); px(E, T, x0, y0 + 3, m, 4); px(E, T, x0 - 1, y0 + 4, m, 4);   // 左侧受光的斜棱
+    px(E, T, x1 - 1, y0 + 1, m, 2);                                                            // 锈斑凹坑
     px(E, T, x1, ey, o.eye, o.eyeLv === 0 ? 1 : o.eyeLv === 2 ? 4 : 3);                       // 眼洞里的酸绿眼
     px(E, T, x1 - 1, ey, m, 1);                                                                // 洞沿
     px(E, T, x0 - 1, y0 + 5, o.rim, 4); px(E, T, x0, y0 + 5, o.rim, 4);
-    // 提梁弯环：从桶身后上角绕到脑后、垂到桶口下面（下半段随 P.beard 摆）；耳座是桶身侧面一颗亮铆钉
+    // 提梁弯环：从平顶的后角绕到脑后、垂到桶口下面（下半段随 P.beard 摆）；耳座是桶身侧面一颗亮铆钉
     px(E, T, x0 + 1, y0 + 3, o.rim, 4);
     E.part();
     const sw = RD((P.beard || 0) * 0.5);
-    const loop = [[x0 - 1, y0 + 1], [x0 - 2, y0 + 2], [x0 - 3, y0 + 3], [x0 - 4, y0 + 4], [x0 - 4, y0 + 6], [x0 - 3, y0 + 7]];
-    for (let i = 0; i < loop.length; i++) px(E, T, loop[i][0] + (i >= 4 ? sw : 0), loop[i][1], o.rim, i < 2 ? 4 : 3);
+    const loop = [[x0, y0], [x0 - 1, y0 + 1], [x0 - 2, y0 + 2], [x0 - 3, y0 + 3], [x0 - 3, y0 + 4], [x0 - 4, y0 + 6], [x0 - 3, y0 + 7]];
+    for (let i = 0; i < loop.length; i++) px(E, T, loop[i][0] + (i >= 5 ? sw : 0), loop[i][1], o.rim, i < 2 ? 4 : 3);
   }
   // 腐烂的下半张脸（画在桶盔的部件里）：桶沿下面露出两行——上牙行、下颌骨行；下颌一张一合（P.jaw 1 = 张开：上牙行变成黑洞，只剩一颗獠牙）
   function lowerFace(E, R, P, sk) {
@@ -189,17 +195,38 @@ PCD.define('IroncladWarrior', (E) => {
     run(E, T, y - 1, x - 1, x + 1, m, 0); run(E, T, y, x - 2, x + 2, m, 0); run(E, T, y + 1, x - 2, x + 3, m, 0); run(E, T, y + 2, x - 2, x + 3, m, 2);
     px(E, T, x - 1, y, m, 4); px(E, T, x + 2, y + 1, M.rivet, 4);
   }
+  // 候选部件：crowbar 铁撬棍——1 格直柄 + 弯钩端：弯钩附近 3 格加粗成 2 格（剪影里读得出是一根铁器，不再是一条细线），钩顶 2 格、钩尖回勾 2 格。
+  //   朝上时钩尖朝前（+x）；朝前平伸（勾砸出手）时钩尖朝下。o = { mat, len 握点到钩根（默认 9）, back 握点后柄长（默认 4）, hand 'B' | 'F', at / a / free }。
+  //   两个部件（柄 → 钩头，钩头压在柄上出分界线）。
+  const CROW = ['.MM.', 'MM.M', 'MM.M', 'MM..'], CROW_AN = [0, 3];      // 从远端到钩根；CROW_AN = 柄插进去的格
+  function crowbar(E, R, P, o) {
+    const B = o.hand === 'B', gx = RD(o.at ? o.at[0] : B ? P.bhx : P.hx), gy = RD(o.at ? o.at[1] : B ? P.bhy : P.hy), a = o.a != null ? o.a : (B ? P.ba : P.a) || 0;
+    const T = o.free ? parts.FREE : R, dx = Math.sin(a), dy = -Math.cos(a), len = o.len || 9, back = o.back || 4;
+    const ax = RD(gx + dx * len), ay = RD(gy + dy * len), q = ((RD(a / HALF) % 4) + 4) % 4;
+    E.part(); parts.line(E, T, gx - dx * back, gy - dy * back, ax, ay, o.mat, 3);
+    E.part();
+    for (let r = 0; r < CROW.length; r++) for (let c = 0; c < CROW[r].length; c++) {
+      if (CROW[r][c] !== 'M') continue; const u = c - CROW_AN[0], v = r - CROW_AN[1];
+      px(E, T, ax + (q === 0 ? u : q === 1 ? -v : q === 2 ? -u : v), ay + (q === 0 ? v : q === 1 ? u : q === 2 ? -v : -u), o.mat, 0);
+    }
+  }
+  // 前手的拳头：2×2，压在棺材盖背沿中部（盖住包边一格 + 包边外一格），画在盾之后——盾是被手握着的，不是自己立在地上
+  function lidFist(E, R, c, m) {
+    const x = RD(c[0]) - LID_HW[LID_C] - 1, y = RD(c[1]) - 1;
+    E.part(); px(E, R, x, y, m, 4); px(E, R, x + 1, y, m, 3); px(E, R, x, y + 1, m, 3); px(E, R, x + 1, y + 1, m, 2);
+  }
 
   // ───── 画（部件从后往前）─────
   function lidAt() { return [P.hx + 1, P.hy + 1]; }
   function drawHero() {
     E.begin(hero, P.bx, 0); const R = parts.rig(P, BODY), H = P.hard, dead = P.st === DEATH;
+    if (P.step > 0 && !R.lie && !R.kneel) R.footFx += 1;             // 行军接触 A：盾侧的前脚多跨 1 格——两个接触帧的剪影不一样（接触 B 是远侧脚在前）
     const legSk = H >= 1 ? M.hard : M.skin, legSkD = H >= 1 ? M.hardD : M.skinD, armSk = H >= 2 ? M.hard : M.skin, armSkD = H >= 2 ? M.hardD : M.skinD, jawSk = H >= 3 ? M.hard : M.skin;
     const LID = { face: M.wood, rim: M.bar, rivet: M.rivet, cross: M.bar, lit: M.cross };
     // 后手武器：撬棍（死亡时脱手：P.hatX 1 下落中 · 2 落在身前地上）
-    if (dead && P.hatX === 1) parts.axe(E, R, P, Object.assign({}, BAR, { free: 1, at: [14, -6], a: -2.4 }));
-    else if (dead && P.hatX === 2) parts.axe(E, R, P, Object.assign({}, BAR, { free: 1, at: [24, -1], a: -HALF }));
-    else parts.axe(E, R, P, BAR);
+    if (dead && P.hatX === 1) crowbar(E, R, P, Object.assign({}, BAR, { free: 1, at: [14, -6], a: -2.4 }));
+    else if (dead && P.hatX === 2) crowbar(E, R, P, Object.assign({}, BAR, { free: 1, at: [24, -1], a: -HALF }));
+    else crowbar(E, R, P, BAR);
     const sealed = dead && P.lid >= 4;                                 // 棺材盖扣下以后：躯干、手臂都在盖子下面，只露出头端的桶盔和脚端的靴子
     if (!sealed) parts.arm(E, R, P, { side: 'B', sleeve: 'bare', mat: armSkD, cuff: M.barD, cuffStyle: 'bracer', hand: armSkD, grip: 'fist' });
     parts.legs(E, R, P, { style: 'boot', mat: legSk, matD: legSkD, boot: M.rust, bootD: M.rustD, bootH: 3 });
@@ -219,18 +246,60 @@ PCD.define('IroncladWarrior', (E) => {
     bucketHelm(E, R, P, { mat: M.rust, rim: M.bar, skin: jawSk, eye: M.eye, eyeLv: P.eyes || P.gem === 4 ? 0 : P.gem >= 2 ? 2 : 1 });
     const hideArm = dead && P.lid >= 3;                                // 棺材盖扣下后，前臂在盖子下面
     if (!hideArm) { parts.arm(E, R, P, { sleeve: 'bare', mat: armSk, cuff: M.bar, cuffStyle: 'bracer', hand: armSk, grip: 'fist' }); pauldron(E, R, M.bar); }
-    if (!dead || P.lid === 0) coffinLid(E, R, P, Object.assign({ at: lidAt() }, LID));
+    if (!dead || P.lid === 0) { coffinLid(E, R, P, Object.assign({ at: lidAt() }, LID)); lidFist(E, R, lidAt(), armSk); }
     else if (P.lid === 1) coffinLid(E, R, P, Object.assign({ at: [11, -10], free: 1 }, LID));
     else if (P.lid === 2) coffinLid(E, R, P, Object.assign({ at: [4, -14], free: 1, rot: 3 }, LID));
     else if (P.lid === 3) coffinLid(E, R, P, Object.assign({ at: [-2, -9], free: 1, rot: 3 }, LID));
     else coffinLid(E, R, P, Object.assign({ at: [-4, -4], free: 1, rot: 3 }, LID));
   }
-  function bakeHero() { RIM.rim = P.rim; RIM.rx = P.gx + hero.ox; RIM.ry = P.gy + hero.oy; RIM.flash = P.flash; RIM.dq = P.dq; bake(hero, RIM); }
+  function bakeHero() {
+    RIM.rim = P.rim; RIM.rx = P.gx + hero.ox; RIM.ry = P.gy + hero.oy; RIM.flash = P.flash; RIM.dq = P.dq;
+    RIM.rimRamp = P.rimHi ? RAMP_HI : EL; RIM.skip = P.rimHi ? SKIP_HI : SKIP; RIM.rimR = P.rimHi ? RIMR_HI : RIMR; bake(hero, RIM);
+  }
+  function ensureHero() { if (P.k1 !== hero.k1 || P.k2 !== hero.k2) { drawHero(); bakeHero(); hero.k1 = P.k1; hero.k2 = P.k2; } }   // 同 render 的缓存规则：保证剪影是当前姿势
 
   // ───── 特效 ─────
   const ghost = new Sprite(hero.w, hero.h, hero.ox, hero.oy);
   let ghostT = 9, chargeAcc = 0, steamAcc = 0, gasAcc = 0, soulAcc = 0, lastStep = 0, lastTap = -1;
   const wx = (x) => scrX(x), wy = (y) => HY + y;
+  // 蓄力汇聚的铁屑 / 锈渣：本模块预分配的小粒子池（引擎的汇聚粒子只画 1 格，铁屑要画成 2 格短条：亮头 21 / 31 朝前、尾巴 30 / 29 拖在后面）。
+  // 起点在上半圈和两侧（a ∈ (-π + 0.3, -0.3)，r 14–22，落进身体 / 盾的剪影就往外推），全部顺时针螺旋收拢到盾面十字（跟着十字走）；施放那一帧剩下的全部外爆
+  const FN = 72, FSQ = 0.8, fOn = new Uint8Array(FN), fRust = new Uint8Array(FN), fA = new Float32Array(FN), fR = new Float32Array(FN), fR0 = new Float32Array(FN), fV = new Float32Array(FN), fW = new Float32Array(FN);
+  function inHero(x, y) {                                               // 屏幕坐标 (x, y) 周围 1 格内有没有角色像素（含勾线）
+    const s = hero, lx = x - (HX + P.mx) + s.ox, ly = y - HY + s.oy;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const X = lx + dx, Y = ly + dy; if (X >= 0 && Y >= 0 && X < s.w && Y < s.h && s.out[Y * s.w + X] !== 255) return true; }
+    return false;
+  }
+  function spawnFiling() {
+    let i = 0; for (; i < FN && fOn[i]; i++); if (i === FN) return;
+    const tx = wx(P.gx), ty = wy(P.gy); let a = 0, r = 0;
+    for (let tries = 0; tries < 4; tries++) {
+      a = -Math.PI + 0.3 + Math.random() * (Math.PI - 0.6); r = 14 + Math.random() * 8;
+      while (r < 30 && (inHero(RD(tx + Math.cos(a) * r), RD(ty + Math.sin(a) * r * FSQ)) || ty + Math.sin(a) * r * FSQ > HY - 2)) r += 2;
+      if (r < 30) break;
+    }
+    fOn[i] = 1; fRust[i] = Math.random() < 0.3 ? 1 : 0; fA[i] = a; fR[i] = r; fR0[i] = r; fV[i] = r / (0.5 + Math.random() * 0.35); fW[i] = 1.6 + Math.random() * 1.0;
+  }
+  function stepFilings(dt) { for (let i = 0; i < FN; i++) if (fOn[i]) { fA[i] += fW[i] * dt; fR[i] -= fV[i] * dt; if (fR[i] <= 2) fOn[i] = 0; } }
+  function drawFilings() {
+    const tx = wx(P.gx), ty = wy(P.gy);
+    for (let i = 0; i < FN; i++) {
+      if (!fOn[i]) continue;
+      const a = fA[i], r = fR[i], c = Math.cos(a), s = Math.sin(a), x = RD(tx + c * r), y = RD(ty + s * r * FSQ), near = r < fR0[i] * 0.45;
+      const vx = -fV[i] * c - r * fW[i] * s, vy = (-fV[i] * s + r * fW[i] * c) * FSQ;   // 运动方向：尾巴拖在反方向
+      const ex = Math.abs(vx) >= Math.abs(vy) ? -Math.sign(vx) : 0, ey = ex ? 0 : -Math.sign(vy);
+      if (fRust[i]) { put(x + ex, y + ey, near ? 7 : 10); put(x, y, near ? 6 : 7); }          // 锈渣（dust 色阶）
+      else { put(x + ex, y + ey, near ? 30 : 29); put(x, y, near ? 21 : 31); }                  // 铁屑（steel：亮头 21 / 31）
+    }
+  }
+  function releaseFilings() {                                          // 施放：还在路上的铁屑全部往外崩
+    const tx = wx(P.gx), ty = wy(P.gy);
+    for (let i = 0; i < FN; i++) {
+      if (!fOn[i]) continue; fOn[i] = 0;
+      const c = Math.cos(fA[i]), s = Math.sin(fA[i]), v = 50 + Math.random() * 60;
+      spawn(K_BURST, tx + c * fR[i], ty + s * fR[i] * FSQ, c * v, s * v * 0.8 - 12, 0.3 + Math.random() * 0.3, fRust[i] ? R_DUST : R_EL);
+    }
+  }
   function lidRivets() {                                              // 盾上铆钉的屏幕坐标（施放时逐颗白闪）：和 coffinLid 同一套几何
     const c = lidAt(), out = [];
     for (let r = 0; r < LID_HW.length; r++) if ((r % 3) === 1) for (const s of [-1, 1]) out.push([c[0] + s * LID_HW[r] + P.bx, c[1] + r - LID_C]);
@@ -242,6 +311,7 @@ PCD.define('IroncladWarrior', (E) => {
       for (let k = 0; k <= 30; k++) { const a = Math.PI + k / 30 * Math.PI, x = wx(4) + Math.cos(a) * 17, y = HY + Math.sin(a) * 30; spawn(K_DUST, x, y, Math.cos(a) * 14, 6 + Math.random() * 14, 0.45 + Math.random() * 0.35, R_EL); }
     }
     if (s !== CAST) return;                                            // 盾砸地：两道地裂 + 冲击环 + 地面碎屑，震屏、天空闪白
+    releaseFilings();
     const c = lidAt(), x = wx(c[0] + P.bx), y = HY;
     fx.crack(x + 5, y + 1, 18, 1, R_EL, 1.0); fx.crack(x - 5, y + 1, 18, -1, R_EL, 1.0);
     ring(x, y - 3, 1, R_EL); burst(x, y - 2, 24, 40, 110, 0.3, 0.7, R_EL, 30); burst(x, y - 1, 12, 20, 60, 0.3, 0.6, R_DUST, 14);
@@ -274,9 +344,11 @@ PCD.define('IroncladWarrior', (E) => {
     burst(hx - 2, hy, 5, 20, 50, 0.3, 0.6, R_DUST, 5); shake(0.16, s === DEATH ? 2 : 1); if (s === DEATH) flash(0.04); return true;
   }
   function stepFX(dt, state, stT) {
-    if (state === CHARGE) {                                            // 地上的铁屑和锈渣螺旋收拢到盾面的十字上
-      chargeAcc += dt * (22 + 34 * clamp01(stT / DUR[CHARGE]));
-      while (chargeAcc >= 1) { chargeAcc -= 1; const a = 0.25 + Math.random() * (Math.PI - 0.5), r = 15 + Math.random() * 10; spawn(K_SPIRAL_PT, wx(P.gx), wy(P.gy), r / (0.35 + Math.random() * 0.35), 0, 9, Math.random() < 0.6 ? R_EL : R_DUST, a, r, (Math.random() - 0.5) * 4); }
+    stepFilings(dt);
+    if (state === CHARGE) {                                            // 四周的铁屑和锈渣从上半圈和两侧螺旋收拢到盾面的十字上（越来越密）
+      chargeAcc += dt * (30 + 44 * clamp01(stT / DUR[CHARGE]));
+      if (chargeAcc >= 1) ensureHero();
+      while (chargeAcc >= 1) { chargeAcc -= 1; spawnFiling(); }
     }
     if (state === MOVE && P.step !== lastStep) {
       if (P.step !== 0) { sfx('step', { w: 0.75 }); for (let i = 0; i < 3; i++) spawn(K_DUST, wx(P.step > 0 ? 4 : -3) + (Math.random() - 0.5) * 4, HY, (Math.random() - 0.5) * 20, -4 - Math.random() * 7, 0.3 + Math.random() * 0.25, R_DUST); }
@@ -297,11 +369,17 @@ PCD.define('IroncladWarrior', (E) => {
     if (state === DEATH && stT > INCOMING + 1.6 && stT < INCOMING + 2.4) { soulAcc += dt * 28; while (soulAcc >= 1) { soulAcc -= 1; spawn(K_RISE, HX - 18 + Math.random() * 26, HY - 1 - Math.random() * 8, (Math.random() - 0.5) * 6, -14 - Math.random() * 16, 0.8 + Math.random() * 0.8, R_SOUL); } }
     ghostT += dt;
   }
-  function fxReset() { ghostT = 9; chargeAcc = 0; steamAcc = 0; gasAcc = 0; soulAcc = 0; lastStep = 0; lastTap = -1; }
-  function fxBack(f12) { if (!P.lying && P.dq < 1) floorGlow(wx(P.gx), P.rim, EL, f12); shotFloorGlow(f12); }
+  function fxReset() { ghostT = 9; chargeAcc = 0; steamAcc = 0; gasAcc = 0; soulAcc = 0; lastStep = 0; lastTap = -1; fOn.fill(0); }
+  function fxBack(f12) {
+    if (P.rimHi) {                                                     // 蓄力后半段：盾脚下地面隔点映光（白 21 → 冷白 31 → 亮钢 30，每帧错一格）
+      const gx = wx(P.gx); for (let x = gx - 12; x <= gx + 12; x++) { const d = Math.abs(x - gx); if (((x + f12) & 1) === 0) put(x, FLOOR, d < 4 ? 21 : d < 8 ? 31 : 30); }
+    } else if (!P.lying && P.dq < 1) floorGlow(wx(P.gx), P.rim, EL, f12);
+    shotFloorGlow(f12);
+  }
   function fxMid() { if (ghostT < 0.25) blitShape(ghost, HX + P.mx, HY, P.flip, ghostT < 1 / 12 ? 29 : 28, clamp01(ghostT / 0.25)); }   // 勾砸残影（冷钢剪影）
   function fxFront(f12) {
     const st = E.state, tq = q12(E.stT), by = bandY(st, tq);
+    drawFilings();
     if (by < 50 && by > -34) {                                         // 硬化高光带：扫过角色自己的像素（白 → 冷白 → 亮钢三行）
       const s = hero, x0 = HX + P.mx - s.ox;
       for (let k = 0; k < 3; k++) { const y = by + k, row = y + s.oy; if (row < 0 || row >= s.h) continue; for (let x = 0; x < s.w; x++) if (s.out[row * s.w + x] !== 255) put(x0 + x, HY + y, EL[k]); }

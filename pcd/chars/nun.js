@@ -3,7 +3,7 @@
 PCD.define('nun', (E) => {
   const { defMat, Sprite, begin, part, sp, run, rect, line, brush, bake, ease, clamp01, mix, q12, f12of, gait, walkDemo, color, fxRamp, FXR, FXI, DT, HY, FLOOR, DUMMY_X, INCOMING, ASTEP,
     IDLE, MOVE, ATTACK, CHARGE, CAST, RECOVER, HURT, DEATH, REVIVE, DEFAULT_DUR, K_EMBER, K_RISE, K_DUST,
-    spawn, burst, shoot, shake, flash, hitDummy, put, scrX, shotFloorGlow } = E;
+    spawn, burst, shoot, shake, flash, hitDummy, put, scrX, shotFloorGlow, sfx } = E;
 
   // ───── 颜色：0–26 与共享色板相同；原版追加的 27–40 用 pc(原下标) 取本页下标 ─────
   const OWN = ['#12161f', '#2e3647', '#4f5b73', '#7c89a2',     // 27–30 鸽灰蓝修女袍（勾线 / 暗 / 基 / 亮）
@@ -290,11 +290,12 @@ PCD.define('nun', (E) => {
       const gx = scrX(P.gx), gy = HY + P.gy;
       mzT = 0; mzX = gx; mzY = gy; smT = 0; psX0 = HX + Math.round(K_WIND.hx + Math.sin(K_WIND.a) * 6); psX1 = gx - 3; psY = gy;
       shoot(1, gx + 3, gy, 160, DUMMY_X - 3); burst(gx, gy, 6, 30, 60, 0.15, 0.3, R_EL, 0);
+      sfx('swing', { kind: 'staff', w: 0.25 }); sfx('shoot', { proj: 'orb' });
     }
     if (s === DEATH && t === INCOMING + 0.66) {                   // 仰面落地：尘土 + 念珠断线，珠子四散弹跳
       for (let i = 0; i < 16; i++) { const x = HX - 20 + Math.random() * 24; spawn(K_DUST, x, HY - 1, (Math.random() - 0.5) * 30, -8 - Math.random() * 14, 0.4 + Math.random() * 0.4, R_DUST); }
       for (let i = 0; i < 16; i++) qSpawn(Q_BEAD, HX - 6 + Math.random() * 5, HY - 5 - Math.random() * 2, (Math.random() - 0.5) * 100, -35 - Math.random() * 45, 0.9 + Math.random() * 0.6);
-      shake(0.1, 1);
+      shake(0.1, 1); sfx('fall', { w: 0.3 });
     }
     if (s === DEATH && t === INCOMING + D_CROSS_LAND + 0.01) {    // 十字架落地：银色火星 + 少量尘
       const x = HX + 18; burst(x, HY - 2, 6, 20, 50, 0.2, 0.35, R_BEAD, 22);
@@ -303,7 +304,7 @@ PCD.define('nun', (E) => {
   }
   const EVENTS = [[], [], [T_FLICK], [], [], [], [], [INCOMING + 0.66, INCOMING + D_CROSS_LAND + 0.01], []];
   function impactOn(k, x, y) {
-    if (k === 1) { burst(x, y, 8, 40, 90, 0.15, 0.35, R_EL, 10); hitDummy(0); }
+    if (k === 1) { burst(x, y, 8, 40, 90, 0.15, 0.35, R_EL, 10); hitDummy(0); sfx('hit', { mat: 'magic', w: 0.25 }); }
   }
   function waveFront(dir) { const d = WV_SPD * Math.max(0, wvT); return dir > 0 ? Math.min(HX + 3 + d, DUMMY_X - 3) : Math.max(HX - 3 - d, HX - 30); }
   function stepFX(dt, state, stT) {
@@ -311,7 +312,7 @@ PCD.define('nun', (E) => {
     if (state === CHARGE) { chargeAcc += dt * (5 + 6 * clamp01(stT / DUR[CHARGE])); while (chargeAcc >= 1) { chargeAcc -= 1; plusMote(HX - 11 + Math.random() * 23, HY - Math.random() * 3, -15 - Math.random() * 14, 0.8 + Math.random() * 0.5); } }   // 脚下不断上升的十字光点
     if (state === CAST) { chargeAcc += dt * 14; while (chargeAcc >= 1) { chargeAcc -= 1; plusMote(PIL_X - 2 + Math.random() * 4, HY - Math.random() * 8, -45 - Math.random() * 25, 0.45 + Math.random() * 0.25); } }
     if (state === RECOVER) { chargeAcc += dt * 7; while (chargeAcc >= 1) { chargeAcc -= 1; plusMote(HX - 8 + Math.random() * 17, HY - 2 - Math.random() * 12, -14 - Math.random() * 10, 0.6 + Math.random() * 0.4); } }
-    if (state === MOVE && P.step !== lastStep) { if (P.step !== 0) { stepCnt++; if (!(stepCnt & 1)) spawn(K_DUST, scrX(P.step > 0 ? 2 : 1) + (Math.random() - 0.5) * 2, HY, (Math.random() - 0.5) * 14, -3 - Math.random() * 5, 0.3 + Math.random() * 0.2, R_DUST); } lastStep = P.step; }   // 每 2 步 1 颗尘
+    if (state === MOVE && P.step !== lastStep) { if (P.step !== 0) { sfx('step', { w: 0.2 }); stepCnt++; if (!(stepCnt & 1)) spawn(K_DUST, scrX(P.step > 0 ? 2 : 1) + (Math.random() - 0.5) * 2, HY, (Math.random() - 0.5) * 14, -3 - Math.random() * 5, 0.3 + Math.random() * 0.2, R_DUST); } lastStep = P.step; }   // 每 2 步 1 颗尘
     if (state === IDLE) { emberAcc += dt * 1.6; while (emberAcc >= 1) { emberAcc -= 1; spawn(K_EMBER, gx + Math.round(Math.random() * 2 - 1), gy - 2, Math.random() * 6 - 3, -6 - Math.random() * 6, 0.6 + Math.random() * 0.5, R_EL); } }
     if (state === DEATH && stT > INCOMING + 1.6 && stT < INCOMING + 2.4) { soulAcc += dt * 30; while (soulAcc >= 1) { soulAcc -= 1; spawn(K_RISE, HX - 20 + Math.random() * 24, HY - 1 - Math.random() * 6, (Math.random() - 0.5) * 6, -14 - Math.random() * 16, 0.8 + Math.random() * 0.8, FXI.soul); } }
     if (pilT < 9) { pilT += dt; if (pilT > 1.3) pilT = 9; }
@@ -323,7 +324,7 @@ PCD.define('nun', (E) => {
         if (wvT < 0.3 && Math.random() < dt * 40) spawn(K_EMBER, fl, HY - 2, -8 - Math.random() * 8, -10 - Math.random() * 10, 0.3 + Math.random() * 0.2, R_EL);
         if (!wvHit) {
           if (Math.random() < dt * 50) spawn(K_EMBER, fr, HY - 2, 8 + Math.random() * 8, -10 - Math.random() * 10, 0.3 + Math.random() * 0.2, R_EL);
-          if (fr >= DUMMY_X - 6) { wvHit = 1; wvHitT = wvT; burnT = 0; burst(DUMMY_X - 1, HY - 12, 24, 50, 130, 0.3, 0.7, R_EL, 16); hitDummy(1, 1); shake(0.12, 1); }   // 圣焰波推到假人脚下：灼烧
+          if (fr >= DUMMY_X - 6) { wvHit = 1; wvHitT = wvT; burnT = 0; burst(DUMMY_X - 1, HY - 12, 24, 50, 130, 0.3, 0.7, R_EL, 16); hitDummy(1, 1); shake(0.12, 1); sfx('impact', { pal: 'holy', w: 0.7 }); }   // 圣焰波推到假人脚下：灼烧
         }
       }
       if (wvT > 0.9) wvT = 9;
@@ -467,6 +468,8 @@ PCD.define('nun', (E) => {
 
   return {
     name: '驱魔修女', HX, R_EL, DUR, hero, P, GLOW_MATS: [M_STONE, M_SGLOW], HIT_POINT: [1, -10], EVENTS,
+    // 音效声明：布袍娇小的修女、仰面后倒；圣咏 = 圣光治疗（自建薄荷色阶，所以写 pal）
+    SFX: { body: 'flesh', how: 'topple', pal: 'holy', style: 'heal', w: 0.6 },
     poseAt, drawHero, bakeHero, onEnter, onTime, impactOn, stepFX, fxReset, fxBack, fxMid, fxFront, drawShot, offField,
   };
 });

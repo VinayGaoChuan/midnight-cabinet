@@ -57,3 +57,4 @@
 - `shoot.mjs` 退出码 0（audit 无问题：待机 8 / 移动 4 / 攻击 6 / 蓄力 10 / 施放 2 / 收招 7 / 受击 6 / 死亡 24 个不同帧；专属色 4 个；音效 move.step · attack.swing / shoot / hit · skill.charge / release / impact · hurt · death · death.fall 都有）。第一轮死亡帧里脱手的弓画到了缓冲右沿，缓冲加宽到 78 格后通过。
 - `compare.mjs` 对范式和 accepted 退出码 0；升级线三级两两也不撞（和鹰喙弓手待机 IoU 0.616，和天使弓手 0.519）。
 - `frames.mjs`：移动 gaitEvery2 前 4 个各不相同，屈膝碎步的两个接触帧换脚看得出。
+- 复核（重跑构建轮）：`shoot.mjs` 退出码 0（audit 无问题，待机 26×34）；`compare.mjs` 对范式 + accepted（去掉 accepted 里本角色上一轮的副本）退出码 0，最近 巨魔 待机 IoU 0.629、鹰喙弓手 0.616、守夜人 0.613；`frames.mjs` 移动 gaitEvery2 = 0,2,4,6…；`--prev` 对上一轮验收图无消失区域。

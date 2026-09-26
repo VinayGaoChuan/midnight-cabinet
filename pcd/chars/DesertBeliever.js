@@ -35,22 +35,30 @@ PCD.define('DesertBeliever', (E) => {
   // 一根上段微弯的木杖（1 格），杖身嵌 5 颗法力珠，杖首是一条张开兜帽的铜眼镜蛇（兜帽宽 5 格、头朝前、蛇眼是发光体），兜帽下挂两只铜铃。
   // o = { wood, metal 铜蛇, eye 蛇眼 / 法力珠（flat）, glow 点亮后的发光材质（flat）, bell, len 握点到杖顶, back 握点到杖尾, bow 上段弯度, at / a / free / rot（掉在地上时蛇头按 90° 转）}
   // 读 P：a（杖角，0 = 竖直）gem（蛇眼 0 待机 · 1 蓄力 · 2 蓄满 · 3 施放 · 4 熄灭）jaw（0 / 1 张嘴）mana（亮起的法力珠 0–5，从下往上）bell（铃摆 -1..1）glint
+  //      sb（握点沿杖身上移的格数：双手举高握杖时，杖首跟着降低、杖尾变长）。杖尾低于地面（y > 0）的部分插在沙里不画，插进去时杖脚堆起一小圈沙。
   // 两个部件：杖身（含法力珠）→ 蛇头（含蛇眼、铃）。坐标：u 朝前、v 向上为负，相对杖顶。
-  // 蛇头在上、朝前（u 0..4），兜帽在头后下方张开成铲形（宽 5 格：u -2..2），颈接杖顶
-  const COBRA = [[-11, 0, 2], [-10, -1, 3], [-9, -2, 4], [-8, -2, 2], [-7, -2, 2], [-6, -2, 2], [-5, -2, 2], [-4, -1, 1], [-3, -1, 1], [-2, 0, 0], [-1, 0, 0]];
-  const COBRA_OPEN = [[-11, 0, 2], [-10, -1, 4], [-9, -2, 0], [-8, -2, 3], [-7, -2, 2], [-6, -2, 2], [-5, -2, 2], [-4, -1, 1], [-3, -1, 1], [-2, 0, 0], [-1, 0, 0]];
+  // 蛇头在上、朝前：吻伸出兜帽前沿 3 格（u 3..5），下颌下面留出台阶，剪影里是一个往前勾的「？」；
+  // 兜帽在头后张开成倒水滴（宽 5 格：u -2..2），上沿升到头后，往下收成 1 格的颈接杖顶
+  const COBRA = [[-12, 0, 1], [-11, -1, 3], [-10, -2, 5], [-9, -2, 5], [-8, -2, 2], [-7, -2, 2], [-6, -2, 2], [-5, -2, 1], [-4, -1, 1], [-3, -1, 0], [-2, 0, 0], [-1, 0, 0]];
+  const COBRA_OPEN = [[-12, 0, 1], [-11, -1, 5], [-10, -2, 2], [-9, -2, 4], [-8, -2, 2], [-7, -2, 2], [-6, -2, 2], [-5, -2, 1], [-4, -1, 1], [-3, -1, 0], [-2, 0, 0], [-1, 0, 0]];
   const BEADS = [3, 6, 9, 14, 17];                                   // 法力珠离杖尾的格数（避开握点）
   const tfm = (R, r0, x, y) => ({ r0: r0 & 3, tx: R.tx + x, ty: R.ty + y, rot: R.rot, ox: R.ox, oy: R.oy });
   const tfree = (r0, x, y) => ({ r0: r0 & 3, tx: x, ty: y, rot: 0, ox: 0, oy: 0 });
   function cobraGeo(P, o) {
     const a = o.a != null ? o.a : P.a, gx = RD(o.at ? o.at[0] : P.hx), gy = RD(o.at ? o.at[1] : P.hy), dx = Math.sin(a), dy = -Math.cos(a);
-    const tip = [RD(gx + dx * o.len), RD(gy + dy * o.len)], r0 = o.rot || 0, j = P.jaw ? 1 : 0;
+    const sb = o.free ? 0 : (P.sb | 0), len = o.len - sb, back = o.back + sb;
+    const tip = [RD(gx + dx * len), RD(gy + dy * len)], r0 = o.rot || 0, j = P.jaw ? 1 : 0;
     const loc = (u, v) => (r0 === 3 ? [tip[0] + v, tip[1] - u] : r0 === 1 ? [tip[0] - v, tip[1] + u] : [tip[0] + u, tip[1] + v]);
-    return { gx, gy, dx, dy, tip, r0, eye: loc(1, -10), mouth: loc(5, -9) };
+    return { gx, gy, dx, dy, tip, r0, back, len, base: [RD(gx - dx * back), RD(gy - dy * back)], eye: loc(1, -11), mouth: loc(6, -10) };
   }
   function cobraStaff(E, R, P, o) {
-    const G = cobraGeo(P, o), T = o.free ? parts.FREE : R, back = o.back, len = o.len, total = back + len, bow = o.bow == null ? -1 : o.bow;
+    const G = cobraGeo(P, o), T = o.free ? parts.FREE : R, back = G.back, len = G.len, total = back + len, bow = o.bow == null ? -1 : o.bow;
     const bx = G.gx - G.dx * back, by = G.gy - G.dy * back, nx = -G.dy, ny = G.dx, s0 = back / total;
+    if (!o.free && G.base[1] >= 1) {                                 // 杖插进沙里：杖脚两边堆起一小圈沙
+      const b = G.base[0]; E.part();
+      for (const d of [-2, -1, 1, 2]) parts.px(E, T, b + d, 0, M.sand, Math.abs(d) === 1 ? 4 : 3);
+      parts.px(E, T, b - 1, -1, M.sand, 4); parts.px(E, T, b + 1, -1, M.sand, 3);
+    }
     E.part();
     let lx = null, ly = null;
     for (let k = 0; k <= total; k++) {
@@ -67,13 +75,13 @@ PCD.define('DesertBeliever', (E) => {
     for (const [v, u0, u1] of (j ? COBRA_OPEN : COBRA)) parts.run(E, H, v, u0, u1, m, 0);
     parts.px(E, H, -1, -7, m, 2); parts.px(E, H, 1, -7, m, 2); parts.px(E, H, 0, -6, m, 2); parts.px(E, H, 0, -5, m, 2);   // 兜帽上的眼镜纹
     parts.px(E, H, -2, -8, m, 4); parts.px(E, H, -2, -6, m, 4); parts.px(E, H, 1, -4, m, 2);
-    if (j) { parts.run(E, H, -9, 1, 3, m, 1); parts.px(E, H, 4, -10, m, 4); parts.px(E, H, 3, -8, m, 4); }   // 张嘴：口腔一行暗、上下各一颗牙
-    else { parts.run(E, H, -9, 1, 3, m, 2); parts.px(E, H, 3, -10, m, 4); }
+    if (j) { parts.px(E, H, 2, -10, m, 1); parts.px(E, H, 5, -11, m, 4); parts.px(E, H, 4, -9, m, 4); parts.run(E, H, -9, 1, 3, m, 2); }   // 张嘴：喉口一格暗、上下各一颗牙
+    else { parts.run(E, H, -9, 1, 4, m, 2); parts.px(E, H, 4, -10, m, 4); parts.px(E, H, 5, -10, m, 3); }   // 合嘴：下颌一行暗、吻尖高光
     const lv = CL(o.glowLv != null ? o.glowLv : P.gem | 0, 0, 4);
-    if (lv === 4) parts.px(E, H, 1, -10, o.eye, 1);
-    else if (lv >= 2) { parts.px(E, H, 1, -10, o.glow, lv === 3 ? 3 : 4); if (lv === 3) parts.px(E, H, 2, -10, o.glow, 4); }
-    else parts.px(E, H, 1, -10, o.eye, lv === 1 ? 4 : 3);
-    if (P.glint) parts.px(E, H, 1, -11, o.glow, 3);
+    if (lv === 4) parts.px(E, H, 1, -11, o.eye, 1);
+    else if (lv >= 2) { parts.px(E, H, 1, -11, o.glow, lv === 3 ? 3 : 4); if (lv === 3) parts.px(E, H, 2, -11, o.glow, 4); }
+    else parts.px(E, H, 1, -11, o.eye, lv === 1 ? 4 : 3);
+    if (P.glint) parts.px(E, H, 1, -12, o.glow, 3);
     if (!o.free) {                                                  // 铜铃：兜帽右下挂两只，随 P.bell 摆
       const b = P.bell | 0; parts.px(E, H, 3, -3, o.bell, 2); parts.px(E, H, 3 + (b > 0 ? 1 : 0), -2, o.bell, 2);
       parts.rect(E, H, 3 + b, -1, 2, 2, o.bell, 0); parts.px(E, H, 3 + b, -1, o.bell, 4); parts.px(E, H, 4 + b, 1, o.bell, 2);
@@ -83,30 +91,32 @@ PCD.define('DesertBeliever', (E) => {
   }
   // ───── 姿势 ─────
   const P = { hx: 0, hy: 0, a: 0, bhx: 0, bhy: 0, lean: 0, head: 0, crouch: 0, bob: 0, bx: 0, step: 0, wup: 0, walk: 0, beard: 0, sway: 0, bend: 0,
-    gem: 0, glint: 0, rim: 0, eyes: 0, flash: 0, lying: 0, lift: 0, dq: 0, st: 0, jaw: 0, mana: 0, bell: 0, sand: 0, pile: 0, sa: 0, slift: 0, gx: 0, gy: 0, flip: 0, mx: 0, k1: 0, k2: 0 };
+    gem: 0, glint: 0, rim: 0, eyes: 0, flash: 0, lying: 0, lift: 0, dq: 0, st: 0, jaw: 0, mana: 0, bell: 0, sb: 0, sand: 0, pile: 0, sa: 0, slift: 0, gx: 0, gy: 0, flip: 0, mx: 0, k1: 0, k2: 0 };
   const K = (hx, hy, a, bhx, bhy, lean, head, crouch) => ({ hx, hy, a, bhx, bhy, lean: lean || 0, head: head || 0, crouch: crouch || 0 });
   const K_IDLE = K(8, -12, 0, -3, -8);                               // 前手拄杖，后手垂在身侧
   const K_PRAY = K(7, -12, 0, 6, -16, 1, 1);                        // 待机个性：双手扶杖，低头把额头贴在杖上
   const K_WIND = K(5, -13, -0.35, -3, -9, -1, 0);                    // 攻击预兆：杖往回收
   const K_POINT = K(10, -15, 0.9, -4, -10, 1, 0);                    // 出手：单手把蛇头杖前指
   const K_HOLD = K(9, -14, 0.7, -4, -9, 1, 0);
-  const K_PLANT = K(8, -12, 0, 8, -17, 0, -1);                       // 蓄力：杖插在身前，双手握杖，仰头看蛇眼
-  const K_CAST = K(9, -12, 0.1, 9, -17, 1, 0);
+  const K_RAISE = K(9, -16, 0, 9, -20, -1, -1);                     // 蓄力起手：双手把杖提高
+  const K_PLANT = K(10, -13, 0, 10, -17, 0, -1);                     // 蓄力：杖往下一戳插进身前的沙里（握点上移 SB_PLANT 格），双手握杖，仰头看蛇眼
+  const K_CAST = K(10, -13, 0, 10, -17, 1, 0, 1);                    // 施放：身体压向杖，杖再往沙里吃进 1 格
+  const SB_PLANT = 3;                                                // 握点到杖尾 11 + 3 = 14：杖脚落在 y +1（插进地面 1 格）
   const K_HURT = K(6, -11, -0.25, -4, -10, -1, -1);
   const K_KNEEL = K(7, -9, 0, 7, -12, 1, 1, 4);                      // 死亡：拄杖跪下
   const FIELDS = ['hx', 'hy', 'a', 'bhx', 'bhy', 'lean', 'head', 'crouch'];
   const setK = (A, B, q) => E.mix(P, A, B, q, FIELDS);
   const KEY1 = parts.keyer([['hx', -16, 31], ['hy', -40, 8], ['a', -32, 32, 1 / ASTEP], ['bhx', -16, 31], ['bhy', -40, 8], ['lean', -1, 2], ['head', -1, 1], ['crouch', 0, 7], ['bob', 0, 1]]);
   const KEY2 = parts.keyer([['step', -1, 1], ['wup', 0, 2], ['walk', 0, 1], ['beard', -3, 3], ['sway', -2, 2], ['gem', 0, 4], ['glint', 0, 1], ['rim', 0, 3], ['eyes', 0, 1], ['flash', 0, 1],
-    ['jaw', 0, 1], ['mana', 0, 5], ['bell', -1, 1], ['sand', 0, 9], ['pile', 0, 5], ['sa', 0, 3], ['slift', 0, 3], ['dq', 0, 48, 48], ['bx', -16, 15], ['st', 0, 8]]);
+    ['jaw', 0, 1], ['mana', 0, 5], ['bell', -1, 1], ['sb', 0, 4], ['sand', 0, 9], ['pile', 0, 5], ['sa', 0, 3], ['slift', 0, 3], ['dq', 0, 48, 48], ['bx', -16, 15], ['st', 0, 8]]);
   const BEARD_IDLE = [0, 1, 0, -1], SWAY_IDLE = [0, 1, 0, -1], BELL_IDLE = [0, 1, 0, -1];
   const WALK_STAFF = [2, 1, 0, 2], WALK_SLIFT = [0, 0, 0, 1];         // 拄杖缓行：接触 A 杖点地，之后杖留在原地（相对身体往后），经过 B 提杖前送
-  const T_REL = 2 / 12, T_KNEE = INCOMING + 0.3, T_PILE = INCOMING + 1.1, T_REST = INCOMING + 1.25;
+  const T_PLANT = 3 / 12, T_PULL = 2 / 12, T_REL = 2 / 12, T_KNEE = INCOMING + 0.3, T_PILE = INCOMING + 1.1, T_REST = INCOMING + 1.25;
 
   function poseAt(st, t, T) {
     const tq = q12(t), f12 = f12of(T), TT = f12 / 12;
     P.st = st; P.bx = 0; P.step = 0; P.wup = 0; P.walk = 0; P.beard = 0; P.sway = 0; P.bend = 0; P.gem = 0; P.glint = 0; P.rim = 1; P.eyes = 0; P.flash = 0;
-    P.lying = 0; P.lift = 0; P.dq = 0; P.bob = 0; P.flip = 0; P.mx = 0; P.jaw = 0; P.mana = 0; P.bell = 0; P.sand = 0; P.pile = 0; P.sa = 0; P.slift = 0;
+    P.lying = 0; P.lift = 0; P.dq = 0; P.bob = 0; P.flip = 0; P.mx = 0; P.jaw = 0; P.mana = 0; P.bell = 0; P.sb = 0; P.sand = 0; P.pile = 0; P.sa = 0; P.slift = 0;
     let sl = 0;
     const idle = () => {
       setK(K_IDLE, K_IDLE, 0); const b = Math.floor(TT * 2.5 + 1e-6); P.bob = b & 1; P.beard = BEARD_IDLE[(b + 1) & 3]; P.sway = SWAY_IDLE[Math.floor(TT * 1.25 + 1e-6) & 3];
@@ -124,15 +134,17 @@ PCD.define('DesertBeliever', (E) => {
       else if (tq < T_REL + 1 / 12) { setK(K_POINT, K_POINT, 0); P.gem = 2; P.jaw = 1; P.rim = 2; P.beard = -2; P.sway = -1; P.bell = 1; }
       else if (tq < 0.45) { setK(K_POINT, K_HOLD, ease.out((tq - T_REL - 1 / 12) / 0.2)); P.gem = 1; P.beard = -1; P.bell = -1; }
       else setK(K_HOLD, K_IDLE, ease.inOut(clamp01((tq - 0.45) / 0.3)));
-    } else if (st === CHARGE) {                                        // 杖插在身前：法力珠每 0.25 s 亮一颗，铜铃越摇越快
-      const q = ease.inOut(clamp01(tq / 0.5)); setK(K_IDLE, K_PLANT, q);
+    } else if (st === CHARGE) {                                        // 双手提杖 → 往下一戳插在身前的沙里：法力珠每 0.25 s 亮一颗，铜铃越摇越快
+      if (tq < 2 / 12) setK(K_IDLE, K_RAISE, ease.out(tq / (2 / 12)));
+      else if (tq < T_PLANT) setK(K_RAISE, K_PLANT, 0.5);
+      else { setK(K_PLANT, K_PLANT, 0); P.sb = SB_PLANT; }
       P.mana = Math.min(5, Math.floor(tq / 0.25 + 1e-6)); P.gem = P.mana >= 5 ? 2 : 1; P.rim = 2;
       const sp = tq < 0.6 ? 3 : tq < 1.0 ? 2 : 1; P.bell = [0, 1, 0, -1][Math.floor(f12 / sp) & 3] || 0; P.beard = -1 + ((f12 & 1) && tq > 1.0 ? 1 : 0); P.sway = tq > 1.1 ? ((f12 & 1) ? -1 : 0) : 0;
     } else if (st === CAST) {
-      setK(K_PLANT, K_CAST, ease.out(clamp01(tq / 0.12))); P.mana = 5; P.gem = 3; P.rim = 3; P.jaw = tq < 2 / 12 ? 1 : 0; P.beard = -2; P.sway = -1; P.bell = (f12 & 1) ? 1 : -1;
-    } else if (st === RECOVER) {                                       // 收招：法力珠一起熄灭，把杖从地上拔起
-      const q = ease.inOut(clamp01(tq / 0.6)); setK(K_CAST, K_IDLE, q); P.mana = tq < 0.15 ? 5 : 0; P.gem = q < 0.35 ? 2 : q < 0.75 ? 1 : 0; P.rim = q < 0.5 ? 2 : 1;
-      sl = tq >= 0.15 && tq < 0.35 ? 1 : 0; P.beard = -RD(1 - q);
+      setK(K_PLANT, K_CAST, ease.out(clamp01(tq / 0.12))); P.sb = SB_PLANT; P.mana = 5; P.gem = 3; P.rim = 3; P.jaw = tq < 2 / 12 ? 1 : 0; P.beard = -2; P.sway = -1; P.bell = (f12 & 1) ? 1 : -1;
+    } else if (st === RECOVER) {                                       // 收招：法力珠一起熄灭，把杖从沙里拔起（杖往上一提 2 格）
+      if (tq < T_PULL) { setK(K_CAST, K_CAST, 0); P.sb = SB_PLANT; P.mana = 5; P.gem = 2; P.rim = 2; P.beard = -1; }
+      else { const q = ease.inOut(clamp01((tq - T_PULL) / 0.45)); setK(K_CAST, K_IDLE, q); P.gem = q < 0.35 ? 2 : q < 0.75 ? 1 : 0; P.rim = q < 0.5 ? 2 : 1; sl = tq < T_PULL + 2 / 12 ? 2 : tq < T_PULL + 3 / 12 ? 1 : 0; P.beard = -RD(1 - q); }
     } else if (st === HURT) {
       const h = tq - INCOMING;
       if (h < 0) idle();
@@ -215,7 +227,7 @@ PCD.define('DesertBeliever', (E) => {
     cobraStaff(E, parts.FREE, P, pileOpt());
   }
   function drawHero() {
-    E.begin(hero, P.bx, 0);
+    E.begin(hero, P.bx, 0, 0);                                       // 贴地截断：插进沙里的杖脚不画
     if (P.pile) { drawPile(); return; }
     const R = parts.rig(P, BODY), bFront = P.bhx > 3;
     drape(R);
@@ -278,6 +290,14 @@ PCD.define('DesertBeliever', (E) => {
       shoot(1, m[0] + 1, m[1], 170, DUMMY_X - 3, R_EL); burst(m[0], m[1], 6, 30, 60, 0.15, 0.3, R_EL, 0);
       sfx('swing', { kind: 'staff', w: 0.3 }); sfx('shoot', { proj: 'orb' });
     }
+    if (s === CHARGE && t === T_PLANT) {                               // 杖戳进沙里：杖脚扬起一圈沙
+      const b = cobraGeo(P, STAFF).base, x = wx(b[0] + P.bx);
+      for (let i = 0; i < 7; i++) spawn(K_DUST, x + (Math.random() - 0.5) * 4, HY - 1, (Math.random() - 0.5) * 30, -6 - Math.random() * 10, 0.3 + Math.random() * 0.3, i & 1 ? R_SAND : R_DUST);
+    }
+    if (s === RECOVER && t === T_PULL) {                               // 拔杖：杖脚带起几颗沙
+      const b = cobraGeo(P, STAFF).base, x = wx(b[0] + P.bx);
+      for (let i = 0; i < 4; i++) spawn(K_DUST, x + (Math.random() - 0.5) * 3, HY - 1, (Math.random() - 0.5) * 14, -8 - Math.random() * 8, 0.3 + Math.random() * 0.2, R_SAND);
+    }
     if (s === DEATH && t === T_KNEE) { for (let i = 0; i < 8; i++) spawn(K_DUST, HX - 6 + Math.random() * 14, HY - 1, (Math.random() - 0.5) * 20, -5 - Math.random() * 8, 0.3 + Math.random() * 0.3, R_DUST); }
     if (s === DEATH && t === T_PILE) {                                 // 塌成一堆沙
       for (let i = 0; i < 18; i++) spawn(K_DUST, HX - 10 + Math.random() * 18, HY - 1 - Math.random() * 8, (Math.random() - 0.5) * 26, -6 - Math.random() * 10, 0.4 + Math.random() * 0.4, R_SAND);
@@ -285,7 +305,7 @@ PCD.define('DesertBeliever', (E) => {
     }
     if (s === DEATH && t === T_REST) { for (let i = 0; i < 5; i++) spawn(K_DUST, HX + 2 - Math.random() * 14, HY - 3, (Math.random() - 0.5) * 16, -4 - Math.random() * 5, 0.3, R_SAND); sfx('hit', { mat: 'wood', w: 0.25 }); }
   }
-  const EVENTS = [[], [], [T_REL], [], [], [], [], [T_KNEE, T_PILE, T_REST], []];
+  const EVENTS = [[], [], [T_REL], [T_PLANT], [], [T_PULL], [], [T_KNEE, T_PILE, T_REST], []];
   function impactOn(k, x, y) {
     if (k === 1) { burst(x, y, 8, 40, 90, 0.15, 0.35, R_EL, 10); fx.cross(x, y, 3, R_EL, 0.15); hitDummy(0); sfx('hit', { mat: 'magic', w: 0.3 }); }
     else if (k === 2) {                                               // 光弹打中第 1 个友军：化成蛇形翠光往下一个友军跳
@@ -301,7 +321,7 @@ PCD.define('DesertBeliever', (E) => {
         if (Math.random() < 0.55) { const r = 13 + Math.random() * 5; spawnX(K_SPIRAL_PT, 0, 0, r / (0.5 + Math.random() * 0.4), 0, 9, R_DUST, { a: HALF + (Math.random() - 0.5) * 0.9, r, w: 7 + Math.random() * 3, tx: gx - 1, ty: gy + 2, squash: 1.45 }); }
         else { const r = 9 + Math.random() * 7, a = Math.random() * 6.2832; spawn(K_SPIRAL, gx, gy, (r - 3.5) / (0.3 + Math.random() * 0.35), 0, 9, R_EL, a, r, 5 + Math.random() * 3); }
       }
-      if (P.mana !== lastMana) { if (P.mana > lastMana) { const G = cobraGeo(P, STAFF), total = STAFF.back + STAFF.len, k = BEADS[P.mana - 1], bx = G.gx - G.dx * STAFF.back, by = G.gy - G.dy * STAFF.back; const px = wx(RD(bx + (G.tip[0] - bx) * k / total) + P.bx), py = wy(RD(by + (G.tip[1] - by) * k / total)); burst(px, py, 5, 15, 35, 0.15, 0.3, R_EL, 4); } lastMana = P.mana; }
+      if (P.mana !== lastMana) { if (P.mana > lastMana) { const G = cobraGeo(P, STAFF), total = G.back + G.len, k = BEADS[P.mana - 1], bx = G.base[0], by = G.base[1]; const px = wx(RD(bx + (G.tip[0] - bx) * k / total) + P.bx), py = wy(RD(by + (G.tip[1] - by) * k / total)); burst(px, py, 5, 15, 35, 0.15, 0.3, R_EL, 4); } lastMana = P.mana; }
     }
     if (chT < 1) {                                                    // 治疗链：每 0.12 s 跳一次
       chT += dt;

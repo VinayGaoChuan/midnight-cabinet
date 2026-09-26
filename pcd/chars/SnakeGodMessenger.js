@@ -19,7 +19,7 @@ PCD.define('SnakeGodMessenger', (E) => {
   const ROBE = ['#2a1a0c', '#6a4a24', '#a8804a', '#d8b87a'], SKIN = ['#121a14', '#2e4a38', '#4a7058', '#70987a'], TAIL = ['#08201c', '#145a44', '#2a9a70', '#6ad8a0'];
   const M = parts.mats(E, {
     tail: { r: TAIL, band: 2 }, tailS: TAIL, belly: 'sand', robe: { r: ROBE, band: 2 }, trim: 'gold', belt: 'gold', skin: SKIN, veil: 'blue',
-    hoodIn: [0, 39, 39, 40], ocel: 'gold', rod: 'wood', snake: 'gold', stone: 'stone', cord: 'leather', tongue: 'blood',
+    hoodIn: [0, 39, 39, 40], ocel: 'gold', rod: 'wood', snake: 'gold', stone: 'stone', cord: 'leather', tongue: 'blood', bangle: { r: 'gold', flat: 1 },
     eye: { r: [JADE[3], JADE[2], JADE[1], JADE[0]], flat: 1 }, glow: { r: [JADE[1], JADE[0], 21, 21], flat: 1 },
   });
   const BODY = { body: 'tall', leg: 16, torso: 11, sw: 3, waist: 1, limb: 0.9, fall: 'front' };
@@ -46,7 +46,8 @@ PCD.define('SnakeGodMessenger', (E) => {
       for (let k = 0; k <= 16; k++) { const t = k / 16, it = 1 - t, cx = hx + 0.5, cy = Math.max(hy + 2, -9);
         TF[3 * tfN] = it * it * hx + 2 * it * t * cx + t * t * fx0; TF[3 * tfN + 1] = it * it * (hy + 1) + 2 * it * t * cy + t * t * (-rG); TF[3 * tfN + 2] = o.r0 + (rG - o.r0) * t; tfN++; }
     }
-    const ph = gf >= 0 ? 0.3 + gf * 0.22 : (P.coil ? 0.42 : 0.34), arch = flat ? 0.4 : o.arch, len = o.back, r1 = rG * 0.5;
+    // 滑行：4 帧走完一整个波周期（拱峰每帧后移约 4 格，第 4 帧接回第 1 帧）
+    const ph = gf >= 0 ? 0.3 + gf * 0.5 : (P.coil ? 0.42 : 0.34), arch = flat ? 0.4 : o.arch, len = o.back, r1 = rG * 0.5;
     const x0 = flat ? hx : fx0, y0f = flat ? hy : 0;
     let ex = 0, ey = 0, er = 0;
     for (let k = 0; k <= 34; k++) {                                   // 后段：往后盘，拱峰随波相移动
@@ -115,7 +116,7 @@ PCD.define('SnakeGodMessenger', (E) => {
 
   // ───── 姿势 ─────
   const P = { hx: 0, hy: 0, a: 0, bhx: 0, bhy: 0, lean: 0, head: 0, crouch: 0, bob: 0, bx: 0, rise: 0, gf: -1, coil: 0, tail: 0, hood: 1, tongue: 0, beard: 0, sway: 0, bend: 0,
-    gem: 0, glint: 0, rim: 0, eyes: 0, flash: 0, lying: 0, lift: 0, flat: 0, shed: 0, cq: 0, drop: 0, sa: 0, slift: 0, dq: 0, st: 0, gx: 0, gy: 0, flip: 0, mx: 0, k1: 0, k2: 0 };
+    gem: 0, glint: 0, ax: 0, ay: 0, rim: 0, eyes: 0, flash: 0, lying: 0, lift: 0, flat: 0, shed: 0, cq: 0, drop: 0, sa: 0, slift: 0, dq: 0, st: 0, gx: 0, gy: 0, flip: 0, mx: 0, k1: 0, k2: 0 };
   const K = (hx, hy, a, bhx, bhy, lean, head, rise) => ({ hx, hy, a, bhx, bhy, lean: lean || 0, head: head || 0, rise: rise || 0 });
   const K_IDLE = K(7, -20, 0, -3, -16);                              // 前手握杖，后手垂在身侧
   const K_WIND = K(5, -27, -0.15, 5, -24, -1, -1, 1);                // 攻击预兆：双手把杖举起
@@ -129,25 +130,25 @@ PCD.define('SnakeGodMessenger', (E) => {
   const FIELDS = ['hx', 'hy', 'a', 'bhx', 'bhy', 'lean', 'head', 'rise'];
   const setK = (A, B, q) => E.mix(P, A, B, q, FIELDS);
   const KEY1 = parts.keyer([['hx', -16, 31], ['hy', -56, 8], ['a', -32, 32, 1 / ASTEP], ['bhx', -16, 31], ['bhy', -56, 8], ['lean', -1, 2], ['head', -1, 1], ['bob', 0, 1], ['rise', -8, 4]]);
-  const KEY2 = parts.keyer([['gf', -1, 3], ['coil', 0, 1], ['tail', -1, 1], ['hood', 0, 2], ['tongue', 0, 2], ['gem', 0, 4], ['glint', 0, 1], ['rim', 0, 3], ['eyes', 0, 1], ['flash', 0, 1],
+  const KEY2 = parts.keyer([['gf', -1, 3], ['coil', 0, 1], ['tail', -2, 2], ['hood', 0, 2], ['tongue', 0, 2], ['gem', 0, 4], ['glint', 0, 1], ['rim', 0, 3], ['eyes', 0, 1], ['flash', 0, 1],
     ['lying', 0, 1], ['lift', 0, 3], ['flat', 0, 1], ['shed', 0, 1], ['cq', 0, 12], ['drop', 0, 1], ['sa', 0, 3], ['slift', 0, 3], ['dq', 0, 48, 48], ['bx', -16, 15], ['st', 0, 8], ['beard', -3, 3], ['sway', -2, 2]]);
-  const SWAY_IDLE = [0, 1, 0, -1], TAIL_IDLE = [0, 1, 0, -1], TONGUE = [0, 1, 2, 1, 0];
+  const SWAY_IDLE = [0, 1, 0, -1, 0], TAIL_IDLE = [0, -1, 0, 1, 0], COIL_IDLE = [0, 0, 1, 1, 0], TONGUE = [0, 1, 2, 1, 0];
   const T_PRESS = 2 / 12, T_LAND = INCOMING + 0.7, T_SHED = INCOMING + 1.2, T_STAFF = INCOMING + 2.05, T_ARMOR = 0.15;
   const PLANT = [6, -1];                                             // 死亡时蛇杖脱手，杖尾插在地上的位置
 
   function poseAt(st, t, T) {
-    const tq = q12(t), f12 = f12of(T), TT = f12 / 12;
+    const tq = q12(t), f12 = f12of(T);
     P.st = st; P.bx = 0; P.bob = 0; P.gf = -1; P.coil = 0; P.tail = 0; P.hood = 1; P.tongue = 0; P.beard = 0; P.sway = 0; P.bend = 0; P.gem = 0; P.glint = 0; P.rim = 1;
     P.eyes = 0; P.flash = 0; P.lying = 0; P.lift = 0; P.flat = 0; P.shed = 0; P.cq = 0; P.drop = 0; P.sa = 0; P.slift = 0; P.dq = 0; P.flip = 0; P.mx = 0; P.crouch = 0;
     const idle = () => {                                               // 催眠摇摆：上身按 S 形左右摇 1 格，蛇尾缓慢盘动，兜帽一张一收
-      setK(K_IDLE, K_IDLE, 0); const b = Math.floor(TT * 2.5 + 1e-6), s = Math.floor(TT * 1.25 + 1e-6); P.bob = b & 1;
-      P.lean = SWAY_IDLE[s & 3]; P.hx += P.lean; P.bhx += P.lean; P.tail = TAIL_IDLE[(s + 2) & 3]; P.coil = (s >> 1) & 1; P.hood = (s & 1) ? 1 : 2; P.beard = -P.lean; P.sway = P.lean;
-      const lp = tq % DUR[IDLE];
+      // 一个循环 = 2.4 s，按循环内时间 lp 分 5 段（各 0.48 s）：居中 → 右 → 居中 → 左 → 回到第 0 帧的姿势（呼吸、盘尾、兜帽、尾尖都一样），首尾相接不跳
+      setK(K_IDLE, K_IDLE, 0); const lp = tq % DUR[IDLE], s = Math.min(4, Math.floor(lp / 0.48 + 1e-6)); P.bob = s & 1;
+      P.lean = SWAY_IDLE[s]; P.hx += P.lean; P.bhx += P.lean; P.tail = TAIL_IDLE[s]; P.coil = COIL_IDLE[s]; P.hood = (s & 1) ? 1 : 2; P.beard = -P.lean; P.sway = P.lean;
       if (lp >= 1.6 && lp < 2.0) { const k = Math.floor((lp - 1.6) * 12 + 1e-6); P.tongue = TONGUE[k] || 0; P.gem = k >= 1 && k <= 3 ? 1 : 0; P.glint = k === 2 ? 1 : 0; P.hood = 2; }   // 吐一下分叉信子，护符亮一下
     };
     if (st === IDLE) idle();
     else if (st === MOVE) {                                            // 蛇行滑行：蛇尾 S 波往前推，上身几乎不起伏
-      setK(K_IDLE, K_IDLE, 0); const f = E.gait(tq); P.gf = f; P.tail = [1, 0, -1, 0][f]; P.beard = -1; P.sway = f & 1 ? -1 : 0; P.hood = 1;
+      setK(K_IDLE, K_IDLE, 0); const f = E.gait(tq); P.gf = f; P.tail = [2, 0, -2, 0][f]; P.beard = -1; P.sway = f & 1 ? -1 : 0; P.hood = 1;
       const w = walkDemo(tq, 14, 1); P.mx = w.mx; P.flip = w.flip;
     } else if (st === ATTACK) {
       if (tq < 0.12) { setK(K_IDLE, K_WIND, ease.out(tq / 0.12)); P.gem = 1; P.hood = 2; }
@@ -156,7 +157,8 @@ PCD.define('SnakeGodMessenger', (E) => {
       else setK(K_HOLD, K_IDLE, ease.inOut(clamp01((tq - 0.45) / 0.3)));
     } else if (st === CHARGE) {
       const q = ease.inOut(clamp01(tq / 0.7)); setK(K_IDLE, K_RAISE, q); P.hood = q > 0.4 ? 2 : 1;
-      P.gem = tq < 0.45 ? 1 : ((f12 & 1) ? 2 : 1); P.rim = 2; P.tail = (f12 >> 1) & 1 ? 1 : -1; P.coil = 1; P.beard = -1 - (tq > 1.0 && (f12 & 1) ? 1 : 0); P.sway = tq > 1.0 ? ((f12 & 1) ? -1 : 0) : 0;
+      // 护符 / 蛇眼：0.45 s 起亮到 2 档，最后 0.4 s 逐帧闪到 3 档
+      P.gem = tq < 0.45 ? 1 : tq > 1.0 && (f12 & 1) ? 3 : 2; P.rim = 2; P.tail = (f12 >> 1) & 1 ? 1 : -1; P.coil = 1; P.beard = -1 - (tq > 1.0 && (f12 & 1) ? 1 : 0); P.sway = tq > 1.0 ? ((f12 & 1) ? -1 : 0) : 0;
     } else if (st === CAST) { setK(K_RAISE, K_SLAM, ease.out(clamp01(tq / 0.12))); P.gem = 3; P.rim = 3; P.hood = 2; P.coil = 1; P.beard = -2; P.sway = -1; }
     else if (st === RECOVER) {
       const q = ease.inOut(clamp01(tq / 0.6)); setK(K_SLAM, K_IDLE, q); P.gem = q < 0.35 ? 2 : q < 0.75 ? 1 : 0; P.rim = q < 0.5 ? 2 : 1; P.hood = q < 0.6 ? 2 : 1; P.beard = -RD(1 - q);
@@ -188,6 +190,8 @@ PCD.define('SnakeGodMessenger', (E) => {
     P.hx = RD(P.hx); P.hy = RD(P.hy) + yo; P.bhx = RD(P.bhx); P.bhy = RD(P.bhy) + yo;
     P.a = RD(P.a / ASTEP) * ASTEP; P.lean = RD(P.lean); P.head = RD(P.head);
     const g = twinGeo(P, staffOpt()).focus; P.gx = g[0] + P.bx; P.gy = g[1];
+    BODY_R.leg = BODY.leg + (P.lying ? 0 : P.rise); const R = parts.rig(P, BODY_R); if (P.lying) R.ox = 4 - BODY.leg;   // 护符中心（给特效挂点用，和 drawHero 同一个 rig）
+    const am = amuletAt(R), ac = parts.toSprite(R, am[0] + 1, am[1] + 1); P.ax = ac[0] + P.bx; P.ay = ac[1];
     P.k1 = KEY1(P); P.k2 = KEY2(P);
   }
   // 死亡时蛇杖脱手：先插在地上，最后往前倒下
@@ -218,7 +222,7 @@ PCD.define('SnakeGodMessenger', (E) => {
       else parts.px(E, R, b, y, M.tailS, 0);
       if (lv && t > -0.3 && ((y - y0) & 1)) for (let x = a + 2; x < b - 1; x += 2) parts.px(E, R, x, y, M.hoodIn, 2);   // 兜帽的肋纹
     }
-    if (lv > 0) { const ox = RD(cx - rx * 0.4), oy = RD(cy - 1); parts.px(E, R, ox, oy - 1, M.ocel, 4); parts.px(E, R, ox - 1, oy, M.ocel, 3); parts.px(E, R, ox + 1, oy, M.ocel, 3); parts.px(E, R, ox, oy + 1, M.ocel, 2); parts.px(E, R, ox, oy, M.hoodIn, 1); }   // 金色眼纹
+    if (lv > 0) { const ox = RD(cx - rx * 0.45), oy = RD(cy - ry * 0.45); parts.px(E, R, ox, oy, M.ocel, 3); parts.px(E, R, ox, oy + 1, M.ocel, 2); }   // 金色眼纹：压暗一级（gold 第 2–3 级、没有白芯和黑瞳），缩成 2 格、挪到兜帽上半，不和真脸抢
   }
   function mask(R) {                                                 // 面巾（和脸同一部件）+ 分叉信子
     const x0 = R.hx0, x1 = R.hx1, ey = R.ey, bot = R.hy;
@@ -227,14 +231,25 @@ PCD.define('SnakeGodMessenger', (E) => {
     const tg = P.tongue | 0;
     if (tg) { for (let k = 1; k <= tg; k++) parts.px(E, R, x1 + k, bot, M.tongue, 3); parts.px(E, R, x1 + tg + 1, bot - 1, M.tongue, 4); parts.px(E, R, x1 + tg + 1, bot + 1, M.tongue, 2); }
   }
-  function amulet(R) {                                               // 胸前的石蛇护符：挂绳 + 3×4 石板 + 刻出的蛇纹（发光体）
-    const e = parts.edges(R, R.yS + 3), x1 = e[1], y0 = R.yS + 2;
+  // 胸前的石蛇护符（发光体）：两股挂绳从前后肩线斜下来，3×4 石板挂在胸口中线（躯干后沿 +1 起 3 列，避开 x ≥ 3 的杖身和前手），刻一条 S 形蛇纹。
+  // 最后画（压在前臂之后），相邻的部件被压出分界线、石板自己不会被压暗。P.gem：0 常态暗翠 · 1 亮 · 2 更亮（白头）· 3 全白 · 4 熄灭
+  function amuletAt(R) { return [parts.edges(R, R.yS + 3)[0] + 1, R.yS + 3]; }          // 石板左上角（rig 本地坐标）
+  const GLYPH = [[1, 1], [0, 2], [1, 3]];                                                // 蛇纹：头 → 身 → 尾（一个 < 形弯）
+  const GLYPH_T = [[[M.eye, 3], [M.eye, 2], [M.eye, 2]], [[M.eye, 4], [M.eye, 3], [M.eye, 3]], [[M.glow, 3], [M.eye, 4], [M.eye, 4]], [[M.glow, 3], [M.glow, 3], [M.glow, 2]], [[M.eye, 1], [M.eye, 1], [M.eye, 1]]];
+  function amulet(R) {
+    const a = amuletAt(R), x0 = a[0], y0 = a[1], lv = CL(P.gem | 0, 0, 4);
     E.part();
-    parts.line(E, R, R.hx - 1, R.yS - 1, x1 - 1, y0, M.cord, 2);
-    parts.rect(E, R, x1 - 2, y0 + 1, 3, 4, M.stone, 0); parts.px(E, R, x1 - 2, y0 + 1, M.stone, 4);
-    const lv = CL(P.gem | 0, 0, 4), gm = lv === 4 ? M.eye : lv >= 2 ? M.glow : M.eye, gt = lv === 4 ? 1 : lv === 3 ? 3 : lv === 2 ? 2 : lv === 1 ? 4 : 3;
-    parts.px(E, R, x1 - 1, y0 + 2, gm, gt); parts.px(E, R, x1 - 2 + 1, y0 + 3, gm, lv >= 2 ? gt : 2); parts.px(E, R, x1 - 1 - 1 + (lv >= 1 ? 0 : 1), y0 + 4, gm, lv >= 1 ? gt : 2);
-    if (P.glint) parts.px(E, R, x1, y0 + 2, M.glow, 3);
+    parts.line(E, R, x0 - 1, R.yS, x0, y0 - 1, M.cord, 2);                              // 后股：后肩线 → 石板左上
+    parts.line(E, R, x0 + 3, R.yS + 1, x0 + 2, y0 - 1, M.cord, 3);                      // 前股：前肩线 → 石板右上（压过前肩）
+    for (let v = 0; v < 4; v++) for (let u = 0; u < 3; u++) parts.px(E, R, x0 + u, y0 + v, M.stone, v === 0 ? (u === 2 ? 3 : 4) : u === 2 || (v === 3 && u === 1) ? 2 : 3);   // 石板：上沿亮、右沿和下沿暗
+    for (let k = 0; k < 3; k++) { const g = GLYPH[k], c = GLYPH_T[lv][k]; parts.px(E, R, x0 + g[0], y0 + g[1], c[0], c[1]); }
+    if (P.glint) parts.px(E, R, x0 - 1, y0, M.glow, 3);                                // 亮一下：左上角一颗白星
+  }
+  // 金蛇镯：前臂手腕处和小臂垂直的一行 3 格金（flat 材质：后画的手不会把它压成勾线）
+  function bangle(R, A) {
+    const dx = A.hx - A.ex, dy = A.hy - A.ey, d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d, cx = A.hx - 0.5 - ux * 1.6, cy = A.hy - 0.5 - uy * 1.6;
+    const pts = [-1, 0, 1].map((k) => [RD(cx - uy * k), RD(cy + ux * k)]).sort((p, q) => p[0] + p[1] - q[0] - q[1]);
+    E.part(); parts.px(E, R, pts[0][0], pts[0][1], M.bangle, 4); parts.px(E, R, pts[1][0], pts[1][1], M.bangle, 3); parts.px(E, R, pts[2][0], pts[2][1], M.bangle, 2);
   }
   function drawHero() {
     E.begin(hero, P.bx, 0);
@@ -249,14 +264,16 @@ PCD.define('SnakeGodMessenger', (E) => {
     nagaTailBack(TO);
     parts.arm(E, R, P, { side: 'B', sleeve: 'tight', mat: M.robeD, cuff: M.trim, hand: M.skinD, grip: bFront ? 'none' : 'fist' });
     nagaTailFront(TO);
+    nagaHood(R);                                                    // 兜帽在后颈张开：下沿压在肩后，被躯干挡住（不再盖住胸口）
     parts.torso(E, R, P, { style: 'robe', mat: M.robe, trim: M.trim, belt: M.belt, buckle: M.trim, hem: R.yHip + 4, flare: 1.6, flareF: 1.2 });
-    amulet(R);
-    nagaHood(R);
     parts.head(E, R, P, { mat: M.skin, face: 'long', eye: M.eye, eyeStyle: 'glow', nose: 'none', mouth: 'none', ear: 'none' });
     mask(R);
     if (!(free && P.lying && P.sa < 3)) twinStaff(R, so);
     if (bFront) parts.hand(E, R, P, { side: 'B', hand: M.skinD });
-    parts.arm(E, R, P, { sleeve: 'loose', mat: M.robe, cuff: M.trim, hand: M.skin });
+    const A = parts.arm(E, R, P, { from: [R.sFx + 1, R.sFy], sleeve: 'loose', mat: M.robe, grip: 'none' });   // 前肩往前挪 1 格，让出胸口的护符
+    bangle(R, A);
+    parts.hand(E, R, P, { hand: M.skin });
+    amulet(R);
   }
   // 蛇蜕：非蛇杖的像素换成骨灰色；逐列消散（从头到尾：右 → 左）
   const SHEDMAP = new Uint8Array(256);
@@ -385,6 +402,10 @@ PCD.define('SnakeGodMessenger', (E) => {
     if (P.gem >= 2 && P.gem <= 3 && P.dq < 1 && !P.lying) {          // 双蛇杖首星芒
       const L = P.gem === 3 ? 6 : 2 + (f12 & 1);
       for (let r = 2; r <= L; r++) { const c = r <= 2 ? EL[0] : r <= 4 ? EL[1] : EL[2]; put(gx + r, gy, c); put(gx - r, gy, c); put(gx, gy - r, c); put(gx, gy + r, c); }
+    }
+    if (P.gem >= 2 && P.gem <= 3 && P.dq < 1 && !P.lying) {          // 护符亮到 2 / 3 档：石板四角外一圈翠光点
+      const ax = scrX(P.ax), ay = HY + P.ay, c = P.gem === 3 ? EL[0] : EL[1 + (f12 & 1)];
+      put(ax - 2, ay - 2, c); put(ax - 2, ay + 3, c); put(ax - 3, ay, EL[2]); if (P.gem === 3) { put(ax + 2, ay - 2, c); put(ax - 4, ay, EL[3]); }
     }
     if (snT < SN_RISE) drawRise(f12); else if (snT < SN_COIL) drawCoil(true, f12);
     const st = E.state; if (st === CHARGE || st === CAST || st === RECOVER) { drawArmor(f12); drawHpBar(f12); }

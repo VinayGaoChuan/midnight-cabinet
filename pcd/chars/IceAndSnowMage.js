@@ -26,13 +26,13 @@ PCD.define('IceAndSnowMage', (E) => {
   const M = parts.mats(E, {
     robe: { r: ROBE, band: 2 }, sleeve: ROBE, fur: 'white', face: 'pale',
     birch: ['#3a3228', '#8a8070', '#c8c0ac', '#eeeade'], silver: [27, 29, 30, 31],
-    ice: ['#1e4a70', '#7ab8dc', '#c4ecf8', 21],                          // 冰棱冠、袍摆冰凌
+    ice: ['#0e2238', '#7ab8dc', '#c4ecf8', 21],                          // 冰棱冠、袍摆冰凌
     hand: ['#1e4a70', '#3a7eac', '#7ab8dc', '#c4ecf8'],                  // 冻成冰蓝的手指
     boot: ['#0e2238', 39, 40, 41], ink: { r: 'ink', flat: 1 },
     xtal: { r: [39, 40, 23, 22], flat: 1 }, xglow: { r: [22, 22, 21, 21], flat: 1 },   // 叉尖冰晶：暗档 / 亮档
     eye: { r: [39, 23, 22, 21], flat: 1 },                                // 眼窝魂火
   });
-  const BODY = { body: 'slim', sw: 2, leg: 10, torso: 8, head: 6, headW: 5, arm: 9, lw: 2, stride: 2, lift: 1, limb: 0.9, neck: -1 };
+  const BODY = { body: 'slim', sw: 2, leg: 10, torso: 8, head: 7, headW: 6, arm: 9, lw: 2, stride: 2, lift: 1, limb: 0.9 };
   const HX = 34, DUR = DEFAULT_DUR.slice();
   const hero = new Sprite(68, 48, 30, 43);
   const RIM = { rim: 0, rx: 0, ry: 0, rimR: [0, 7, 15, 20], rimRamp: EL, flash: 0, dq: 0, skip: new Uint8Array(256) };
@@ -76,7 +76,7 @@ PCD.define('IceAndSnowMage', (E) => {
   }
   // 候选部件：iceCrown —— 脑后放射的冰棱冠：几根冰锥从头后向上放射（根部藏在头和毛领后面），前半段 2 格粗、尖端 1 格亮。
   //   spikes = [[根 x, 根 y, 尖 x, 尖 y]]（相对头中线 hx / 下巴行 hy）；读 P.crown（> 0 每根加长格数；-1 = 第 2、4 根断掉一截）。一个部件。
-  const SPK = [[-4, -2, -9, -5], [-3, -3, -7, -8], [-2, -3, -4, -9], [-1, -4, -1, -8], [0, -4, 1, -7]];
+  const SPK = [[-4, 0, -11, -4], [-4, -1, -10, -8], [-3, -2, -5, -9], [-2, -3, -1, -8], [0, -3, 3, -7]];
   function iceCrown(R, m) {
     E.part(); const g = Math.max(0, P.crown);
     for (let i = 0; i < SPK.length; i++) {
@@ -84,7 +84,7 @@ PCD.define('IceAndSnowMage', (E) => {
       const L = L0 + g - (P.crown < 0 && (i === 1 || i === 3) ? 3 : 0), n = Math.ceil(L), side = Math.abs(ux) > Math.abs(uy) ? [0, 1] : [1, 0];
       for (let k = 0; k <= n; k++) {
         const x = R.hx + bx + ux * k * (L / n), y = R.hy + by + uy * k * (L / n);
-        px(E, R, x, y, m, k === n ? 4 : 0); if (k / n < 0.55) px(E, R, x + side[0], y + side[1], m, 0);
+        px(E, R, x, y, m, k === n ? 4 : k >= n - 1 ? 3 : 0); if (k / n < 0.3) px(E, R, x + side[0], y + side[1], m, 0);
       }
     }
   }
@@ -93,7 +93,7 @@ PCD.define('IceAndSnowMage', (E) => {
   //   o = { mat, back 后沿比头后沿多几格, front 前沿比头前沿多几格, up 后沿高出下巴几行, drop 下沿在肩线下几行, lift 整体上移（缩肩）, clasp 领扣材质 }
   //   读 P.sway（毛穗相位）。一个部件。
   function furCollar(R, o) {
-    const m = o.mat, lift = o.lift || 0, cy = R.hy - lift, top = cy - o.up, bot = R.yS + o.drop - lift, xb = R.hx0 - o.back, xf = R.hx1 + o.front, sw = RD(P.sway || 0);
+    const m = o.mat, lift = o.lift || 0, cy = R.yS - lift, top = cy - o.up, bot = R.yS + o.drop - lift, xb = R.hx0 - o.back, xf = R.hx1 + o.front, sw = RD(P.sway || 0);
     const ph = (x) => ((((x - sw) % 3) + 3) % 3), LL = [], RR = [];
     E.part();
     for (let y = top; y <= bot; y++) {
@@ -106,7 +106,10 @@ PCD.define('IceAndSnowMage', (E) => {
     for (let y = cy + 1; y < bot; y += 2) px(E, R, RR[y - top] + 1, y, m, 0);
     const L = LL[bot - top], Rr = RR[bot - top];
     for (let x = L; x <= Rr; x++) { const q = ph(x); if (q === 2) { px(E, R, x, bot, m, 2); px(E, R, x, bot - 1, m, 2); continue; } px(E, R, x, bot + 1, m, 0); if (q === 0 && x > L && x < Rr) px(E, R, x, bot + 2, m, 0); }
-    for (let y = cy - 1; y <= cy + 1; y++) px(E, R, xb + 3 + (y & 1), y, m, 2);
+    for (let y = top + 1; y <= bot - 2; y++) for (let x = LL[y - top] + 2; x < RR[y - top] - 1; x++) {   // 毛束：斜向的暗纹 + 纹上方一格亮毛尖
+      const s = (((x * 2 - y + sw) % 7) + 7) % 7; if (s === 0) px(E, R, x, y, m, 2);
+    }
+    for (let y = cy; y <= cy + 2; y++) px(E, R, RR[y - top] - 1, y, m, 2);                            // 前襟翻口的阴影（看得出领子是一圈）
     if (o.clasp) { const x = R.hx1 + 2, y = cy + 3; px(E, R, x, y, o.clasp, 4); px(E, R, x + 1, y, o.clasp, 3); px(E, R, x, y + 1, o.clasp, 2); }
     return { top, bot, back: xb };
   }
@@ -121,16 +124,17 @@ PCD.define('IceAndSnowMage', (E) => {
   const K_POINT = K(9, -13, HALF, -6, 1);         // 双手平端三叉杖指向前方
   const K_CHARGE = K(7, -12, 0, 5, 0, -1);        // 双手握紧三叉杖竖在身前（后手在上）
   const K_CAST = K(10, -14, HALF, -6, 1, 1);
-  const K_HURT = K(5, -10, -0.3, 0, -1, -1);
-  const K_FROZEN = K(6, -10, -0.12, 0, 1, 1);     // 冻住时的姿势：缩着、低头
+  const K_HURT = K(8, -10, -0.2, 0, -1, -1);     // 受击：上身后仰、杖往后仰（叉头让开后仰的脸）
+  const K_FROZEN = K(9, -10, 0.05, 0, 1, 1);    // 冻住时的姿势：缩着、低头（杖在脸前面一点，不压脸）
   const FIELDS = ['hx', 'hy', 'a', 'hd', 'lean', 'head'];
   const setK = (A, B, q) => E.mix(P, A, B, q || 0, FIELDS);
   const KEY = keyer([['hx', -10, 30], ['hy', -30, 2], ['ai', -24, 24], ['hd', -8, 8], ['bhx', -10, 30], ['bhy', -30, 2], ['lean', -1, 2], ['head', -1, 1], ['crouch', 0, 3], ['bob', 0, 1], ['bx', -4, 4],
     ['step', -1, 1], ['wup', 0, 2], ['walk', 0, 1], ['sway', -2, 2], ['c0', 0, 4], ['c1', 0, 4], ['c2', 0, 4], ['eye', 0, 4], ['eyes', 0, 1], ['crown', -1, 3], ['rim', 0, 3],
     ['flash', 0, 1], ['frz', 0, 48], ['glint', 0, 1], ['breath', 0, 2], ['shrug', 0, 1], ['dqk', 0, 48], ['st', 0, 8]]);
   const SWAY_IDLE = [0, 1, 0, -1];
-  const T_A = [2 / 12, 4 / 12, 6 / 12], T_PUFF = 1.75, T_SHATTER = INCOMING + 0.85, T_LAND = T_SHATTER + 0.25, T_BREAK = 0.36;
-  const T_CAST = [1 / 12, 2 / 12, 3 / 12, 4 / 12, 5 / 12], T_REC = [0.5 / 12, 1.5 / 12, 2.5 / 12, 3.5 / 12];
+  const T_A = [2 / 12, 4 / 12, 6 / 12], T_PUFF = 1.75, T_SHATTER = INCOMING + 0.85, T_LAND = T_SHATTER + 0.25, T_BREAK = 0.3;
+  // 技能连射：9 根冰针每帧一根（施放第 0 帧在 onEnter 发第 1 根，之后施放 1–5 帧、收招 0–2 帧各一根），叉尖 0 → 1 → 2 轮流
+  const T_CAST = [1 / 12, 2 / 12, 3 / 12, 4 / 12, 5 / 12], T_REC = [1 / 12, 2 / 12];
   const lit = (k, v) => { if (k === 0) P.c0 = v; else if (k === 1) P.c1 = v; else P.c2 = v; };
 
   function poseAt(st, t, T) {
@@ -165,13 +169,12 @@ PCD.define('IceAndSnowMage', (E) => {
       P.bend = RD(q * 2);
     } else if (st === CAST) {
       const f = Math.floor(tq * 12 + 1e-6); setK(K_CAST, K_CAST); P.rim = 3; P.eye = (f12 & 1) ? 3 : 2; P.crown = 3; P.sway = -1;
-      if (f === 0) { P.c0 = P.c1 = P.c2 = 3; P.lean = 2; }
-      else { P.c0 = P.c1 = P.c2 = 2; lit((f - 1) % 3, 3); if (f & 1) P.hx -= 1; }
+      P.c0 = P.c1 = P.c2 = f === 0 ? 3 : 2; lit(f % 3, 3); if (f === 0) P.lean = 2; else if (f & 1) P.hx -= 1;
     } else if (st === RECOVER) {
       const f = Math.floor(tq * 12 + 1e-6);
-      if (tq < 0.33) { setK(K_CAST, K_CAST); P.c0 = P.c1 = P.c2 = 2; lit((5 + f) % 3, 3); if (!(f & 1)) P.hx -= 1; P.rim = 2; P.sway = -1; }
-      else { const q = ease.inOut(clamp01((tq - 0.33) / 0.33)); setK(K_CAST, K_IDLE, q); const v = q < 0.5 ? 1 : 0; P.c0 = P.c1 = P.c2 = v; P.rim = q < 0.5 ? 2 : 1; }
-      P.eye = tq < 0.3 ? 2 : tq < 0.45 ? 1 : 0; P.crown = tq < T_BREAK ? 3 : -1;   // 冰焰眼尾缩回，两根冰锥碎落
+      if (tq < 0.25) { setK(K_CAST, K_CAST); P.c0 = P.c1 = P.c2 = 2; lit((6 + f) % 3, 3); if (!(f & 1)) P.hx -= 1; P.rim = 2; P.sway = -1; }
+      else { const q = ease.inOut(clamp01((tq - 0.25) / 0.35)); setK(K_CAST, K_IDLE, q); const v = q < 0.5 ? 1 : 0; P.c0 = P.c1 = P.c2 = v; P.rim = q < 0.5 ? 2 : 1; }
+      P.eye = tq < 0.25 ? 2 : tq < 0.4 ? 1 : 0; P.crown = tq < T_BREAK ? 3 : -1;   // 冰焰眼尾缩回，两根冰锥碎落
     } else if (st === HURT) {
       const h = tq - INCOMING;
       if (h < 0) idle();
@@ -194,7 +197,7 @@ PCD.define('IceAndSnowMage', (E) => {
     const yo = P.bob + Math.min(3, RD(P.crouch));
     P.hx = RD(P.hx); P.hy = RD(P.hy) + yo; P.ai = RD(P.a / ASTEP); P.a = P.ai * ASTEP; P.hd = RD(P.hd); P.lean = RD(P.lean); P.head = RD(P.head);
     if (P.hd) { const dx = Math.sin(P.a), dy = -Math.cos(P.a); P.bhx = RD(P.hx + dx * P.hd); P.bhy = RD(P.hy + dy * P.hd); }
-    else if (P.breath) { P.bhx = P.breath === 2 ? 4 : 5; P.bhy = (P.breath === 2 ? -19 : -15) + yo; }
+    else if (P.breath) { P.bhx = P.breath === 2 ? 4 : 5; P.bhy = (P.breath === 2 ? -20 : -15) + yo; }
     else { P.bhx = -3; P.bhy = -9 + yo; }
     const G = triGeo(STAFF); P.gx = G.tips[1][0] + P.bx; P.gy = G.tips[1][1];
     P.dqk = RD(P.dq * 48); KEY(P);
@@ -212,7 +215,8 @@ PCD.define('IceAndSnowMage', (E) => {
       for (let x = L + 1; x < Rr; x++) { const k = (((x - sw) % 4) + 4) % 4; if (k === 2) px(E, R, x, hem + 1, M.ice, (x & 4) ? 4 : 3); else if (k === 1) px(E, R, x, hem, M.ice, 3); } }
     const H = parts.head(E, R, P, { mat: M.face, face: 'gaunt', nose: 'none', mouth: 'none', ear: 'none' });
     { const ex = H.eye[0], ey = H.ey, x1 = H.x1;                                 // 骷髅脸：颧下凹陷、鼻腔、牙排、眼窝魂火（和脸同一个部件）
-      px(E, R, ex - 1, ey + 1, M.face, 2); px(E, R, x1, ey + 1, M.ink, 0); px(E, R, x1 - 1, ey + 1, M.face, 4);
+      px(E, R, ex - 2, ey - 1, M.face, 3); px(E, R, ex - 1, ey - 1, M.face, 3); px(E, R, ex, ey - 1, M.face, 2); px(E, R, x1, ey - 1, M.face, 4);   // 额骨亮、眼窝上沿暗
+      px(E, R, x1, ey, M.face, 2); px(E, R, ex - 1, ey + 1, M.face, 2); px(E, R, x1, ey + 1, M.ink, 0); px(E, R, x1 - 1, ey + 1, M.face, 4);
       px(E, R, x1, ey + 2, M.face, 4); px(E, R, x1 - 1, ey + 2, M.ink, 0); px(E, R, x1 - 2, ey + 2, M.face, 4);
       const e = P.eyes ? 5 : P.eye;
       if (e === 5) { px(E, R, ex, ey, M.eye, 1); px(E, R, ex - 1, ey, M.eye, 1); }
@@ -220,7 +224,7 @@ PCD.define('IceAndSnowMage', (E) => {
       else if (e === 0) { px(E, R, ex, ey, M.eye, 3); px(E, R, ex - 1, ey, M.eye, 2); }
       else { px(E, R, ex, ey, M.eye, 4); px(E, R, ex - 1, ey, M.eye, 3); if (e >= 2) px(E, R, ex, ey - 1, M.eye, 3); } }
     parts.arm(E, R, P, { side: 'F', sleeve: 'bell', mat: M.sleeve, cuff: M.fur, cuffStyle: 'fur', grip: 'none' });
-    furCollar(R, { mat: M.fur, back: 5, front: 4, up: 3, drop: 4, lift: P.shrug, clasp: M.silver });
+    furCollar(R, { mat: M.fur, back: 5, front: 4, up: 4, drop: 3, lift: P.shrug, clasp: M.silver });
     if (P.breath) {                                                          // 呵手：后手越过身前凑到嘴边（压在毛领前面）
       E.part(); parts.sweep(E, R, 5, R.yS + 3, P.bhx + 1, P.bhy + 2, 1, 1.2, M.sleeveD, 0);
       E.part(); parts.brush(E, R, P.bhx + 1, P.bhy + 2, 0.9, M.furD, 0);
@@ -256,7 +260,7 @@ PCD.define('IceAndSnowMage', (E) => {
   const halves = [0, 1, 2, 3].map(() => new Sprite(hero.w, hero.h, hero.ox, hero.oy));
   function bakeHalves() {
     const G = triGeo(STAFF), BR = 3, kx = RD(G.gx + G.dx * BR + P.bx), ky = RD(G.gy + G.dy * BR);
-    const one = (i, o) => { E.begin(halves[i], 0, 0); tridentStaff(parts.FREE, { ...STAFF, lv: [4, 4, 4], ...o }); bake(halves[i], PLAIN); freezeOut(halves[i], 60, 0); };
+    const one = (i, o) => { E.begin(halves[i], 0, 0); tridentStaff(parts.FREE, { ...STAFF, lv: [4, 4, 4], ...o }); bake(halves[i], PLAIN); };
     one(0, { half: 1, at: [kx, ky], a: G.a - 0.55, len: STAFF.len - BR, brk: 0 });
     one(1, { half: 1, at: [kx - 4, -5], a: -HALF, len: STAFF.len - BR, brk: 0 });
     one(2, { half: 2, at: [kx, ky], a: G.a + 0.6, len: 1, back: STAFF.back + BR, brk: 0 });
@@ -276,16 +280,18 @@ PCD.define('IceAndSnowMage', (E) => {
   function onEnter(s) {
     if (s === CHARGE) { chT = 0; }
     if (s === CAST) {
-      chT = -1; castT = 0; skillHits = 0; const cx = scrX(-1), cy = HY - 15;
+      chT = -1; castT = 0; skillHits = 0; const cx = scrX(-1), cy = HY - 16;
       releaseOrbit(40, 90, 0.3, 0.6); burst(cx, cy - 4, 24, 50, 130, 0.3, 0.7, R_EL, 18); ring(cx, cy, 1, R_EL);
       shake(0.28, 2); flash(0.05);
+      poseAt(CAST, 0, 0); fireNeedle(0, 0, 360);                                // 施放第 0 帧：第 1 根冰针
     }
+    if (s === RECOVER) { poseAt(RECOVER, 0, 0); fireNeedle(6 % 3, 0, 360); }       // 收招第 0 帧：第 7 根
   }
   function onTime(s, t) {
     if (s === ATTACK) { const i = T_A.indexOf(t); if (i >= 0) { if (i === 0) sfx('swing', { kind: 'staff', w: 0.25 }); fireNeedle(i, 0, 240); } }
-    if (s === CAST) { const n = T_CAST.indexOf(t); if (n >= 0) fireNeedle(n % 3, 0, 300); }
+    if (s === CAST) { const n = T_CAST.indexOf(t); if (n >= 0) fireNeedle((n + 1) % 3, 0, 360); }
     if (s === RECOVER) {
-      const n = T_REC.indexOf(t); if (n >= 0) fireNeedle((5 + n) % 3, n === 3, 300);
+      const n = T_REC.indexOf(t); if (n >= 0) fireNeedle((7 + n) % 3, n === 1, 360);
       if (t === T_BREAK) {                                                       // 两根冰锥碎落
         const R = parts.rig(P, BODY);
         for (const i of [1, 3]) { const sp = SPK[i], x = scrX(R.hx + sp[2] + P.bx), y = HY + R.hy + sp[3]; for (let j = 0; j < 3; j++) fall(x + j - 1, y + j, (Math.random() - 0.5) * 30, -20 - Math.random() * 20, HY, R_EL, 1); burst(x, y, 5, 20, 50, 0.15, 0.3, R_EL, 6); }
@@ -353,8 +359,8 @@ PCD.define('IceAndSnowMage', (E) => {
   // 施放：身后炸开的锯齿冰焰光环（只画外轮廓：外沿亮、内沿暗；上半圈是一排往上翻腾的冰焰舌）
   function aura(f12) {
     if (castT >= 1.1) return;
-    const cx = scrX(-1 + P.bx), cy = HY - 15, g = Math.min(1, (castT + 0.02) / 0.12), rx = 7 + 6 * g, ry = 9 + 7 * g, late = castT > 0.55, broken = castT > 0.85;
-    const TONG = [6, 3, 1, 3];
+    const cx = scrX(-1 + P.bx), cy = HY - 16, g = Math.min(1, (castT + 0.02) / 0.12), rx = 8 + 8 * g, ry = 10 + 9 * g, late = castT > 0.55, broken = castT > 0.85;
+    const TONG = [7, 3, 1, 4];
     const inside = (x, y) => {
       const dx = (x - cx) / rx; if (dx <= -1 || dx >= 1) return false; const s = Math.sqrt(1 - dx * dx);
       if (y > cy + ry * s * 0.85) return false;
@@ -377,7 +383,7 @@ PCD.define('IceAndSnowMage', (E) => {
     if (P.c1 === 3 && E.state === CHARGE && P.dq < 1) { const gx = scrX(P.gx), gy = HY + P.gy; for (let r = 2; r <= 4; r++) { const c = r < 3 ? EL[0] : EL[1]; put(gx + r, gy, c); put(gx - r, gy, c); put(gx, gy - r, c); } }
     if (staffT >= 0) {                                                          // 断成两截的杖：倾倒 → 落地弹一下 → 随冰块一起消散
       const dq = clamp01((staffT - 1.1) / 0.5);
-      if (staffT < 0.12) { blitOut(halves[0], HX, HY, 0, RD(staffT * 20)); blitOut(halves[2], HX, HY, 0, RD(staffT * 10)); }
+      if (staffT < 0.12) { blitOut(halves[0], HX - 2, HY, 0, RD(staffT * 20) - 1); blitOut(halves[2], HX + 2, HY, 0, RD(staffT * 10)); }
       else { const b = staffT < 0.2 ? -1 : 0; blitOut(halves[1], HX, HY, dq, b); blitOut(halves[3], HX, HY, dq, 0); }
     }
   }

@@ -57,3 +57,4 @@
 - `shoot.mjs` 退出码 0（audit 无问题：待机 9 / 移动 4 / 攻击 6 / 蓄力 9 / 施放 2 / 收招 7 / 受击 6 / 死亡 6 个不同帧；专属色 4 个；音效 move.step · attack.swing / shoot / hit · skill.charge / release / impact · hurt · death · death.fall 都有）。
 - `compare.mjs` 对范式和 accepted 退出码 0；本升级线三级两两比较也不撞（和投石弓手待机 IoU 0.616）。
 - `frames.mjs`：移动 gaitEvery2 = 0,2,4,6…（前 4 个各不相同），剪影行看得出两个接触帧换脚、经过帧后脚只抬 1 格。
+- 复核（重跑构建轮）：`shoot.mjs` 退出码 0（audit 无问题，待机 26×28）；`compare.mjs` 对范式 + accepted（去掉 accepted 里本角色上一轮的副本）退出码 0，最近 巨魔 待机 IoU 0.619、投石弓手 0.616（配色 0.919，同一升级线的同一个僵尸，剪影未过线）；`frames.mjs` 移动 gaitEvery2 = 0,2,4,6…；`--prev` 对上一轮验收图无消失区域。

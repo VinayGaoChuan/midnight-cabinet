@@ -18,8 +18,8 @@ PCD.define('MagicShieldSoldier', (E) => {
     brz: BRONZE, shd: BRONZE, iron: 'iron', skin: 'moss', tusk: 'bone', stone: 'stone', cord: 'leather',
     rune: { r: [42, '#8a5ce0', 43, 21], flat: 1 }, eye: { r: [0, 20, 14, 47], flat: 1 },
   });
-  const BODY = { body: 'stocky', sw: 6, limb: 1.35, lw: 4 };
-  const HX = 77, DUR = DEFAULT_DUR.slice();
+  const BODY = { body: 'stocky', sw: 6, limb: 1.35, lw: 4, headX: -2 };   // 头缩在肩后 2 格：盔缝和獠牙露在盾沿后面，不被盾压住
+  const HX = 74, DUR = DEFAULT_DUR.slice();
   const hero = new Sprite(64, 46, 28, 40);
   const RIM = { rim: 0, rx: 0, ry: 0, rimR: [0, 8, 12, 16], rimRamp: EL, flash: 0, dq: 0, rimAll: 1, skip: new Uint8Array(256) };
   for (const k of Object.keys(M)) if (k !== 'shd') RIM.skip[M[k]] = 1;
@@ -28,17 +28,17 @@ PCD.define('MagicShieldSoldier', (E) => {
   const P = { hx: 0, hy: 0, bhx: 0, bhy: 0, lean: 0, head: 0, crouch: 0, bob: 0, bx: 0, step: 0, wup: 0, walk: 0, beard: 0, sway: 0,
     gem: 0, lit: 4, col: 0, rim: 0, eyes: 0, flash: 0, sit: 0, lift: 0, tilt: 0, brk: 0, dq: 0, st: 0, gx: 0, gy: 0, flip: 0, mx: 0, k1: 0, k2: 0 };
   const K = (hx, hy, bhx, bhy, lean, head, crouch) => ({ hx, hy, bhx, bhy, lean: lean || 0, head: head || 0, crouch: crouch || 0 });
-  const K_IDLE = K(3, -14, 1, -13, 0, -1, 2);      // 缩在盾后：盾顶齐眼缝，只露出盔冠和后半个头
-  const K_PEEK = K(3, -10, 1, -9, 0, 1, 0);        // 从盾沿上探头：盾放低、身子直起来
-  const K_WALK = K(3, -14, 1, -13, 0, 0, 1);
-  const K_WIND = K(1, -15, -1, -14, -1, -1, 3);    // 盾收回、蹲低蓄势
-  const K_PUSH = K(6, -13, 4, -12, 1, 1, 1);       // 整面塔盾往前一顶 3 格（脚不挪）
-  const K_HOLD = K(5, -13, 3, -12, 1, 0, 1);
-  const K_LIFT = K(3, -18, 1, -17, 0, 0, 1);       // 蓄力：先把盾提起来
-  const K_BRACE = K(2, -10, 0, -9, 1, -1, 3);      // 盾底插进地里（下沉 1 格），蹲低缩到盾后
-  const K_WALL = K(2, -9, 0, -8, 1, 0, 2);         // 施放：顶住盾
-  const K_HURT = K(1, -15, -1, -14, -1, -1, 1);
-  const K_STAG = K(1, -13, -1, -12, -1, -1, 2);    // 盾碎了，踉跄
+  const K_IDLE = K(6, -14, 4, -13, 0, -1, 2);      // 缩在盾后：盾顶齐盔顶，盔缝里的眼和獠牙从盾沿后面露出来
+  const K_PEEK = K(6, -10, 4, -9, 0, 0, 0);        // 从盾沿上探头：盾放低、身子直起来
+  const K_WALK = K(6, -14, 4, -13, 0, 0, 1);
+  const K_WIND = K(4, -15, 2, -14, -1, -1, 3);     // 盾收回、蹲低蓄势
+  const K_PUSH = K(9, -13, 7, -12, 1, 1, 1);       // 整面塔盾往前一顶 3 格（脚不挪）
+  const K_HOLD = K(8, -13, 6, -12, 1, 0, 1);
+  const K_LIFT = K(6, -18, 4, -17, 0, 0, 1);       // 蓄力：先把盾提起来
+  const K_BRACE = K(5, -10, 3, -9, 1, -1, 3);      // 盾底插进地里（下沉 1 格），蹲低缩到盾后
+  const K_WALL = K(5, -9, 3, -8, 1, 0, 2);         // 施放：顶住盾
+  const K_HURT = K(4, -15, 2, -14, -1, -1, 1);
+  const K_STAG = K(4, -13, 2, -12, -1, -1, 2);     // 盾碎了，踉跄
   const K_SIT = K(4, -9, -9, -4, -1, -1, 0);       // 坐倒（rig 坐标，整个身体下移 SIT_DROP）：半截盾框搁在腿上，后手撑地
   const FIELDS = ['hx', 'hy', 'bhx', 'bhy', 'lean', 'head', 'crouch'];
   const setK = (A, B, q) => E.mix(P, A, B, q, FIELDS);
@@ -49,7 +49,7 @@ PCD.define('MagicShieldSoldier', (E) => {
   const PEEK = [[0.5, 0, 0], [1, 0, 1], [1, 1, 2], [1, 1, 3], [0.5, 0, 0]];   // 待机个性：探头张望（混合量、转头、闪亮的符文列）
   const CH_TRACK = [[0, K_IDLE], [0.25, K_LIFT, 'out'], [4 / 12, K_BRACE, 'in']];
   const T_PUSH = 2 / 12, T_PLANT = 4 / 12, T_SHOT1 = 0.1, T_SHOT2 = 0.2, T_PULL = 0.3;
-  const T_SHATTER = INCOMING + 0.3, T_LAND = INCOMING + 0.58, T_TILT = INCOMING + 0.8, SIT_DROP = 3;
+  const T_SHATTER = INCOMING + 0.3, T_LAND = INCOMING + 0.62, T_TILT = INCOMING + 0.8, SIT_DROP = 3;
   const SHIELD_C = [K_BRACE.hx + 3, K_BRACE.hy + 3];   // 插地时的盾心（蓄力汇聚的目标）
 
   function poseAt(st, t, T) {
@@ -155,10 +155,10 @@ PCD.define('MagicShieldSoldier', (E) => {
     for (const [dx, dy] of [[-hw + 1, 2], [hw - 1, 2], [-hw + 1, h - 3], [hw - 1, h - 3]]) px(E, R, cx + dx, top + dy, m, 4);   // 铆钉
     px(E, R, cx - 2, top + 3, m, 4); px(E, R, cx - 2, top + 4, m, 4); px(E, R, cx + 2, top + 12, m, 4);   // 盾面冷光
     for (let c = 0; c < 3; c++) {
-      const x = cx + (c - 1) * 3, hot = P.col === c + 1;
-      for (let y = top + 3; y <= top + h - 5; y++) px(E, R, x, y, m, 2);                                  // 暗刻槽
+      const x = cx + (c - 1) * 3, hot = P.col === c + 1, off = c === 1 ? 1 : 0;                           // 中间一列错开 1 行：读成一行行刻字，不是窗格
+      for (let y = top + 3 + off; y <= top + h - 5 + off; y++) px(E, R, x, y, m, 2);                      // 暗刻槽
       for (let g = 0; g < 4; g++) {
-        const y = top + 3 + g * 3, lit = 3 - g < P.lit, d = c === 0 ? -1 : c === 2 ? 1 : (g & 1 ? 1 : -1), tn = runeTone(lit, hot, false);
+        const y = top + 3 + off + g * 3, lit = 3 - g < P.lit, d = c === 0 ? -1 : c === 2 ? 1 : (g & 1 ? 1 : -1), tn = runeTone(lit, hot, false);
         px(E, R, x, y, M.rune, runeTone(lit, hot, true)); px(E, R, x, y + 1, M.rune, tn);
         if (((c + g) & 1) === 0) px(E, R, x + d, y + ((c + g) & 2 ? 1 : 0), M.rune, Math.max(1, tn - 1));   // 横钩（暗一级）
       }
@@ -210,7 +210,7 @@ PCD.define('MagicShieldSoldier', (E) => {
   function bakeHero() { RIM.rim = P.rim; RIM.rx = P.gx + hero.ox; RIM.ry = P.gy + hero.oy; RIM.flash = P.flash; RIM.dq = P.dq; bake(hero, RIM); }
 
   // ───── 特效 ─────
-  const WALL_LX = 13, WALL_H = 24;                                    // 符文护壁：盾前 3 格、高 24 格、宽 3 格
+  const WALL_LX = 16, WALL_H = 24;                                    // 符文护壁：盾前 3 格、高 24 格、宽 3 格
   const catches = [{ x: 0, y: 0, t: 9 }, { x: 0, y: 0, t: 9 }];
   let pushT = 9, wallT = 9, fadeT = 9, hitY = 0, hitT = 9, chargeAcc = 0, soulAcc = 0, lastStep = 0, lastLit = 0, lastCol = 0;
   const wx = (x) => scrX(x), wy = (y) => HY + y;
@@ -244,7 +244,7 @@ PCD.define('MagicShieldSoldier', (E) => {
       burst(cx, cy, 20, 40, 120, 0.3, 0.7, R_EL, 20); fx.cross(cx, cy, 6, R_EL, 0.25); shake(0.12, 1);
     }
     if (s === DEATH && t === T_LAND) { for (let i = 0; i < 16; i++) spawn(K_DUST, HX - 12 + Math.random() * 24, HY - 1, (Math.random() - 0.5) * 30, -8 - Math.random() * 12, 0.4 + Math.random() * 0.4, FXI.dust); shake(0.1, 1); sfx('fall', { w: 0.7 }); }
-    if (s === DEATH && t === T_TILT) { const X = wx(-2), Y = wy(-15); burst(X, Y, 4, 20, 40, 0.1, 0.25, R_IMP, 10); }   // 头盔磕歪：两点火星
+    if (s === DEATH && t === T_TILT) { const X = wx(-5), Y = wy(-15); burst(X, Y, 4, 20, 40, 0.1, 0.25, R_IMP, 10); }   // 头盔磕歪：两点火星
   }
   const EVENTS = [[], [], [T_PUSH], [T_PLANT], [T_SHOT1, T_SHOT2], [T_PULL], [], [T_SHATTER, T_LAND, T_TILT], []];
   function impactOn(k, x, y) {                                          // 敌弹撞上护壁：被吸住，撞击处的符文格变白 1 帧
@@ -313,7 +313,7 @@ PCD.define('MagicShieldSoldier', (E) => {
   }
 
   return {
-    name: '魔盾兵', HX, R_EL, DUR, hero, P, GLOW_MATS: [M.rune, M.eye], HIT_POINT: [8, -13], EVENTS, R_HURT: R_IMP,
+    name: '魔盾兵', HX, R_EL, DUR, hero, P, GLOW_MATS: [M.rune, M.eye], HIT_POINT: [10, -13], EVENTS, R_HURT: R_IMP,
     SFX: { body: 'armor', how: 'collapse', pal: 'arcane', style: 'shield', w: 0.7 },
     poseAt, drawHero, bakeHero, onEnter, onTime, impactOn, stepFX, fxReset, fxBack, fxFront, hurtFx,
   };

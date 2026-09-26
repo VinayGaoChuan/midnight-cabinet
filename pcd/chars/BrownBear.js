@@ -21,7 +21,7 @@ PCD.define('BrownBear', (E) => {
     frost: 'pale', skin: SKIN, rib: 'bone', iron: 'iron', lid: 'steel', wood: 'wood', rope: [20, 19, 61, 62],
     soup: [34, 36, 37, 38], steam: [0, 37, 38, 21],
   });
-  const o = Q.shape({ len: 16, chest: 6.5, rump: 5, waist: 0.15, hump: 3, leg: 6, lw: 3, thigh: 3, stride: 2, lift: 2, farDx: -2,
+  const o = Q.shape({ len: 19, chest: 6.5, rump: 5, waist: 0.15, hump: 3, leg: 6, lw: 3, thigh: 3, stride: 2, lift: 2, farDx: -2,
     neck: 2, neckA: 0.12, neckW: 3.5, head: { type: 'bear', tusk: 2 }, headA: 0.22, tail: 'stub', foot: 'pad', mane: 'none', fur: 1, m });
   const HX = 66, DUR = DEFAULT_DUR.slice(), hero = new Sprite(104, 64, 48, 58);
   const RIM = { rim: 0, rx: 0, ry: 0, rimR: [0, 8, 13, 18], rimRamp: EL, flash: 0, dq: 0, rimAll: 1, skip: new Uint8Array(256) };
@@ -96,9 +96,6 @@ PCD.define('BrownBear', (E) => {
     pxT(T, cx - 7, top + 2, m.iron, 0); pxT(T, cx - 7, top + 3, m.iron, 2); pxT(T, cx + 6, top + 2, m.iron, 0);   // 锅耳
     for (let x = cx - 6; x <= cx + 5; x++) pxT(T, x, top + 3, m.rope, x === cx - 3 ? 4 : x === cx + 2 ? 2 : 0);   // 麻绳
     pxT(T, cx - 4, top + 2, m.iron, 4); pxT(T, cx - 5, top + 4, m.iron, 4);
-    if (onBody) {                                                    // 两道麻绳绕过肚子（绑在背上）
-      for (const rx of [cx - 5, cx + 4]) { const s = Q.span(rig, o, rx); if (s) for (let y = by + 1; y <= s[1]; y++) pxT(T, rx + (y & 1 ? 0 : 0), y, m.rope, (y & 1) ? 3 : 2); }
-    }
     E.part();                                                        // 锅盖 = 倒扣的平底锅（木柄朝前）
     const ly = top - 1 - lid;
     for (let x = cx - 4; x <= cx + 3; x++) pxT(T, x, ly, m.lid, x === cx - 4 ? 4 : 0);
@@ -123,7 +120,12 @@ PCD.define('BrownBear', (E) => {
     const C1 = rig.C1, C2 = rig.C2, dx = C1.x - C2.x;
     for (let x = R(C2.x + dx * 0.62); x <= R(C2.x + dx * 0.62) + 10; x++) { const s = Q.span(rig, o, x); if (!s) continue; for (let y = s[0]; y <= s[0] + 1; y++) U.dot(E, x, y, m.skin, y === s[0] ? 0 : 2); }
     for (let x = R(C2.x - C2.r + 1); x <= R(C1.x + 2); x++) { const s = Q.span(rig, o, x); if (!s) continue; for (let y = s[0] + 1; y < s[1] - 2; y++) if (U.hash(x * 3 + 7, y * 5 + 11) < 0.045 && y < s[0] + 5) U.dot(E, x, y, m.frost, 3); }
-    const sx = R(C2.x + dx * 0.35), s = Q.span(rig, o, sx); if (s && !rig.lie) for (let y = s[0] + 3; y <= s[1] - 2; y++) { U.dot(E, sx + (y & 1), y, m.body, 1); if (y & 1) U.dot(E, sx + 2, y, m.body, 4); }
+    const sx = R(C2.x + dx * 0.74), s = Q.span(rig, o, sx);                                      // 侧腹一道缝合线：斜的深色缝 + 每 2 行一对浅色针脚（梯形针脚，不画成锯齿）
+    if (s && !rig.lie) for (let y = s[0] + 4, k = 0; y <= s[1] - 2; y++, k++) { const x = sx - (k >> 1); U.dot(E, x, y, m.body, 1); if (!(k & 1)) { U.dot(E, x - 1, y, m.body, 4); U.dot(E, x + 1, y, m.body, 4); } }
+  }
+  function potRopes() {                                              // 两道麻绳从锅耳绕过肚子（和躯干同一个部件：不压分界线，身上不会出现一圈圈深色格子）
+    const b = potBase();
+    for (const rx of [b[0] - 5, b[0] + 4]) { const s = Q.span(rig, o, rx); if (s) for (let y = b[1] + 1; y <= s[1] - 1; y++) U.dot(E, rx, y, m.rope, (y & 1) ? 3 : 2); }
   }
   function legs(far) {                                               // 腿：quad.leg 之后紧跟着画白色长爪（前爪多伸 1 格）
     for (let i = 0; i < 4; i++) {
@@ -139,7 +141,7 @@ PCD.define('BrownBear', (E) => {
     const legsLast = rig.lie === 2;
     if (!legsLast) legs(1);
     Q.tail(E, rig, P, o);
-    Q.body(E, rig, P, o); bodyMarks();
+    Q.body(E, rig, P, o); bodyMarks(); if (!P.drop) potRopes();
     if (!legsLast) legs(0);
     ribs();
     if (!P.drop) { const b = potBase(); drawPot(null, b[0], b[1], P.lid, P.mane, 1); }

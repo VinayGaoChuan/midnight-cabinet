@@ -3,7 +3,7 @@
 PCD.define('watchman', (E) => {
   const { defMat, Sprite, begin, part, sp, run, rect, line, brush, bake, ease, clamp01, mix, q12, f12of, gait, walkDemo, color, fxRamp, FXR, FXI, B8, W, HY, FLOOR, DUMMY_X, INCOMING, ASTEP,
     IDLE, MOVE, ATTACK, CHARGE, CAST, RECOVER, HURT, DEATH, REVIVE, DEFAULT_DUR, K_BURST, K_EMBER, K_RISE, K_DUST,
-    spawn, burst, shake, flash, hitDummy, dummyFx, put, scrX, shotFloorGlow } = E;
+    spawn, burst, shake, flash, hitDummy, dummyFx, put, scrX, shotFloorGlow, sfx } = E;
 
   // ───── 颜色：0–26 与共享色板相同；原版追加的 27–39 用 pc(原下标) 取本页下标 ─────
   const OWN = ['#0e130b', '#1f2a16', '#36472a', '#56693b',     // 27–30 夜巡斗篷 墨橄榄绿（勾线 / 暗 / 基 / 亮）
@@ -270,6 +270,7 @@ PCD.define('watchman', (E) => {
       for (let i = 0; i < 8; i++) spawn(K_DUST, LAMP_CAST_X - 6 + Math.random() * 12, HY, (Math.random() - 0.5) * 50, -8 - Math.random() * 14, 0.35 + Math.random() * 0.3, FXI.dust);
       grT = 0; grX = LAMP_CAST_X; grY = HY; colT = 0; colX = LAMP_CAST_X; colY = LAMP_CAST_Y - 3; frzOn = 0; frzHit = 0; frzT = 9; starT = 9;
       shake(0.28, 2); flash(0.05);
+      sfx('impact', { pal: 'fire', w: 0.9 });
     }
   }
   function onTime(s, t) {
@@ -278,10 +279,11 @@ PCD.define('watchman', (E) => {
       smT = 0; smX0 = tipW; smX1 = tipS - 5; smY = HY + K_STRIKE.hy;
       hitDummy(0, 1); burst(tipS, smY, 7, 40, 100, 0.15, 0.35, FXI.impact, 10);
       for (let i = 0; i < 2; i++) spawn(K_BURST, tipS - 1, smY - 1 + i * 2, 25 + Math.random() * 25, (i ? 1 : -1) * (12 + Math.random() * 12), 0.45 + Math.random() * 0.2, R_EL);
+      sfx('swing', { kind: 'thrust', w: 0.55 }); sfx('hit', { mat: 'metal', w: 0.55 });
     }
     if (s === DEATH && t === INCOMING + 0.28) { for (let i = 0; i < 6; i++) spawn(K_DUST, HX - 5 + Math.random() * 4, HY, (Math.random() - 0.5) * 24, -5 - Math.random() * 8, 0.3 + Math.random() * 0.3, FXI.dust); }   // 膝盖着地
     if (s === DEATH && t === INCOMING + 0.7) { for (let i = 0; i < 4; i++) spawn(K_EMBER, LAMP_KNEEL_X + Math.random() * 2 - 1, LAMP_KNEEL_Y - 3, Math.random() * 6 - 3, -6 - Math.random() * 6, 0.8 + Math.random() * 0.5, FXI.dust); }   // 灯熄的一缕烟
-    if (s === DEATH && t === INCOMING + 0.86) { for (let i = 0; i < 16; i++) { const x = HX - 24 + Math.random() * 32; spawn(K_DUST, x, HY - 1, (Math.random() - 0.5) * 30, -8 - Math.random() * 14, 0.4 + Math.random() * 0.4, FXI.dust); } shake(0.1, 1); }
+    if (s === DEATH && t === INCOMING + 0.86) { for (let i = 0; i < 16; i++) { const x = HX - 24 + Math.random() * 32; spawn(K_DUST, x, HY - 1, (Math.random() - 0.5) * 30, -8 - Math.random() * 14, 0.4 + Math.random() * 0.4, FXI.dust); } shake(0.1, 1); sfx('fall', { w: 0.6 }); }
   }
   const EVENTS = [[], [], [T_FLICK], [], [], [], [], [INCOMING + 0.28, INCOMING + 0.7, INCOMING + 0.86], []];
   // 假人被琥珀光罩住：第 1 帧整片烛黄，之后按原色亮度映射成琥珀单色；不摇、不褪（到点直接解除）
@@ -292,13 +294,13 @@ PCD.define('watchman', (E) => {
   function stepFX(dt, state, stT) {
     const gx = scrX(P.gx), gy = HY + P.gy;
     if (state === CHARGE && stT > 0.2) { chargeAcc += dt * (18 + 30 * clamp01(stT / DUR[CHARGE])); while (chargeAcc >= 1) { chargeAcc -= 1; const k = Math.floor(Math.random() * 8); if (k === 2) continue; const a = k * 0.7854 + (Math.random() - 0.5) * 0.1, r = 11 + Math.random() * 7; rayIn(a, r, 18 + Math.random() * 16); } }
-    if (state === MOVE && P.step !== lastStep) { if (P.step !== 0) for (let i = 0; i < 2; i++) spawn(K_DUST, scrX(3) + (Math.random() - 0.5) * 3, HY, (Math.random() - 0.5) * 16, -4 - Math.random() * 6, 0.3 + Math.random() * 0.2, FXI.dust); lastStep = P.step; }
+    if (state === MOVE && P.step !== lastStep) { if (P.step !== 0) { sfx('step', { w: 0.55 }); } if (P.step !== 0) for (let i = 0; i < 2; i++) spawn(K_DUST, scrX(3) + (Math.random() - 0.5) * 3, HY, (Math.random() - 0.5) * 16, -4 - Math.random() * 6, 0.3 + Math.random() * 0.2, FXI.dust); lastStep = P.step; }
     if (state === IDLE || state === RECOVER) { emberAcc += dt * (state === IDLE ? 0.7 : 8); while (emberAcc >= 1) { emberAcc -= 1; spawn(K_EMBER, gx + Math.round(Math.random() * 2 - 1), gy - 3, Math.random() * 6 - 3, -7 - Math.random() * 7, 0.6 + Math.random() * 0.6, R_EL); } }
     if (state === DEATH && stT > INCOMING + 1.7 && stT < INCOMING + 2.45) { soulAcc += dt * 30; while (soulAcc >= 1) { soulAcc -= 1; spawn(K_RISE, HX - 22 + Math.random() * 28, HY - 1 - Math.random() * 7, (Math.random() - 0.5) * 6, -14 - Math.random() * 16, 0.8 + Math.random() * 0.8, FXI.soul); } }
     for (let i = 0; i < RAYN; i++) if (rOn[i]) { rR[i] -= rV[i] * dt; if (rR[i] <= 3) { rOn[i] = 0; continue; } rX[i] = gx + Math.cos(rA[i]) * rR[i]; rY[i] = gy + Math.sin(rA[i]) * rR[i]; rQ[i] = 0.9 * clamp01((rR[i] - 3) / Math.max(1, rR0[i] - 3)); }
     // 技能命中：光环扫到假人 → 琥珀剪影定格 0.4 秒（不摇）→ 才闪白 + 大摇 + 击退 1 格
     if (grT < GR_LIFE && !frzOn && grX + grRX(grT) >= DUMMY_X - 6) { frzOn = 1; frzT = 0; }
-    if (frzOn && !frzHit && frzT >= 0.4) { frzHit = 1; hitDummy(1, 1); shake(0.12, 1); burst(DUMMY_X - 2, HY - 16, 14, 40, 100, 0.25, 0.5, R_EL, 12); starT = 0; }
+    if (frzOn && !frzHit && frzT >= 0.4) { frzHit = 1; hitDummy(1, 1); shake(0.12, 1); burst(DUMMY_X - 2, HY - 16, 14, 40, 100, 0.25, 0.5, R_EL, 12); starT = 0; sfx('impact', { pal: 'fire', w: 0.7 }); }
     // 场外照夜：压暗 → 闪暖白 → 探照光带向右扫 → 扫到的敌人定格 2.5 秒
     if (ofT < 0.1 && ofT + dt >= 0.1) flash(0.05);
     if (!ofHit && ofT >= 0.1 && ofT < 2 && HX + (ofT - 0.1) * 240 >= DUMMY_X - 6) { ofHit = 1; ofFrz = 0; }
@@ -358,6 +360,8 @@ PCD.define('watchman', (E) => {
 
   return {
     name: '守夜人', HX, R_EL, DUR, hero, P, GLOW_MATS: [M_LAMP, M_LGLOW], HIT_POINT: [5, -21], EVENTS,
+    // 音效声明：布衣肉身受击、跪倒仰面倒下；灯盾猛击 = 琥珀灯火（fire）+ 盾击花样，重砸
+    SFX: { body: 'flesh', how: 'topple', pal: 'fire', style: 'shield', w: 0.85 },
     poseAt, drawHero, bakeHero, onEnter, onTime, stepFX, fxReset, fxBack, fxMid, fxFront, offField,
   };
 });

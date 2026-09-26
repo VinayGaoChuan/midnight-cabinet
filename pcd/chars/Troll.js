@@ -117,6 +117,7 @@ PCD.define('Troll', (E) => {
   // ───── 画（部件从后往前）─────
   let R = null;
   const px = (x, y, m, t) => parts.px(E, R, x, y, m, t), run = (y, a, b, m, t) => parts.run(E, R, y, a, b, m, t), line = (a, b, c, d, m, t) => parts.line(E, R, a, b, c, d, m, t);
+  const mossT = () => (P.gem === 4 ? 2 : P.gem >= 2 ? 4 : 3);         // 再生痂：平时 3 级，蓄力 / 施放亮到 4 级，熄灭（死亡）暗到 2 级
   // 背脊骨刺：肩胛到后腰三根，斜向后上方伸出背线（spine 0 缩进皮下 · 1 平时 · 2 弹出加长 2 格；spineN = 还露着几根，死亡时从下往上缩回）
   const SPINE_ROW = [2, 5, 8], SPINE_LEN = [3, 2, 2];
   function spines() {
@@ -140,7 +141,7 @@ PCD.define('Troll', (E) => {
     E.part();
     for (let v = 0; v < SLAB.length; v++) for (let u = 0; u < 5; u++) {
       const ch = SLAB[v][u]; if (ch === '.') continue; const p = at(u, v);
-      if (ch === 'M') px(p[0], p[1], M.moss, P.gem >= 2 ? 4 : 3); else px(p[0], p[1], M.bone, ch === 'h' ? 4 : ch === 'd' ? 2 : ch === 'r' ? 4 : 0);
+      if (ch === 'M') px(p[0], p[1], M.moss, mossT()); else px(p[0], p[1], M.bone, ch === 'h' ? 4 : ch === 'd' ? 2 : ch === 'r' ? 4 : 0);
     }
     if (spikes) for (const [u, v] of SLAB_SP) { const p = at(u, v); px(p[0], p[1], M.bone, 4); }
   }
@@ -155,7 +156,7 @@ PCD.define('Troll', (E) => {
   function scarPx(x, y, i, n, scab) {
     if (y >= HEAL_Y[P.heal]) return;
     const moss = P.wnd && i < Math.ceil(n * P.wnd / 3);
-    if (moss || scab) px(x, y, M.moss, P.gem >= 2 ? 4 : P.gem === 4 ? 2 : 3); else px(x, y, M.scar, (i & 1) ? 3 : 2);
+    if (moss || scab) px(x, y, M.moss, mossT()); else px(x, y, M.scar, (i & 1) ? 3 : 2);
   }
   function scars() {
     const y0 = R.yS + 3, e = parts.edges(R, y0);
@@ -210,7 +211,7 @@ PCD.define('Troll', (E) => {
     head();
     const na = parts.arm(E, R, P, { sleeve: 'bare', mat: M.skin, grip: 'none' });
     { const x = RD((R.sFx + na.ex) / 2), y = RD((R.sFy + na.ey) / 2);   // 上臂的伤疤（和手臂同一部件；待机时被骨爪抠的就是它）
-      if (P.wo) { px(x, y, M.scar, 4); px(x, y + 1, M.scar, 3); } else if (y < HEAL_Y[P.heal]) { px(x, y, M.moss, P.gem >= 2 ? 4 : 3); px(x, y + 1, M.scar, 2); } }
+      if (P.wo) { px(x, y, M.scar, 4); px(x, y + 1, M.scar, 3); } else if (y < HEAL_Y[P.heal]) { px(x, y, M.moss, mossT()); px(x, y + 1, M.scar, 2); } }
     boneSlab(P.hx, P.hy, P.so, P.slabSp);
     parts.hand(E, R, P, { hand: M.skin });
   }

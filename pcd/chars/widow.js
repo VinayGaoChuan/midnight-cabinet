@@ -3,7 +3,7 @@
 PCD.define('widow', (E) => {
   const { defMat, Sprite, begin, part, sp, run, rect, line, bake, ease, clamp01, mix, q12, f12of, gait, walkDemo, color, fxRamp, FXR, FXI, B8, DT, HY, DUMMY_X, INCOMING, ASTEP,
     IDLE, MOVE, ATTACK, CHARGE, CAST, RECOVER, HURT, DEATH, REVIVE, DEFAULT_DUR, K_BURST, K_TRAIL, K_RISE, K_DUST,
-    spawn, burst, shoot, shake, flash, hitDummy, put, scrX, floorGlow, shotFloorGlow } = E;
+    spawn, burst, shoot, shake, flash, hitDummy, put, scrX, floorGlow, shotFloorGlow, sfx } = E;
 
   // ───── 颜色：0–26 与共享色板相同；原版追加的 27–36 用 pc(原下标) 取本页下标 ─────
   const OWN = ['#08060c', '#17101f', '#2a1d3a', '#45335e',     // 27–30 丧服黑紫（勾线 / 暗 / 基 / 亮）
@@ -366,6 +366,7 @@ PCD.define('widow', (E) => {
     if (s === ATTACK && t === T_FLICK) {                         // 甩腕那一帧：拖影弧、出手金光、飞出小牌
       smCX = HX + 2 + K_FLICK.lean; smCY = HY - 17; smT = 0;
       mzT = 0; mzX = HX + K_FLICK.hx + 1; mzY = HY + K_FLICK.hy - 1; shoot(1, mzX + 1, mzY, 170, DUMMY_X - 3);
+      sfx('swing', { kind: 'throw', w: 0.2 }); sfx('shoot', { proj: 'arrow' });
     }
     if (s === ATTACK && t === 0.55) burst(scrX(P.hx), HY + P.hy - 3, 3, 10, 25, 0.12, 0.25, R_EL, 4);   // 指尖变出新牌
     if (s === RECOVER && t === 0.33) {                           // 吹一口烟：一个烟圈往前飘 + 几缕散烟
@@ -377,18 +378,18 @@ PCD.define('widow', (E) => {
       const L = i & 1, x0 = HX - 2 + (L ? 6 : 2), y0 = HY + (L ? -12 : -9);
       debris(1, x0, y0, (L ? 1 : -1) * (8 + Math.random() * 40) + (Math.random() - 0.5) * 20, -45 - Math.random() * 55, 1.95 - Math.random() * 0.1, (Math.random() < 0.3 ? 1 : 0) | (Math.random() < 0.5 ? 2 : 0));
     }
-    if (s === DEATH && t === INCOMING + 0.66) { for (let i = 0; i < 16; i++) { const x = HX - 16 + Math.random() * 28; spawn(K_DUST, x, HY - 1, (Math.random() - 0.5) * 34, -6 - Math.random() * 12, 0.4 + Math.random() * 0.4, R_DUST); } shake(0.1, 1); }
+    if (s === DEATH && t === INCOMING + 0.66) { for (let i = 0; i < 16; i++) { const x = HX - 16 + Math.random() * 28; spawn(K_DUST, x, HY - 1, (Math.random() - 0.5) * 34, -6 - Math.random() * 12, 0.4 + Math.random() * 0.4, R_DUST); } shake(0.1, 1); sfx('fall', { w: 0.35 }); }
     if (s === DEATH && t === INCOMING + 1.0) { for (let i = 0; i < 6; i++) spawn(K_DUST, HX - 1 + (i & 1 ? 8 : -8) + Math.random() * 2, HY - 8, (i & 1 ? 1 : -1) * (6 + Math.random() * 8), -3 - Math.random() * 4, 0.3 + Math.random() * 0.2, R_DUST); }   // 帽子轻轻落下
     if (s === DEATH && t === INCOMING + 1.3) { for (let i = 0; i < 4; i++) qSpawn(Q_SMOKE, scrX(P.gx), HY - 1, (Math.random() - 0.5) * 4, -6 - Math.random() * 5, 0.9 + Math.random() * 0.5); }   // 烟头熄灭的一缕烟
   }
   const EVENTS = [[1.0], [], [T_FLICK, 0.55], [], [], [0.33], [], [INCOMING, INCOMING + 0.66, INCOMING + 1.0, INCOMING + 1.3], []];
   function impactOn(k, x, y) {
-    if (k === 1) { burst(x, y, 8, 40, 90, 0.15, 0.35, R_EL, 10); hitDummy(0); }
+    if (k === 1) { burst(x, y, 8, 40, 90, 0.15, 0.35, R_EL, 10); hitDummy(0); sfx('hit', { mat: 'flesh', w: 0.2 }); }
     else if (k === 2) {                                          // 牌钉进假人：X 形交叉切线 + 30 颗桃红外爆 + 头顶一小股金筹码喷泉（积分倍率）
       xsT = 0; xsX = Math.round(x); xsY = Math.round(y); stickT = 0; stickX = Math.round(x); stickY = Math.round(y);
       burst(x, y, 30, 60, 150, 0.3, 0.7, R_EL, 14);
       for (let i = 0; i < 12; i++) spawn(K_BURST, DUMMY_X + (Math.random() - 0.5) * 4, HY - 31, (Math.random() - 0.5) * 34, -80 - Math.random() * 45, 0.6 + Math.random() * 0.45, R_IMPACT);
-      hitDummy(1, 1); shake(0.12, 1);
+      hitDummy(1, 1); shake(0.12, 1); sfx('impact', { pal: 'coin', w: 0.8 });
     }
   }
   function stepFX(dt, state, stT) {
@@ -521,6 +522,8 @@ PCD.define('widow', (E) => {
 
   return {
     name: '赌徒寡妇', HX, R_EL, DUR, hero, P, GLOW_MATS: [M_LIT, M_EMBER], HIT_POINT: [1, -16], EVENTS,
+    // 音效声明：丧服下的人身、塌进裙摆（collapse）、梭哈 · 金筹码音色（fxRamp 自建桃红色阶，必须写 pal）、施放重量；滑行裙摆遮脚、无落脚声 → hover
+    SFX: { body: 'flesh', how: 'collapse', pal: 'coin', style: 'coin', w: 0.6, hover: 1 },
     poseAt, drawHero, bakeHero, onEnter, onTime, impactOn, stepFX, fxReset, fxBack, fxFront, drawShot, offField,
   };
 });
