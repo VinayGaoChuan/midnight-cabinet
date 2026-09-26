@@ -104,3 +104,5 @@ mc-titan.js
 mc-bossfight.js
 mc-vocplay.js
 mc-tele.js
+mc-pcd.js
+mc-pcd-game.js

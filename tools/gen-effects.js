@@ -31,6 +31,11 @@ const skillOf = (k) => {
 // the awakening a unit plays when the fight starts (mc-awaken.js)
 const AWN = { skull: '亡语', venom: '毒', summon: '召唤', heal: '治疗', guard: '守护', thorns: '反伤', speed: '迅捷', frost: '冰霜', fire: '火焰', bolt: '雷电', gold: '金币', growth: '成长', stealth: '潜行', leap: '冲锋', blade: '刀锋', arcane: '奥术', rage: '狂怒', curse: '诅咒', revive: '复生',
   aura_heal: '光环 · 治疗', aura_guard: '光环 · 守护', aura_atk: '光环 · 伤害', aura_speed: '光环 · 攻速', aura_mana: '光环 · 法力', aura_frost: '光环 · 冰霜', aura_weak: '光环 · 削弱', aura_blood: '光环 · 吸血' };
+// redrawn pixel characters (pcd/): their attack, skill and death are their own, described on their design card
+const PCDW = win.PCD, CARD = {};
+try { for (const b of fs.readdirSync(path.join(ROOT, 'pcd'))) if (/^batch-/.test(b)) for (const k of fs.readdirSync(path.join(ROOT, 'pcd', b))) if (fs.existsSync(path.join(ROOT, 'pcd', b, k, 'design.md'))) CARD[k] = 'pcd/' + b + '/' + k + '/design.md'; } catch (err) { /* no pcd/ source: no card links */ }
+const isPcd = (k) => !!(PCDW && PCDW.has && PCDW.has(k));
+const cardOf = (k) => CARD[k] ? '<br>[设定卡](../' + CARD[k] + ')' : '';
 const awOf = (k) => { const a = M.unitAw(k); return a ? AWN[a.cat] || a.cat : '—'; };
 
 const put = (doc, name, body) => { const a = '<!-- gen:' + name + ' -->', b = '<!-- /gen:' + name + ' -->', i = doc.indexOf(a), j = doc.indexOf(b); if (i < 0 || j < i) throw new Error('marker missing: ' + name); return doc.slice(0, i + a.length) + '\n' + body + '\n' + doc.slice(j); };
@@ -42,13 +47,13 @@ const count = {};
   let out = '', n = 0;
   [['Summon', '我方部队'], ['Enemy', '敌人'], ['Derivant', '召唤物 / 衍生单位']].forEach(([type, title]) => {
     const keys = Object.keys(DB).filter(k => DB[k].type === type).sort((a, b) => (DB[a].q || 0) - (DB[b].q || 0) || DB[a].race.localeCompare(DB[b].race) || a.localeCompare(b));
-    out += '\n#### ' + title + '（' + keys.length + '）\n\n| 编号 | 单位 | 职业 · 品质 | 卡片上的一句话 | 开战激活 | 自带法力技能 · 触发条件 | 蓄力 → 施放（色板） |\n|---|---|---|---|---|---|---|\n';
+    out += '\n#### ' + title + '（' + keys.length + '）\n\n| 编号 | 单位 | 职业 · 品质 | 卡片上的一句话 | 开战激活 | 自带法力技能 · 触发条件 | 技能演出 |\n|---|---|---|---|---|---|---|\n';
     keys.forEach(k => {
       const d = DB[k], s = skillOf(k), tr = s && M.unitTrigger(k);
-      out += '| ' + pad('U', ++n) + ' | ' + esc(d.n) + '<br>`' + k + '` | ' + (d.voc || '无职业') + ' · ' + Q[d.q || 0] + ' | ' + esc(M.unitLine(k)) + ' | ' + awOf(k) + ' | ' + (s ? esc(s.n) + (tr ? '：' + esc(tr.d) : '') : '—') + ' | ' + (s ? recTxt(s.rec) : '—') + ' |\n';
+      out += '| ' + pad('U', ++n) + ' | ' + esc(d.n) + '<br>`' + k + '`' + cardOf(k) + ' | ' + (d.voc || '无职业') + ' · ' + Q[d.q || 0] + ' | ' + esc(M.unitLine(k)) + ' | ' + awOf(k) + ' | ' + (s ? esc(s.n) + (tr ? '：' + esc(tr.d) : '') : '—') + ' | ' + (s ? (isPcd(k) ? '像素角色自己的蓄力 → 施放 → 收招（设定卡）' : recTxt(s.rec)) : '—') + ' |\n';
     });
   });
-  out += '\n- 部队只有自己的特性，没有额外的主动技能。卡片和悬浮说明只显示职业、战斗力和「卡片上的一句话」（`src/mc-awaken.js` 的特性表）。\n- 开战时，每个有特性的单位依次播放**激活演出**：光点聚向胸口 → 地面冲击环 + 光柱 + 火花 → 这一类的专属花样 → 特性图标从身上冲出、越过头顶再落定，之后一直浮在头顶；特性生效（法力技能放出、击杀）时图标闪一下；亡语类单位死亡时图标飞向击杀者炸开。光环类还会连线到范围内的每个友军。\n- 有「自带法力技能」的单位：开战时法力满，满足触发条件才放（`src/mc-skilltrigger.js`）。\n';
+  out += '\n- 部队只有自己的特性，没有额外的主动技能。像素角色在开战激活时播放自己设计的技能（有法力技能的在蓄满时放），见 D08。卡片和悬浮说明只显示职业、战斗力和「卡片上的一句话」（`src/mc-awaken.js` 的特性表）。\n- 开战时，每个有特性的单位依次播放**激活演出**：光点聚向胸口 → 地面冲击环 + 光柱 + 火花 → 这一类的专属花样 → 特性图标从身上冲出、越过头顶再落定，之后一直浮在头顶；特性生效（法力技能放出、击杀）时图标闪一下；亡语类单位死亡时图标飞向击杀者炸开。光环类还会连线到范围内的每个友军。\n- 有「自带法力技能」的单位：开战时法力满，满足触发条件才放（`src/mc-skilltrigger.js`）。\n';
   doc = put(doc, 'units', out); count.units = n;
 }
 
