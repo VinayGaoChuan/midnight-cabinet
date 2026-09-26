@@ -45,7 +45,7 @@ P.skillSpec = function (e) {
   return { n, col: e.side === 'E' ? '#ff6a5a' : col, q, tier, pw: [1, 1.25, 1.55, 2][q] * (e.side === 'E' ? 0.85 : 1) };
 };
 P.beginCast = function (e, o = {}) {
-  const sp = this.skillSpec(e), dur = [0.34, 0.5, 0.72, 0.95][sp.tier];
+  const sp = this.skillSpec(e), dur = sp.dur || [0.34, 0.5, 0.72, 0.95][sp.tier];   // sp.dur: by quality (mc-omen.js)
   e.mana = 0; e.casting = { t0: this.t, until: this.t + dur, sp };
   this.fxp({ k: 'cast', ent: e, col: sp.col, tier: sp.tier, life: dur + 0.3 });
   // one headline banner at a time: only the newest big cast owns the top of the screen

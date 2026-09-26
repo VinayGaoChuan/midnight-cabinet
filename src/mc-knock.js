@@ -75,7 +75,7 @@ BP.kbStep = function (dt) {
         else { this.kbLand(e, 1); e.air = null; e.trail = null; if (e.alive) { e.down = { rot: Math.round(a.rot / (Math.PI / 2)) * (Math.PI / 2) * 0 + (a.vr > 0 ? 0.5 : -0.5), t: T }; e.kbLock = T + 0.22; } else e.landT = T; }
       }
     }
-    if (e.down && T - e.down.t > 0.22) e.down = null;
+    if (e.down && T - e.down.t > (e.down.dur || 0.22)) e.down = null;
   });
 };
 BP.kbLand = function (e, k) {
@@ -92,6 +92,17 @@ BP.kbBump = function (e, v) {
     const pass = 0.45 * Math.sqrt(mass(e) / mass(o)); o.slide = { vx: v.vx * pass, vy: v.vy * pass * 0.5, t0: T }; o.kbLock = Math.max(o.kbLock || 0, T + 0.12);
     v.vx *= 0.7; v.vy *= 0.7; this.dust(o.x, o.y, 3); this.skid(o.x, o.y, Math.sign(v.vx) || 1); S.hit && S.hit();
   });
+};
+// a boss's blow: thrown up (击飞) or knocked flat (击倒) whatever the numbers say (mc-bossfight.js)
+BP.launch = function (tg, vx, vy, lift) {
+  if (!tg || !tg.alive || immune(tg)) return; const T = this.t;
+  if (tg.air) { tg.air.vz = Math.max(tg.air.vz, 0) + 380 + lift * 200; tg.air.vx += vx * 0.5; tg.kbLock = Math.max(tg.kbLock || 0, T + 0.3); return; }
+  tg.air = { z: 0, vz: Math.min(1150, 540 + lift * 420), vx, vy, rot: 0, vr: (vx >= 0 ? 1 : -1) * (6 + lift * 4), bounced: 0 }; tg.trail = []; tg.slide = null; tg.down = null;
+  tg.kbLock = Math.max(tg.kbLock || 0, T + 2); this.fxp({ k: 'kbpop', x: tg.x, y: tg.y - 40 * (tg.sz || 1), life: 0.18 });
+};
+BP.knockDown = function (tg, dur) {
+  if (!tg || !tg.alive || immune(tg) || tg.air) return; const T = this.t;
+  tg.down = { rot: (Math.random() < 0.5 ? -1 : 1) * 1.35, t: T, dur }; tg.kbLock = Math.max(tg.kbLock || 0, T + dur); tg.slide = null; this.dust(tg.x, tg.y, 3);
 };
 M.kbCorpseA = (e, T) => e.landT ? cl(1 - (T - e.landT - 0.5) / 0.6, 0, 1) : 1;
 

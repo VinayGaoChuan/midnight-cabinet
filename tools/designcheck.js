@@ -22,6 +22,8 @@
       天赋: Object.values(M.TALENTS || {}).map(t => (typeof t.n === 'function' ? t.n('') : t.n)),
       职业: Object.keys(M.VOC || {}),
       说明卡: (M.GUIDE || []).map(c => c.title),
+      场景: Object.values(M.SCENES || {}).reduce((a, l) => a.concat(l), []).map(s => s.n),
+      最终首领: Object.keys(M.DB || {}).filter(k => M.DB[k].type === 'Titan').map(k => M.DB[k].n),
     };
     const missing = {};
     Object.keys(lists).forEach(k => { const miss = lists[k].filter(n => n && !doc.includes(String(n).replace(/卡带$/, ''))); if (miss.length) missing[k] = miss; });

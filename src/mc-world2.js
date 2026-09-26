@@ -48,7 +48,7 @@ M.genMap2 = function (run, meta) {
     plan.push({ k: 'start', seg: 0 });
     for (let s = 0; s < L.boss; s++) {
       if (s > 0) plan.push({ k: 'after', seg: s });
-      const mids = L.mid[0] + Math.floor(Math.random() * (L.mid[1] - L.mid[0] + 1));
+      const mids = L.mids ? L.mids[s] : L.mid[0] + Math.floor(Math.random() * (L.mid[1] - L.mid[0] + 1));   // a scene fixes each segment's length (mc-scenes.js)
       for (let i = 0; i < mids; i++) plan.push({ k: 'mid', seg: s, first: s === 0 && i === 0 });
       plan.push({ k: 'shop', seg: s });
       plan.push({ k: 'boss', seg: s, final: s === L.boss - 1 });
@@ -278,7 +278,7 @@ M.drawMinimap2 = function (ctx, run, walker) {
   const hx = px(walker.x), hy = py(walker.y), hc = PJ.reduced || Math.sin(walker.t * 3 * Math.PI) < 0.6 ? P.gold : P.white;
   PR(ctx, hx - 8, hy - 26, 16, 16, P.ink); PR(ctx, hx - 6, hy - 24, 12, 12, hc); PR(ctx, hx - 4, hy - 12, 8, 6, P.ink); PR(ctx, hx - 2, hy - 12, 4, 4, hc);
   // 标题小牌（靛蓝）：压在面板上沿
-  const cap = run.region.n + ' · ' + (run.len.boss ? run.len.boss + ' 个首领' : run.len.n) + ' · 第 ' + (curCol + 1) + '/' + map.cols + ' 站', U = M.UI, tw = E((U ? U.measure(ctx, cap, 24) : 300) + 32), tx = X + 24, ty = Y - 20;
+  const cap = run.region.n + ' · ' + (run.scene ? run.scene.n : run.len.boss ? run.len.boss + ' 个首领' : run.len.n) + ' · 第 ' + (curCol + 1) + '/' + map.cols + ' 站', U = M.UI, tw = E((U ? U.measure(ctx, cap, 24) : 300) + 32), tx = X + 24, ty = Y - 20;
   PR(ctx, tx - 4, ty - 4, tw + 8, 44, P.ink); PR(ctx, tx, ty, tw, 36, P.indigo); PR(ctx, tx, ty, tw, 4, P.dusk);
   if (U) U.text(ctx, cap, tx + 16, ty + 28, 24, P.butter, { align: 'left', base: 'alphabetic', u: 2 });
 };

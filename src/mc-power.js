@@ -36,7 +36,7 @@ function tuneBoss(run, node, cfg) {
   const bs = cfg.list.filter(s => s.boss); if (!bs.length || run.region.tut) return cfg;
   let el = 0; for (let i = 0; i < 4; i++) el += M.powerOf(M.sideE(run, oCfg.call(M, run, { col: node.col, type: 'elite' }))); el /= 4;
   // the first segment's boss meets an army of ~5 bought at one shop: it is only as strong as an elite there
-  const target = el * (!node.seg ? 1.0 : node.final ? 1.45 : 1.3); let lo = 0.15, hi = 3;
+  const target = el * (!node.seg ? M.BOSS_T0 : node.final ? M.BOSS_TF : M.BOSS_TM); let lo = 0.02, hi = 40;   // a boss fights alone (2026-09-26): its scale can run far from its table values
   for (let k = 0; k < 18; k++) { const f = (lo + hi) / 2; bs.forEach(s => { s.hpMul = f; s.atkMul = f; }); if (M.powerOf(M.sideE(run, cfg)) > target) hi = f; else lo = f; }
   const f = +((lo + hi) / 2).toFixed(3); bs.forEach(s => { s.hpMul = f; s.atkMul = f; }); return cfg;
 }
@@ -52,10 +52,16 @@ const FIGHT = { normal: 1, elite: 1, boss: 1, hold: 1, extract: 1 };
 // starting on the field it was 0.75; since the leader waits on the bench in boss fights too (2026-09-25) a boss plays
 // like an elite of 1.05× its raw power
 M.BOSS_SHOW = 1.05;
+// a boss fights alone since 2026-09-26 (.ai/sim-boss3.js, 400 fights each): a small boss with its two charged blows plays
+// like 1.26× its raw power, a final boss in its arena like 0.92× (its blows are slow; the army fights it along the whole edge)
+M.MB_SHOW = 1.26; M.FB_SHOW = 0.92;
+// how strong a boss is, against the elite fight at the same stop (2026-09-26 growth sims, tools/prog.js): the first small
+// boss 0.75× (the army has seen one shop), later small bosses 1.0×, the final boss 1.15×
+M.BOSS_T0 = 0.75; M.BOSS_TM = 1.0; M.BOSS_TF = 1.15;
 // every fight shows 15% stronger since the leader lost its field skill and units throw each other (2026-09-26,
 // .ai/sim-kb.js: a shown 1.0–1.15 had dropped to ~40% wins; ×1.15 brings the colours back to their promise)
 M.E_SHOW = 1.15;
-M.nodePower = function (run, n) { if (!FIGHT[n.type] || run.region.tut) return 0; if (n._pw == null) n._pw = Math.round(M.powerOf(M.sideE(run, M.makeBattleCfg(run, n))) * (n.type === 'hold' || n.type === 'extract' ? 0.7 : n.type === 'boss' ? M.BOSS_SHOW : 1) * (M.E_SHOW || 1)); return n._pw; };
+M.nodePower = function (run, n) { if (!FIGHT[n.type] || run.region.tut) return 0; if (n._pw == null) n._pw = Math.round(M.powerOf(M.sideE(run, M.makeBattleCfg(run, n))) * (n.type === 'hold' || n.type === 'extract' ? 0.7 : n.type === 'boss' ? (n.final && run.scene && run.scene.boss ? M.FB_SHOW : M.MB_SHOW) : 1) * (M.E_SHOW || 1)); return n._pw; };
 M.oddsCol = (mine, theirs) => { const r = mine / Math.max(1, theirs); return r >= 1.25 ? '#b6f28a' : r >= 1 ? '#ffcf4a' : '#e8434f'; };
 M.oddsWord = (mine, theirs) => { const r = mine / Math.max(1, theirs); return r >= 1.25 ? '稳赢' : r >= 1 ? '有风险' : '很危险'; };
 

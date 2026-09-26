@@ -19,6 +19,11 @@ function botBase(g, M) {
   if (did) g.save();
   return did;
 }
+function botLeave(g, M) {
+  const run = g.run, h = run.hero, col = g.walker ? run.map.nodes[g.walker.node].col : 0, boss = run.map.nodes.find(n => n.type === 'boss' && !n.done && n.col > col);
+  if (h && h.hp < M.heroMaxHp(h, run.M) * 0.35) return true; if (!boss) return false;
+  const mine = M.runPower(run), theirs = M.nodePower(run, boss) || 1; return mine < theirs * 1.0;
+}
 function botShop(g, M) {
   const run = g.run; if (!run || !run.shop || !run.shop.units) return; let n = 0;
   while (n++ < 12) {
@@ -42,7 +47,7 @@ window.__bot = async function (secs, opts = {}) {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   while (performance.now() - T0 < secs * 1000) {
     steps++;
-    for (let i = 0; i < 6; i++) g.tick(1 / 30);
+    for (let i = 0; i < (opts.fast ? 24 : 6); i++) g.tick(1 / 30);   // opts.fast: the growth sims (tools/prog.js) — same flow, less waiting
     if (g.guide) { guides++; g.guideClose(); }   // first-time explanation cards: read and dismissed
     const s = g.screen;
     // the view is what the page renders every frame: a throw here means a broken screen for the player
@@ -57,14 +62,14 @@ window.__bot = async function (secs, opts = {}) {
       else if (s === 'base') {
         if (opts.stopAtBase && nodes > 2) break;
         if (g.modal && g.modal.choices && !g.modal.over) { const ch = g.modal.choices.find(c => !c.dis) || g.modal.choices[g.modal.choices.length - 1]; events++; ch.fn(); if (g.modal && g.modal.title === '流浪商人') g.modal.choices[g.modal.choices.length - 1].fn(); for (let i = 0; i < 10; i++) g.tick(1 / 30); continue; }   // calendar events: take the first thing on offer
-        if (g.homeQ || g.lvFx || g.dayFx || g.tlFx || g.rite || g.expand) { for (let i = 0; i < 40; i++) g.tick(1 / 30); await sleep(40); continue; }   // the return home plays in order: let it
+        if (g.homeQ || g.lvFx || g.dayFx || g.tlFx || g.rite || g.expand) { for (let i = 0; i < (opts.fast ? 120 : 40); i++) g.tick(1 / 30); await sleep(opts.fast ? 2 : 40); continue; }   // the return home plays in order: let it
         if (opts.base !== false && !g.panel && M.startBuild && botBase(g, M)) builds++;
         // leaders grow like a plain player grows them: level up when the orbs are there, spend every talent point
         if (opts.grow !== false && !g.panel) { let lv = false; g.meta.heroes.forEach(h => { if (!lv && h.lv < 10 && M.lvOrbs(h, g.meta) <= g.meta.orbs) { g.heroLvUp(h.id); lv = true; } for (let k = 0; k < 20 && h.points > 0; k++) { const c = (h.tree || []).map((_, i) => i).filter(i => M.talCan(h, i)); if (!c.length) break; g.takeTalent(h.id, c[Math.floor(Math.random() * c.length)]); talents++; } }); if (lv) continue; }
-        if (!g.panel) { if (!g.portalOn || !g.portalOn()) g.openWorlds(); else if (!g.bv.drop) { const st = (g.bv.steles || [])[0]; if (st) g.steleDrop(st.k, st.wx, st.wy); else if (g.bv.sv > 0.9 || !g.bv.steles) g.pickWorld(M.worldsOpen(g.meta)[0]); } } else if (g.panel.kind === 'loadout') g.launch(); else if (g.panel.kind === 'raidPrep') { raids++; g.raidLaunch(); } else g.closePanel();
-        await sleep(900);
+        if (!g.panel) { if (!g.portalOn || !g.portalOn()) g.openWorlds(); else if (!g.bv.drop) { const st = opts.pickSt ? opts.pickSt(g, g.bv.steles || []) : (g.bv.steles || [])[0]; if (st) g.steleDrop(st.k, st.wx, st.wy); else if (g.bv.sv > 0.9 || !g.bv.steles) g.pickWorld(M.worldsOpen(g.meta)[0]); } } else if (g.panel.kind === 'loadout') g.launch(); else if (g.panel.kind === 'raidPrep') { raids++; g.raidLaunch(); } else g.closePanel();
+        await sleep(opts.fast ? 30 : 900);
       }
-      else if (s === 'raid') { for (let i = 0; i < 60; i++) g.tick(1 / 30); }
+      else if (s === 'raid') { for (let i = 0; i < (opts.fast ? 240 : 60); i++) g.tick(1 / 30); }
       if (g.modal && g.modal.raidRes) g.modal.choices[0].fn();
       else if (s === 'shop') { shops++; if (opts.buy !== false) botShop(g, M); g.leaveShop(); }
       else if (s === 'world') {
@@ -73,7 +78,9 @@ window.__bot = async function (secs, opts = {}) {
         else if (g.chest) { chests++; g.chest.t = 9; g.chestClick(); }
         else if (g.reel) { g.reel.t = 99; }
         else if (g.modal) { events++; const ch = (g.modal.choices || []).find(c => !c.dis) || (g.modal.choices || [])[0]; if (ch) ch.fn(); else g.modal = null; }
-        else { const w = g.walker; g.keys.up = g.keys.down = false; g.keys.right = true; if (w && !w.edge) { const outs = M.nodeAhead(g.run.map, w.node); if (outs.length && !outs.find(o => o.dir === 'right')) { g.keys.right = false; g.keys[outs[0].dir] = true; } } }
+        else { const w = g.walker; g.keys.up = g.keys.down = false; g.keys.right = true; if (w && !w.edge) { const outs = M.nodeAhead(g.run.map, w.node); if (outs.length && !outs.find(o => o.dir === 'right')) { g.keys.right = false; g.keys[outs[0].dir] = true; }
+          // opts.extract: leave by the 撤离 point when the next boss looks too strong (a careful player)
+          const ex = opts.extract && outs.find(o => g.run.map.nodes[o.b].type === 'extract'); if (ex && botLeave(g, M)) { g.keys.right = false; g.keys.up = g.keys.down = false; g.keys[ex.dir] = true; } } }
       }
       else if (s === 'battle') {
         const b = g.battle; if (b && !b.over) { battles += b.t < 0.1 ? 1 : 0; if (opts.skill !== false && b.canCast && b.canCast() && b.t > 2) g.castSkill(); for (let i = 0; i < 200 && !b.over; i++) b.step(1 / 30); if (opts.useItems) g.run.items.forEach((k, i) => k && g.useSlot(i)); }

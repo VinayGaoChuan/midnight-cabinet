@@ -52,7 +52,7 @@ const CONCEPTS = [
   { id: 'raid', cat: '基地', icon: 't_sword', title: '时间轴', line: '这 5 天和下 5 天：哪天混沌来袭，哪天有别的事件。', scr: 'base', sel: '[data-g="timeline"]' },
   { id: 'sup', cat: '基地', img: () => sprite('sack'), title: '物资', line: '挖岩层、建房间、打造宝物都花它。出征和守城带回来。', scr: 'base', sel: '[data-fx="msup"]' },
   { id: 'shard', cat: '基地', img: () => sprite('shard'), title: '灵魂碎片', line: '高端材料：建史诗 / 传说建筑、精铸宝物时要用。主要在守城时击杀怪物得到。', scr: 'base', sel: '[data-fx="msh"]' },
-  { id: 'core', cat: '基地', icon: 't_heart', title: '基地核心', line: '三颗心：探索失败时献出一颗救回领袖，通关世界补回一颗；心用完这一局就结束。', scr: 'base', sel: '[data-tip="b-core"]' },
+  { id: 'core', cat: '基地', icon: 't_heart', title: '基地核心', line: '三颗心：探索失败时献出一颗救回领袖，通关一个场景补回一颗；心用完这一局就结束。', scr: 'base', sel: '[data-tip="b-core"]' },
   { id: 'pros', cat: '基地', icon: 't_pros', title: '繁荣度', line: '造的建筑品质越高，繁荣度涨得越多；升一级，地块向外扩一圈。', scr: 'base', sel: '[data-tip="b-pros"]' },
   { id: 'town', cat: '基地', icon: 'f_defense', title: '地面城镇', line: '地下每建一座建筑，地面就升起一座；它们自己排好：城墙在最外，塔在中间，民房在里面。', scr: 'base', at: (g) => townRect(g, () => true), when: (g) => !!(g.town && Object.keys(g.town.vis).length) },
   { id: 'ruin', cat: '基地', icon: 'u_hammer', title: '损毁', line: '守城时被打塌的建筑，修好之前不起作用；点它的房间修复。', scr: 'base', at: (g) => townRect(g, v => v.ruin), when: (g) => !!(g.town && Object.values(g.town.vis).some(v => v.ruin)) },
@@ -74,7 +74,7 @@ const CONCEPTS = [
   { id: 'nodes', cat: '出征', icon: 'e_path', title: '地图节点', line: '图标就是这一站的内容：战斗、夜市、营火、宝箱、奇遇……鼠标悬浮看详情。', scr: 'world', at: nextNode },
   { id: 'whp', cat: '出征', icon: 't_heart', title: '领袖生命', line: '不会自动回复：靠营火、奇遇，或者回基地后的医疗建筑。归零就探索失败，基地核心献出一颗心救回领袖。', scr: 'world', sel: '[data-tip="w-hp"]' },
   { id: 'wallet', cat: '出征', img: () => sprite('coin', 4), title: '积分', line: '这一局的钱：打赢战斗得到，在夜市和奇遇里花。回基地就清零。', scr: 'world', sel: '[data-tip="w-wallet"]' },
-  { id: 'haul', cat: '出征', img: () => sprite('sack'), title: '本次收获', line: '物资、经验、图纸要撤离或通关才带得回基地；出征失败就全丢。', scr: 'world', sel: '[data-tip="w-rsup"]' },
+  { id: 'haul', cat: '出征', img: () => sprite('sack'), title: '本次收获', line: '物资、经验、图纸要撤离或通关才带得回基地；出征失败只留下一半经验。', scr: 'world', sel: '[data-tip="w-rsup"]' },
   { id: 'roster', cat: '出征', icon: 'v_warrior', title: '部队', line: '战斗里自动作战。在夜市买、招募旗领，最多 10 支。', scr: 'world', sel: '[data-tip="w-roster"]' },
   { id: 'items', cat: '出征', icon: 't_chest', title: '支援道具', line: '战斗中按 Q W E 由领袖放出。用的时候转一下，转出这次的效果；图片下面写着它是哪一类。', scr: ['world', 'battle'], sel: '[data-tip="b-items"]' },
   { id: 'banners', cat: '出征', img: () => sprite('flag'), title: '战旗', line: '整支部队的常驻加成，比如「射手战旗」让所有射手更强。', scr: ['world', 'shop'], sel: '[data-fx="banners"],[data-g="shop-banners"]' },
@@ -87,7 +87,7 @@ const CONCEPTS = [
   { id: 'score', cat: '战斗', icon: 't_mult', title: '积分 = 基础 × 积分倍率', line: '击杀得基础分；精英、首领、战旗、宝物会加积分倍率。积分就是这一局的钱。', scr: 'battle', sel: '[data-tip="b-score"]', freeze: 1 },
   { id: 'bhero', cat: '战斗', icon: 't_command', title: '指挥位', line: '领袖站在左边指挥；部队全灭后亲自上场，撤离战和部队一起上场。', scr: 'battle', sel: '[data-tip="b-hero"]', freeze: 1 },
   { id: 'bskill', cat: '战斗', icon: 't_skill', title: '领袖技能', line: '按空格放。', scr: 'battle', sel: '[data-g="b-skill"]', freeze: 1, when: (g) => g.battle && g.battle.hero && g.battle.hero.bench },
-  { id: 'voc', cat: '标签与品质', icon: 'v_archer', title: '职业标签', line: '决定打法：先锋、守护者扛伤，战士近战，射手远程，刺客爆发，法师技能，牧师、圣骑士治疗，祭司强化和削弱，召唤师召唤，商人赚钱。', scr: ['shop', 'world', 'battle', 'base'], sel: '[data-tip^="tag-voc-"]' },
+  { id: 'voc', cat: '标签与品质', icon: 'v_archer', title: '职业标签', line: '决定打法：先锋、守护者扛伤，战士近战，射手远程，刺客先杀弱小，法师群体伤害，牧师、圣骑士治疗，祭司光环，召唤师召唤，商人赚钱。', scr: ['shop', 'world', 'battle', 'base'], sel: '[data-tip^="tag-voc-"]' },
   { id: 'trait', cat: '战斗', icon: 'e_skull', title: '特性', line: '卡片上那一句话就是这支部队的本事。开战时它的图标从身上亮出来，停在头顶，生效时会闪。', scr: ['shop', 'world'], sel: '[data-g="trait"]' },
   { id: 'upower', cat: '标签与品质', icon: 'u_star', title: '战斗力', line: '部队有多强，就是它的价格：越贵越强。', scr: ['world'], sel: '[data-tip="w-power"]' },
   // ── 夜市 ──
@@ -142,7 +142,7 @@ M.TAG.style = (k) => { const t = oStyle(k); if (t) t.d = '建筑风格：地格�
 const LOOP = [
   { icon: 'u_pick', t: '基地', d: '在地下挖岩层、盖房间：生产、打造、医疗、训练、防御。' },
   { icon: 'g_gate', t: '出征', d: '穿过传送门进入异世界，一站站往前走：战斗、夜市、奇遇。' },
-  { icon: 'g_pack', t: '带回', d: '撤离或打败首领，把物资、经验、图纸带回基地；出征失败就全丢，领袖带着 1 点生命回来。' },
+  { icon: 'g_pack', t: '带回', d: '撤离或打败场景尽头的首领，把物资、经验、图纸带回基地；出征失败只留下一半经验，基地核心献出一颗心救回领袖。' },
   { icon: 't_shield', t: '守城', d: '每 5 天一次混沌来袭。主基地被打破，这一局结束。' },
 ];
 const CATS = ['房间', '基地', '领袖', '出征', '战斗', '夜市', '守城', '标签与品质'];

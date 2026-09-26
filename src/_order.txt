@@ -80,6 +80,7 @@ mc-shops.js
 mc-portal.js
 mc-vision.js
 mc-recruit.js
+mc-scenes.js
 mc-power.js
 mc-danger.js
 mc-bigfx.js
@@ -98,4 +99,8 @@ mc-prosper.js
 mc-town.js
 mc-siege.js
 mc-knock.js
+mc-omen.js
+mc-titan.js
+mc-bossfight.js
+mc-vocplay.js
 mc-tele.js

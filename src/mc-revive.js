@@ -11,16 +11,20 @@ const RM = () => !!M.PJ.reduced;
 // the core's data (M.CORE_MAX, a full core in a new game and in old saves) lives in mc-rules26.js
 
 // ───────── a lost expedition: the haul is lost; the core pays a heart for the leader ─────────
+M.FAIL_EXP = 0.5;
 G.runFail = function () {
-  const m = this.meta, run = this.run, h = run.hero, mx = M.heroMaxHp(h, m), tut = !!(run.region && run.region.tut);
+  const m = this.meta, run = this.run, h = run.hero, tut = !!(run.region && run.region.tut);
+  // half of what the leader learned on the way stays with it (2026-09-26: a lost run still moves you on)
+  const ex = tut ? 0 : Math.round(((run.loot && run.loot.exp) || 0) * M.FAIL_EXP); if (ex > 0) M.addExp(h, ex);
+  const mx = M.heroMaxHp(h, m);
   const before = m.core == null ? M.CORE_MAX : m.core, after = tut ? before : Math.max(0, before - 1);
   m.core = after; h.hp = after > 0 ? mx : 1; h.relics = []; h.runs = (h.runs || 0) + 1; m.runs++;
   m.st = m.st || {}; m.st.fails = (m.st.fails || 0) + 1; if (!tut) m.st.deaths = (m.st.deaths || 0) + 1;
   if (!tut) this.pendingDay = true;
   this.save(); S.lose && S.lose();
   const card = { name: M.heroN(h), cls: h.cls, lv: h.lv, rarity: h.rarity, region: run.region.n };
-  this.endInfo = { title: '探索失败', color: '#ff4a4a', sub: after > 0 ? M.heroN(h) + ' 倒在了' + run.region.n + '，这一趟的收获都丢了。' : '基地核心的最后一颗心保不住了。',
-    tiles: [], lines: [{ k: '基地核心', v: after + ' / ' + M.CORE_MAX, c: after <= 1 ? '#ff4a4a' : '#ff8ab0' }], at: now(), gain: {}, revive: tut ? null : { card, before, after } };
+  this.endInfo = { title: '探索失败', color: '#ff4a4a', sub: after > 0 ? M.heroN(h) + ' 倒在了' + run.region.n + '，这一趟的收获丢了，经验留下一半。' : '基地核心的最后一颗心保不住了。',
+    tiles: [], lines: [{ k: '基地核心', v: after + ' / ' + M.CORE_MAX, c: after <= 1 ? '#ff4a4a' : '#ff8ab0' }].concat(ex > 0 ? [{ k: '经验', v: '+' + ex, c: '#9cff7a' }] : []), at: now(), gain: {}, revive: tut ? null : { card, before, after } };
   this.go('end');
 };
 // the rite is the first thing that happens back home
@@ -185,7 +189,7 @@ const oNG = G.newGame;
 if (oNG) G.newGame = function () { this.rite = null; this.coreShow = null; return oNG.apply(this, arguments); };
 const oTip = G.tipFor;
 G.tipFor = function (key) {
-  if (key === 'b-core') { const m = this.meta, c = m.core == null ? M.CORE_MAX : m.core; return { title: '基地核心 ' + c + '/' + M.CORE_MAX, c: '#ff8ab0', icon: 't_heart', d: '探索失败时献出一颗心救回领袖；通关世界补回一颗。', lines: [{ t: '一颗都不剩时游戏结束', c: '#ff8a8a' }] }; }
+  if (key === 'b-core') { const m = this.meta, c = m.core == null ? M.CORE_MAX : m.core; return { title: '基地核心 ' + c + '/' + M.CORE_MAX, c: '#ff8ab0', icon: 't_heart', d: '探索失败时献出一颗心救回领袖；通关一个场景补回一颗。', lines: [{ t: '一颗都不剩时游戏结束', c: '#ff8a8a' }] }; }
   return oTip.apply(this, arguments);
 };
 })();
