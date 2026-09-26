@@ -44,7 +44,7 @@ function checkMeta(raw) {
   }
   const co = m.base.cells[M.CORE.r][M.CORE.c]; if (co.b !== 'core') { Object.assign(co, { b: 'core', dug: true, job: null }); note('基地核心房间'); }
   // relics
-  const relics = m.relics.filter(r => isObj(r) && M.RELICS[r.key] && intIn(r.q, 0, 3) && r.id != null);
+  const relics = m.relics.filter(r => isObj(r) && M.RELICS[r.key] && intIn(r.q, 0, 5) && r.id != null);
   if (relics.length < m.relics.length) note('宝物', m.relics.length - relics.length);
   relics.forEach(r => { if (!Array.isArray(r.lines)) r.lines = M.relicLines(r.key, r.q); }); m.relics = relics;
   const rid = new Set(relics.map(r => r.id));

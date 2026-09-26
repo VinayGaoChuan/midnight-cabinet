@@ -50,16 +50,15 @@ const CONCEPTS = [
   { id: 'rest', cat: '基地', icon: 't_hourglass', title: '休整一天', line: '不出征，直接过一天。', scr: 'base', sel: '[data-g="rest"]' },
   { id: 'dayev', cat: '基地', icon: 't_clover', title: '日程事件', line: '时间轴上带图标的日子：到那天就发生，悬浮看它做什么。', scr: 'base', sel: '[data-g="timeline"]' },
   { id: 'raid', cat: '基地', icon: 't_sword', title: '时间轴', line: '这 5 天和下 5 天：哪天混沌来袭，哪天有别的事件。', scr: 'base', sel: '[data-g="timeline"]' },
-  { id: 'sup', cat: '基地', img: () => sprite('sack'), title: '物资', line: '挖岩层、建房间、打造宝物都花它。出征和守城带回来。', scr: 'base', sel: '[data-fx="msup"]' },
-  { id: 'shard', cat: '基地', img: () => sprite('shard'), title: '灵魂碎片', line: '高端材料：建史诗 / 传说建筑、精铸宝物时要用。主要在守城时击杀怪物得到。', scr: 'base', sel: '[data-fx="msh"]' },
+  { id: 'sup', cat: '基地', img: () => sprite('sack'), title: '物资', line: '挖岩层、建房间、打造宝物都花它。出征带回来，守住夜晚也有。', scr: 'base', sel: '[data-fx="msup"]' },
+  { id: 'shard', cat: '基地', img: () => sprite('shard'), title: '灵魂碎片', line: '高端材料：建史诗 / 传说建筑、精铸宝物时要用。夜里击退怪物得到。', scr: 'base', sel: '[data-fx="msh"]' },
   { id: 'core', cat: '基地', icon: 't_heart', title: '基地核心', line: '三颗心：探索失败时献出一颗救回领袖，通关一个场景补回一颗；心用完这一局就结束。', scr: 'base', sel: '[data-tip="b-core"]' },
   { id: 'pros', cat: '基地', icon: 't_pros', title: '繁荣度', line: '造的建筑品质越高，繁荣度涨得越多；升一级，地块向外扩一圈。', scr: 'base', sel: '[data-tip="b-pros"]' },
   { id: 'town', cat: '基地', icon: 'f_defense', title: '地面城镇', line: '地下每建一座建筑，地面就升起一座：前排是会挨打的战斗建筑，后面是城市。', scr: 'base', at: (g) => townRect(g, () => true), when: (g) => !!(g.town && Object.keys(g.town.vis).length) },
-  { id: 'ruin', cat: '基地', icon: 'u_hammer', title: '损毁', line: '守城时被打塌的战斗建筑，修好之前不起作用；点它的房间修复。', scr: 'base', at: (g) => townRect(g, v => v.ruin), when: (g) => !!(g.town && Object.values(g.town.vis).some(v => v.ruin)) },
   { id: 'locked', cat: '基地', icon: 't_pros', title: '未解锁的地块', line: '黑色的地块还没解锁，繁荣度升级后才能挖。', scr: 'base', at: (g) => lockedRect(g) },
-  { id: 'heroes', cat: '领袖', icon: 't_command', title: '领袖', line: '你的化身：出征带队，守城时站在主基地屋顶指挥。点卡片看天赋；卡片上的黄点 = 有没用的天赋点。', scr: 'base', sel: '[data-fx="heroes"]' },
+  { id: 'heroes', cat: '领袖', icon: 't_command', title: '领袖', line: '你的化身：出征带队，夜里站在主基地屋顶指挥。点卡片看天赋；卡片上的黄点 = 有没用的天赋点。', scr: 'base', sel: '[data-fx="heroes"]' },
   { id: 'rock', cat: '基地', icon: 'u_pick', title: '挖掘', line: '点和房间相邻的岩层，花物资和天数挖开，挖通才能建房间。', scr: 'base', sel: '[data-g="dig"]' },
-  { id: 'bp', cat: '基地', icon: 'g_scroll', title: '建筑图纸', line: '列表里只有你有图纸的建筑，×2 就是有 2 张。图纸靠出征和守城拿。', scr: 'base', sel: '[data-g="bld"]' },
+  { id: 'bp', cat: '基地', icon: 'g_scroll', title: '建筑图纸', line: '列表里只有你有图纸的建筑，×2 就是有 2 张。图纸靠出征拿。', scr: 'base', sel: '[data-g="bld"]' },
   { id: 'portal', cat: '出征', icon: 'g_gate', title: '传送门', line: '点它打开，上方升起今天能去的世界碑，点碑出征。', scr: 'base', at: (g) => { if (g.panel || !g.bv || !M.BASE_GEO) return null; const p = g.bv.toScreen(M.BASE_GEO.DOOR_X, -130); return { x: p.x - 100, y: p.y - 110, w: 200, h: 230 }; } },
   { id: 'danger', cat: '出征', img: () => sprite('skull'), title: '难度', line: '碑上的低 / 中 / 高：越难收获越多，图纸越好。', scr: 'base', at: (g) => M.STELE_AT && M.STELE_AT.danger(g) },
   { id: 'loot', cat: '出征', img: () => sprite('sack'), title: '世界特产', line: '碑下方的图标：这个世界多给的东西。悬浮看详情。', scr: 'base', at: (g) => M.STELE_AT && M.STELE_AT.loot(g) },
@@ -67,7 +66,7 @@ const CONCEPTS = [
   { id: 'talent', cat: '领袖', icon: 't_clover', title: '天赋树', line: '每名领袖一棵自己的树，每三级长出一层，越往上越强。', scr: 'base', sel: '[data-tip^="tal-"]:not([data-tip="tal-root"])' },
   { id: 'hclass', cat: '领袖', icon: 'c_nun', title: '职业', line: '头像左上角是领袖的职业。职业决定技能：同一职业，技能永远一样。', scr: 'base', sel: '[data-g="hclass"]' },
   { id: 'rarity', cat: '标签与品质', icon: 'u_star', title: '品质', line: '白 普通 → 蓝 稀有 → 紫 史诗 → 金 传说。名字和边框的颜色就是品质。', scr: ['base', 'shop'], sel: '[data-tip="hs-rar"],[data-g="shop-units"]' },
-  { id: 'defend', cat: '守城', icon: 't_shield', title: '守城', line: '怪物攻打主基地：城墙挡路，防御塔开火，兵营出兵，领袖在屋顶指挥。主基地被攻破这一局就结束。', scr: 'base', sel: '[data-g="raidprep"]' },
+  { id: 'defend', cat: '混沌来袭', icon: 't_shield', title: '混沌来袭', line: '每天夜里怪物攻打主基地：驻军迎敌，领袖在屋顶用技能。驻军败退，剩下的怪物打主基地。', scr: 'base', sel: '[data-g="raidprep"]' },
   // ── 出征 ──
   { id: 'nodes', cat: '出征', icon: 'e_path', title: '地图节点', line: '图标就是这一站的内容：战斗、夜市、营火、宝箱、奇遇……鼠标悬浮看详情。', scr: 'world', at: nextNode },
   { id: 'whp', cat: '出征', icon: 't_heart', title: '领袖生命', line: '不会自动回复：靠营火、奇遇，或者回基地后的医疗建筑。归零就探索失败，基地核心献出一颗心救回领袖。', scr: 'world', sel: '[data-tip="w-hp"]' },
@@ -91,8 +90,6 @@ const CONCEPTS = [
   // ── 夜市 ──
   { id: 'shop', cat: '夜市', icon: 'e_market', title: '商店', line: '每家店卖的部队不一样，招牌旁边写着它的特点和代价。点自己的部队可以半价卖掉。', scr: 'shop', sel: '[data-g="shop-units"]' },
   // ── 守城 ──
-  { id: 'raidfield', cat: '守城', icon: 'f_defense', title: '防御塔', line: '地下每建一座防御建筑，地面就升起一座，守城时它自己开火。', scr: 'raid', at: (g) => townRect(g, v => v.role === 'tower') },
-  { id: 'dome', cat: '守城', icon: 'f_defense', title: '防御罩', line: '罩住的建筑和主基地先由护罩挨打；护罩破了，过一会儿会恢复。', scr: 'raid', at: (g) => townRect(g, v => v.role === 'shield'), when: (g) => !!(g.raid && g.raid.domes && g.raid.domes.length) },
 ];
 M.GUIDE = CONCEPTS;
 const seen = (() => { try { return JSON.parse(localStorage.getItem(K_SEEN) || '{}') || {}; } catch (e) { return {}; } })();
@@ -139,12 +136,12 @@ M.TAG.style = (k) => { const t = oStyle(k); if (t) t.d = '建筑风格：地格�
 
 // ───────── 玩法说明：the loop in four steps, then every card by topic ─────────
 const LOOP = [
-  { icon: 'u_pick', t: '基地', d: '在地下挖岩层、盖房间：生产、打造、医疗、训练、防御。' },
+  { icon: 'u_pick', t: '基地', d: '在地下挖岩层、盖房间：生产、打造、医疗、训练、进化。' },
   { icon: 'g_gate', t: '出征', d: '穿过传送门进入异世界，一站站往前走：战斗、夜市、奇遇。' },
   { icon: 'g_pack', t: '带回', d: '撤离或打败场景尽头的首领，把物资、经验、图纸带回基地；出征失败只留下一半经验，基地核心献出一颗心救回领袖。' },
-  { icon: 't_shield', t: '守城', d: '每 5 天一次混沌来袭。主基地被打破，这一局结束。' },
+  { icon: 't_shield', t: '守夜', d: '每天夜里混沌来袭，出征带回来的部队守城；主基地被打破，这一局结束。' },
 ];
-const CATS = ['房间', '基地', '领袖', '出征', '战斗', '夜市', '守城', '标签与品质'];
+const CATS = ['房间', '基地', '领袖', '出征', '战斗', '夜市', '混沌来袭', '标签与品质'];
 let glossC = null;
 const glossary = () => glossC || (glossC = {
   loop: LOOP.map(s => ({ img: icon(s.icon), t: s.t, d: s.d })),

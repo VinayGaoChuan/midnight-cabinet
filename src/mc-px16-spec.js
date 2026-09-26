@@ -22,7 +22,7 @@ const RACE = {
   英雄: { skin: 'skin', cloth: 'crimson', cloth2: 'void', pants: 'void', hair: 'wood', trim: 'gold', magic: 'holy' },
 };
 P16.RACE = RACE; P16.BASE_MAT = BASE_MAT;
-const QS = [1, 1.14, 1.3, 1.5];
+const QS = [1, 1.07, 1.14, 1.3, 1.5, 1.65];
 // sizes: base height by quality, bosses and giants larger
 P16.sizeOf = (d, spec) => Math.round((spec.S0 || 22) * (QS[d ? d.q || 0 : 0] || 1) * (spec.big || 1));
 P16.spec = function (key) {

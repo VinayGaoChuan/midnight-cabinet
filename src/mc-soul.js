@@ -33,7 +33,7 @@ M.startBuild = function (m, c, r, key) {
 
 // fine forging: shards buy a relic of at least epic quality
 const oFO = G.forgeOf;
-G.forgeOf = function (c, r) { const f = oFO.call(this, c, r); if (this._fine) f.minQ = 2; return f; };
+G.forgeOf = function (c, r) { const f = oFO.call(this, c, r); if (this._fine) f.minQ = 3; return f; };
 const oCR = M.craftRelic3;
 M.craftRelic3 = function (meta, key, forge) {
   const res = oCR.call(this, meta, key, forge), mq = forge && forge.minQ;

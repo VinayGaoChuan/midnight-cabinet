@@ -3,7 +3,7 @@
 // Evolution lines (user ruling 2026-09-26: 「我以为3合1，合成更强的该系的角色，例如3个射手，合成后，是这个射手的进化型，不但还是
 // 射手，而且特性也是在原有基础上的加强，甚至增加……每个职业的基础单位做3种就行了（机制要丰富，可以参考原部队的机制库）。进化：普通
 // （白色）到稀有（蓝色），稀有到史诗（紫色），史诗到传说（金色），每一串4种单位，3次进化」).
-// · 11 vocations × 3 lines × 4 tiers = 132 units; these are the only units the shops sell. A line keeps its vocation, its
+// · 11 vocations × 3 lines × 6 tiers (普通 → 传说, and 神话 past it) = 198 units; these are the only units the shops sell. A line keeps its vocation, its
 //   look (the base character's art, bigger every tier) and its skill: every tier strengthens the skill's numbers, the rare
 //   tier adds a second skill and the legendary tier a third.
 // · Price: common as set, then ×3.3 a tier, so three of a tier are worth a little less than the next one (the 10% extra
@@ -71,21 +71,64 @@ const LINES = M.LINES = [
   ['商人', 'VikingPirate', 35, ['海盗', '维京海盗', '海盗船长', '七海霸主'], [S('SummonSecretStashTrait', [0.8], [1], [1.3], [1.8]), S('SummonShortSellingTrait', null, [25, 10], [40, 12], [60, 15]), S('SummonDuelistTrait', null, null, null, [20, 20])]],
   ['商人', 'JadeBeast', 30, ['玉石虫', '宝玉兽', '翡翠玉兽', '玉麒麟'], [['JadeBeastTrait', [{ d: '场上存在2个商人单位时，积分倍率+0.1；存在3个商人单位时，积分倍率再+0.1' }, { d: '场上存在2个商人单位时，积分倍率+0.1；存在3个商人单位时，积分倍率再+0.1' }, { d: '场上存在2个商人单位时，积分倍率+0.15；存在3个商人单位时，积分倍率再+0.15' }, { d: '场上存在2个商人单位时，积分倍率+0.2；存在3个商人单位时，积分倍率再+0.2' }]], S('SummonDelicacyTrait', null, [1], [1.3], [1.6]), S('SummonShortSellingTrait', null, null, null, [50, 15])]],
 ];
-const QN = ['普通', '稀有', '史诗', '传说'], TIER_K = 3.3;
+// 2026-09-26 (six qualities: 普通 / 优质 / 稀有 / 史诗 / 传说 / 神话): a line runs 普通 → 传说 in five tiers; its vocation's
+// evolution building lets a 传说 evolve once more, to 神话 (「超限进化」, mc-evo.js). The four tiers above are spread over the
+// six: 优质 sits halfway between 普通 and 稀有, 神话 goes past 传说 as far again and wears its vocation's own skill on top.
+const QN = ['普通', '优质', '稀有', '史诗', '传说', '神话'], TIER_K = 3.3, TIERS = 6;
+const NAMES2 = {   // [优质, 神话] for every line
+  FootSoldier: ['老兵', '神铸城壁'], VoodooBeliever: ['巫毒侍从', '巫毒神'], BigWildBoar: ['野猪', '撼地猪神'],
+  YellowManeHorse: ['骏马', '神驹'], BloodKnight: ['血卫', '血神'], CursedSwordsman: ['咒刃剑客', '咒神'],
+  SlaveLord: ['恶棍', '不灭斗神'], Berserker: ['蛮勇战士', '战神'], Skybot: ['改装机器人', '神机'],
+  HolyLightKnight: ['骑士', '光之神使'], LifeTree: ['生命之枝', '生命之神'], LionHammer: ['重锤卫', '狮神'],
+  Ranger: ['林间游侠', '风神射手'], Archer: ['骸骨猎手', '冥神弓'], Bat: ['蝙蝠射手', '雷神蝠'],
+  BlackSword: ['黑刃', '影神之刃'], WaterWarrior: ['浪刃', '海神之影'], Gladiator: ['角斗新星', '角斗之神'],
+  Summoner: ['驯兽大师', '兽神'], CrabWarlock: ['蟹巫学徒', '蟹神'], ShadowSwordsman: ['影卫', '暗影神'],
+  MageApprentice: ['法师学徒', '雷神'], WildMage: ['林法师', '森之神'], TimeMage: ['时之术士', '时间之神'],
+  DesertBeliever: ['沙漠行者', '圣沙之神'], GreenDragon: ['小青龙', '龙神'], SnakeGodMessenger: ['蛇侍', '蛇神'],
+  Mage: ['骸骨学徒', '骸骨之神'], DarkFang: ['暗牙卫士', '暗牙神'], WarpWing: ['翼兽', '虚空之神'],
+  Chick: ['小公鸡', '财神鸡'], VikingPirate: ['水手', '海神'], JadeBeast: ['玉石兽', '玉神麒麟'],
+};
+// the 神话 tier of a skill that changes kind on the way (summons, the healer dragon, the jade count)
+const MYTH_OBJ = {
+  Summoner: { k: 'SummonHellhoundTrait', d: '每秒恢复10%法力值，法力值满后，召唤2只VengefulDragon，持续40秒' },
+  CrabWarlock: { k: 'SummonSummonPincerTrait', d: '每秒恢复5%法力值，法力值满后，召唤2只Pincer，持续40秒' },
+  ShadowSwordsman: { k: 'SummonHatebreederTrait', v: [3, 40] },
+  GreenDragon: { k: 'SummonSoulTransferTrait', v: [22, 90, 1, 420] },
+  JadeBeast: { d: '场上存在2个商人单位时，积分倍率+0.3；存在3个商人单位时，积分倍率再+0.3' },
+};
+// every vocation's own skill, worn by its 神话 tier (not again if the line has it already)
+const MYTH_TR = { 先锋: ['SummonPrismaticShieldTrait', [6, 10, 85]], 守护者: ['SummonProtectionAuraTrait', [15]], 战士: ['SummonFinalJudgmentTrait', [5, 0.3, 25, 35]], 圣骑士: ['SummonSpeedBoostTrait', [1, 80]],
+  射手: ['SummonHypershotTrait', [3]], 刺客: ['SummonHypershotTrait', [2]], 法师: ['SummonAsteroidTrait', [4, 900, 3]], 牧师: ['SummonTreatmentChainTrait', [3000]], 祭司: ['SummonLeadershipAuraTrait', [30, 10]],
+  召唤师: ['SummonDimensionalChasmTrait', null], 商人: ['SummonSecretStashTrait', [2]] };
+const isInt = (x) => Number.isInteger(x);
+const mid = (a, b) => (a == null || b == null ? a : a.map((x, i) => { const y = b[i] == null ? x : b[i], m = (x + y) / 2; return isInt(x) && isInt(y) ? Math.round(m) : Math.round(m * 100) / 100; }));
+const ext = (c, d) => (d == null ? null : d.map((y, i) => { const x = c && c[i] != null ? c[i] : y, v = c ? y + (y - x) * 1.2 : y * 1.3; const r = isInt(x) && isInt(y) ? Math.round(v) : Math.round(v * 100) / 100; return y > 0 && r <= 0 ? y : r; }));
+// four specs (普通 / 稀有 / 史诗 / 传说) → six tiers
+function six(art, per) {
+  const [a, b, c, d] = per;
+  if ([a, b, c, d].some(x => x && !Array.isArray(x))) {   // per-tier objects
+    const mo = (x, y) => (x == null ? null : y && x.v && y.v ? Object.assign({}, x, { v: mid(x.v, y.v) }) : x);
+    return [a, mo(a, b), b, c, d, MYTH_OBJ[art] || d];
+  }
+  return [a, mid(a, b), b, c, d, ext(c, d)];
+}
 const round5 = (x) => Math.max(5, Math.round(x / 5) * 5);
 M.lineKey = (art, t) => art + '_T' + t;
 const made = [];
-LINES.forEach(([voc, art, cost1, names, skills], li) => {
+LINES.forEach(([voc, art, cost1, names4, skills], li) => {
   const A = DB[art]; if (!A) return;
+  const n2 = NAMES2[art] || [names4[0] + '·优', names4[3] + '·神'], names = [names4[0], n2[0], names4[1], names4[2], names4[3], n2[1]];
+  const specs = skills.map(([base, per]) => [base, six(art, per)]);
+  const mt = MYTH_TR[voc]; if (mt && TDB[mt[0]] && !specs.some(([b]) => b === mt[0])) specs.push([mt[0], [null, null, null, null, null, mt[1] || true]]);
   let cost = cost1;
-  for (let t = 1; t <= 4; t++) {
+  for (let t = 1; t <= TIERS; t++) {
     const key = M.lineKey(art, t), trs = [];
-    skills.forEach(([base, per]) => {
+    specs.forEach(([base, per]) => {
       const x = per[t - 1]; if (x == null) return;
-      const k = Array.isArray(x) ? tr(base, x) : tr(x.k || base, x.v || null, x.d || null);
+      const k = x === true ? tr(base) : Array.isArray(x) ? tr(base, x) : tr(x.k || base, x.v || null, x.d || null);
       if (k) trs.push(k);
     });
-    const d = DB[key] = { n: names[t - 1], q: t - 1, g: QN[t - 1], voc, race: A.race, type: 'Summon', cost, as: A.as || 100, spd: A.spd || 280, ranged: voc === '射手' ? 1 : A.ranged === 2 ? 0 : A.ranged, rad: A.rad || 256, tr: trs, desc: A.desc || '', art, line: art, lineI: li, tier: t, prev: t > 1 ? M.lineKey(art, t - 1) : null, next: t < 4 ? M.lineKey(art, t + 1) : null, _voc: 1 };
+    const d = DB[key] = { n: names[t - 1], q: t - 1, g: QN[t - 1], voc, race: A.race, type: 'Summon', cost, as: A.as || 100, spd: A.spd || 280, ranged: voc === '射手' ? 1 : A.ranged === 2 ? 0 : A.ranged, rad: A.rad || 256, tr: trs, desc: A.desc || '', art, line: art, lineI: li, tier: t, prev: t > 1 ? M.lineKey(art, t - 1) : null, next: t < TIERS ? M.lineKey(art, t + 1) : null, myth: t === TIERS, _voc: 1 };
     // life and damage as every unit's: power = price, split by the vocation (mc-voc.js)
     const V = M.VOC[voc], P = M.vocPowerOf(cost), hp = Math.max(40, Math.round(P * Math.sqrt(V.r) / 10) * 10);
     d.hp = hp; d.atk = Math.round(P * P / hp * 100 / d.as * 100) / 100;
@@ -97,7 +140,8 @@ LINES.forEach(([voc, art, cost1, names, skills], li) => {
 M.LINE_UNITS = made;
 M.lineOf = (k) => (DB[k] && DB[k].line) || null;
 M.linesOfVoc = (v) => LINES.filter(L => L[0] === v && DB[M.lineKey(L[1], 1)]).map(L => L[1]);
-M.lineTiers = (art) => [1, 2, 3, 4].map(t => M.lineKey(art, t)).filter(k => DB[k]);
+M.lineTiers = (art) => [1, 2, 3, 4, 5, 6].map(t => M.lineKey(art, t)).filter(k => DB[k]);
+M.LINE_TIERS = TIERS;
 // only the lines are sold (the old units stay for helpers and old saves)
 M.SHOP_POOL = made.slice();
 })();

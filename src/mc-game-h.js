@@ -147,9 +147,9 @@ const oDrop = M.dropBp;
 M.dropBp = function (bias, style, qUp) {
   if (!style || Math.random() < 0.4) return oDrop(bias);
   if (Math.random() < 0.45) return 'rbp:' + M.pick(M.relicPool());
-  const w = M.bpWeights ? M.bpWeights(bias, qUp) : [60, 25, 11, 4].map((x, i) => i === 0 ? x : x * (1 + (bias || 0) + (qUp || 0) * 0.8));
+  const w = M.bpWeights ? M.bpWeights(bias, qUp) : [60, 20, 12, 6, 2, 0.4].map((x, i) => i === 0 ? x : x * (1 + (bias || 0) + (qUp || 0) * 0.8));
   const ks = Object.keys(M.BUILDINGS).filter(k => !M.BUILDINGS[k].fixed && M.BUILDINGS[k].style === style); if (!ks.length) return oDrop(bias);
-  const q = M.wpick([0, 1, 2, 3], i => ks.some(k => M.BUILDINGS[k].q === i) ? w[i] : 0);
+  const q = M.wpick([0, 1, 2, 3, 4, 5], i => ks.some(k => M.BUILDINGS[k].q === i) ? w[i] || 0 : 0);
   return 'bbp:' + M.pick(ks.filter(k => M.BUILDINGS[k].q === q));
 };
 const oNewRun = M.newRun3;

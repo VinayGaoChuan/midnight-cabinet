@@ -28,7 +28,7 @@ const RACE = {
   英雄:{ skin:'#f0c8a0', dark:'#8a5a3a', cloth:'#5a2a3a', acc:'#ffd060', glow:'#ffe0a0' },
 };
 M.RACE_PAL = RACE;
-const QS = [1, 1.14, 1.3, 1.5];
+const QS = [1, 1.07, 1.14, 1.3, 1.5, 1.65];   // six qualities (mc-q6.js)
 M.QSIZE = QS;
 function rnd(seed) { let s = 0; for (let i = 0; i < seed.length; i++) s = (s * 31 + seed.charCodeAt(i)) >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 function kindOf(k) {
@@ -156,7 +156,7 @@ function paintBeast(c, D, P, S, R) {
   if (/Cerberus/.test(k)) { [-0.9, 0.9].forEach(o => { c.fillStyle = shade(fur, -0.1); c.beginPath(); c.ellipse(hx - hr * 0.4, hy + o * hr * 0.9, hr * 0.8, hr * 0.7, 0, 0, 7); c.fill(); }); }
   c.fillStyle = P.glow; c.beginPath(); c.arc(hx + hr * 0.35, hy - hr * 0.2, hr * 0.14, 0, 7); c.fill();
   c.fillStyle = '#1a1010'; c.beginPath(); c.arc(hx + hr * 1.55, hy + hr * 0.2, hr * 0.12, 0, 7); c.fill();
-  if (D.q >= 2) { c.strokeStyle = P.acc; c.lineWidth = S * 0.03; c.beginPath(); c.ellipse(hx - hr * 0.3, hy + hr * 0.7, hr * 0.8, hr * 0.3, 0.3, 0, Math.PI); c.stroke(); }
+  if (D.q >= 3) { c.strokeStyle = P.acc; c.lineWidth = S * 0.03; c.beginPath(); c.ellipse(hx - hr * 0.3, hy + hr * 0.7, hr * 0.8, hr * 0.3, 0.3, 0, Math.PI); c.stroke(); }
 }
 function paintBug(c, D, P, S, R) {
   const k = D.key, sh = shade(P.skin, (R() - 0.5) * 0.2);

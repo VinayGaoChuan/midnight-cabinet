@@ -1585,7 +1585,7 @@ const BATM = (() => {
 
 const DIRM = S.musicDir = { scene: null, lv: 0 };
 function sceneOf(g) { const s2 = g && g.screen; if (!s2 || s2 === 'intro' || s2 === 'menu' || s2 === 'room') return 'room'; if (s2 === 'base') return 'base'; if (s2 === 'raid') return 'raid'; if (s2 === 'world' || s2 === 'shop') return 'map'; if (s2 === 'battle') return 'battle'; if (s2 === 'over') return 'none'; return 'bed'; }
-function baseLevel(m) { const MC = root.MC; if (!m || !MC) return 0; const E = MC.RAID_EVERY || 5; if (m.day % E === 0 && m.lastRaid !== m.day && (m.heroes || []).length) return 4; const left = E - (m.day % E); return left >= 4 ? 0 : left === 3 ? 1 : left === 2 ? 2 : 3; }
+function baseLevel(m) { const MC = root.MC; if (!m || !MC) return 0; if (MC.NIGHTLY) return 1; /* every night is a raid (mc-night.js): the day keeps one steady unease */ const E = MC.RAID_EVERY || 5; if (m.day % E === 0 && m.lastRaid !== m.day && (m.heroes || []).length) return 4; const left = E - (m.day % E); return left >= 4 ? 0 : left === 3 ? 1 : left === 2 ? 2 : 3; }
 function setScene(sc, lv, wk, hot) {
   const prev = DIRM.scene, t = A().currentTime; DIRM.scene = sc;
   if (sc !== 'map') MAPM.stop();

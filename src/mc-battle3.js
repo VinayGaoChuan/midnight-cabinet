@@ -290,7 +290,7 @@ class B3 extends M.Battle2 {
     e.lunge = this.t;
     const hits = 1 + e.combo;
     for (let i = 0; i < hits; i++) {
-      const go = () => { if (!tg.alive || !e.alive) return; if (i === 0) Sfx.atk(this.atkSnd(e), Sfx.panX(e.x), e.isHero || e.boss || e.elite || e.d.q >= 2 ? 1 : 0.3); if (e.ranged) { this.shootP(e, tg, { style: e.pstyle, size: e.isHero ? 18 : 10 + e.d.q * 3 }); } else { this.fxp({ k: 'slash', x: tg.x, y: tg.y - 34 * tg.sz, life: 0.14, big: e.d.q >= 2 || e.isHero, col: RCOL[e.d.race] }); this.strike(e, tg, false); } };
+      const go = () => { if (!tg.alive || !e.alive) return; if (i === 0) Sfx.atk(this.atkSnd(e), Sfx.panX(e.x), e.isHero || e.boss || e.elite || e.d.q >= 3 ? 1 : 0.3); if (e.ranged) { this.shootP(e, tg, { style: e.pstyle, size: e.isHero ? 18 : 10 + e.d.q * 3 }); } else { this.fxp({ k: 'slash', x: tg.x, y: tg.y - 34 * tg.sz, life: 0.14, big: e.d.q >= 2 || e.isHero, col: RCOL[e.d.race] }); this.strike(e, tg, false); } };
       if (i === 0) go(); else this.later(i * 0.09, go);
     }
   }
@@ -433,12 +433,12 @@ function drawEnt3(ctx, e, T, b) {
   ctx.save(); ctx.globalAlpha = (o.a == null ? 1 : o.a) * (e.stealth ? 0.35 + 0.1 * Math.sin(T * 10) : 1) * (e.ghost ? 0.75 : 1) * (dead ? M.kbCorpseA(e, T) : 1);
   const shS = air ? Math.max(0.35, 1 - air / 360) : 1;
   const qc = M.QUALITY[e.d.q] ? M.QUALITY[e.d.q].c : '#fff';
-  if (px16 && !e.fb) { const ga = ctx.globalAlpha; ctx.globalAlpha = ga * 0.5 * shS; M.P16.ellipse(ctx, e.x + o.x * (o.y ? 0 : 1), e.y, 30 * e.sz * shS, 8 * e.sz * shS, PL.ink); ctx.globalAlpha = ga; if (e.d.q >= 2 || e.boss) M.P16.ellipse(ctx, e.x + o.x * (o.y ? 0 : 1), e.y, 36 * e.sz, 11 * e.sz, e.boss ? PL.red : qc, true); }
+  if (px16 && !e.fb) { const ga = ctx.globalAlpha; ctx.globalAlpha = ga * 0.5 * shS; M.P16.ellipse(ctx, e.x + o.x * (o.y ? 0 : 1), e.y, 30 * e.sz * shS, 8 * e.sz * shS, PL.ink); ctx.globalAlpha = ga; if (e.d.q >= 3 || e.boss) M.P16.ellipse(ctx, e.x + o.x * (o.y ? 0 : 1), e.y, 36 * e.sz, 11 * e.sz, e.boss ? PL.red : qc, true); }
   else { ctx.fillStyle = 'rgba(7,6,15,0.45)'; ctx.beginPath(); ctx.ellipse(e.x + o.x * (o.y ? 0 : 1), e.y, 34 * e.sz, 10 * e.sz, 0, 0, 7); ctx.fill(); }
-  if (!px16 && (e.d.q >= 2 || e.boss)) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(e.x, e.y); ctx.scale(1, 0.35); const gc = e.boss ? PL.red : qc; ctx.fillStyle = M.UI.rg(ctx, 0, 0, 0, 60 * e.sz, [[0, gc + '66'], [1, gc + '00']], 4); ctx.beginPath(); ctx.arc(0, 0, 60 * e.sz, 0, 7); ctx.fill(); ctx.restore(); }
+  if (!px16 && (e.d.q >= 3 || e.boss)) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(e.x, e.y); ctx.scale(1, 0.35); const gc = e.boss ? PL.red : qc; ctx.fillStyle = M.UI.rg(ctx, 0, 0, 0, 60 * e.sz, [[0, gc + '66'], [1, gc + '00']], 4); ctx.beginPath(); ctx.arc(0, 0, 60 * e.sz, 0, 7); ctx.fill(); ctx.restore(); }
   if (e.trail && e.trail.length && M.drawKbTrail) M.drawKbTrail(ctx, e, img, T);
   ctx.translate(x, y - bob - air); if (spin) { ctx.translate(0, -kp.py); ctx.rotate(spin); ctx.translate(0, kp.py); } ctx.scale(sc * (2 - sq), sc * sq); if (face < 0) ctx.scale(-1, 1);   // kbPose: in the air it turns about the waist, on the ground it lies about its feet; units face what they attack
-  if (!px16 && (e.d.q >= 3 || e.boss)) { const hl = M.hdCanvas(e.hd || { key: 'x', race: '人类', voc: '', q: 0 }, H0, e.boss ? PL.red : qc, pose); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= Math.floor(T * 3) % 2 ? 0.45 : 0.3; for (const [dx, dy] of [[-4, 0], [4, 0], [0, -4], [0, 4]]) ctx.drawImage(hl, -hl.cx + dx, -hl.footY + dy); ctx.restore(); }   // 传说 / 首领：硬边色圈，不模糊
+  if (!px16 && (e.d.q >= 4 || e.boss)) { const hl = M.hdCanvas(e.hd || { key: 'x', race: '人类', voc: '', q: 0 }, H0, e.boss ? PL.red : qc, pose); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= Math.floor(T * 3) % 2 ? 0.45 : 0.3; for (const [dx, dy] of [[-4, 0], [4, 0], [0, -4], [0, 4]]) ctx.drawImage(hl, -hl.cx + dx, -hl.footY + dy); ctx.restore(); }   // 传说 / 首领：硬边色圈，不模糊
   if (e.clipY != null) { ctx.beginPath(); ctx.rect(-4000, -4000, 8000, 4000 + e.clipY); ctx.clip(); }   // a final boss rising out of (or sinking into) its arena
   ctx.drawImage(img, -img.cx, -img.footY);
   ctx.restore();
@@ -461,7 +461,7 @@ function drawBars(ctx, e, T, b) {
     if (ready) { ctx.save(); ctx.globalAlpha *= 0.5 + 0.5 * Math.sin(T * 4 * Math.PI); U.R(ctx, x - 2, top + 6, w + 4, 8, PL.butter); U.R(ctx, x, top + 8, w, 4, PL.ink); ctx.restore(); }   // a ready skill waiting for its trigger: the bar's frame blinks
     const mw = w * clamp(ch / 100, 0, 1); if (mw > 0) { U.R(ctx, x, top + 8, mw, 4, PL.teal); U.R(ctx, x, top + 8, mw, 2, PL.ice); } }
   // 品质菱形：品质色像素菱形，墨色大一圈垫底，顶格亮一阶
-  if (e.d.q >= 1 && !e.isHero) { const q = M.UI.Q[Math.min(3, e.d.q)], dx = x - 10, dy = top + 2;
+  if (e.d.q >= 1 && !e.isHero) { const q = M.UI.Q[Math.min(5, e.d.q)], dx = x - 10, dy = top + 2;
     for (let k = -3; k <= 3; k++) { const r = 3 - Math.abs(k); U.R(ctx, dx - r * 2, dy + k * 2, r * 4 + 2, 2, PL.ink); }
     for (let k = -2; k <= 2; k++) { const r = 2 - Math.abs(k); U.R(ctx, dx - r * 2, dy + k * 2, r * 4 + 2, 2, k === -2 ? q[1] : q[0]); } }
   // 状态签：像素字 24px（像素层上正好 12px 原生字号）+ 1 格墨描边，按实际宽度排开

@@ -207,7 +207,7 @@ G.panelView = function () {
 };
 const oTip = G.tipFor;
 G.tipFor = function (key) { if (key === 'p-fort') return { title: '加固', c: '#ffcf4a', d: '每一级：生命 +40%，伤害 +25%，最多三级。' }; return oTip.apply(this, arguments); };
-if (M.GUIDE) M.GUIDE.push({ id: 'fort', cat: '守城', icon: 'f_defense', title: '加固', line: '用物资把一座战斗建筑加固，最多三级，守城时更结实、打得更疼。', scr: 'base', sel: '[data-tip="p-fort"]' });
+// (the 加固 card went with the fighting buildings, 2026-09-26: mc-night.js)
 // ───────── 守住的把握 (2026-09-27): the raid ahead, played out in the background ─────────
 // Before a 混沌来袭 the timeline says how the town would fare today: the coming raid is played out a few times with no
 // drawing and no sound, a slice each frame while the base is idle, again whenever the town changes (a building, 加固, a

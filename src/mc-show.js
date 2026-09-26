@@ -8,7 +8,7 @@ const cl = K.cl, eo = K.eo, eb = K.eb, rnd = Math.random;
 const SH = M.SHOW = {};
 const RM = () => !!(M.PJ && M.PJ.reduced);
 const snd = (ev, x) => { try { S.mini && S.mini('_', ev, x); } catch (e) {} };
-const QC = (q) => (M.QUALITY[cl(q | 0, 0, 3)] || M.QUALITY[0]).c;
+const QC = (q) => (M.QUALITY[[0, 2, 3, 4][cl(q | 0, 0, 3)]] || M.QUALITY[0]).c;   // a show's four steps: 普通 / 稀有 / 史诗 / 传说 of the six (mc-q6.js)
 const TIER_C = [C.lime, C.gold, C.gold, C.gold];
 SH.QC = QC;
 

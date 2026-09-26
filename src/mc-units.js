@@ -134,7 +134,7 @@ const B = M.BUILDINGS;
 B.tavern = { n:'酒馆', q:0, cat:'recruit', style:'medieval', pw:-1, cost:60, days:1, recruit:{}, d:'花物资招募新领袖。' };
 Object.keys(B).forEach(k => { if (!B[k].fixed && !B[k].specialDays) B[k].days = B[k].q + 1; });
 // light (user ruling 2026-09-24): the core and epic / legendary rooms light 2 cells around them, common / rare rooms and empty rooms 1
-M.LIGHT_R = (m, x) => x.b === 'core' ? 2 : x.b ? (M.BUILDINGS[x.b].q >= 2 ? 2 : 1) : x.dug ? 1 : 0;
+M.LIGHT_R = (m, x) => x.b === 'core' ? 2 : x.b ? (M.BUILDINGS[x.b].q >= 3 ? 2 : 1) : x.dug ? 1 : 0;
 // ───────── heroes scaled to the new stat range ─────────
 Object.keys(M.HEROES).forEach(k => { const H = M.HEROES[k]; if (!H._s) { H._s = 1; H.hp *= 5; H.atk *= 3; H.range = H.ranged ? 420 : 70; } });
 // ───────── meta v4 ─────────

@@ -1,15 +1,15 @@
 // ==== mc-timeline.js ====
 (function () {
-// The calendar (user rulings 2026-09-24 / 25): a strip of 10 days sits in the top bar, centre-right. It shows the
-// current five-day stretch and the next one: 混沌来袭 closes every stretch, and each stretch carries two other events
-// (merchant, lucky star …). A passing day only moves the "today" frame one cell; once the stretch's 混沌来袭 is over,
-// the whole strip advances five days in a big show: the spent days fall away, the strip rolls, the next five days
-// land one by one and the next 混沌来袭 is called out. An event on the new day happens right after the frame moves.
+// The calendar (user rulings 2026-09-24 / 25 / 26): a strip of 10 days sits in the top bar, centre-right. It shows the
+// current five-day stretch and the next one; each stretch carries one visitor day (merchant, lucky star …) — 混沌来袭
+// comes every night now (mc-night.js), so it has no cell. A passing day only moves the "today" frame one cell; once the
+// stretch is over, the whole strip advances five days in a big show: the spent days fall away, the strip rolls, the next
+// five days land one by one. An event on the new day happens right after the frame moves, and takes that day.
 const M = window.MC, G = M.Game.prototype, S = M.Sfx, cl = (v, a, b) => Math.max(a, Math.min(b, v));
 // round day nodes with three small dots between (user ruling 2026-09-25): a passing day lights the dots one by one
 const DAYS = 10, CW = 52, GAP = 50, PITCH = CW + GAP, NDOT = 3, TLX = 560, TLY = 6, STEP_D = 1.5, EV_D = 2.3, BIG_D = 4.4;
 const EV = {
-  raid:     { n: '混沌来袭', ic: 'e_skull', c: '#e8434f', d: '怪物攻打主基地，领袖出来守城。' },
+  raid:     { n: '血月', ic: 'e_skull', c: '#e8434f', d: '每 5 天的最后一晚：混沌来袭的怪物强三成多，还带一个精英。' },
   merchant: { n: '流浪商人', ic: 't_coin', c: '#ffcf4a', d: '用物资或碎片，换随机的好东西。', w: 5 },
   star:     { n: '幸运之星', ic: 't_clover', c: '#9cff7a', d: '三选一：下一次出征的祝福。', w: 4 },
   recruit:  { n: '招募日', ic: 'f_recruit', c: '#7fb0ff', d: '下一次招募领袖免费，至少「稀有」。', w: 2 },
@@ -18,28 +18,29 @@ const EV = {
   harvest:  { n: '丰收', ic: 't_sack', c: '#e8c86a', d: '所有挖掘和建造各推进 1 天。', w: 3 },
 };
 M.DAYEV = EV;
-const E5 = () => M.RAID_EVERY;
-const raidOn = (m, d) => d % E5() === 0 && m.lastRaid !== d && m.heroes.length > 0;
-// the stretch on show: it starts the day after the last 混沌来袭 that is over
-M.tlWinStart = (m) => { const E = E5(); let d = m.day; if (d % E === 0 && m.lastRaid === d) d++; return E * Math.floor((d - 1) / E) + 1; };
+// every night is a 混沌来袭 since 2026-09-26 (mc-night.js): the strip only carries the day events; a stretch is five days
+const E5 = () => 5;
+const raidOn = () => false;
+// the stretch on show: the five days today belongs to
+M.tlWinStart = (m) => { const E = E5(); return E * Math.floor((m.day - 1) / E) + 1; };
 // two events in every stretch, rolled a stretch ahead so the big show can land them; old saves roll again once
 M.dayEvents = function (m) {
   const E = E5();
-  if (m.evV !== 2) { m.evs = (Array.isArray(m.evs) ? m.evs : []).filter(e => e && e.done); m.evGen = m.day; m.evV = 2; }
+  if (m.evV !== 3) { m.evs = (Array.isArray(m.evs) ? m.evs : []).filter(e => e && e.done); m.evGen = m.day; m.evV = 3; }   // v3: one visitor a stretch (2026-09-26)
   m.evs = (Array.isArray(m.evs) ? m.evs : []).filter(e => e && EV[e.k] && e.day >= m.day - 2 * E);
   const upto = M.tlWinStart(m) + DAYS + E - 1;
   for (let guard = 0; (m.evGen || 0) < upto && guard < 8; guard++) {
     const d0 = (m.evGen || 0) + 1, end = E * Math.ceil(d0 / E), days = [];
-    for (let d = d0; d < end; d++) if (d > m.day && d > 1 && !m.evs.some(e => e.day === d)) days.push(d);
+    for (let d = d0; d < end; d++) if (d > m.day && d > 1 && !m.evs.some(e => e.day === d)) days.push(d);   // end = the blood moon, kept free
     const kinds = Object.keys(EV).filter(k => EV[k].w && (!EV[k].need || EV[k].need(m)));
-    days.sort(() => Math.random() - 0.5).slice(0, 2).forEach(d => { const k = M.wpick(kinds, x => EV[x].w); kinds.splice(kinds.indexOf(k), 1); m.evs.push({ day: d, k }); });
+    days.sort(() => Math.random() - 0.5).slice(0, 1).forEach(d => { const k = M.wpick(kinds, x => EV[x].w); kinds.splice(kinds.indexOf(k), 1); m.evs.push({ day: d, k }); });
     m.evGen = end;
   }
   return m.evs;
 };
 // the event that fires on a day (not yet done) / what a cell shows (done or not)
 M.eventOn = (m, d) => (raidOn(m, d) ? 'raid' : ((m.evs || []).find(e => e.day === d && !e.done) || {}).k || null);
-const shownOn = (m, d) => (d % E5() === 0 ? 'raid' : ((m.evs || []).find(e => e.day === d) || {}).k || null);
+const shownOn = (m, d) => (M.bloodMoon && M.bloodMoon(d) ? 'raid' : ((m.evs || []).find(e => e.day === d) || {}).k || null);   // the blood moon closes every stretch (mc-night.js)
 
 // ───────── the strip ─────────
 const IC = (k) => (M.iconURL ? M.iconURL(k, 2) : '');
@@ -174,7 +175,7 @@ function goods(g, m) {
   const bld = Object.keys(M.BUILDINGS).filter(k => { const B = M.BUILDINGS[k]; return !B.fixed && !B.gone && !B.boss && (!M.bpUseful || M.bpUseful(m, 'bbp:' + k)); });
   const gifts = Object.keys(M.GIFTS || {}).filter(k => M.GIFTS[k].w > 0 && (!M.giftUseful || M.giftUseful(m, k)));
   const make = {
-    bld: () => { const bk = pick(bld), B = M.BUILDINGS[bk]; return bk && { id: 'b' + bk, n: B.n + '图纸', d: B.d, cost: B.q >= 2 ? ['sh', 40 + 20 * B.q] : ['sup', 90 + 50 * B.q], give: () => M.invAdd(m, 'bbp:' + bk, 1) }; },
+    bld: () => { const bk = pick(bld), B = M.BUILDINGS[bk]; return bk && { id: 'b' + bk, n: B.n + '图纸', d: B.d, cost: B.q >= 3 ? ['sh', 20 + 20 * B.q] : ['sup', 90 + 40 * B.q], give: () => M.invAdd(m, 'bbp:' + bk, 1) }; },
     rel: () => { const rk = pick(M.relicPool()), Rl = M.RELICS[rk]; return rk && { id: 'r' + rk, n: Rl.n + '图纸', d: '打造「' + Rl.n + '」', cost: ['sh', 30], give: () => M.invAdd(m, 'rbp:' + rk, 1) }; },
     gift: () => { const gk = pick(gifts), K = M.GIFTS[gk]; return gk && { id: 'g' + gk, n: K.n, d: K.d, cost: ['sup', 70], give: () => { const r = K.apply(g, m, null); g.toast(K.n + ' · ' + ((r && r.t) || ''), K.c); } }; },
   };

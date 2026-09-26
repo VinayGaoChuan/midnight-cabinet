@@ -14,9 +14,9 @@ const rnd = Math.random, now = () => performance.now(), cl = (v, a, b) => Math.m
 const eo = (q) => 1 - Math.pow(1 - q, 3), eb = (q) => { const c = 1.7; return 1 + (c + 1) * Math.pow(q - 1, 3) + c * Math.pow(q - 1, 2); };
 const RM = () => !!(M.PJ && M.PJ.reduced);
 
-M.EVO_MAX = 3; M.EVO_NEED = 3; M.EVO_PAY = 1.1; M.POOL_COPIES = 3;
+M.EVO_MAX = 5; M.EVO_NEED = 3; M.EVO_PAY = 1.1; M.POOL_COPIES = 3;
 // shops lean to the base tier: the higher tiers mostly come from evolving (专精卡带 leans further, mc-legacy.js)
-M.POOL_QB = [1.6, 1, 0.55, 0.2];
+M.POOL_QB = [1.6, 1.3, 1, 0.55, 0.2, 0];   // 普通 … 神话 (神话 only by evolving)
 M.EVO_TUT = { from: 'FootSoldier_T1', to: 'FootSoldier_T2' };
 const TUT_LINES = ['FootSoldier', 'Ranger', 'YellowManeHorse', 'MageApprentice', 'DesertBeliever'];
 const rndOf = (a) => a[Math.floor(rnd() * a.length)];
@@ -51,7 +51,7 @@ M.newRun3 = function (meta) {
 const oPU = M.pickUnitQ;
 M.pickUnitQ = function (run) {
   if (!run || !run.pool) return oPU.apply(this, arguments);
-  const qw = M.shopQW(run), L = M.unitPool(run), QB = M.POOL_QB, q = M.wpick([0, 1, 2, 3], x => Math.max(0.01, qw[x] * QB[x])), c = L.filter(k => DB[k].q === q);
+  const qw = M.shopQW(run), L = M.unitPool(run), QB = M.POOL_QB, q = M.wpick([0, 1, 2, 3, 4], x => Math.max(0.01, (qw[x] || 0) * (QB[x] || 0))), c = L.filter(k => DB[k].q === q);
   return rndOf(c.length ? c : L);
 };
 // the area changes as you walk into it
@@ -87,7 +87,7 @@ M.evoMerge = function (run, three, to) {
   const nu = { uid: M.rid(), type: to, star: 1, bAtk: sum('bAtk'), bHp: sum('bHp'), lv: 1, battles: Math.max(...three.map(u => u.battles || 0)), kills: sum('kills'), mana: 0, bonusAtk: 0, evo, ek, from: three[0].type };
   run.roster.splice(at, 0, nu); M.poolAdd(run, to); run.evoN = (run.evoN || 0) + 1; if (tutOf(run)) run.tutEvo = 1;
   if (M._g && M._g.prof) { const st = M._g.prof.stats || (M._g.prof.stats = {}); st.evos = (st.evos || 0) + 1; }
-  if (M._g && M._g.meta && DB[to] && DB[to].tier === 4) { const m = M._g.meta; m.st = m.st || {}; m.st.legends = (m.st.legends || 0) + 1; }
+  if (M._g && M._g.meta && DB[to] && DB[to].tier >= 5) { const m = M._g.meta; m.st = m.st || {}; m.st.legends = (m.st.legends || 0) + 1; if (DB[to].tier === 6) m.st.myths = (m.st.myths || 0) + 1; }
   return nu;
 };
 
@@ -106,12 +106,14 @@ function colSil(img, col) { if (!img) return null; const k = col; let m = colC.g
 function outlined(img, col, w) { if (!img) return null; const k = 'o' + col + w; let m = colC.get(img); if (!m) colC.set(img, m = {}); if (m[k]) return m[k]; const c = document.createElement('canvas'); c.width = img.width + w * 2; c.height = img.height + w * 2; const x = c.getContext('2d'), s = colSil(img, col);
   for (const [dx, dy] of [[-w, 0], [w, 0], [0, -w], [0, w], [-w, -w], [w, -w], [-w, w], [w, w]]) x.drawImage(s, w + dx, w + dy); x.drawImage(img, w, w); return (m[k] = c); }
 const imgOf = (k, s) => { try { return M.spriteCanvas(k, s); } catch (e) { return null; } };
-G.evoStart = function (three, to) {
-  const order = rosterOrder(this), from = three[0].type, evo = Math.min(M.EVO_MAX, Math.max(...three.map(u => u.evo || 0)) + 1);
-  const pos = three.map(u => { const i = order.indexOf(u); return slotPos(this, i < 0 ? 0 : i); });
+// host: the garrison on the base (mc-night.js) — the three rise from its chip on the bar and the card flies back into it
+G.evoStart = function (three, to, host) {
+  const from = three[0].type, evo = Math.min(M.EVO_MAX, Math.max(...three.map(u => u.evo || 0)) + 1);
+  let pos; if (host) { const p = this.fxPos('mgar') || { x: 700, y: 50 }; pos = three.map((u, i) => ({ x: p.x + (i - 1) * 90, y: p.y + 60 })); }
+  else { const order = rosterOrder(this); pos = three.map(u => { const i = order.indexOf(u); return slotPos(this, i < 0 ? 0 : i); }); }
   three.forEach(u => this.hideU.add(u.uid));
   const sparks = []; for (let i = 0; i < 46; i++) { const a = rnd() * 6.283, sp = 380 + rnd() * 900; sparks.push({ vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.75 - 120, s: 6 + Math.floor(rnd() * 3) * 3 }); }
-  this.evoFx = { t: 0, three, to, from, evo, qA: DB[from].q, qB: DB[to].q, pos, imgA: imgOf(from, 6), imgB: imgOf(to, 8), sparks, s: {}, first: !(this.prof && this.prof.stats && this.prof.stats.evos) };
+  this.evoFx = { t: 0, three, to, from, evo, host: host || null, over: !!(DB[to].tier > M.EVO_BASE), qA: DB[from].q, qB: DB[to].q, pos, imgA: imgOf(from, 6), imgB: imgOf(to, 8), sparks, s: {}, first: !(this.prof && this.prof.stats && this.prof.stats.evos) };
   S.rc && S.rc('in'); this.bump();
 };
 function beat(F, k, at, fn) { if (F.t >= at && !F.s[k]) { F.s[k] = 1; try { fn(); } catch (e) {} } }
@@ -171,12 +173,12 @@ function drawEvo(ctx, g, F) {
     const x = C.x + (to.x - C.x) * q, y = C.y + (to.y - C.y) * q - Math.sin(q * Math.PI) * 140, sc = (1 - 0.86 * q) * pop;
     if (fl < 1) drawCard(ctx, x, y, sc, F);
     // the words: 进化！ and what became what
-    if (fl < 0.2) { const a = cl(d / 0.25, 0, 1) * (1 - fl / 0.2); ctx.globalAlpha = a; U.text(ctx, '进化！', C.x, 96, 88, P.gold, { outline: true, ramp: true }); U.text(ctx, DB[F.from].n + '  →  ' + DB[F.to].n, C.x, 176, 36, P.cream, { outline: true }); ctx.globalAlpha = 1; }
+    if (fl < 0.2) { const a = cl(d / 0.25, 0, 1) * (1 - fl / 0.2); ctx.globalAlpha = a; U.text(ctx, F.over ? '超限进化！' : '进化！', C.x, 96, 88, F.over ? Q[F.qB].c : P.gold, { outline: true, ramp: true }); U.text(ctx, DB[F.from].n + '  →  ' + DB[F.to].n, C.x, 176, 36, P.cream, { outline: true }); ctx.globalAlpha = 1; }
   }
   ctx.restore();
 }
 function finish(g, F) {
-  if (!F.nu) F.nu = M.evoMerge(g.run, F.three, F.to);
+  if (!F.nu) F.nu = M.evoMerge(F.host || g.run, F.three, F.to);
   F.three.forEach(u => g.hideU.delete(u.uid)); g.hideU.delete(F.nu.uid);
   g.evoFx = null; g.pulse.roster = now(); g.bump();
 }
@@ -184,9 +186,9 @@ const oTick = G.tick;
 G.tick = function (dt) {
   const F0 = this.evoFx; if (F0 && this.keys) Object.keys(this.keys).forEach(k => { this.keys[k] = false; });   // nobody walks while it plays
   oTick.call(this, dt);
-  const F = this.evoFx, run = this.run;
+  const F = this.evoFx, run = F && F.host ? F.host : this.run;
   if (!F) { this.evoCheck(); return; }
-  if (!run || (this.screen !== 'world' && this.screen !== 'shop')) { if (run) finish(this, F); else this.evoFx = null; return; }
+  if (!run || (F.host ? this.screen !== 'base' : this.screen !== 'world' && this.screen !== 'shop')) { if (run) finish(this, F); else this.evoFx = null; return; }
   F.t += (dt || 0) * (this.rushUntil > now() ? 3 : 1);
   beat(F, 'ch', T_IN, () => S.rc && S.rc('charge', { dur: T_BOOM - T_IN, rar: F.qB }));
   const tier = F.t < T_IN ? -1 : Math.min(F.qB, F.qA + Math.floor((F.t - T_IN) / ((T_BOOM - T_IN) / (F.qB - F.qA + 1))));
@@ -194,7 +196,7 @@ G.tick = function (dt) {
   beat(F, 'boom', T_BOOM, () => {
     F.nu = M.evoMerge(run, F.three, F.to); this.hideU.add(F.nu.uid); F.three.forEach(u => this.hideU.delete(u.uid));
     const order = run.roster.filter(u => !this.hideU.has(u.uid) || u === F.nu).map((u, i) => [u, M.unitPower(u.type, u), i]).sort((a, b) => b[1] - a[1] || a[2] - b[2]).map(x => x[0]);
-    F.dest = slotPos(this, Math.max(0, order.indexOf(F.nu)));
+    F.dest = F.host ? (this.fxPos('mgar') || { x: 700, y: 50 }) : slotPos(this, Math.max(0, order.indexOf(F.nu)));
     S.rc && S.rc('shatter', F.qB); if (this.fx) { this.fx.kick && this.fx.kick(18 + F.qB * 6); this.fx.burst && this.fx.burst(960, 460, Q[F.qB].c, 36); }
     this.bump();
   });
@@ -226,7 +228,7 @@ G.view = function () {
   (v.w.roster || []).forEach((r, i) => { const u = byPow[i], d = u && DB[u.type], e = d && d.tier ? d.tier - 1 : u ? u.evo || 0 : 0; r.evoOn = e > 0; r.evoPips = pips(e, e, P.gold, P.gold); if (e > 0) r.stars = ''; });
   // shop cards: how many of it the army holds; the card that makes three glows
   const have = {}; run.roster.forEach(u => { if (DB[u.type] && DB[u.type].next) have[u.type] = (have[u.type] || 0) + 1; });
-  if (v.s && run.shop && this.screen === 'shop') (v.s.units || []).forEach((cv, i) => { const c = (run.shop.units || [])[i], n = c ? have[c.type] || 0 : 0; cv.evoOn = !!c && !c.sold && n > 0; cv.evoPips = pips(Math.min(2, n), 3, P.gold, '#3a3450'); cv.evoGo = !!c && !c.sold && n % M.EVO_NEED === M.EVO_NEED - 1; });
+  if (v.s && run.shop && this.screen === 'shop') (v.s.units || []).forEach((cv, i) => { const c = (run.shop.units || [])[i], n = c ? have[c.type] || 0 : 0; cv.evoOn = !!c && !c.sold && n > 0; cv.evoPips = pips(Math.min(2, n), 3, P.gold, '#3a3450'); cv.evoGo = !!c && !c.sold && n % M.EVO_NEED === M.EVO_NEED - 1 && (!M.evoOpen || M.evoOpen(run.M, c.type)); });
   // the area's pool, under the minimap
   v.w.poolOn = this.screen === 'world' && !!run.pool;
   if (v.w.poolOn) {
@@ -236,18 +238,18 @@ G.view = function () {
     const lines = run.pool.lines || [];
     v.w.pool = lines.map(l => { const ks = M.lineTiers(l), k1 = ks[0], d = DB[k1], n = Math.max(0, ...ks.map(k => (have[k] || 0) % M.EVO_NEED));
       return { img: M.spriteURL(k1, 3), c: Q[d.q].c, pipsOn: n > 0, pips: pips(n, 2, P.gold, '#3a3450'), tipOn: this.tipFn(() => { const t = M.unitTip(k1, null, run) || { title: d.n, lines: [] };
-        t.lines = (t.lines || []).concat([{ rich: [{ t: '进化　', c: '#ffcf4a', b: 1 }].concat(ks.slice(1).map((k, i) => ({ t: (i ? ' → ' : '') + DB[k].n, c: Q[DB[k].q].c, b: 1 }))) }]); return t; }) }; });
+        const cap = M.vocCap ? M.vocCap(run.M, d.voc) : 6; t.lines = (t.lines || []).concat([{ rich: [{ t: '进化　', c: '#ffcf4a', b: 1 }].concat(ks.slice(1).map((k, i) => ({ t: (i ? ' → ' : '') + DB[k].n, c: DB[k].tier > cap ? '#5a5670' : Q[DB[k].q].c, b: 1 }))) }]).concat(cap < 6 ? [{ t: '灰色的档位要在基地建' + d.voc + '的进化建筑', c: '#a9a3c9' }] : []); return t; }) }; });
   }
   return v;
 };
 const oTip = G.tipFor;
 G.tipFor = function (key) {
   if (key === 'w-pool') return { title: '部队池', c: '#ffcf4a', d: '这个场景的商店和招募只出这几条进化链。' };
-  if (key === 's-evo') return { title: '进化', c: '#ffcf4a', d: '同一种部队凑齐三支，就进化成下一档。' };
+  if (key === 's-evo') return { title: '进化', c: '#ffcf4a', d: '同一种部队凑齐三支，就进化成下一档；稀有以上要在基地建进化建筑。' };
   return oTip.apply(this, arguments);
 };
 if (M.GUIDE) M.GUIDE.push(
-  { id: 'evo', cat: '出征', icon: 'u_star', title: '进化', line: '同一种部队凑齐三支，就进化成同一条链的下一档：普通 → 稀有 → 史诗 → 传说。', scr: 'world', sel: '[data-fx="roster"]' },
+  { id: 'evo', cat: '出征', icon: 'u_star', title: '进化', line: '同一种部队凑齐三支，就进化成同一条链的下一档；默认最高到稀有，再往上要建进化建筑。', scr: 'world', sel: '[data-fx="roster"]' },
   { id: 'pool', cat: '出征', icon: 'e_card', title: '部队池', line: '每个场景每个职业一条进化链，商店和招募都从里面来。', scr: 'world', sel: '[data-tip="w-pool"]' });
 })();
 

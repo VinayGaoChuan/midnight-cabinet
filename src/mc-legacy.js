@@ -31,14 +31,14 @@ const KITS = M.KITS2 = [
 const KIT = {}; KITS.forEach(k => KIT[k.k] = k);
 const ACH = M.ACH2 = [
   { k: 'boss10', n: '首领猎手', d: '一局里打倒 10 个首领', tok: 80, ok: (m) => (m.st && m.st.boss || 0) >= 10 },
-  { k: 'raid3', n: '守城人', d: '一局里守住 3 次混沌来袭', tok: 80, ok: (m) => (m.st && m.st.raidsWon || 0) >= 3 },
+  { k: 'raid3', n: '守城人', d: '一局里守住 10 个夜晚', tok: 80, ok: (m) => (m.st && m.st.raidsWon || 0) >= 10 },   // every night is a raid since 2026-09-26 (was 3)
   { k: 'build10', n: '建筑师', d: '一局里建成 10 座建筑', tok: 80, ok: (m) => (m.st && m.st.built || 0) >= 10 },
   { k: 'chapter', n: '第一章', d: '通关一章', tok: 100, ok: (m) => !!(m.prog && m.prog.d0 && Object.keys(m.prog.d0.clr || {}).length) },
   { k: 'day20', n: '长夜', d: '活到第 20 天', tok: 120, ok: (m) => m.day >= 20 },
   { k: 'evo3', n: '传说进化', d: '让一支部队进化成传说', tok: 100, ok: (m, p) => (p.stats.evoMax || 0) >= 3 },
   { k: 'legion', n: '传说军团', d: '一局里进化出 3 支传说部队', tok: 200, ok: (m) => (m.st && m.st.legends || 0) >= 3 },
   { k: 'fever', n: '大奖', d: 'FEVER 转出一次传说效果', tok: 100, ok: (m, p) => !!p.stats.feverLegend },
-  { k: 'legend', n: '传说建筑', d: '建成一座传说品质的建筑', tok: 120, ok: (m) => { let f = false; if (M.eachBuilt) M.eachBuilt(m, (k) => { if (B[k] && B[k].q === 3 && !B[k].boss) f = true; }); return f; } },
+  { k: 'legend', n: '传说建筑', d: '建成一座传说品质的建筑', tok: 120, ok: (m) => { let f = false; if (M.eachBuilt) M.eachBuilt(m, (k) => { if (B[k] && B[k].q >= 4 && !B[k].boss) f = true; }); return f; } },
   { k: 'hard', n: '噩梦', d: '打开噩梦难度', tok: 200, ok: (m) => (m.diffMax || 0) >= 1 },
 ];
 M.SHRINE_MAX = 6;
@@ -130,7 +130,7 @@ G.menuGo = function () { const p = P_(this); if (!this.lg && !this._lgPick && M.
 // the chosen leader, cartridge and portrait go into the new game
 const oDM = M.defaultMeta3;
 M.defaultMeta3 = function () { const m = oDM.apply(this, arguments); if (M._nextCls && H[M._nextCls] && m.heroes && m.heroes.length) m.heroes = [M.newHero(m, M._nextCls)]; return m; };
-const wsBp = () => { const ks = Object.keys(B).filter(k => B[k].cat === 'forge' && !B[k].boss && !B[k].fixed && !B[k].gone && B[k].q <= 1); return ks.length ? 'bbp:' + pick(ks) : null; };
+const wsBp = () => { const ks = Object.keys(B).filter(k => B[k].cat === 'forge' && !B[k].boss && !B[k].fixed && !B[k].gone && B[k].q <= 2); return ks.length ? 'bbp:' + pick(ks) : null; };
 const oNG = G.newGame;
 G.newGame = function () {
   const r = oNG.apply(this, arguments), m = this.meta, p = P_(this), L = this._lgPick; M._nextCls = null; this._lgPick = null;
@@ -138,7 +138,7 @@ G.newGame = function () {
   if (L && m) {
     m.kit2 = L.kit && (p.kits2 || {})[L.kit] ? L.kit : null;
     if (m.kit2 === 'dig') { m.supplies += 100; let n = 0; for (const [dc, dr] of [[-1, 0], [1, 0], [0, 1], [-2, 0], [2, 0]]) { const x = M.cell(m, M.CORE.c + dc, M.CORE.r + dr); if (x && !x.dug && n < 3) { x.dug = true; n++; } } }
-    if (m.kit2 === 'build') { const ks = Object.keys(B).filter(k => !B[k].fixed && !B[k].boss && !B[k].gone && B[k].q >= 1 && B[k].q <= 2 && k !== 'core'); for (let i = 0; i < 2 && ks.length; i++) M.invAdd(m, 'bbp:' + ks.splice(Math.floor(rnd() * ks.length), 1)[0], 1); }
+    if (m.kit2 === 'build') { const ks = Object.keys(B).filter(k => !B[k].fixed && !B[k].boss && !B[k].gone && B[k].q >= 2 && B[k].q <= 3 && k !== 'core'); for (let i = 0; i < 2 && ks.length; i++) M.invAdd(m, 'bbp:' + ks.splice(Math.floor(rnd() * ks.length), 1)[0], 1); }
     if (m.kit2 === 'arms') { const w = wsBp(); if (w) M.invAdd(m, w, 1); const rs = M.relicPool ? M.relicPool() : []; if (rs.length) M.invAdd(m, 'rbp:' + pick(rs), 1); }
     const pi = (p.shrine || []).findIndex(x => x.id === L.pid);
     if (pi >= 0 && h) { const po = p.shrine[pi]; if (talOk(po.t)) h.inh = { f: po.t.f, L: po.t.L, voc: po.t.voc }; if (po.cls === h.cls) h.points = (h.points || 0) + 1; p.shrine.splice(pi, 1); }

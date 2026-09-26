@@ -10,7 +10,7 @@ const PAL = {
   red: '#e8434f', wine: '#8c1f3a', pink: '#ff9aa8', brown: '#8a5a3c', tan: '#c98f5a', umber: '#4f2f22',
   silver: '#c4ccd9', steel: '#8791a6', slate: '#4b5268', teal: '#47d6c1', tealDeep: '#1f8f8a', ice: '#bff7f0',
   violet: '#b86bff', violetDeep: '#6a2fbf', magenta: '#ff6bd6', gold: '#ffcf4a', amber: '#e0781f', butter: '#fff3b0',
-  blue: '#4f8fff', blueDeep: '#22408c', abyss: '#0d0b1e', night: '#1a1640', indigo: '#2b2461', dusk: '#3d3a8c',
+  blue: '#4f8fff', blueDeep: '#22408c', orange: '#ff9a3c', orangeDeep: '#b8561a', abyss: '#0d0b1e', night: '#1a1640', indigo: '#2b2461', dusk: '#3d3a8c',
   lavender: '#a9a3c9', haze: '#6a6394'
 };
 const P = PAL;

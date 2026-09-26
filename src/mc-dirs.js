@@ -10,7 +10,7 @@ const M = window.MC, G = M.Game.prototype, S = M.Sfx, B = M.BUILDINGS, now = () 
 const SCALE = ['supplyDaily', 'shardDaily', 'faithDaily', 'expDaily', 'heal', 'healAll', 'exp', 'lootSup', 'startMult', 'unitHp', 'unitAtk', 'heroAtk', 'heroHp', 'feverStart', 'feverRate', 'portalHp', 'bpLuck', 'defDmg'];
 const K = M.DIR_K = 0.35, MAXLV = M.DIR_MAX = 3;
 const each = (m, fn) => { if (m && m.base && M.eachBuilt) M.eachBuilt(m, (k, c, r) => { if (k !== 'core' && B[k]) fn(B[k], k, c, r); }); };
-const fits = (D, Bd) => !!Bd && ((D.cats || []).includes(Bd.cat) || (D.styles || []).includes(Bd.style));
+const fits = (D, Bd) => !!Bd && !Bd.evoVoc && ((D.cats || []).includes(Bd.cat) || (D.styles || []).includes(Bd.style));   // an evolution building (mc-night.js) has no number a direction could raise
 const flat = (fx) => (o, m, lv) => Object.keys(fx).forEach(x => { o[x] = (o[x] || 0) + fx[x] * lv; });
 // n: name · c: colour · cats / styles: the buildings it strengthens (效果 ×(1 + 0.35 per level)) · t: the sentence · fn: its own extra
 const DIRS = M.DIRS = {

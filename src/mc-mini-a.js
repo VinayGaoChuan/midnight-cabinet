@@ -387,7 +387,7 @@ MINI.claw = { title: '抓娃娃机', img: 'e_claw', col: C.pink, text: '玻璃�
     if (mg.phase === 'down') { mg.cx = mg.dx; mg.cy = top + (mg.ty - top) * eio(mg.pt / 0.9); if (mg.pt >= 0.9) { this.miniSet('grab'); S.mini('claw', 'grab'); } }
     if (mg.phase === 'grab') { mg.open = 1 - cl(mg.pt / 0.35, 0, 1); if (mg.pt >= 0.35) { if (mg.tgt >= 0 && (mg.succ || rnd() < 0.7)) mg.hold = mg.tgt; this.miniSet('up'); S.mini('claw', mg.hold >= 0 ? 'lift' : 'empty');
       // 抓住了：聚光跟着娃娃走，品质越高越紧张（传说是超级）；空爪一拍带过
-      if (mg.hold >= 0) { const p = mg.prizes[mg.hold]; M.SHOW.reach(this, mg, { x: p.x, y: p.y - 50, r: 120, lv: p.q >= 2 ? 2 : 1, label: '抓住了！', col: M.QUALITY[p.q].c }); } else M.SHOW.lose(this, mg); } }
+      if (mg.hold >= 0) { const p = mg.prizes[mg.hold]; M.SHOW.reach(this, mg, { x: p.x, y: p.y - 50, r: 120, lv: p.q >= 3 ? 2 : 1, label: '抓住了！', col: M.QUALITY[p.q].c }); } else M.SHOW.lose(this, mg); } }
     if (mg.phase === 'up') { mg.cy = mg.ty + (top - mg.ty) * eio(mg.pt / 1.0); if (mg.hold >= 0 && !mg.succ && mg.pt > 0.45) { const p = mg.prizes[mg.hold]; p.vy = 0; mg.hold = -1; p.falling = true; S.mini('claw', 'slip'); M.SHOW.near(this, mg, p.x, p.y - 40, '滑掉了！'); this.miniSay('滑掉了……', '#8d8496'); }
       if (mg.pt >= 1.0) { this.miniSet(mg.hold >= 0 ? 'move' : 'back'); } }
     if (mg.phase === 'move' && mg.pt < 0.02) M.SHOW.slowmo(mg, 0.5, 1.2);   // 吊着往出口挪：慢动作

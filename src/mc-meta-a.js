@@ -54,10 +54,10 @@ M.FURN = [
     { d: '建造时间 -1 天', fx: { buildDays: -1 } },
     { d: '建造时间 -1 天；挖掘立刻完成', fx: { buildDays: -1, digInstant: 1 } },
     { d: '建造时间 -2 天；挖掘立刻完成', fx: { buildDays: -2, digInstant: 1 } }] },
-  { k: 'calendar', icon: 'r_skel', names: ['挂历', '行事历', '预言历'], cost: [120, 280, 520], what: '把混沌来袭的日子圈出来。', lv: [
-    { d: '混沌来袭间隔 5 天 → 6 天', fx: { raidEvery: 6 } },
-    { d: '混沌来袭间隔 7 天', fx: { raidEvery: 7 } },
-    { d: '混沌来袭间隔 7 天；混沌来袭时防御塔伤害 +40%', fx: { raidEvery: 7, defDmg: 0.4 } }] },
+  { k: 'calendar', icon: 'r_skel', names: ['挂历', '行事历', '预言历'], cost: [120, 280, 520], what: '把每一个夜晚都圈出来。', lv: [
+    { d: '驻军生命 +10%', fx: { garHp: 0.1 } },
+    { d: '驻军生命 +20%', fx: { garHp: 0.2 } },
+    { d: '驻军生命 +20%，驻军攻击 +40%', fx: { garHp: 0.2, defDmg: 0.4 } }] },
   { k: 'photo', icon: 't_heart', names: ['相框', '照片墙', '纪念碑'], cost: [100, 240, 480], what: '记住每一个没回来的人。', lv: [
     { d: '领袖阵亡时，多留下 50% 经验球', fx: { deathOrbsX: 0.5 } },
     { d: '阵亡多留 50% 经验球；阵亡时宝物全部保住', fx: { deathOrbsX: 0.5, bank: 9 } },
@@ -96,7 +96,7 @@ M.ACH = [
 M.ACH_BY = {}; M.ACH.forEach(a => M.ACH_BY[a.k] = a);
 
 // ═════════════════════ perks = furniture + earned achievements ═════════════════════
-const ADD = ['drinkAtk', 'drinkHp', 'startSup', 'lootSup', 'carrySup', 'carrySh', 'startHeroLv', 'newHeroLv', 'healMul', 'vision', 'startTiles', 'eventLuck', 'startMult', 'buildDays', 'defDmg', 'deathOrbsX', 'deathShards', 'startBpQ', 'portalHp', 'buildCost', 'startWonder', 'eventRate', 'bossBp', 'recruitCost', 'clawBonus', 'unitHp'];
+const ADD = ['drinkAtk', 'drinkHp', 'startSup', 'lootSup', 'carrySup', 'carrySh', 'startHeroLv', 'newHeroLv', 'healMul', 'vision', 'startTiles', 'eventLuck', 'startMult', 'buildDays', 'defDmg', 'garHp', 'deathOrbsX', 'deathShards', 'startBpQ', 'portalHp', 'buildCost', 'startWonder', 'eventRate', 'bossBp', 'recruitCost', 'clawBonus', 'unitHp'];
 let cache = null, cacheV = -1;
 M.perks = function () {
   if (!M.META_ROOM) return {};
@@ -109,7 +109,7 @@ M.perks = function () {
 M.furnLv = (k) => prof().furn[k] || 0;
 // base-wide perks flow through the existing base modifier channel
 const oBM = M.baseMods;
-M.baseMods = function (m, raw) { const o = oBM.call(this, m, raw), P = M.perks(); ['lootSup', 'supplyDaily', 'newHeroLv', 'vision', 'tower', 'startMult', 'buildDays', 'defDmg', 'bank', 'deathShards', 'portalHp'].forEach(k => { if (P[k]) o[k] = (o[k] || 0) + P[k]; }); if (m && m.moon === 'blood') o.lootSup = (o.lootSup || 0) + 0.2; return o; };
+M.baseMods = function (m, raw) { const o = oBM.call(this, m, raw), P = M.perks(); ['lootSup', 'supplyDaily', 'newHeroLv', 'vision', 'tower', 'startMult', 'buildDays', 'defDmg', 'garHp', 'bank', 'deathShards', 'portalHp'].forEach(k => { if (P[k]) o[k] = (o[k] || 0) + P[k]; }); if (m && m.moon === 'blood') o.lootSup = (o.lootSup || 0) + 0.2; return o; };
 const oHR = M.hospitalRate; M.hospitalRate = function (m) { return oHR.call(this, m) * (1 + (M.perks().healMul || 0)); };
 // raid interval is a per-game setting now
 M.nextRaid = (m) => { const E = M.RAID_EVERY; return Math.ceil((m.day + 0.001) / E) * E; };

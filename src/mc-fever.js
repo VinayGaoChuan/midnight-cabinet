@@ -90,7 +90,7 @@ G.feverGo = function (b) {
 G.feverRoll = function () {
   const X = this.feverFx, b = X && X.b; if (!b || b !== this.battle) { this.feverFx = null; return; }
   const I = M.ITEMS[X.key]; X.rolled = true;
-  this.startReel({ title: 'FEVER · ' + I.name, iconKey: I.icon, itemMode: true, land: 0, ups: X.tier, tease: X.tier < 3, tiles: M.TIERS.map((t, k) => ({ n: t.n, sub: I.tiers[k], c: t.c })),
+  this.startReel({ title: 'FEVER · ' + I.name, iconKey: I.icon, itemMode: true, fever: true, land: 0, ups: X.tier, tease: X.tier < 5, tiles: M.TIERS.map((t, k) => ({ n: t.n, sub: I.tiers[k], c: t.c })),
     onDone: () => {
       if (this.battle !== b || b.over) { this.feverFx = null; return; }
       this.fvStageStart(X.key, X.tier, b);   // the fight stays frozen; the effect plays on a darkened screen (below)
@@ -117,7 +117,12 @@ G.tick = function (dt) {
 // the slam slows the fight right down until the reel takes over (the reel slows it by itself, mc-game-m.js)
 const oBT = G.battleTick;
 // the fight stops from the slam until the effect has played (user ruling 2026-09-27: 「fever触发的时候，战斗停止」)
-if (oBT) G.battleTick = function (dt) { const X = this.feverFx; return oBT.call(this, X && !X.timeAt ? 0 : dt); };
+if (oBT) G.battleTick = function (dt) {
+  const X = this.feverFx, b = this.battle;
+  // frozen, the fight's own shake and flash would hang on the screen: they fade in real time (2026-09-26: 「屏幕还要震好久，才结算效果」)
+  if (X && !X.timeAt && b) { const d = Math.max(0, dt || 0); b.shake = Math.max(0, (b.shake || 0) - d * 90); b.flash = Math.max(0, (b.flash || 0) - d * 3); }
+  return oBT.call(this, X && !X.timeAt ? 0 : dt);
+};
 
 // drawn on the fx layer, screen space: the marquee, the slam, the FEVER TIME bar
 M.drawFever = function (x, g) {

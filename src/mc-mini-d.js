@@ -357,7 +357,7 @@ MINI.recruit = { title: '招募旗', img: 'e_flag', col: C.blue, text: '旗子�
       if (k >= 0 && mg.t < c.la) { const s = Math.min(c.path.length - 1, Math.floor(k / (c.od / c.path.length))); if (s !== c.s) { if (c.s < 0) SHOW.omen(this, mg, c.path[s]); else SHOW.promote(this, mg, c.x, c.y - 40, c.path[s]); c.s = s; } }
       c.lift = cl((mg.t - c.la) / 0.28, 0, 1);
       if (mg.t >= c.la && !c.snd) { c.snd = 1; const last = c.path.length - 1; if (c.s >= 0 && c.s < last) SHOW.promote(this, mg, c.x, c.y - 40, c.path[last]); c.s = last; c.pop = mg.t;
-        S.mini('recruit', 'curtain'); S.mini('recruit', 'reveal'); const col = QC(c.q); this.fx.burst(c.x, c.y - 180, col, 10 + 6 * c.q); this.fx.kick(2 + c.q * 2); if (c.q >= 2) this.fx.rays(c.x, c.y - 40, col, 0.8, { r: 200 + 40 * c.q }); } }); },
+        S.mini('recruit', 'curtain'); S.mini('recruit', 'reveal'); const col = QC(c.q); this.fx.burst(c.x, c.y - 180, col, 10 + 6 * c.q); this.fx.kick(2 + c.q * 2); if (c.q >= 3) this.fx.rays(c.x, c.y - 40, col, 0.8, { r: 200 + 40 * c.q }); } }); },
   draw(x, mg) {
     const t = mg.t; bgv(x, '#141a2a', '#06080e'); K.R(x, SX, FLOOR - 20, SW, 140, '#2a2018');
     mg.cards.forEach((c, i) => { const D = M.DB[c.k], Q = M.QUALITY[D.q], hov = mg.phase === 'idle' && Math.abs(mg.mx - c.x) < 130 && Math.abs(mg.my - c.y) < 190, sel = mg.phase === 'take' && mg.cur === i, dim = mg.phase === 'take' && mg.cur !== i;

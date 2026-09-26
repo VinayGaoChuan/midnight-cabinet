@@ -7,7 +7,7 @@ const FONT = "'Fusion Pixel 12px Proportional SC','Noto Serif SC',serif", NUMF =
 // 字号阶梯（舞台像素）：标签 18 · 说明 22 · 正文 26 · 条目 30 · 按键 32 · 标题 40 · 数字 52 · 招牌 64
 const T = { tag: 18, cap: 22, body: 26, item: 30, btn: 32, title: 40, num: 52, hero: 64 };
 // 品质：面色 / 亮边 / 暗边
-const Q = [[P.silver, P.white, P.steel], [P.teal, P.ice, P.tealDeep], [P.violet, P.magenta, P.violetDeep], [P.gold, P.butter, P.amber]];
+const Q = [[P.silver, P.white, P.steel], [P.green, P.lime, P.greenDeep], [P.blue, P.ice, P.blueDeep], [P.violet, P.magenta, P.violetDeep], [P.orange, P.butter, P.orangeDeep], [P.red, P.pink, P.wine]];   // 普通 / 优质 / 稀有 / 史诗 / 传说 / 神话
 // 按键：底色 / 上高光 / 下暗阶 / 字色
 const BTN = { gold: [P.gold, P.butter, P.amber, P.ink], teal: [P.teal, P.ice, P.tealDeep, P.ink], red: [P.red, P.pink, P.wine, P.ink], dark: [P.indigo, P.dusk, P.night, P.cream], violet: [P.violet, P.magenta, P.violetDeep, P.ink] };
 const R = (x, a, b, w, h, c) => { x.fillStyle = c; x.fillRect(Math.round(a), Math.round(b), Math.round(w), Math.round(h)); };

@@ -6,7 +6,7 @@ const cl = (v, a, b) => Math.max(a, Math.min(b, v));
 const Q = M.QUALITY;
 M.HEROES.butcherlord.skill.v = (lv) => 0.2 + 0.05 * Math.floor(lv / 3);
 Object.keys(M.BUILDINGS).forEach(k => { const w = M.BUILDINGS[k].weapon; if (w && !w._s) { w._s = 1; w.dmg *= 9; } });
-const qGlow = (q) => q >= 3 ? '0 0 26px ' + Q[3].c + ', 0 0 60px rgba(255,200,60,0.45)' : q === 2 ? '0 0 22px rgba(232,240,250,0.55)' : q === 1 ? '0 0 10px rgba(224,144,74,0.4)' : 'none';
+const qGlow = (q) => q >= 5 ? '0 0 28px ' + Q[5].c + ', 0 0 64px rgba(255,74,90,0.5)' : q === 4 ? '0 0 26px ' + Q[4].c + ', 0 0 60px rgba(255,154,60,0.45)' : q === 3 ? '0 0 22px rgba(184,107,255,0.5)' : q === 2 ? '0 0 14px rgba(79,143,255,0.4)' : q === 1 ? '0 0 10px rgba(111,212,106,0.35)' : 'none';
 const qBg = (q) => 'radial-gradient(ellipse at 50% 78%,' + Q[q].c + (q >= 2 ? '66' : '33') + ' 0%,rgba(20,14,24,0.95) 62%)';
 M.qGlow = qGlow; M.qBg = qBg;
 const ITEM_BG = 'radial-gradient(ellipse at 50% 78%,#c9a24a44 0%,rgba(20,14,24,0.95) 62%)', ITEM_GLOW = '0 0 12px rgba(201,162,74,0.35)';
@@ -71,7 +71,7 @@ G.buy = function (zone, i) {
   this.hold('wallet', run.wallet); run.wallet -= c.cost; this.release('wallet'); c.sold = true; c.soldAt = now();
   // 买下是爽点，按品质分两档：普通 / 稀有是小爽（卡片弹一下 + 火花，部队飞进队伍），史诗 / 传说是大爽（炸开 + 光芒 + 金币 + 镜头震）
   M.Sfx.buy();
-  if (c.q >= 2) { M.Sfx.stamp(); this.juice('big', { x: from.x, y: from.y, col: Q[c.q].c, p: c.q / 3, sfx: false }); this.fx.rays(from.x, from.y, Q[c.q].c, 0.9, { r: 260, delay: 0.06 }); this.fx.coins(from.x, from.y, 8, { v: 600, delay: 0.08 }); }
+  if (c.q >= 3) { M.Sfx.stamp(); this.juice('big', { x: from.x, y: from.y, col: Q[c.q].c, p: c.q / 3, sfx: false }); this.fx.rays(from.x, from.y, Q[c.q].c, 0.9, { r: 260, delay: 0.06 }); this.fx.coins(from.x, from.y, 8, { v: 600, delay: 0.08 }); }
   else this.juice('good', { x: from.x, y: from.y, col: Q[c.q].c, p: 0.5 + c.q * 0.3, sfx: false });
   if (c.kind === 'unit') this.award([{ k: 'unit', type: c.type }], from);
   if (c.kind === 'item') this.award([{ k: 'item', key: c.key }], from);
@@ -102,7 +102,7 @@ G.baseTutStep = function () {
   if (m.baseTut === 1) { const p = cp(C.c, C.r); this.coach('这是你的地下基地。主基地会照亮周围 3 格。点击「主基地」打开仓库，看看你带回了什么。', p.x, p.y + 230, p.x, p.y); }
   if (m.baseTut === 3) { const p = cp(C.c - 1, C.r); this.coach('主基地两边各有一个空房间。点击左边的空房间，用「酒馆图纸」建造酒馆。普通品质的建筑只要 1 天。', p.x, p.y + 230, p.x, p.y); }
   if (m.baseTut === 4) { const p = cp(C.c, C.r + 1); this.coach('再点击主基地下方的岩层，挖出一块新空地。新挖的房间自带光亮，能照亮周围 1 格。发光的岩层是特殊地格。', p.x, p.y + 230, p.x, p.y); }
-  if (m.baseTut === 5) { const p = this.bv.toScreen(M.BASE_GEO.DOOR_X, -130); this.coach('每次出征，基地就过去 1 天，挖掘和建造也会推进。点击地面上的「传送门」，再来一局！每 ' + M.RAID_EVERY + ' 天会有混沌来袭，记得在地下造武器房间。', p.x, p.y + 330, p.x, p.y); }
+  if (m.baseTut === 5) { const p = this.bv.toScreen(M.BASE_GEO.DOOR_X, -130); this.coach('每次出征，基地就过去 1 天，挖掘和建造也会推进。点击地面上的「传送门」，再来一局！每天夜里混沌来袭，出征带回来的部队会留下守城。', p.x, p.y + 330, p.x, p.y); }
 };
 const oldClose = G.closePanel;
 G.closePanel = function () { const was = this.panel; const b0 = this.meta.baseTut; oldClose.call(this); const m = this.meta; if (was && was.key === 'core' && m.baseTut === 3) { this.coachData = null; setTimeout(() => this.baseTutStep(), 750); } };

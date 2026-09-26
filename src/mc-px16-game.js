@@ -6,7 +6,7 @@
 // unit picture (cards, portraits, raids, the world map) gets the same sprite at an integer scale.
 const M = window.MC, P16 = M.P16, ART = P16.ART, G = M.Game.prototype;
 const snap = (v) => Math.round(v / ART) * ART;
-const QS = M.QSIZE || [1, 1.14, 1.3, 1.5];
+const QS = M.QSIZE || [1, 1.07, 1.14, 1.3, 1.5, 1.65];
 
 // ───────── any-size picture of a unit (integer upscale of its canonical sprite) ─────────
 const ui = new Map();

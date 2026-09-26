@@ -256,7 +256,7 @@ M.reelP = function (r) {
 // 不升档也不「再上一格？」时，停轮那一下就是锁定
 M.reelLock = (r) => (r.ups || r.tease ? 2.55 + r.ups * 0.95 + (r.tease ? 0.75 : 0) : M.REEL_STOP);
 // 锁定后的余韵按结果分：普通 / 稀有 0.9 秒，史诗以上 1.5 秒（负面的快速过去）
-M.reelDur = (r) => M.reelLock(r) + (r.itemMode && r.ups < 2 ? 0.9 : 1.5);
+M.reelDur = (r) => M.reelLock(r) + (r.itemMode && r.ups < 3 ? 0.9 : 1.5);   // six qualities: 史诗 and up linger
 // 每一次往上冲（升品、最后的「再上一格？」）的时刻：冲之前 0.42 秒是蓄力
 M.reelEv = (r) => [...Array(r.ups || 0)].map((_, i) => 2.55 + i * 0.95).concat(r.tease ? [2.55 + (r.ups || 0) * 0.95] : []);
 M.REEL_CHG = 0.42;
@@ -273,17 +273,17 @@ M.drawReel = function (ctx, r, fx) {
   const ts = stepT(t, 15), inA = eback(ts / 0.35), outA = st4(clamp((dur - t) / 0.25, 0, 1));
   const X = 960, Y = 540;
   ctx.save();
-  M.fxDim(ctx, 0.88 * st4(Math.min(1, t / 0.2)) * outA); ctx.globalAlpha = outA;
+  if (!r.fever) M.fxDim(ctx, 0.88 * st4(Math.min(1, t / 0.2)) * outA); ctx.globalAlpha = outA;   // FEVER's reel: no dark screen (user ruling 2026-09-26)
   if (t > lockT) { const q = t - lockT; hardRays(ctx, X, Y, 16, 900, 80, cc, 0.12 * st4(q * 3) * outA, stepT(q, 8) * 0.5); }
   const upIdx = r.ups ? [...Array(r.ups)].map((_, i) => 2.55 + i * 0.95).findIndex(a => t >= a && t < a + 0.45) : -1;
   const sh = upIdx >= 0 ? (1 - (t - (2.55 + upIdx * 0.95)) / 0.45) * 16 : t > lockT && t < lockT + 0.3 ? (1 - (t - lockT) / 0.3) * 20 : 0;
   const ant = t < lockT ? clamp((ts - (lockT - 0.9)) / 0.9, 0, 1) : 0, punch = ts >= lockT ? 1 + 0.16 * Math.exp(-(ts - lockT) * 9) * Math.cos((ts - lockT) * 30) : 1, upP = upIdx >= 0 ? 1 + 0.07 * (1 - clamp((ts - (2.55 + upIdx * 0.95)) / 0.45, 0, 1)) : 1;
-  if (ant > 0) { ctx.globalAlpha = st4(0.35 * ant) * outA; R(ctx, 0, 0, 1920, 1080, P.ink); ctx.globalAlpha = outA; }
+  if (ant > 0 && !r.fever) { ctx.globalAlpha = st4(0.35 * ant) * outA; R(ctx, 0, 0, 1920, 1080, P.ink); ctx.globalAlpha = outA; }
   // 蓄力：每次往上冲之前灯珠全灭、窗口透出下一档的颜色、机箱越抖越厉害
   let chg = 0; M.reelEv(r).forEach(E => { if (t < E && t > E - M.REEL_CHG) chg = (t - (E - M.REEL_CHG)) / M.REEL_CHG; });
   const nxt = r.tiles[((Math.round(p) + 1) % N + N) % N], nc = palC(nxt.c);
   // 传说锁定前黑场一下
-  const legend = r.itemMode && r.ups >= 3, black = legend && t > lockT - 0.18 && t < lockT ? 1 : 0;
+  const legend = r.itemMode && r.ups >= 4, black = legend && t > lockT - 0.18 && t < lockT ? 1 : 0;
   const SC = inA * (0.85 + 0.15 * outA) * (1 + 0.08 * ant * ant + 0.04 * chg) * punch * upP, jig = () => Math.round((Math.random() - 0.5) * (sh + ant * 5 + chg * 8));
   ctx.translate(X + jig(), Y + jig() - Math.round(curve(M.CURVE.jolt, t - 0.2) * 0.7)); ctx.scale(SC, SC);
   const W = 820, H = 640, hw = W / 2, hh = H / 2;

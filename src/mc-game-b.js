@@ -53,7 +53,7 @@ Object.assign(G, {
     if (m.baseTut === 0 && m.tutDone) { m.baseTut = 1; this.save(); }
     if (m.baseTut === 1) { const p = this.corePos(); this.coach('这是你的地下基地。点击「主基地」，打开仓库看看。', p.x, p.y + 220, p.x, p.y); }
     if (m.baseTut === 3) { const p = this.cellPos(M.CORE.c, M.CORE.r + 1); this.coach('点击主基地左、右、下方的岩层，挖出新房间（花物资和 1 个探索日）。发光的岩层是特殊地格，建在上面会有加成。', p.x, p.y + 200, p.x, p.y); }
-    if (m.baseTut === 4) { const p = this.bv.toScreen(M.BASE_GEO.DOOR_X, -130); this.coach('每次出征，基地就过去 1 天，挖掘和建造也跟着推进。点击地面上的「传送门」，再点升起的碑出发。每 ' + M.RAID_EVERY + ' 天会有混沌来袭，记得在地下造武器房间。', p.x, p.y + 330, p.x, p.y); }
+    if (m.baseTut === 4) { const p = this.bv.toScreen(M.BASE_GEO.DOOR_X, -130); this.coach('每次出征，基地就过去 1 天，挖掘和建造也跟着推进。点击地面上的「传送门」，再点升起的碑出发。每天夜里混沌来袭，出征带回来的部队会留下守城。', p.x, p.y + 330, p.x, p.y); }
   },
   doDig(c, r) {
     const m = this.meta, cost = M.digCost(m, c, r);
@@ -70,8 +70,8 @@ Object.assign(G, {
     if (!o) return; if (o.why) { this.deny(o.why, '#d0453c'); return; }
     this.hold('msup', m.supplies); M.startBuild(m, c, r, key); this.release('msup');
     // 开工：普通 / 稀有建筑是小爽点（按键弹 → 地格上一圈光和尘），史诗 / 传说是大爽点（地格炸开）
-    const p = this.cellPos(c, r), qc = M.QUALITY[o.B.q].c; M.Sfx.build(); this.juice(o.B.q >= 2 ? 'big' : 'good', { sfx: false, col: qc, p: 0.5 + o.B.q * 0.2 });
-    setTimeout(() => { if (o.B.q >= 2) this.fx.explode(p.x, p.y, qc, 1.2 + o.B.q * 0.5); else { this.fx.flare(p.x, p.y, 140, qc, 0.22); this.fx.ring(p.x, p.y, 10, 140, qc, 6, 0.34); this.fx.burst(p.x, p.y, '#8a6a40', 14, { v: 420 }); this.fx.kick(4); } this.fx.pop(p.x, p.y - 70, o.B.n + ' 开工 · ' + o.days + ' 天', qc, 44); }, 110);
+    const p = this.cellPos(c, r), qc = M.QUALITY[o.B.q].c; M.Sfx.build(); this.juice(o.B.q >= 3 ? 'big' : 'good', { sfx: false, col: qc, p: 0.5 + o.B.q * 0.2 });
+    setTimeout(() => { if (o.B.q >= 3) this.fx.explode(p.x, p.y, qc, 1.2 + o.B.q * 0.5); else { this.fx.flare(p.x, p.y, 140, qc, 0.22); this.fx.ring(p.x, p.y, 10, 140, qc, 6, 0.34); this.fx.burst(p.x, p.y, '#8a6a40', 14, { v: 420 }); this.fx.kick(4); } this.fx.pop(p.x, p.y - 70, o.B.n + ' 开工 · ' + o.days + ' 天', qc, 44); }, 110);
     this.panel = Object.assign({}, this.panel, { kind: 'job', at: now() }); this.save();
   },
   forgeOf(c, r) { const m = this.meta, x = M.cell(m, c, r), B = M.BUILDINGS[x.b], t = M.tileMod(m, c, r, x.b); return Object.assign({}, B.forge, { luck: t.forgeLuck || 0 }); },
@@ -82,7 +82,7 @@ Object.assign(G, {
     if (m.supplies < cost) { this.deny('物资不足', '#d0453c'); return; }
     m.supplies -= cost; M.invAdd(m, 'rbp:' + key, -1);
     const res = M.craftRelic3(m, key, this.forgeOf(c, r)); this.save();
-    this.startReel({ title: '打造 · ' + R.n, iconKey: R.icon, itemMode: true, land: 0, ups: res.landQ, tease: res.landQ < 3, tiles: M.QUALITY.map((q, i) => ({ n: q.n, sub: M.statText(R.lines[i].k, R.lines[i].v), c: q.c })), onDone: () => {
+    this.startReel({ title: '打造 · ' + R.n, iconKey: R.icon, itemMode: true, land: 0, ups: res.landQ, tease: res.landQ < 5, tiles: M.QUALITY.map((q, i) => ({ n: q.n, sub: M.statText(R.lines[i].k, R.lines[i].v), c: q.c })), onDone: () => {
       const col = M.QUALITY[res.r.q].c, img = M.spriteCanvas(R.icon, 16);
       this.fx.rays(960, 460, col, 2.2, { r: 700 }); this.fx.pop(960, 700, M.QUALITY[res.r.q].n + ' · ' + R.n, col, 80, { life: 1.8, rise: 20 }); M.Sfx.itemReveal(res.r.q);
       this.fx.fly(img, { x: 960, y: 460 }, this.corePos(), { col, delay: 1.1, s0: 1, s1: 0.3, dur: 0.9 });

@@ -116,7 +116,7 @@ M.dropBp = function (bias, style, qUp) {
   if (cats && Math.random() < 0.45) {
     const ks = Object.keys(B).filter(k => !B[k].fixed && !B[k].gone && !B[k].boss && cats.includes(B[k].cat) && (!m || !M.bpUseful || M.bpUseful(m, 'bbp:' + k)));
     if (ks.length) {
-      const wq = M.bpWeights ? M.bpWeights(bias, qUp) : [60, 25, 11, 4], q = M.wpick([0, 1, 2, 3], i => (ks.some(k => B[k].q === i) ? wq[i] : 0));
+      const wq = M.bpWeights ? M.bpWeights(bias, qUp) : [60, 20, 12, 6, 2, 0.4], q = M.wpick([0, 1, 2, 3, 4, 5], i => (ks.some(k => B[k].q === i) ? wq[i] || 0 : 0));
       const at = ks.filter(k => B[k].q === q); if (at.length) return 'bbp:' + M.pick(at);
     }
   }

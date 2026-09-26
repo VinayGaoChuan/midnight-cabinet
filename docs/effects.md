@@ -260,7 +260,7 @@
 
 <!-- gen:units -->
 
-#### 我方部队（272）
+#### 我方部队（338）
 
 | 编号 | 单位 | 职业 · 品质 | 卡片上的一句话 | 开战激活 | 自带法力技能 · 触发条件 | 技能演出 |
 |---|---|---|---|---|---|---|
@@ -324,297 +324,363 @@
 | U058 | 锤卫<br>`LionHammer_T1` | 圣骑士 · 普通 | 让身边友军攻击大量吸血。 | 光环 · 吸血 | — | — |
 | U059 | 骸骨术士<br>`Mage_T1` | 祭司 · 普通 | 让身边友军攻速提高。 | 光环 · 攻速 | — | — |
 | U060 | 驯兽师<br>`Summoner_T1` | 召唤师 · 普通 | 蓄满法力后召唤灰狼。 | 召唤 | 召唤猎犬：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
-| U061 | 斗鸡<br>`Chick_T2` | 商人 · 稀有 | 死亡时掉落积分，活过一场战斗就赚积分。 | 金币 | — | — |
-| U062 | 盾兵<br>`FootSoldier_T2` | 先锋 · 稀有 | 受到的伤害减少，受到的远程伤害减少。 | 守护 | — | — |
-| U063 | 食人魔<br>`Ogre`<br>[设定卡](../pcd/batch-01/Ogre/design.md) | 先锋 · 稀有 | 开战时可能硬化，防御提高。 | 守护 | — | — |
-| U064 | 公鸡<br>`Rooster`<br>[设定卡](../pcd/batch-01/Rooster/design.md) | 先锋 · 稀有 | 受到的远程伤害减少。 | 守护 | — | — |
-| U065 | 火鸡<br>`Turkey`<br>[设定卡](../pcd/batch-01/Turkey/design.md) | 商人 · 稀有 | 死亡时掉落积分。 | 金币 | — | — |
-| U066 | 水战士<br>`WaterWarrior`<br>[设定卡](../pcd/batch-01/WaterWarrior/design.md) | 刺客 · 稀有 | 开战时隐身，偷袭敌方远程。 | 潜行 | — | — |
-| U067 | 潮刃刺客<br>`WaterWarrior_T2` | 刺客 · 稀有 | 开战时隐身，偷袭敌方远程，常常闪避攻击。 | 潜行 | — | — |
-| U068 | 精英猎手<br>`EliteHunter`<br>[设定卡](../pcd/batch-02/EliteHunter/design.md) | 射手 · 稀有 | 每次攻击同时射中三个敌人。 | 刀锋 | — | — |
-| U069 | 奴隶主<br>`SlaveLord`<br>[设定卡](../pcd/batch-02/SlaveLord/design.md) | 战士 · 稀有 | 残血时攻速翻倍。 | 狂怒 | — | — |
-| U070 | 奴隶主<br>`SlaveLord_T2` | 战士 · 稀有 | 残血时攻速翻倍，持续回血。 | 狂怒 | — | — |
-| U071 | 战马<br>`YellowManeHorse_T2` | 守护者 · 稀有 | 让身边友军防御提高，持续回血。 | 光环 · 守护 | — | — |
-| U072 | 宝石蜥蜴<br>`GemLizard`<br>[设定卡](../pcd/batch-03/GemLizard/design.md) | 射手 · 稀有 | 越打越快。 | 雷电 | — | — |
-| U073 | 铁甲战士<br>`IroncladWarrior`<br>[设定卡](../pcd/batch-03/IroncladWarrior/design.md) | 先锋 · 稀有 | 开战时可能硬化，防御提高。 | 守护 | — | — |
-| U074 | 时间法师<br>`TimeMage_T2` | 法师 · 稀有 | 蓄满法力后召唤陨石砸单个敌人，让身边友军法力恢复更快。 | 奥术 | 小行星：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
-| U075 | 獠牙野猪<br>`BigWildBoar_T2` | 先锋 · 稀有 | 开战时跳进敌群砸地，反弹受到的伤害。 | 冲锋 | — | — |
-| U076 | 沙漠信徒<br>`DesertBeliever`<br>[设定卡](../pcd/batch-04/DesertBeliever/design.md) | 牧师 · 稀有 | 蓄满法力后治疗一串友军。 | 治疗 | 治疗链：有友军生命低于 70% | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U077 | 沙海祭司<br>`DesertBeliever_T2` | 牧师 · 稀有 | 蓄满法力后治疗一串友军，持续回血。 | 治疗 | 治疗链：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
-| U078 | 宝玉兽<br>`JadeBeast`<br>[设定卡](../pcd/batch-17/JadeBeast/design.md) | 商人 · 稀有 | 场上商人越多，积分倍率越高。 | 金币 | — | — |
-| U079 | 宝玉兽<br>`JadeBeast_T2` | 商人 · 稀有 | 场上商人越多，积分倍率越高，死亡时掉落积分。 | 金币 | — | — |
-| U080 | 蛇神祭司<br>`SnakeGodMessenger_T2` | 牧师 · 稀有 | 开战时给最肉的友军加大量生命，蓄满法力后治疗一串友军。 | 治疗 | 治疗链：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
-| U081 | 先祖战士<br>`AncestorWarrior`<br>[设定卡](../pcd/batch-05/AncestorWarrior/design.md) | 先锋 · 稀有 | 死后很快复活，并且更快。 | 复生 | — | — |
-| U082 | 幻影射手<br>`FantasyShooter`<br>[设定卡](../pcd/batch-05/FantasyShooter/design.md) | 射手 · 稀有 | 每次攻击同时打中三个敌人。 | 刀锋 | — | — |
-| U083 | 机枪蝠<br>`Bat`<br>[设定卡](../pcd/batch-08/Bat/design.md) | 射手 · 稀有 | 不停扫射附近的敌人。 | 刀锋 | — | — |
-| U084 | 机枪蝠<br>`Bat_T2` | 射手 · 稀有 | 不停扫射附近的敌人，越打越快。 | 刀锋 | — | — |
-| U085 | 狂战士<br>`Berserker_T2` | 战士 · 稀有 | 每次攻击连打三下，残血时攻速翻倍。 | 迅捷 | — | — |
-| U086 | 链甲枪兵<br>`ChainmailPikeman`<br>[设定卡](../pcd/batch-08/ChainmailPikeman/design.md) | 先锋 · 稀有 | 开战时可能硬化，防御提高。 | 守护 | — | — |
-| U087 | 角斗士<br>`Gladiator_T2` | 刺客 · 稀有 | 盯住一个目标越打越痛，攻击削弱目标防御，可叠加。 | 刀锋 | — | — |
-| U088 | 法师<br>`MageApprentice_T2` | 法师 · 稀有 | 蓄满法力后闪电连锁五个敌人，让身边友军法力恢复更快。 | 雷电 | 闪电打击：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
-| U089 | 巫师<br>`Wizard`<br>[设定卡](../pcd/batch-08/Wizard/design.md) | 祭司 · 稀有 | 让身边友军攻速提高。 | 光环 · 攻速 | — | — |
-| U090 | 翡翠龙<br>`EmeraldDragon`<br>[设定卡](../pcd/batch-09/EmeraldDragon/design.md) | 先锋 · 稀有 | 散发芬芳，持续伤害身边的敌人。 | 毒 | — | — |
-| U091 | 圣光骑士<br>`HolyLightKnight_T2` | 圣骑士 · 稀有 | 半血上场，但快速回血，持续治疗身边的友军。 | 治疗 | — | — |
-| U092 | 猎手<br>`Ranger_T2` | 射手 · 稀有 | 每次攻击附带额外伤害，攻击会弹射到旁边的敌人。 | 刀锋 | — | — |
-| U093 | 赤卫<br>`RedGuard`<br>[设定卡](../pcd/batch-09/RedGuard/design.md) | 先锋 · 稀有 | 半血上场，但持续回血。 | 治疗 | — | — |
-| U094 | 巫毒守卫<br>`VoodooBeliever_T2` | 先锋 · 稀有 | 死亡时会对击杀者施加毒素，持续回血。 | 亡语 | — | — |
-| U095 | 巫毒守卫<br>`VoodooGuard`<br>[设定卡](../pcd/batch-09/VoodooGuard/design.md) | 先锋 · 稀有 | 死亡时会对击杀者施加剧毒。 | 亡语 | — | — |
-| U096 | 炮灰法师<br>`CannonFodderMage`<br>[设定卡](../pcd/batch-10/CannonFodderMage/design.md) | 商人 · 稀有 | 死亡时掉落积分。 | 金币 | — | — |
-| U097 | 诅咒剑士<br>`CursedSwordsman`<br>[设定卡](../pcd/batch-10/CursedSwordsman/design.md) | 守护者 · 稀有 | 蓄满法力后砸伤一片敌人并削弱其伤害。 | 刀锋 | 铁之冰雹：射程内的目标附近有 2 个以上敌人扎堆（只剩更少时也放） | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U098 | 诅咒剑士<br>`CursedSwordsman_T2` | 守护者 · 稀有 | 蓄满法力后砸伤一片敌人并削弱其伤害，让身边友军防御提高。 | 刀锋 | 铁之冰雹：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
-| U099 | 青龙<br>`GreenDragon`<br>[设定卡](../pcd/batch-10/GreenDragon/design.md) | 牧师 · 稀有 | 用自己的生命治疗友军。 | 治疗 | 生命交换：有友军生命低于 60%，且自己生命高于 50% | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U100 | 青龙<br>`GreenDragon_T2` | 牧师 · 稀有 | 用自己的生命治疗友军，持续回血。 | 治疗 | 生命交换：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
-| U101 | 影剑士<br>`ShadowSwordsman_T2` | 召唤师 · 稀有 | 每攻击几次召唤一个影子随从，常常闪避攻击。 | 召唤 | — | — |
-| U102 | 叶刃法师<br>`WildMage_T2` | 法师 · 稀有 | 每次攻击溅射周围敌人，击杀时引发爆炸。 | 刀锋 | — | — |
-| U103 | 暗刃<br>`BlackSword_T2` | 刺客 · 稀有 | 攻击削弱目标防御，可叠加，常常闪避攻击。 | 诅咒 | — | — |
-| U104 | 蟹术士<br>`CrabWarlock`<br>[设定卡](../pcd/batch-11/CrabWarlock/design.md) | 召唤师 · 稀有 | 蓄满法力后召唤小螃蟹。 | 召唤 | 召唤小螃蟹：有敌人逼近到 600 以内 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U105 | 蟹术士<br>`CrabWarlock_T2` | 召唤师 · 稀有 | 蓄满法力后召唤小螃蟹，击杀时回复法力。 | 召唤 | 召唤小螃蟹：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
-| U106 | 暗牙督军<br>`DarkFang_T2` | 祭司 · 稀有 | 让身边友军伤害提高，但更脆，持续回血。 | 光环 · 伤害 | — | — |
-| U107 | 地主<br>`Landlord`<br>[设定卡](../pcd/batch-11/Landlord/design.md) | 商人 · 稀有 | 活过一场战斗就赚积分，开战时可能加速。 | 金币 | — | — |
-| U108 | 生命树<br>`LifeTree_T2` | 圣骑士 · 稀有 | 持续治疗身边的友军，持续回血。 | 治疗 | — | — |
-| U109 | 北极熊<br>`PolarBear`<br>[设定卡](../pcd/batch-11/PolarBear/design.md) | 先锋 · 稀有 | 刚招募时更强，之后慢慢变弱。 | 成长 | — | — |
-| U110 | 战斗机器人<br>`Skybot_T2` | 战士 · 稀有 | 每次攻击溅射周围敌人，攻击削弱目标防御。 | 火焰 | — | — |
-| U111 | 维京海盗<br>`VikingPirate_T2` | 商人 · 稀有 | 活过一场战斗就赚积分，开战时可能加速。 | 金币 | — | — |
-| U112 | 曲速之翼<br>`WarpWing`<br>[设定卡](../pcd/batch-12/WarpWing/design.md) | 祭司 · 稀有 | 持续削弱周围敌人的伤害。 | 光环 · 削弱 | — | — |
-| U113 | 曲速之翼<br>`WarpWing_T2` | 祭司 · 稀有 | 持续削弱周围敌人的伤害，常常闪避攻击。 | 光环 · 削弱 | — | — |
-| U114 | 旋翼机<br>`Whirlybird`<br>[设定卡](../pcd/batch-11/Whirlybird/design.md) | 射手 · 稀有 | 每打几下或击杀后来一发重炮。 | 火焰 | — | — |
-| U115 | 骸骨射手<br>`Archer_T2` | 射手 · 稀有 | 每箭附带火焰伤害，持续回血。 | 火焰 | — | — |
-| U116 | 血骑士<br>`BloodKnight`<br>[设定卡](../pcd/batch-15/BloodKnight/design.md) | 守护者 · 稀有 | 让身边友军攻击吸血。 | 光环 · 吸血 | — | — |
-| U117 | 血骑士<br>`BloodKnight_T2` | 守护者 · 稀有 | 让身边友军攻击吸血，让身边友军防御提高。 | 光环 · 吸血 | — | — |
-| U118 | 狮锤<br>`LionHammer_T2` | 圣骑士 · 稀有 | 让身边友军攻击大量吸血，蓄满法力后给一名友军回血。 | 光环 · 吸血 | 颅骨炖汤：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
-| U119 | 骸骨法师<br>`Mage`<br>[设定卡](../pcd/batch-15/Mage/design.md) | 祭司 · 稀有 | 让身边友军攻速提高。 | 光环 · 攻速 | — | — |
-| U120 | 骸骨法师<br>`Mage_T2` | 祭司 · 稀有 | 让身边友军攻速提高，持续回血。 | 光环 · 攻速 | — | — |
-| U121 | 召唤师<br>`Summoner`<br>[设定卡](../pcd/batch-15/Summoner/design.md) | 召唤师 · 稀有 | 蓄满法力后召唤灰狼。 | 召唤 | 召唤猎犬：有敌人逼近到 600 以内 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U122 | 召唤师<br>`Summoner_T2` | 召唤师 · 稀有 | 蓄满法力后召唤灰狼，击杀时回复法力。 | 召唤 | 召唤猎犬：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
-| U123 | 骸骨武士<br>`Warrior`<br>[设定卡](../pcd/batch-15/Warrior/design.md) | 先锋 · 稀有 | 持续回血。 | 治疗 | — | — |
-| U124 | 金冠鸡<br>`Chick_T3` | 商人 · 史诗 | 死亡时掉落积分，活过一场战斗就赚积分。 | 金币 | — | — |
-| U125 | 铁壁卫士<br>`FootSoldier_T3` | 先锋 · 史诗 | 受到的伤害减少，受到的远程伤害减少。 | 守护 | — | — |
-| U126 | 冰雪法师<br>`IceAndSnowMage`<br>[设定卡](../pcd/batch-01/IceAndSnowMage/design.md) | 法师 · 史诗 | 每次攻击连打三下，蓄满法力后狂暴攻击并回血。 | 迅捷 | 超级鼓舞：敌人进入攻击范围 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U127 | 不朽蓝魔<br>`ImmortalBlueDemon`<br>[设定卡](../pcd/batch-01/ImmortalBlueDemon/design.md) | 刺客 · 史诗 | 开战时隐身，偷袭敌方远程。 | 潜行 | — | — |
-| U128 | 赤十字<br>`RedCross`<br>[设定卡](../pcd/batch-01/RedCross/design.md) | 战士 · 史诗 | 身边敌人死得越多，越快升级成炎帝。 | 成长 | 商业渔夫：敌人进入攻击范围 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U129 | 神石<br>`Stone`<br>[设定卡](../pcd/batch-01/Stone/design.md) | 先锋 · 史诗 | 活过两场战斗后孵化成巨人战神，反弹受到的伤害。 | 成长 | — | — |
-| U130 | 深渊刺客<br>`WaterWarrior_T3` | 刺客 · 史诗 | 开战时隐身，偷袭敌方远程，常常闪避攻击。 | 潜行 | — | — |
-| U131 | 卫队长<br>`GuardCommander`<br>[设定卡](../pcd/batch-02/GuardCommander/design.md) | 先锋 · 史诗 | 法力满后，接下来的攻击都带范围伤害，法力越多，攻速和生命越高。 | 刀锋 | 神盾：敌人进入攻击范围 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U132 | 重装战士<br>`HeavilyArmedWarrior`<br>[设定卡](../pcd/batch-02/HeavilyArmedWarrior/design.md) | 先锋 · 史诗 | 受到的远程伤害减少。 | 守护 | — | — |
-| U133 | 惩戒牧师<br>`PunishingCleric`<br>[设定卡](../pcd/batch-02/PunishingCleric/design.md) | 射手 · 史诗 | 盯住一个目标越打越痛，蓄满法力后攻速翻倍。 | 奥术 | 太阳耀斑：敌人进入攻击范围 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U134 | 角斗场主<br>`SlaveLord_T3` | 战士 · 史诗 | 残血时攻速翻倍，持续回血。 | 狂怒 | — | — |
-| U135 | 汗血马<br>`SweatBloodHorse`<br>[设定卡](../pcd/batch-02/SweatBloodHorse/design.md) | 守护者 · 史诗 | 让身边友军防御提高。 | 光环 · 守护 | — | — |
-| U136 | 汗血宝马<br>`YellowManeHorse_T3` | 守护者 · 史诗 | 让身边友军防御提高，持续回血。 | 光环 · 守护 | — | — |
-| U137 | 天使弓手<br>`AngelArcher`<br>[设定卡](../pcd/batch-03/AngelArcher/design.md) | 射手 · 史诗 | 攻击会弹射到旁边的敌人，每次攻击附带火焰伤害。 | 刀锋 | — | — |
-| U138 | 蓝龙<br>`BlueDragon`<br>[设定卡](../pcd/batch-03/BlueDragon/design.md) | 法师 · 史诗 | 蓄满法力后闪电连锁五个敌人。 | 雷电 | 闪电打击：攻击范围内有 3 个以上敌人（只剩更少时也放） | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U139 | 投石弓手<br>`CatapultArcher`<br>[设定卡](../pcd/batch-03/CatapultArcher/design.md) | 射手 · 史诗 | 攻击会弹射到旁边的敌人，攻击削弱目标防御。 | 刀锋 | — | — |
-| U140 | 月光使徒<br>`MoonlightApostle`<br>[设定卡](../pcd/batch-03/MoonlightApostle/design.md) | 法师 · 史诗 | 蓄满法力后砸伤一片敌人并削弱其伤害。 | 刀锋 | 铁之冰雹：射程内的目标附近有 2 个以上敌人扎堆（只剩更少时也放） | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U141 | 赤龙<br>`RedDragon`<br>[设定卡](../pcd/batch-03/RedDragon/design.md) | 先锋 · 史诗 | 用法力吸收受到的伤害，法力越少伤害越高。 | 守护 | — | — |
-| U142 | 时光术士<br>`TimeMage_T3` | 法师 · 史诗 | 蓄满法力后召唤陨石砸单个敌人，让身边友军法力恢复更快。 | 奥术 | 小行星：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
-| U143 | 巨型野猪<br>`BigWildBoar`<br>[设定卡](../pcd/batch-04/BigWildBoar/design.md) | 先锋 · 史诗 | 开战时跳进敌群砸地。 | 冲锋 | — | — |
-| U144 | 巨型野猪<br>`BigWildBoar_T3` | 先锋 · 史诗 | 开战时跳进敌群砸地，反弹受到的伤害。 | 冲锋 | — | — |
-| U145 | 沙海先知<br>`DesertBeliever_T3` | 牧师 · 史诗 | 蓄满法力后治疗一串友军，持续回血。 | 治疗 | 治疗链：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
-| U146 | 绿魔<br>`GreenDemon`<br>[设定卡](../pcd/batch-04/GreenDemon/design.md) | 先锋 · 史诗 | 防御很高，但身边强力友军越多越弱。 | 守护 | — | — |
-| U147 | 翡翠玉兽<br>`JadeBeast_T3` | 商人 · 史诗 | 场上商人越多，积分倍率越高，死亡时掉落积分。 | 金币 | — | — |
-| U148 | 狂王<br>`MadMonarch`<br>[设定卡](../pcd/batch-04/MadMonarch/design.md) | 射手 · 史诗 | 越打越快。 | 迅捷 | — | — |
-| U149 | 魔盾兵<br>`MagicShieldSoldier`<br>[设定卡](../pcd/batch-04/MagicShieldSoldier/design.md) | 先锋 · 史诗 | 重装单位，非常耐打。 | — | — | — |
-| U150 | 蛇神使者<br>`SnakeGodMessenger_T3` | 牧师 · 史诗 | 开战时给最肉的友军加大量生命，蓄满法力后治疗一串友军。 | 治疗 | 治疗链：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
-| U151 | 黄魔<br>`YellowDemon`<br>[设定卡](../pcd/batch-04/YellowDemon/design.md) | 先锋 · 史诗 | 身边强力友军越多越强。 | 狂怒 | — | — |
-| U152 | 烈焰射手<br>`BlazingShooter`<br>[设定卡](../pcd/batch-05/BlazingShooter/design.md) | 射手 · 史诗 | 开战时可能发脾气，攻速提高，每次攻击同时打中三个敌人。 | 狂怒 | — | — |
-| U153 | 灵召塔<br>`SpiritSummonTower`<br>[设定卡](../pcd/batch-05/SpiritSummonTower/design.md) | 召唤师 · 史诗 | 蓄满法力后召唤月豹和看门犬。 | 召唤 | 次元裂隙：有敌人逼近到 600 以内，且自己生命够扣（> 800） | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U154 | 白牙<br>`WhiteFang`<br>[设定卡](../pcd/batch-05/WhiteFang/design.md) | 召唤师 · 史诗 | 开战时放出自爆步兵。 | 召唤 | — | — |
-| U155 | 白狼<br>`WhiteWolf`<br>[设定卡](../pcd/batch-05/WhiteWolf/design.md) | 先锋 · 史诗 | 冻伤并减速周围的敌人，常常闪避攻击。 | 光环 · 冰霜 | — | — |
-| U156 | 重炮蝠<br>`Bat_T3` | 射手 · 史诗 | 不停扫射附近的敌人，越打越快。 | 刀锋 | — | — |
-| U157 | 狂暴战将<br>`Berserker_T3` | 战士 · 史诗 | 每次攻击连打三下，残血时攻速翻倍。 | 迅捷 | — | — |
-| U158 | 天界法师<br>`CelestialMage`<br>[设定卡](../pcd/batch-08/CelestialMage/design.md) | 法师 · 史诗 | 蓄满法力后闪电连锁五个敌人。 | 雷电 | 闪电打击：攻击范围内有 3 个以上敌人（只剩更少时也放） | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U159 | 火焰法师<br>`FlameMage`<br>[设定卡](../pcd/batch-08/FlameMage/design.md) | 法师 · 史诗 | 每次攻击溅射周围敌人。 | 火焰 | — | — |
-| U160 | 角斗士<br>`Gladiator`<br>[设定卡](../pcd/batch-08/Gladiator/design.md) | 刺客 · 史诗 | 盯住一个目标越打越痛。 | 刀锋 | — | — |
-| U161 | 冠军角斗士<br>`Gladiator_T3` | 刺客 · 史诗 | 盯住一个目标越打越痛，攻击削弱目标防御，可叠加。 | 刀锋 | — | — |
-| U162 | 金龙<br>`GoldenDragon`<br>[设定卡](../pcd/batch-08/GoldenDragon/design.md) | 射手 · 史诗 | 击杀时引发爆炸。 | 火焰 | — | — |
-| U163 | 雷法师<br>`MageApprentice_T3` | 法师 · 史诗 | 蓄满法力后闪电连锁五个敌人，让身边友军法力恢复更快。 | 雷电 | 闪电打击：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
-| U164 | 吸血蝠<br>`VampireBat`<br>[设定卡](../pcd/batch-08/VampireBat/design.md) | 祭司 · 史诗 | 让身边友军伤害提高，定时轰炸三个敌人。 | 光环 · 伤害 | — | — |
-| U165 | 黑铁卫<br>`BlackIronGuard`<br>[设定卡](../pcd/batch-09/BlackIronGuard/design.md) | 守护者 · 史诗 | 让身边友军防御提高。 | 光环 · 守护 | — | — |
-| U166 | 死亡射手<br>`DeathShooter`<br>[设定卡](../pcd/batch-09/DeathShooter/design.md) | 射手 · 史诗 | 每次攻击附带额外伤害，攻击削弱目标防御。 | 刀锋 | — | — |
-| U167 | 圣光骑士<br>`HolyLightKnight`<br>[设定卡](../pcd/batch-09/HolyLightKnight/design.md) | 圣骑士 · 史诗 | 半血上场，但快速回血。 | 治疗 | — | — |
-| U168 | 圣殿骑士<br>`HolyLightKnight_T3` | 圣骑士 · 史诗 | 半血上场，但快速回血，持续治疗身边的友军。 | 治疗 | — | — |
-| U169 | 玉藤堡垒<br>`JadeVineFortress`<br>[设定卡](../pcd/batch-09/JadeVineFortress/design.md) | 先锋 · 史诗 | 反弹受到的伤害。 | 反伤 | — | — |
-| U170 | 神射手<br>`Ranger_T3` | 射手 · 史诗 | 每次攻击附带额外伤害，攻击会弹射到旁边的敌人。 | 刀锋 | — | — |
-| U171 | 巫毒祭主<br>`VoodooBeliever_T3` | 先锋 · 史诗 | 死亡时会对击杀者施加毒素，持续回血。 | 亡语 | — | — |
-| U172 | 苦痛盾卫<br>`AgonyShieldDefender`<br>[设定卡](../pcd/batch-10/AgonyShieldDefender/design.md) | 守护者 · 史诗 | 蓄满法力后降下剑雨，削弱敌人伤害。 | 刀锋 | 剑雨：射程内的目标附近有 2 个以上敌人扎堆（只剩更少时也放） | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U173 | 充能塔<br>`ChargeTower`<br>[设定卡](../pcd/batch-10/ChargeTower/design.md) | 商人 · 史诗 | 死亡时掉落积分。 | 金币 | — | — |
-| U174 | 冥誓剑圣<br>`CursedSwordsman_T3` | 守护者 · 史诗 | 蓄满法力后砸伤一片敌人并削弱其伤害，让身边友军防御提高。 | 刀锋 | 铁之冰雹：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
-| U175 | 魔王近卫<br>`DemonKingsGuard`<br>[设定卡](../pcd/batch-10/DemonKingsGuard/design.md) | 守护者 · 史诗 | 蓄满法力后卷起剑刃风暴，大幅削弱敌人伤害。 | 刀锋 | 剑刃风暴：射程内的目标附近有 2 个以上敌人扎堆（只剩更少时也放） | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U176 | 翠羽龙<br>`GreenDragon_T3` | 牧师 · 史诗 | 用自己的生命治疗友军，持续回血。 | 治疗 | 灵魂转移：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
-| U177 | 法师英雄<br>`MageHero`<br>[设定卡](../pcd/batch-10/MageHero/design.md) | 射手 · 史诗 | 每活过一场战斗就变强。 | 成长 | — | — |
-| U178 | 影剑士<br>`ShadowSwordsman`<br>[设定卡](../pcd/batch-10/ShadowSwordsman/design.md) | 召唤师 · 史诗 | 每攻击几次召唤一个影子随从。 | 召唤 | — | — |
-| U179 | 影骑士<br>`ShadowSwordsman_T3` | 召唤师 · 史诗 | 每攻击几次召唤一个影子随从，常常闪避攻击。 | 召唤 | — | — |
-| U180 | 天龙<br>`SkyDragon`<br>[设定卡](../pcd/batch-10/SkyDragon/design.md) | 牧师 · 史诗 | 用自己的生命治疗友军。 | 治疗 | 灵魂转移：有友军生命低于 60%，且自己生命高于 50% | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U181 | 森林法师<br>`WildMage_T3` | 法师 · 史诗 | 每次攻击溅射周围敌人，击杀时引发爆炸。 | 刀锋 | — | — |
-| U182 | 野人王<br>`WildManKing`<br>[设定卡](../pcd/batch-10/WildManKing/design.md) | 召唤师 · 史诗 | 死亡时召唤野人矛兵，攻击攒法力，满了召唤两个野人矛兵。 | 召唤 | 史莱姆繁殖：有敌人逼近到 600 以内 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U183 | 歼灭者<br>`Annihilator`<br>[设定卡](../pcd/batch-12/Annihilator/design.md) | 射手 · 史诗 | 每箭附带火焰伤害。 | 火焰 | — | — |
-| U184 | 黑熊<br>`BlackBear`<br>[设定卡](../pcd/batch-11/BlackBear/design.md) | 先锋 · 史诗 | 死亡或法力满时引爆，伤害周围敌人。 | 火焰 | 禁果：身边有 3 个以上敌人（只剩更少时也放） | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U185 | 夜刃<br>`BlackSword_T3` | 刺客 · 史诗 | 攻击削弱目标防御，可叠加，常常闪避攻击。 | 诅咒 | — | — |
-| U186 | 蟹巫<br>`CrabWarlock_T3` | 召唤师 · 史诗 | 蓄满法力后召唤小螃蟹，击杀时回复法力。 | 召唤 | 召唤小螃蟹：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
-| U187 | 爬行投石车<br>`CrawlingCatapult`<br>[设定卡](../pcd/batch-12/CrawlingCatapult/design.md) | 射手 · 史诗 | 目标越远伤害越高。 | 火焰 | — | — |
-| U188 | 暗牙<br>`DarkFang`<br>[设定卡](../pcd/batch-11/DarkFang/design.md) | 祭司 · 史诗 | 让身边友军伤害提高，但更脆。 | 光环 · 伤害 | — | — |
-| U189 | 暗牙统帅<br>`DarkFang_T3` | 祭司 · 史诗 | 让身边友军伤害提高，但更脆，持续回血。 | 光环 · 伤害 | — | — |
-| U190 | 金手<br>`GoldenHand`<br>[设定卡](../pcd/batch-11/GoldenHand/design.md) | 商人 · 史诗 | 活过一场战斗就赚积分，开战时可能加速。 | 金币 | — | — |
-| U191 | 生命树<br>`LifeTree`<br>[设定卡](../pcd/batch-11/LifeTree/design.md) | 圣骑士 · 史诗 | 持续治疗身边的友军。 | 治疗 | — | — |
-| U192 | 古老生命树<br>`LifeTree_T3` | 圣骑士 · 史诗 | 持续治疗身边的友军，持续回血。 | 治疗 | — | — |
-| U193 | 脉冲机器人<br>`Pulsebot`<br>[设定卡](../pcd/batch-11/Pulsebot/design.md) | 先锋 · 史诗 | 受到的伤害大幅减少。 | 守护 | — | — |
-| U194 | 暗影死神<br>`ShadowGrimReaper`<br>[设定卡](../pcd/batch-11/ShadowGrimReaper/design.md) | 刺客 · 史诗 | 常常闪避，每次闪避都变强。 | 成长 | — | — |
-| U195 | 天空机器人<br>`Skybot_T3` | 战士 · 史诗 | 每次攻击溅射周围敌人，攻击削弱目标防御。 | 火焰 | — | — |
-| U196 | 海盗船长<br>`VikingPirate_T3` | 商人 · 史诗 | 活过一场战斗就赚积分，开战时可能加速。 | 金币 | — | — |
-| U197 | 虚空之翼<br>`WarpWing_T3` | 祭司 · 史诗 | 持续削弱周围敌人的伤害，常常闪避攻击。 | 光环 · 削弱 | — | — |
-| U198 | 骸骨神射<br>`Archer_T3` | 射手 · 史诗 | 每箭附带火焰伤害，持续回血。 | 火焰 | — | — |
-| U199 | 猩红骑士长<br>`BloodKnight_T3` | 守护者 · 史诗 | 让身边友军攻击吸血，让身边友军防御提高。 | 光环 · 吸血 | — | — |
-| U200 | 糖果女孩<br>`CandyGirl`<br>[设定卡](../pcd/batch-15/CandyGirl/design.md) | 召唤师 · 史诗 | 蓄满法力后召唤恐狼。 | 召唤 | 召唤地狱犬：有敌人逼近到 600 以内 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U201 | 教堂守卫<br>`ChurchGuard`<br>[设定卡](../pcd/batch-15/ChurchGuard/design.md) | 先锋 · 史诗 | 受到的伤害大幅减少。 | 守护 | — | — |
-| U202 | 金鬃狮锤<br>`LionHammer_T3` | 圣骑士 · 史诗 | 让身边友军攻击大量吸血，蓄满法力后给一名友军回血。 | 光环 · 吸血 | 颅骨炖汤：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
-| U203 | 骸骨巫师<br>`Mage_T3` | 祭司 · 史诗 | 让身边友军攻速提高，持续回血。 | 光环 · 攻速 | — | — |
-| U204 | 死灵法师<br>`Necromancer`<br>[设定卡](../pcd/batch-15/Necromancer/design.md) | 召唤师 · 史诗 | 蓄满法力后召唤复仇之龙，击杀时回复法力。 | 召唤 | 召唤巨龙：有敌人逼近到 600 以内 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U205 | 兽王<br>`Summoner_T3` | 召唤师 · 史诗 | 蓄满法力后召唤恐狼，击杀时回复法力。 | 召唤 | 召唤地狱犬：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
-| U206 | 剑舞者<br>`SwordDancer`<br>[设定卡](../pcd/batch-15/SwordDancer/design.md) | 商人 · 史诗 | 死亡时掉落积分。 | 金币 | — | — |
-| U207 | 大法师<br>`Archmage`<br>[设定卡](../pcd/batch-01/Archmage/design.md) | 法师 · 传说 | 每次攻击连打三下，蓄满法力后狂暴攻击并回血。 | 迅捷 | 超级鼓舞：敌人进入攻击范围 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U208 | 棕熊<br>`BrownBear`<br>[设定卡](../pcd/batch-01/BrownBear/design.md) | 守护者 · 传说 | 让身边友军持续回血、防御提高。 | 光环 · 治疗 | — | — |
-| U209 | 聚宝金鸡<br>`Chick_T4` | 商人 · 传说 | 死亡时掉落积分，活过一场战斗就赚积分。 | 金币 | — | — |
-| U210 | 指挥官<br>`Commander`<br>[设定卡](../pcd/batch-01/Commander/design.md) | 守护者 · 传说 | 蓄满法力后炮击一片敌人并减慢其攻速。 | 火焰 | 炮弹休克：射程内的目标附近有 2 个以上敌人扎堆（只剩更少时也放） | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U211 | 炎帝<br>`EmperorOfFlame`<br>[设定卡](../pcd/batch-01/EmperorOfFlame/design.md) | 战士 · 传说 | 攒下的层数越多越强。 | 成长 | — | — |
-| U212 | 不破城壁<br>`FootSoldier_T4` | 先锋 · 传说 | 受到的伤害减少，受到的远程伤害减少。 | 守护 | — | — |
-| U213 | 巨人战神<br>`GiantGodOfWar`<br>[设定卡](../pcd/batch-01/GiantGodOfWar/design.md) | 先锋 · 传说 | 死亡时分裂出三只魔像。 | 召唤 | — | — |
-| U214 | 海渊之影<br>`WaterWarrior_T4` | 刺客 · 传说 | 开战时隐身，偷袭敌方远程，常常闪避攻击。 | 潜行 | — | — |
-| U215 | 主教<br>`Bishop`<br>[设定卡](../pcd/batch-02/Bishop/design.md) | 射手 · 传说 | 盯住一个目标越打越痛，蓄满法力后攻速翻倍。 | 奥术 | 超级太阳耀斑：敌人进入攻击范围 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U216 | 奥法元帅<br>`MarshalOrfa`<br>[设定卡](../pcd/batch-02/MarshalOrfa/design.md) | 战士 · 传说 | 法力满后，接下来的攻击都带大范围伤害，法力越多，攻速和生命越高。 | 奥术 | 最终审判：敌人进入攻击范围 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U217 | 暗夜射手<br>`NightArcher`<br>[设定卡](../pcd/batch-02/NightArcher/design.md) | 射手 · 传说 | 每次攻击连打四下。 | 迅捷 | — | — |
-| U218 | 血斗之王<br>`SlaveLord_T4` | 战士 · 传说 | 残血时攻速翻倍，持续回血。 | 狂怒 | — | — |
-| U219 | 天马<br>`YellowManeHorse_T4` | 守护者 · 传说 | 让身边友军防御提高，持续回血。 | 光环 · 守护 | — | — |
-| U220 | 黑龙<br>`BlackDragon`<br>[设定卡](../pcd/batch-03/BlackDragon/design.md) | 先锋 · 传说 | 用法力吸收大部分伤害，法力越少伤害越高。 | 守护 | — | — |
-| U221 | 钢铁军阀<br>`SteelWarlord`<br>[设定卡](../pcd/batch-03/SteelWarlord/design.md) | 先锋 · 传说 | 开战时可能硬化，防御提高。 | 守护 | — | — |
-| U222 | 时间法师<br>`TimeMage`<br>[设定卡](../pcd/batch-03/TimeMage/design.md) | 法师 · 传说 | 让身边友军法力恢复更快，蓄满法力后召唤陨石砸单个敌人。 | 光环 · 法力 | 小行星：射程内的目标生命还多（≥ 40%，只剩 1 个敌人时也放） | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U223 | 时间领主<br>`TimeMage_T4` | 法师 · 传说 | 蓄满法力后召唤陨石砸单个敌人，让身边友军法力恢复更快。 | 奥术 | 小行星：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
-| U224 | 破魔守卫<br>`AntiMagicGuardian`<br>[设定卡](../pcd/batch-04/AntiMagicGuardian/design.md) | 先锋 · 传说 | 重装单位，非常耐打。 | — | — | — |
-| U225 | 赤瞳猪王<br>`BigWildBoar_T4` | 先锋 · 传说 | 开战时跳进敌群砸地，反弹受到的伤害。 | 冲锋 | — | — |
-| U226 | 圣沙使徒<br>`DesertBeliever_T4` | 牧师 · 传说 | 蓄满法力后治疗一串友军，持续回血。 | 治疗 | 治疗链：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
-| U227 | 玉麒麟<br>`JadeBeast_T4` | 商人 · 传说 | 场上商人越多，积分倍率越高，死亡时掉落积分。 | 金币 | — | — |
-| U228 | 赤瞳<br>`RedEyes`<br>[设定卡](../pcd/batch-04/RedEyes/design.md) | 先锋 · 传说 | 开战时跳进敌群砸地。 | 冲锋 | — | — |
-| U229 | 蛇神使者<br>`SnakeGodMessenger`<br>[设定卡](../pcd/batch-04/SnakeGodMessenger/design.md) | 牧师 · 传说 | 开战时给最肉的友军加大量生命。 | 治疗 | — | — |
-| U230 | 蛇神化身<br>`SnakeGodMessenger_T4` | 牧师 · 传说 | 开战时给最肉的友军加大量生命，蓄满法力后治疗一串友军。 | 治疗 | 治疗链：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
-| U231 | 地狱召唤塔<br>`HellSummonTower`<br>[设定卡](../pcd/batch-05/HellSummonTower/design.md) | 召唤师 · 传说 | 蓄满法力后召唤魔豹和邪犬。 | 召唤 | 超级裂隙：有敌人逼近到 600 以内，且自己生命够扣（> 2080） | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U232 | 雪狼王<br>`SnowWolfKing`<br>[设定卡](../pcd/batch-05/SnowWolfKing/design.md) | 先锋 · 传说 | 冻伤并大幅减速周围的敌人，常常闪避攻击。 | 光环 · 冰霜 | — | — |
-| U233 | 灵魂战士<br>`SoulWarrior`<br>[设定卡](../pcd/batch-05/SoulWarrior/design.md) | 先锋 · 传说 | 死后很快复活，并且更快。 | 复生 | — | — |
-| U234 | 暴风炮蝠<br>`Bat_T4` | 射手 · 传说 | 不停扫射附近的敌人，越打越快。 | 刀锋 | — | — |
-| U235 | 狂战士<br>`Berserker`<br>[设定卡](../pcd/batch-08/Berserker/design.md) | 战士 · 传说 | 盯住一个目标越打越痛。 | 刀锋 | — | — |
-| U236 | 战神化身<br>`Berserker_T4` | 战士 · 传说 | 每次攻击连打三下，残血时攻速翻倍。 | 迅捷 | — | — |
-| U237 | 不败角斗王<br>`Gladiator_T4` | 刺客 · 传说 | 盯住一个目标越打越痛，攻击削弱目标防御，可叠加。 | 刀锋 | — | — |
-| U238 | 风暴大法师<br>`MageApprentice_T4` | 法师 · 传说 | 蓄满法力后闪电连锁五个敌人，让身边友军法力恢复更快。 | 雷电 | 闪电打击：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
-| U239 | 魔龙<br>`MagicDragon`<br>[设定卡](../pcd/batch-08/MagicDragon/design.md) | 射手 · 传说 | 击杀时引发爆炸。 | 火焰 | — | — |
-| U240 | 监工<br>`Supervisor`<br>[设定卡](../pcd/batch-08/Supervisor/design.md) | 祭司 · 传说 | 让身边友军攻速大幅提高。 | 光环 · 攻速 | — | — |
-| U241 | 光明圣者<br>`HolyLightKnight_T4` | 圣骑士 · 传说 | 半血上场，但快速回血，持续治疗身边的友军。 | 治疗 | — | — |
-| U242 | 毒龙<br>`PoisonDragon`<br>[设定卡](../pcd/batch-09/PoisonDragon/design.md) | 先锋 · 传说 | 散发毒气，持续伤害身边的敌人。 | 毒 | — | — |
-| U243 | 风暴游侠<br>`Ranger_T4` | 射手 · 传说 | 每次攻击附带额外伤害，攻击会弹射到旁边的敌人。 | 刀锋 | — | — |
-| U244 | 风暴堡垒<br>`StormFortress`<br>[设定卡](../pcd/batch-09/StormFortress/design.md) | 先锋 · 传说 | 反弹受到的伤害，每次攻击连打三下。 | 反伤 | — | — |
-| U245 | 翠盾<br>`VerdantShield`<br>[设定卡](../pcd/batch-09/VerdantShield/design.md) | 守护者 · 传说 | 让身边友军防御大幅提高。 | 光环 · 守护 | — | — |
-| U246 | 巫毒之王<br>`VoodooBeliever_T4` | 先锋 · 传说 | 死亡时会对击杀者施加毒素，持续回血。 | 亡语 | — | — |
-| U247 | 永咒剑魔<br>`CursedSwordsman_T4` | 守护者 · 传说 | 蓄满法力后砸伤一片敌人并削弱其伤害，让身边友军防御提高。 | 刀锋 | 铁之冰雹：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
-| U248 | 火神塔<br>`FireGodTower`<br>[设定卡](../pcd/batch-10/FireGodTower/design.md) | 商人 · 传说 | 死亡时掉落积分。 | 金币 | — | — |
-| U249 | 天龙<br>`GreenDragon_T4` | 牧师 · 传说 | 用自己的生命治疗友军，持续回血。 | 治疗 | 灵魂转移：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
-| U250 | 影骑士<br>`ShadowKnight`<br>[设定卡](../pcd/batch-10/ShadowKnight/design.md) | 召唤师 · 传说 | 每攻击几次召唤一个强力随从。 | 召唤 | — | — |
-| U251 | 暗影君王<br>`ShadowSwordsman_T4` | 召唤师 · 传说 | 每攻击几次召唤一个强力随从，常常闪避攻击。 | 召唤 | — | — |
-| U252 | 翠影贤者<br>`WildMage_T4` | 法师 · 传说 | 每次攻击溅射周围敌人，击杀时引发爆炸。 | 刀锋 | — | — |
-| U253 | 影王之刃<br>`BlackSword_T4` | 刺客 · 传说 | 攻击削弱目标防御，可叠加，常常闪避攻击。 | 诅咒 | — | — |
-| U254 | 蟹巫<br>`Crabomancer`<br>[设定卡](../pcd/batch-11/Crabomancer/design.md) | 召唤师 · 传说 | 蓄满法力后召唤巨蟹钳。 | 召唤 | 召唤蟹钳：有敌人逼近到 600 以内 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U255 | 蟹皇<br>`CrabWarlock_T4` | 召唤师 · 传说 | 蓄满法力后召唤巨蟹钳，击杀时回复法力。 | 召唤 | 召唤蟹钳：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
-| U256 | 暗牙王<br>`DarkFang_T4` | 祭司 · 传说 | 让身边友军伤害提高，但更脆，持续回血。 | 光环 · 伤害 | — | — |
-| U257 | 巨型歼灭者<br>`GigaAnnihilator`<br>[设定卡](../pcd/batch-12/GigaAnnihilator/design.md) | 射手 · 传说 | 每箭附带火焰伤害。 | 火焰 | — | — |
-| U258 | 世界之树<br>`LifeTree_T4` | 圣骑士 · 传说 | 持续治疗身边的友军，持续回血。 | 治疗 | — | — |
-| U259 | 天空机器人<br>`Skybot`<br>[设定卡](../pcd/batch-11/Skybot/design.md) | 战士 · 传说 | 每次攻击溅射周围敌人，攻击削弱目标防御。 | 火焰 | — | — |
-| U260 | 天穹战甲<br>`Skybot_T4` | 战士 · 传说 | 每次攻击溅射周围敌人，攻击削弱目标防御。 | 火焰 | — | — |
-| U261 | 七海霸主<br>`VikingPirate_T4` | 商人 · 传说 | 活过一场战斗就赚积分，开战时可能加速。 | 金币 | — | — |
-| U262 | 虚空魔鬼鱼<br>`VoidManta`<br>[设定卡](../pcd/batch-12/VoidManta/design.md) | 祭司 · 传说 | 持续削弱周围敌人的伤害。 | 光环 · 削弱 | — | — |
-| U263 | 流浪投石机<br>`WanderingTrebuchet`<br>[设定卡](../pcd/batch-12/WanderingTrebuchet/design.md) | 射手 · 传说 | 目标越远伤害越高。 | 火焰 | — | — |
-| U264 | 虚空魔鬼鱼<br>`WarpWing_T4` | 祭司 · 传说 | 持续削弱周围敌人的伤害，常常闪避攻击。 | 光环 · 削弱 | — | — |
-| U265 | 死亡弓王<br>`Archer_T4` | 射手 · 传说 | 每箭附带火焰伤害，持续回血。 | 火焰 | — | — |
-| U266 | 血月领主<br>`BloodKnight_T4` | 守护者 · 传说 | 让身边友军攻击吸血，让身边友军防御提高。 | 光环 · 吸血 | — | — |
-| U267 | 死神<br>`GrimReaper`<br>[设定卡](../pcd/batch-15/GrimReaper/design.md) | 召唤师 · 传说 | 身边敌人死亡时回复法力，蓄满法力后召唤骨龙。 | 亡语 | 召唤死神：有敌人逼近到 600 以内 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U268 | 狮锤<br>`LionHammer`<br>[设定卡](../pcd/batch-15/LionHammer/design.md) | 圣骑士 · 传说 | 让身边友军攻击大量吸血，蓄满法力后给一名友军回血。 | 光环 · 吸血 | 颅骨炖汤：有友军生命低于 60% | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U269 | 狮王圣锤<br>`LionHammer_T4` | 圣骑士 · 传说 | 让身边友军攻击大量吸血，蓄满法力后给一名友军回血。 | 光环 · 吸血 | 颅骨炖汤：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
-| U270 | 骸骨魔导<br>`Mage_T4` | 祭司 · 传说 | 让身边友军攻速提高，持续回血。 | 光环 · 攻速 | — | — |
-| U271 | 幻影舞者<br>`PhantomDancer`<br>[设定卡](../pcd/batch-15/PhantomDancer/design.md) | 刺客 · 传说 | 每次攻击都永久变强。 | 狂怒 | — | — |
-| U272 | 百兽之主<br>`Summoner_T4` | 召唤师 · 传说 | 蓄满法力后召唤恐狼，击杀时回复法力。 | 召唤 | 召唤地狱犬：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U061 | 小公鸡<br>`Chick_T2` | 商人 · 稀有 | 死亡时掉落积分。 | 金币 | — | — |
+| U062 | 老兵<br>`FootSoldier_T2` | 先锋 · 稀有 | 受到的伤害减少。 | 守护 | — | — |
+| U063 | 浪刃<br>`WaterWarrior_T2` | 刺客 · 稀有 | 开战时隐身，偷袭敌方远程。 | 潜行 | — | — |
+| U064 | 恶棍<br>`SlaveLord_T2` | 战士 · 稀有 | 残血时攻速翻倍。 | 狂怒 | — | — |
+| U065 | 骏马<br>`YellowManeHorse_T2` | 守护者 · 稀有 | 让身边友军防御提高。 | 光环 · 守护 | — | — |
+| U066 | 时之术士<br>`TimeMage_T2` | 法师 · 稀有 | 蓄满法力后召唤陨石砸单个敌人。 | 奥术 | 小行星：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U067 | 野猪<br>`BigWildBoar_T2` | 先锋 · 稀有 | 开战时跳进敌群砸地。 | 冲锋 | — | — |
+| U068 | 沙漠行者<br>`DesertBeliever_T2` | 牧师 · 稀有 | 蓄满法力后治疗一串友军。 | 治疗 | 治疗链：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U069 | 玉石兽<br>`JadeBeast_T2` | 商人 · 稀有 | 场上商人越多，积分倍率越高。 | 金币 | — | — |
+| U070 | 蛇侍<br>`SnakeGodMessenger_T2` | 牧师 · 稀有 | 开战时给最肉的友军加大量生命。 | 治疗 | — | — |
+| U071 | 蝙蝠射手<br>`Bat_T2` | 射手 · 稀有 | 不停扫射附近的敌人。 | 刀锋 | — | — |
+| U072 | 蛮勇战士<br>`Berserker_T2` | 战士 · 稀有 | 每次攻击连打三下。 | 迅捷 | — | — |
+| U073 | 角斗新星<br>`Gladiator_T2` | 刺客 · 稀有 | 盯住一个目标越打越痛。 | 刀锋 | — | — |
+| U074 | 法师学徒<br>`MageApprentice_T2` | 法师 · 稀有 | 蓄满法力后闪电连锁五个敌人。 | 雷电 | 闪电打击：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U075 | 骑士<br>`HolyLightKnight_T2` | 圣骑士 · 稀有 | 半血上场，但快速回血。 | 治疗 | — | — |
+| U076 | 林间游侠<br>`Ranger_T2` | 射手 · 稀有 | 每次攻击附带额外伤害。 | 刀锋 | — | — |
+| U077 | 巫毒侍从<br>`VoodooBeliever_T2` | 先锋 · 稀有 | 死亡时会对击杀者施加毒素。 | 亡语 | — | — |
+| U078 | 咒刃剑客<br>`CursedSwordsman_T2` | 守护者 · 稀有 | 蓄满法力后砸伤一片敌人并削弱其伤害。 | 刀锋 | 铁之冰雹：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U079 | 小青龙<br>`GreenDragon_T2` | 牧师 · 稀有 | 用自己的生命治疗友军。 | 治疗 | 生命交换：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U080 | 影卫<br>`ShadowSwordsman_T2` | 召唤师 · 稀有 | 每攻击几次召唤一个影子随从。 | 召唤 | — | — |
+| U081 | 林法师<br>`WildMage_T2` | 法师 · 稀有 | 每次攻击溅射周围敌人。 | 刀锋 | — | — |
+| U082 | 黑刃<br>`BlackSword_T2` | 刺客 · 稀有 | 攻击削弱目标防御，可叠加。 | 诅咒 | — | — |
+| U083 | 蟹巫学徒<br>`CrabWarlock_T2` | 召唤师 · 稀有 | 蓄满法力后召唤小螃蟹。 | 召唤 | 召唤小螃蟹：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U084 | 暗牙卫士<br>`DarkFang_T2` | 祭司 · 稀有 | 让身边友军伤害提高，但更脆。 | 光环 · 伤害 | — | — |
+| U085 | 生命之枝<br>`LifeTree_T2` | 圣骑士 · 稀有 | 持续治疗身边的友军。 | 治疗 | — | — |
+| U086 | 改装机器人<br>`Skybot_T2` | 战士 · 稀有 | 每次攻击溅射周围敌人。 | 火焰 | — | — |
+| U087 | 水手<br>`VikingPirate_T2` | 商人 · 稀有 | 活过一场战斗就赚积分。 | 金币 | — | — |
+| U088 | 翼兽<br>`WarpWing_T2` | 祭司 · 稀有 | 持续削弱周围敌人的伤害。 | 光环 · 削弱 | — | — |
+| U089 | 骸骨猎手<br>`Archer_T2` | 射手 · 稀有 | 每箭附带火焰伤害。 | 火焰 | — | — |
+| U090 | 血卫<br>`BloodKnight_T2` | 守护者 · 稀有 | 让身边友军攻击吸血。 | 光环 · 吸血 | — | — |
+| U091 | 重锤卫<br>`LionHammer_T2` | 圣骑士 · 稀有 | 让身边友军攻击大量吸血。 | 光环 · 吸血 | — | — |
+| U092 | 骸骨学徒<br>`Mage_T2` | 祭司 · 稀有 | 让身边友军攻速提高。 | 光环 · 攻速 | — | — |
+| U093 | 驯兽大师<br>`Summoner_T2` | 召唤师 · 稀有 | 蓄满法力后召唤灰狼。 | 召唤 | 召唤猎犬：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U094 | 斗鸡<br>`Chick_T3` | 商人 · 史诗 | 死亡时掉落积分，活过一场战斗就赚积分。 | 金币 | — | — |
+| U095 | 盾兵<br>`FootSoldier_T3` | 先锋 · 史诗 | 受到的伤害减少，受到的远程伤害减少。 | 守护 | — | — |
+| U096 | 食人魔<br>`Ogre`<br>[设定卡](../pcd/batch-01/Ogre/design.md) | 先锋 · 史诗 | 开战时可能硬化，防御提高。 | 守护 | — | — |
+| U097 | 公鸡<br>`Rooster`<br>[设定卡](../pcd/batch-01/Rooster/design.md) | 先锋 · 史诗 | 受到的远程伤害减少。 | 守护 | — | — |
+| U098 | 火鸡<br>`Turkey`<br>[设定卡](../pcd/batch-01/Turkey/design.md) | 商人 · 史诗 | 死亡时掉落积分。 | 金币 | — | — |
+| U099 | 水战士<br>`WaterWarrior`<br>[设定卡](../pcd/batch-01/WaterWarrior/design.md) | 刺客 · 史诗 | 开战时隐身，偷袭敌方远程。 | 潜行 | — | — |
+| U100 | 潮刃刺客<br>`WaterWarrior_T3` | 刺客 · 史诗 | 开战时隐身，偷袭敌方远程，常常闪避攻击。 | 潜行 | — | — |
+| U101 | 精英猎手<br>`EliteHunter`<br>[设定卡](../pcd/batch-02/EliteHunter/design.md) | 射手 · 史诗 | 每次攻击同时射中三个敌人。 | 刀锋 | — | — |
+| U102 | 奴隶主<br>`SlaveLord`<br>[设定卡](../pcd/batch-02/SlaveLord/design.md) | 战士 · 史诗 | 残血时攻速翻倍。 | 狂怒 | — | — |
+| U103 | 奴隶主<br>`SlaveLord_T3` | 战士 · 史诗 | 残血时攻速翻倍，持续回血。 | 狂怒 | — | — |
+| U104 | 战马<br>`YellowManeHorse_T3` | 守护者 · 史诗 | 让身边友军防御提高，持续回血。 | 光环 · 守护 | — | — |
+| U105 | 宝石蜥蜴<br>`GemLizard`<br>[设定卡](../pcd/batch-03/GemLizard/design.md) | 射手 · 史诗 | 越打越快。 | 雷电 | — | — |
+| U106 | 铁甲战士<br>`IroncladWarrior`<br>[设定卡](../pcd/batch-03/IroncladWarrior/design.md) | 先锋 · 史诗 | 开战时可能硬化，防御提高。 | 守护 | — | — |
+| U107 | 时间法师<br>`TimeMage_T3` | 法师 · 史诗 | 蓄满法力后召唤陨石砸单个敌人，让身边友军法力恢复更快。 | 奥术 | 小行星：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U108 | 獠牙野猪<br>`BigWildBoar_T3` | 先锋 · 史诗 | 开战时跳进敌群砸地，反弹受到的伤害。 | 冲锋 | — | — |
+| U109 | 沙漠信徒<br>`DesertBeliever`<br>[设定卡](../pcd/batch-04/DesertBeliever/design.md) | 牧师 · 史诗 | 蓄满法力后治疗一串友军。 | 治疗 | 治疗链：有友军生命低于 70% | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U110 | 沙海祭司<br>`DesertBeliever_T3` | 牧师 · 史诗 | 蓄满法力后治疗一串友军，持续回血。 | 治疗 | 治疗链：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U111 | 宝玉兽<br>`JadeBeast`<br>[设定卡](../pcd/batch-17/JadeBeast/design.md) | 商人 · 史诗 | 场上商人越多，积分倍率越高。 | 金币 | — | — |
+| U112 | 宝玉兽<br>`JadeBeast_T3` | 商人 · 史诗 | 场上商人越多，积分倍率越高，死亡时掉落积分。 | 金币 | — | — |
+| U113 | 蛇神祭司<br>`SnakeGodMessenger_T3` | 牧师 · 史诗 | 开战时给最肉的友军加大量生命，蓄满法力后治疗一串友军。 | 治疗 | 治疗链：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U114 | 先祖战士<br>`AncestorWarrior`<br>[设定卡](../pcd/batch-05/AncestorWarrior/design.md) | 先锋 · 史诗 | 死后很快复活，并且更快。 | 复生 | — | — |
+| U115 | 幻影射手<br>`FantasyShooter`<br>[设定卡](../pcd/batch-05/FantasyShooter/design.md) | 射手 · 史诗 | 每次攻击同时打中三个敌人。 | 刀锋 | — | — |
+| U116 | 机枪蝠<br>`Bat`<br>[设定卡](../pcd/batch-08/Bat/design.md) | 射手 · 史诗 | 不停扫射附近的敌人。 | 刀锋 | — | — |
+| U117 | 机枪蝠<br>`Bat_T3` | 射手 · 史诗 | 不停扫射附近的敌人，越打越快。 | 刀锋 | — | — |
+| U118 | 狂战士<br>`Berserker_T3` | 战士 · 史诗 | 每次攻击连打三下，残血时攻速翻倍。 | 迅捷 | — | — |
+| U119 | 链甲枪兵<br>`ChainmailPikeman`<br>[设定卡](../pcd/batch-08/ChainmailPikeman/design.md) | 先锋 · 史诗 | 开战时可能硬化，防御提高。 | 守护 | — | — |
+| U120 | 角斗士<br>`Gladiator_T3` | 刺客 · 史诗 | 盯住一个目标越打越痛，攻击削弱目标防御，可叠加。 | 刀锋 | — | — |
+| U121 | 法师<br>`MageApprentice_T3` | 法师 · 史诗 | 蓄满法力后闪电连锁五个敌人，让身边友军法力恢复更快。 | 雷电 | 闪电打击：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U122 | 巫师<br>`Wizard`<br>[设定卡](../pcd/batch-08/Wizard/design.md) | 祭司 · 史诗 | 让身边友军攻速提高。 | 光环 · 攻速 | — | — |
+| U123 | 翡翠龙<br>`EmeraldDragon`<br>[设定卡](../pcd/batch-09/EmeraldDragon/design.md) | 先锋 · 史诗 | 散发芬芳，持续伤害身边的敌人。 | 毒 | — | — |
+| U124 | 圣光骑士<br>`HolyLightKnight_T3` | 圣骑士 · 史诗 | 半血上场，但快速回血，持续治疗身边的友军。 | 治疗 | — | — |
+| U125 | 猎手<br>`Ranger_T3` | 射手 · 史诗 | 每次攻击附带额外伤害，攻击会弹射到旁边的敌人。 | 刀锋 | — | — |
+| U126 | 赤卫<br>`RedGuard`<br>[设定卡](../pcd/batch-09/RedGuard/design.md) | 先锋 · 史诗 | 半血上场，但持续回血。 | 治疗 | — | — |
+| U127 | 巫毒守卫<br>`VoodooBeliever_T3` | 先锋 · 史诗 | 死亡时会对击杀者施加毒素，持续回血。 | 亡语 | — | — |
+| U128 | 巫毒守卫<br>`VoodooGuard`<br>[设定卡](../pcd/batch-09/VoodooGuard/design.md) | 先锋 · 史诗 | 死亡时会对击杀者施加剧毒。 | 亡语 | — | — |
+| U129 | 炮灰法师<br>`CannonFodderMage`<br>[设定卡](../pcd/batch-10/CannonFodderMage/design.md) | 商人 · 史诗 | 死亡时掉落积分。 | 金币 | — | — |
+| U130 | 诅咒剑士<br>`CursedSwordsman`<br>[设定卡](../pcd/batch-10/CursedSwordsman/design.md) | 守护者 · 史诗 | 蓄满法力后砸伤一片敌人并削弱其伤害。 | 刀锋 | 铁之冰雹：射程内的目标附近有 2 个以上敌人扎堆（只剩更少时也放） | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U131 | 诅咒剑士<br>`CursedSwordsman_T3` | 守护者 · 史诗 | 蓄满法力后砸伤一片敌人并削弱其伤害，让身边友军防御提高。 | 刀锋 | 铁之冰雹：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U132 | 青龙<br>`GreenDragon`<br>[设定卡](../pcd/batch-10/GreenDragon/design.md) | 牧师 · 史诗 | 用自己的生命治疗友军。 | 治疗 | 生命交换：有友军生命低于 60%，且自己生命高于 50% | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U133 | 青龙<br>`GreenDragon_T3` | 牧师 · 史诗 | 用自己的生命治疗友军，持续回血。 | 治疗 | 生命交换：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U134 | 影剑士<br>`ShadowSwordsman_T3` | 召唤师 · 史诗 | 每攻击几次召唤一个影子随从，常常闪避攻击。 | 召唤 | — | — |
+| U135 | 叶刃法师<br>`WildMage_T3` | 法师 · 史诗 | 每次攻击溅射周围敌人，击杀时引发爆炸。 | 刀锋 | — | — |
+| U136 | 暗刃<br>`BlackSword_T3` | 刺客 · 史诗 | 攻击削弱目标防御，可叠加，常常闪避攻击。 | 诅咒 | — | — |
+| U137 | 蟹术士<br>`CrabWarlock`<br>[设定卡](../pcd/batch-11/CrabWarlock/design.md) | 召唤师 · 史诗 | 蓄满法力后召唤小螃蟹。 | 召唤 | 召唤小螃蟹：有敌人逼近到 600 以内 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U138 | 蟹术士<br>`CrabWarlock_T3` | 召唤师 · 史诗 | 蓄满法力后召唤小螃蟹，击杀时回复法力。 | 召唤 | 召唤小螃蟹：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U139 | 暗牙督军<br>`DarkFang_T3` | 祭司 · 史诗 | 让身边友军伤害提高，但更脆，持续回血。 | 光环 · 伤害 | — | — |
+| U140 | 地主<br>`Landlord`<br>[设定卡](../pcd/batch-11/Landlord/design.md) | 商人 · 史诗 | 活过一场战斗就赚积分，开战时可能加速。 | 金币 | — | — |
+| U141 | 生命树<br>`LifeTree_T3` | 圣骑士 · 史诗 | 持续治疗身边的友军，持续回血。 | 治疗 | — | — |
+| U142 | 北极熊<br>`PolarBear`<br>[设定卡](../pcd/batch-11/PolarBear/design.md) | 先锋 · 史诗 | 刚招募时更强，之后慢慢变弱。 | 成长 | — | — |
+| U143 | 战斗机器人<br>`Skybot_T3` | 战士 · 史诗 | 每次攻击溅射周围敌人，攻击削弱目标防御。 | 火焰 | — | — |
+| U144 | 维京海盗<br>`VikingPirate_T3` | 商人 · 史诗 | 活过一场战斗就赚积分，开战时可能加速。 | 金币 | — | — |
+| U145 | 曲速之翼<br>`WarpWing`<br>[设定卡](../pcd/batch-12/WarpWing/design.md) | 祭司 · 史诗 | 持续削弱周围敌人的伤害。 | 光环 · 削弱 | — | — |
+| U146 | 曲速之翼<br>`WarpWing_T3` | 祭司 · 史诗 | 持续削弱周围敌人的伤害，常常闪避攻击。 | 光环 · 削弱 | — | — |
+| U147 | 旋翼机<br>`Whirlybird`<br>[设定卡](../pcd/batch-11/Whirlybird/design.md) | 射手 · 史诗 | 每打几下或击杀后来一发重炮。 | 火焰 | — | — |
+| U148 | 骸骨射手<br>`Archer_T3` | 射手 · 史诗 | 每箭附带火焰伤害，持续回血。 | 火焰 | — | — |
+| U149 | 血骑士<br>`BloodKnight`<br>[设定卡](../pcd/batch-15/BloodKnight/design.md) | 守护者 · 史诗 | 让身边友军攻击吸血。 | 光环 · 吸血 | — | — |
+| U150 | 血骑士<br>`BloodKnight_T3` | 守护者 · 史诗 | 让身边友军攻击吸血，让身边友军防御提高。 | 光环 · 吸血 | — | — |
+| U151 | 狮锤<br>`LionHammer_T3` | 圣骑士 · 史诗 | 让身边友军攻击大量吸血，蓄满法力后给一名友军回血。 | 光环 · 吸血 | 颅骨炖汤：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U152 | 骸骨法师<br>`Mage`<br>[设定卡](../pcd/batch-15/Mage/design.md) | 祭司 · 史诗 | 让身边友军攻速提高。 | 光环 · 攻速 | — | — |
+| U153 | 骸骨法师<br>`Mage_T3` | 祭司 · 史诗 | 让身边友军攻速提高，持续回血。 | 光环 · 攻速 | — | — |
+| U154 | 召唤师<br>`Summoner`<br>[设定卡](../pcd/batch-15/Summoner/design.md) | 召唤师 · 史诗 | 蓄满法力后召唤灰狼。 | 召唤 | 召唤猎犬：有敌人逼近到 600 以内 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U155 | 召唤师<br>`Summoner_T3` | 召唤师 · 史诗 | 蓄满法力后召唤灰狼，击杀时回复法力。 | 召唤 | 召唤猎犬：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U156 | 骸骨武士<br>`Warrior`<br>[设定卡](../pcd/batch-15/Warrior/design.md) | 先锋 · 史诗 | 持续回血。 | 治疗 | — | — |
+| U157 | 金冠鸡<br>`Chick_T4` | 商人 · 传说 | 死亡时掉落积分，活过一场战斗就赚积分。 | 金币 | — | — |
+| U158 | 铁壁卫士<br>`FootSoldier_T4` | 先锋 · 传说 | 受到的伤害减少，受到的远程伤害减少。 | 守护 | — | — |
+| U159 | 冰雪法师<br>`IceAndSnowMage`<br>[设定卡](../pcd/batch-01/IceAndSnowMage/design.md) | 法师 · 传说 | 每次攻击连打三下，蓄满法力后狂暴攻击并回血。 | 迅捷 | 超级鼓舞：敌人进入攻击范围 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U160 | 不朽蓝魔<br>`ImmortalBlueDemon`<br>[设定卡](../pcd/batch-01/ImmortalBlueDemon/design.md) | 刺客 · 传说 | 开战时隐身，偷袭敌方远程。 | 潜行 | — | — |
+| U161 | 赤十字<br>`RedCross`<br>[设定卡](../pcd/batch-01/RedCross/design.md) | 战士 · 传说 | 身边敌人死得越多，越快升级成炎帝。 | 成长 | 商业渔夫：敌人进入攻击范围 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U162 | 神石<br>`Stone`<br>[设定卡](../pcd/batch-01/Stone/design.md) | 先锋 · 传说 | 活过两场战斗后孵化成巨人战神，反弹受到的伤害。 | 成长 | — | — |
+| U163 | 深渊刺客<br>`WaterWarrior_T4` | 刺客 · 传说 | 开战时隐身，偷袭敌方远程，常常闪避攻击。 | 潜行 | — | — |
+| U164 | 卫队长<br>`GuardCommander`<br>[设定卡](../pcd/batch-02/GuardCommander/design.md) | 先锋 · 传说 | 法力满后，接下来的攻击都带范围伤害，法力越多，攻速和生命越高。 | 刀锋 | 神盾：敌人进入攻击范围 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U165 | 重装战士<br>`HeavilyArmedWarrior`<br>[设定卡](../pcd/batch-02/HeavilyArmedWarrior/design.md) | 先锋 · 传说 | 受到的远程伤害减少。 | 守护 | — | — |
+| U166 | 惩戒牧师<br>`PunishingCleric`<br>[设定卡](../pcd/batch-02/PunishingCleric/design.md) | 射手 · 传说 | 盯住一个目标越打越痛，蓄满法力后攻速翻倍。 | 奥术 | 太阳耀斑：敌人进入攻击范围 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U167 | 角斗场主<br>`SlaveLord_T4` | 战士 · 传说 | 残血时攻速翻倍，持续回血。 | 狂怒 | — | — |
+| U168 | 汗血马<br>`SweatBloodHorse`<br>[设定卡](../pcd/batch-02/SweatBloodHorse/design.md) | 守护者 · 传说 | 让身边友军防御提高。 | 光环 · 守护 | — | — |
+| U169 | 汗血宝马<br>`YellowManeHorse_T4` | 守护者 · 传说 | 让身边友军防御提高，持续回血。 | 光环 · 守护 | — | — |
+| U170 | 天使弓手<br>`AngelArcher`<br>[设定卡](../pcd/batch-03/AngelArcher/design.md) | 射手 · 传说 | 攻击会弹射到旁边的敌人，每次攻击附带火焰伤害。 | 刀锋 | — | — |
+| U171 | 蓝龙<br>`BlueDragon`<br>[设定卡](../pcd/batch-03/BlueDragon/design.md) | 法师 · 传说 | 蓄满法力后闪电连锁五个敌人。 | 雷电 | 闪电打击：攻击范围内有 3 个以上敌人（只剩更少时也放） | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U172 | 投石弓手<br>`CatapultArcher`<br>[设定卡](../pcd/batch-03/CatapultArcher/design.md) | 射手 · 传说 | 攻击会弹射到旁边的敌人，攻击削弱目标防御。 | 刀锋 | — | — |
+| U173 | 月光使徒<br>`MoonlightApostle`<br>[设定卡](../pcd/batch-03/MoonlightApostle/design.md) | 法师 · 传说 | 蓄满法力后砸伤一片敌人并削弱其伤害。 | 刀锋 | 铁之冰雹：射程内的目标附近有 2 个以上敌人扎堆（只剩更少时也放） | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U174 | 赤龙<br>`RedDragon`<br>[设定卡](../pcd/batch-03/RedDragon/design.md) | 先锋 · 传说 | 用法力吸收受到的伤害，法力越少伤害越高。 | 守护 | — | — |
+| U175 | 时光术士<br>`TimeMage_T4` | 法师 · 传说 | 蓄满法力后召唤陨石砸单个敌人，让身边友军法力恢复更快。 | 奥术 | 小行星：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U176 | 巨型野猪<br>`BigWildBoar`<br>[设定卡](../pcd/batch-04/BigWildBoar/design.md) | 先锋 · 传说 | 开战时跳进敌群砸地。 | 冲锋 | — | — |
+| U177 | 巨型野猪<br>`BigWildBoar_T4` | 先锋 · 传说 | 开战时跳进敌群砸地，反弹受到的伤害。 | 冲锋 | — | — |
+| U178 | 沙海先知<br>`DesertBeliever_T4` | 牧师 · 传说 | 蓄满法力后治疗一串友军，持续回血。 | 治疗 | 治疗链：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U179 | 绿魔<br>`GreenDemon`<br>[设定卡](../pcd/batch-04/GreenDemon/design.md) | 先锋 · 传说 | 防御很高，但身边强力友军越多越弱。 | 守护 | — | — |
+| U180 | 翡翠玉兽<br>`JadeBeast_T4` | 商人 · 传说 | 场上商人越多，积分倍率越高，死亡时掉落积分。 | 金币 | — | — |
+| U181 | 狂王<br>`MadMonarch`<br>[设定卡](../pcd/batch-04/MadMonarch/design.md) | 射手 · 传说 | 越打越快。 | 迅捷 | — | — |
+| U182 | 魔盾兵<br>`MagicShieldSoldier`<br>[设定卡](../pcd/batch-04/MagicShieldSoldier/design.md) | 先锋 · 传说 | 重装单位，非常耐打。 | — | — | — |
+| U183 | 蛇神使者<br>`SnakeGodMessenger_T4` | 牧师 · 传说 | 开战时给最肉的友军加大量生命，蓄满法力后治疗一串友军。 | 治疗 | 治疗链：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U184 | 黄魔<br>`YellowDemon`<br>[设定卡](../pcd/batch-04/YellowDemon/design.md) | 先锋 · 传说 | 身边强力友军越多越强。 | 狂怒 | — | — |
+| U185 | 烈焰射手<br>`BlazingShooter`<br>[设定卡](../pcd/batch-05/BlazingShooter/design.md) | 射手 · 传说 | 开战时可能发脾气，攻速提高，每次攻击同时打中三个敌人。 | 狂怒 | — | — |
+| U186 | 灵召塔<br>`SpiritSummonTower`<br>[设定卡](../pcd/batch-05/SpiritSummonTower/design.md) | 召唤师 · 传说 | 蓄满法力后召唤月豹和看门犬。 | 召唤 | 次元裂隙：有敌人逼近到 600 以内，且自己生命够扣（> 800） | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U187 | 白牙<br>`WhiteFang`<br>[设定卡](../pcd/batch-05/WhiteFang/design.md) | 召唤师 · 传说 | 开战时放出自爆步兵。 | 召唤 | — | — |
+| U188 | 白狼<br>`WhiteWolf`<br>[设定卡](../pcd/batch-05/WhiteWolf/design.md) | 先锋 · 传说 | 冻伤并减速周围的敌人，常常闪避攻击。 | 光环 · 冰霜 | — | — |
+| U189 | 重炮蝠<br>`Bat_T4` | 射手 · 传说 | 不停扫射附近的敌人，越打越快。 | 刀锋 | — | — |
+| U190 | 狂暴战将<br>`Berserker_T4` | 战士 · 传说 | 每次攻击连打三下，残血时攻速翻倍。 | 迅捷 | — | — |
+| U191 | 天界法师<br>`CelestialMage`<br>[设定卡](../pcd/batch-08/CelestialMage/design.md) | 法师 · 传说 | 蓄满法力后闪电连锁五个敌人。 | 雷电 | 闪电打击：攻击范围内有 3 个以上敌人（只剩更少时也放） | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U192 | 火焰法师<br>`FlameMage`<br>[设定卡](../pcd/batch-08/FlameMage/design.md) | 法师 · 传说 | 每次攻击溅射周围敌人。 | 火焰 | — | — |
+| U193 | 角斗士<br>`Gladiator`<br>[设定卡](../pcd/batch-08/Gladiator/design.md) | 刺客 · 传说 | 盯住一个目标越打越痛。 | 刀锋 | — | — |
+| U194 | 冠军角斗士<br>`Gladiator_T4` | 刺客 · 传说 | 盯住一个目标越打越痛，攻击削弱目标防御，可叠加。 | 刀锋 | — | — |
+| U195 | 金龙<br>`GoldenDragon`<br>[设定卡](../pcd/batch-08/GoldenDragon/design.md) | 射手 · 传说 | 击杀时引发爆炸。 | 火焰 | — | — |
+| U196 | 雷法师<br>`MageApprentice_T4` | 法师 · 传说 | 蓄满法力后闪电连锁五个敌人，让身边友军法力恢复更快。 | 雷电 | 闪电打击：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U197 | 吸血蝠<br>`VampireBat`<br>[设定卡](../pcd/batch-08/VampireBat/design.md) | 祭司 · 传说 | 让身边友军伤害提高，定时轰炸三个敌人。 | 光环 · 伤害 | — | — |
+| U198 | 黑铁卫<br>`BlackIronGuard`<br>[设定卡](../pcd/batch-09/BlackIronGuard/design.md) | 守护者 · 传说 | 让身边友军防御提高。 | 光环 · 守护 | — | — |
+| U199 | 死亡射手<br>`DeathShooter`<br>[设定卡](../pcd/batch-09/DeathShooter/design.md) | 射手 · 传说 | 每次攻击附带额外伤害，攻击削弱目标防御。 | 刀锋 | — | — |
+| U200 | 圣光骑士<br>`HolyLightKnight`<br>[设定卡](../pcd/batch-09/HolyLightKnight/design.md) | 圣骑士 · 传说 | 半血上场，但快速回血。 | 治疗 | — | — |
+| U201 | 圣殿骑士<br>`HolyLightKnight_T4` | 圣骑士 · 传说 | 半血上场，但快速回血，持续治疗身边的友军。 | 治疗 | — | — |
+| U202 | 玉藤堡垒<br>`JadeVineFortress`<br>[设定卡](../pcd/batch-09/JadeVineFortress/design.md) | 先锋 · 传说 | 反弹受到的伤害。 | 反伤 | — | — |
+| U203 | 神射手<br>`Ranger_T4` | 射手 · 传说 | 每次攻击附带额外伤害，攻击会弹射到旁边的敌人。 | 刀锋 | — | — |
+| U204 | 巫毒祭主<br>`VoodooBeliever_T4` | 先锋 · 传说 | 死亡时会对击杀者施加毒素，持续回血。 | 亡语 | — | — |
+| U205 | 苦痛盾卫<br>`AgonyShieldDefender`<br>[设定卡](../pcd/batch-10/AgonyShieldDefender/design.md) | 守护者 · 传说 | 蓄满法力后降下剑雨，削弱敌人伤害。 | 刀锋 | 剑雨：射程内的目标附近有 2 个以上敌人扎堆（只剩更少时也放） | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U206 | 充能塔<br>`ChargeTower`<br>[设定卡](../pcd/batch-10/ChargeTower/design.md) | 商人 · 传说 | 死亡时掉落积分。 | 金币 | — | — |
+| U207 | 冥誓剑圣<br>`CursedSwordsman_T4` | 守护者 · 传说 | 蓄满法力后砸伤一片敌人并削弱其伤害，让身边友军防御提高。 | 刀锋 | 铁之冰雹：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U208 | 魔王近卫<br>`DemonKingsGuard`<br>[设定卡](../pcd/batch-10/DemonKingsGuard/design.md) | 守护者 · 传说 | 蓄满法力后卷起剑刃风暴，大幅削弱敌人伤害。 | 刀锋 | 剑刃风暴：射程内的目标附近有 2 个以上敌人扎堆（只剩更少时也放） | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U209 | 翠羽龙<br>`GreenDragon_T4` | 牧师 · 传说 | 用自己的生命治疗友军，持续回血。 | 治疗 | 灵魂转移：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U210 | 法师英雄<br>`MageHero`<br>[设定卡](../pcd/batch-10/MageHero/design.md) | 射手 · 传说 | 每活过一场战斗就变强。 | 成长 | — | — |
+| U211 | 影剑士<br>`ShadowSwordsman`<br>[设定卡](../pcd/batch-10/ShadowSwordsman/design.md) | 召唤师 · 传说 | 每攻击几次召唤一个影子随从。 | 召唤 | — | — |
+| U212 | 影骑士<br>`ShadowSwordsman_T4` | 召唤师 · 传说 | 每攻击几次召唤一个影子随从，常常闪避攻击。 | 召唤 | — | — |
+| U213 | 天龙<br>`SkyDragon`<br>[设定卡](../pcd/batch-10/SkyDragon/design.md) | 牧师 · 传说 | 用自己的生命治疗友军。 | 治疗 | 灵魂转移：有友军生命低于 60%，且自己生命高于 50% | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U214 | 森林法师<br>`WildMage_T4` | 法师 · 传说 | 每次攻击溅射周围敌人，击杀时引发爆炸。 | 刀锋 | — | — |
+| U215 | 野人王<br>`WildManKing`<br>[设定卡](../pcd/batch-10/WildManKing/design.md) | 召唤师 · 传说 | 死亡时召唤野人矛兵，攻击攒法力，满了召唤两个野人矛兵。 | 召唤 | 史莱姆繁殖：有敌人逼近到 600 以内 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U216 | 歼灭者<br>`Annihilator`<br>[设定卡](../pcd/batch-12/Annihilator/design.md) | 射手 · 传说 | 每箭附带火焰伤害。 | 火焰 | — | — |
+| U217 | 黑熊<br>`BlackBear`<br>[设定卡](../pcd/batch-11/BlackBear/design.md) | 先锋 · 传说 | 死亡或法力满时引爆，伤害周围敌人。 | 火焰 | 禁果：身边有 3 个以上敌人（只剩更少时也放） | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U218 | 夜刃<br>`BlackSword_T4` | 刺客 · 传说 | 攻击削弱目标防御，可叠加，常常闪避攻击。 | 诅咒 | — | — |
+| U219 | 蟹巫<br>`CrabWarlock_T4` | 召唤师 · 传说 | 蓄满法力后召唤小螃蟹，击杀时回复法力。 | 召唤 | 召唤小螃蟹：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U220 | 爬行投石车<br>`CrawlingCatapult`<br>[设定卡](../pcd/batch-12/CrawlingCatapult/design.md) | 射手 · 传说 | 目标越远伤害越高。 | 火焰 | — | — |
+| U221 | 暗牙<br>`DarkFang`<br>[设定卡](../pcd/batch-11/DarkFang/design.md) | 祭司 · 传说 | 让身边友军伤害提高，但更脆。 | 光环 · 伤害 | — | — |
+| U222 | 暗牙统帅<br>`DarkFang_T4` | 祭司 · 传说 | 让身边友军伤害提高，但更脆，持续回血。 | 光环 · 伤害 | — | — |
+| U223 | 金手<br>`GoldenHand`<br>[设定卡](../pcd/batch-11/GoldenHand/design.md) | 商人 · 传说 | 活过一场战斗就赚积分，开战时可能加速。 | 金币 | — | — |
+| U224 | 生命树<br>`LifeTree`<br>[设定卡](../pcd/batch-11/LifeTree/design.md) | 圣骑士 · 传说 | 持续治疗身边的友军。 | 治疗 | — | — |
+| U225 | 古老生命树<br>`LifeTree_T4` | 圣骑士 · 传说 | 持续治疗身边的友军，持续回血。 | 治疗 | — | — |
+| U226 | 脉冲机器人<br>`Pulsebot`<br>[设定卡](../pcd/batch-11/Pulsebot/design.md) | 先锋 · 传说 | 受到的伤害大幅减少。 | 守护 | — | — |
+| U227 | 暗影死神<br>`ShadowGrimReaper`<br>[设定卡](../pcd/batch-11/ShadowGrimReaper/design.md) | 刺客 · 传说 | 常常闪避，每次闪避都变强。 | 成长 | — | — |
+| U228 | 天空机器人<br>`Skybot_T4` | 战士 · 传说 | 每次攻击溅射周围敌人，攻击削弱目标防御。 | 火焰 | — | — |
+| U229 | 海盗船长<br>`VikingPirate_T4` | 商人 · 传说 | 活过一场战斗就赚积分，开战时可能加速。 | 金币 | — | — |
+| U230 | 虚空之翼<br>`WarpWing_T4` | 祭司 · 传说 | 持续削弱周围敌人的伤害，常常闪避攻击。 | 光环 · 削弱 | — | — |
+| U231 | 骸骨神射<br>`Archer_T4` | 射手 · 传说 | 每箭附带火焰伤害，持续回血。 | 火焰 | — | — |
+| U232 | 猩红骑士长<br>`BloodKnight_T4` | 守护者 · 传说 | 让身边友军攻击吸血，让身边友军防御提高。 | 光环 · 吸血 | — | — |
+| U233 | 糖果女孩<br>`CandyGirl`<br>[设定卡](../pcd/batch-15/CandyGirl/design.md) | 召唤师 · 传说 | 蓄满法力后召唤恐狼。 | 召唤 | 召唤地狱犬：有敌人逼近到 600 以内 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U234 | 教堂守卫<br>`ChurchGuard`<br>[设定卡](../pcd/batch-15/ChurchGuard/design.md) | 先锋 · 传说 | 受到的伤害大幅减少。 | 守护 | — | — |
+| U235 | 金鬃狮锤<br>`LionHammer_T4` | 圣骑士 · 传说 | 让身边友军攻击大量吸血，蓄满法力后给一名友军回血。 | 光环 · 吸血 | 颅骨炖汤：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U236 | 骸骨巫师<br>`Mage_T4` | 祭司 · 传说 | 让身边友军攻速提高，持续回血。 | 光环 · 攻速 | — | — |
+| U237 | 死灵法师<br>`Necromancer`<br>[设定卡](../pcd/batch-15/Necromancer/design.md) | 召唤师 · 传说 | 蓄满法力后召唤复仇之龙，击杀时回复法力。 | 召唤 | 召唤巨龙：有敌人逼近到 600 以内 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U238 | 兽王<br>`Summoner_T4` | 召唤师 · 传说 | 蓄满法力后召唤恐狼，击杀时回复法力。 | 召唤 | 召唤地狱犬：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U239 | 剑舞者<br>`SwordDancer`<br>[设定卡](../pcd/batch-15/SwordDancer/design.md) | 商人 · 传说 | 死亡时掉落积分。 | 金币 | — | — |
+| U240 | 大法师<br>`Archmage`<br>[设定卡](../pcd/batch-01/Archmage/design.md) | 法师 · undefined | 每次攻击连打三下，蓄满法力后狂暴攻击并回血。 | 迅捷 | 超级鼓舞：敌人进入攻击范围 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U241 | 棕熊<br>`BrownBear`<br>[设定卡](../pcd/batch-01/BrownBear/design.md) | 守护者 · undefined | 让身边友军持续回血、防御提高。 | 光环 · 治疗 | — | — |
+| U242 | 聚宝金鸡<br>`Chick_T5` | 商人 · undefined | 死亡时掉落积分，活过一场战斗就赚积分。 | 金币 | — | — |
+| U243 | 指挥官<br>`Commander`<br>[设定卡](../pcd/batch-01/Commander/design.md) | 守护者 · undefined | 蓄满法力后炮击一片敌人并减慢其攻速。 | 火焰 | 炮弹休克：射程内的目标附近有 2 个以上敌人扎堆（只剩更少时也放） | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U244 | 炎帝<br>`EmperorOfFlame`<br>[设定卡](../pcd/batch-01/EmperorOfFlame/design.md) | 战士 · undefined | 攒下的层数越多越强。 | 成长 | — | — |
+| U245 | 不破城壁<br>`FootSoldier_T5` | 先锋 · undefined | 受到的伤害减少，受到的远程伤害减少。 | 守护 | — | — |
+| U246 | 巨人战神<br>`GiantGodOfWar`<br>[设定卡](../pcd/batch-01/GiantGodOfWar/design.md) | 先锋 · undefined | 死亡时分裂出三只魔像。 | 召唤 | — | — |
+| U247 | 海渊之影<br>`WaterWarrior_T5` | 刺客 · undefined | 开战时隐身，偷袭敌方远程，常常闪避攻击。 | 潜行 | — | — |
+| U248 | 主教<br>`Bishop`<br>[设定卡](../pcd/batch-02/Bishop/design.md) | 射手 · undefined | 盯住一个目标越打越痛，蓄满法力后攻速翻倍。 | 奥术 | 超级太阳耀斑：敌人进入攻击范围 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U249 | 奥法元帅<br>`MarshalOrfa`<br>[设定卡](../pcd/batch-02/MarshalOrfa/design.md) | 战士 · undefined | 法力满后，接下来的攻击都带大范围伤害，法力越多，攻速和生命越高。 | 奥术 | 最终审判：敌人进入攻击范围 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U250 | 暗夜射手<br>`NightArcher`<br>[设定卡](../pcd/batch-02/NightArcher/design.md) | 射手 · undefined | 每次攻击连打四下。 | 迅捷 | — | — |
+| U251 | 血斗之王<br>`SlaveLord_T5` | 战士 · undefined | 残血时攻速翻倍，持续回血。 | 狂怒 | — | — |
+| U252 | 天马<br>`YellowManeHorse_T5` | 守护者 · undefined | 让身边友军防御提高，持续回血。 | 光环 · 守护 | — | — |
+| U253 | 黑龙<br>`BlackDragon`<br>[设定卡](../pcd/batch-03/BlackDragon/design.md) | 先锋 · undefined | 用法力吸收大部分伤害，法力越少伤害越高。 | 守护 | — | — |
+| U254 | 钢铁军阀<br>`SteelWarlord`<br>[设定卡](../pcd/batch-03/SteelWarlord/design.md) | 先锋 · undefined | 开战时可能硬化，防御提高。 | 守护 | — | — |
+| U255 | 时间法师<br>`TimeMage`<br>[设定卡](../pcd/batch-03/TimeMage/design.md) | 法师 · undefined | 让身边友军法力恢复更快，蓄满法力后召唤陨石砸单个敌人。 | 光环 · 法力 | 小行星：射程内的目标生命还多（≥ 40%，只剩 1 个敌人时也放） | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U256 | 时间领主<br>`TimeMage_T5` | 法师 · undefined | 蓄满法力后召唤陨石砸单个敌人，让身边友军法力恢复更快。 | 奥术 | 小行星：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U257 | 破魔守卫<br>`AntiMagicGuardian`<br>[设定卡](../pcd/batch-04/AntiMagicGuardian/design.md) | 先锋 · undefined | 重装单位，非常耐打。 | — | — | — |
+| U258 | 赤瞳猪王<br>`BigWildBoar_T5` | 先锋 · undefined | 开战时跳进敌群砸地，反弹受到的伤害。 | 冲锋 | — | — |
+| U259 | 圣沙使徒<br>`DesertBeliever_T5` | 牧师 · undefined | 蓄满法力后治疗一串友军，持续回血。 | 治疗 | 治疗链：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U260 | 玉麒麟<br>`JadeBeast_T5` | 商人 · undefined | 场上商人越多，积分倍率越高，死亡时掉落积分。 | 金币 | — | — |
+| U261 | 赤瞳<br>`RedEyes`<br>[设定卡](../pcd/batch-04/RedEyes/design.md) | 先锋 · undefined | 开战时跳进敌群砸地。 | 冲锋 | — | — |
+| U262 | 蛇神使者<br>`SnakeGodMessenger`<br>[设定卡](../pcd/batch-04/SnakeGodMessenger/design.md) | 牧师 · undefined | 开战时给最肉的友军加大量生命。 | 治疗 | — | — |
+| U263 | 蛇神化身<br>`SnakeGodMessenger_T5` | 牧师 · undefined | 开战时给最肉的友军加大量生命，蓄满法力后治疗一串友军。 | 治疗 | 治疗链：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U264 | 地狱召唤塔<br>`HellSummonTower`<br>[设定卡](../pcd/batch-05/HellSummonTower/design.md) | 召唤师 · undefined | 蓄满法力后召唤魔豹和邪犬。 | 召唤 | 超级裂隙：有敌人逼近到 600 以内，且自己生命够扣（> 2080） | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U265 | 雪狼王<br>`SnowWolfKing`<br>[设定卡](../pcd/batch-05/SnowWolfKing/design.md) | 先锋 · undefined | 冻伤并大幅减速周围的敌人，常常闪避攻击。 | 光环 · 冰霜 | — | — |
+| U266 | 灵魂战士<br>`SoulWarrior`<br>[设定卡](../pcd/batch-05/SoulWarrior/design.md) | 先锋 · undefined | 死后很快复活，并且更快。 | 复生 | — | — |
+| U267 | 暴风炮蝠<br>`Bat_T5` | 射手 · undefined | 不停扫射附近的敌人，越打越快。 | 刀锋 | — | — |
+| U268 | 狂战士<br>`Berserker`<br>[设定卡](../pcd/batch-08/Berserker/design.md) | 战士 · undefined | 盯住一个目标越打越痛。 | 刀锋 | — | — |
+| U269 | 战神化身<br>`Berserker_T5` | 战士 · undefined | 每次攻击连打三下，残血时攻速翻倍。 | 迅捷 | — | — |
+| U270 | 不败角斗王<br>`Gladiator_T5` | 刺客 · undefined | 盯住一个目标越打越痛，攻击削弱目标防御，可叠加。 | 刀锋 | — | — |
+| U271 | 风暴大法师<br>`MageApprentice_T5` | 法师 · undefined | 蓄满法力后闪电连锁五个敌人，让身边友军法力恢复更快。 | 雷电 | 闪电打击：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U272 | 魔龙<br>`MagicDragon`<br>[设定卡](../pcd/batch-08/MagicDragon/design.md) | 射手 · undefined | 击杀时引发爆炸。 | 火焰 | — | — |
+| U273 | 监工<br>`Supervisor`<br>[设定卡](../pcd/batch-08/Supervisor/design.md) | 祭司 · undefined | 让身边友军攻速大幅提高。 | 光环 · 攻速 | — | — |
+| U274 | 光明圣者<br>`HolyLightKnight_T5` | 圣骑士 · undefined | 半血上场，但快速回血，持续治疗身边的友军。 | 治疗 | — | — |
+| U275 | 毒龙<br>`PoisonDragon`<br>[设定卡](../pcd/batch-09/PoisonDragon/design.md) | 先锋 · undefined | 散发毒气，持续伤害身边的敌人。 | 毒 | — | — |
+| U276 | 风暴游侠<br>`Ranger_T5` | 射手 · undefined | 每次攻击附带额外伤害，攻击会弹射到旁边的敌人。 | 刀锋 | — | — |
+| U277 | 风暴堡垒<br>`StormFortress`<br>[设定卡](../pcd/batch-09/StormFortress/design.md) | 先锋 · undefined | 反弹受到的伤害，每次攻击连打三下。 | 反伤 | — | — |
+| U278 | 翠盾<br>`VerdantShield`<br>[设定卡](../pcd/batch-09/VerdantShield/design.md) | 守护者 · undefined | 让身边友军防御大幅提高。 | 光环 · 守护 | — | — |
+| U279 | 巫毒之王<br>`VoodooBeliever_T5` | 先锋 · undefined | 死亡时会对击杀者施加毒素，持续回血。 | 亡语 | — | — |
+| U280 | 永咒剑魔<br>`CursedSwordsman_T5` | 守护者 · undefined | 蓄满法力后砸伤一片敌人并削弱其伤害，让身边友军防御提高。 | 刀锋 | 铁之冰雹：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U281 | 火神塔<br>`FireGodTower`<br>[设定卡](../pcd/batch-10/FireGodTower/design.md) | 商人 · undefined | 死亡时掉落积分。 | 金币 | — | — |
+| U282 | 天龙<br>`GreenDragon_T5` | 牧师 · undefined | 用自己的生命治疗友军，持续回血。 | 治疗 | 灵魂转移：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U283 | 影骑士<br>`ShadowKnight`<br>[设定卡](../pcd/batch-10/ShadowKnight/design.md) | 召唤师 · undefined | 每攻击几次召唤一个强力随从。 | 召唤 | — | — |
+| U284 | 暗影君王<br>`ShadowSwordsman_T5` | 召唤师 · undefined | 每攻击几次召唤一个强力随从，常常闪避攻击。 | 召唤 | — | — |
+| U285 | 翠影贤者<br>`WildMage_T5` | 法师 · undefined | 每次攻击溅射周围敌人，击杀时引发爆炸。 | 刀锋 | — | — |
+| U286 | 影王之刃<br>`BlackSword_T5` | 刺客 · undefined | 攻击削弱目标防御，可叠加，常常闪避攻击。 | 诅咒 | — | — |
+| U287 | 蟹巫<br>`Crabomancer`<br>[设定卡](../pcd/batch-11/Crabomancer/design.md) | 召唤师 · undefined | 蓄满法力后召唤巨蟹钳。 | 召唤 | 召唤蟹钳：有敌人逼近到 600 以内 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U288 | 蟹皇<br>`CrabWarlock_T5` | 召唤师 · undefined | 蓄满法力后召唤巨蟹钳，击杀时回复法力。 | 召唤 | 召唤蟹钳：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U289 | 暗牙王<br>`DarkFang_T5` | 祭司 · undefined | 让身边友军伤害提高，但更脆，持续回血。 | 光环 · 伤害 | — | — |
+| U290 | 巨型歼灭者<br>`GigaAnnihilator`<br>[设定卡](../pcd/batch-12/GigaAnnihilator/design.md) | 射手 · undefined | 每箭附带火焰伤害。 | 火焰 | — | — |
+| U291 | 世界之树<br>`LifeTree_T5` | 圣骑士 · undefined | 持续治疗身边的友军，持续回血。 | 治疗 | — | — |
+| U292 | 天空机器人<br>`Skybot`<br>[设定卡](../pcd/batch-11/Skybot/design.md) | 战士 · undefined | 每次攻击溅射周围敌人，攻击削弱目标防御。 | 火焰 | — | — |
+| U293 | 天穹战甲<br>`Skybot_T5` | 战士 · undefined | 每次攻击溅射周围敌人，攻击削弱目标防御。 | 火焰 | — | — |
+| U294 | 七海霸主<br>`VikingPirate_T5` | 商人 · undefined | 活过一场战斗就赚积分，开战时可能加速。 | 金币 | — | — |
+| U295 | 虚空魔鬼鱼<br>`VoidManta`<br>[设定卡](../pcd/batch-12/VoidManta/design.md) | 祭司 · undefined | 持续削弱周围敌人的伤害。 | 光环 · 削弱 | — | — |
+| U296 | 流浪投石机<br>`WanderingTrebuchet`<br>[设定卡](../pcd/batch-12/WanderingTrebuchet/design.md) | 射手 · undefined | 目标越远伤害越高。 | 火焰 | — | — |
+| U297 | 虚空魔鬼鱼<br>`WarpWing_T5` | 祭司 · undefined | 持续削弱周围敌人的伤害，常常闪避攻击。 | 光环 · 削弱 | — | — |
+| U298 | 死亡弓王<br>`Archer_T5` | 射手 · undefined | 每箭附带火焰伤害，持续回血。 | 火焰 | — | — |
+| U299 | 血月领主<br>`BloodKnight_T5` | 守护者 · undefined | 让身边友军攻击吸血，让身边友军防御提高。 | 光环 · 吸血 | — | — |
+| U300 | 死神<br>`GrimReaper`<br>[设定卡](../pcd/batch-15/GrimReaper/design.md) | 召唤师 · undefined | 身边敌人死亡时回复法力，蓄满法力后召唤骨龙。 | 亡语 | 召唤死神：有敌人逼近到 600 以内 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U301 | 狮锤<br>`LionHammer`<br>[设定卡](../pcd/batch-15/LionHammer/design.md) | 圣骑士 · undefined | 让身边友军攻击大量吸血，蓄满法力后给一名友军回血。 | 光环 · 吸血 | 颅骨炖汤：有友军生命低于 60% | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U302 | 狮王圣锤<br>`LionHammer_T5` | 圣骑士 · undefined | 让身边友军攻击大量吸血，蓄满法力后给一名友军回血。 | 光环 · 吸血 | 颅骨炖汤：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U303 | 骸骨魔导<br>`Mage_T5` | 祭司 · undefined | 让身边友军攻速提高，持续回血。 | 光环 · 攻速 | — | — |
+| U304 | 幻影舞者<br>`PhantomDancer`<br>[设定卡](../pcd/batch-15/PhantomDancer/design.md) | 刺客 · undefined | 每次攻击都永久变强。 | 狂怒 | — | — |
+| U305 | 百兽之主<br>`Summoner_T5` | 召唤师 · undefined | 蓄满法力后召唤恐狼，击杀时回复法力。 | 召唤 | 召唤地狱犬：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U306 | 财神鸡<br>`Chick_T6` | 商人 · undefined | 死亡时掉落积分，活过一场战斗就赚积分。 | 金币 | — | — |
+| U307 | 神铸城壁<br>`FootSoldier_T6` | 先锋 · undefined | 受到的伤害减少，受到的远程伤害减少。 | 守护 | — | — |
+| U308 | 海神之影<br>`WaterWarrior_T6` | 刺客 · undefined | 开战时隐身，偷袭敌方远程，常常闪避攻击。 | 潜行 | — | — |
+| U309 | 不灭斗神<br>`SlaveLord_T6` | 战士 · undefined | 残血时攻速翻倍，持续回血。 | 狂怒 | 最终审判：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U310 | 神驹<br>`YellowManeHorse_T6` | 守护者 · undefined | 让身边友军防御提高，持续回血。 | 光环 · 守护 | — | — |
+| U311 | 时间之神<br>`TimeMage_T6` | 法师 · undefined | 蓄满法力后召唤陨石砸单个敌人，让身边友军法力恢复更快。 | 奥术 | 小行星：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U312 | 撼地猪神<br>`BigWildBoar_T6` | 先锋 · undefined | 开战时跳进敌群砸地，反弹受到的伤害。 | 冲锋 | — | — |
+| U313 | 圣沙之神<br>`DesertBeliever_T6` | 牧师 · undefined | 蓄满法力后治疗一串友军，持续回血。 | 治疗 | 治疗链：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U314 | 玉神麒麟<br>`JadeBeast_T6` | 商人 · undefined | 场上商人越多，积分倍率越高，死亡时掉落积分。 | 金币 | — | — |
+| U315 | 蛇神<br>`SnakeGodMessenger_T6` | 牧师 · undefined | 开战时给最肉的友军加大量生命，蓄满法力后治疗一串友军。 | 治疗 | 治疗链：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U316 | 雷神蝠<br>`Bat_T6` | 射手 · undefined | 不停扫射附近的敌人，越打越快。 | 刀锋 | — | — |
+| U317 | 战神<br>`Berserker_T6` | 战士 · undefined | 每次攻击连打三下，残血时攻速翻倍。 | 迅捷 | 最终审判：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U318 | 角斗之神<br>`Gladiator_T6` | 刺客 · undefined | 盯住一个目标越打越痛，攻击削弱目标防御，可叠加。 | 刀锋 | — | — |
+| U319 | 雷神<br>`MageApprentice_T6` | 法师 · undefined | 蓄满法力后闪电连锁五个敌人，让身边友军法力恢复更快。 | 雷电 | 闪电打击：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U320 | 光之神使<br>`HolyLightKnight_T6` | 圣骑士 · undefined | 半血上场，但快速回血，持续治疗身边的友军。 | 治疗 | — | — |
+| U321 | 风神射手<br>`Ranger_T6` | 射手 · undefined | 每次攻击附带额外伤害，攻击会弹射到旁边的敌人。 | 刀锋 | — | — |
+| U322 | 巫毒神<br>`VoodooBeliever_T6` | 先锋 · undefined | 死亡时会对击杀者施加毒素，持续回血。 | 亡语 | — | — |
+| U323 | 咒神<br>`CursedSwordsman_T6` | 守护者 · undefined | 蓄满法力后砸伤一片敌人并削弱其伤害，让身边友军防御提高。 | 刀锋 | 铁之冰雹：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U324 | 龙神<br>`GreenDragon_T6` | 牧师 · undefined | 用自己的生命治疗友军，持续回血。 | 治疗 | 灵魂转移：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U325 | 暗影神<br>`ShadowSwordsman_T6` | 召唤师 · undefined | 每攻击几次召唤一个强力随从，常常闪避攻击。 | 召唤 | 超级裂隙：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U326 | 森之神<br>`WildMage_T6` | 法师 · undefined | 每次攻击溅射周围敌人，击杀时引发爆炸。 | 刀锋 | 小行星：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U327 | 影神之刃<br>`BlackSword_T6` | 刺客 · undefined | 攻击削弱目标防御，可叠加，常常闪避攻击。 | 诅咒 | — | — |
+| U328 | 蟹神<br>`CrabWarlock_T6` | 召唤师 · undefined | 蓄满法力后召唤巨蟹钳，击杀时回复法力。 | 召唤 | 召唤蟹钳：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U329 | 暗牙神<br>`DarkFang_T6` | 祭司 · undefined | 让身边友军伤害提高，但更脆，持续回血。 | 光环 · 伤害 | — | — |
+| U330 | 生命之神<br>`LifeTree_T6` | 圣骑士 · undefined | 持续治疗身边的友军，持续回血。 | 治疗 | — | — |
+| U331 | 神机<br>`Skybot_T6` | 战士 · undefined | 每次攻击溅射周围敌人，攻击削弱目标防御。 | 火焰 | 最终审判：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U332 | 海神<br>`VikingPirate_T6` | 商人 · undefined | 活过一场战斗就赚积分，开战时可能加速。 | 金币 | — | — |
+| U333 | 虚空之神<br>`WarpWing_T6` | 祭司 · undefined | 持续削弱周围敌人的伤害，常常闪避攻击。 | 光环 · 削弱 | — | — |
+| U334 | 冥神弓<br>`Archer_T6` | 射手 · undefined | 每箭附带火焰伤害，持续回血。 | 火焰 | — | — |
+| U335 | 血神<br>`BloodKnight_T6` | 守护者 · undefined | 让身边友军攻击吸血，让身边友军防御提高。 | 光环 · 吸血 | — | — |
+| U336 | 狮神<br>`LionHammer_T6` | 圣骑士 · undefined | 让身边友军攻击大量吸血，蓄满法力后给一名友军回血。 | 光环 · 吸血 | 颅骨炖汤：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
+| U337 | 骸骨之神<br>`Mage_T6` | 祭司 · undefined | 让身边友军攻速提高，持续回血。 | 光环 · 攻速 | — | — |
+| U338 | 兽神<br>`Summoner_T6` | 召唤师 · undefined | 蓄满法力后召唤恐狼，击杀时回复法力。 | 召唤 | 召唤地狱犬：敌人进入攻击范围 | 通用：螺旋聚气 → 爆散 |
 
 #### 敌人（49）
 
 | 编号 | 单位 | 职业 · 品质 | 卡片上的一句话 | 开战激活 | 自带法力技能 · 触发条件 | 技能演出 |
 |---|---|---|---|---|---|---|
-| U273 | 混沌邪犬<br>`ChaosEvilDog`<br>[设定卡](../pcd/batch-07/ChaosEvilDog/design.md) | 无职业 · 普通 | 受到的远程伤害减少。 | 守护 | — | — |
-| U274 | 混沌邪猪<br>`ChaosEvilPig`<br>[设定卡](../pcd/batch-06/ChaosEvilPig/design.md) | 无职业 · 普通 | 普通单位。 | — | — | — |
-| U275 | 混沌鼠<br>`ChaosRat`<br>[设定卡](../pcd/batch-06/ChaosRat/design.md) | 无职业 · 普通 | 越打越痛。 | 刀锋 | — | — |
-| U276 | 腐尸鼠<br>`DecayingCorpseRat`<br>[设定卡](../pcd/batch-07/DecayingCorpseRat/design.md) | 无职业 · 普通 | 普通单位。 | — | — | — |
-| U277 | 赤邪眼<br>`EvilEyeRed`<br>[设定卡](../pcd/batch-07/EvilEyeRed/design.md) | 无职业 · 普通 | 普通单位。 | — | — | — |
-| U278 | 邪鼠<br>`EvilRat`<br>[设定卡](../pcd/batch-06/EvilRat/design.md) | 无职业 · 普通 | 普通单位。 | — | — | — |
-| U279 | 蛛母<br>`MotherSpider`<br>[设定卡](../pcd/batch-06/MotherSpider/design.md) | 无职业 · 普通 | 死亡时召唤小蜘蛛。 | 召唤 | — | — |
-| U280 | 翠蠕虫统领<br>`VerdantWormCommander`<br>[设定卡](../pcd/batch-06/VerdantWormCommander/design.md) | 无职业 · 普通 | 普通单位。 | — | — | — |
-| U281 | 翠蠕虫兵<br>`VerdantWormSoldier`<br>[设定卡](../pcd/batch-06/VerdantWormSoldier/design.md) | 无职业 · 普通 | 普通单位。 | — | — | — |
-| U282 | 蛮兵<br>`Brute`<br>[设定卡](../pcd/batch-00-pilot/Brute/design.md) | 无职业 · 普通 | 攻击会减慢目标的攻速。 | 诅咒 | — | — |
-| U283 | 恐龙<br>`Dino`<br>[设定卡](../pcd/batch-14/Dino/design.md) | 无职业 · 普通 | 普通单位。 | — | — | — |
-| U284 | 龙龟<br>`DragonTurtle`<br>[设定卡](../pcd/batch-14/DragonTurtle/design.md) | 无职业 · 普通 | 普通单位。 | — | — | — |
-| U285 | 恶鬼<br>`Fiend`<br>[设定卡](../pcd/batch-14/Fiend/design.md) | 无职业 · 普通 | 普通单位。 | — | — | — |
-| U286 | 巨蜗<br>`GiantSnail`<br>[设定卡](../pcd/batch-14/GiantSnail/design.md) | 无职业 · 普通 | 普通单位。 | — | — | — |
-| U287 | 隐士<br>`Hermit`<br>[设定卡](../pcd/batch-14/Hermit/design.md) | 无职业 · 普通 | 让身边友军持续回血。 | 光环 · 治疗 | — | — |
-| U288 | 蜥蜴人<br>`LizardEnemy`<br>[设定卡](../pcd/batch-14/LizardEnemy/design.md) | 无职业 · 普通 | 普通单位。 | — | — | — |
-| U289 | 机器人<br>`Robo`<br>[设定卡](../pcd/batch-14/Robo/design.md) | 无职业 · 普通 | 普通单位。 | — | — | — |
-| U290 | 蜗牛<br>`Snail`<br>[设定卡](../pcd/batch-14/Snail/design.md) | 无职业 · 普通 | 普通单位。 | — | — | — |
-| U291 | 混沌恐狼<br>`ChaosDireWolf`<br>[设定卡](../pcd/batch-06/ChaosDireWolf/design.md) | 无职业 · 稀有 | 普通单位。 | — | — | — |
-| U292 | 混沌豪猪<br>`ChaosPorcupine`<br>[设定卡](../pcd/batch-06/ChaosPorcupine/design.md) | 无职业 · 稀有 | 普通单位。 | — | — | — |
-| U293 | 翠蠕虫王<br>`VerdantWormKing`<br>[设定卡](../pcd/batch-06/VerdantWormKing/design.md) | 无职业 · 稀有 | 防御更高。 | 守护 | — | — |
-| U294 | 炮手<br>`Cannoneer`<br>[设定卡](../pcd/batch-14/Cannoneer/design.md) | 无职业 · 稀有 | 普通单位。 | — | — | — |
-| U295 | 幼龙<br>`Drake`<br>[设定卡](../pcd/batch-13/Drake/design.md) | 无职业 · 稀有 | 普通单位。 | — | — | — |
-| U296 | 小鬼<br>`Imp`<br>[设定卡](../pcd/batch-13/Imp/design.md) | 无职业 · 稀有 | 成对出现。 | 召唤 | — | — |
-| U297 | 安全鼹鼠<br>`SafetyMole`<br>[设定卡](../pcd/batch-13/SafetyMole/design.md) | 无职业 · 稀有 | 让身边友军受到的伤害减少。 | 光环 · 守护 | — | — |
-| U298 | 混沌恐熊<br>`ChaosDireBear`<br>[设定卡](../pcd/batch-06/ChaosDireBear/design.md) | 无职业 · 史诗 | 普通单位。 | — | — | — |
-| U299 | 混沌士兵<br>`ChaosSoldier`<br>[设定卡](../pcd/batch-07/ChaosSoldier/design.md) | 无职业 · 史诗 | 普通单位。 | — | — | — |
-| U300 | 腐烂鼠王<br>`DecayingChampionRat`<br>[设定卡](../pcd/batch-07/DecayingChampionRat/design.md) | 无职业 · 史诗 | 普通单位。 | — | — | — |
-| U301 | 铁地龙<br>`EarthDragonIron`<br>[设定卡](../pcd/batch-06/EarthDragonIron/design.md) | 无职业 · 史诗 | 普通单位。 | — | — | — |
-| U302 | 暗邪眼<br>`EvilEyeDark`<br>[设定卡](../pcd/batch-06/EvilEyeDark/design.md) | 无职业 · 史诗 | 普通单位。 | — | — | — |
-| U303 | 半人马<br>`Centaur`<br>[设定卡](../pcd/batch-13/Centaur/design.md) | 无职业 · 史诗 | 每次攻击连打两下。 | 迅捷 | — | — |
-| U304 | 四眼<br>`FourEyes`<br>[设定卡](../pcd/batch-13/FourEyes/design.md) | 无职业 · 史诗 | 盯住一个目标越打越痛。 | 诅咒 | — | — |
-| U305 | 幽灵骑士<br>`GhostKnight`<br>[设定卡](../pcd/batch-13/GhostKnight/design.md) | 无职业 · 史诗 | 受到的普通攻击伤害减少。 | 潜行 | — | — |
-| U306 | 蜜熊<br>`HoneyBear`<br>[设定卡](../pcd/batch-13/HoneyBear/design.md) | 无职业 · 史诗 | 死亡时为身边友军回血。 | 治疗 | — | — |
-| U307 | 宝箱怪<br>`Mimic`<br>[设定卡](../pcd/batch-13/Mimic/design.md) | 无职业 · 史诗 | 击杀时抢积分。 | 金币 | — | — |
-| U308 | 针刺者<br>`Needler`<br>[设定卡](../pcd/batch-13/Needler/design.md) | 无职业 · 史诗 | 攻击越来越快。 | 迅捷 | 急速射击：敌人进入攻击范围 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U309 | 食人魔<br>`OgreEnemy`<br>[设定卡](../pcd/batch-13/OgreEnemy/design.md) | 无职业 · 史诗 | 普通单位。 | — | — | — |
-| U310 | 头狼<br>`PackLeader`<br>[设定卡](../pcd/batch-13/PackLeader/design.md) | 无职业 · 史诗 | 让身边友军伤害提高，但更脆。 | 光环 · 伤害 | — | — |
-| U311 | 萨满<br>`Shaman`<br>[设定卡](../pcd/batch-13/Shaman/design.md) | 无职业 · 史诗 | 让一名友军加速。 | 狂怒 | — | — |
-| U312 | 攻城锤<br>`SiegeRam`<br>[设定卡](../pcd/batch-13/SiegeRam/design.md) | 无职业 · 史诗 | 受到的远程伤害减少。 | 守护 | — | — |
-| U313 | 女巫<br>`Witch`<br>[设定卡](../pcd/batch-13/Witch/design.md) | 无职业 · 史诗 | 召唤蛙人。 | 召唤 | 召唤蛙人：有敌人逼近到 600 以内 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
-| U314 | 刻耳柏洛斯<br>`Cerberus`<br>[设定卡](../pcd/batch-07/Cerberus/design.md) | 无职业 · 传说 | 身边敌人死亡时回血、加速。 | 狂怒 | — | — |
-| U315 | 混沌屠夫<br>`ChaosButcher`<br>[设定卡](../pcd/batch-06/ChaosButcher/design.md) | 无职业 · 传说 | 持续毒伤目标，身边敌人死亡时回血、加速。 | 毒 | — | — |
-| U316 | 混沌卫黑卡托斯<br>`ChaosGuardBlackKatos`<br>[设定卡](../pcd/batch-06/ChaosGuardBlackKatos/design.md) | 无职业 · 传说 | 防御更高，身边敌人死亡时回血、加速。 | 守护 | — | — |
-| U317 | 地龙王加贡<br>`EarthDragonKingGargon`<br>[设定卡](../pcd/batch-07/EarthDragonKingGargon/design.md) | 无职业 · 传说 | 防御更高。 | 守护 | — | — |
-| U318 | 邪眼王尼克松<br>`EvilEyeKingNixon`<br>[设定卡](../pcd/batch-00-pilot/EvilEyeKingNixon/design.md) | 无职业 · 传说 | 防御更高，身边敌人死亡时回血、加速。 | 守护 | — | — |
-| U319 | 豹帝萨瓦隆<br>`LeopardEmperorSavalon`<br>[设定卡](../pcd/batch-06/LeopardEmperorSavalon/design.md) | 无职业 · 传说 | 身边敌人死亡时回血、加速。 | 狂怒 | — | — |
-| U320 | 蛛皇阿纳佐斯<br>`SpiderEmperorAnazos`<br>[设定卡](../pcd/batch-07/SpiderEmperorAnazos/design.md) | 无职业 · 传说 | 防御更高。 | 守护 | — | — |
-| U321 | 克拉肯<br>`Kraken`<br>[设定卡](../pcd/batch-13/Kraken/design.md) | 无职业 · 传说 | 防御更高。 | 守护 | — | — |
+| U339 | 混沌邪犬<br>`ChaosEvilDog`<br>[设定卡](../pcd/batch-07/ChaosEvilDog/design.md) | 无职业 · 普通 | 受到的远程伤害减少。 | 守护 | — | — |
+| U340 | 混沌邪猪<br>`ChaosEvilPig`<br>[设定卡](../pcd/batch-06/ChaosEvilPig/design.md) | 无职业 · 普通 | 普通单位。 | — | — | — |
+| U341 | 混沌鼠<br>`ChaosRat`<br>[设定卡](../pcd/batch-06/ChaosRat/design.md) | 无职业 · 普通 | 越打越痛。 | 刀锋 | — | — |
+| U342 | 腐尸鼠<br>`DecayingCorpseRat`<br>[设定卡](../pcd/batch-07/DecayingCorpseRat/design.md) | 无职业 · 普通 | 普通单位。 | — | — | — |
+| U343 | 赤邪眼<br>`EvilEyeRed`<br>[设定卡](../pcd/batch-07/EvilEyeRed/design.md) | 无职业 · 普通 | 普通单位。 | — | — | — |
+| U344 | 邪鼠<br>`EvilRat`<br>[设定卡](../pcd/batch-06/EvilRat/design.md) | 无职业 · 普通 | 普通单位。 | — | — | — |
+| U345 | 蛛母<br>`MotherSpider`<br>[设定卡](../pcd/batch-06/MotherSpider/design.md) | 无职业 · 普通 | 死亡时召唤小蜘蛛。 | 召唤 | — | — |
+| U346 | 翠蠕虫统领<br>`VerdantWormCommander`<br>[设定卡](../pcd/batch-06/VerdantWormCommander/design.md) | 无职业 · 普通 | 普通单位。 | — | — | — |
+| U347 | 翠蠕虫兵<br>`VerdantWormSoldier`<br>[设定卡](../pcd/batch-06/VerdantWormSoldier/design.md) | 无职业 · 普通 | 普通单位。 | — | — | — |
+| U348 | 蛮兵<br>`Brute`<br>[设定卡](../pcd/batch-00-pilot/Brute/design.md) | 无职业 · 普通 | 攻击会减慢目标的攻速。 | 诅咒 | — | — |
+| U349 | 恐龙<br>`Dino`<br>[设定卡](../pcd/batch-14/Dino/design.md) | 无职业 · 普通 | 普通单位。 | — | — | — |
+| U350 | 龙龟<br>`DragonTurtle`<br>[设定卡](../pcd/batch-14/DragonTurtle/design.md) | 无职业 · 普通 | 普通单位。 | — | — | — |
+| U351 | 恶鬼<br>`Fiend`<br>[设定卡](../pcd/batch-14/Fiend/design.md) | 无职业 · 普通 | 普通单位。 | — | — | — |
+| U352 | 巨蜗<br>`GiantSnail`<br>[设定卡](../pcd/batch-14/GiantSnail/design.md) | 无职业 · 普通 | 普通单位。 | — | — | — |
+| U353 | 隐士<br>`Hermit`<br>[设定卡](../pcd/batch-14/Hermit/design.md) | 无职业 · 普通 | 让身边友军持续回血。 | 光环 · 治疗 | — | — |
+| U354 | 蜥蜴人<br>`LizardEnemy`<br>[设定卡](../pcd/batch-14/LizardEnemy/design.md) | 无职业 · 普通 | 普通单位。 | — | — | — |
+| U355 | 机器人<br>`Robo`<br>[设定卡](../pcd/batch-14/Robo/design.md) | 无职业 · 普通 | 普通单位。 | — | — | — |
+| U356 | 蜗牛<br>`Snail`<br>[设定卡](../pcd/batch-14/Snail/design.md) | 无职业 · 普通 | 普通单位。 | — | — | — |
+| U357 | 混沌恐狼<br>`ChaosDireWolf`<br>[设定卡](../pcd/batch-06/ChaosDireWolf/design.md) | 无职业 · 史诗 | 普通单位。 | — | — | — |
+| U358 | 混沌豪猪<br>`ChaosPorcupine`<br>[设定卡](../pcd/batch-06/ChaosPorcupine/design.md) | 无职业 · 史诗 | 普通单位。 | — | — | — |
+| U359 | 翠蠕虫王<br>`VerdantWormKing`<br>[设定卡](../pcd/batch-06/VerdantWormKing/design.md) | 无职业 · 史诗 | 防御更高。 | 守护 | — | — |
+| U360 | 炮手<br>`Cannoneer`<br>[设定卡](../pcd/batch-14/Cannoneer/design.md) | 无职业 · 史诗 | 普通单位。 | — | — | — |
+| U361 | 幼龙<br>`Drake`<br>[设定卡](../pcd/batch-13/Drake/design.md) | 无职业 · 史诗 | 普通单位。 | — | — | — |
+| U362 | 小鬼<br>`Imp`<br>[设定卡](../pcd/batch-13/Imp/design.md) | 无职业 · 史诗 | 成对出现。 | 召唤 | — | — |
+| U363 | 安全鼹鼠<br>`SafetyMole`<br>[设定卡](../pcd/batch-13/SafetyMole/design.md) | 无职业 · 史诗 | 让身边友军受到的伤害减少。 | 光环 · 守护 | — | — |
+| U364 | 混沌恐熊<br>`ChaosDireBear`<br>[设定卡](../pcd/batch-06/ChaosDireBear/design.md) | 无职业 · 传说 | 普通单位。 | — | — | — |
+| U365 | 混沌士兵<br>`ChaosSoldier`<br>[设定卡](../pcd/batch-07/ChaosSoldier/design.md) | 无职业 · 传说 | 普通单位。 | — | — | — |
+| U366 | 腐烂鼠王<br>`DecayingChampionRat`<br>[设定卡](../pcd/batch-07/DecayingChampionRat/design.md) | 无职业 · 传说 | 普通单位。 | — | — | — |
+| U367 | 铁地龙<br>`EarthDragonIron`<br>[设定卡](../pcd/batch-06/EarthDragonIron/design.md) | 无职业 · 传说 | 普通单位。 | — | — | — |
+| U368 | 暗邪眼<br>`EvilEyeDark`<br>[设定卡](../pcd/batch-06/EvilEyeDark/design.md) | 无职业 · 传说 | 普通单位。 | — | — | — |
+| U369 | 半人马<br>`Centaur`<br>[设定卡](../pcd/batch-13/Centaur/design.md) | 无职业 · 传说 | 每次攻击连打两下。 | 迅捷 | — | — |
+| U370 | 四眼<br>`FourEyes`<br>[设定卡](../pcd/batch-13/FourEyes/design.md) | 无职业 · 传说 | 盯住一个目标越打越痛。 | 诅咒 | — | — |
+| U371 | 幽灵骑士<br>`GhostKnight`<br>[设定卡](../pcd/batch-13/GhostKnight/design.md) | 无职业 · 传说 | 受到的普通攻击伤害减少。 | 潜行 | — | — |
+| U372 | 蜜熊<br>`HoneyBear`<br>[设定卡](../pcd/batch-13/HoneyBear/design.md) | 无职业 · 传说 | 死亡时为身边友军回血。 | 治疗 | — | — |
+| U373 | 宝箱怪<br>`Mimic`<br>[设定卡](../pcd/batch-13/Mimic/design.md) | 无职业 · 传说 | 击杀时抢积分。 | 金币 | — | — |
+| U374 | 针刺者<br>`Needler`<br>[设定卡](../pcd/batch-13/Needler/design.md) | 无职业 · 传说 | 攻击越来越快。 | 迅捷 | 急速射击：敌人进入攻击范围 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U375 | 食人魔<br>`OgreEnemy`<br>[设定卡](../pcd/batch-13/OgreEnemy/design.md) | 无职业 · 传说 | 普通单位。 | — | — | — |
+| U376 | 头狼<br>`PackLeader`<br>[设定卡](../pcd/batch-13/PackLeader/design.md) | 无职业 · 传说 | 让身边友军伤害提高，但更脆。 | 光环 · 伤害 | — | — |
+| U377 | 萨满<br>`Shaman`<br>[设定卡](../pcd/batch-13/Shaman/design.md) | 无职业 · 传说 | 让一名友军加速。 | 狂怒 | — | — |
+| U378 | 攻城锤<br>`SiegeRam`<br>[设定卡](../pcd/batch-13/SiegeRam/design.md) | 无职业 · 传说 | 受到的远程伤害减少。 | 守护 | — | — |
+| U379 | 女巫<br>`Witch`<br>[设定卡](../pcd/batch-13/Witch/design.md) | 无职业 · 传说 | 召唤蛙人。 | 召唤 | 召唤蛙人：有敌人逼近到 600 以内 | 像素角色自己的蓄力 → 施放 → 收招（设定卡） |
+| U380 | 刻耳柏洛斯<br>`Cerberus`<br>[设定卡](../pcd/batch-07/Cerberus/design.md) | 无职业 · undefined | 身边敌人死亡时回血、加速。 | 狂怒 | — | — |
+| U381 | 混沌屠夫<br>`ChaosButcher`<br>[设定卡](../pcd/batch-06/ChaosButcher/design.md) | 无职业 · undefined | 持续毒伤目标，身边敌人死亡时回血、加速。 | 毒 | — | — |
+| U382 | 混沌卫黑卡托斯<br>`ChaosGuardBlackKatos`<br>[设定卡](../pcd/batch-06/ChaosGuardBlackKatos/design.md) | 无职业 · undefined | 防御更高，身边敌人死亡时回血、加速。 | 守护 | — | — |
+| U383 | 地龙王加贡<br>`EarthDragonKingGargon`<br>[设定卡](../pcd/batch-07/EarthDragonKingGargon/design.md) | 无职业 · undefined | 防御更高。 | 守护 | — | — |
+| U384 | 邪眼王尼克松<br>`EvilEyeKingNixon`<br>[设定卡](../pcd/batch-00-pilot/EvilEyeKingNixon/design.md) | 无职业 · undefined | 防御更高，身边敌人死亡时回血、加速。 | 守护 | — | — |
+| U385 | 豹帝萨瓦隆<br>`LeopardEmperorSavalon`<br>[设定卡](../pcd/batch-06/LeopardEmperorSavalon/design.md) | 无职业 · undefined | 身边敌人死亡时回血、加速。 | 狂怒 | — | — |
+| U386 | 蛛皇阿纳佐斯<br>`SpiderEmperorAnazos`<br>[设定卡](../pcd/batch-07/SpiderEmperorAnazos/design.md) | 无职业 · undefined | 防御更高。 | 守护 | — | — |
+| U387 | 克拉肯<br>`Kraken`<br>[设定卡](../pcd/batch-13/Kraken/design.md) | 无职业 · undefined | 防御更高。 | 守护 | — | — |
 
 #### 召唤物 / 衍生单位（20）
 
 | 编号 | 单位 | 职业 · 品质 | 卡片上的一句话 | 开战激活 | 自带法力技能 · 触发条件 | 技能演出 |
 |---|---|---|---|---|---|---|
-| U322 | 邪犬<br>`EvilDog`<br>[设定卡](../pcd/batch-05/EvilDog/design.md) | 战士 · 普通 | 近战输出。 | — | — | — |
-| U323 | 魔豹<br>`MagicLeopard`<br>[设定卡](../pcd/batch-05/MagicLeopard/design.md) | 射手 · 普通 | 远程输出。 | — | — | — |
-| U324 | 月豹<br>`MoonLeopard`<br>[设定卡](../pcd/batch-05/MoonLeopard/design.md) | 射手 · 普通 | 远程输出。 | — | — | — |
-| U325 | 看门犬<br>`Watchdog`<br>[设定卡](../pcd/batch-05/Watchdog/design.md) | 战士 · 普通 | 近战输出。 | — | — | — |
-| U326 | 小蜘蛛<br>`Spiderling`<br>[设定卡](../pcd/batch-07/Spiderling/design.md) | 战士 · 普通 | 近战输出。 | — | — | — |
-| U327 | 自爆步兵<br>`BoomSoldier`<br>[设定卡](../pcd/batch-08/BoomSoldier/design.md) | 战士 · 普通 | 冲上去自爆。 | 火焰 | — | — |
-| U328 | 小螃蟹<br>`Crabling`<br>[设定卡](../pcd/batch-10/Crabling/design.md) | 先锋 · 普通 | 站在前排扛伤害。 | — | — | — |
-| U329 | 巨蟹钳<br>`Pincer`<br>[设定卡](../pcd/batch-10/Pincer/design.md) | 先锋 · 普通 | 站在前排扛伤害。 | — | — | — |
-| U330 | 影骑士分身<br>`ShadowKnightReplicator`<br>[设定卡](../pcd/batch-10/ShadowKnightReplicator/design.md) | 战士 · 普通 | 近战输出。 | — | — | — |
-| U331 | 影剑士分身<br>`ShadowSwordsmanReplicator`<br>[设定卡](../pcd/batch-10/ShadowSwordsmanReplicator/design.md) | 战士 · 普通 | 近战输出。 | — | — | — |
-| U332 | 野人矛兵<br>`WildManSpearman`<br>[设定卡](../pcd/batch-10/WildManSpearman/design.md) | 战士 · 普通 | 近战输出。 | — | — | — |
-| U333 | 舞蛇<br>`DancingSnake`<br>[设定卡](../pcd/batch-14/DancingSnake/design.md) | 战士 · 普通 | 近战输出。 | — | — | — |
-| U334 | 蛙人<br>`Froggo`<br>[设定卡](../pcd/batch-14/Froggo/design.md) | 射手 · 普通 | 远程输出。 | — | — | — |
-| U335 | 骨龙<br>`BoneDragon`<br>[设定卡](../pcd/batch-16/BoneDragon/design.md) | 射手 · 普通 | 远程输出。 | — | — | — |
-| U336 | 恶魔<br>`Diabolic`<br>[设定卡](../pcd/batch-16/Diabolic/design.md) | 射手 · 普通 | 召唤小鬼。 | 召唤 | — | — |
-| U337 | 恐狼<br>`DireWolf`<br>[设定卡](../pcd/batch-16/DireWolf/design.md) | 战士 · 普通 | 近战输出。 | — | — | — |
-| U338 | 灰狼<br>`GrayWolf`<br>[设定卡](../pcd/batch-16/GrayWolf/design.md) | 战士 · 普通 | 近战输出。 | — | — | — |
-| U339 | 老猎犬<br>`OldHound`<br>[设定卡](../pcd/batch-16/OldHound/design.md) | 战士 · 普通 | 近战输出。 | — | — | — |
-| U340 | 复仇之龙<br>`VengefulDragon`<br>[设定卡](../pcd/batch-15/VengefulDragon/design.md) | 射手 · 普通 | 远程输出。 | — | — | — |
-| U341 | 魔像<br>`Golem`<br>[设定卡](../pcd/batch-01/Golem/design.md) | 先锋 · 史诗 | 站在前排扛伤害。 | — | — | — |
+| U388 | 邪犬<br>`EvilDog`<br>[设定卡](../pcd/batch-05/EvilDog/design.md) | 战士 · 普通 | 近战输出。 | — | — | — |
+| U389 | 魔豹<br>`MagicLeopard`<br>[设定卡](../pcd/batch-05/MagicLeopard/design.md) | 射手 · 普通 | 远程输出。 | — | — | — |
+| U390 | 月豹<br>`MoonLeopard`<br>[设定卡](../pcd/batch-05/MoonLeopard/design.md) | 射手 · 普通 | 远程输出。 | — | — | — |
+| U391 | 看门犬<br>`Watchdog`<br>[设定卡](../pcd/batch-05/Watchdog/design.md) | 战士 · 普通 | 近战输出。 | — | — | — |
+| U392 | 小蜘蛛<br>`Spiderling`<br>[设定卡](../pcd/batch-07/Spiderling/design.md) | 战士 · 普通 | 近战输出。 | — | — | — |
+| U393 | 自爆步兵<br>`BoomSoldier`<br>[设定卡](../pcd/batch-08/BoomSoldier/design.md) | 战士 · 普通 | 冲上去自爆。 | 火焰 | — | — |
+| U394 | 小螃蟹<br>`Crabling`<br>[设定卡](../pcd/batch-10/Crabling/design.md) | 先锋 · 普通 | 站在前排扛伤害。 | — | — | — |
+| U395 | 巨蟹钳<br>`Pincer`<br>[设定卡](../pcd/batch-10/Pincer/design.md) | 先锋 · 普通 | 站在前排扛伤害。 | — | — | — |
+| U396 | 影骑士分身<br>`ShadowKnightReplicator`<br>[设定卡](../pcd/batch-10/ShadowKnightReplicator/design.md) | 战士 · 普通 | 近战输出。 | — | — | — |
+| U397 | 影剑士分身<br>`ShadowSwordsmanReplicator`<br>[设定卡](../pcd/batch-10/ShadowSwordsmanReplicator/design.md) | 战士 · 普通 | 近战输出。 | — | — | — |
+| U398 | 野人矛兵<br>`WildManSpearman`<br>[设定卡](../pcd/batch-10/WildManSpearman/design.md) | 战士 · 普通 | 近战输出。 | — | — | — |
+| U399 | 舞蛇<br>`DancingSnake`<br>[设定卡](../pcd/batch-14/DancingSnake/design.md) | 战士 · 普通 | 近战输出。 | — | — | — |
+| U400 | 蛙人<br>`Froggo`<br>[设定卡](../pcd/batch-14/Froggo/design.md) | 射手 · 普通 | 远程输出。 | — | — | — |
+| U401 | 骨龙<br>`BoneDragon`<br>[设定卡](../pcd/batch-16/BoneDragon/design.md) | 射手 · 普通 | 远程输出。 | — | — | — |
+| U402 | 恶魔<br>`Diabolic`<br>[设定卡](../pcd/batch-16/Diabolic/design.md) | 射手 · 普通 | 召唤小鬼。 | 召唤 | — | — |
+| U403 | 恐狼<br>`DireWolf`<br>[设定卡](../pcd/batch-16/DireWolf/design.md) | 战士 · 普通 | 近战输出。 | — | — | — |
+| U404 | 灰狼<br>`GrayWolf`<br>[设定卡](../pcd/batch-16/GrayWolf/design.md) | 战士 · 普通 | 近战输出。 | — | — | — |
+| U405 | 老猎犬<br>`OldHound`<br>[设定卡](../pcd/batch-16/OldHound/design.md) | 战士 · 普通 | 近战输出。 | — | — | — |
+| U406 | 复仇之龙<br>`VengefulDragon`<br>[设定卡](../pcd/batch-15/VengefulDragon/design.md) | 射手 · 普通 | 远程输出。 | — | — | — |
+| U407 | 魔像<br>`Golem`<br>[设定卡](../pcd/batch-01/Golem/design.md) | 先锋 · 传说 | 站在前排扛伤害。 | — | — | — |
 
 - 部队只有自己的特性，没有额外的主动技能。像素角色在开战激活时播放自己设计的技能（有法力技能的在蓄满时放），见 D08。卡片和悬浮说明只显示职业、战斗力和「卡片上的一句话」（`src/mc-awaken.js` 的特性表）。
 - 开战时，每个有特性的单位依次播放**激活演出**：光点聚向胸口 → 地面冲击环 + 光柱 + 火花 → 这一类的专属花样 → 特性图标从身上冲出、越过头顶再落定，之后一直浮在头顶；特性生效（法力技能放出、击杀）时图标闪一下；亡语类单位死亡时图标飞向击杀者炸开。光环类还会连线到范围内的每个友军。
@@ -770,66 +836,86 @@
 | R008 | 水培农场 | 普通 | 两层种植槽在品红补光灯下，叶子被照成紫粉色、随风轻摆、结着果子；槽底滴水，喷头定时喷雾，农夫提着水壶浇地 | — |
 | R009 | 净水池 | 普通 | 玻璃池里的水从下往上发光，墙上水纹光影流动，红鱼游来游去；水泵叶片转，水管往池里注水溅起水花，管理员拖地 | — |
 | R010 | 监听室 | 普通 | 圆形雷达屏上扫描线转圈，亮点被扫到就亮一下再慢慢暗；戴耳机的监听员坐在转椅上敲键；波形屏上信号流动，路线图上一圈信号扩散、点亮 3 步以内的节点；磁带机的卷盘转着，天线碟慢慢转；每隔一阵出现目标：红点闪、红色警灯把屋子照红、波形乱跳、卷盘飞转，监听员按住耳机凑近，天线转过去对准 | — |
-| R011 | 保险库 | 普通 | 铆钉铁墙上嵌着巨大的圆形金库门；金条堆成金字塔，金币顺着铜滑槽一枚枚滚进金币堆；每隔一阵管理员把拉杆顺着槽一拉到底：黄色警灯旋转、转轮飞转、门栓收回，门向外转开，金光从库里涌出、洒满地面，再轰地关上、门栓弹回、喷一团汽 | — |
-| R012 | 弩炮室 | 普通 | 巨型弩炮架在木架上，弦已上好、大箭已搭上，斜指墙上的射口，射口外是月夜和地面的草；墙上的架子挂着一排大箭，桶里插着箭，吊灯在弩臂上方轻轻晃，火盆火苗翻动，月光从射口斜照进来、灰尘在光里飘；守卫扶着绞盘，不时使劲再绞几圈，弩臂吱呀往后一弯，梁上落下细灰；开火时弩臂猛地弹回，大箭拖着白光从射口飞出，木架一震、火花和尘土四起、吊灯被震得直晃，守卫再把弦绞回去 | bolt · 射程 2 |
-| R013 | 蒸汽加农炮 | 普通 | 长炮管架在铆钉炮架上，从铜圈炮口伸出去指着夜空；左边铁架上排着两层黑色圆弹，链条吊斗从地板口把炮弹一发发吊上来，地板口下透出弹药库的灯光，吊机顶上的汽机一边拉链一边冒汽、琥珀灯跟着转；炮手守着炮尾，不时转身从吊斗里抱出一发炮弹塞进炮膛，炮膛嘶地冒汽；前面摆着火药桶和一堆码成金字塔的炮弹；开火时炮口喷出一团火光、满屋一亮，炮管往后一坐，炮尾两侧喷出白汽，吊钩被震得来回摆 | shell · 射程 3 · 溅射 |
-| R014 | 特斯拉线圈 | 普通 | 线圈立在黑黄警示条的机柜上，底座上平盘着三圈铜管，中间的铜线绕得密密的，顶上是金属圆环和放电球，细小的电弧不停从球上窜出、在圆环上爬，不时一道电弧跳到两边的避雷杆上；左边闸刀开关偶尔冒火花，电容管里的电一格格涨，工程师拿着夹板看屏幕，地上盘着一卷黄色电缆；电容充满时两道大电弧同时打到避雷杆、满屋一白，工程师抬手挡脸；开火时电弧穿过天花板的导电口冲上地面，火花往下落，红色警示灯一闪 | chain · 射程 2 · 连锁 3 |
-| R015 | 奥术尖塔 | 普通 | 黄铜转台上架着一根紫水晶炮管，斜指墙角的射击口，口外是月夜和半个月亮，口沿结着冰凌、不时滴水；两道符环套在炮管上转，炮口前还悬着一道，一道亮光不停沿水晶往上跑；左边的充能线圈里紫光一路往上涌，两道符环绕着它上下转，能量顺着地上的导管流进炮座；技师戴着镜片、捧着书站在一旁，墙上架着备用水晶，烛台摇曳，头顶挂着几张符纸；技师举书念咒时符文飞向炮尾、符环收紧、水晶一亮、炮口冒出冷雾；开火时符环猛地收紧往前冲，一道紫蓝光束从射击口射出，口沿震落一片蓝白冰晶，冷雾涌进来 | arcane · 射程 3 · 减速 |
-| R016 | 沃尔夫斯堡工厂 | 传说 | 夜里的汽车厂，流水线一站一停：车架从门帘里开进来，橙色机械臂从托盘上夹起车壳落到车架上，另一只机械臂沿车缝焊接，火花四溅，蓝色焊光一闪一闪照亮两只机械臂；两盏绿罩吊灯在流水线和地面上照出暖黄的光圈；小车停在金色检测门下，扫描线扫过、车灯亮起，门前光亮的钢板地面映出车灯的倒影；门梁上一排圆指示灯，每下线一辆车就多亮一盏，满六盏重新开始；每三辆就有一辆整辆变成金色，亮起的是金灯，一道金光落下，再顺着流水线一路扫回去，两盏吊灯跟着一亮，亮着的指示灯一起闪，天桥上的工长举手欢呼；地上刷着黄黑相间的警示线，一辆黄色零件小车闪着灯慢慢来回运零件；挂着轮胎的吊架从窗前慢慢移过 | — |
-| R017 | 威尼斯兵工厂 | 史诗 | 起雾的夜里的兵工厂船坞，没有月亮，远处的灯火把雾映成淡紫：一艘带桨的大帆船占满船坞，三角主帆上画着金狮、边缘在风里抖，船头船尾的灯笼摇曳、船尾窗户透着灯光，主桅顶上红底金狮旗在飘；后面是两座城门塔的黑影，左边圣马可钟楼的钟亭亮着灯，对岸屋顶的窗户和岸边一排路灯亮着，灯影在水里晃；薄雾一团团从船后和水面上飘过；岸上木吊车里一个人踩着大轮子走，高高的吊臂从岸边的木架上吊起一门铜炮，转过夜空，放进船舱，甲板上的水手伸手去接；炮一碰到船舷，火星和尘土一溅、金光照亮整条船，两边水花拍船；岸边火盆冒火星，前面有红白条纹的系船桩和一条黑色贡多拉，翘起的船头上立着银色的铁梳，船尾挂着一盏灯笼 | — |
-| R018 | 鲁尔区 | 史诗 | 夜里的矿场，天空被工厂映成暗红，远处是厂房、顶上亮着红灯的储气罐和冒烟的烟囱：锈红色的井架上两只天轮跟着绳子转，罐笼载着煤车从井口升上来；戴头灯的矿工把满满一车煤推出来倒进溜槽，煤块滚下去，扬起一团煤灰；对面高炉顶上烧着火炬，每隔一会儿穿灰罩衣的炉前工用长铁杆捅开出铁口，铁水顺着槽流进铁水罐，火花四溅、橙光一亮，罐口透着红光，罐里的铁水慢慢变暗 | — |
-| R019 | 埃菲尔铁塔 | 传说 | 巴黎的黄昏，天空从深蓝过渡到紫色和粉橘，一层低云被晚风吹着慢慢飘：铁塔立在塞纳河对岸，镂空的钢架透出金光，平台亮着一圈灯，亮灯的电梯厢沿着塔腿上上下下；塔顶探照灯转着扫过天空，扫到哪片云，哪片云就被照亮；河面上铁塔的灯光拉成一根根晃动的金色光柱，一艘玻璃顶游船亮着一排窗慢慢驶过，船灯照亮对岸石堤，船尾拖着白色浪花；对岸车灯来来往往，远处屋顶亮着窗、树丛间有金顶、山上有白教堂，一架飞机闪着灯飞过；每隔一会儿灯光秀开始：白色闪光从塔尖往下铺满全塔，第二道探照灯亮起，两道光一起扫过云层，河里的光柱也闪起白光，画家转身举起画笔看；近处路灯照着河岸石板，飞蛾绕着灯飞，栗树枝上不时飘下一片叶子 | — |
-| R020 | 马丘比丘 | 稀有 | 安第斯山的清晨：太阳刚从右边山脊升起，夹在尖尖的华纳比丘山和悬崖之间，两道阳光斜斜照过山谷；石头城下面是一片云海，远处的雪山和蓝色山峰从云里露出来，云海表面的云团慢慢翻滚；绿色梯田一层层往下没进云里，一缕缕云雾顺着梯田往上爬；花岗岩房子开着梯形的门，两座盖着陡陡的草顶，草顶里冒出做早饭的烟，小山包上的拴日石冒着金色的光点；右边悬崖上一道瀑布落下；小片白云飘过太阳，农夫在最低一层梯田上锄地，前面一头披着花毯的羊驼低头吃草、抬头嚼嚼，每隔一会儿一只秃鹰滑翔着飞过天空，拴日石跟着一亮 | — |
-| R021 | 金字塔 | 史诗 | 黄昏的金色沙漠，夕阳正落在大金字塔尖的后面：金字塔背着光成了暗色剪影，两条塔边描着一道金边，霞光从塔尖向整片天空放射；旁边是戴蓝金头巾的狮身人面像和刻满符号的红色方尖碑，塔影朝近处铺在沙地上；石匠抡锤凿石、石粉飞溅，建筑师拿着图纸来回踱步，两只鹰绕着塔顶盘旋，风吹着沙粒贴地流动；每隔一阵两个光点沿塔边爬上塔尖，金顶一闪，光芒向四周射出，一道光柱冲天，一片金光顺着塔面往下扫，方尖碑上的符号从上到下亮起 | — |
-| R022 | 巨石阵 | 稀有 | 月夜草原上的巨石阵：月亮悬在中央石门正上方，门里立着一道淡蓝的光，光丝和光点不停往上飘，石头上的刻纹跟着一明一暗；白袍祭司拄杖守着祭石，两只羊低头吃草，篝火摇曳，萤火点点，地上漫着薄雾，偶尔划过一颗流星；每隔一阵月光直落进石门，门光大亮，刻纹从中间往外一块块亮起，一圈光在草地上散开，祭司举起法杖 | — |
-| R023 | 空中花园 | 史诗 | 天快亮时蓝色天光下的巴比伦：天空从深蓝淡到淡紫，几朵云的底边染成粉色，晨星一闪一闪，远处的城站在雾里；三层蓝色琉璃砖的阶梯花园，金边拱门里亮着灯，檐下挂的小灯笼轻轻摇晃，每层都长满花丛、柏树和棕榈，藤蔓顺墙垂下随风摆动；顶上金顶亭子里挂着两盏吊灯，一只倾倒的陶瓮往外流水，水沿中间一层层往下淌、在每层台沿卷起白色水花，流进发光的水池；一缕缕薄雾从花园前飘过，地上的雾慢慢翻滚，水池上水汽升腾；园丁提壶浇花，燕子飞过，近处一枝开花的树枝轻摇、花瓣飘落；每隔一阵一股大水冲下，水池溅起水花，水雾变浓，雾里挂出一道彩虹，绿色十字从水里升起 | — |
-| R024 | 阿尔忒弥斯神庙 | 稀有 | 月牙下林边的白色希腊神庙：带凹槽的石柱、山墙上的金色月牙，中间敞开的神殿门里站着头戴月牙、手持金弓的女神像，台阶上两只铜火盆；左边一棵银绿叶子的橄榄树，庙前祭坛燃着像素火焰，旁边堆着陶罐、麦束和果子箱，女祭司照看火焰，侍从来回搬箱子，一头雄鹿在旁边低头吃草、偶尔抬头，飞蛾绕火，橄榄叶轻轻抖动；每隔一阵祭司举起双手撒香，火焰猛地窜高、火星四溅，两只火盆冒出香烟，女神像周身亮起金边、月牙冠放光，鹿猛地抬起头 | — |
-| R025 | 亚历山大图书馆 | 史诗 | 卷轴格从地面一直排到拱顶，有些卷轴发着紫光；大拱窗外，海岛上的法罗斯灯塔燃着火、光束来回扫过夜空，月光斜落到地上；金色浑天仪的圆环慢慢转动，几本书像鸟一样在空中飞，管理员爬梯子取卷轴，老学者在讲台前读书，油灯摇晃；每隔一阵讲台上的大书哗哗翻页，发光的字盘旋升起，一道光波扫过所有卷轴格，飞书打着转 | — |
-| R026 | 罗德岛巨像 | 史诗 | 日出时的港口：太阳从右边海面升起，霞光一道道射满天空，几条细云镶着金边，海面上一条金色光带闪闪发亮、一直铺到眼前；铜色巨人跨立在两座石台上，背着光成了暗色剪影，朝着太阳的一侧描着一圈金边，头戴光芒王冠，一手高举还在燃烧的火炬，一手握着的大锤平放在左边石台上；帆船挂着灯从他两腿间驶过，近处码头上持矛执盾的卫兵守在火盆旁，左边远岸的小城还亮着几盏灯，每隔一阵浪头拍上石台；开火时巨人抡起大锤砸向石台，锤下迸出一团星形闪光，石台正面裂开几道发红的裂纹，火星和石粉飞溅，两边海水冲起，水面一圈圈荡开，火炬和眼睛一亮 | colossus · 射程 5 · 溅射 |
-| R027 | 兵马俑 | 传说 | 秦陵大厅里，三排陶俑站在夯土台上持矛列队，中间是将军俑，前排两俑之间露出一匹陶马；两侧青铜连枝灯烛光摇曳，右边铜鼎里火焰翻滚、火星上飘，墙上铜盘里一条蟠龙绕着玉眼盘成一圈，不时闪过一道光；守陵人来回踱步，隔一会儿敲响铜锣，金光从左到右扫过军阵，陶俑眼睛一个个亮起、抖落尘土、长矛齐齐一斜 | 守城时召唤援军 |
-| R028 | 奥林匹亚宙斯神像 | 史诗 | 神殿深处，象牙与黄金的宙斯坐在乌木宝座上，一手高举雷霆、一手斜握着顶上立着金鹰的权杖；雷霆噼啪闪着电弧，脚下油池里倒映着金色的神像、波纹来回晃动，两座三足火盆燃烧，重装步兵在台前巡逻；开火时雷霆变白、闪电劈穿屋顶，宙斯双眼发光、手臂一震，满殿一亮、火花落地 | zeus · 射程 4 · 连锁 4 |
-| R029 | 高德院 | 稀有 | 月夜的庭院里，青铜大佛盘腿坐在莲花座上，满月正好挂在他脑后当作光环，月光给他的头和肩镶上一道亮边；左边黑松伸进画面，枝上纸灯笼轻轻摇晃，右边铜香炉升起一缕缕青烟、飘到高处散成小团，石灯笼透着烛光，萤火虫一闪一闪；一名武僧练长刀，一名武僧扫地；练到最后一记劈砍，风卷松针、吹弯青烟，大佛额头闪过一点光 | 守城时召唤援军 |
-| R030 | 圣索菲亚大教堂 | 史诗 | 夜里的海边，大圆顶、半圆顶和扶壁被岸边的灯照得暖红，一排排窗户透出烛光，一弯新月挂在圆顶右上方，给圆顶镶上一道冷光；四座宣礼塔立在两侧，海面上摇着一条条灯影和月光；近处一条小船随浪起伏，船头挂着灯，船夫站着摇橹；隔一会儿宣礼塔的阳台灯一圈圈亮起、塔尖一盏盏点亮，塔间的灯串从两头亮到中间，一群鸽子从右边飞来，绕着圆顶转一圈再飞走 | — |
-| R031 | 紫禁城 | 传说 | 雪夜里，太和殿立在三层汉白玉台基上，栏杆积着雪，一排排龙头挂着冰柱，台阶正中是雕着龙的御路；重檐金瓦上压着厚厚的白雪，殿后一层层金顶红墙退进雪里，远处山顶一座亭子；台上铜鹤、铜龟和鎏金香炉冒着青烟，台下一对石狮，近处一枝红梅上站着喜鹊，一口鎏金铜缸积满了雪，一盏宫灯轻轻摆动；两名侍卫守在台前，黄马褂的官员领着一队侍卫走来，到岗位前敬礼、换岗；隔一会儿，宫灯沿着台阶一对对亮起，殿门打开，金光顺着台阶铺下来，殿后放起烟花，屋顶上的乌鸦和梅枝上的喜鹊一起惊飞 | — |
-| R032 | 泰姬陵 | 史诗 | 月光下的白色陵墓：满月正好升在大圆顶后面，顶上细细的金色尖饰映在月亮上；洋葱圆顶、两座小亭、大拱门里一盏灯，两侧宣礼塔立在台基上，柏树成排，圆顶和塔顶的上沿镶着一道冷白的月光边；长水池里倒映着倒过来的陵墓，倒影最下面正是月亮的倒影，水面一道道晃动，月亮倒影两边碎光闪烁，拱门的暖光在倒影里一明一暗，岸边一排油灯摇曳；灵魂从水里慢慢升起，每隔一会儿三团魂光飞进拱门，墙面、镶边和水里的倒影一起泛起紫光，结出一枚灵魂碎片朝月亮飞走；守陵人提着灯沿池边巡夜 | — |
-| R033 | 大本钟 | 稀有 | 雾夜的伦敦，看不见月亮和星星：钟楼的表盘在雾里发光，外面罩着一圈圈光晕，分针一圈圈转；转到整点大钟一摆、表盘一亮，声波一圈圈荡开，鸽子从钟楼上飞散又飞回；雾带一层层横着飘过议会大楼和街道，一近一远两盏煤气路灯各罩着一圈硬边光晕、灯火摇曳；议会大楼的尖塔和窗灯、烟囱冒烟；时不时下起细雨，雨丝经过灯下被照亮，湿石板和水洼上溅起小水圈，水洼倒映着钟楼；推车上堆着货箱和苹果，巡警踱步、钟响时掏出怀表对时 | — |
-| R034 | 自由女神像 | 史诗 | 黎明时从渡轮的栏杆望出去：天空从头顶的深蓝变成淡紫、粉红，海天交界一片金色，太阳在自由岛和曼哈顿之间刚露出半个，几道薄云横过日面；铜绿色的女神站在花岗岩基座和星形堡垒上，朝太阳的一侧镶着一道亮边，高举的火炬熊熊燃烧；火炬是一座灯塔，光束在港口上空转圈，每转到正对你时一阵强光；被照成粉色的云慢慢飘，海面上粉光金光闪烁，海鸥绕着她盘旋，远处轮船从太阳前驶过；曼哈顿的楼顶镶着金边，还有几扇窗亮着；水手靠在栏杆边，光束扫过时举起望远镜，船灯摇晃、旗子飘动 | — |
-| R035 | 悉尼歌剧院 | 稀有 | 没有月亮的港湾夜里，浅色花岗岩台基上一片白色贝壳屋顶，台基左头是一段宽台阶；灯光秀一轮换一种颜色（粉、青、金、紫）：瓦面上投出斜条纹、扫过的光带或一圈圈光环，台基和码头也被照成同一种颜色，几道激光从屋顶后面射向夜空、慢慢摆动，港湾大桥的拱上彩灯一串串跑过；玻璃幕墙透出暖光；码头上一个街头小提琴手把琴夹在下巴下来回拉弓，音符从琴弦和大厅里飘起；码头上挂着彩灯，海里倒映着倒过来的浅色扇片；每隔一会儿烟花从海面升起炸开，整片屋顶从右到左被染成粉、青、金色，连同倒影一起亮上两三秒再褪回白色 | — |
+| R011 | 保险库 | 稀有 | 铆钉铁墙上嵌着巨大的圆形金库门；金条堆成金字塔，金币顺着铜滑槽一枚枚滚进金币堆；每隔一阵管理员把拉杆顺着槽一拉到底：黄色警灯旋转、转轮飞转、门栓收回，门向外转开，金光从库里涌出、洒满地面，再轰地关上、门栓弹回、喷一团汽 | — |
+| R012 | 弩炮室 | 史诗 | 巨型弩炮架在木架上，弦已上好、大箭已搭上，斜指墙上的射口，射口外是月夜和地面的草；墙上的架子挂着一排大箭，桶里插着箭，吊灯在弩臂上方轻轻晃，火盆火苗翻动，月光从射口斜照进来、灰尘在光里飘；守卫扶着绞盘，不时使劲再绞几圈，弩臂吱呀往后一弯，梁上落下细灰；开火时弩臂猛地弹回，大箭拖着白光从射口飞出，木架一震、火花和尘土四起、吊灯被震得直晃，守卫再把弦绞回去 | — |
+| R013 | 蒸汽加农炮 | 传说 | 长炮管架在铆钉炮架上，从铜圈炮口伸出去指着夜空；左边铁架上排着两层黑色圆弹，链条吊斗从地板口把炮弹一发发吊上来，地板口下透出弹药库的灯光，吊机顶上的汽机一边拉链一边冒汽、琥珀灯跟着转；炮手守着炮尾，不时转身从吊斗里抱出一发炮弹塞进炮膛，炮膛嘶地冒汽；前面摆着火药桶和一堆码成金字塔的炮弹；开火时炮口喷出一团火光、满屋一亮，炮管往后一坐，炮尾两侧喷出白汽，吊钩被震得来回摆 | — |
+| R014 | 特斯拉线圈 | 史诗 | 线圈立在黑黄警示条的机柜上，底座上平盘着三圈铜管，中间的铜线绕得密密的，顶上是金属圆环和放电球，细小的电弧不停从球上窜出、在圆环上爬，不时一道电弧跳到两边的避雷杆上；左边闸刀开关偶尔冒火花，电容管里的电一格格涨，工程师拿着夹板看屏幕，地上盘着一卷黄色电缆；电容充满时两道大电弧同时打到避雷杆、满屋一白，工程师抬手挡脸；开火时电弧穿过天花板的导电口冲上地面，火花往下落，红色警示灯一闪 | — |
+| R015 | 奥术尖塔 | 史诗 | 黄铜转台上架着一根紫水晶炮管，斜指墙角的射击口，口外是月夜和半个月亮，口沿结着冰凌、不时滴水；两道符环套在炮管上转，炮口前还悬着一道，一道亮光不停沿水晶往上跑；左边的充能线圈里紫光一路往上涌，两道符环绕着它上下转，能量顺着地上的导管流进炮座；技师戴着镜片、捧着书站在一旁，墙上架着备用水晶，烛台摇曳，头顶挂着几张符纸；技师举书念咒时符文飞向炮尾、符环收紧、水晶一亮、炮口冒出冷雾；开火时符环猛地收紧往前冲，一道紫蓝光束从射击口射出，口沿震落一片蓝白冰晶，冷雾涌进来 | — |
+| R016 | 沃尔夫斯堡工厂 | undefined | 夜里的汽车厂，流水线一站一停：车架从门帘里开进来，橙色机械臂从托盘上夹起车壳落到车架上，另一只机械臂沿车缝焊接，火花四溅，蓝色焊光一闪一闪照亮两只机械臂；两盏绿罩吊灯在流水线和地面上照出暖黄的光圈；小车停在金色检测门下，扫描线扫过、车灯亮起，门前光亮的钢板地面映出车灯的倒影；门梁上一排圆指示灯，每下线一辆车就多亮一盏，满六盏重新开始；每三辆就有一辆整辆变成金色，亮起的是金灯，一道金光落下，再顺着流水线一路扫回去，两盏吊灯跟着一亮，亮着的指示灯一起闪，天桥上的工长举手欢呼；地上刷着黄黑相间的警示线，一辆黄色零件小车闪着灯慢慢来回运零件；挂着轮胎的吊架从窗前慢慢移过 | — |
+| R017 | 威尼斯兵工厂 | 传说 | 起雾的夜里的兵工厂船坞，没有月亮，远处的灯火把雾映成淡紫：一艘带桨的大帆船占满船坞，三角主帆上画着金狮、边缘在风里抖，船头船尾的灯笼摇曳、船尾窗户透着灯光，主桅顶上红底金狮旗在飘；后面是两座城门塔的黑影，左边圣马可钟楼的钟亭亮着灯，对岸屋顶的窗户和岸边一排路灯亮着，灯影在水里晃；薄雾一团团从船后和水面上飘过；岸上木吊车里一个人踩着大轮子走，高高的吊臂从岸边的木架上吊起一门铜炮，转过夜空，放进船舱，甲板上的水手伸手去接；炮一碰到船舷，火星和尘土一溅、金光照亮整条船，两边水花拍船；岸边火盆冒火星，前面有红白条纹的系船桩和一条黑色贡多拉，翘起的船头上立着银色的铁梳，船尾挂着一盏灯笼 | — |
+| R018 | 鲁尔区 | 传说 | 夜里的矿场，天空被工厂映成暗红，远处是厂房、顶上亮着红灯的储气罐和冒烟的烟囱：锈红色的井架上两只天轮跟着绳子转，罐笼载着煤车从井口升上来；戴头灯的矿工把满满一车煤推出来倒进溜槽，煤块滚下去，扬起一团煤灰；对面高炉顶上烧着火炬，每隔一会儿穿灰罩衣的炉前工用长铁杆捅开出铁口，铁水顺着槽流进铁水罐，火花四溅、橙光一亮，罐口透着红光，罐里的铁水慢慢变暗 | — |
+| R019 | 埃菲尔铁塔 | undefined | 巴黎的黄昏，天空从深蓝过渡到紫色和粉橘，一层低云被晚风吹着慢慢飘：铁塔立在塞纳河对岸，镂空的钢架透出金光，平台亮着一圈灯，亮灯的电梯厢沿着塔腿上上下下；塔顶探照灯转着扫过天空，扫到哪片云，哪片云就被照亮；河面上铁塔的灯光拉成一根根晃动的金色光柱，一艘玻璃顶游船亮着一排窗慢慢驶过，船灯照亮对岸石堤，船尾拖着白色浪花；对岸车灯来来往往，远处屋顶亮着窗、树丛间有金顶、山上有白教堂，一架飞机闪着灯飞过；每隔一会儿灯光秀开始：白色闪光从塔尖往下铺满全塔，第二道探照灯亮起，两道光一起扫过云层，河里的光柱也闪起白光，画家转身举起画笔看；近处路灯照着河岸石板，飞蛾绕着灯飞，栗树枝上不时飘下一片叶子 | — |
+| R020 | 马丘比丘 | 史诗 | 安第斯山的清晨：太阳刚从右边山脊升起，夹在尖尖的华纳比丘山和悬崖之间，两道阳光斜斜照过山谷；石头城下面是一片云海，远处的雪山和蓝色山峰从云里露出来，云海表面的云团慢慢翻滚；绿色梯田一层层往下没进云里，一缕缕云雾顺着梯田往上爬；花岗岩房子开着梯形的门，两座盖着陡陡的草顶，草顶里冒出做早饭的烟，小山包上的拴日石冒着金色的光点；右边悬崖上一道瀑布落下；小片白云飘过太阳，农夫在最低一层梯田上锄地，前面一头披着花毯的羊驼低头吃草、抬头嚼嚼，每隔一会儿一只秃鹰滑翔着飞过天空，拴日石跟着一亮 | — |
+| R021 | 金字塔 | 传说 | 黄昏的金色沙漠，夕阳正落在大金字塔尖的后面：金字塔背着光成了暗色剪影，两条塔边描着一道金边，霞光从塔尖向整片天空放射；旁边是戴蓝金头巾的狮身人面像和刻满符号的红色方尖碑，塔影朝近处铺在沙地上；石匠抡锤凿石、石粉飞溅，建筑师拿着图纸来回踱步，两只鹰绕着塔顶盘旋，风吹着沙粒贴地流动；每隔一阵两个光点沿塔边爬上塔尖，金顶一闪，光芒向四周射出，一道光柱冲天，一片金光顺着塔面往下扫，方尖碑上的符号从上到下亮起 | — |
+| R022 | 巨石阵 | 史诗 | 月夜草原上的巨石阵：月亮悬在中央石门正上方，门里立着一道淡蓝的光，光丝和光点不停往上飘，石头上的刻纹跟着一明一暗；白袍祭司拄杖守着祭石，两只羊低头吃草，篝火摇曳，萤火点点，地上漫着薄雾，偶尔划过一颗流星；每隔一阵月光直落进石门，门光大亮，刻纹从中间往外一块块亮起，一圈光在草地上散开，祭司举起法杖 | — |
+| R023 | 空中花园 | 传说 | 天快亮时蓝色天光下的巴比伦：天空从深蓝淡到淡紫，几朵云的底边染成粉色，晨星一闪一闪，远处的城站在雾里；三层蓝色琉璃砖的阶梯花园，金边拱门里亮着灯，檐下挂的小灯笼轻轻摇晃，每层都长满花丛、柏树和棕榈，藤蔓顺墙垂下随风摆动；顶上金顶亭子里挂着两盏吊灯，一只倾倒的陶瓮往外流水，水沿中间一层层往下淌、在每层台沿卷起白色水花，流进发光的水池；一缕缕薄雾从花园前飘过，地上的雾慢慢翻滚，水池上水汽升腾；园丁提壶浇花，燕子飞过，近处一枝开花的树枝轻摇、花瓣飘落；每隔一阵一股大水冲下，水池溅起水花，水雾变浓，雾里挂出一道彩虹，绿色十字从水里升起 | — |
+| R024 | 阿尔忒弥斯神庙 | 史诗 | 月牙下林边的白色希腊神庙：带凹槽的石柱、山墙上的金色月牙，中间敞开的神殿门里站着头戴月牙、手持金弓的女神像，台阶上两只铜火盆；左边一棵银绿叶子的橄榄树，庙前祭坛燃着像素火焰，旁边堆着陶罐、麦束和果子箱，女祭司照看火焰，侍从来回搬箱子，一头雄鹿在旁边低头吃草、偶尔抬头，飞蛾绕火，橄榄叶轻轻抖动；每隔一阵祭司举起双手撒香，火焰猛地窜高、火星四溅，两只火盆冒出香烟，女神像周身亮起金边、月牙冠放光，鹿猛地抬起头 | — |
+| R025 | 亚历山大图书馆 | 传说 | 卷轴格从地面一直排到拱顶，有些卷轴发着紫光；大拱窗外，海岛上的法罗斯灯塔燃着火、光束来回扫过夜空，月光斜落到地上；金色浑天仪的圆环慢慢转动，几本书像鸟一样在空中飞，管理员爬梯子取卷轴，老学者在讲台前读书，油灯摇晃；每隔一阵讲台上的大书哗哗翻页，发光的字盘旋升起，一道光波扫过所有卷轴格，飞书打着转 | — |
+| R026 | 罗德岛巨像 | undefined | 日出时的港口：太阳从右边海面升起，霞光一道道射满天空，几条细云镶着金边，海面上一条金色光带闪闪发亮、一直铺到眼前；铜色巨人跨立在两座石台上，背着光成了暗色剪影，朝着太阳的一侧描着一圈金边，头戴光芒王冠，一手高举还在燃烧的火炬，一手握着的大锤平放在左边石台上；帆船挂着灯从他两腿间驶过，近处码头上持矛执盾的卫兵守在火盆旁，左边远岸的小城还亮着几盏灯，每隔一阵浪头拍上石台；开火时巨人抡起大锤砸向石台，锤下迸出一团星形闪光，石台正面裂开几道发红的裂纹，火星和石粉飞溅，两边海水冲起，水面一圈圈荡开，火炬和眼睛一亮 | — |
+| R027 | 兵马俑 | undefined | 秦陵大厅里，三排陶俑站在夯土台上持矛列队，中间是将军俑，前排两俑之间露出一匹陶马；两侧青铜连枝灯烛光摇曳，右边铜鼎里火焰翻滚、火星上飘，墙上铜盘里一条蟠龙绕着玉眼盘成一圈，不时闪过一道光；守陵人来回踱步，隔一会儿敲响铜锣，金光从左到右扫过军阵，陶俑眼睛一个个亮起、抖落尘土、长矛齐齐一斜 | — |
+| R028 | 奥林匹亚宙斯神像 | undefined | 神殿深处，象牙与黄金的宙斯坐在乌木宝座上，一手高举雷霆、一手斜握着顶上立着金鹰的权杖；雷霆噼啪闪着电弧，脚下油池里倒映着金色的神像、波纹来回晃动，两座三足火盆燃烧，重装步兵在台前巡逻；开火时雷霆变白、闪电劈穿屋顶，宙斯双眼发光、手臂一震，满殿一亮、火花落地 | — |
+| R029 | 高德院 | 传说 | 月夜的庭院里，青铜大佛盘腿坐在莲花座上，满月正好挂在他脑后当作光环，月光给他的头和肩镶上一道亮边；左边黑松伸进画面，枝上纸灯笼轻轻摇晃，右边铜香炉升起一缕缕青烟、飘到高处散成小团，石灯笼透着烛光，萤火虫一闪一闪；一名武僧练长刀，一名武僧扫地；练到最后一记劈砍，风卷松针、吹弯青烟，大佛额头闪过一点光 | — |
+| R030 | 圣索菲亚大教堂 | 传说 | 夜里的海边，大圆顶、半圆顶和扶壁被岸边的灯照得暖红，一排排窗户透出烛光，一弯新月挂在圆顶右上方，给圆顶镶上一道冷光；四座宣礼塔立在两侧，海面上摇着一条条灯影和月光；近处一条小船随浪起伏，船头挂着灯，船夫站着摇橹；隔一会儿宣礼塔的阳台灯一圈圈亮起、塔尖一盏盏点亮，塔间的灯串从两头亮到中间，一群鸽子从右边飞来，绕着圆顶转一圈再飞走 | — |
+| R031 | 紫禁城 | undefined | 雪夜里，太和殿立在三层汉白玉台基上，栏杆积着雪，一排排龙头挂着冰柱，台阶正中是雕着龙的御路；重檐金瓦上压着厚厚的白雪，殿后一层层金顶红墙退进雪里，远处山顶一座亭子；台上铜鹤、铜龟和鎏金香炉冒着青烟，台下一对石狮，近处一枝红梅上站着喜鹊，一口鎏金铜缸积满了雪，一盏宫灯轻轻摆动；两名侍卫守在台前，黄马褂的官员领着一队侍卫走来，到岗位前敬礼、换岗；隔一会儿，宫灯沿着台阶一对对亮起，殿门打开，金光顺着台阶铺下来，殿后放起烟花，屋顶上的乌鸦和梅枝上的喜鹊一起惊飞 | — |
+| R032 | 泰姬陵 | 传说 | 月光下的白色陵墓：满月正好升在大圆顶后面，顶上细细的金色尖饰映在月亮上；洋葱圆顶、两座小亭、大拱门里一盏灯，两侧宣礼塔立在台基上，柏树成排，圆顶和塔顶的上沿镶着一道冷白的月光边；长水池里倒映着倒过来的陵墓，倒影最下面正是月亮的倒影，水面一道道晃动，月亮倒影两边碎光闪烁，拱门的暖光在倒影里一明一暗，岸边一排油灯摇曳；灵魂从水里慢慢升起，每隔一会儿三团魂光飞进拱门，墙面、镶边和水里的倒影一起泛起紫光，结出一枚灵魂碎片朝月亮飞走；守陵人提着灯沿池边巡夜 | — |
+| R033 | 大本钟 | 史诗 | 雾夜的伦敦，看不见月亮和星星：钟楼的表盘在雾里发光，外面罩着一圈圈光晕，分针一圈圈转；转到整点大钟一摆、表盘一亮，声波一圈圈荡开，鸽子从钟楼上飞散又飞回；雾带一层层横着飘过议会大楼和街道，一近一远两盏煤气路灯各罩着一圈硬边光晕、灯火摇曳；议会大楼的尖塔和窗灯、烟囱冒烟；时不时下起细雨，雨丝经过灯下被照亮，湿石板和水洼上溅起小水圈，水洼倒映着钟楼；推车上堆着货箱和苹果，巡警踱步、钟响时掏出怀表对时 | — |
+| R034 | 自由女神像 | undefined | 黎明时从渡轮的栏杆望出去：天空从头顶的深蓝变成淡紫、粉红，海天交界一片金色，太阳在自由岛和曼哈顿之间刚露出半个，几道薄云横过日面；铜绿色的女神站在花岗岩基座和星形堡垒上，朝太阳的一侧镶着一道亮边，高举的火炬熊熊燃烧；火炬是一座灯塔，光束在港口上空转圈，每转到正对你时一阵强光；被照成粉色的云慢慢飘，海面上粉光金光闪烁，海鸥绕着她盘旋，远处轮船从太阳前驶过；曼哈顿的楼顶镶着金边，还有几扇窗亮着；水手靠在栏杆边，光束扫过时举起望远镜，船灯摇晃、旗子飘动 | — |
+| R035 | 悉尼歌剧院 | 史诗 | 没有月亮的港湾夜里，浅色花岗岩台基上一片白色贝壳屋顶，台基左头是一段宽台阶；灯光秀一轮换一种颜色（粉、青、金、紫）：瓦面上投出斜条纹、扫过的光带或一圈圈光环，台基和码头也被照成同一种颜色，几道激光从屋顶后面射向夜空、慢慢摆动，港湾大桥的拱上彩灯一串串跑过；玻璃幕墙透出暖光；码头上一个街头小提琴手把琴夹在下巴下来回拉弓，音符从琴弦和大厅里飘起；码头上挂着彩灯，海里倒映着倒过来的浅色扇片；每隔一会儿烟花从海面升起炸开，整片屋顶从右到左被染成粉、青、金色，连同倒影一起亮上两三秒再褪回白色 | — |
 | R036 | 金门大桥 | 稀有 | 夕阳下的红色悬索桥：装饰艺术风格的桥塔、主缆垂成弧线，桥面上一串钠灯，车灯来回流动，塔顶红灯一闪一闪；雾一层层从海面滚过，远处货轮从桥下驶过，海面倒映着夕阳和桥；岸边石码头上立着蒸汽雾笛和小锅炉，每隔一会儿看守人一拉链条，雾笛喷出一大团蒸汽、声波一圈圈荡开 | — |
-| R037 | 阿蒙森-斯科特科考站 | 传说 | 极光在夜空翻卷，不时一道亮波沿光幕跑过、下缘泛粉，雪地跟着被照绿；高架科考站亮着一排窗，屋顶天线慢慢转，雷达球顶上红灯闪；冰屋门口透出火光，极点银球两边插着三面小旗在飘；科学家从氦气瓶给探空气球充气、放飞，再拿夹板记下；企鹅摇摇摆摆走过，远处雪地车亮着车灯开过 | — |
-| R038 | 布达拉宫 | 史诗 | 雪山日出：太阳刚从右边山脊后露出一角，光芒向天上散开，天空从夜蓝变成玫瑰色和金色；第一缕阳光把雪峰顶染成粉金色，最先照亮布达拉宫的金顶，下面的白宫和红宫还在清晨的蓝影里，窗里亮着灯，最高的雪峰顶上飘着一缕雪雾；一串经幡横过天空飘；左边香炉冒烟和火星；右边僧人推着大转经筒，每转一圈铃响一声、紫色经文升起；朝圣者摇着手转经筒走过；一阵风来，天上划过两道风线，经幡被吹得拉平，香炉的烟压成一条横线，五色风马纸从经幡绳上卷起飞上天，风最大时太阳一亮、光芒大盛，金顶全部闪一下 | — |
-| R039 | 圣米歇尔山 | 史诗 | 暮色里退潮的海湾：太阳刚落到左边远山后，天空从靛蓝变成玫瑰色和金色；圣米歇尔山立在湿沙滩上，城墙、圆塔、亮窗的小镇和山顶修道院尖塔被晚霞勾出金边，塔尖站着金色天使；湿沙像镜子一样映着晚霞和山影，沙洲一道道隆起，一条潮沟弯弯伸向远处；石堤上卫兵扛着长矛巡逻，提灯火光摇晃，一条小渔船斜躺在沙上，黑白海鸟在沙洲上啄食，角落里的盐沼草轻轻摆；每隔一会儿修道院钟声一响、天使一亮，潮水像奔马一样从海湾冲上沙滩：一道白浪线飞快扫过，整片沙滩变成映着山影的水镜，海鸟惊起飞走，小船被托起扶正、随水起伏；随后潮水退回海湾，留下一个个发亮的水洼慢慢渗干 | — |
-| R040 | 亚历山大灯塔 | 稀有 | 夜海礁石上的灯塔：方形白石塔身、八角层、圆形火室，顶上铜像举着三股叉；火室里火焰翻滚，铜镜转着把一道暖光扫过海面，转到正对这边时整个画面一亮、满海金光；海鸥绕着塔顶飞，浪拍上礁石溅起水花，远处挂条纹帆的商船提着灯从岛后驶过；码头上搬运工把货箱搬到陶罐和粮袋旁，火盆冒火星 | — |
-| R041 | 吴哥窟 | 稀有 | 夕阳下的吴哥窟：一层层回廊和七座莲花苞石塔衬着橙色的天，整座寺倒映在莲池里；水面碎光跟着太阳晃，莲花轻摇，萤火虫在池面闪，棕榈叶摆动；穿橘色袈裟的僧人站在石阶上，身旁是扇形七头蛇栏杆，锣下点着供烛；他每隔一会儿敲一下铜锣：锣面一亮，池面荡开波纹，一群鸟从塔尖飞起掠过晚霞 | — |
-| R042 | 马拉卡纳体育场 | 史诗 | 夜场比赛：顶棚一圈泛光灯雪亮，看台被水泥台阶分成一区一区，黄衣区、绿衣区成片坐满球迷，一排排人头下面是整条的球衣颜色，顶棚在最上面两排投下一道阴影；人浪一块一块站起来、举起手臂再坐下，绕着看台滚过去；一面巨大的巴西国旗被下层的球迷举着起伏，闪光灯此起彼伏，场边广告屏滚动，映在场边的光跟着变色；10 号带球晃过后卫起脚射门，球网一鼓——进球！泛光灯先一暗再猛地一亮，烟花从顶棚后面升起、在夜空炸开，记分牌闪出 GOL、比分变成 2:0，人浪停下，各个看台一片一片跳起来欢呼，纸屑飘落，射手张开双臂跑向场边，门将随后把球开出去 | — |
+| R037 | 阿蒙森-斯科特科考站 | undefined | 极光在夜空翻卷，不时一道亮波沿光幕跑过、下缘泛粉，雪地跟着被照绿；高架科考站亮着一排窗，屋顶天线慢慢转，雷达球顶上红灯闪；冰屋门口透出火光，极点银球两边插着三面小旗在飘；科学家从氦气瓶给探空气球充气、放飞，再拿夹板记下；企鹅摇摇摆摆走过，远处雪地车亮着车灯开过 | — |
+| R038 | 布达拉宫 | 传说 | 雪山日出：太阳刚从右边山脊后露出一角，光芒向天上散开，天空从夜蓝变成玫瑰色和金色；第一缕阳光把雪峰顶染成粉金色，最先照亮布达拉宫的金顶，下面的白宫和红宫还在清晨的蓝影里，窗里亮着灯，最高的雪峰顶上飘着一缕雪雾；一串经幡横过天空飘；左边香炉冒烟和火星；右边僧人推着大转经筒，每转一圈铃响一声、紫色经文升起；朝圣者摇着手转经筒走过；一阵风来，天上划过两道风线，经幡被吹得拉平，香炉的烟压成一条横线，五色风马纸从经幡绳上卷起飞上天，风最大时太阳一亮、光芒大盛，金顶全部闪一下 | — |
+| R039 | 圣米歇尔山 | undefined | 暮色里退潮的海湾：太阳刚落到左边远山后，天空从靛蓝变成玫瑰色和金色；圣米歇尔山立在湿沙滩上，城墙、圆塔、亮窗的小镇和山顶修道院尖塔被晚霞勾出金边，塔尖站着金色天使；湿沙像镜子一样映着晚霞和山影，沙洲一道道隆起，一条潮沟弯弯伸向远处；石堤上卫兵扛着长矛巡逻，提灯火光摇晃，一条小渔船斜躺在沙上，黑白海鸟在沙洲上啄食，角落里的盐沼草轻轻摆；每隔一会儿修道院钟声一响、天使一亮，潮水像奔马一样从海湾冲上沙滩：一道白浪线飞快扫过，整片沙滩变成映着山影的水镜，海鸟惊起飞走，小船被托起扶正、随水起伏；随后潮水退回海湾，留下一个个发亮的水洼慢慢渗干 | — |
+| R040 | 亚历山大灯塔 | 史诗 | 夜海礁石上的灯塔：方形白石塔身、八角层、圆形火室，顶上铜像举着三股叉；火室里火焰翻滚，铜镜转着把一道暖光扫过海面，转到正对这边时整个画面一亮、满海金光；海鸥绕着塔顶飞，浪拍上礁石溅起水花，远处挂条纹帆的商船提着灯从岛后驶过；码头上搬运工把货箱搬到陶罐和粮袋旁，火盆冒火星 | — |
+| R041 | 吴哥窟 | 史诗 | 夕阳下的吴哥窟：一层层回廊和七座莲花苞石塔衬着橙色的天，整座寺倒映在莲池里；水面碎光跟着太阳晃，莲花轻摇，萤火虫在池面闪，棕榈叶摆动；穿橘色袈裟的僧人站在石阶上，身旁是扇形七头蛇栏杆，锣下点着供烛；他每隔一会儿敲一下铜锣：锣面一亮，池面荡开波纹，一群鸟从塔尖飞起掠过晚霞 | — |
+| R042 | 马拉卡纳体育场 | 传说 | 夜场比赛：顶棚一圈泛光灯雪亮，看台被水泥台阶分成一区一区，黄衣区、绿衣区成片坐满球迷，一排排人头下面是整条的球衣颜色，顶棚在最上面两排投下一道阴影；人浪一块一块站起来、举起手臂再坐下，绕着看台滚过去；一面巨大的巴西国旗被下层的球迷举着起伏，闪光灯此起彼伏，场边广告屏滚动，映在场边的光跟着变色；10 号带球晃过后卫起脚射门，球网一鼓——进球！泛光灯先一暗再猛地一亮，烟花从顶棚后面升起、在夜空炸开，记分牌闪出 GOL、比分变成 2:0，人浪停下，各个看台一片一片跳起来欢呼，纸屑飘落，射手张开双臂跑向场边，门将随后把球开出去 | — |
 | R043 | 酒馆 | 普通 | 吧台后是一整墙五颜六色的酒瓶，架下挂着木酒杯，右边酒桶架上方贴着招募冒险者的告示，桶上趴着一只甩尾巴的橘猫；两盏提灯里烛火摇曳；酒保拿条纹抹布擦吧台；戴兜帽的冒险者靠在吧台尽头，喝干一杯就把空杯顺着吧台推回去，酒保接住擦亮，端去酒头接满，再顺着吧台滑过去；冒险者一把接住举杯，泡沫飞溅、灯火一亮、橘猫抬头，喝上一大口，再弹一枚金币进小费罐 | — |
 | R044 | 冥想室 | 普通 | 修行者在石台的蒲团上打坐，身后的莲花曼陀罗一明一暗、外圈符文慢慢转动；墙上挂轴写着一个大大的「心」字，下面画着一个墨圈；香炉升起一缕青烟，两边烛火摇晃，纸灯笼亮着，橘猫在地上睡觉、尾巴轻摆；每隔一阵一把红头木槌自己浮起来绕着颂钵转，钵声一圈圈荡开，曼陀罗一亮，修行者离开蒲团浮起来，光点向他聚拢 | — |
 | R045 | 军械库 | 稀有 | 一整套板甲立在石台上，双手按着插在身前的长剑，身后挂着绣交叉双剑的红旗，头顶铁格窗漏下一道淡白的光柱照在头盔上，在石台和地板上照出一块亮斑，灰尘在光里飘，白色羽饰轻轻摆；左边架子上立着长戟、长矛和三把尖头长剑，右墙挂着两面纹章盾，一面圆盾压在两把交叉的斧头上，刀刃不时闪一下；两边火把摇曳，木柱上的油灯跳着小火苗，水槽上两根木柱架着一块圆磨石，铠甲匠踩着踏板，磨石上的四道深槽跟着转，他把剑压在磨石左上边、火花飞溅；磨好后他把剑举到光下，光柱猛地大亮、地上的亮斑跟着变亮，一道亮光从头盔顺着胸甲滑到剑上，光里的灰尘打着旋，旗边轻轻一抖 | — |
-| R046 | 少林寺 | 史诗 | 夕阳落进山谷，少林寺大殿两层屋檐、彩绘横梁，牌匾上金字写着「少林寺」，格子门里透出金光；红灯笼随风轻摆，香炉冒着青烟，松针不时飘落；四个穿深橙僧衣的武僧整齐地出拳、踢腿，师父在旁边看着；每隔一阵撞钟的僧人拉开木桩撞响大钟，钟声在钟亭边一圈圈荡开、满院一亮，屋脊上的白鸽飞走又飞回，武僧一齐跳起飞踢 | — |
-| R047 | 罗马斗兽场 | 史诗 | 月夜的斗兽场，弧形看台一层层坐满观众、一直升到拱廊和月光下的顶边，皇帝包厢挂着紫帘、立着鹰旗，铁栅门后有一双发光的眼睛；两边火盆熊熊燃烧；戴盔持盾的角斗士和肩戴护板、手拿三叉戟、身后拖着渔网的角斗士你来我往，每次交锋火花四溅、场中一亮；每隔一阵三叉戟被打飞、转着圈插进两人前面的空沙地，胜者高举短剑，火盆一齐腾起、看台一亮，全场观众跳起来举手欢呼，输的一方退了几步，弯腰握住杆子，把三叉戟从沙里拔出来 | — |
-| R048 | 午夜钟楼 | 传说 | （缺描述） | — |
-| R049 | 守墓人的墓园 | 传说 | （缺描述） | — |
-| R050 | 德鲁伊石环 | 传说 | （缺描述） | — |
-| R051 | 古树之苗 | 传说 | （缺描述） | — |
-| R052 | 精灵女王雕像 | 传说 | （缺描述） | — |
-| R053 | 旋转木马 | 传说 | （缺描述） | — |
-| R054 | 马戏大棚 | 传说 | （缺描述） | — |
-| R055 | 沉船 | 传说 | （缺描述） | — |
-| R056 | 深海之灯 | 传说 | （缺描述） | — |
-| R057 | 不熄的熔炉 | 传说 | （缺描述） | — |
-| R058 | 巨像残骸 | 传说 | （缺描述） | — |
-| R059 | 护士站 | 传说 | （缺描述） | — |
-| R060 | 手术室 | 传说 | （缺描述） | — |
-| R061 | 舰桥终端 | 传说 | （缺描述） | — |
-| R062 | 孵化池 | 传说 | （缺描述） | — |
-| R063 | 地狱之门 | 传说 | （缺描述） | — |
-| R064 | 摆渡船 | 传说 | （缺描述） | — |
-| R065 | 魔王王座 | 传说 | （缺描述） | — |
-| R066 | 赌桌 | 传说 | （缺描述） | — |
-| R067 | 庄家金库 | 传说 | （缺描述） | — |
-| R068 | 石墙 | 普通 | 城墙底下的石料间：左边码着一堆方石，石匠在木架上的石块旁抡锤凿打，每一下石屑飞出、扬起一小团石粉；右边天花板开着吊口，月光漏下来，绳子把方石一块块吊上地面的城墙，空钩再放下来，下一块石头从石堆拖到钩下；墙上的火把摇曳，吊灯挂在木架上方 | — |
-| R069 | 防御罩 | 稀有 | （缺描述） | — |
-| R070 | 守望古树 | 稀有 | （缺描述） | — |
+| R046 | 少林寺 | 传说 | 夕阳落进山谷，少林寺大殿两层屋檐、彩绘横梁，牌匾上金字写着「少林寺」，格子门里透出金光；红灯笼随风轻摆，香炉冒着青烟，松针不时飘落；四个穿深橙僧衣的武僧整齐地出拳、踢腿，师父在旁边看着；每隔一阵撞钟的僧人拉开木桩撞响大钟，钟声在钟亭边一圈圈荡开、满院一亮，屋脊上的白鸽飞走又飞回，武僧一齐跳起飞踢 | — |
+| R047 | 罗马斗兽场 | undefined | 月夜的斗兽场，弧形看台一层层坐满观众、一直升到拱廊和月光下的顶边，皇帝包厢挂着紫帘、立着鹰旗，铁栅门后有一双发光的眼睛；两边火盆熊熊燃烧；戴盔持盾的角斗士和肩戴护板、手拿三叉戟、身后拖着渔网的角斗士你来我往，每次交锋火花四溅、场中一亮；每隔一阵三叉戟被打飞、转着圈插进两人前面的空沙地，胜者高举短剑，火盆一齐腾起、看台一亮，全场观众跳起来举手欢呼，输的一方退了几步，弯腰握住杆子，把三叉戟从沙里拔出来 | — |
+| R048 | 午夜钟楼 | undefined | （缺描述） | — |
+| R049 | 守墓人的墓园 | undefined | （缺描述） | — |
+| R050 | 德鲁伊石环 | undefined | （缺描述） | — |
+| R051 | 古树之苗 | undefined | （缺描述） | — |
+| R052 | 精灵女王雕像 | undefined | （缺描述） | — |
+| R053 | 旋转木马 | undefined | （缺描述） | — |
+| R054 | 马戏大棚 | undefined | （缺描述） | — |
+| R055 | 沉船 | undefined | （缺描述） | — |
+| R056 | 深海之灯 | undefined | （缺描述） | — |
+| R057 | 不熄的熔炉 | undefined | （缺描述） | — |
+| R058 | 巨像残骸 | undefined | （缺描述） | — |
+| R059 | 护士站 | undefined | （缺描述） | — |
+| R060 | 手术室 | undefined | （缺描述） | — |
+| R061 | 舰桥终端 | undefined | （缺描述） | — |
+| R062 | 孵化池 | undefined | （缺描述） | — |
+| R063 | 地狱之门 | undefined | （缺描述） | — |
+| R064 | 摆渡船 | undefined | （缺描述） | — |
+| R065 | 魔王王座 | undefined | （缺描述） | — |
+| R066 | 赌桌 | undefined | （缺描述） | — |
+| R067 | 庄家金库 | undefined | （缺描述） | — |
+| R068 | 石墙 | 史诗 | 城墙底下的石料间：左边码着一堆方石，石匠在木架上的石块旁抡锤凿打，每一下石屑飞出、扬起一小团石粉；右边天花板开着吊口，月光漏下来，绳子把方石一块块吊上地面的城墙，空钩再放下来，下一块石头从石堆拖到钩下；墙上的火把摇曳，吊灯挂在木架上方 | — |
+| R069 | 防御罩 | 史诗 | （缺描述） | — |
+| R070 | 生命古树 | 史诗 | （缺描述） | — |
+| R071 | 破阵营 | 传说 | （缺描述） | — |
+| R072 | 不落要塞 | undefined | （缺描述） | — |
+| R073 | 誓约大厅 | 传说 | （缺描述） | — |
+| R074 | 圣盾穹顶 | undefined | （缺描述） | — |
+| R075 | 角斗场 | 史诗 | （缺描述） | — |
+| R076 | 骑士团驻地 | 史诗 | （缺描述） | — |
+| R077 | 圣光礼拜堂 | 传说 | （缺描述） | — |
+| R078 | 风神箭塔 | undefined | （缺描述） | — |
+| R079 | 影刃密室 | 传说 | （缺描述） | — |
+| R080 | 无面者神殿 | undefined | （缺描述） | — |
+| R081 | 法师塔 | 传说 | （缺描述） | — |
+| R082 | 星界天文台 | undefined | （缺描述） | — |
+| R083 | 圣泉疗养院 | 传说 | （缺描述） | — |
+| R084 | 天使圣堂 | undefined | （缺描述） | — |
+| R085 | 神谕祭坛 | 史诗 | （缺描述） | — |
+| R086 | 月神殿 | 传说 | （缺描述） | — |
+| R087 | 召唤法阵 | 史诗 | （缺描述） | — |
+| R088 | 灵魂熔炉 | 传说 | （缺描述） | — |
+| R089 | 跳蚤市场 | 史诗 | （缺描述） | — |
+| R090 | 黄金交易所 | 传说 | （缺描述） | — |
 
 <!-- /gen:rooms -->
 
@@ -874,7 +960,7 @@
 | V015 | `Sfx.tick` | 界面 | 12 |
 | V016 | `Sfx.numTick` | 界面 | 0 |
 | V017 | `Sfx.coin` | 界面 | 4 |
-| V018 | `Sfx.land` | 界面 | 5 |
+| V018 | `Sfx.land` | 界面 | 6 |
 | V019 | `Sfx.fly` | 界面 | 0 |
 | V020 | `Sfx.bump` | 界面 | 0 |
 | V021 | `Sfx.stamp` | 界面 | 3 |
@@ -882,13 +968,13 @@
 | V023 | `Sfx.toggle` | 界面 | 0 |
 | V024 | `Sfx.whoosh` | 通用 | 25 |
 | V025 | `Sfx.sparkle` | 通用 | 4 |
-| V026 | `Sfx.up` | 通用 | 30 |
+| V026 | `Sfx.up` | 通用 | 31 |
 | V027 | `Sfx.mult` | 通用 | 6 |
 | V028 | `Sfx.heal` | 通用 | 12 |
 | V029 | `Sfx.boom` | 通用 | 23 |
 | V030 | `Sfx.impact` | 通用 | 21 |
 | V031 | `Sfx.heart` | 通用 | 6 |
-| V032 | `Sfx.alarm` | 通用 | 2 |
+| V032 | `Sfx.alarm` | 通用 | 3 |
 | V033 | `Sfx.portal` | 通用 | 4 |
 | V034 | `Sfx.shatter` | 通用 | 8 |
 | V035 | `Sfx.creak` | 通用 | 2 |
@@ -900,8 +986,8 @@
 | V041 | `Sfx.cast` | 通用 | 3 |
 | V042 | `Sfx.bolt` | 通用 | 7 |
 | V043 | `Sfx.win` | 通用 | 0 |
-| V044 | `Sfx.fanfare` | 通用 | 13 |
-| V045 | `Sfx.lose` | 通用 | 8 |
+| V044 | `Sfx.fanfare` | 通用 | 14 |
+| V045 | `Sfx.lose` | 通用 | 10 |
 | V046 | `Sfx.die` | 通用 | 5 |
 | V047 | `Sfx.kill` | 通用 | 3 |
 | V048 | `Sfx.hit` | 通用 | 15 |

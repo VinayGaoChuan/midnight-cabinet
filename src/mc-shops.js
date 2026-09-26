@@ -10,10 +10,10 @@ const SHOPS = {
   bazaar:   { n: '夜市', d: '什么部队都卖一点。', units: 8, w: 3, unit: 1 },
   barracks: { n: '兵营', d: '只卖前排和近战：先锋、守护者、战士、圣骑士。', units: 8, pool: VOCS('先锋', '守护者', '战士', '圣骑士'), w: 3, unit: 1 },
   refugee:  { n: '难民营', d: '全是普通部队，便宜一成半。', units: 8, pool: (k) => DB[k].q === 0, price: 0.85, w: 2, unit: 1 },
-  slaver:   { n: '奴隶贩子', d: '好部队打七折，但每买一支，领袖失去 8% 生命。', units: 6, pool: (k) => DB[k].q >= 1, qBoost: 2, price: 0.7, hpCost: 0.08, w: 2, unit: 1 },
+  slaver:   { n: '奴隶贩子', d: '好部队打七折，但每买一支，领袖失去 8% 生命。', units: 6, pool: (k) => DB[k].q >= 2, qBoost: 2, price: 0.7, hpCost: 0.08, w: 2, unit: 1 },
   guild:    { n: '法师协会', d: '只卖法师、牧师、祭司和召唤师。', units: 8, pool: VOCS('法师', '牧师', '祭司', '召唤师'), w: 2, unit: 1 },
   hunters:  { n: '猎人营地', d: '只卖射手和刺客。', units: 8, pool: VOCS('射手', '刺客'), w: 2, unit: 1 },
-  mercs:    { n: '佣兵团', d: '只卖史诗和传说部队，价格贵一成。', units: 6, pool: (k) => DB[k].q >= 2, price: 1.1, w: 1, unit: 1 },
+  mercs:    { n: '佣兵团', d: '只卖史诗和传说部队，价格贵一成。', units: 6, pool: (k) => DB[k].q >= 3 && DB[k].q <= 4, price: 1.1, w: 1, unit: 1 },
 };
 // discounts are rare and single (user ruling 2026-09-25): a shop may put one card on sale, a few shops say they do
 const SALE_ANY = 0.3, SALE_OFF = 0.3;
@@ -32,12 +32,12 @@ M.genMap2 = function (run) {
 const oRoll = M.rollShop;
 M.rollShop = function (run) {
   const S = SHOPS[run.shopKind] || SHOPS.bazaar;
-  const pooled = !!(run.pool && M.unitPool), qw = M.shopQW(run), pm = M.priceMul(run), base = (pooled ? M.unitPool(run) : M.SHOP_POOL).filter(k => DB[k]), units = [], QB = (pooled ? (M.POOL_QB || [1, 1, 1, 1]) : [1, 1, 1, 1]).map((x, i) => (i === 0 && run.M && run.M.kit2 === 'focus' ? x * 1.8 : x));   // 专精卡带 (mc-legacy.js)
+  const pooled = !!(run.pool && M.unitPool), qw = M.shopQW(run), pm = M.priceMul(run), base = (pooled ? M.unitPool(run) : M.SHOP_POOL).filter(k => DB[k]), units = [], QB = (pooled ? (M.POOL_QB || [1, 1, 1, 1, 1, 0]) : [1, 1, 1, 1, 1, 0]).map((x, i) => (i === 0 && run.M && run.M.kit2 === 'focus' ? x * 1.8 : x));   // 专精卡带 (mc-legacy.js)
   // the area's pool (mc-evo.js): copies are the point, up to three of one unit; a trade the pool cannot serve falls back to all units
   const pool0 = S.pool ? base.filter(S.pool) : base, pool = pool0.length ? pool0 : M.SHOP_POOL.filter(k => DB[k] && (!S.pool || S.pool(k)));
   const room = (k) => (pooled ? units.filter(u => u.type === k).length < (M.POOL_COPIES || 3) : !units.some(u => u.type === k));
   for (let i = 0; i < (S.units || 0); i++) {
-    const q = M.wpick([0, 1, 2, 3], x => Math.max(0, qw[x]) * QB[x] * (S.qBoost && x >= 1 ? S.qBoost : 1)), c = pool.filter(k => DB[k].q === q && room(k)), rest = pool.filter(room); if (!c.length && !rest.length) break; const k = pick(c.length ? c : rest);
+    const q = M.wpick([0, 1, 2, 3, 4, 5], x => Math.max(0, qw[x] || 0) * (QB[x] || 0) * (S.qBoost && x >= 2 ? S.qBoost : 1)), c = pool.filter(k => DB[k].q === q && room(k)), rest = pool.filter(room); if (!c.length && !rest.length) break; const k = pick(c.length ? c : rest);
     units.push({ kind: 'unit', type: k, q: DB[k].q, cost: Math.max(5, Math.round(DB[k].cost * pm * (S.price || 1))) });
   }
   run.shop = { units, banners: [], items: [] };

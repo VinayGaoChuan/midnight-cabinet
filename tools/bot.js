@@ -1,8 +1,8 @@
 // headless-ish play bot: drives the Game through menus, map, battles, shops, events, chests, settlement
 // shopping like a plain player: keep a third of the army on the front line, otherwise the most power per coin;
 // a banner that fits when money is left over (opts.buy === false: never buys, the old behaviour)
-// the base like a plain player (2026-09-26): repair what fell, fill empty rooms (walls first, then towers, then the
-// best blueprint), dig one more room when nothing is empty and supplies allow, reinforce (加固) with what is left over
+// the base like a plain player (2026-09-26): fill empty rooms (the best blueprint first), dig one more room when nothing
+// is empty and supplies allow; every night the garrison fights on the battle screen like any fight (mc-night.js)
 function botBase(g, M) {
   const m = g.meta, B = M.BUILDINGS; let did = 0;
   const cells = []; for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) cells.push([c, r, m.base.cells[r][c]]);

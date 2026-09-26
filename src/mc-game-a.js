@@ -158,9 +158,9 @@ class Game {
     const lk = M.reelLock(r); if (!r.locked && r.t > lk - 0.9 && Math.floor((r.t - (lk - 0.9)) / 0.3) !== r.hb) { r.hb = Math.floor((r.t - (lk - 0.9)) / 0.3); S.heart(); this.fx.kick(2); }
     if (!r.locked && r.t >= M.reelLock(r)) {
       r.locked = true; S.reelStop(); const tl = r.tiles[(r.land + r.ups) % r.tiles.length];
-      const big = !r.itemMode || r.ups >= 2; if (big) S.fanfare(); else S.itemReveal(1);
+      const big = !r.itemMode || r.ups >= 3; if (big) S.fanfare(); else S.itemReveal(1);
       // 锁定按结果分档：普通一圈光、稀有小炸、史诗大炸 + 光芒 + 金币、传说（黑场之后）全屏金币雨和彩纸；「再上一格」没冲上去先一声「差一点」
-      const tier = r.itemMode ? r.ups : 1.5; if (r.tease) S.mini && S.mini('_', 'near'); if (r.itemMode && r.ups >= 3) S.mini && S.mini('_', 'win4');
+      const tier = r.itemMode ? r.ups : 1.5; if (r.tease) S.mini && S.mini('_', 'near'); if (r.itemMode && r.ups >= 4) S.mini && S.mini('_', 'win4');
       if (tier < 1) { this.fx.ring(960, 520, 20, 320, tl.c, 6, 0.4); this.fx.spark(960, 520, tl.c, 16, { v: 700 }); this.fx.kick(4); }
       else { this.fx.explode(960, 520, tl.c, 1 + tier * 0.6); if (tier >= 1.5) this.fx.rays(960, 520, tl.c, 1.4, { r: 900, n: 18 }); if (tier >= 2) { this.fx.confetti(tier >= 3 ? 220 : 100, { x: 960, y: 520, cols: [tl.c, '#ffffff', '#ffe08a'] }); this.fx.coins(960, 600, tier >= 3 ? 90 : 30, { v: 1300, spread: tier >= 3 ? 1.9 : 1.3 }); } if (tier >= 3) { this.fx.flash('#ffffff', 0.7); this.fx.confetti(120); this.fx.kick(26); } }
       this.fx.pop(960, 250, tl.n + '！', tl.c, tier >= 3 ? 150 : tier >= 1 ? 120 : 90, { slam: 1, life: tier >= 2 ? 1.3 : 0.8, rise: 0 }); S.impact();
@@ -175,7 +175,7 @@ class Game {
     if (c.t > 0.8 && c.t < 1.5) { if (Math.floor(p * 12) !== Math.floor(c.t * 12)) { M.Sfx.knock((c.t - 0.8) / 0.7); this.fx.kick(1 + (c.t - 0.8) * 4); } if (Math.random() < 0.6) this.fx.spark(960 + (Math.random() - 0.5) * 240, 470, c.col, 2, { dir: -Math.PI / 2, spread: 2, v: 500, w: 3, life: 0.35 }); }
     if (p < 1.45 && c.t >= 1.45) this.fx.freeze(110);
     if (p < 1.5 && c.t >= 1.5) { M.Sfx.chest(); this.fx.explode(960, 480, c.col, 3); this.fx.flash('#ffffff', 0.9); this.fx.confetti(160, { x: 960, y: 480 }); this.fx.coins(960, 520, 50, { v: 1400, spread: 1.6 }); this.fx.spark(960, 480, c.col, 60, { v: 1500, w: 6, life: 0.7 }); }
-    const q = c.t - 1.5; c.items.forEach((it, i) => { if (!it.snd && q > 0.25 + i * 0.28 + 0.5) { it.snd = 1; M.Sfx.itemReveal(Math.max(0, M.QUALITY.findIndex(Q => Q.c === it.c))); const gold = it.c === M.QUALITY[3].c || it.c === M.QUALITY[2].c; this.fx.explode(it.x || 960, it.y || 380, it.c, gold ? 1.6 : 0.8); if (gold) this.fx.rays(it.x || 960, it.y || 380, it.c, 1.2, { r: 320 }); } });
+    const q = c.t - 1.5; c.items.forEach((it, i) => { if (!it.snd && q > 0.25 + i * 0.28 + 0.5) { it.snd = 1; M.Sfx.itemReveal(Math.max(0, M.QUALITY.findIndex(Q => Q.c === it.c))); const gold = it.c === M.QUALITY[5].c || it.c === M.QUALITY[4].c || it.c === M.QUALITY[3].c; this.fx.explode(it.x || 960, it.y || 380, it.c, gold ? 1.6 : 0.8); if (gold) this.fx.rays(it.x || 960, it.y || 380, it.c, 1.2, { r: 320 }); } });
   }
   chestClick() {
     const c = this.chest; if (!c) return; if (c.t < 1.5 + 0.6 + c.items.length * 0.28) { if (c.t < 1.4) c.t = 1.4; return; }

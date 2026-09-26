@@ -4,9 +4,10 @@ const M = window.MC;
 const { SP, UNITS, pick, wpick, nice, baseS, ENEMIES, TIERS, HEROES, STATS } = M;
 
 // ───────── unified quality: 普通（白）/ 稀有（蓝）/ 史诗（紫）/ 传说（金）; names always show as 名字（品质） in the quality colour ─────────
-const QUALITY = [ { n:'普通', c:'#c4ccd9', m:1 }, { n:'稀有', c:'#47d6c1', m:1.5 }, { n:'史诗', c:'#b86bff', m:2.2 }, { n:'传说', c:'#ffcf4a', m:3.2 } ];
+// six since 2026-09-26 (「普通白色，优质绿色，稀有蓝色，史诗紫色，传说橙色，神话红色」); old tables are moved onto them in mc-q6.js
+const QUALITY = [ { n:'普通', c:'#c4ccd9', m:1 }, { n:'优质', c:'#6fd46a', m:1.25 }, { n:'稀有', c:'#4f8fff', m:1.5 }, { n:'史诗', c:'#b86bff', m:2.2 }, { n:'传说', c:'#ff9a3c', m:3.2 }, { n:'神话', c:'#ff4a5a', m:4.5 } ];
 TIERS.splice(0, TIERS.length, ...QUALITY.map(q => ({ n: q.n, c: q.c })));
-const RARITY = [ { n:'普通', c:QUALITY[0].c, w:55, tiers:3, stat:1 }, { n:'稀有', c:QUALITY[1].c, w:30, tiers:4, stat:1.08 }, { n:'史诗', c:QUALITY[2].c, w:12, tiers:5, stat:1.18 }, { n:'传说', c:QUALITY[3].c, w:3, tiers:6, stat:1.3 } ];   // tiers = layers of the talent tree
+const RARITY = [ { n:'普通', c:QUALITY[0].c, w:55, tiers:3, stat:1 }, { n:'稀有', c:QUALITY[2].c, w:30, tiers:4, stat:1.08 }, { n:'史诗', c:QUALITY[3].c, w:12, tiers:5, stat:1.18 }, { n:'传说', c:QUALITY[4].c, w:3, tiers:6, stat:1.3 } ];   // tiers = layers of the talent tree
 Object.assign(STATS, {
   supplies:{ d:'打仗得到的物资 +{v}%', b:0.1, pct:1 }, exp:{ d:'领袖出征得到的经验 +{v}%', b:0.1, pct:1 }, eventLuck:{ d:'奇遇出好结果的概率 +{v}%', b:0.05, pct:1 }, chest:{ d:'宝箱里的积分 +{v}%', b:0.15, pct:1 },
   killHeal:{ d:'领袖每次击杀回复 {v}% 生命', b:0.02, pct:1 },
@@ -325,7 +326,7 @@ M.dropBp = function (bias) {
   if (Math.random() < 0.5) return 'rbp:' + pick(M.relicPool());
   const ks = Object.keys(BUILDINGS).filter(k => !BUILDINGS[k].fixed && !BUILDINGS[k].boss);   // a boss building drops only from its boss (mc-bossbld.js)
   const w = M.bpWeights ? M.bpWeights(bias, 0) : [60, 25, 11, 4].map((x, i) => i === 0 ? x : x * (1 + (bias || 0)));   // quality by the run's danger (mc-danger.js)
-  const q = wpick([0, 1, 2, 3], i => (ks.some(k => BUILDINGS[k].q === i) ? w[i] : 0));
+  const q = wpick([0, 1, 2, 3, 4, 5], i => (ks.some(k => BUILDINGS[k].q === i) ? w[i] || 0 : 0));
   return 'bbp:' + pick(ks.filter(k => BUILDINGS[k].q === q));
 };
 M.craftRelic3 = function (meta, key, forge) {

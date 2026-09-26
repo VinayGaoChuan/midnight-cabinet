@@ -548,7 +548,7 @@ function drawParts(s, out, B, I) {
 }
 
 // ───────── the frame: ink border, a bevelled trim, the quality line (a glint runs round rare+ rooms) ─────────
-const QC = ['#8791a6', '#47d6c1', '#b86bff', '#ffcf4a'];
+const QC = ['#8791a6', '#6fd46a', '#4f8fff', '#b86bff', '#ff9a3c', '#ff4a5a'];
 function frame(out, s, t, o, hovK) {
   const B = BAKED[s.key], q = (M.BUILDINGS[s.key] || {}).q || 0, ink = abgr('#07060f'), dark = abgr('#1a1640'), lit = abgr('#3d3a8c'), qc = rgbOf(QC[q]), q32 = abgr(QC[q]);
   const set = (x, y, c) => { out[y * W + x] = c; };
@@ -557,7 +557,7 @@ function frame(out, s, t, o, hovK) {
   for (let x = 2; x < W - 2; x++) { set(x, 2, lit); set(x, H - 3, dark); } for (let y = 2; y < H - 2; y++) { set(2, y, lit); set(W - 3, y, dark); }
   if (q >= 1 || hovK > 0.05) { const a = q >= 1 ? 1 : 0; for (let x = 3; x < W - 3; x++) { if (a) { set(x, 3, q32); set(x, H - 4, q32); } } for (let y = 3; y < H - 3; y++) { if (a) { set(3, y, q32); set(W - 4, y, q32); } } }
   // glints: rare+ always, anything while hovered; they run the inner perimeter
-  const glints = q >= 2 ? (q >= 3 ? 3 : 2) : 0, per = 2 * (W - 8 + H - 8), g = [];
+  const glints = q >= 3 ? (q >= 4 ? 3 : 2) : 0, per = 2 * (W - 8 + H - 8), g = [];
   for (let i = 0; i < glints; i++) g.push(((t * 0.22 + i / glints) % 1) * per);
   if (hovK > 0.05) g.push(((t * 0.5) % 1) * per);
   g.forEach(d => { for (let k = -5; k <= 5; k++) { const dd = ((d + k) % per + per) % per, a = 1 - Math.abs(k) / 6; let x, y; if (dd < W - 8) { x = 4 + dd; y = 3; } else if (dd < W - 8 + H - 8) { x = W - 4; y = 4 + dd - (W - 8); } else if (dd < 2 * (W - 8) + H - 8) { x = W - 4 - (dd - (W - 8) - (H - 8)); y = H - 4; } else { x = 3; y = H - 4 - (dd - 2 * (W - 8) - (H - 8)); }

@@ -38,6 +38,7 @@ mc-pxroom-t1.js
 mc-pxroom-t2.js
 mc-pxroom-t3.js
 mc-pxroom-base.js
+mc-pxroom-evo.js
 mc-pxroom-jobs.js
 mc-game-a.js
 mc-game-b.js
@@ -121,4 +122,7 @@ mc-tele.js
 mc-pcd.js
 mc-pcd-game.js
 mc-lines-art.js
+mc-q6.js
+mc-night.js
+mc-boons.js
 mc-opening.js
