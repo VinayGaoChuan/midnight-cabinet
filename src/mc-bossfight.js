@@ -199,7 +199,7 @@ M.drawBattleHudPx = function (ctx, b, T) {
 const fieldRect = (x0, y0, x1, y1) => ({ x: Math.max(10, x0), y: Math.max(10, y0 + 180), w: Math.min(1910, x1) - Math.max(10, x0), h: y1 - y0 });
 if (M.GUIDE) M.GUIDE.push(
   { id: 'omen', cat: '战斗', icon: 't_sword', title: '警示圈', line: '技能要落下的地方，里面填满就放出来；红色是敌人的。', scr: 'battle', freeze: 1, at: (g) => { const b = g.battle, o = b && (b.omens || []).find(o => o.shape === 'circle' && b.t - o.t0 > 0.1); if (!o) return null; const x = o.ent ? o.ent.x : o.x, y = o.ent ? o.ent.y : o.y; return fieldRect(x - o.r, y - o.r / 1.2, x + o.r, y + o.r / 1.2); } },
-  { id: 'elite', cat: '战斗', icon: 'u_star', title: '精英', line: '更强的敌人，打倒它积分倍率 +0.1。', scr: 'battle', freeze: 1, at: (g) => { const b = g.battle, e = b && b.ents.find(u => u.alive && u.elite && !u.boss && b.t > (u.entryT || 0) + 1); if (!e) return null; const h = 88 * e.sz; return fieldRect(e.x - 60, e.y - h - 80, e.x + 60, e.y + 10); } },
+  { id: 'elite', cat: '战斗', icon: 'u_star', title: '精英', line: '不朽的敌人，更强，打倒它积分更多。', scr: 'battle', freeze: 1, at: (g) => { const b = g.battle, e = b && b.ents.find(u => u.alive && u.elite && !u.boss && b.t > (u.entryT || 0) + 1); if (!e) return null; const h = 88 * e.sz; return fieldRect(e.x - 60, e.y - h - 80, e.x + 60, e.y + 10); } },
   { id: 'fboss', cat: '战斗', icon: 'e_skull', title: '最终首领', line: '场景尽头的首领，站在自己的地形里；血条过半进入第二阶段。', scr: 'battle', freeze: 1, at: (g) => { const b = g.battle, e = b && b.ents.find(u => u.fb && u.alive && u.ai && u.ai.st === 'idle'); return e ? fieldRect(EDGE, 60, 1910, 700) : null; } },
   { id: 'scene', cat: '出征', icon: 'e_path', title: '场景', line: '每个世界分几个场景，按故事一个接一个；打倒场景尽头的首领才算通关。', scr: 'base', at: (g) => M.STELE_AT && M.STELE_AT.scene && M.STELE_AT.scene(g) },
 );

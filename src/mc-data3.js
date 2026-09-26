@@ -45,9 +45,9 @@ Object.assign(SP, {
 // ───────── heroes: exactly one active skill each, cooldown counted in nodes ─────────
 const SK = {
   watchman:{ nodeCd:3, v:(lv) => 2 + 0.25 * lv, d:(v) => '所有敌人停顿 ' + v.toFixed(1) + ' 秒' },
-  widow:{ nodeCd:3, v:(lv) => 0.08 + 0.02 * lv, d:(v) => '8 秒内每次击杀，积分倍率 +' + v.toFixed(2) },
+  widow:{ nodeCd:3, v:(lv) => 0.08 + 0.02 * lv, d:(v) => '8 秒内击杀得到的积分 ×' + (1 + v * 10).toFixed(1) },
   nun:{ nodeCd:3, v:(lv) => 0.3 + 0.03 * lv, d:(v) => '全队回复 ' + Math.round(v * 100) + '% 生命' },
-  butcherlord:{ nodeCd:4, v:(lv) => 0.8 + 0.15 * lv, d:(v) => '献祭生命最低的部队，积分倍率 +' + v.toFixed(2) },
+  butcherlord:{ nodeCd:4, v:(lv) => 0.8 + 0.15 * lv, d:(v) => '献祭生命最低的部队，全队攻击 +' + Math.round(v * 25) + '%' },
   clockmaker:{ nodeCd:3, v:(lv) => 0.5 + 0.05 * lv, d:(v) => '部队攻速 +' + Math.round(v * 100) + '%，持续 6 秒' },
   cremator:{ nodeCd:3, v:(lv) => 0.5 + 0.08 * lv, d:(v) => '点燃所有敌人，每秒 ' + Math.round(v * 100) + '% 领袖攻击' },
 };
@@ -60,11 +60,11 @@ M.skillNodeCd = (h, meta) => { const hm = M.heroMods(h, meta); return Math.max(1
 const RELICS = {
   herakEye:{ n:'赫拉克之眼', icon:'r_eye', d:'一只不会闭上的眼睛。', lines:[{k:'crit',v:0.05},{k:'heroAtk',v:0.12},{k:'crit',v:0.08},{k:'baseScore',v:0.2}] },
   rustBlade:{ n:'守夜人的锈刀', icon:'r_blade', d:'刀口已经钝了，但它记得每一个夜晚。', lines:[{k:'heroAtk',v:0.15},{k:'unitAtk',v:0.06},{k:'killHeal',v:0.02},{k:'heroAtk',v:0.3}] },
-  dealerRing:{ n:'庄家的戒指', icon:'r_ring', d:'戴上它的人，总能多赢一点。', lines:[{k:'startMult',v:0.15},{k:'shop',v:-0.08},{k:'startMult',v:0.25},{k:'baseScore',v:0.25}] },
-  loadedDice:{ n:'灌铅骰子', icon:'r_dice', d:'永远是六。几乎。', lines:[{k:'tier',v:0.06},{k:'crit',v:0.05},{k:'tier',v:0.1},{k:'startMult',v:0.4}] },
+  dealerRing:{ n:'庄家的戒指', icon:'r_ring', d:'戴上它的人，总能多赢一点。', lines:[{k:'baseScore',v:0.08},{k:'shop',v:-0.08},{k:'baseScore',v:0.12},{k:'baseScore',v:0.25}] },
+  loadedDice:{ n:'灌铅骰子', icon:'r_dice', d:'永远是六。几乎。', lines:[{k:'tier',v:0.06},{k:'crit',v:0.05},{k:'tier',v:0.1},{k:'baseScore',v:0.2}] },
   necroBook:{ n:'亡者名录', icon:'r_book', d:'书页上会自己多出名字。', lines:[{k:'exp',v:0.15},{k:'unitHp',v:0.08},{k:'exp',v:0.25},{k:'skillCd',v:-0.34}] },
   brassGear:{ n:'黄铜心轮', icon:'r_gear', d:'还在转，不知道为谁。', lines:[{k:'unitAtk',v:0.08},{k:'unitHp',v:0.08},{k:'unitAtk',v:0.12},{k:'shield',v:0.2}] },
-  ashCrown:{ n:'灰烬王冠', icon:'r_crown', d:'前一个戴它的人烧成了灰。', lines:[{k:'heroHp',v:0.12},{k:'heroAtk',v:0.1},{k:'supplies',v:0.2},{k:'startMult',v:0.5}] },
+  ashCrown:{ n:'灰烬王冠', icon:'r_crown', d:'前一个戴它的人烧成了灰。', lines:[{k:'heroHp',v:0.12},{k:'heroAtk',v:0.1},{k:'supplies',v:0.2},{k:'unitAtk',v:0.1}] },
   angelHeart:{ n:'天使心脏', icon:'r_heart', d:'每隔一会儿，它会跳一下。', lines:[{k:'heroHp',v:0.18},{k:'postHeal',v:0.04},{k:'heroHp',v:0.25},{k:'postHeal',v:0.08}] },
   gullFeather:{ n:'信天翁之羽', icon:'r_feather', d:'风会替你指路。', lines:[{k:'eventLuck',v:0.1},{k:'supplies',v:0.15},{k:'chest',v:0.3},{k:'eventLuck',v:0.2}] },
   saintSkull:{ n:'圣徒颅骨', icon:'r_skull', d:'它会替你挡下一次。', lines:[{k:'shield',v:0.1},{k:'heroHp',v:0.15},{k:'unitHp',v:0.15},{k:'shield',v:0.15}] },
@@ -116,7 +116,7 @@ const BUILDINGS = {
   taj:{ n:'泰姬陵', q:2, cat:'misc', style:'fantasy', pw:-1, cost:280, days:4, fx:{ deathShards:1 }, d:'领袖死亡时，灵魂碎片 +100%。' },
   bigben:{ n:'大本钟', q:1, cat:'store', style:'steam', pw:-1, cost:220, days:3, fx:{ supplyDaily:15, craftCost:-0.3 }, d:'每天 +15 物资，打造费用 -30%。' },
   liberty:{ n:'自由女神像', q:2, cat:'luck', style:'water', pw:-1, cost:300, days:4, fx:{ tower:1, lootSup:0.3 }, d:'出征时地图全亮，物资收益 +30%。' },
-  opera:{ n:'悉尼歌剧院', q:1, cat:'luck', style:'cartoon', pw:-1, cost:200, days:3, fx:{ startMult:0.3 }, d:'每场战斗初始积分倍率 +0.3。' },
+  opera:{ n:'悉尼歌剧院', q:1, cat:'luck', style:'cartoon', pw:-1, cost:200, days:3, fx:{ feverRate:0.15 }, d:'FEVER 槽涨得快 15%。' },
   goldengate:{ n:'金门大桥', q:1, cat:'misc', style:'steam', pw:-1, cost:180, days:2, fx:{ digCost:-0.5 }, d:'挖掘费用 -50%。' },
   amundsen:{ n:'阿蒙森-斯科特科考站', q:3, cat:'misc', style:'scifi', pw:-3, cost:420, days:5, fx:{ tileX2:1 }, d:'所有特殊地格的加成翻倍。' },
   potala:{ n:'布达拉宫', q:2, cat:'luck', style:'magic', pw:-2, cost:300, days:4, fx:{ skillNodeCd:-1 }, d:'所有领袖技能冷却 -1 个节点。' },

@@ -82,12 +82,9 @@ M.unitTip = function (k, u) {
   return { title: d.n, c: q.c, brief: [row], d: M.unitLine(k) };
 };
 // a race-count trait would be invisible now that cards show no race: 宝玉兽 counts merchants instead
-if (TDB.JadeBeastTrait) Object.assign(TDB.JadeBeastTrait, { d: '场上存在2个商人单位时，积分倍率+0.1；存在3个商人单位时，积分倍率再+0.1', lines: null });
+if (TDB.JadeBeastTrait) Object.assign(TDB.JadeBeastTrait, { d: '场上存在2个商人单位时，击杀得到的积分+20%；存在3个商人单位时再+20%', lines: null });
 if (DB.JadeBeast) DB.JadeBeast.desc = '身上长着玉石的兽，同行越多越值钱。';
-if (M.TRAIT_H && M.TRAIT_H.JadeBeast) M.TRAIT_H.JadeBeast.start = function (b, e) {
-  const n = b.run.roster.filter(u => DB[u.type] && DB[u.type].voc === '商人').length; let m = 0; if (n >= 2) m += 0.1; if (n >= 3) m += 0.1;
-  if (m) { b.addMult(m, e.x, e.y - 120, '玉石共鸣'); b.fxp({ k: 'rays', x: e.x, y: e.y - 40, col: '#7fffc0', life: 0.8 }); }
-};
+// (the merchants' 玉石共鸣 now raises the kills' score, mc-battle3.js H.JadeBeast)
 // a sprite that must stay inside its card: the inner image takes the element's max size
 try { const st = document.createElement('style'); st.textContent = 'm-img[data-fit]>img{max-width:inherit;max-height:inherit;width:auto!important;height:auto!important}'; document.head.appendChild(st); } catch (e) {}
 const G = M.Game.prototype, oView = G.view;

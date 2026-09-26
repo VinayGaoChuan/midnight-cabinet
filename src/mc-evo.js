@@ -7,7 +7,8 @@
 //   its own line (mc-lines.js): same vocation, same character, stronger skills; common → rare → epic → legendary, 3 at most.
 // · The pool (same day, 「每个职业，随机一个基础单位就行了」): one line per vocation, all four tiers of it.
 // · The show: the three fly out of the roster, circle and melt into one light that flickers between the old and the new
-//   shape, bursts, and the new unit's card stands in the middle of the screen before it flies into the roster.
+//   shape, bursts, and the new unit's card stands in the middle of the screen until the player clicks; then it flies
+//   into the roster (2026-09-26: it used to fly off by itself before it could be read).
 // · The prologue starts with two 步卒 and its shop sells a third: three 步卒 become a 盾兵.
 const M = window.MC, G = M.Game.prototype, DB = M.DB, S = M.Sfx, U = M.UI, P = M.PJ.PAL, Q = M.QUALITY;
 const rnd = Math.random, now = () => performance.now(), cl = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -172,6 +173,7 @@ function drawEvo(ctx, g, F) {
     const fl = cl((T - T_HOLD) / (T_END - T_HOLD - 0.05), 0, 1), q = eo(fl), pop = still ? 1 : eb(cl(d / 0.45, 0, 1)), to = F.dest || { x: 80, y: 400 };
     const x = C.x + (to.x - C.x) * q, y = C.y + (to.y - C.y) * q - Math.sin(q * Math.PI) * 140, sc = (1 - 0.86 * q) * pop;
     if (fl < 1) drawCard(ctx, x, y, sc, F);
+    if (!F.go && d > 0.6) { ctx.globalAlpha = 0.55 + 0.45 * Math.abs(Math.sin(T * 3)); U.text(ctx, '点击继续', C.x, C.y + CH / 2 + 60, 30, P.cream, { outline: true }); ctx.globalAlpha = 1; }
     // the words: 进化！ and what became what
     if (fl < 0.2) { const a = cl(d / 0.25, 0, 1) * (1 - fl / 0.2); ctx.globalAlpha = a; U.text(ctx, F.over ? '超限进化！' : '进化！', C.x, 96, 88, F.over ? Q[F.qB].c : P.gold, { outline: true, ramp: true }); U.text(ctx, DB[F.from].n + '  →  ' + DB[F.to].n, C.x, 176, 36, P.cream, { outline: true }); ctx.globalAlpha = 1; }
   }
@@ -190,6 +192,8 @@ G.tick = function (dt) {
   if (!F) { this.evoCheck(); return; }
   if (!run || (F.host ? this.screen !== 'base' : this.screen !== 'world' && this.screen !== 'shop')) { if (run) finish(this, F); else this.evoFx = null; return; }
   F.t += (dt || 0) * (this.rushUntil > now() ? 3 : 1);
+  // the new card stays until the player clicks (user ruling 2026-09-26: 「合成之后的卡片，不要自动收起，玩家点击之后再收起」)
+  if (!F.go && F.t > T_HOLD) F.t = T_HOLD;
   beat(F, 'ch', T_IN, () => S.rc && S.rc('charge', { dur: T_BOOM - T_IN, rar: F.qB }));
   const tier = F.t < T_IN ? -1 : Math.min(F.qB, F.qA + Math.floor((F.t - T_IN) / ((T_BOOM - T_IN) / (F.qB - F.qA + 1))));
   if (tier >= 0 && tier !== F.tier && F.t < T_BOOM) { F.tier = tier; S.rc && S.rc('tier', tier); }
@@ -220,7 +224,7 @@ const pips = (n, of, on, off) => { const a = []; for (let i = 0; i < of; i++) a.
 const oView = G.view;
 G.view = function () {
   const v = oView.call(this), run = this.run;
-  if (this.evoFx) { v.fxZ = 75; v.coverOn = true; v.coverClick = () => { this.hurry && this.hurry(); }; }
+  if (this.evoFx) { const F = this.evoFx; v.fxZ = 75; v.coverOn = true; v.coverClick = () => { if (F.t >= T_BOOM + 0.45) { F.go = true; S.click && S.click(); } else if (this.hurry) this.hurry(); }; }
   if (!run || !v.w) return v;
   this._rosLay = { top: v.w.rosTop, fit: v.w.rosFit };
   // roster cards: one gold diamond per evolution

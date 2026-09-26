@@ -139,13 +139,13 @@ const ITEMS = {
   heal:{ name:'回魂烛', icon:'candle', desc:'治疗全队，有概率增加护盾、复活', type:'恢复类', tiers:['回复 20%','回复 50%','回满 + 护盾','回满 + 护盾 + 复活 1 名'] },
   frame:{ name:'旧相框', icon:'frame', desc:'召唤帮手作战，有概率召出巨型怨灵', type:'召唤类', tiers:['1 只火小鬼','3 只火小鬼','1 只巨型怨灵','2 只怨灵 + 3 只小鬼'] },
   bell:{ name:'招魂铃', icon:'bell', desc:'眩晕敌人，有概率让敌人自相残杀', type:'控制类', tiers:['敌人停顿 1 秒','停顿 2 秒','停顿 3.5 秒','敌人互相攻击 5 秒'] },
-  cup:{ name:'骰盅', icon:'die', desc:'提高积分倍率，有概率大幅提高', type:'收益类', tiers:['积分倍率 +0.2','积分倍率 +0.5','积分倍率 +1','积分倍率 +2.5'] },
+  horn:{ name:'战吼号角', icon:'t_rage', desc:'全体部队攻击提高，直到这一仗结束', type:'增益类', tiers:['部队攻击 +8%','部队攻击 +12%','部队攻击 +16%','部队攻击 +22%','部队攻击 +30%','部队攻击 +45%'] },   // was 骰盅 (the score multiplier is gone, 2026-09-26)
 };
 // every support item is the same colour: dark gold
 const ITEM_C = '#c9a24a';
 const WHEEL = [
   { n:'什么都没有', c:'#6b6570', w:22 }, { n:'返还 ×2', c:'#ffcc33', w:24 }, { n:'随机部队', c:'#6fa8dc', w:20 },
-  { n:'积分倍率 +0.3', c:'#ff9a3c', w:16 }, { n:'随机道具', c:'#b86bff', w:18 },
+  { n:'击杀积分 +20%', c:'#ff9a3c', w:16 }, { n:'随机道具', c:'#b86bff', w:18 },
 ];
 const PERKS = {
   wallet:{ name:'旧钱包', desc:'每次结算，积分收入 +10%', max:5, icon:'coin' },

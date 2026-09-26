@@ -55,9 +55,9 @@ SP.b_empty = { pal:{ g:'#2a2230', G:'#1a1620' }, rows:["................",".....
 // ───────── heroes ─────────
 const HEROES = {
   watchman:{ n:'守夜人', sprite:'watchman', hp:420, atk:26, cd:0.9, range:60, spd:110, skill:{ n:'照夜', d:'所有敌人停顿 2.5 秒', cd:18 } },
-  widow:{ n:'赌徒寡妇', sprite:'widow', hp:300, atk:30, cd:0.8, range:380, ranged:1, spd:100, skill:{ n:'梭哈', d:'8 秒内每次击杀，积分倍率 +0.1', cd:24 } },
+  widow:{ n:'赌徒寡妇', sprite:'widow', hp:300, atk:30, cd:0.8, range:380, ranged:1, spd:100, skill:{ n:'梭哈', d:'8 秒内击杀得到的积分翻倍', cd:24 } },
   nun:{ n:'驱魔修女', sprite:'nun', hp:340, atk:22, cd:1.0, range:360, ranged:1, spd:100, skill:{ n:'圣咏', d:'全队回复 35% 生命', cd:20 } },
-  butcherlord:{ n:'屠宰场主', sprite:'butcherlord', hp:480, atk:36, cd:1.2, range:65, spd:95, skill:{ n:'血祭', d:'献祭生命最低的部队，积分倍率 +1', cd:22 } },
+  butcherlord:{ n:'屠宰场主', sprite:'butcherlord', hp:480, atk:36, cd:1.2, range:65, spd:95, skill:{ n:'血祭', d:'献祭生命最低的部队，全队攻击 +20%', cd:22 } },
   clockmaker:{ n:'钟表匠', sprite:'clockmaker', hp:320, atk:24, cd:0.7, range:340, ranged:1, spd:100, skill:{ n:'倒带', d:'部队攻速 +60%，持续 6 秒', cd:22 } },
   cremator:{ n:'焚尸人', sprite:'cremator', hp:380, atk:28, cd:1.0, range:70, spd:105, skill:{ n:'火葬', d:'点燃所有敌人', cd:20 } },
 };

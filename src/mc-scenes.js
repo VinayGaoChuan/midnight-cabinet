@@ -96,7 +96,7 @@ const MODS = M.STELE_MODS = {
   blood: { n: '血月', d: '每段多一场精英战，图纸掉率 ×1.5' },
   harvest: { n: '丰收', d: '物资 ×1.5' },
   lesson: { n: '授业', d: '领袖经验 ×1.4' },
-  bounty: { n: '悬赏', d: '每场战斗初始积分倍率 +0.3' },
+  bounty: { n: '悬赏', d: '击杀得到的积分 +30%' },
   veteran: { n: '老兵', d: '敌人生命和攻击 +10%，暗金宝物的掉率翻倍' },
 };
 const rng = (seed) => { let s = seed % 2147483647 || 1; return () => { s = (s * 16807) % 2147483647; return s / 2147483647; }; };
@@ -156,7 +156,7 @@ M.newRun3 = function (meta, hero, worldKey) {
   run.lootMul *= D.loot; run.mods.exp = (run.mods.exp || 0) + (D.exp - 1);
   if (k === 'harvest') run.lootMul *= 1.5;
   if (k === 'lesson') run.mods.exp = (run.mods.exp || 0) + 0.4;
-  if (k === 'bounty') run.startMult = Math.round(((run.startMult || 0) + 0.3) * 10) / 10;
+  if (k === 'bounty') run.mods.baseScore = (run.mods.baseScore || 0) + 0.3;
   if (k === 'blood') run.bpMul = (run.bpMul || 1) * 1.5;
   if (k === 'fog') { run.vision = Math.max(1, (run.vision || 2) - 1); run.modEk = 0.92; }
   if (k === 'veteran') run.modEk = 1.1;

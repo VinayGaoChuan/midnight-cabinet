@@ -125,4 +125,5 @@ mc-lines-art.js
 mc-q6.js
 mc-night.js
 mc-boons.js
+mc-q7.js
 mc-opening.js

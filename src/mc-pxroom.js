@@ -548,7 +548,7 @@ function drawParts(s, out, B, I) {
 }
 
 // ───────── the frame: ink border, a bevelled trim, the quality line (a glint runs round rare+ rooms) ─────────
-const QC = ['#8791a6', '#6fd46a', '#4f8fff', '#b86bff', '#ff9a3c', '#ff4a5a'];
+const QC = ['#8791a6', '#6fd46a', '#4f8fff', '#b86bff', '#ff9a3c', '#ff4a5a', '#c9a24a'];   // … 神话, 不朽 (boss buildings, mc-q7.js)
 function frame(out, s, t, o, hovK) {
   const B = BAKED[s.key], q = (M.BUILDINGS[s.key] || {}).q || 0, ink = abgr('#07060f'), dark = abgr('#1a1640'), lit = abgr('#3d3a8c'), qc = rgbOf(QC[q]), q32 = abgr(QC[q]);
   const set = (x, y, c) => { out[y * W + x] = c; };

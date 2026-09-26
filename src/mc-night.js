@@ -149,7 +149,7 @@ G.garEvo = function () {
 // §8.2): gentle while the garrison is two or three trips deep, then climbing with what evolving brings. The last night of
 // every five days is a 血月 (blood moon): 35% stronger, always with an elite, marked on the calendar. A lost night costs
 // three in ten of the fallen (half made one loss snowball into the next: 2026-09-26 growth sims).
-M.NIGHT = { HIT: 0.6, LOSS: 0.3, T_MAX: 240, MOON: 1.35, CURVE: [[1, 300], [3, 800], [5, 1600], [8, 3200], [10, 4600], [15, 8500], [20, 13000], [30, 22000]] };
+M.NIGHT = { HIT: 0.6, LOSS: 0.3, T_MAX: 240, MOON: 1.35, CURVE: [[1, 390], [3, 1040], [5, 2080], [8, 4160], [10, 6000], [15, 11000], [20, 17000], [30, 28600]] };   // ×1.3 on 2026-09-26: with FEVER no longer stopping the fight, 49 nights in a row were held
 M.bloodMoon = (d) => d > 0 && d % 5 === 0;
 M.nightBase = (day) => { const C = M.NIGHT.CURVE; if (day <= C[0][0]) return C[0][1]; for (let i = 1; i < C.length; i++) if (day <= C[i][0]) { const [d0, p0] = C[i - 1], [d1, p1] = C[i]; return p0 + (p1 - p0) * (day - d0) / (d1 - d0); } const L = C[C.length - 1]; return L[1] + (day - L[0]) * 900; };
 M.nightPower = (m) => { const d = Math.max(1, (m && m.day) || 1); return Math.round(M.nightBase(d) * (M.bloodMoon(d) ? M.NIGHT.MOON : 1) * (1 - ((m && m.raidWeak) || 0))); };

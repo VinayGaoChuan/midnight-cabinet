@@ -19,7 +19,7 @@ delete M.CAT.luck; delete M.CAT.misc;
 Object.assign(M.CAT_COL, { power: '#ffd23a', store: '#c8a060', forge: '#b8c0cc', faith: '#ffe6a0', med: '#ff6a6a', train: '#ffa060', defense: '#ff6a5a', scout: '#7fe0ff', eng: '#d0a0ff' });
 // what each is for, one sentence (the tag's tooltip)
 M.CAT_D = {
-  power: '每天产出物资。', store: '出征的补给：FEVER、积分倍率和带回的物资。', forge: '打造宝物；有了它，出征才会掉宝物图纸。',
+  power: '每天产出物资。', store: '出征的补给：FEVER 和带回的物资。', forge: '打造宝物；有了它，出征才会掉宝物图纸。',
   faith: '每天产出信仰值；有了它，才有信仰值。', med: '让领袖回复生命。', train: '让领袖和出征部队更强。',
   defense: '守住混沌来袭。', scout: '看清出征的地图。', eng: '挖掘、建造和地格。',
 };

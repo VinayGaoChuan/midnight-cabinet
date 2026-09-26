@@ -17,7 +17,7 @@
 const M = window.MC, G = M.Game.prototype, BP = M.Battle3 && M.Battle3.prototype, S = M.Sfx, U = M.UI, P = M.PJ.PAL, DB = M.DB, now = () => performance.now();
 const cl = (v, a, b) => Math.max(a, Math.min(b, v)), eo = (q) => 1 - Math.pow(1 - q, 3), RM = () => !!(M.PJ && M.PJ.reduced);
 const eback = (q) => { const c = 1.7; return 1 + (c + 1) * Math.pow(q - 1, 3) + c * Math.pow(q - 1, 2); };
-const FIELD_Y = 180, MULT_C = '#ff6bd6';
+const FIELD_Y = 180;
 
 // ───────── the five effects, as the reel shows them (the words match what happens) ─────────
 // six tiers since 2026-09-26 (普通 / 优质 / 稀有 / 史诗 / 传说 / 神话, mc-q6.js). F4: which of the old four a tier plays like
@@ -27,7 +27,7 @@ const FX = M.FEVER_FX = {
   heal: { pct: [0.2, 0.35, 0.5, 1, 1, 1] },
   frame: { list: [['GrayWolf'], ['GrayWolf', 'GrayWolf'], ['GrayWolf', 'GrayWolf', 'DireWolf'], ['DireWolf', 'VengefulDragon'], ['BoneDragon', 'DireWolf', 'DireWolf', 'VengefulDragon'], ['BoneDragon', 'BoneDragon', 'VengefulDragon', 'VengefulDragon', 'DireWolf', 'DireWolf']] },
   bell: { stun: [1, 1.5, 2, 3.5, 0, 1.5], charm: [0, 0, 0, 0, 5, 8] },
-  cup: { add: [0.2, 0.3, 0.4, 0.5, 0.8, 1.2] },
+  horn: { add: [0.08, 0.12, 0.16, 0.22, 0.3, 0.45] },
 };
 const F4 = [0, 0, 1, 2, 3, 3];
 const I = M.ITEMS, nm = (k) => (DB[k] && DB[k].n) || k;
@@ -36,7 +36,7 @@ if (I) {
   Object.assign(I.heal, { tiers: ['全队回复 20%', '全队回复 35%', '全队回复 50%', '全队回满 + 护盾', '回满 + 护盾 + 复活倒下的部队', '回满 + 护盾 + 复活，部队攻击 +30%'] });
   Object.assign(I.frame, { desc: '召来帮手，落到我方阵地上', tiers: FX.frame.list.map(L => { const c = {}; L.forEach(k => { c[k] = (c[k] || 0) + 1; }); return '召来 ' + Object.keys(c).map(k => c[k] + ' 只' + nm(k)).join(' + '); }) });
   Object.assign(I.bell, { name: '摄魂铃', desc: '定住敌人，有概率让敌人自相残杀', tiers: ['敌人定住 1 秒', '定住 1.5 秒', '定住 2 秒', '定住 3.5 秒', '敌人互相攻击 5 秒', '敌人互相攻击 8 秒'] });
-  Object.assign(I.cup, { tiers: FX.cup.add.map(a => '积分倍率 +' + a) });
+  if (I.horn) Object.assign(I.horn, { tiers: FX.horn.add.map(a => '部队攻击 +' + Math.round(a * 100) + '%') });
 }
 // where each ally stood when the fight began: the army's own ground (the called helpers land there)
 if (BP) { const oInit = BP.init; BP.init = function () { const r = oInit.apply(this, arguments); this.ents.forEach(e => { if (e.side === 'A') { e.x0 = e.x; e.y0 = e.y; } }); return r; }; }
@@ -47,18 +47,9 @@ const zoom = (g) => (g.bcam && g.bcam.z) || 1;
 const bodyAt = (g, e) => scr(g, e.x, e.y - 42 * (e.sz || 1));
 const rectOf = (g, sel) => { const st = g.ui && g.ui.stage && g.ui.stage(); if (!st) return null; const el = st.querySelector('[data-fx="' + sel + '"]'); if (!el) return null; const a = st.getBoundingClientRect(), b = el.getBoundingClientRect(), s = g.ui.scale(); return { x: (b.left - a.left) / s, y: (b.top - a.top) / s, w: b.width / s, h: b.height / s }; };
 
-// a glowing chip for the multiplier (drawn once)
-let CHIP = null;
-const chip = () => { if (CHIP) return CHIP; const c = document.createElement('canvas'); c.width = c.height = 44; const x = c.getContext('2d'), R = (a, b, w, h, col) => { x.fillStyle = col; x.fillRect(a, b, w, h); };
-  R(8, 2, 28, 40, P.ink); R(2, 8, 40, 28, P.ink); R(6, 4, 32, 36, P.ink); R(8, 6, 28, 32, MULT_C); R(6, 10, 32, 24, MULT_C); R(10, 6, 16, 4, P.white); R(8, 10, 4, 8, P.white); R(12, 36, 22, 3, '#a02a7a');
-  R(19, 13, 6, 18, P.white); R(13, 19, 18, 6, P.white); CHIP = c; return c; };
-// the multiplier takes chips one by one: each lands with a jump and +0.1
-G.multChips = function (n, from, delay) {
-  const b = this.battle; if (!b || !(n > 0)) return; const to = this.fxPos('bmult') || { x: 1480, y: 1000 };
-  for (let i = 0; i < n; i++) this.fx.fly(chip(), { x: from.x + (Math.random() - 0.5) * 60, y: from.y + (Math.random() - 0.5) * 30 }, to, { col: MULT_C, dur: 0.42, s0: 1.3, s1: 0.8, arc: 160 + Math.random() * 80, delay: (delay || 0) + i * 0.11,
-    onLand: () => { if (this.battle !== b) return; b.mult = Math.round((b.mult + 0.1) * 10) / 10; this.punchSel('bmult', 1.2); this.wave && this.wave(to.x, to.y, 0.6, 200); S.tick && S.tick(Math.min(12, i)); } });
-  S.mult && S.mult();
-};
+// (the multiplier chips went with the score multiplier, 2026-09-26)
+G.multChips = function () {};
+M.feverBody = (g, e) => bodyAt(g, e);
 
 // ───────── the stage ─────────
 G.fvStageStart = function (key, tier, b) {
@@ -67,7 +58,7 @@ G.fvStageStart = function (key, tier, b) {
   const on = (t, fn) => st.ev.push({ t, fn });
   const Ix = I[key], tc = M.TIERS[tier].c;
   st.title = { n: Ix.name, sub: Ix.tiers[tier], c: tc, ic: Ix.icon };
-  S.whoosh && S.whoosh(0.5); S.itemUse && S.itemUse(key === 'cup' ? 'dice' : key, f);
+  S.whoosh && S.whoosh(0.5); S.itemUse && S.itemUse(key === 'horn' ? 'bell' : key, f);
   const g = this, foes = () => b.ents.filter(e => e.alive && e.side === 'E' && e.x < 1900 && (b.t >= (e.entryT || 0)));
   if (key === 'bolt') {
     const n = FX.bolt.n[tier], dmg = FX.bolt.dmg[tier] * Math.max(200, ((b.cfg && b.cfg.budget) || 100) * 2.4) * (b.ek || 1), gap = n > 8 ? 0.11 : n > 5 ? 0.15 : 0.24, struck = new Set();
@@ -110,12 +101,13 @@ G.fvStageStart = function (key, tier, b) {
     st.prop = { kind: 'bell', x: 960, y: 250, t0: 0 };
     [0.45, 0.9, 1.35].forEach(t => on(t, () => { st.waves.push({ t0: st.t }); if (!RM()) g.fx.kick(5); S.itemUse && S.itemUse('bell', f); }));
     st.bellOn = true; st.end = 1.9;   // the first ring has swept the field by then
-  } else if (key === 'cup') {
-    const add = FX.cup.add[tier], n = Math.round(add * 10);
-    st.spot = 'bmult'; st.prop = { kind: 'cup', x: 960, y: 360, t0: 0 };
-    on(0.75, () => { st.dice = [{ a: -1, t0: st.t, v: 1 + Math.floor(Math.random() * 6) }, { a: 1, t0: st.t, v: 1 + Math.floor(Math.random() * 6) }]; S.itemUse && S.itemUse('dice', f); });
-    on(1.2, () => this.multChips(n, { x: 960, y: 450 }, 0));
-    st.end = 1.2 + n * 0.11 + 0.42 + 0.2;
+  } else if (key === 'horn') {
+    // 战吼号角: a horn in the middle; a mote of red-gold light to every unit, each one's attack goes up for the rest of the fight
+    const add = FX.horn.add[tier], C = { x: 960, y: 330 }, A = b.ents.filter(e => e.alive && e.side === 'A' && !e.isHero).sort((a, c) => a.x - c.x);
+    st.prop = { kind: 'horn', x: C.x, y: C.y, t0: 0 };
+    A.forEach((o, i) => on(0.5 + i * 0.06, () => st.flyers.push({ kind: 'mote', from: C, e: o, t0: st.t, dur: 0.4, col: '#ff9a3c', land: () => {
+      if (!o.alive) return; o.atk *= 1 + add; st.marks.push({ e: o, kind: 'rage', t0: st.t }); const q = bodyAt(g, o); g.fx.pop(q.x, q.y - 60, '攻击 +' + Math.round(add * 100) + '%', '#ffb060', 30, { rise: 40 }); } })));
+    st.end = 0.5 + A.length * 0.06 + 0.4 + 0.25;
   }
 };
 // real time: events in order, then the flyers; the stage lets go when it is done or the fight is gone
@@ -130,7 +122,7 @@ G.tick = function (dt) {
   if (st.bellOn) st.waves.forEach(w => { const R = (st.t - w.t0) * 1500; b.ents.forEach(e => { if (!e.alive || e.side !== 'E' || st.hit.has(e.id) || e.x >= 1900) return; const p = bodyAt(this, e); if (Math.hypot(p.x - 960, p.y - 250) > R) return; st.hit.add(e.id);
     const ch = FX.bell.charm[st.tier] || 0; if (ch) { e.charm = ch; e.target = null; if (st.myth) e.stun = Math.max(e.stun || 0, FX.bell.stun[st.tier]); } else e.stun = Math.max(e.stun || 0, FX.bell.stun[st.tier]);
     st.marks.push({ e, kind: ch ? 'charm' : 'stun', t0: st.t }); st.holes.push({ e, r: 100, t0: st.t, life: 99 }); this.fx.pop(p.x, p.y - 70, ch ? '倒戈' : '定住', ch ? (st.myth ? P.red : '#ff80c0') : P.gold, 30, { rise: 40 }); }); });
-  if (st.t >= st.end) { this.fvStage = null; if (this.fx) { this.fx.trauma = Math.min(this.fx.trauma || 0, 0.08); } b.shake = 0; this.feverTimeStart(b); }
+  if (st.t >= st.end) { this.fvStage = null; if (this.fx) { this.fx.trauma = Math.min(this.fx.trauma || 0, 0.08); } b.shake = 0; if (b.fever && !b.fever.on) this.feverTimeStart(b); }   // FEVER TIME started with the effect (mc-fever.js)
   return r;
 };
 // the pile of 5 long shows the player can hurry: the stage counts too
@@ -150,21 +142,16 @@ function drawStage(ctx, g, st) {
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
   // the lit multiplier: a gold frame that breathes
   if (st.spot) { const R = rectOf(g, st.spot); if (R) st.spotR = R; }
-  if (st.spotR) { const R = st.spotR, pu = still ? 0 : Math.sin(T * 8) * 3; ctx.globalAlpha = fade; ctx.strokeStyle = P.gold; ctx.lineWidth = 6; ctx.strokeRect(R.x - 14 - pu, R.y - 10 - pu, R.w + 28 + pu * 2, R.h + 20 + pu * 2); M.glow(ctx, R.x + R.w / 2, R.y + R.h / 2, 220, MULT_C, 0.35 * fade); ctx.globalAlpha = 1; }
+  if (st.spotR) { const R = st.spotR, pu = still ? 0 : Math.sin(T * 8) * 3; ctx.globalAlpha = fade; ctx.strokeStyle = P.gold; ctx.lineWidth = 6; ctx.strokeRect(R.x - 14 - pu, R.y - 10 - pu, R.w + 28 + pu * 2, R.h + 20 + pu * 2); M.glow(ctx, R.x + R.w / 2, R.y + R.h / 2, 220, P.gold, 0.35 * fade); ctx.globalAlpha = 1; }
   // the prop in the middle: candle, frame, bell or cup, rising in with a glow
   const pr = st.prop; if (pr) {
-    const q = cl(T / 0.35, 0, 1), sc = still ? 1 : eback(q), ic = st.title.ic, im = M.spriteCanvas(ic, 18), col = pr.kind === 'candle' ? '#ffe08a' : pr.kind === 'frame' ? '#d8a0ff' : pr.kind === 'bell' ? P.gold : MULT_C;
+    const q = cl(T / 0.35, 0, 1), sc = still ? 1 : eback(q), ic = st.title.ic, im = M.spriteCanvas(ic, 18), col = pr.kind === 'candle' ? '#ffe08a' : pr.kind === 'frame' ? '#d8a0ff' : pr.kind === 'bell' ? P.gold : '#ff9a3c';
     let rot = 0, dx = 0; if (!still && pr.kind === 'bell') rot = Math.sin(T * 9) * 0.35 * cl(1 - (T - 1.6) / 0.8, 0, 1); if (!still && pr.kind === 'cup' && T > 0.3 && T < 0.8) dx = Math.sin(T * 60) * 12; if (!still && pr.kind === 'frame') rot = Math.sin(T * 3) * 0.05;
     ctx.globalAlpha = fade; M.glow(ctx, pr.x, pr.y, 260, col, 0.55); M.glow(ctx, pr.x, pr.y, 110, '#ffffff', 0.35);
     if (pr.kind === 'candle') for (let i = 0; i < 6; i++) { const a = T * 1.4 + i; U.R(ctx, pr.x + Math.cos(a) * 120, pr.y - 40 + Math.sin(a * 1.3) * 60, 6, 6, i % 2 ? P.butter : '#b8ffb0'); }
     if (im) { ctx.save(); ctx.translate(pr.x + dx, pr.y - (pr.kind === 'bell' ? 0 : 0)); ctx.rotate(rot); ctx.scale(sc, sc); ctx.drawImage(im, -im.width / 2, pr.kind === 'bell' ? 0 : -im.height / 2); ctx.restore(); }
     ctx.globalAlpha = 1;
   }
-  // the dice tumble out of the cup and land showing their faces
-  if (st.dice) st.dice.forEach(dc => { const q = cl((T - dc.t0) / 0.45, 0, 1), x = 960 + dc.a * (40 + 90 * eo(q)), y = 380 + 70 * eo(q) - Math.sin(q * Math.PI) * 90, r = still ? 0 : (1 - q) * 6 * dc.a, s = 56;
-    ctx.save(); ctx.globalAlpha = fade; ctx.translate(x, y); ctx.rotate(r); U.R(ctx, -s / 2 - 4, -s / 2 - 4, s + 8, s + 8, P.ink); U.R(ctx, -s / 2, -s / 2, s, s, P.cream); U.R(ctx, -s / 2, -s / 2, s, 6, P.white);
-    const PIP = { 1: [[0, 0]], 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]], 4: [[-1, -1], [1, -1], [-1, 1], [1, 1]], 5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], 6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]] }[q < 1 ? 1 + Math.floor(T * 20) % 6 : dc.v];
-    PIP.forEach(([a, b]) => U.R(ctx, a * 16 - 5, b * 16 - 5, 10, 10, dc.v === 1 && q >= 1 ? P.red : P.ink)); ctx.restore(); M.glow(ctx, x, y, 90, MULT_C, 0.3 * fade); });
   // bell rings
   st.waves.forEach(w => { const q = (T - w.t0) / 0.9; if (q < 0 || q > 1) return; ctx.save(); ctx.globalAlpha = (1 - q) * fade; ctx.strokeStyle = st.myth ? P.red : st.f === 3 ? '#ff80c0' : P.gold; ctx.lineWidth = 10 * (1 - q) + 3; ctx.beginPath(); ctx.ellipse(960, 250, q * 1350, q * 900, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); });
   // bolts from the top of the screen, a chain arc, pillars of light for the risen
@@ -181,6 +168,7 @@ function drawStage(ctx, g, st) {
     ctx.save(); ctx.globalAlpha = a;
     if (mk.kind === 'stun') for (let i = 0; i < 3; i++) { const an = T * 4 + i * 2.1, sx = p.x + Math.cos(an) * 26, sy = y + Math.sin(an) * 8; U.R(ctx, sx - 5, sy - 5, 10, 10, P.ink); U.R(ctx, sx - 3, sy - 3, 6, 6, P.gold); }
     else if (mk.kind === 'charm') { U.R(ctx, p.x - 12, y - 8, 10, 10, '#ff80c0'); U.R(ctx, p.x + 2, y - 8, 10, 10, '#ff80c0'); U.R(ctx, p.x - 8, y, 16, 8, '#ff80c0'); U.R(ctx, p.x - 4, y + 8, 8, 4, '#ff80c0'); }
+    else if (mk.kind === 'rage') { const a2 = 0.6 + 0.4 * Math.abs(Math.sin(T * 5 + e.id)); ctx.globalAlpha = a * a2; U.R(ctx, p.x - 3, y - 6, 6, 14, '#ff9a3c'); U.R(ctx, p.x - 9, y - 6, 18, 4, '#ff9a3c'); U.R(ctx, p.x - 6, y - 10, 12, 4, '#ffcf4a'); U.R(ctx, p.x - 3, y - 14, 6, 4, '#ffcf4a'); }
     else if (mk.kind === 'shield') { ctx.strokeStyle = P.gold; ctx.lineWidth = 5; ctx.beginPath(); ctx.ellipse(p.x, p.y, 48 * zoom(g), 56 * zoom(g), 0, 0, Math.PI * 2); ctx.stroke(); }
     ctx.restore(); });
   // the title: the effect and what it does, in the tier's colour

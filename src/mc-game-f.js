@@ -6,7 +6,7 @@ const cl = (v, a, b) => Math.max(a, Math.min(b, v));
 const Q = M.QUALITY;
 M.HEROES.butcherlord.skill.v = (lv) => 0.2 + 0.05 * Math.floor(lv / 3);
 Object.keys(M.BUILDINGS).forEach(k => { const w = M.BUILDINGS[k].weapon; if (w && !w._s) { w._s = 1; w.dmg *= 9; } });
-const qGlow = (q) => q >= 5 ? '0 0 28px ' + Q[5].c + ', 0 0 64px rgba(255,74,90,0.5)' : q === 4 ? '0 0 26px ' + Q[4].c + ', 0 0 60px rgba(255,154,60,0.45)' : q === 3 ? '0 0 22px rgba(184,107,255,0.5)' : q === 2 ? '0 0 14px rgba(79,143,255,0.4)' : q === 1 ? '0 0 10px rgba(111,212,106,0.35)' : 'none';
+const qGlow = (q) => q >= 6 ? '0 0 30px ' + Q[6].c + ', 0 0 70px rgba(201,162,74,0.55)' : q >= 5 ? '0 0 28px ' + Q[5].c + ', 0 0 64px rgba(255,74,90,0.5)' : q === 4 ? '0 0 26px ' + Q[4].c + ', 0 0 60px rgba(255,154,60,0.45)' : q === 3 ? '0 0 22px rgba(184,107,255,0.5)' : q === 2 ? '0 0 14px rgba(79,143,255,0.4)' : q === 1 ? '0 0 10px rgba(111,212,106,0.35)' : 'none';
 const qBg = (q) => 'radial-gradient(ellipse at 50% 78%,' + Q[q].c + (q >= 2 ? '66' : '33') + ' 0%,rgba(20,14,24,0.95) 62%)';
 M.qGlow = qGlow; M.qBg = qBg;
 const ITEM_BG = 'radial-gradient(ellipse at 50% 78%,#c9a24a44 0%,rgba(20,14,24,0.95) 62%)', ITEM_GLOW = '0 0 12px rgba(201,162,74,0.35)';
@@ -40,7 +40,7 @@ G.startSettle = function () {
   if (run.tut && h.hp <= 0) { h.hp = Math.round(mx * 0.3); good = true; lines.push({ t: '序章中领袖不会死亡', c: '#8d8496' }); }
   if (!good) { title = '领袖倒下'; col = '#ff4a4a'; }
   if (good) {
-    run.wallet += score; lines.push({ t: '积分 +' + M.fmt(score) + '（' + M.fmt(b.base) + ' × ' + b.mult.toFixed(1) + '）', c: '#ffcc33', icon: 'coin' });
+    run.wallet += score; lines.push({ t: '积分 +' + M.fmt(score), c: '#ffcc33', icon: 'coin' });
     const sup = Math.round((10 + 2.5 * cfg.w) * run.lootMul * (1 + (run.mods.supplies || 0))); run.loot.supplies += sup; lines.push({ t: '物资 +' + sup, c: '#caa84a', icon: 'sack' });
     const ex = Math.round((b.kills * 3 + 10 * cfg.w) * (1 + (run.mods.exp || 0))); run.loot.exp += ex; lines.push({ t: '经验 +' + ex + '（带回基地生效）', c: '#9cff7a', icon: 'orb' });
     const pb = n.type === 'boss' ? 1 : n.type === 'elite' ? 0.45 : run.tut ? 0 : 0.06;

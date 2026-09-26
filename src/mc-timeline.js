@@ -195,7 +195,7 @@ const BLESS = [
   { n: '带回的物资 +50%', f: (run) => { run.lootMul *= 1.5; } },
   { n: '视野 +2', f: (run) => { run.visAdj = (run.visAdj || 0) + 2; } },
   { n: '开局多带 2 个支援道具', f: (run) => { for (let i = 0; i < 2; i++) { const s = run.items.indexOf(null); if (s >= 0) { run.items[s] = pick(Object.keys(M.ITEMS)); run.itemQ[s] = 0; } } } },
-  { n: '每场战斗初始积分倍率 +0.5', f: (run) => { run.startMult = (run.startMult || 0) + 0.5; } },
+  { n: '击杀得到的积分 +30%', f: (run) => { run.mods.baseScore = (run.mods.baseScore || 0) + 0.3; } },
   { n: '领袖出发时回满生命', f: (run) => { run.hero.hp = M.heroMaxHp(run.hero, run.M); } },
   { n: '掉图纸的概率翻倍', f: (run) => { run.bpMul = (run.bpMul || 1) * 2; } },
 ];

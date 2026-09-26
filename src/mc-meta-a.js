@@ -49,7 +49,7 @@ M.FURN = [
   { k: 'radio', icon: 'e_music', names: ['收音机', '唱片机', '点唱机'], cost: [90, 220, 450], what: '有音乐的夜晚，运气会好一点。', lv: [
     { d: '出征时事件好运 +10%', fx: { eventLuck: 0.1 } },
     { d: '事件好运 +10%；每次出征自带一面随机战旗', fx: { eventLuck: 0.1, runBanner: 1 } },
-    { d: '事件好运 +15%；自带战旗；初始积分倍率 +0.2', fx: { eventLuck: 0.15, runBanner: 1, startMult: 0.2 } }] },
+    { d: '事件好运 +15%；自带战旗；击杀积分 +10%', fx: { eventLuck: 0.15, runBanner: 1, baseScore: 0.1 } }] },
   { k: 'clock', icon: 't_hourglass', names: ['挂钟', '落地钟', '时之沙'], cost: [110, 260, 500], what: '机台里的时间，走得比外面快。', lv: [
     { d: '建造时间 -1 天', fx: { buildDays: -1 } },
     { d: '建造时间 -1 天；挖掘立刻完成', fx: { buildDays: -1, digInstant: 1 } },

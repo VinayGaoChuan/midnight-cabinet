@@ -53,7 +53,7 @@ MINI.musician = { title: '流浪乐师', img: 'musician', col: C.gold, text: '�
     // 最后一个音符能改评级时：聚光罩住它那条音轨、心跳（能冲到 S 就是超级听牌）
     const L = mg.lastN; if (!mg.reached && !L.st && mg.song > L.t - 0.9 && mg.notes.every(n => n === L || n.st)) { mg.reached = 1; const N2 = mg.notes.length * 2, hi = mTier((mg.score + 2) / N2); if (hi > mTier(mg.score / N2)) SHW.reach(this, mg, { x: LANE_X[L.l], y: HIT_Y, r: 130, lv: hi >= 3 ? 2 : 1 }); }
     if (mg.song > mg.end) { this.miniSet('end'); const N = mg.notes.length, pct = mg.score / (N * 2); let tx, col, g = [], gr, ev;
-      if (pct >= 0.8) { this.run.runBuff.mult = (this.run.runBuff.mult || 0) + 0.3; g.push({ k: 'wallet', v: M.nice(mg.P * 6) }); tx = '乐师第一次笑了（如果那算笑的话）。本局初始积分倍率 +0.3。'; col = '#ffcc33'; gr = 'S'; ev = 'great'; }
+      if (pct >= 0.8) { this.run.runBuff.unitAtk = (this.run.runBuff.unitAtk || 0) + 0.08; g.push({ k: 'wallet', v: M.nice(mg.P * 6) }); tx = '乐师第一次笑了（如果那算笑的话）。本局部队攻击 +8%。'; col = '#ffcc33'; gr = 'S'; ev = 'great'; }
       else if (pct >= 0.55) { this.run.runBuff.unitAtk = (this.run.runBuff.unitAtk || 0) + 0.1; tx = '部队听得热血沸腾。本局部队攻击 +10%。'; col = '#f2c14e'; gr = 'A'; ev = 'ok'; }
       else if (pct >= 0.3) { g.push({ k: 'rsup', v: 15 }); tx = '勉强能听。他还是给了你一点东西。'; col = '#caa84a'; gr = 'B'; ev = 'poor'; }
       else { tx = '琴弦断了一根。他默默收起了琴。'; col = '#8d8496'; gr = 'C'; ev = 'poor'; }
@@ -260,7 +260,7 @@ const MEDS = [
   { n: '金色药水', c: C.gold, d: '宝贝', q: 3, f(g, mg) { return g.award([mg.it || K.item(g.run, mg.P)], mg.from).join(''); } },
   { n: '白色药片', c: C.white, d: '物资', q: 0, f(g, mg) { return g.award([{ k: 'rsup', v: 25 }], mg.from).join(''); } },
   { n: '红色药水', c: C.red, d: '剧毒', q: -1, f(g) { S.mini('clinic', 'bad'); return '中毒 -' + g.heroHurt(0.1); } },
-  { n: '紫色药水', c: C.violet, d: '积分倍率', q: 2, f(g) { g.run.runBuff.mult = (g.run.runBuff.mult || 0) + 0.2; S.mini('clinic', 'mult'); return '本局初始积分倍率 +0.2'; } }];
+  { n: '紫色药水', c: C.violet, d: '部队攻击', q: 2, f(g) { g.run.runBuff.unitAtk = (g.run.runBuff.unitAtk || 0) + 0.05; S.mini('clinic', 'mult'); return '本局部队攻击 +5%'; } }];
 MINI.clinic = { title: '废弃医务室', img: 'gurney', col: C.ice, text: '药柜里有六个瓶子。有两个标签被血糊住了。你最多敢试三瓶。',
   init(mg) { const pool = MEDS.slice().sort(() => rnd() - 0.5); mg.bt = pool.map((m, i) => ({ m, x: SX + 250 + i * 140, y: SY + 330, dark: false, open: 0 })); const dk = [0, 1, 2, 3, 4, 5].sort(() => rnd() - 0.5).slice(0, 2); dk.forEach(i => mg.bt[i].dark = true); mg.opened = 0; mg.got = []; },
   open(mg, i) { const b = mg.bt[i]; if (!b || b.opened || mg.phase !== 'idle' || mg.opened >= 3) return; b.opened = true; mg.opened++; mg.cur = i; S.mini('clinic', 'pick');
@@ -341,17 +341,17 @@ MINI.mirror = { title: '落地镜', img: 'mirror', col: C.blue, text: '镜子里
   } };
 
 // ═════════════════════ 血祭坛 · hold to pour ═════════════════════
-MINI.altar = { title: '血祭坛', img: 'candle', col: C.red, text: '一滴血，一分运。倒得越多，积分倍率越高——但蜡烛随时可能被血浇灭。',
+MINI.altar = { title: '血祭坛', img: 'candle', col: C.red, text: '一滴血，一分力。倒得越多，这一趟部队的攻击越高——但蜡烛随时可能被血浇灭。',
   init(mg) { mg.poured = 0; mg.th = 0.14 + rnd() * 0.26 + mg.luck * 0.2; mg.gain = 0; },
   down(mg) { if (mg.phase === 'ready' || mg.phase === 'pour') { this.miniSet('pour'); } },
   up(mg) { if (mg.phase === 'pour') MINI.altar.stop.call(this, mg); },
   stop(mg) { const h = this.run.hero, mx = M.heroMaxHp(h, this.meta), lost = Math.round(mx * mg.poured); this.fx.flash('#ff2a2a', 0.2); const p = this.fxPos('hp'); if (p) this.fx.pop(p.x, p.y - 30, '-' + lost, '#ff5a4a', 40, { num: 1 }); this.pulse.hp = performance.now();
     if (mg.out) { this.miniSet('done'); this.miniSay('蜡烛灭了', '#8d8496', true); SHW.lose(this, mg); SHW.later(mg, HOLD[0], () => this.mini === mg && this.miniFinish('血太多了，蜡烛被浇灭。祭坛什么也没给你。你流了 ' + lost + ' 点血。', '#8d8496')); return; }
     const lv = Math.floor(mg.poured / 0.04), tier = lv >= 6 ? 3 : lv >= 3 ? 2 : lv >= 1 ? 1 : 0;
-    mg.gain = lv * 0.1; this.run.runBuff.mult = (this.run.runBuff.mult || 0) + mg.gain; S.mini('altar', mg.gain ? 'win' : 'flicker'); this.miniSet('done'); this.miniSay('本局积分倍率 +' + mg.gain.toFixed(1), '#ffcc33', true);
+    mg.gain = lv * 0.02; this.run.runBuff.unitAtk = (this.run.runBuff.unitAtk || 0) + mg.gain; S.mini('altar', mg.gain ? 'win' : 'flicker'); this.miniSet('done'); this.miniSay('本局部队攻击 +' + Math.round(mg.gain * 100) + '%', '#ffcc33', true);
     // 倍率越高演得越响：倒到六成以上是大赢；一滴没到数一拍带过
     if (tier) SHW.win(this, mg, tier, { x: CX, y: FLOOR - 300, col: tier >= 3 ? C.gold : C.magenta }); else SHW.lose(this, mg);
-    SHW.later(mg, HOLD[tier], () => this.mini === mg && this.miniFinish(mg.gain ? '蜡烛亮了一截。你流了 ' + lost + ' 点血，本局初始积分倍率 +' + mg.gain.toFixed(1) + '。' : '你只滴了几滴，祭坛没有理你。', mg.gain ? '#ffcc33' : '#8d8496')); },
+    SHW.later(mg, HOLD[tier], () => this.mini === mg && this.miniFinish(mg.gain ? '蜡烛亮了一截。你流了 ' + lost + ' 点血，本局部队攻击 +' + Math.round(mg.gain * 100) + '%。' : '你只滴了几滴，祭坛没有理你。', mg.gain ? '#ffcc33' : '#8d8496')); },
   btns(mg) { if (mg.phase === 'idle') return [{ t: '献血', sub: '按住倒血，松手停下', danger: 1, fn: () => this.miniSet('ready') }, { t: '离开', leave: 1, fn: () => this.miniFinish('烛火跟着你晃了一下。', '#8d8496') }]; if (mg.phase === 'ready') return [{ t: '按住空格 / 鼠标', sub: '倒血', dis: 1, why: '按住画面' }]; return []; },
   tick(mg, dt) {
     if (mg.phase !== 'pour') return; const h = this.run.hero, mx = M.heroMaxHp(h, this.meta), step = 0.1 * dt; if (h.hp - mx * step <= 1) return MINI.altar.stop.call(this, mg); h.hp -= mx * step; mg.poured += step;
@@ -371,8 +371,8 @@ MINI.altar = { title: '血祭坛', img: 'candle', col: C.red, text: '一滴血�
     K.R(x, cx0 - 14, FLOOR - 250, 28, 100, '#e8dcc4'); if (!mg.out) { K.GL(x, cx0 + wob, FLOOR - 270, 140 * fl, '#ff8a3a', 0.6); K.EL(x, cx0 + wob, FLOOR - 272, 9 * fl, 22 * fl, '#ffcc33'); K.EL(x, cx0 + wob, FLOOR - 268, 4 * fl, 10 * fl, '#fff6c0'); } else K.LN(x, cx0, FLOOR - 255, cx0 + 10, FLOOR - 320, 3, 'rgba(160,160,170,0.5)');
     const hx = CX - 330; K.SP(x, heroSp(this), hx, FLOOR, 190);
     if (mg.phase === 'pour') { x.strokeStyle = C.red; x.lineWidth = 6; x.beginPath(); x.moveTo(hx + 50, FLOOR - 110); x.quadraticCurveTo(gx - 120, gy - 260, gx, gy - 130); x.stroke(); for (let i = 0; i < 4; i++) K.CI(x, gx + Math.sin(t * 20 + i) * 8, gy - 140 + i * 10, 4, '#d01a1a'); }
-    // 积分倍率读数：品红大字，每涨一档弹一下；流血量红字
-    K.big(x, '积分倍率 +' + (Math.floor(mg.poured / 0.04) * 0.1).toFixed(1), CX, SY + 160, T.num, C.magenta, mg.phase === 'pour' ? (mg.poured % 0.04) / 0.1 : 9); U.text(x, '已流血 ' + Math.round(mg.poured * 100) + '%', CX, SY + 215, T.body, C.red);
+    // 部队攻击读数：品红大字，每涨一档弹一下；流血量红字
+    K.big(x, '部队攻击 +' + (Math.floor(mg.poured / 0.04) * 2) + '%', CX, SY + 160, T.num, C.magenta, mg.phase === 'pour' ? (mg.poured % 0.04) / 0.1 : 9); U.text(x, '已流血 ' + Math.round(mg.poured * 100) + '%', CX, SY + 215, T.body, C.red);
     if (mg.phase === 'ready') K.sign(x, '按住倒血', CX, SY + 272, { kind: 'red', size: T.btn });
   } };
 

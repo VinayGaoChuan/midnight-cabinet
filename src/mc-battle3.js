@@ -111,7 +111,7 @@ H.HealingAura = { aura: { r: RM, col: '#7fff9a', ally: 1, fn(b, e, o, v) { o.au.
 H.Maul = { dealt(b, e, tg, d, v, c) { if (c.auto && tg.alive) { tg.slowAS = Math.max(tg.slowAS, v[0] / 100); tg.slowT = b.t + 3; } } };
 H.RaiseImp = { tick(b, e, v, dt) { e.st.ri = (e.st.ri || 0) + dt; if (e.st.ri > 9) { e.st.ri = 0; b.summon('Imp', e.side, e.x + 40, e.y, 30, e); } } };
 H.DiabolicDuo = {};
-H.JadeBeast = { start(b, e) { const n = b.run.roster.filter(u => DB[u.type] && DB[u.type].race === '兽人').length; let m = 0; if (n >= 2) m += 0.1; if (n >= 3) m += 0.1; if (m) { b.addMult(m, e.x, e.y - 120, '玉石共鸣'); b.fxp({ k: 'rays', x: e.x, y: e.y - 40, col: '#7fffc0', life: 0.9, r: 140 }); } } };
+H.JadeBeast = { start(b, e, v) { const n = b.run.roster.filter(u => DB[u.type] && DB[u.type].voc === '商人').length, a = (v && v[0]) || 20, c = (v && v[1]) || 20; let k = 0; if (n >= 2) k += a / 100; if (n >= 3) k += c / 100; if (k) { b.scoreK = Math.max(b.scoreK || 0, k); b.float(e.x, e.y - 120, '玉石共鸣 · 击杀积分 +' + Math.round(k * 100) + '%', '#7fffc0', 28); b.fxp({ k: 'rays', x: e.x, y: e.y - 40, col: '#7fffc0', life: 0.9, r: 140 }); } } };
 M.TRAIT_H = H;
 
 class B3 extends M.Battle2 {
@@ -120,7 +120,7 @@ class B3 extends M.Battle2 {
     this.run = run; this.cfg = cfg; this.w = cfg.w; this.mode = cfg.mode; this.mods = run.mods;
     this.t = 0; this.ents = []; this.proj = []; this.fx = []; this.pending = []; this.growLog = [];
     this.shake = 0; this.flash = 0; this.flashCol = '#fff8d8'; this.syn = {};
-    this.base = 0; this.mult = Math.round((1 + (run.startMult || 0) + (run.runBuff.mult || 0) + M.legionSum(run, 'mult')) * 10) / 10;
+    this.base = 0; this.mult = 1;   // 积分倍率 removed (user ruling 2026-09-26: 「把积分倍率相关的所有内容删掉」): the score is what the kills give
     this.spawnI = 0; this.over = null; this.overT = 0; this.deadUids = []; this.nid = 1; this.kills = 0;
     this.skillT = 0; this.allin = 0; this.rewind = 0; this.rage = 0; this.heroDmgTaken = 0; this.started = false;
     this.ek = (run.region.tut ? 0.75 : 1) * (1 + (run.M.day - 1) * 0.02);
@@ -150,7 +150,7 @@ class B3 extends M.Battle2 {
     // no army, or a boss fight (user ruling 2026-09-24): the leader takes the field with the army from the start
     if (!run.roster.length || cfg.type === 'extract') this.later(this.openEnd, () => this.heroEnter());   // 2026-09-25: bosses wait like any fight; the 撤离战 leader fights beside the army
   }
-  get score() { return Math.round(this.base * this.mult); }
+  get score() { return Math.round(this.base); }
   mk(o) { const e = Object.assign({ id: this.nid++, alive: true, t: Math.random() * 0.4, flash: 0, stun: 0, charm: 0, shield: 0, kills: 0, readyAt: 0, mana: 0, def: 0, dodge: 0, asB: 0, asDyn: 0, atkDyn: 0, defDyn: 0, combo: 0, buffs: [], debuf: {}, st: {}, traits: [], slowAS: 0, slowT: 0, au: {}, sz: 1, tags: [], star: 1 }, o); e.maxHp = e.maxHp || e.hp; this.ents.push(e); return e; }
   unitStats(key, side, x, y, o = {}) {
     const d = DB[key], u = o.unit, L = side === 'A' ? M.legionMods(this.run, d) : { hp: 0, atk: 0, as: 0, mana: 0, shield: 0 }, md = side === 'A' ? this.mods : {}, V = side === 'A' ? M.vocMods(md, d) : M.vocMods(null);
@@ -158,7 +158,7 @@ class B3 extends M.Battle2 {
     const hp = (d.hp + (u ? u.bHp : 0)) * (1 + L.hp + V.hp + (md.unitHp || 0)) * ek * (o.hpMul || 1), atk = (d.atk + (u ? u.bAtk : 0)) * (1 + L.atk + V.atk + (md.unitAtk || 0) + (this.run.runBuff.unitAtk || 0) * (side === 'A' ? 1 : 0)) * ek * (o.atkMul || 1);
     const boss = !!o.boss || d.g === '不朽';
     const traits = (d.tr || []).filter(t => TDB[t]).map(t => { const T = TDB[t]; return { key: t, n: T.n, d: T.d, v: T.v, cls: T.cls.replace(/^Summon|Trait$/g, '') }; });
-    const e = this.mk({ side, key, d, kind: key, hd: { key: d.art || key, race: d.race, voc: d.voc, q: d.q }, tier: d.tier || 0, sz: (QS[d.q] || 1) * (boss ? 1.45 : o.elite ? 1.15 : 1) * (o.summon ? 0.9 : 1), evo: (u && u.evo) || 0, x, y, hp, maxHp: hp, atk, iv: d.as ? 100 / d.as : 99, range: d.ranged === 1 ? d.rad * 0.46 : 48 + Math.max(0, d.rad - 240) * 0.12, spd: (d.spd || 280) * 0.32, ranged: d.ranged === 1, noAtk: d.ranged === 2 || !d.atk, traits, unit: u, uid: u ? u.uid : null, summon: !!o.summon, life: o.life, boss, elite: !!o.elite, base: side === 'E' ? Math.round((d.cost || 10) * (o.elite ? 1.3 : 1)) : 0, mult: side === 'E' ? (boss ? 0.3 : o.elite ? 0.1 : 0) : 0 });
+    const e = this.mk({ side, key, d, kind: key, hd: { key: d.art || key, race: d.race, voc: d.voc, q: d.q }, tier: d.tier || 0, sz: (QS[d.q] || 1) * (boss ? 1.45 : o.elite ? 1.15 : 1) * (o.summon ? 0.9 : 1), evo: (u && u.evo) || 0, x, y, hp, maxHp: hp, atk, iv: d.as ? 100 / d.as : 99, range: d.ranged === 1 ? d.rad * 0.46 : 48 + Math.max(0, d.rad - 240) * 0.12, spd: (d.spd || 280) * 0.32, ranged: d.ranged === 1, noAtk: d.ranged === 2 || !d.atk, traits, unit: u, uid: u ? u.uid : null, summon: !!o.summon, life: o.life, boss, elite: !!o.elite, base: side === 'E' ? (boss ? Math.round(((this.cfg && this.cfg.budget) || 100) * (M.BOSS_SCORE || 1.6)) : Math.round((d.cost || 10) * (o.elite ? 1.3 : 1))) : 0, mult: side === 'E' ? (boss ? 0.3 : o.elite ? 0.1 : 0) : 0 });
     e.asB += L.as + V.as; e.manaMul = 1 + L.mana + V.mana; e.hasMana = traits.some(t => /法力/.test(t.d));
     e.pw = M.unitPower(key, u);
     if (L.shield) e.shield = e.maxHp * L.shield;
@@ -338,12 +338,8 @@ class B3 extends M.Battle2 {
     this.ents.forEach(o => { if (o !== e && this.active(o) && o.side !== e.side) this.call(o, 'near', e); });
     if (e.side === 'E') {
       this.kills++;
-      const base = Math.max(1, Math.round(e.base * 0.9 * (1 + (this.mods.baseScore || 0) + M.legionSum(this.run, 'base'))));
+      const base = Math.max(1, Math.round(e.base * (M.KILL_K || 0.9) * (1 + (this.mods.baseScore || 0) + (this.scoreK || 0)) * (this.t < this.allin ? 1 + (this.allinV || 0.1) * 10 : 1)));   // scoreK: 玉石共鸣; allin: 梭哈
       this.base += base; this.float(e.x, e.y - hgt - 10, '+' + fmt(base), PL.cream, 24, true);
-      let m = e.mult; if (m && (e.elite || e.boss)) m += M.legionSum(this.run, 'eliteMult');
-      if (this.t < this.allin) m += (this.allinV || 0.1);
-      const km = M.legionSum(this.run, 'killMult'); if (km && this.kills % km === 0) m += 0.1;
-      if (m) this.addMult(Math.round(m * 10) / 10, e.x, e.y - hgt - 50);
       if (e.boss) { this.shake = 30; this.flash = 0.6; this.flashCol = '#ffffff'; this.slow = 0.8; Sfx.impact(); } else if (e.elite) { this.shake = Math.max(this.shake, 14); this.slow = Math.max(this.slow || 0, 0.25); }
       if (src && src.side === 'A' && (e.elite || e.boss) && this.mods.eliteHeal && this.hero.alive) this.heal(this.hero, this.hero.maxHp * this.mods.eliteHeal);
       if (src && src.side === 'A' && src.alive) { src.kills++; if (src.unit) src.unit.kills = (src.unit.kills || 0) + 1; this.call(src, 'kill', e); if (src.isHero && this.mods.killHeal) this.heal(src, src.maxHp * this.mods.killHeal); }
@@ -352,7 +348,7 @@ class B3 extends M.Battle2 {
     else { if (src && src.alive) this.call(src, 'kill', e); if (!e.summon && !e.evolved) { this.deadUids.push(e.uid); this.float(e.x, e.y + 30, '倒下', '#ff8a8a', 26); } Sfx.allyDie(Sfx.panX(e.x)); }
   }
   explode(x, y, dmg, src) { this.fxp({ k: 'boom', x, y, life: 0.4 }); this.shake = Math.max(this.shake, 10); Sfx.boom(); this.ents.forEach(o => { if (this.active(o) && o.side === 'E' && Math.hypot(o.x - x, o.y - y) < 150) this.deal(src || this.hero, o, dmg, { skill: 1 }); }); }
-  addMult(m, x, y, label) { m = Math.round(m * 10) / 10; if (!m) return; this.mult = Math.round((this.mult + m) * 10) / 10; this.float(x, y, (label ? label + ' ' : '') + '积分倍率 +' + m, PL.magenta, 40); this.fxp({ k: 'rays', x, y: y + 20, col: '#ffcc33', life: 0.6, r: 90 }); Sfx.mult(); }
+  addMult() {}   // 积分倍率 is gone (2026-09-26): whatever still calls this adds nothing
   itemEffect(key, tier) {
     const T = this.t, hs = Math.max(200, this.cfg.budget * 2.4) * this.ek;
     const foes = () => this.ents.filter(e => this.active(e) && e.side === 'E' && e.x < 1900);
@@ -461,7 +457,7 @@ function drawBars(ctx, e, T, b) {
     if (ready) { ctx.save(); ctx.globalAlpha *= 0.5 + 0.5 * Math.sin(T * 4 * Math.PI); U.R(ctx, x - 2, top + 6, w + 4, 8, PL.butter); U.R(ctx, x, top + 8, w, 4, PL.ink); ctx.restore(); }   // a ready skill waiting for its trigger: the bar's frame blinks
     const mw = w * clamp(ch / 100, 0, 1); if (mw > 0) { U.R(ctx, x, top + 8, mw, 4, PL.teal); U.R(ctx, x, top + 8, mw, 2, PL.ice); } }
   // 品质菱形：品质色像素菱形，墨色大一圈垫底，顶格亮一阶
-  if (e.d.q >= 1 && !e.isHero) { const q = M.UI.Q[Math.min(5, e.d.q)], dx = x - 10, dy = top + 2;
+  if (e.d.q >= 1 && !e.isHero) { const q = M.UI.Q[Math.min(M.UI.Q.length - 1, e.d.q)], dx = x - 10, dy = top + 2;
     for (let k = -3; k <= 3; k++) { const r = 3 - Math.abs(k); U.R(ctx, dx - r * 2, dy + k * 2, r * 4 + 2, 2, PL.ink); }
     for (let k = -2; k <= 2; k++) { const r = 2 - Math.abs(k); U.R(ctx, dx - r * 2, dy + k * 2, r * 4 + 2, 2, k === -2 ? q[1] : q[0]); } }
   // 状态签：像素字 24px（像素层上正好 12px 原生字号）+ 1 格墨描边，按实际宽度排开

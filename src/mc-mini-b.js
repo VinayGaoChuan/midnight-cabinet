@@ -180,7 +180,7 @@ MINI.tree = { title: '世界树', img: 'e_tree', col: C.green, text: '树根扎�
 
 // ═════════════════════ 塔罗 / 砸金蛋 · pick from covered things ═════════════════════
 const TAROT = [
-  { n: '太阳', c: C.gold, ic: 'u_star', good: 1, q: 3, f(g) { return g.buffRun('mult', 0.3, '积分倍率 +0.3', C.magenta); } },
+  { n: '太阳', c: C.gold, ic: 'u_star', good: 1, q: 3, f(g) { return g.buffRun('unitAtk', 0.08, '本局部队攻击 +8%', C.gold); } },
   { n: '月亮', c: C.ice, ic: 't_eye', good: 1, q: 1, f(g) { return g.buffRun('eventLuck', 0.15, '事件好运 +15%', C.ice); } },
   { n: '星星', c: C.violet, ic: 'gem', good: 1, q: 2, f(g, mg) { const got = g.award([K.item(g.run, mg.P)], mg.from); return got.join(''); } },
   { n: '力量', c: C.amber, ic: 't_sword', good: 1, q: 1, f(g) { return g.buffRun('unitAtk', 0.1, '部队攻击 +10%', C.amber); } },
@@ -352,7 +352,7 @@ MINI.dice = { title: '骰子对决', img: 't_dice', col: C.cream, text: '一个�
 // ═════════════════════ 命运之轮 · pay in blood, spin the reel ═════════════════════
 // the wheel is a wheel (user ruling 2026-09-25): the stone disc itself spins, slows down and stops with a sector under
 // the pointer — no slot reel. Each sector says what it gives.
-const FATE = [{ n: '空', c: C.haze, w: 16 }, { n: '积分倍率 +0.4', c: C.magenta, w: 16 }, { n: '部队', c: C.blue, w: 16 }, { n: 'FEVER', c: C.violet, w: 14 }, { n: '图纸', c: C.tan, w: 12 }, { n: '积分', c: C.gold, w: 16 }, { n: '诅咒', c: C.red, w: 10 }];
+const FATE = [{ n: '空', c: C.haze, w: 16 }, { n: '部队攻击 +8%', c: C.magenta, w: 16 }, { n: '部队', c: C.blue, w: 16 }, { n: 'FEVER', c: C.violet, w: 14 }, { n: '图纸', c: C.tan, w: 12 }, { n: '积分', c: C.gold, w: 16 }, { n: '诅咒', c: C.red, w: 10 }];
 const SEG = Math.PI * 2 / FATE.length, FTA = 2.6;
 // 每格的中奖档（0 = 没中）；倍率和图纸是「金格」
 const FT = [0, 3, 2, 2, 3, 2, 0], TOPF = (k) => FT[k] >= 3;
@@ -383,7 +383,7 @@ MINI.fate = { title: '命运之轮', img: 'e_fate', col: C.red, text: '石头做
   resolve(mg, idx) {
     const run = this.run, P = mg.P; let tx = '', col = FATE[idx].c; const g = [];
     if (idx === 0) tx = '石轮停在空白处。血白流了。';
-    if (idx === 1) { run.runBuff.mult = (run.runBuff.mult || 0) + 0.4; tx = '本局初始积分倍率 +0.4。'; }
+    if (idx === 1) { run.runBuff.unitAtk = (run.runBuff.unitAtk || 0) + 0.08; tx = '本局部队攻击 +8%。'; }
     if (idx === 2) { const t = M.pickUnitQ(run); if (M.canAdd(run, t)) { g.push({ k: 'unit', type: t }); tx = '石轮上走下来一个 ' + M.DB[t].n + '。'; } else { g.push({ k: 'wallet', v: M.nice(P * 6) }); tx = '队伍满了，名字化成了积分。'; } }
     if (idx === 3) { run.mods.feverStart = (run.mods.feverStart || 0) + 0.2; tx = '石轮发烫。本局每场战斗开局 FEVER 槽 +20%。'; }
     if (idx === 4) { g.push(K.bp(null, 1)); tx = '一张刻在石片上的图纸。'; }

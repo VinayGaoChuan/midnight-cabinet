@@ -6,7 +6,10 @@ const PX = M.PX, RCOL = M.RACES, FW = 1920, FH = 720;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const eo = (t) => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
 const rnd = (i) => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
-const BAL = M.BAL = { MANA_MUL: 2.0, ALLY_FLOOR: 5, ENEMY_K: 1.9 };   // 2026-09-26 (evolution lines): 1.6 → 1.9, growth sims won 58 of 59 runs at 2.5–3 times the enemy (target ~2.2, a run lost now and then)   // 2026-09-26: 1.8 → 1.6, the leader lost its field skill and a lost run costs a core heart   // batch G/H rebalance: a shopping player won everything at 1.15; 1.6 → 1.8 with the layered talent trees and levelled leaders (2026-09-25)
+const BAL = M.BAL = { MANA_MUL: 2.0, ALLY_FLOOR: 5, ENEMY_K: 1.9 };
+// the score (2026-09-26, 积分倍率 removed): a kill gives 0.7 × the enemy's price (was 0.9 and then multiplied); a boss gives
+// 1.6 × the fight's budget instead of its own huge price (a first-chapter boss paid 2 340, ten normal fights)
+M.KILL_K = 0.7; M.BOSS_SCORE = 1.6;   // 2026-09-26 (evolution lines): 1.6 → 1.9, growth sims won 58 of 59 runs at 2.5–3 times the enemy (target ~2.2, a run lost now and then)   // 2026-09-26: 1.8 → 1.6, the leader lost its field skill and a lost run costs a core heart   // batch G/H rebalance: a shopping player won everything at 1.15; 1.6 → 1.8 with the layered talent trees and levelled leaders (2026-09-25)
 let { MANA_MUL, ALLY_FLOOR } = BAL;
 M.setBal = (o) => { Object.assign(BAL, o); ({ MANA_MUL, ALLY_FLOOR } = BAL); };
 // enemies are a little tougher outside the tutorial

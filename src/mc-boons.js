@@ -9,11 +9,13 @@ const M = window.MC, G = M.Game.prototype, DB = M.DB, B = M.BUILDINGS, S = M.Sfx
 const cl = (v, a, b) => Math.max(a, Math.min(b, v)), eo = (q) => 1 - Math.pow(1 - q, 3);
 
 // the battle keys and how they read (percentages unless noted)
-const BN = { unitAtk: '部队攻击 +{p}%', unitHp: '部队生命 +{p}%', heroAtk: '领袖攻击 +{p}%', heroHp: '领袖生命 +{p}%', shield: '部队开局护盾 {p}%', startMult: '初始积分倍率 +{v}',
+const BN = { unitAtk: '部队攻击 +{p}%', unitHp: '部队生命 +{p}%', heroAtk: '领袖攻击 +{p}%', heroHp: '领袖生命 +{p}%', shield: '部队开局护盾 {p}%', baseScore: '击杀积分 +{p}%',
   feverStart: 'FEVER 槽开局 {p}%', feverRate: 'FEVER 槽涨得快 {p}%', skillPow: '领袖技能效果 +{p}%', vanHp: '先锋生命 +{p}%', guaHp: '守护者生命 +{p}%', warAtk: '战士攻击 +{p}%',
   palHp: '圣骑士生命 +{p}%', rngAtk: '射手攻击 +{p}%', rngAs: '射手攻速 +{p}%', assAtk: '刺客攻击 +{p}%', magAtk: '法师攻击 +{p}%', cleHp: '牧师生命 +{p}%', priAtk: '祭司攻击 +{p}%',
   priHp: '祭司生命 +{p}%', sumHp: '召唤师生命 +{p}%', sumAtk: '召唤师攻击 +{p}%', diverse: '每种职业全体生命 +{p}%', bossStun: '首领开场停顿 {v} 秒' };
 const GAR = { garHp: '驻军生命 +{p}%', defDmg: '驻军攻击 +{p}%' };
+// every vocation's life / attack / attack speed
+Object.entries({ van: '先锋', gua: '守护者', war: '战士', pal: '圣骑士', rng: '射手', ass: '刺客', mag: '法师', cle: '牧师', pri: '祭司', sum: '召唤师', mer: '商人' }).forEach(([k, n]) => { BN[k + 'Hp'] = n + '生命 +{p}%'; BN[k + 'Atk'] = n + '攻击 +{p}%'; BN[k + 'As'] = n + '攻速 +{p}%'; });
 const say = (tab, o) => Object.keys(tab).filter(k => o[k] > 0.0001).map(k => tab[k].replace('{p}', Math.round(o[k] * 100)).replace('{v}', Math.round(o[k] * 100) / 100));
 const add = (o, x, keys) => { if (x) Object.keys(x).forEach(k => { if (keys[k] && typeof x[k] === 'number') o[k] = (o[k] || 0) + x[k]; }); return o; };
 // the sources, in the order they are shown: [{ n, ic, c, t }]

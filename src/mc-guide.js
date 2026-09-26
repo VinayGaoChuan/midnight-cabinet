@@ -81,7 +81,7 @@ const CONCEPTS = [
   { id: 'legion', cat: '领袖', icon: 't_skill', title: '领袖技能', line: '每个职业一个技能：在场外指挥时按空格放，每场战斗一开战就能用一次。', scr: ['base', 'world'], sel: '[data-tip="tal-root"],[data-g="w-skill"]' },
   // ── 战斗 ──
   { id: 'bmode', cat: '战斗', icon: 't_sword', title: '战斗目标', line: '普通战：消灭所有敌人；坚守战：撑过倒计时。', scr: 'battle', sel: '[data-tip="b-mode"]', freeze: 1 },
-  { id: 'score', cat: '战斗', icon: 't_mult', title: '积分 = 基础 × 积分倍率', line: '击杀得基础分；精英、首领、FEVER、宝物会加积分倍率。积分就是这一局的钱。', scr: 'battle', sel: '[data-tip="b-score"]', freeze: 1 },
+  { id: 'score', cat: '战斗', icon: 't_coin', title: '积分', line: '击杀敌人得积分，越强的敌人给得越多。积分就是这一趟在夜市用的钱。', scr: 'battle', sel: '[data-tip="b-base"]', freeze: 1 },
   { id: 'bhero', cat: '战斗', icon: 't_command', title: '指挥位', line: '领袖站在左边指挥；部队全灭后亲自上场，撤离战和部队一起上场。', scr: 'battle', sel: '[data-tip="b-hero"]', freeze: 1 },
   { id: 'bskill', cat: '战斗', icon: 't_skill', title: '领袖技能', line: '按空格放。', scr: 'battle', sel: '[data-g="b-skill"]', freeze: 1, when: (g) => g.battle && g.battle.hero && g.battle.hero.bench },
   { id: 'voc', cat: '标签与品质', icon: 'v_archer', title: '职业标签', line: '决定打法：先锋、守护者扛伤，战士近战，射手远程，刺客先杀弱小，法师群体伤害，牧师、圣骑士治疗，祭司光环，召唤师召唤，商人赚钱。', scr: ['shop', 'world', 'battle', 'base'], sel: '[data-tip^="tag-voc-"]' },

@@ -74,8 +74,7 @@ G.tipFor = function (key) {
   const m = this.meta, run = this.run, b = this.battle, kq = (a) => '「' + M.keyOf(a) + '」';
   const T = {
     'b-mode': () => { const cf = (b && b.cfg) || this.cfg || {}, hold = cf.mode === 'hold'; return { title: cf.type === 'boss' ? '首领战' : cf.type === 'elite' ? '精英战' : cf.type === 'extract' ? '撤离战' : hold ? '坚守战' : '普通战', c: '#f2c14e', d: hold ? '撑过倒计时就赢。' : cf.type === 'boss' ? '领袖和部队一起上，消灭所有敌人就赢。' : '消灭所有敌人就赢。' }; },
-    'b-base': () => ({ title: '基础积分', c: '#f5ead4', d: '击杀获得，乘以积分倍率就是本场积分。' }),
-    'b-mult': () => ({ title: '积分倍率', c: '#ffcc33', d: '击杀精英 +0.1，击杀首领 +0.3。' }),
+    'b-base': () => ({ title: '本场积分', c: '#ffcc33', d: '击杀敌人得到，胜利后存进钱包，在夜市花。' }),
     'b-score': () => ({ title: '积分', c: '#ffcc33', d: '胜利后存进钱包，在夜市花。' }),
     'b-hero': () => ({ title: run ? 'Lv' + run.hero.lv + ' ' + M.heroN(run.hero) : '领袖', c: '#f2c14e', d: '部队全灭后亲自上场。' }),
     'b-count': () => ({ title: '战况', c: '#e8dcc4', d: '我方剩余部队 / 剩余敌人。' }),
@@ -215,7 +214,7 @@ G.view = function () {
         fl: q < 1 ? 0 : (0.85 * (1 - M.ease.eo(la / 0.22))).toFixed(3), ringIn: -Math.round(4 + 46 * M.ease.eo(la / 0.45)), ringOp: q < 1 ? 0 : (1 - M.ease.eo(la / 0.45)).toFixed(3), shX: Math.round(-90 + 360 * cl((la - 0.15) / 0.45, 0, 1)), isc: (1 + 0.18 * Math.exp(-la * 8)).toFixed(3),
         bgc: t.c + '48', glow: t.c + (rare ? 'aa' : '55'), gw: Math.round((rare ? 44 : 22) + 30 * Math.exp(-la * 4)), rare, halo: t.c + '66', tipOn: this.tipFn(n && i < st.shown ? { title: n, c: t.c } : null) };
     });
-    v.st.hasTiles = v.st.tiles.length > 0; v.st.eqOn = st.good; v.st.base = M.fmt(st.base); v.st.mult = (Math.round(st.mult * 100) / 100).toFixed(2); v.st.score = M.fmt(st.score * M.ease.eo(q));
+    v.st.hasTiles = v.st.tiles.length > 0; v.st.eqOn = false; /* no base × multiplier equation any more (积分倍率 removed 2026-09-26) */ v.st.base = M.fmt(st.base); v.st.mult = (Math.round(st.mult * 100) / 100).toFixed(2); v.st.score = M.fmt(st.score * M.ease.eo(q));
     v.st.btn = st.shown < st.tiles.length ? '跳过' : st.final === 'fail' ? '结束' : st.final ? '带着收获回家' : '继续前进';
   }
   // coach ring follows its building while the camera moves

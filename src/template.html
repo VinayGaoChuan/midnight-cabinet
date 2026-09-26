@@ -1191,11 +1191,7 @@
     </div>
     <div style="flex:1;display:flex;flex-direction:column;gap:14px">
       <div style="display:flex;align-items:flex-end;gap:26px">
-        <div data-tip="b-base" data-fx="bbase" style="display:flex;flex-direction:column;gap:8px;min-width:240px"><div style="font-size:22px;color:#a9a3c9">基础积分</div><mc-num v="{{h.base}}" style="font-size:40px;color:#f4efe0"></mc-num></div>
-        <div style="font-family:'Silkscreen','Fusion Pixel 12px Proportional SC',monospace;font-size:32px;color:#6a6394">×</div>
-        <div data-tip="b-mult" data-fx="bmult" style="display:flex;flex-direction:column;gap:8px;min-width:150px"><div style="font-size:22px;color:#a9a3c9">积分倍率</div><mc-num v="×{{h.mult}}" style="font-size:40px;color:#ff6bd6;transform:scale({{h.multSc}});transform-origin:left center"></mc-num></div>
-        <div style="font-family:'Silkscreen','Fusion Pixel 12px Proportional SC',monospace;font-size:32px;color:#6a6394">=</div>
-        <div style="display:flex;flex-direction:column;gap:8px"><div data-tip="b-score" style="font-size:22px;color:#a9a3c9">{{h.scoreLabel}}</div><mc-num v="{{h.score}}" style="font-size:52px;color:{{h.scoreColor}};transform:scale({{h.scoreSc}});transform-origin:left center"></mc-num></div>
+        <div data-tip="b-base" data-fx="bbase" style="display:flex;flex-direction:column;gap:8px;min-width:240px"><div style="font-size:22px;color:#a9a3c9">本场积分</div><mc-num v="{{h.base}}" style="font-size:52px;color:#ffcc33;transform:scale({{h.scoreSc}});transform-origin:left center"></mc-num></div>
       </div>
       <div style="position:relative;height:12px;background:#07060f;box-shadow:0 0 0 3px #07060f,0 0 0 6px #3d3a8c"><div style="position:absolute;left:0;top:0;bottom:0;width:{{h.bar}};background:{{h.barC}};box-shadow:inset 0 3px 0 0 rgba(255,243,176,0.55)"></div></div>
     </div>
@@ -1522,9 +1518,9 @@
   <div data-enter-rows="1" style="--rd:.12s;position:absolute;left:60px;right:60px;top:280px;display:flex;flex-wrap:wrap;justify-content:center;gap:28px 36px">
     <sc-for list="{{rp.cards}}" as="rc" hint-placeholder-count="2">
       <div data-pj="opt" sc-camel-on-click="{{rc.onPick}}" style="width:400px;box-sizing:border-box;padding:18px 20px 22px;display:flex;flex-direction:column;align-items:center;gap:10px;--q:{{rc.c}};opacity:{{rc.op}}">
-        <m-img src="{{rc.img}}" style="width:240px;height:168px"></m-img>
-        <div style="font-size:28px;color:{{rc.c}};text-shadow:3px 3px 0 #07060f"><span data-pj="cur" style="font-size:24px;margin-right:8px">▶</span>{{rc.n}}</div>
-        <div style="font-size:30px;line-height:40px;color:#f4efe0;text-align:center;min-height:80px;text-wrap:balance">{{rc.t}}</div>
+        <m-img src="{{rc.img}}" style="width:96px;height:96px"></m-img>
+        <div style="font-size:34px;line-height:46px;color:#ffe6a0;text-align:center;min-height:92px;text-wrap:balance;text-shadow:3px 3px 0 #07060f"><span data-pj="cur" style="font-size:24px;margin-right:8px">▶</span>{{rc.t}}</div>
+        <div style="font-size:22px;color:{{rc.c}};text-shadow:2px 2px 0 #07060f">{{rc.n}}</div>
       </div>
     </sc-for>
   </div>

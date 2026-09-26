@@ -6,17 +6,17 @@
 // · A fight fills a FEVER gauge by how the army fights: every hit (archers more, mages a little per target), crits,
 //   the front line taking blows, kills (assassins and merchants more, elites much more), heals, summons, priests' auras.
 //   More vocations fill it faster (up to +35%); an army with both a front and a back line +15%, one without −15%.
-// · Full, it goes off by itself: the fight drops to slow motion, the screen flashes, a marquee of bulbs chases round
-//   the screen, F · E · V · E · R slam down one by one, and the arcade reel rolls one of the five old item effects
-//   (闪电风暴 · 回魂烛 · 旧相框 · 摄魂铃 · 骰盅), picked by the fight's state (a hurt army leans to 回魂烛, a crowd of
-//   enemies to 摄魂铃, a thin army to 旧相框). Then 8 s of FEVER TIME: the army attacks 30% faster in a golden glow and
-//   the score multiplier goes up 0.2. The gauge refills for the next one.
+// · Full, it goes off by itself, at once (2026-09-26: no slam, no reel, the fight never stops): the unit that filled it
+//   flares and 「FEVER!」 with the effect's name rises over it; one of the five effects (闪电风暴 · 回魂烛 · 旧相框 ·
+//   摄魂铃 · 战吼号角) plays over the running fight, picked by the fight's state (a hurt army leans to 回魂烛, a crowd of
+//   enemies to 摄魂铃, a thin army to 旧相框), its tier rolled on the six qualities. At the same time 8 s of FEVER TIME:
+//   the army attacks 30% faster in a golden glow. The gauge refills for the next one.
 // · Items and banners are gone: shops sell units, what gave an item gives points, what added item slots feeds FEVER.
 const M = window.MC, G = M.Game.prototype, BP = M.Battle3 && M.Battle3.prototype, S = M.Sfx, U = M.UI, P = M.PJ.PAL, DB = M.DB, now = () => performance.now();
 const cl = (v, a, b) => Math.max(a, Math.min(b, v)), eo = (q) => 1 - Math.pow(1 - q, 3), eback = (q) => { const c = 1.7; return 1 + (c + 1) * Math.pow(q - 1, 3) + c * Math.pow(q - 1, 2); };
 const RM = () => !!(M.PJ && M.PJ.reduced);
 const FEVER_T = 8, RAIN = [P.red, P.gold, P.lime, P.teal, P.violet], WORD = ['F', 'E', 'V', 'E', 'R'];
-M.FEVER = { T: FEVER_T, AS: 0.3, MULT: 0.2,
+M.FEVER = { T: FEVER_T, AS: 0.3,
   // what fills the gauge (points out of 100, before the army's rate)
   G: { hit: 0.9, archer: 1.1, mage: 0.55, crit: 1, front: 0.5, kill: 6, assassin: 4, merchant: 3, elite: 10, heal: 8, summon: 3, aura: 0.8, boss: 150 } };
 const GN = M.FEVER.G;
@@ -34,28 +34,29 @@ if (BP) {
       mix, vocN: vocs.size, form: front && back, n: 0, q0: Math.max(md.feverQ || 0, bm.feverQ || 0), on: null, pending: false };
     return r;
   };
-  const feed = (b, v) => { const F = b.fever; if (!F || F.on || F.pending || b.over || !(v > 0)) return; F.v = Math.min(100, F.v + v * F.rate); };
+  // who: the unit whose action this was (the one that fills the gauge is named when FEVER goes off)
+  const feed = (b, v, who) => { const F = b.fever; if (!F || F.on || F.pending || b.over || !(v > 0)) return; F.v = Math.min(100, F.v + v * F.rate); if (F.v >= 100 && who && who.side === 'A') F.who = who; };
   M.feverFeed = feed;
   const oDeal = BP.deal;
   BP.deal = function (src, tg, amt, o) {
     const r = oDeal.apply(this, arguments);
     if (this.fever && src && tg && src !== tg && amt > 0) {
-      if (src.side === 'A' && !src.isHero) { const v = src.d && src.d.voc; feed(this, (v === '射手' ? GN.archer : v === '法师' ? GN.mage : GN.hit) + (o && o.crit ? GN.crit : 0)); }
-      if (src.side === 'A' && tg.boss && tg.maxHp) feed(this, GN.boss * amt / tg.maxHp);   // a boss alone gives no kills: its life is the fuel
-      if (tg.side === 'A' && isFront(tg)) feed(this, GN.front);   // the front line holding
+      if (src.side === 'A' && !src.isHero) { const v = src.d && src.d.voc; feed(this, (v === '射手' ? GN.archer : v === '法师' ? GN.mage : GN.hit) + (o && o.crit ? GN.crit : 0), src); }
+      if (src.side === 'A' && tg.boss && tg.maxHp) feed(this, GN.boss * amt / tg.maxHp, src);   // a boss alone gives no kills: its life is the fuel
+      if (tg.side === 'A' && isFront(tg)) feed(this, GN.front, tg);   // the front line holding
     }
     return r;
   };
   const oKill = BP.kill;
   BP.kill = function (e, src) {
     const was = e && e.alive, r = oKill.apply(this, arguments);
-    if (was && e && !e.alive && e.side === 'E' && this.fever) { const v = src && src.d && src.d.voc; feed(this, GN.kill + (v === '刺客' ? GN.assassin : 0) + (v === '商人' ? GN.merchant : 0) + (e.elite ? GN.elite : 0)); }
+    if (was && e && !e.alive && e.side === 'E' && this.fever) { const v = src && src.d && src.d.voc; feed(this, GN.kill + (v === '刺客' ? GN.assassin : 0) + (v === '商人' ? GN.merchant : 0) + (e.elite ? GN.elite : 0), src); }
     return r;
   };
   const oHeal = BP.heal;
-  BP.heal = function (o, amt) { const h0 = o && o.hp, r = oHeal.apply(this, arguments); if (this.fever && o && o.side === 'A' && o.hp > h0) feed(this, GN.heal * (o.hp - h0) / (o.maxHp || 1)); return r; };
+  BP.heal = function (o, amt) { const h0 = o && o.hp, r = oHeal.apply(this, arguments); if (this.fever && o && o.side === 'A' && o.hp > h0) feed(this, GN.heal * (o.hp - h0) / (o.maxHp || 1), o); return r; };
   const oSum = BP.summon;
-  BP.summon = function (key, side) { const e = oSum.apply(this, arguments); if (e && side === 'A' && this.fever) feed(this, GN.summon); return e; };
+  BP.summon = function (key, side) { const e = oSum.apply(this, arguments); if (e && side === 'A' && this.fever) feed(this, GN.summon, e); return e; };
   const oStep = BP.step;
   BP.step = function (dt) {
     const r = oStep.apply(this, arguments), F = this.fever; if (!F) return r;
@@ -74,34 +75,31 @@ if (BP) {
 const pickEffect = (b) => {
   const A = b.ents.filter(e => e.alive && e.side === 'A' && !e.isHero), E = b.ents.filter(e => b.active(e) && e.side === 'E');
   const hp = A.reduce((s, e) => s + e.hp, 0) / Math.max(1, A.reduce((s, e) => s + e.maxHp, 0));
-  const w = { bolt: 3, heal: hp < 0.55 ? 5 : 0.6, frame: A.length < 3 ? 4 : 1, bell: E.length >= 6 ? 3 : 1, cup: 1.4 };
+  const w = { bolt: 3, heal: hp < 0.55 ? 5 : 0.6, frame: A.length < 3 ? 4 : 1, bell: E.length >= 6 ? 3 : 1, horn: 1.4 };
   return M.wpick(Object.keys(w), k => w[k]);
 };
 
 // ───────── the show ─────────
+// 2026-09-26 (user ruling: 「fever频繁触发，感觉特别烦，每次都要等动画，把fever的滚轮去掉，fever直接播放，战斗也不暂停了，效果同时
+// 触发，触发的明显点就行，让玩家知道这个效果谁触发的就行」): full, it goes off at once — no slam, no reel, the fight runs on.
+// The unit that filled it flares and says 「FEVER!」 with the effect's name; the effect (mc-feverstage.js) and FEVER TIME
+// start together.
 G.feverGo = function (b) {
   const F = b.fever; F.pending = false; F.v = 0;
-  const key = pickEffect(b), I = M.ITEMS[key], tier = Math.max(F.n === 1 ? F.q0 : 0, M.rollTier2(this.run, 0));
-  this.feverFx = { t0: now(), key, tier, b, reelAt: now() + (RM() ? 300 : 1150), seed: Math.random() * 100 };
-  S.fanfare && S.fanfare(); S.impact && S.impact(); b.shake = Math.max(b.shake || 0, 26); b.flash = 0.7; b.flashCol = '#fff3b0';
-  this.fx.kick && this.fx.kick(18); for (let i = 0; i < 40; i++) this.fx.spark && this.fx.spark(960, 400, RAIN[i % 5], 1, { v: 900, spread: 6.3 });
+  const key = pickEffect(b), tier = Math.max(F.n === 1 ? F.q0 : 0, M.rollTier2(this.run, 0)), who = F.who && F.who.alive ? F.who : null; F.who = null;
+  this.feverFx = { t0: now(), key, tier, b, who, quick: 1, rolled: true, seed: Math.random() * 100 };
+  S.fanfare && S.fanfare(); b.flash = 0.35; b.flashCol = '#fff3b0'; this.fx.kick && this.fx.kick(8);
+  if (who && b.burst) { b.burst(who.x, who.y - 40 * (who.sz || 1), '#ffcf4a', 24); b.ring && b.ring(who.x, who.y - 30, 10, 220, '#ffcf4a', 10, 0.5); }
   try { M.T && M.T.ev('fever', { n: F.n, key, tier }); } catch (e) {}
+  this.feverTimeStart(b);
+  if (this.fvStageStart) this.fvStageStart(key, tier, b);
 };
-G.feverRoll = function () {
-  const X = this.feverFx, b = X && X.b; if (!b || b !== this.battle) { this.feverFx = null; return; }
-  const I = M.ITEMS[X.key]; X.rolled = true;
-  this.startReel({ title: 'FEVER · ' + I.name, iconKey: I.icon, itemMode: true, fever: true, land: 0, ups: X.tier, tease: X.tier < 5, tiles: M.TIERS.map((t, k) => ({ n: t.n, sub: I.tiers[k], c: t.c })),
-    onDone: () => {
-      if (this.battle !== b || b.over) { this.feverFx = null; return; }
-      this.fvStageStart(X.key, X.tier, b);   // the fight stays frozen; the effect plays on a darkened screen (below)
-    } });
-};
+G.feverRoll = function () {};   // the reel is gone
 // after the show: 8 s of FEVER TIME, its +0.2 flying into the multiplier as two chips
 G.feverTimeStart = function (b) {
   const X = this.feverFx, F = b.fever; if (!F) return;
   F.on = { until: b.t + FEVER_T, t0: b.t, sp: 0 };
   b.ents.forEach(e => { if (e.alive && e.side === 'A' && !e._fv) { e.asB += M.FEVER.AS; e._fv = true; } });
-  this.multChips(Math.round(M.FEVER.MULT * 10), { x: 960, y: 150 }, 0);
   if (X) X.timeAt = now();
 };
 const oTick = G.tick;
@@ -135,7 +133,7 @@ M.drawFever = function (x, g) {
   x.save(); pts.forEach(([px, py], i) => { const on = (i + step) % 4 === 0, c = RAIN[(i + Math.floor(step / 4)) % 5]; x.globalAlpha = lit * (on ? 1 : 0.35); U.R(x, px - 9, py - 9, 18, 18, P.ink); U.R(x, px - 6, py - 6, 12, 12, on ? c : P.dusk); if (on) { U.R(x, px - 3, py - 6, 6, 3, P.white); } });
   x.restore();
   // the slam: F · E · V · E · R drop in one by one, then fly up to the top
-  if (X && t < 3.2) {
+  if (X && !X.quick && t < 3.2) {
     const up = X.rolled ? cl((now() - X.reelAt) / 350, 0, 1) : 0, cy = 430 - up * 300, size = Math.round(170 - up * 90);
     if (!X.rolled) { x.save(); x.globalAlpha = cl(1 - t / 0.5, 0, 1) * 0.6; U.R(x, 0, 0, W, H, P.white); x.restore(); }
     WORD.forEach((ch, i) => {
@@ -145,6 +143,15 @@ M.drawFever = function (x, g) {
       if (q >= 1 && !X['hit' + i]) { X['hit' + i] = 1; g.fx.kick && g.fx.kick(6 + i * 2); S.tick && S.tick(i * 2); g.fx.rays && g.fx.rays(gx, gy, RAIN[i], 0.5, { r: 160 }); }
     });
     if (t > 0.75 && !X.rolled) U.text(x, '!!', 960 + 2.8 * size * 0.78, cy, size, P.white, { num: true, outline: true, u: 5 });
+  }
+  // who set it off: 「FEVER!」 and the effect's name over that unit, a gold ring under it (1.6 s)
+  if (X && X.quick && t < 1.6) {
+    const e = X.who, I = M.ITEMS[X.key], a = cl((1.6 - t) / 0.3, 0, 1), up = eo(cl(t / 0.25, 0, 1));
+    const p = e && M.feverBody ? M.feverBody(g, e) : { x: 960, y: 420 };
+    x.save(); x.globalAlpha = a; M.glow && M.glow(x, p.x, p.y, 150, P.gold, 0.5);
+    U.text(x, 'FEVER!', p.x, p.y - 110 - up * 30, 56, P.gold, { num: true, outline: true, u: 4 });
+    U.text(x, (I ? I.name : '') + ' · ' + M.TIERS[X.tier].n, p.x, p.y - 58 - up * 30, 30, M.TIERS[X.tier].c, { outline: true });
+    x.restore();
   }
   // FEVER TIME: the word small at the top, a bar that runs out
   if (F.on) {

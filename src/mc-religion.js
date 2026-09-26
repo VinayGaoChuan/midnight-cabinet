@@ -15,25 +15,27 @@
 const M = window.MC, G = M.Game.prototype, S = M.Sfx, B = M.BUILDINGS, Q = M.QUALITY, now = () => performance.now();
 const FC = '#ffe6a0';
 const E = (t, base, run) => ({ t, base: base || null, run: run || null });
+// every doctrine works on the expeditions (and the nights' fights), none on the base (user ruling 2026-09-26: 「不应该是给
+// 图纸，而是应该对局内有影响」): army, vocations, the leader, FEVER, shops, finds
 const DOC = M.REL_DOCTRINES = {
-  meditation: [E('领袖技能效果 +15%。', { skillPow: 0.15 }), E('领袖每天获得 25 经验。', { expDaily: 25 }), E('领袖出征得到的经验 +20%。', { exp: 0.2 }),
+  meditation: [E('领袖技能效果 +15%。', { skillPow: 0.15 }), E('领袖攻击 +12%。', { heroAtk: 0.12 }), E('领袖生命 +15%。', { heroHp: 0.15 }),
     E('出征视野 +1。', { vision: 1 }), E('奇遇出好结果的概率 +15%。', null, { eventLuck: 0.15 }), E('领袖每打完一场仗，回复 5% 生命。', { postHeal: 0.05 })],
-  artemis: [E('射手部队攻击 +20%。', null, { rngAtk: 0.2 }), E('刺客部队攻击 +25%。', null, { assAtk: 0.25 }), E('精英战和首领战的积分 +30%。', null, { eliteScore: 0.3 }),
-    E('每场战斗初始积分倍率 +0.2。', { startMult: 0.2 }), E('掉图纸的概率 +25%。', null, { bpFind: 0.25 }), E('FEVER 槽涨得快 12%。', { feverRate: 0.12 })],
+  artemis: [E('射手部队攻击 +20%。', null, { rngAtk: 0.2 }), E('刺客部队攻击 +25%。', null, { assAtk: 0.25 }), E('射手部队攻速 +15%。', null, { rngAs: 0.15 }),
+    E('掉图纸的概率 +25%。', null, { bpFind: 0.25 }), E('FEVER 槽涨得快 12%。', { feverRate: 0.12 }), E('刺客部队生命 +25%。', null, { assHp: 0.25 })],
   angkor: [E('部队生命 +8%。', { unitHp: 0.08 }), E('召唤师部队生命 +25%。', null, { sumHp: 0.25 }), E('出征带回的物资 +15%。', { lootSup: 0.15 }),
-    E('基地每天多产 12 物资。', { supplyDaily: 12 }), E('部队里每有一种职业，全体部队生命 +1.5%。', null, { diverse: 0.015 }), E('卖部队的商店多摆 1 支部队。', null, { shopUnits: 1 })],
-  hagia: [E('部队每场开局获得 8% 生命的护盾。', null, { shield: 0.08 }), E('牧师和圣骑士部队生命 +25%。', null, { cleHp: 0.25, palHp: 0.25 }), E('医院每天给领袖多回复 10% 生命。', { heal: 0.1 }),
-    E('领袖生命 +15%。', { heroHp: 0.15 }), E('主基地耐久 +12%。', { portalHp: 0.12 }), E('FEVER 转出好效果的概率 +10%。', null, { tier: 0.1 })],
-  potala: [E('先锋和守护者部队生命 +20%。', null, { vanHp: 0.2, guaHp: 0.2 }), E('混沌来袭时，基地武器的伤害 +15%。', { defDmg: 0.15 }), E('坚守战的时间 -15%。', null, { hold: -0.15 }),
-    E('领袖攻击 +15%。', { heroAtk: 0.15 }), E('基地每天多产 2 灵魂碎片。', { shardDaily: 2 }), E('建造的工期少 1 天（至少 1 天）。', { buildDays: -1 })],
-  taj: [E('基地每天多产 3 灵魂碎片。', { shardDaily: 3 }), E('部队攻击 +6%。', { unitAtk: 0.06 }), E('每场战斗开局，FEVER 槽已经有 15%。', { feverStart: 0.15 }),
-    E('挖掘的费用 -25%。', { digCost: -0.25 }), E('打造宝物的费用 -25%。', { craftCost: -0.25 }), E('每天多产 3 信仰值。', { faithDaily: 3 })],
+    E('部队里每有一种职业，全体部队生命 +1.5%。', null, { diverse: 0.015 }), E('卖部队的商店多摆 1 支部队。', null, { shopUnits: 1 }), E('打仗得到的物资 +25%。', null, { supplies: 0.25 })],
+  hagia: [E('部队每场开局获得 8% 生命的护盾。', null, { shield: 0.08 }), E('牧师和圣骑士部队生命 +25%。', null, { cleHp: 0.25, palHp: 0.25 }), E('领袖生命 +15%。', { heroHp: 0.15 }),
+    E('部队攻击 +5%。', { unitAtk: 0.05 }), E('驻军生命 +15%。', { garHp: 0.15 }), E('FEVER 转出好效果的概率 +10%。', null, { tier: 0.1 })],
+  potala: [E('先锋和守护者部队生命 +20%。', null, { vanHp: 0.2, guaHp: 0.2 }), E('驻军攻击 +15%。', { defDmg: 0.15 }), E('坚守战的时间 -15%。', null, { hold: -0.15 }),
+    E('领袖攻击 +15%。', { heroAtk: 0.15 }), E('先锋和守护者部队攻击 +20%。', null, { vanAtk: 0.2, guaAtk: 0.2 }), E('部队生命 +6%。', { unitHp: 0.06 })],
+  taj: [E('部队攻击 +6%。', { unitAtk: 0.06 }), E('每场战斗开局，FEVER 槽已经有 15%。', { feverStart: 0.15 }), E('宝箱里的积分 +40%。', null, { chest: 0.4 }),
+    E('商店价格 -10%。', null, { shop: -0.1 }), E('领袖出征得到的经验 +20%。', { exp: 0.2 }), E('法师部队攻击 +20%。', null, { magAtk: 0.2 })],
   bb_grave: [E('部队攻击 +8%。', { unitAtk: 0.08 }), E('战士部队攻击 +25%。', null, { warAtk: 0.25 }), E('法师部队攻击 +25%。', null, { magAtk: 0.25 }),
-    E('部队生命 +6%。', { unitHp: 0.06 }), E('每天多产 3 信仰值。', { faithDaily: 3 }), E('基地每天多产 3 灵魂碎片。', { shardDaily: 3 })],
-  bb_queen: [E('每场战斗初始积分倍率 +0.3。', { startMult: 0.3 }), E('FEVER 槽涨得快 15%。', { feverRate: 0.15 }), E('祭司部队攻击和生命 +20%。', null, { priAtk: 0.2, priHp: 0.2 }),
-    E('射手部队攻速 +15%。', null, { rngAs: 0.15 }), E('奇遇出好结果的概率 +15%。', null, { eventLuck: 0.15 }), E('每天多产 3 信仰值。', { faithDaily: 3 })],
-  bb_ferry: [E('基地每天多产 4 灵魂碎片。', { shardDaily: 4 }), E('商店价格 -10%。', null, { shop: -0.1 }), E('宝箱里的积分 +40%。', null, { chest: 0.4 }),
-    E('打仗得到的物资 +25%。', null, { supplies: 0.25 }), E('召唤师部队攻击 +25%。', null, { sumAtk: 0.25 }), E('每天多产 3 信仰值。', { faithDaily: 3 })],
+    E('部队生命 +6%。', { unitHp: 0.06 }), E('召唤师部队攻击 +20%。', null, { sumAtk: 0.2 }), E('刺客部队攻击 +20%。', null, { assAtk: 0.2 })],
+  bb_queen: [E('祭司部队攻击和生命 +20%。', null, { priAtk: 0.2, priHp: 0.2 }), E('射手部队攻速 +15%。', null, { rngAs: 0.15 }), E('FEVER 槽涨得快 15%。', { feverRate: 0.15 }),
+    E('奇遇出好结果的概率 +15%。', null, { eventLuck: 0.15 }), E('牧师部队生命 +25%。', null, { cleHp: 0.25 }), E('部队每场开局获得 6% 生命的护盾。', null, { shield: 0.06 })],
+  bb_ferry: [E('商店价格 -10%。', null, { shop: -0.1 }), E('宝箱里的积分 +40%。', null, { chest: 0.4 }), E('打仗得到的物资 +25%。', null, { supplies: 0.25 }),
+    E('召唤师部队攻击 +25%。', null, { sumAtk: 0.25 }), E('出征带回的物资 +15%。', { lootSup: 0.15 }), E('掉图纸的概率 +20%。', null, { bpFind: 0.2 })],
 };
 M.REL_NEED = (lv) => 20 + 10 * (lv || 0);
 const relOf = (m) => { if (!m) return { lv: 0, picks: [] }; if (!m.rel || typeof m.rel !== 'object' || !Array.isArray(m.rel.picks)) m.rel = { lv: 0, picks: [] }; return m.rel; };
@@ -68,17 +70,21 @@ G.relTake = function (i) {
 const oTick = G.tick;
 G.tick = function (dt) {
   const r = oTick.apply(this, arguments), m = this.meta;
-  if (m && this.screen === 'base' && !this.relPick && !this.dirPick && !this.dirFx && !this.expand && !this.modal && !this.visit && !this.raid && !this.raidPrep && !this.rite && !this.tear && !this.lvFx && !this.lvPick && !this.homeQ && !this.panel && due(m)) this.relOpen();
+  if (m && this.screen === 'base' && !this.relPick && !this.dirPick && !this.dirFx && !this.expand && !this.modal && !this.visit && !this.raid && !this.raidPrep && !this.rite && !this.tear && !this.lvFx && !this.lvPick && !this.homeQ && !this.panel && !this.night && !this.evoFx && due(m)) this.relOpen();
   if (this.relPick && this.screen !== 'base') this.relPick = null;
   return r;
 };
 // one pick at a time: the 发展方向 pick waits while the religion's is up (and the religion waits for it, above)
 const oDO = G.dirOpen; if (oDO) G.dirOpen = function () { if (this.relPick) return; return oDO.apply(this, arguments); };
 const oBack = G.backAction; if (oBack) G.backAction = function () { if (this.relPick) return; return oBack.apply(this, arguments); };
-const oBusy = G.baseBusy; if (oBusy) G.baseBusy = function () { return !!this.relPick || oBusy.apply(this, arguments); };
+// (the pick is not a 'busy' base: the lock sat over the cards and swallowed every click, 2026-09-26)
 const oGB = G.guideBusy; if (oGB) G.guideBusy = function () { return !!this.relPick || oGB.apply(this, arguments); };
 const oNG = G.newGame; if (oNG) G.newGame = function () { this.relPick = null; return oNG.apply(this, arguments); };
 
+// a doctrine's icon: its vocation's, or what it touches
+const VIC = { van: 'v_vanguard', gua: 'v_guardian', war: 'v_warrior', pal: 'v_paladin', rng: 'v_archer', ass: 'v_assassin', mag: 'v_mage', cle: 'v_cleric', pri: 'v_priest', sum: 'v_summoner', mer: 'v_merchant' };
+const KIC = { unitAtk: 't_sword', unitHp: 't_heart', shield: 't_shield', diverse: 't_heart', heroAtk: 't_command', heroHp: 't_shieldHeart', skillPow: 't_skill', postHeal: 't_heal', vision: 't_eye', eventLuck: 't_clover', bpFind: 'g_scroll', feverRate: 'e_star', feverStart: 'e_star', tier: 't_dice', lootSup: 't_sack', supplies: 't_sack', shopUnits: 'e_market', shop: 't_coin', chest: 't_chest', exp: 't_orb', hold: 't_hourglass', garHp: 't_shield', defDmg: 't_sword' };
+const docIcon = (d) => { const x = d ? Object.assign({}, d.base || {}, d.run || {}) : {}, k = Object.keys(x)[0] || ''; const v = VIC[k.slice(0, 3)]; return v && /(Hp|Atk|As)$/.test(k) ? v : KIC[k] || 'f_faith'; };
 // ───────── the view: the cards; the bar shows how far the next level is ─────────
 const oView = G.view;
 G.view = function () {
@@ -88,7 +94,7 @@ G.view = function () {
   if (v.relOn) {
     const ready = now() - P.at > 500;
     v.rp = { title: '宗教 Lv' + P.lv, line: '选一条教义', cards: P.cards.map((c, i) => { const Bd = B[c.b], d = docOf(c);
-      return { img: M.roomThumb ? M.roomThumb(c.b) : '', n: Bd.n, c: (Q[Bd.q] || Q[0]).c, t: d ? d.t : '', op: ready ? 1 : 0.6, onPick: () => this.relTake(i) }; }) };
+      return { img: M.iconURL ? M.iconURL(docIcon(d), 3) : '', n: '来自 · ' + Bd.n, c: (Q[Bd.q] || Q[0]).c, t: d ? d.t : '', op: ready ? 1 : 0.6, onPick: () => this.relTake(i) }; }) };
   }
   return v;
 };

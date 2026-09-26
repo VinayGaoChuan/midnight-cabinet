@@ -50,7 +50,7 @@ const T = {
   // ── its expeditions
   scout:     { n: '侦察术', sc: 'run', ic: 't_eye', ...X_({ 1: 1, 3: 2, 5: 3 }), d: (v) => '本领袖出征时，视野 +' + v + '。', m: (v) => ({ vision: v }) },
   haggle:    { n: '外交术', sc: 'run', ic: 't_coin', ...S_(0.12), d: (v) => '本领袖出征时，商店价格 -' + pct(v) + '。', m: (v) => ({ shop: -v }) },
-  fortune:   { n: '红运', sc: 'run', ic: 't_mult', ...X_({ 1: 0.1, 2: 0.2, 3: 0.3, 4: 0.4, 5: 0.5, 6: 0.7 }), d: (v) => '本领袖出征时，每场战斗的初始积分倍率 +' + v + '。', m: (v) => ({ startMult: v }) },
+  fortune:   { n: '红运', sc: 'run', ic: 't_coin', ...X_({ 1: 0.1, 2: 0.2, 3: 0.3, 4: 0.4, 5: 0.5, 6: 0.7 }), d: (v) => '本领袖出征时，击杀得到的积分 +' + Math.round(v * 50) + '%。', m: (v) => ({ baseScore: v * 0.5 }) },   // was the score multiplier (removed 2026-09-26)
   gambler:   { n: '赌性', sc: 'run', ic: 't_dice', ...S_(0.08), d: (v) => '本领袖出征时，支援道具转出好效果的概率 +' + pct(v) + '。', m: (v) => ({ tier: v }) },
   scavenge:  { n: '后勤学', sc: 'run', ic: 't_sack', ...S_(0.25), d: (v) => '本领袖出征时，打仗得到的物资 +' + pct(v) + '。', m: (v) => ({ supplies: v }) },
   treasure:  { n: '寻宝术', sc: 'run', strat: 1, ic: 't_chest', ...S_(0.4), d: (v) => '本领袖出征时，宝箱里的积分 +' + pct(v) + '。', m: (v) => ({ chest: v }) },
@@ -74,7 +74,7 @@ const T = {
   tactics:   { n: '战术', sc: 'base', ic: 'e_bolt', ...S_(0.04), d: (v) => '所有领袖出征时，部队攻击 +' + pct(v) + '。', m: (v) => ({ unitAtk: v }) },
   drill:     { n: '操练', sc: 'base', ic: 'e_thorns', ...S_(0.04), d: (v) => '所有领袖出征时，部队生命 +' + pct(v) + '。', m: (v) => ({ unitHp: v }) },
   logistics: { n: '军需', sc: 'base', ic: 'f_logi', ...S_(0.1), d: (v) => '所有领袖出征带回的物资 +' + pct(v) + '。', m: (v) => ({ lootSup: v }) },
-  rally:     { n: '鼓舞', sc: 'base', ic: 'e_star', ...X_({ 2: 0.1, 4: 0.2, 6: 0.3 }), d: (v) => '所有领袖出征时，每场战斗的初始积分倍率 +' + v + '。', m: (v) => ({ startMult: v }) },
+  rally:     { n: '鼓舞', sc: 'base', ic: 'e_star', ...X_({ 2: 0.1, 4: 0.2, 6: 0.3 }), d: (v) => '出征时 FEVER 槽涨得快 ' + Math.round(v * 50) + '%。', m: (v) => ({ feverRate: v * 0.5 }) },
   command:   { n: '统御', sc: 'base', ic: 'l_crown', ...X_({ 6: 1 }), d: () => '领袖上限 +1。', m: (v) => ({ heroCap: v }) },
 };
 M.TALENTS = T; M.TAL_SC = SC; M.TAL_TIER = TIER;

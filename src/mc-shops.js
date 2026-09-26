@@ -1,7 +1,8 @@
 // ==== mc-shops.js ====
 (function () {
 // Shops on the map are not all the same (user ruling 2026-09-24): some sell units, some banners, some support items,
-// and shops of one trade differ too — a barracks, a refugee camp, a slaver, a mages' guild … each with its own stock,
+// and shops of one trade differ too — a barracks, a slaver, a mages' guild … each with its own stock (难民营 removed
+// 2026-09-26),
 // prices and catch. The shop before a boss always sells units (which kind is random). Every shop says its catch in
 // one line under its sign.
 const M = window.MC, G = M.Game.prototype, DB = M.DB, rnd = Math.random, pick = (a) => a[Math.floor(rnd() * a.length)];
@@ -9,7 +10,6 @@ const VOCS = (...v) => (k) => v.includes(DB[k].voc);
 const SHOPS = {
   bazaar:   { n: '夜市', d: '什么部队都卖一点。', units: 8, w: 3, unit: 1 },
   barracks: { n: '兵营', d: '只卖前排和近战：先锋、守护者、战士、圣骑士。', units: 8, pool: VOCS('先锋', '守护者', '战士', '圣骑士'), w: 3, unit: 1 },
-  refugee:  { n: '难民营', d: '全是普通部队，便宜一成半。', units: 8, pool: (k) => DB[k].q === 0, price: 0.85, w: 2, unit: 1 },
   slaver:   { n: '奴隶贩子', d: '好部队打七折，但每买一支，领袖失去 8% 生命。', units: 6, pool: (k) => DB[k].q >= 2, qBoost: 2, price: 0.7, hpCost: 0.08, w: 2, unit: 1 },
   guild:    { n: '法师协会', d: '只卖法师、牧师、祭司和召唤师。', units: 8, pool: VOCS('法师', '牧师', '祭司', '召唤师'), w: 2, unit: 1 },
   hunters:  { n: '猎人营地', d: '只卖射手和刺客。', units: 8, pool: VOCS('射手', '刺客'), w: 2, unit: 1 },

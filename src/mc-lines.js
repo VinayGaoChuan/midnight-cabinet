@@ -69,7 +69,7 @@ const LINES = M.LINES = [
   // 商人
   ['商人', 'Chick', 20, ['雏鸡', '斗鸡', '金冠鸡', '聚宝金鸡'], [S('SummonDelicacyTrait', [1], [1.2], [1.5], [2]), S('SummonSecretStashTrait', null, [0.5], [0.8], [1.2]), S('SummonRangedDamageReductionTrait', null, null, null, [20])]],
   ['商人', 'VikingPirate', 35, ['海盗', '维京海盗', '海盗船长', '七海霸主'], [S('SummonSecretStashTrait', [0.8], [1], [1.3], [1.8]), S('SummonShortSellingTrait', null, [25, 10], [40, 12], [60, 15]), S('SummonDuelistTrait', null, null, null, [20, 20])]],
-  ['商人', 'JadeBeast', 30, ['玉石虫', '宝玉兽', '翡翠玉兽', '玉麒麟'], [['JadeBeastTrait', [{ d: '场上存在2个商人单位时，积分倍率+0.1；存在3个商人单位时，积分倍率再+0.1' }, { d: '场上存在2个商人单位时，积分倍率+0.1；存在3个商人单位时，积分倍率再+0.1' }, { d: '场上存在2个商人单位时，积分倍率+0.15；存在3个商人单位时，积分倍率再+0.15' }, { d: '场上存在2个商人单位时，积分倍率+0.2；存在3个商人单位时，积分倍率再+0.2' }]], S('SummonDelicacyTrait', null, [1], [1.3], [1.6]), S('SummonShortSellingTrait', null, null, null, [50, 15])]],
+  ['商人', 'JadeBeast', 30, ['玉石虫', '宝玉兽', '翡翠玉兽', '玉麒麟'], [['JadeBeastTrait', [{ v: [15, 15], d: '场上存在2个商人单位时，击杀得到的积分+15%；存在3个商人单位时再+15%' }, { v: [20, 20], d: '场上存在2个商人单位时，击杀得到的积分+20%；存在3个商人单位时再+20%' }, { v: [25, 25], d: '场上存在2个商人单位时，击杀得到的积分+25%；存在3个商人单位时再+25%' }, { v: [30, 30], d: '场上存在2个商人单位时，击杀得到的积分+30%；存在3个商人单位时再+30%' }]], S('SummonDelicacyTrait', null, [1], [1.3], [1.6]), S('SummonShortSellingTrait', null, null, null, [50, 15])]],
 ];
 // 2026-09-26 (six qualities: 普通 / 优质 / 稀有 / 史诗 / 传说 / 神话): a line runs 普通 → 传说 in five tiers; its vocation's
 // evolution building lets a 传说 evolve once more, to 神话 (「超限进化」, mc-evo.js). The four tiers above are spread over the
@@ -94,7 +94,7 @@ const MYTH_OBJ = {
   CrabWarlock: { k: 'SummonSummonPincerTrait', d: '每秒恢复5%法力值，法力值满后，召唤2只Pincer，持续40秒' },
   ShadowSwordsman: { k: 'SummonHatebreederTrait', v: [3, 40] },
   GreenDragon: { k: 'SummonSoulTransferTrait', v: [22, 90, 1, 420] },
-  JadeBeast: { d: '场上存在2个商人单位时，积分倍率+0.3；存在3个商人单位时，积分倍率再+0.3' },
+  JadeBeast: { v: [40, 40], d: '场上存在2个商人单位时，击杀得到的积分+40%；存在3个商人单位时再+40%' },
 };
 // every vocation's own skill, worn by its 神话 tier (not again if the line has it already)
 const MYTH_TR = { 先锋: ['SummonPrismaticShieldTrait', [6, 10, 85]], 守护者: ['SummonProtectionAuraTrait', [15]], 战士: ['SummonFinalJudgmentTrait', [5, 0.3, 25, 35]], 圣骑士: ['SummonSpeedBoostTrait', [1, 80]],

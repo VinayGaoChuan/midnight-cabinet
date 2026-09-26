@@ -8,7 +8,7 @@ M.RACES = { 兽人:'#8fd060', 不死:'#8fe0ff', 骷髅:'#e8e0cc', 人类:'#ffd98
 M.VOCS = {}; Object.keys(M.VOC || {}).forEach(v => { M.VOCS[v] = M.VOC[v].c; });
 // custom unit demonstrating a race-count trait
 DB.JadeBeast = { n:'宝玉兽', q:1, g:'优质', voc:'商人', race:'兽人', type:'Summon', cost:90, hp:900, atk:34, as:100, spd:320, ranged:0, rad:256, tr:['JadeBeastTrait'], desc:'身上长着玉石的兽，同族越多越值钱。' };
-TDB.JadeBeastTrait = { n:'玉石共鸣', d:'场上存在2个兽人单位时，积分倍率+0.1；存在3个兽人单位时，积分倍率再+0.1', cls:'JadeBeast', lines:[{ need:2, t:'2 个兽人：积分倍率 +0.1' }, { need:3, t:'3 个兽人：积分倍率再 +0.1' }] };
+TDB.JadeBeastTrait = { n:'玉石共鸣', d:'场上存在2个商人单位时，击杀得到的积分+20%；存在3个商人单位时再+20%', v:[20, 20], cls:'JadeBeast' };
 // UNITS_PROXY: legacy code reads M.UNITS[k].name/tags/desc
 Object.keys(M.UNITS).forEach(k => { if (!DB[k]) delete M.UNITS[k]; });
 Object.keys(DB).forEach(k => { const d = DB[k]; if (d.type !== 'Summon' && d.type !== 'Derivant') return; M.UNITS[k] = { name: d.n, tags: [d.race, d.voc].filter(Boolean), tier: d.q + 1, hp: d.hp, atk: d.atk, desc: d.desc || '', q: d.q }; });

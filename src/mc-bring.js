@@ -41,7 +41,7 @@ const GIFTS = {
       if (!n) { m.buildBoost = (m.buildBoost || 0) + 2; return ok('下一项工程少 2 天'); } return ok(n + ' 项工程各推进 2 天' + (done ? '，' + done + ' 项当场完工' : ''), at); } },
   portal: { n: '修门石', ic: 'g_gate', c: '#5fd0c0', w: 9, d: '主基地耐久 +300（不超过上限）。',
     apply(g, m) { const mx = M.portalMax(m), v = Math.min(300, mx - m.portal.hp); m.portal.hp += Math.max(0, v); return ok(v > 0 ? '主基地耐久 +' + Math.round(v) : '传送门本来就是满的', { door: 1 }); } },
-  talent: { n: '启示卷轴', ic: 'g_scroll', c: '#e8dcc4', w: 3, d: '带着它回来的领袖获得 1 个天赋点。',
+  talent: { n: '启示卷轴', ic: 'g_scroll', c: '#c9a24a', q: 6, w: 3, d: '带着它回来的领袖获得 1 个天赋点。',
     apply(g, m, run) { const h = (run && m.heroes.includes(run.hero)) ? run.hero : M.pick(m.heroes); if (!h) return ok('没有领袖可以读它'); h.points++; return ok(M.heroN(h) + ' 天赋点 +1', { hero: h.id }); } },
   temper: { n: '淬火石', ic: 'g_anvil', c: '#ff8a3a', w: 8, d: '最差的一件宝物品质 +1。',
     apply(g, m) { const r = m.relics.filter(x => x.q < 5).sort((a, b) => a.q - b.q)[0]; if (!r) { m.supplies += 60; return ok('没有能淬火的宝物，换成 60 物资'); } r.q++; r.lines = M.relicLines(r.key, r.q); return ok(M.qn(M.RELICS[r.key].n, r.q) + ' 升了一档', { col: M.qc(r.q) }); } },
@@ -69,7 +69,7 @@ M.giftUseful = (m, k) => !!GIFTS[k] && GIFTS[k].w > 0 && (!USEFUL[k] || !m || US
 M.dropGift = (m) => { m = m || (M._g && M._g.meta); const ks = Object.keys(GIFTS).filter(k => M.giftUseful(m, k)); return 'gift:' + M.wpick(ks.length ? ks : ['cell'], k => GIFTS[k].w || 1); };
 const oInfo = M.itemInfo;
 M.itemInfo = function (key) {
-  if (key && key.startsWith('gift:')) { const K = GIFTS[key.slice(5)]; if (K) return { n: K.n, icon: K.ic, c: K.c, q: 1, kind: '带回基地', d: K.d, sub: '带回基地后生效' }; }
+  if (key && key.startsWith('gift:')) { const K = GIFTS[key.slice(5)]; if (K) return { n: K.n, icon: K.ic, c: K.c, q: K.q || 1, kind: '带回基地', d: K.d, sub: '带回基地后生效' }; }
   return oInfo.apply(this, arguments);
 };
 

@@ -46,7 +46,7 @@ const oBaseClick = G.baseClick;
 if (oBaseClick) G.baseClick = function () { if (this.baseBusy()) { this.hurry && this.hurry(); return; } return oBaseClick.apply(this, arguments); };
 const oViewL = G.view;
 G.view = function () {
-  const v = oViewL.call(this); v.lockOn = this.baseBusy();
+  const v = oViewL.call(this); v.lockOn = this.baseBusy() && !this.relPick && !this.dirPick;   // a pick waiting for an answer is never under the lock
   if (v.lockOn) { v.tipOn = false; v.lockClick = () => { if (this.hurry) this.hurry(); }; }
   v.pickOn = this.pickShown(); if (v.pickOn) { v.pnZ = 65; v.pickCancel = () => { S.click(); this.closePanel(); }; }   // the page over the dimmed base and bars
   return v;
