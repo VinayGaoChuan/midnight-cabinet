@@ -30,7 +30,7 @@ function gameData() {
 const data = gameData();
 const box = { MC: Object.assign({ PJ: {} }, data), console, Math, performance, Date };
 box.window = box; box.globalThis = box; vm.createContext(box);
-order.filter(f => /^mc-pxroom/.test(f)).forEach(f => vm.runInContext(fs.readFileSync(path.join(SRC, f), 'utf8'), box, { filename: f }));
+order.filter(f => /^mc-pxroom/.test(f)).forEach(f => { try { vm.runInContext(fs.readFileSync(path.join(SRC, f), 'utf8'), box, { filename: f }); } catch (e) { if (!/^mc-pxroom(-kit|-a)?\.js$/.test(f)) console.error('skipped ' + f + ': ' + String(e.message || e).slice(0, 120)); else throw e; } });   // a half-written batch file must not stop everyone's shots
 if (opt.extra) String(opt.extra).split(',').forEach(f => vm.runInContext(fs.readFileSync(path.resolve(f), 'utf8'), box, { filename: f }));   // --extra draft.js: try a room before it goes into src
 const X = box.MC.PXR, W = X.W, H = X.H;
 if (!keys.length) { console.log('pixel rooms: ' + Object.keys(X.defs).join(' ')); process.exit(0); }
@@ -77,4 +77,4 @@ keys.forEach(k => {
   const out = Object.assign({}, r); delete out.frames; if (REF) out.rel = +(r.ms / REF).toFixed(2); try { Object.assign(out, X.info(k)); } catch (e) {} console.log(JSON.stringify(out));
 });
 function sheetBig(f, file) { const S2 = opt.bigscale ? +opt.bigscale : 5, FW = f.w, w = FW * S2, h = f.h * S2, img = { w, h, data: new Uint8Array(w * h * 4) }; for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const c = f[Math.floor(y / S2) * FW + Math.floor(x / S2)], i = (y * w + x) * 4; img.data[i] = c & 255; img.data[i + 1] = (c >> 8) & 255; img.data[i + 2] = (c >> 16) & 255; img.data[i + 3] = 255; } png.write(file, img); }
-if (opt.sheet && all.length) console.log(JSON.stringify({ sheet: sheet(all.map(r => r.frames), path.join(OUT, opt.sheet + '.png')) }));
+if (opt.sheet && all.length) { let rows = all.map(r => r.frames); if (opt.cols) { const fl = rows.flat(), c = +opt.cols; rows = []; for (let i = 0; i < fl.length; i += c) rows.push(fl.slice(i, i + c)); } console.log(JSON.stringify({ sheet: sheet(rows, path.join(OUT, opt.sheet + '.png')) })); }   // --cols n: one frame per key laid out n across

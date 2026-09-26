@@ -349,53 +349,85 @@ X.def('pool', {
   },
 });
 
-// ───────── 升降井 the shaft room under the main base (core) ─────────
-// storage shelves of crates, sacks and a chest; a lift cage rides the shaft up to the surface and back with its lamp lit
+// ───────── 升降井 the shaft room under the main base (core, legendary) ─────────
+// The treasury at the foot of the portal shaft: the portal's teal light pours down the shaft (dust drifting in it),
+// runes on the shaft frame breathe with it, the lift cage rides up and down with its lamp, a winch's great gear turns
+// as it goes. On the left the stores: shelves of crates, a glass case of three glowing relics, a heap of gold,
+// a blueprint glowing on the quartermaster's table while he writes; a porter carries the cage's loads to the shelves.
 const LIFT = [22, 40, 58, 76];   // lamp samples down the shaft (crossfaded as the cage moves)
 function liftY(t) { const q = steps(t, 13); return q < 0.22 ? -40 + (q / 0.22) * 88 : q < 0.6 ? 48 : q < 0.85 ? 48 - (q - 0.6) / 0.25 * 88 : -40; }
+const CRUNE = [['101', '010', '111'], ['110', '011', '010'], ['111', '100', '110']];
 X.def('core', {
-  amb: [0.34, 0.3],
+  amb: [0.32, 0.3],
   paint(S, sc) {
     X.shell(S, sc, 'core');
     LIFT.forEach(y => sc.light({ x: 121, y, z: 14, r: 64, i: 0.95, c: '#ffd08a', tint: 0.35, bake: false }));   // 0–3 cage lamp
-    sc.light({ x: 48, y: 14, z: 18, r: 118, i: 1.1, c: '#ffe0b0', fl: 'candle', ph: 4, tint: 0.25 });               // 4 ceiling lamp
-    sc.light({ x: 101, y: 50, z: 6, r: 22, i: 0.5, c: '#60ff90', fl: 'pulse', amp: 0.5, sp: 3, tint: 0.6 });        // 5 call light
-    // the shaft: a dark opening through the ceiling, rails, the frame
-    S.lay('wall'); S.rect(106, 3, 31, FY - 3, 'ink', 1); for (let y = 3; y < FY; y += 6) { S.hl(106, y, 31, 'iron', 2); } S.rect(108, 3, 2, FY - 3, 'iron', 4); S.rect(133, 3, 2, FY - 3, 'iron', 4);
-    S.lay('back'); S.beg(); S.box(103, 3, 4, FY - 3, 'iron', 6); S.box(136, 3, 4, FY - 3, 'iron', 6); for (let y = 10; y < FY; y += 14) { TX.rivet(S, 104, y, 'iron', 6); TX.rivet(S, 137, y, 'iron', 6); } S.end();
-    S.beg(); S.box(100, 46, 3, 8, 'iron', 5); S.rect(101, 48, 1, 2, 'screen', 9, { e: 6 }); S.rect(101, 51, 1, 1, 'red', 7); S.end();
-    // shelving: two steel units, crates, sacks, a chest, a rack of blueprint tubes
-    [[8, 46], [52, 46]].forEach(([x, w]) => { S.beg(); S.box(x, 14, 3, FY - 14, 'iron', 5); S.box(x + w - 3, 14, 3, FY - 14, 'iron', 5); [34, 60, 86].forEach(y => S.box(x, y, w, 3, 'iron', 6, { top: 1 })); S.end(); });
+    sc.light({ x: 34, y: 14, z: 18, r: 100, i: 1, c: '#ffe0b0', fl: 'candle', ph: 4, tint: 0.25 });                // 4 ceiling lamp
+    sc.light({ x: 100, y: 50, z: 6, r: 22, i: 0.5, c: '#60ff90', fl: 'pulse', amp: 0.5, sp: 3, tint: 0.6 });         // 5 call light
+    sc.light({ x: 122, y: 8, z: 14, r: 96, i: 0.85, c: '#5fd0c0', fl: 'pulse', amp: 0.12, sp: 1.6, tint: 0.55 });   // 6 portal light from above
+    sc.light({ x: 74, y: 70, z: 12, r: 34, i: 0.7, c: '#b58cff', fl: 'pulse', amp: 0.2, sp: 2.3, tint: 0.55 });      // 7 relics
+    sc.light({ x: 43, y: 76, z: 12, r: 30, i: 0.6, c: '#6aa8ff', fl: 'screen', tint: 0.5 });                       // 8 blueprint
+    sc.shaft({ x: 121, y0: 3, y1: 90, w0: 11, w1: 15, i: 0.35, haze: 0.45, c: '#7fe0d0', f: (t) => 0.8 + 0.2 * Math.sin(t * 1.6) });
+    // the shaft: a dark opening up through the ceiling, rails, rune-cut frame posts
+    S.lay('wall'); S.rect(106, 3, 31, FY - 3, 'ink', 1); for (let y = 3; y < FY; y += 6) S.hl(106, y, 31, 'iron', 2); S.rect(108, 3, 2, FY - 3, 'iron', 4); S.rect(133, 3, 2, FY - 3, 'iron', 4);
+    S.lay('back'); S.beg(); S.box(102, 3, 4, FY - 3, 'stone', 6); S.box(137, 3, 4, FY - 3, 'stone', 6); S.end();
+    [12, 30, 48, 66].forEach((y, i) => [102, 137].forEach(x => { const g = CRUNE[(i + x) % 3]; for (let a = 0; a < 3; a++) for (let b = 0; b < 3; b++) if (g[b][a] === '1') S.px(x + (a > 1 ? 1 : a), y + b, 'teal', 7.5, { e: 7 }); }));
+    S.beg(); S.box(99, 44, 3, 9, 'iron', 5); S.rect(100, 46, 1, 2, 'screen', 9, { e: 6 }); S.rect(100, 49, 1, 1, 'red', 7); S.end();
+    // winch frame (the gear and drum turn in anim)
+    S.beg(); S.box(86, 74, 16, 16, 'iron', 4, { top: 1 }); TX.rivet(S, 88, 76, 'iron', 4); TX.rivet(S, 98, 76, 'iron', 4); S.end();
+    // shelves along the back wall: crates, sacks, blueprint tubes
+    S.beg(); [6, 55].forEach(x => S.box(x, 14, 3, 64, 'iron', 5)); [30, 52, 74].forEach(y => S.box(6, y, 52, 3, 'iron', 6, { top: 1 })); S.end();
     const crate = (x, y, w, h, tn) => { S.beg(); S.box(x, y - h, w, h, 'wood', tn, { top: 1 }); S.hl(x + 1, y - Math.round(h / 2), w - 2, 'wood', tn - 2); S.line(x + 1, y - h + 1, x + w - 2, y - 2, 'wood', tn - 1.5); S.end(); };
-    crate(12, 34, 12, 10, 6); crate(25, 34, 10, 8, 5); crate(36, 34, 13, 11, 6); crate(56, 34, 14, 12, 5); crate(71, 34, 11, 9, 6); crate(83, 34, 12, 8, 5);
-    crate(12, 60, 14, 11, 5); crate(27, 60, 10, 10, 6); crate(58, 60, 12, 12, 6); crate(84, 60, 11, 9, 6);
-    [[38, 60], [45, 60]].forEach(([x, y]) => { S.beg(); S.ell(x, y - 4, 4, 5, 'sand', 6, { dome: 1 }); S.px(x, y - 9, 'leather', 4); S.end(); });
-    S.beg(); for (let k = 0; k < 5; k++) { S.cyl(71 + k * 3, 49, 2, 11, 'paper', 7); S.px(71 + k * 3, 48, 'tile', 8); } S.end();
-    S.beg(); S.box(14, 79, 16, 7, 'crimson', 5, { top: 3, tt: 1 }); S.hl(14, 79, 16, 'gold', 7); S.vl(21, 76, 10, 'gold', 6); S.rect(20, 80, 3, 3, 'gold', 9); S.end();
-    crate(34, 86, 14, 12, 5); crate(58, 86, 12, 10, 6); crate(71, 86, 14, 13, 5); crate(86, 86, 8, 7, 6);
-    // ceiling lamp over the shelves
-    S.beg(); S.vl(48, 9, 2, 'iron', 5); S.poly([[43, 11], [53, 11], [51, 13], [45, 13]], 'iron', 7); S.end(); S.rect(46, 13, 5, 1, 'lamp', 10, { e: 5 }); S.px(48, 14, 'lamp', 11, { e: 5 });
+    crate(10, 30, 12, 10, 6); crate(23, 30, 10, 8, 5); crate(34, 30, 13, 11, 6); crate(48, 30, 7, 6, 5);
+    [[13, 52], [20, 52]].forEach(([x, y]) => { S.beg(); S.ell(x, y - 4, 4, 5, 'sand', 6, { dome: 1 }); S.px(x, y - 9, 'leather', 4); S.end(); });
+    S.beg(); for (let k = 0; k < 6; k++) { S.cyl(27 + k * 3, 41, 2, 11, 'paper', 7); S.px(27 + k * 3, 40, k % 2 ? 'tile' : 'crimson', 8); } S.end();
+    crate(46, 52, 10, 9, 6); crate(10, 74, 14, 11, 5); crate(26, 74, 11, 8, 6); crate(39, 74, 15, 12, 5);
+    // ceiling lamp
+    S.beg(); S.vl(34, 9, 3, 'iron', 5); S.poly([[29, 12], [39, 12], [37, 14], [31, 14]], 'iron', 7); S.end(); S.rect(32, 14, 5, 1, 'lamp', 10, { e: 5 }); S.px(34, 15, 'lamp', 11, { e: 5 });
+    // glass case of relics on crimson velvet
+    S.lay('mid'); S.beg(); S.box(62, 80, 24, 10, 'wood', 4, { top: 1 }); S.rect(62, 60, 24, 20, 'glass', 2.2); S.rect(63, 72, 22, 4, 'crimson', 4); S.hl(63, 72, 22, 'crimson', 6);
+    S.rect(62, 59, 24, 2, 'brass', 7); S.vl(62, 60, 20, 'brass', 6); S.vl(85, 60, 20, 'brass', 4); S.line(64, 62, 69, 67, 'glass', 9); S.line(65, 62, 71, 68, 'glass', 7); S.end();
+    S.poly([[67, 71], [69, 66], [71, 71]], 'arcane', 9, { e: 8 }); S.px(69, 67, 'arcane', 11, { e: 8 });                                    // gem
+    S.beg(); S.rect(73, 69, 6, 3, 'gold', 8); S.px(73, 68, 'gold', 9); S.px(75, 67, 'gold', 10); S.px(78, 68, 'gold', 9); S.px(75, 70, 'red', 8); S.end();   // crown
+    S.ell(82, 69.5, 2.2, 2.2, 'teal', 9, { e: 8, dome: 1 }); S.px(81, 68, 'teal', 11, { e: 8 });                                        // orb
+    // heap of gold on the floor
+    S.beg(); for (let y = 0; y < 8; y++) { const hw = Math.round(9 - y * 1.1); for (let x = -hw; x <= hw; x++) S.px(14 + x, FY - 1 - y, 'gold', 5.5 + ((x + y) % 3 === 0 ? 2 : 0) + (y > 5 ? 1 : 0) - (x > hw - 2 ? 1.5 : 0)); } S.end();
+    for (let k = 0; k < 5; k++) S.px(6 + k * 4, FY + 1 + (k % 2), 'gold', 7);
+    // blueprint table: the drawing glows faintly
+    S.beg(); S.box(27, 78, 30, 3, 'wood', 6, { top: 1 }); [29, 53].forEach(x => S.rect(x, 81, 2, 9, 'wood', 4)); S.end();
+    S.rect(31, 76, 22, 2, 'tile', 5, { e: 9 }); for (let x = 32; x < 52; x += 3) S.px(x, 76, 'tile', 9, { e: 9 }); S.px(40, 77, 'tile', 10, { e: 9 }); S.px(33, 75, 'paper', 8); S.px(52, 75, 'paper', 8);
     // a hand truck near the eye
-    S.lay('front'); S.beg(); S.line(4, 64, 9, 88, 'iron', 6, { w: 1 }); S.hl(6, 88, 8, 'iron', 7); S.ell(6, 88, 2, 2, 'iron', 3); S.end();
+    S.lay('front'); S.beg(); S.line(144, 62, 139, 88, 'iron', 6, { w: 1 }); S.hl(134, 88, 8, 'iron', 7); S.ell(140, 88, 2, 2, 'iron', 3); S.end();
+    sc.emit({ k: 'dust', x: 121, y: 30, w: 24, h: 50, rate: 1.4, sp: 2, life: 3.5 });
   },
   anim(D, t, rs) {
-    const cy = Math.round(liftY(t)), f = (cy + 17 - LIFT[0]) / (LIFT[1] - LIFT[0]);
+    const st = rs.st, cy = Math.round(liftY(t)), f = (cy + 17 - LIFT[0]) / (LIFT[1] - LIFT[0]);
     LIFT.forEach((_, i) => { rs.mul[i] = cy < -30 ? 0 : Math.max(0, 1 - Math.abs(f - i)); });
     // cables and the cage
     D.lay('back'); if (cy > -40) { D.vl(116, 3, cy - 3, 'iron', 6); D.vl(126, 3, cy - 3, 'iron', 6); }
+    const q = steps(t, 13), carry = q > 0.1 && q < 0.7, glowLoad = Math.floor(t / 13) % 3 === 2;
     D.beg(); D.box(109, cy, 24, 36, 'iron', 5); D.rect(111, cy + 3, 20, 31, 'ink', 1); for (let x = 113; x < 131; x += 4) D.vl(x, cy + 3, 31, 'iron', 6); D.hl(109, cy + 18, 24, 'iron', 7);
-    D.rect(120, cy + 4, 3, 2, 'lamp', 10, { e: 255 }); if (steps(t, 13) > 0.1 && steps(t, 13) < 0.7) { D.box(114, cy + 26, 10, 8, 'wood', 6); D.hl(114, cy + 30, 10, 'wood', 4); } D.end({ none: 1 });
-    // porter: fetches the crate from the cage while it rests, stacks it
-    const q = steps(t, 13); D.lay('mid');
-    if (q > 0.22 && q < 0.6) { const k = (q - 0.22) / 0.38, x = Math.round(k < 0.5 ? 100 - k * 2 * 50 : 50 + (k - 0.5) * 2 * 50), dir = k < 0.5 ? -1 : 1, ph = t * 9;
+    D.rect(120, cy + 4, 3, 2, 'lamp', 10, { e: 255 }); if (carry) { if (glowLoad) { D.rect(114, cy + 26, 10, 8, 'tile', 4); D.hl(114, cy + 29, 10, 'tile', 9, { e: 255 }); D.px(118, cy + 27, 'tile', 10, { e: 255 }); } else { D.box(114, cy + 26, 10, 8, 'wood', 6); D.hl(114, cy + 30, 10, 'wood', 4); } } D.end({ none: 1 });
+    // winch: the gear turns while the cage moves
+    const dv = liftY(t + 0.05) - liftY(t); st.wa = (st.wa || 0) + dv * 0.25; const wa = st.wa;
+    D.beg(); for (let y = -9; y <= 9; y++) for (let x = -9; x <= 9; x++) { const d = Math.hypot(x, y); if (d > 9.4) continue; const th = Math.atan2(y, x) - wa, tooth = Math.cos(th * 10) > 0.2;
+      if (d > 7.5 && !tooth) continue; if (d < 2) { D.px(94 + x, 64 + y, 'iron', 2); continue; } if (d < 6 && d > 2.8 && Math.abs(Math.sin((Math.atan2(y, x) - wa) * 2)) > 0.35) continue; D.px(94 + x, 64 + y, 'brass', 6 - (x + y) / 9 * 1.2 + (d > 7.5 ? -0.6 : 0)); } D.end();
+    D.line(94, 64, 116, 8, 'iron', 5);
+    // the quartermaster writes in his ledger at the blueprint table
+    D.lay('back'); const wq = Math.sin(t * 5); worker(D, 43, 90, { skin: ['skin', 6], hair: ['linen', 7], top: ['crimson', 4], bot: ['hair', 2], boot: ['hair', 2], beard: ['linen', 7] }, { aF: 1.3 + wq * 0.12, eF: -0.9, aB: 1.1, eB: -1, lean: 0.4 }, 1);
+    // sparkle on the relics and the gold
+    if (R() < 0.05) rs.burst('glint', 64 + R() * 20, 64 + R() * 8, 1, { sp: 0, life: 0.5 }); if (R() < 0.04) rs.burst('glint', 8 + R() * 14, FY - 2 - R() * 6, 1, { sp: 0, life: 0.5 });
+    // porter: fetches the load from the cage while it rests, carries it to the shelves
+    D.lay('mid');
+    if (q > 0.22 && q < 0.6) { const k = (q - 0.22) / 0.38, x = Math.round(k < 0.5 ? 118 - k * 2 * 58 : 60 + (k - 0.5) * 2 * 58), dir = k < 0.5 ? -1 : 1, ph = t * 9;
       worker(D, x, FY, 'worker', { lF: Math.sin(ph) * 0.5, lB: -Math.sin(ph) * 0.5, kF: Math.max(0, -Math.sin(ph)) * 0.5, kB: Math.max(0, Math.sin(ph)) * 0.5, aF: 1.2, eF: -1.2, aB: 1, eB: -1, tool: k < 0.5 ? 'box' : null, bob: -Math.abs(Math.cos(ph)) + 0.4 }, dir); }
-    else { const w = stroll(t, 60, 96, 7, 0.4, 3); worker(D, w.x, FY, 'worker', Object.assign(w.pose, { tool: 'board', aF: 1.2, eF: -1.2 }), w.dir); }
+    else { const w = stroll(t, 62, 98, 7, 0.4, 3); worker(D, w.x, FY, 'worker', w.pose, w.dir); }
   },
 });
 
 // what each pixel room shows, in words: replaces the old scene's line in M.ROOM_D (docs/effects.md §R is generated from it)
 const D_ = {
-  core: '货架上堆着箱子、布袋、图纸筒和宝箱；吊笼沿井道上下，笼里的灯照着井壁一路移动，搬运工把箱子搬上货架',
+  core: '传送门的青光从井口泻下来，光里浮尘飘动，井架上的符文跟着呼吸；吊笼带着灯上下，绞盘的大齿轮跟着转；左边是宝库：货架、金币堆、玻璃柜里三件发光的宝物，军需官在发蓝光的图纸桌前记账，搬运工把吊笼运来的货搬上货架',
   generator: '铜锅炉的炉门透着火光；压力表指针爬到头，安全阀喷一团汽、警示灯把墙照红；飞轮带动活塞，两只齿轮咬合转动，工人拿着工具修管子',
   smithy: '砖造的锻炉里像素火焰翻涌、火星上飘，风箱一压炉火一亮；铁匠抡锤，每一下火花四溅、满屋一亮，砧上的铁由白转橙；火把摇曳，淬火桶不时冒汽',
   hospital: '病人的被子随呼吸起伏，不时飘起绿色十字；心电屏扫出心跳，红十字灯箱发光，顶灯偶尔闪一下，护士拿着夹板查房',

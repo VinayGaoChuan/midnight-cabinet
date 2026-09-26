@@ -25,9 +25,6 @@ function ik(sx, sy, tx, ty, l1, l2) {
   const e1 = [sx + Math.cos(a - b) * l1, sy + Math.sin(a - b) * l1], e2 = [sx + Math.cos(a + b) * l1, sy + Math.sin(a + b) * l1], e = e1[1] < e2[1] ? e1 : e2;
   const hx = sx + Math.cos(a) * d, hy = sy + Math.sin(a) * d; return [e, [hx, hy]];
 }
-// 3×5 digits
-const DIG = ['111101101101111', '010110010010111', '111001111100111', '111001111001111', '101101111001001', '111100111001111', '111100111101111', '111001001010010', '111101111101111', '111101111001111'];
-function digits(D, x, y, str, m, t, o) { for (let i = 0; i < str.length; i++) { const g = DIG[+str[i]]; if (!g) continue; for (let k = 0; k < 15; k++) if (g[k] === '1') D.px(x + i * 4 + (k % 3), y + Math.floor(k / 3), m, t, o); } }
 function flame(D, x, y, s, t, ph) {
   const hh = Math.round(s * (0.8 + 0.25 * n1(t * 9 + ph))), sw = Math.round(n1(t * 5 + ph * 2) * 0.8);
   for (let k = 0; k < hh; k++) { const q = k / hh, w = Math.max(1, Math.round((1 - q * q) * s * 0.45)), cx = x + Math.round(sw * q); for (let i = -w + 1; i < w; i++) D.px(cx + i, y - k, 'fire', clamp(11 - q * 6 - Math.abs(i) * 2.2, 3, 11), { e: 255 }); }
@@ -67,21 +64,15 @@ function polySpan(pts, y) {
 }
 function hazard(S, x, y, w, h, t) { for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) { const k = ((xx + yy) >> 1) & 1; S.px(xx, yy, k ? 'gold' : 'ink', k ? (t || 7) : 2); } }
 
-// the kit's moon halo uses half-step tones that dither into a checkerboard: repaint its rings on whole steps
-function moonHalo(S, mx, my, mr) {
-  for (let k = 3; k >= 1; k--) S.ell(mx, my, mr + k * 2.5, mr + k * 2.5, 'night', [0, 5, 4, 3][k], { e: 255 });
-  S.ell(mx, my, mr, mr, 'bone', 9, { e: 255 }); S.ell(mx + mr * 0.25, my - mr * 0.2, mr * 0.75, mr * 0.75, 'bone', 10, { e: 255 });
-  [[-0.3, 0.2, 0.28], [0.35, 0.35, 0.2], [0.05, -0.4, 0.16]].forEach(([a, b, c]) => S.ell(mx + a * mr, my + b * mr, Math.max(1, c * mr), Math.max(1, c * mr), 'bone', 7, { e: 255 }));
-}
-
 // ═════════ 沃尔夫斯堡工厂 wolfsburg (steam · forge · legendary) ═════════
 // An indexed assembly line: chassis roll in through a strip curtain; a yellow robot arm lifts a painted body off its
 // pallet and lowers it onto the chassis; a second arm welds the seams in a shower of sparks under a blue arc light;
 // the car stops under the golden inspection gate, a scan line sweeps it, its headlights come on — and every third car
 // comes out gilded (the building's "quality +1"), with a flash of gold, glints and the foreman cheering on the catwalk,
-// and a wave of gold runs back up the line past both lamps. Two green-shaded lamps throw warm pools on the line and the
-// floor; the welding arc washes the arms in blue; on the floor, station numbers, a parts tug shuttling between stations,
-// and the polished inspection bay mirroring the cars' lamps.
+// and a wave of gold runs back up the line past both lamps. A row of tally lamps on the gate beam lights one lamp per
+// finished car (gold for a gilded one) and starts over at six. Two green-shaded lamps throw warm pools on the line and the
+// floor; the welding arc washes the arms in blue; on the floor, yellow-and-black hazard paint, a parts tug shuttling
+// between stations, and the polished inspection bay mirroring the cars' lamps.
 const WB = { P: 3.6, MV: 0.28, YB: 80 };   // cycle: move 28 %, dwell; stations at x 30 / 62 / 94 / 126
 const WCOL = [['crimson', 7], ['denim', 7], ['linen', 8], ['leaf', 7], ['denim', 8], ['crimson', 8]];
 // the little car, facing right: 20 px long; stage 0 chassis · 1 body · 2 welded (chrome) · 3 finished (lights on)
@@ -129,8 +120,8 @@ function robot(D, sx, sy, hand, tool, open) {
   D.poly([[sx - 5, sy + 4], [sx + 5, sy + 4], [sx + 4, sy - 2], [sx - 3, sy - 4]], RC, 5.4); D.hl(sx - 3, sy - 3, 6, RC, 7.5); D.ell(sx, sy, 2.2, 2.2, 'iron', 4, { dome: 1 }); D.px(sx - 1, sy - 1, 'iron', 8); D.rect(sx + 3, sy, 3, 3, 'iron', 6);
   return [hx, hy];
 }
-// a 5×5 star (the gold count on the gate board)
-const STAR5 = ['..#..', '..#..', '#####', '.###.', '.#.#.'];
+// the gate beam's tally lamps (x of each lens centre, y 52) and the cog badge between the two groups
+const WB_LAMPS = [111, 116, 121, 131, 136, 141], COG = ['.#.#.', '#####', '##.##', '#####', '.#.#.'];
 X.def('wolfsburg', {
   amb: [0.19, 0.26],
   paint(S, sc) {
@@ -172,8 +163,12 @@ X.def('wolfsburg', {
     S.beg(); S.box(12, 60, 20, 3, 'iron', 6, { top: 1 }); S.vl(14, 63, 17, 'iron', 4); S.vl(29, 63, 17, 'iron', 4); S.end();
     // gate: posts, beam with the counter, gold trim, a light bar under it
     S.beg(); S.box(110, 56, 4, 32, 'iron', 5); S.box(138, 56, 4, 32, 'iron', 5); hazard(S, 110, 80, 4, 8); hazard(S, 138, 80, 4, 8);
-    S.box(106, 48, 40, 9, 'iron', 4); S.hl(106, 48, 40, 'gold', 8); S.hl(106, 56, 40, 'gold', 6); S.rect(108, 50, 18, 6, 'ink', 1);
-    S.rect(127, 50, 18, 6, 'ink', 1); S.end();
+    S.box(106, 48, 40, 9, 'iron', 4); S.hl(106, 48, 40, 'gold', 8); S.hl(106, 56, 40, 'gold', 6); S.end();
+    // six round tally lamps in brass sockets (lit one per finished car in anim), a brass cog badge between the groups
+    WB_LAMPS.forEach(x => { S.beg(); S.hl(x - 1, 50, 3, 'brass', 7); S.vl(x - 2, 51, 3, 'brass', 6); S.vl(x + 2, 51, 3, 'brass', 4); S.hl(x - 1, 54, 3, 'brass', 3.6);
+      S.rect(x - 1, 51, 3, 3, 'glass', 2); S.px(x - 1, 51, 'glass', 5); S.end({ ink: 1 }); });
+    for (let x = 108; x < 145; x += 5) if (!WB_LAMPS.some(l => Math.abs(l - x) < 3) && Math.abs(x - 126) > 3) TX.rivet(S, x, 51, 'iron', 4);
+    S.beg(); S.spr(124, 50, COG, { '#': ['brass', 6.6] }); S.px(124, 51, 'brass', 9); S.px(125, 50, 'brass', 9); S.px(126, 52, 'ink', 0); S.end({ ink: 1 });
     S.rect(113, 57, 26, 1, 'lamp', 10, { e: L.gate + 1 }); for (let x = 114; x < 139; x += 3) S.px(x, 57, 'lamp', 11, { e: L.gate + 1 });
     // beacon housing on the gate
     S.beg(); S.box(124, 45, 5, 3, 'iron', 6); S.end();
@@ -189,12 +184,12 @@ X.def('wolfsburg', {
     S.beg(); S.hl(98, 34, 48, 'iron', 8); S.hl(98, 38, 48, 'iron', 6); for (let x = 99; x < 146; x += 8) S.vl(x, 34, 9, 'iron', 7); S.end();
     // ── the floor: station numbers with flow arrows, the cart lane, the polished inspection bay, the lamps' pools ──
     S.lay('wall');
-    [30, 62, 94].forEach((x, i) => { digits(S, x - 1, 90, String(i + 1), 'linen', 6); [0, 1, 2].forEach(k => S.px(x + 4 + (k === 1 ? 1 : 0), 91 + k, 'gold', 6)); S.hl(x - 3, 90, 1, 'gold', 5); S.hl(x - 3, 94, 1, 'gold', 5); });
-    for (let x = 4; x < 107; x++) S.px(x, 95, 'gold', (x % 8) < 5 ? 5 : 2);
+    // floor paint: a yellow-and-black lane line along the conveyor, a striped stop mark under each station
+    [30, 62, 94].forEach(x => hazard(S, x - 3, 90, 7, 3, 6));
+    hazard(S, 4, 95, 103, 2, 6);
     // inspection bay in front of the gate: a polished brass plate edged in gold, its own station number
-    S.rect(107, 90, 39, 11, 'brass', 3); S.hl(107, 90, 39, 'brass', 5, { n: [0, -0.8] }); S.vl(107, 90, 11, 'gold', 6); S.vl(108, 91, 10, 'brass', 1);
+    S.rect(107, 90, 39, 11, 'brass', 3); S.hl(107, 90, 39, 'brass', 5, { n: [0, -0.8] }); hazard(S, 107, 90, 2, 11, 6); S.vl(109, 91, 10, 'brass', 1);
     for (let x = 110; x < 146; x += 6) S.vl(x, 91, 10, 'brass', 2);
-    digits(S, 141, 95, '4', 'linen', 6);
     // the gate's light bar mirrored in the plate: broken gold streaks that breathe with the gate
     [[92, 113, 139, 3, 2, 7], [94, 116, 136, 2, 3, 6], [97, 119, 133, 2, 4, 5], [99, 122, 130, 1, 4, 4]].forEach(([y, a, b, on, off, tn]) => { for (let x = a; x < b; x++) if ((x - a) % (on + off) < on) S.px(x, y, 'lamp', tn, { e: L.gate + 1 }); });
     // light pools under the two lamps (and on the line, below): bright, warm with the lights above them
@@ -256,7 +251,7 @@ X.def('wolfsburg', {
     // gate: scan line, then the reveal; every third car turns to gold
     const cg = n - 3, gold = ((cg % 3) + 3) % 3 === 0;
     if (ph > 0.3 && ph < 0.6) { const q = (ph - 0.3) / 0.3, y = Math.round(58 + Math.sin(q * Math.PI) * 20); D.lay('mid'); for (let x = 114; x < 138; x++) D.px(x, y, 'teal', (x + Math.floor(t * 30)) % 4 ? 9 : 11, { e: 255 }); D.lay('back'); }
-    if (ph >= 0.62 && !st.rev) { st.rev = 1; if (gold) { rs.flash(L.gate, 2.2); rs.burst('glint', 126, 70, 8, { sp: 30, life: 0.8, w: 18, h: 8 }); rs.burst('spark', 126, 66, 16, { sp: 40, ang: 0, spread: 2.2, life: 1, floor: yb - 1 }); st.cheer = t; st.fa = st.fb = 0; } else rs.flash(L.gate, 0.6); }
+    if (ph >= 0.62 && !st.rev) { st.rev = 1; rs.burst('glint', WB_LAMPS[(((n - 4) % 6) + 6) % 6], 52, 2, { sp: 8, life: 0.45 }); if (gold) { rs.flash(L.gate, 2.2); rs.burst('glint', 126, 70, 8, { sp: 30, life: 0.8, w: 18, h: 8 }); rs.burst('spark', 126, 66, 16, { sp: 40, ang: 0, spread: 2.2, life: 1, floor: yb - 1 }); st.cheer = t; st.fa = st.fb = 0; } else rs.flash(L.gate, 0.6); }
     if (ph < 0.5) st.rev = 0;
     // a gilded car: a wave of gold runs back up the whole line — the rail flares, glints trail it, each lamp flares as it passes
     if (st.cheer != null && t - st.cheer < 0.75) { const k = (t - st.cheer) / 0.75, fx = Math.round(142 - ease(k) * 126);
@@ -264,13 +259,14 @@ X.def('wolfsburg', {
       if (R() < 0.8) rs.burst('glint', fx + (R() - 0.5) * 6, 70 + R() * 8, 1, { sp: 5, life: 0.6 });
       if (fx < 82 && !st.fb) { st.fb = 1; rs.flash(L.b, 0.8); rs.burst('glint', 74, 76, 3, { sp: 16, life: 0.6, w: 20, h: 6 }); }
       if (fx < 38 && !st.fa) { st.fa = 1; rs.flash(L.a, 0.8); rs.burst('glint', 30, 76, 3, { sp: 16, life: 0.6, w: 20, h: 6 }); } D.lay('back'); }
-    // counter on the gate: cars made
-    const made = 1400 + n - 3 + (ph >= 0.62 ? 1 : 0);
-    D.lay('back'); digits(D, 109, 50, String(made % 10000).padStart(4, '0'), 'lamp', 9, { e: 255 });
-    // gold count: a star + gilded cars
-    const golds = Math.floor((made - 1400 + 2) / 3) + 466, gl = st.cheer != null && t - st.cheer < 0.8 && Math.floor(t * 8) % 2 ? 11 : 9;
-    D.spr(127, 50, STAR5, { '#': ['gold', gl, { e: 255 }] }); D.px(129, 52, 'gold', 11, { e: 255 });
-    digits(D, 133, 50, String(golds % 1000).padStart(3, '0'), 'gold', gl, { e: 255 });
+    // tally lamps on the gate beam: every car off the line lights the next lamp — warm white, or gold for a gilded car (every
+    // third, so lamps 3 and 6 are the gold ones); the lamp that just came on is white-hot; with all six lit the row starts over.
+    // A gilded car makes the whole lit row blink.
+    const latest = n - 4 + (ph >= 0.62 ? 1 : 0), base = latest - ((((latest - 1) % 6) + 6) % 6), blink = st.cheer != null && t - st.cheer < 0.9 && Math.floor(t * 8) % 2;
+    D.lay('back');
+    WB_LAMPS.forEach((lx, i) => { const c = base + i; if (c > latest) return; const m = ((c % 3) + 3) % 3 === 0 ? 'gold' : 'lamp', fresh = c === latest && ph >= 0.62 && ph < 0.72, G = { e: 255 };
+      D.rect(lx - 1, 51, 3, 3, m, blink ? 7 : 8, G); D.px(lx, 52, m, fresh ? 11 : 10, G); D.px(lx - 1, 51, m, 11, G); if (fresh) { D.px(lx, 51, m, 10, G); D.px(lx - 1, 52, m, 10, G); }
+    });
     // beacon: spins while the line moves
     const ba = t * 9; D.rect(125, 43, 3, 2, 'red', moving ? 8 : 5, { e: 255 }); if (moving) { D.px(126 + Math.round(Math.cos(ba) * 2), 43, 'fire', 10, { e: 255 }); }
     // console screens: a bar graph that climbs
@@ -303,8 +299,10 @@ X.def('wolfsburg', {
 });
 
 // ═════════ 威尼斯兵工厂 venice (medieval · forge · epic) ═════════
-// The arsenal's basin at night, seen close: a galley fills the dock, her lateen mainsail set and lit by the moon and the
-// stern lantern, the lion of the arsenal on it, oars shipped; the twin water-gate towers stand dark behind her. On the
+// The arsenal's basin on a foggy, moonless night, seen close: a galley fills the dock, her lateen mainsail set and lit by
+// the lamp-lit fog and the stern lantern, the lion of the arsenal on it, oars shipped; the twin water-gate towers stand
+// dark behind her, San Marco's bell tower lit at its belfry, the far quay's lamps shivering in the lagoon, banks of fog
+// drifting past behind the ship and a low veil of it over the water in front. On the
 // quay a treadwheel crane — a man walks the wheel, the jib slews out over the ship and lowers a bronze cannon through
 // the waist to the sailor on deck; it drops into the hold with a gold flash and a slap of water against the hull.
 const VN = { P: 12, PIV: [124, 20], JL: 44, PICK: 1.5, GW: 62, TOP: 65 };   // the jib pivots high on the crane house: the gun crosses dark sky
@@ -340,14 +338,35 @@ function cannon(S, x, y, dt, clip) {
 X.def('venice', {
   amb: [0.24, 0.26],
   paint(S, sc) {
-    X.sky(S, sc, { moon: [21, 15, 5], far: 'sea', horizon: 58, floor: 'water' }); moonHalo(S, 21, 15, 5);
     const L = {};
+    L.sky = sc.light({ x: 40, y: 18, z: 60, r: 260, i: 0.45, c: '#c0b8e8', tint: 0.18 });                              // the lamp-lit fog overhead: a soft cool fill
     L.stern = sc.light({ x: 109, y: 36, z: 22, r: 60, i: 0.95, c: '#ffc070', fl: 'candle', tint: 0.5 });                // stern lantern
     L.bow = sc.light({ x: 17, y: 44, z: 22, r: 44, i: 0.7, c: '#ffc070', fl: 'candle', ph: 2.2, tint: 0.45 });          // bow lantern
     L.fire = sc.light({ x: 139, y: 64, z: 14, r: 50, i: 1.05, c: '#ff8a30', fl: 'fire', tint: 0.55 });                  // brazier on the quay
     L.gold = sc.light({ x: 80, y: 56, z: 22, r: 70, i: 1.6, c: '#ffe090', tint: 0.55, bake: false });                 // the landing flash (off at rest)
+    L.gond = sc.light({ x: 142, y: 91, z: 28, r: 30, i: 0.8, c: '#ffc070', fl: 'candle', ph: 4.1, tint: 0.5 });          // the gondola's lantern
     VN.L = L;
-    S.lay('wall');
+    S.lay('wall'); const GL = { e: 255 }, r = S.r;
+    // a misty night, no moon: whole-step bands from night indigo down to the murky violet the city's lamps leave in the fog
+    const SK = [[0, 'night', 1], [10, 'night', 2], [21, 'night', 3], [32, 'lav', 3], [42, 'lav', 4], [51, 'lav', 5]], edge = (i, x) => (i ? SK[i][0] + Math.round(Math.sin(x * 0.05 + i * 2.3) * 1.3) : 0);
+    for (let x = 0; x < W; x++) for (let i = 0; i < SK.length; i++) { const y1 = SK[i + 1] ? edge(i + 1, x) : 58; for (let y = edge(i, x); y < y1; y++) S.px(x, y, SK[i][1], SK[i][2], GL); }
+    for (let i = 0; i < 10; i++) S.px(r() * W, r() * 22, 'linen', r() < 0.3 ? 8 : 6, GL);
+    // the far lagoon, its far edge catching the glow; the near water (the floor rows) lit by the lanterns
+    S.rect(0, 58, W, FY - 58, 'water', 2, GL); S.hl(0, 58, W, 'lav', 4, GL); S.hl(0, 59, W, 'water', 3, GL);
+    S.vgrad(0, FY, W, H - FY, 'water', 4, 2.4);
+    // Venice across the water: roofs and chimneys with lit windows, the domed church of the Salute, a row of lamps along
+    // the far quay; the bell tower of San Marco on the left, its belfry lit
+    for (let x = 0; x < W;) { const bw = 5 + Math.floor(r() * 8), top = 50 + Math.floor(r() * 5); S.rect(x, top, bw, 58 - top, 'lav', 2, GL); if (r() < 0.5) S.px(x + 1 + Math.floor(r() * (bw - 2)), top - 1, 'lav', 2, GL);
+      for (let k = 0; k < bw / 3; k++) if (r() < 0.6) S.px(x + 1 + Math.floor(r() * (bw - 2)), top + 2 + Math.floor(r() * Math.max(1, 55 - top)), 'lamp', r() < 0.4 ? 8 : 6, GL); x += bw; }
+    for (let y = 44; y <= 49; y++) { const hw = Math.round(Math.sqrt(Math.max(0, 1 - ((y - 49.5) / 5.5) ** 2)) * 5.4); S.hl(28 - hw, y, hw * 2 + 1, 'lav', 2, GL); S.px(28 - hw, y, 'lav', 4, GL); }
+    S.rect(23, 50, 11, 3, 'lav', 2, GL); S.px(23, 50, 'lav', 4, GL); S.rect(27, 41, 3, 3, 'lav', 2, GL); S.vl(28, 38, 3, 'lav', 3, GL); S.hl(27, 39, 3, 'lav', 3, GL); [25, 28, 31].forEach(x => S.px(x, 51, 'lamp', 7, GL));
+    VN.lamps = [21, 36, 44, 58, 66, 74, 82, 90, 121, 131, 141];
+    VN.lamps.forEach(x => { S.px(x, 57, 'night', 2, GL); S.px(x, 56, 'lamp', 9, GL); });
+    { const C = (x, y, w, h, m, t) => S.rect(x, y, w, h, m, t, GL);
+      C(13, 25, 6, 33, 'brick', 2); S.vl(13, 25, 33, 'brick', 3, GL); S.vl(15, 28, 28, 'brick', 1, GL); S.vl(17, 28, 28, 'brick', 1, GL);
+      C(12, 18, 8, 7, 'stone', 3); C(12, 24, 8, 1, 'stone', 4); C(12, 18, 8, 1, 'stone', 4); C(13, 19, 2, 4, 'lamp', 6); C(17, 19, 2, 4, 'lamp', 6); S.px(13, 19, 'lamp', 8, GL); S.px(17, 19, 'lamp', 8, GL);
+      C(13, 14, 6, 4, 'brick', 2);
+      for (let k = 0; k < 8; k++) { const hw = Math.max(0, Math.round(3 - k * 0.42)); S.hl(16 - hw, 13 - k, hw * 2, 'moss', 3, GL); } S.px(15, 5, 'gold', 8, GL); S.px(15, 4, 'gold', 6, GL); }
     // the twin water-gate towers, far and dark, a bridge between them, warm slit windows
     const tower = (x, w, top) => { S.rect(x, top, w, 70 - top, 'brick', 2.4); S.noise(x, top, w, 70 - top, 1, 3, x); for (let yy = top + 3; yy < 70; yy += 4) S.hl(x, yy, w, 'brick', 1.6);
       for (let k = 0; k < w; k += 3) S.rect(x + k, top - 3, 2, 3, 'brick', 2.6); S.px(x + 1, top - 4, 'brick', 2.6); S.px(x + w - 2, top - 4, 'brick', 2.6);
@@ -367,7 +386,7 @@ X.def('venice', {
     S.beg(); S.poly([[134, 70], [144, 70], [142, 74], [136, 74]], 'iron', 4); S.vl(136, 74, 2, 'iron', 4); S.vl(141, 74, 2, 'iron', 4); for (let x = 135; x < 144; x++) S.px(x, 69, 'fire', 7 + (x % 3), { e: L.fire + 1 }); S.end();
     // ── the galley: sails, masts and rigging stand on her centreline (back); her near side is the hull (mid) ──
     const G = VN.GW;
-    // mainsail: a lateen triangle hung from its yard, lit by the moon and the stern lantern, the lion of the arsenal on it
+    // mainsail: a lateen triangle hung from its yard, lit by the fog's glow and the stern lantern, the lion of the arsenal on it
     S.beg(); S.poly([[36, 47], [99, 5], [86, 58], [70, 57], [52, 53]], 'linen', 6.6, { n: [0.1, -0.2] });
     for (let k = 0; k < 6; k++) { const x0 = 44 + k * 8; S.line(x0, 51 + k, x0 + 10 + k * 2, 36 - k * 6, 'linen', 5.6); }   // seams
     for (let x = 40; x < 86; x++) { const y = Math.round(47 + (x - 36) * 0.24 + Math.sin((x - 36) / 50 * Math.PI) * 3.5); S.px(x, y, 'linen', 4.5); }    // the foot's shade
@@ -410,19 +429,25 @@ X.def('venice', {
     S.lay('front');
     S.beg(); for (let y = 40; y < 104; y++) { const k = Math.floor((y + 8) / 4) % 2, x = 4; S.rect(x, y, 3, 1, k ? 'crimson' : 'linen', k ? 6 : 7); S.px(x, y, k ? 'crimson' : 'linen', k ? 7.5 : 9); S.px(x + 2, y, k ? 'crimson' : 'linen', k ? 4.5 : 5.5); } S.rect(4, 39, 3, 1, 'gold', 8); S.end();
     S.line(7, 60, 12, 63, 'hair', 3);
-    // the gondola: a black hull whose sheer catches the moon, a gold trim, rising to its stem at the left
+    // the gondola: a black hull whose sheer catches the light, a gold trim, rising to its stem at the left
     S.beg(); S.poly([[123, 105], [148, 105], [148, 98], [137, 99], [130, 98], [126, 96], [124, 93], [122, 94], [122, 99]], 'ink', 1.5);
     [[124, 93], [125, 94], [125, 95], [126, 96], [127, 96], [128, 97], [129, 97]].forEach(([x, y]) => S.px(x, y, 'iron', 5.5)); S.hl(130, 98, 7, 'iron', 5); S.hl(137, 99, 11, 'iron', 4.5);
     S.hl(128, 99, 9, 'gold', 5.5); S.hl(137, 100, 11, 'gold', 5); S.end();
     // its ferro on the stem: a bright iron blade, four teeth forward and one back, a curled crest
     S.beg(); S.vl(122, 83, 11, 'iron', 8.5); S.hl(119, 81, 4, 'iron', 10); S.px(118, 82, 'iron', 9); S.px(122, 82, 'iron', 9.5);
     for (let k = 0; k < 4; k++) S.hl(118, 85 + k * 2, 4, 'iron', 9 - (k % 2) * 0.8); S.px(123, 89, 'iron', 7.5); S.px(123, 90, 'iron', 7); S.end();
+    // a lantern on a post at the gondola's stern
+    S.beg(); S.vl(144, 90, 9, 'iron', 5); S.hl(141, 88, 5, 'iron', 6); S.box(140, 89, 5, 6, 'iron', 4); S.end();
+    S.rect(141, 90, 3, 4, 'lamp', 9, { e: L.gond + 1 }); S.px(142, 91, 'lamp', 11, { e: L.gond + 1 }); S.px(141, 90, 'lamp', 10, { e: L.gond + 1 });
+    // what stands in front of the far water (the fog bank only drifts where nothing nearer does)
+    { const LL = S.L; VN.mask = new Uint8Array(W * H); for (let p = 0; p < W * H; p++) VN.mask[p] = LL.back.m[p] || LL.mid.m[p] || LL.front.m[p] ? 1 : 0; }
     sc.emit({ k: 'ember', x: 139, y: 64, w: 6, rate: 2.2, sp: 7, ang: -0.1, spread: 0.6, life: 1.8 });
   },
   anim(D, t, rs) {
     const st = rs.st, L = VN.L, c = vnCrane(t), P = VN.PIV, G = VN.GW; rs.mul[L.gold] = 0;
-    // water: moon path, rolling dashes, lantern streaks, ripples along the hull
-    X.sea(D, t, 90, 104, 21);
+    // water: rolling dashes, lantern streaks, ripples along the hull; the far quay's lamps shiver in the lagoon
+    X.sea(D, t, 90, 104);
+    for (const x of VN.lamps) for (let y = 59; y < 63; y++) if (Math.sin(t * 2.4 + y * 1.9 + x) > -0.4) D.px(x + Math.round(Math.sin(t * 1.7 + y + x) * 0.8), y, 'lamp', 8 - (y - 59), { e: 255 });
     for (let y = 91; y < 103; y += 2) { const w = Math.round(Math.sin(t * 2 + y) * 1.5); D.hl(108 + w, y, 3, 'lamp', ((y + Math.floor(t * 6)) % 4) ? 7 : 9, { e: 255 }); D.hl(16 + w, y, 2, 'lamp', ((y + Math.floor(t * 5)) % 3) ? 6 : 8, { e: 255 }); D.hl(138 + w, y, 3, 'fire', ((y + Math.floor(t * 7)) % 3) ? 6 : 8, { e: 255 }); }
     for (let x = 20; x < 112; x += 2) if (Math.sin(x * 0.6 + t * 3) > 0.2) D.px(x, 89, 'water', 9, { e: 255 });
     // the sail and the stern windows shimmer in the water
@@ -461,7 +486,14 @@ X.def('venice', {
     // the slap: foam runs out along the waterline from both ends of the hull
     if (st.lt != null && t - st.lt >= 0 && t - st.lt < 0.7) { const k = (t - st.lt) / 0.7, n = Math.round(4 + k * 14), tn = 10 - k * 4;
       for (let i = 0; i < n; i++) { if (i % 3 === 2) continue; D.px(22 - i, 89, 'linen', tn, { e: 255 }); D.px(110 + i, 89, 'linen', tn, { e: 255 }); if (i > n - 5) { D.px(22 - i, 90, 'water', tn, { e: 255 }); D.px(110 + i, 90, 'water', tn, { e: 255 }); } } }
-    X.twinkle(D, t, 8, 30, 12);
+    X.twinkle(D, t, 4, 22, 12);
+  },
+  // fog: a bank drifting over the lagoon, the towers and the city behind the ship, and a low veil over the water in front
+  // drifting the other way — a cool lilac wash in two hard steps, never a gradient
+  post(out, t) {
+    const mask = VN.mask, C = [168, 162, 210];
+    for (let y = 44; y < 64; y++) { const env = 1 - Math.abs(y - 55) / 10; for (let x = 3; x < W - 3; x++) { const p = y * W + x; if (mask[p]) continue; const d = X.vnoise(x * 0.06 - t * 0.3, y * 0.28, 5) * env, a = d > 0.48 ? 0.34 : d > 0.32 ? 0.18 : 0; if (a) X.blendPx(out, p, C, a); } }
+    for (let y = 86; y < 102; y++) { const env = 1 - Math.abs(y - 93) / 9; for (let x = 3; x < W - 3; x++) { const d = X.vnoise(x * 0.05 + t * 0.22, y * 0.32, 9) * env, a = d > 0.5 ? 0.28 : d > 0.34 ? 0.14 : 0; if (a) X.blendPx(out, y * W + x, C, a); } }
   },
 });
 
@@ -637,32 +669,113 @@ X.def('ruhr', {
 });
 
 // ═════════ 埃菲尔铁塔 eiffel (steam · power · legendary) ═════════
-// Paris by night from the near quay: the tower stands over the Seine, its lattice glowing gold from within, two
-// platforms ringed with lamps, a searchlight turning at its top (the beam sweeps the sky and hides behind the
-// tower as it turns away); every eleven seconds the whole tower bursts into white sparkles. Below it the river carries
-// its gold reflection and a lit tour boat; on this side a painter works at his easel under a street lamp.
-const EF = { cx: 75, base: 80, SP: 11 };
+// Paris at the blue hour, from the near quay: a rose-and-violet sky, a low deck of cloud drifting on the evening wind, the
+// tower over the Seine glowing gold from within, its platforms ringed with lamps. Lift cabins climb and drop along its legs
+// (their lamps light the girders as they pass); a searchlight on the top sweeps round and lights up the clouds it crosses.
+// A glass-roofed tour boat glides down the river, windows lit, a floodlight washing the far embankment, foam in its wake
+// and its windows broken up in the water; the tower's lamps hang in the river as wavering columns of gold; car lamps run
+// along the far bank under the lit windows of the city; a plane blinks across. The moment, every twelve seconds: the light
+// show — white sparkles pour down the tower from the top and dance all over it, a second beam lights up opposite the
+// first, both rake the clouds, the river columns glitter white, and the painter at his easel turns to watch.
+const EF = { cx: 75, base: 80, SP: 12, BY: 11, BP: 46 };
 const efWo = (y) => 2 + 23 * Math.exp(-(EF.base - y) / 19);                       // outer half-width
 const efWi = (y) => y < 47 ? 0 : y < 64 ? efWo(y) - (3 + (y - 47) / 17 * 2) : efWo(y) - (5 + (y - 64) / 16 * 4);   // leg inner half-width
+// low clouds: [x at t 0, flat base y, length, height, drift px/s], wrapping round a 230-px loop
+const EF_CL = [[0, 13, 32, 5, 1.1], [58, 19, 44, 6, 0.75], [104, 9, 24, 4, 1.3], [150, 22, 36, 5, 0.9], [196, 15, 28, 4, 1.0], [132, 27, 22, 3, 0.6]];
+// the light show and the searchlight beams at this moment: the main beam turns all the time; in the show a twin beam
+// lights up opposite it (amp fades the show in and out)
+function efShow(t) {
+  const sq = steps(t, EF.SP), on = sq < 0.3, amp = !on ? 0 : sq < 0.03 ? sq / 0.03 : sq > 0.25 ? (0.3 - sq) / 0.05 : 1, beams = [];
+  [0, 1].forEach(k => { if (k && amp < 0.3) return; const a = t * 0.75 + k * Math.PI, sx = Math.sin(a); beams.push({ dir: sx > 0 ? 1 : -1, len: Math.abs(sx) * 160, toward: Math.cos(a), g: k ? amp : 1 + amp * 0.25 }); });
+  return { sq, on, amp, beams };
+}
+// how hard the beams hit a pixel of cloud: 3 the core, 2 inside the beam, 1 its spill, 0 clear
+function efHit(beams, x, y) {
+  let v = 0; for (const b of beams) { const d = (x - EF.cx) * b.dir; if (d < 3 || d > b.len) continue; const yc = EF.BY - 1 + d * 0.06, hw = Math.min(4, 0.6 + d * 0.04), u = Math.abs(y + 0.5 - yc), w = u <= 1.2 ? 3 : u <= hw + 1.5 ? 2 : u <= hw + 4 ? 1 : 0; if (w > v) v = w; }
+  return v;
+}
+// the cloud deck: flat rose-lit undersides, violet bodies, darker crowns; where a beam passes, the cloud blazes cream and white
+function efClouds(D, t, beams) {
+  const G = { e: 255 };
+  EF_CL.forEach(([x0, y, len, hh, sp], k) => { const x = ((x0 + t * sp) % 230 + 230) % 230 - 45;
+    for (let i = 0; i < len; i++) { const xx = Math.round(x + i); if (xx < 3 || xx > W - 4) continue;
+      const f = i / (len - 1), top = Math.max(1, Math.round(hh * Math.pow(Math.sin(f * Math.PI), 0.7) + Math.sin(i * 0.8 + k * 2.1) * 0.9)), bot = ((i + k * 3) % 9 === 0 || f < 0.06 || f > 0.94) ? 1 : 0;
+      for (let j = bot; j < top; j++) { const yy = y - j, hit = efHit(beams, xx, yy); let m = 'dusk', tn = j === bot ? 7 : j === bot + 1 ? 5 : j === top - 1 && top - bot > 2 ? 3 : 4;
+        if (hit === 3) { m = 'linen'; tn = 10; } else if (hit === 2) { m = 'bone'; tn = j === bot ? 9 : 8; } else if (hit === 1) tn = Math.min(7, tn + 2);
+        D.px(xx, yy, m, tn, G); } } });
+}
+// the Seine: the tower's lamps as wavering columns of gold (white glitter in the show), the embankment lamps' streaks,
+// the rose sky and dark ripples rolling across
+function efRiver(D, t, show) {
+  const G = { e: 255 }, col = EF.col;
+  for (let y = 81; y < 90; y++) { const k = y - 80, wob = Math.round(Math.sin(t * 2.1 + y * 1.3) * (0.5 + k * 0.12));
+    for (let x = 3; x < W - 3; x++) { const w = Math.sin(x * 0.5 + y * 2.1 - t * 2.6) + 0.6 * Math.sin(x * 0.17 - t * 1.2 + y * 0.9), c = col[x];
+      if (c > 0.12 && w > 0.9 - c * 1.4 + k * 0.1) { const sp = show && R() < 0.07; D.px(x + wob, y, sp ? 'linen' : 'lamp', sp ? 11 : clamp(Math.round(9.4 - k * 0.45 + c), 5, 11), G); continue; }
+      if (w > 1.3) D.px(x, y, k < 4 ? 'dusk' : 'water', k < 4 ? 5 : 4, G); } }
+  for (let x = 3; x < W - 3; x += 9) { if (Math.abs(x - EF.cx) < 27) continue; for (let y = 81; y < 86; y++) if (Math.sin(t * 3 + y * 1.7 + x) > -0.3) D.px(x + Math.round(Math.sin(t * 2.3 + y * 1.1)), y, 'lamp', 9 - (y - 81), G); }
+}
+// the tour boat heading downstream (left): hull, lit glass cabin with passengers, wheelhouse, tricolour, wake and reflections
+function efBoat(D, t, rs) {
+  const q = steps(t + 9, EF.BP), bx = Math.round(178 - q * 212); if (bx < -26 || bx > 176) return;
+  const G = { e: 255 }, x0 = bx - 20;   // bow at x0, stern at x0 + 40
+  D.lay('wall');
+  // the wake: churned foam under the stern that breaks up and spreads toward us as it falls behind
+  for (let i = 0; i < 32; i++) { const x = x0 + 41 + i; if (x < 3 || x > W - 4) continue; const f = (k) => Math.sin(i * 1.3 - t * 9 + k) + Math.sin(i * 0.37 + t * 2.1 + k * 2) > i / 32 * 1.6 - 0.5;
+    if (f(0)) D.px(x, 87, i < 8 ? 'linen' : i < 18 ? 'linen' : 'water', i < 8 ? 9 : i < 18 ? 7 : 7, G);
+    if (i > 4 && f(1.7)) D.px(x, 88, i < 14 ? 'linen' : 'water', 6, G);
+    if (i > 12 && f(3.1)) D.px(x, 89, 'water', 6, G); }
+  for (let i = 0; i < 3; i++) D.px(x0 - 3 - i, 87, 'linen', 9 - i * 2, G);
+  for (let x = x0 + 6; x < x0 + 35; x++) { const w = Math.round(Math.sin(t * 2.6 + x * 0.4)); if (Math.sin(x * 0.9 - t * 3.1) > -0.3 && (x - x0) % 3 !== 2) D.px(x + w, 88, 'lamp', 7, G);
+    if ((x + Math.floor(t * 4)) % 4 === 0) D.px(x - w, 89, 'lamp', 5, G); if ((x * 3) % 5 === 0) D.px(x, 87, 'linen', 5, G); }
+  D.lay('mid');
+  D.poly([[x0 - 2, 83], [x0 + 41, 83], [x0 + 41, 87], [x0 + 3, 87]], 'linen', 7);
+  D.hl(x0 - 1, 83, 42, 'linen', 9, { n: [0, -0.8] }); D.hl(x0 + 1, 85, 40, 'denim', 4); D.hl(x0 + 3, 86, 38, 'linen', 5);
+  D.rect(x0 + 5, 79, 31, 4, 'linen', 6); D.hl(x0 + 5, 82, 31, 'linen', 8);
+  for (let i = 0; i < 10; i++) { const wx = x0 + 6 + i * 3; D.rect(wx, 80, 2, 2, 'lamp', (i + 1) % 4 ? 9 : 8, G); if ((i * 5 + 2) % 7 < 3) D.px(wx + (i % 2), 81, 'ink', 1); }
+  D.hl(x0 + 5, 78, 31, 'glass', 7, { n: [0, -0.8] }); for (let x = x0 + 7; x < x0 + 35; x += 5) D.px(x, 78, 'glass', 10);
+  D.rect(x0 + 33, 75, 6, 3, 'linen', 7); D.hl(x0 + 33, 75, 6, 'linen', 9); D.rect(x0 + 34, 76, 3, 1, 'lamp', 7, G);
+  const fw = Math.round(Math.sin(t * 6) * 0.6); D.vl(x0 + 40, 73, 10, 'iron', 6);
+  D.px(x0 + 41, 73, 'denim', 6); D.px(x0 + 42, 73 + fw, 'linen', 9); D.px(x0 + 43, 73 + fw, 'red', 6); D.px(x0 + 41, 74, 'denim', 5); D.px(x0 + 42, 74 + fw, 'linen', 8); D.px(x0 + 43, 74 + fw, 'red', 5);
+  D.vl(x0 + 8, 76, 3, 'iron', 6); D.px(x0 + 8, 75, 'linen', 11, G); D.px(x0 - 1, 84, 'red', 9, G);
+  dynOutline(D, x0 - 3, 72, x0 + 44, 87);
+  rs.dl.push({ x: x0 + 2, y: 76, z: 6, r: 24, i: 0.9, rgb: [255, 236, 200], tint: 0.25 });   // its floodlight washes the far embankment
+}
+// lift cabins: two ride the legs from the ground to the second floor (in turn), one climbs the top from there;
+// each lamp lights the girders round it
+function efLifts(D, t, rs) {
+  const G = { e: 255 }, u = (ph, per) => { const q = steps(t + ph, per); return q < 0.4 ? ease(q / 0.4) : q < 0.5 ? 1 : q < 0.9 ? 1 - ease((q - 0.5) / 0.4) : 0; };
+  const cab = (x, y, big) => { const hid = (yy) => (yy >= 62 && yy <= 64) || yy === 45 || yy === 46 || yy === 15 || yy === 16;
+    const P = (xx, yy, m, tn, o) => { if (!hid(yy)) D.px(xx, yy, m, tn, o); };
+    if (big) { for (let i = -1; i <= 1; i++) { P(x + i, y - 3, 'iron', 7); P(x + i, y - 2, 'lamp', 9, G); P(x + i, y - 1, 'lamp', i ? 9 : 11, G); P(x + i, y, 'iron', 4); } }
+    else { P(x, y - 2, 'iron', 7); P(x, y - 1, 'lamp', 11, G); P(x + 1, y - 1, 'lamp', 9, G); P(x, y, 'iron', 4); }
+    rs.dl.push({ x, y: y - 1, z: 8, r: big ? 11 : 8, i: 0.7, rgb: [255, 214, 150], tint: 0.4 }); };
+  [[-1, 0], [1, 5]].forEach(([sd, ph]) => { const y = Math.round(78 - u(ph, 10) * 31), wo = efWo(y), wi = Math.max(efWi(y), wo - 5); cab(Math.round(EF.cx + sd * (wo + wi) / 2), y, 1); });
+  cab(EF.cx, Math.round(43 - u(2.5, 13) * 25), 0);
+}
 X.def('eiffel', {
   amb: [0.26, 0.26],
   paint(S, sc) {
-    X.sky(S, sc, { moon: [22, 16, 5], far: 'none', horizon: 66, floor: 'stone' }); moonHalo(S, 22, 16, 5);
     const L = {};
     L.flood = sc.light({ x: 75, y: 50, z: 8, r: 52, i: 1, c: '#ffc060', tint: 0.45 });                                 // floodlights on the tower: they reach its legs and the far bank, not this side
     L.beacon = sc.light({ x: 75, y: 10, z: 14, r: 26, i: 0.8, c: '#fff0c0', fl: 'pulse', amp: 0.3, sp: 3.5, tint: 0.4 });
     L.lamp = sc.light({ x: 15, y: 82, z: 24, r: 40, i: 1.05, c: '#ffc878', fl: 'candle', ph: 1.3, tint: 0.8 });          // street lamp: its light falls on the quay below it
-    L.spark = sc.light({ x: 75, y: 40, z: 24, r: 76, i: 1, c: '#e8f0ff', tint: 0.3, bake: false });                    // the sparkle (off at rest)
+    L.spark = sc.light({ x: 75, y: 40, z: 24, r: 76, i: 1, c: '#e8f0ff', tint: 0.3, bake: false });                    // the light show (off at rest)
+    L.dusk = sc.light({ x: 75, y: 62, z: 34, r: 150, i: 0.3, c: '#ff8aa0', tint: 0.18 });                              // the rose afterglow in the west
     EF.L = L;
-    S.lay('wall');
-    // Paris in silhouette: mansard roofs with chimney pots, lit windows, a gilded dome and a white basilica on its hill
-    const r = S.r;
-    for (let x = 0; x < W; x++) { const hill = Math.round(8 * Math.exp(-((x - 24) * (x - 24)) / 300)); for (let y = 72 - hill; y < 80; y++) S.px(x, y, 'night', 1.4, { e: 255 }); }
-    for (let x = 0; x < W;) { const bw = 7 + Math.floor(r() * 8), bh = 4 + Math.floor(r() * 7), top = 75 - bh; S.rect(x, top + 2, bw, 80 - top, 'night', 1, { e: 255 }); S.rect(x + 1, top, bw - 2, 2, 'night', 0.6, { e: 255 });
-      for (let k = 0; k < bw / 4; k++) S.px(x + 1 + Math.floor(r() * (bw - 2)), top - 1, 'night', 0.6, { e: 255 });
-      for (let k = 0; k < bw * bh / 12; k++) if (r() < 0.55) S.px(x + 1 + Math.floor(r() * (bw - 2)), top + 3 + Math.floor(r() * (bh - 2)), 'lamp', 6 + r() * 3, { e: 255 }); x += bw; }
+    S.lay('wall'); const r = S.r, G = { e: 255 };
+    // sky: whole-step bands from night indigo through violet and rose to a salmon glow on the horizon, their edges gently waved
+    const SK = [[0, 'night', 2], [8, 'dusk', 2], [17, 'dusk', 3], [27, 'dusk', 4], [38, 'dusk', 5], [49, 'dusk', 6], [59, 'dusk', 7]], edge = (i, x) => (i ? SK[i][0] + Math.round(Math.sin(x * 0.045 + i * 1.7) * 1.4) : 0);
+    for (let x = 0; x < W; x++) for (let i = 0; i < SK.length; i++) { const y1 = SK[i + 1] ? edge(i + 1, x) : FY; for (let y = edge(i, x); y < y1; y++) S.px(x, y, SK[i][1], SK[i][2], G); }
+    for (let i = 0; i < 14; i++) S.px(r() * W, r() * 15, 'linen', r() < 0.3 ? 9 : 7, G);
+    // far Paris in the haze: a violet band of roofs along the horizon, a few lights
+    for (let x = 0; x < W;) { const bw = 4 + Math.floor(r() * 7), top = 64 + Math.floor(r() * 5); S.rect(x, top, bw, 80 - top, 'dusk', 5, G); S.hl(x, top, bw, 'dusk', 6, G); if (r() < 0.6) S.px(x + 1 + Math.floor(r() * Math.max(1, bw - 2)), top + 2 + Math.floor(r() * 3), 'lamp', 7, G); x += bw; }
+    // nearer Paris in silhouette: mansard roofs with chimney pots and many lit windows, the hill of the white basilica
+    for (let x = 0; x < W; x++) { const hill = Math.round(8 * Math.exp(-((x - 24) * (x - 24)) / 300)); for (let y = 72 - hill; y < 80; y++) S.px(x, y, 'night', 1, G); }
+    for (let x = 0; x < W;) { const bw = 7 + Math.floor(r() * 8), bh = 4 + Math.floor(r() * 7), top = 75 - bh; S.rect(x, top + 2, bw, 80 - top, 'night', 1, G); S.rect(x + 1, top, bw - 2, 2, 'night', 1, G);
+      for (let k = 0; k < bw / 4; k++) S.px(x + 1 + Math.floor(r() * (bw - 2)), top - 1, 'night', 1, G);
+      for (let k = 0; k < bw * bh / 8; k++) if (r() < 0.7) S.px(x + 1 + Math.floor(r() * (bw - 2)), top + 3 + Math.floor(r() * (bh - 2)), 'lamp', r() < 0.3 ? 9 : 7, G); x += bw; }
     // the white basilica on its hill, floodlit: a big dome with its lantern, two small domes, the bell tower behind (whole steps: no dither)
-    { const G = { e: 255 }, B = (x, y, t) => S.px(x, y, 'bone', t, G);
+    { const B = (x, y, t) => S.px(x, y, 'bone', t, G);
       S.rect(18, 62, 14, 4, 'bone', 6, G); S.hl(18, 62, 14, 'bone', 7, G); S.vl(31, 62, 4, 'bone', 5, G);
       for (let y = 57; y <= 61; y++) { const hw = Math.round(Math.sqrt(Math.max(0, 1 - ((y - 61.5) / 4.5) ** 2)) * 3.4); for (let x = -hw; x <= hw; x++) B(24 + x, y, x < 0 ? 7 : x > 1 ? 5 : 6); }
       S.vl(24, 54, 3, 'bone', 7, G); B(24, 53, 8); S.hl(23, 56, 3, 'bone', 6, G);
@@ -670,16 +783,17 @@ X.def('eiffel', {
       S.rect(33, 55, 2, 11, 'bone', 5, G); S.vl(33, 55, 11, 'bone', 6, G); B(33, 54, 6); B(34, 54, 5); B(33, 53, 7);
       [[20, 63], [24, 63], [28, 63], [33, 58]].forEach(([x, y]) => S.px(x, y, 'night', 2, G)); }
     // the gilded dome of the Invalides between the far trees: a ribbed gold dome on a floodlit stone drum, lantern and spire
-    { const G = { e: 255 }; for (let y = 61; y <= 65; y++) { const hw = Math.sqrt(Math.max(0, 1 - ((y - 65.5) / 4.6) ** 2)) * 4.6; for (let x = 95; x <= 104; x++) { const u = (x + 0.5 - 100) / hw; if (Math.abs(u) > 1) continue; S.px(x, y, 'gold', u < -0.45 ? 7 : u > 0.4 ? 4 : 6, G); } }
+    { for (let y = 61; y <= 65; y++) { const hw = Math.sqrt(Math.max(0, 1 - ((y - 65.5) / 4.6) ** 2)) * 4.6; for (let x = 95; x <= 104; x++) { const u = (x + 0.5 - 100) / hw; if (Math.abs(u) > 1) continue; S.px(x, y, 'gold', u < -0.45 ? 7 : u > 0.4 ? 4 : 6, G); } }
       [98, 101].forEach(x => S.vl(x, 62, 4, 'gold', 4, G)); S.px(97, 62, 'gold', 8, G);
       S.rect(96, 66, 8, 4, 'bone', 5, G); S.hl(96, 66, 8, 'bone', 6, G); [97, 99, 101].forEach(x => S.vl(x, 67, 2, 'night', 2, G)); S.vl(103, 66, 4, 'bone', 4, G);
       S.rect(93, 70, 14, 5, 'night', 2, G); S.hl(93, 70, 14, 'bone', 4, G);
       S.rect(99, 59, 2, 2, 'gold', 6, G); S.px(99, 59, 'gold', 8, G); S.vl(99, 55, 4, 'gold', 7, G); S.px(99, 54, 'gold', 10, G); }
-    // the Seine: dark water between the far embankment and this quay
-    S.rect(0, 80, W, 10, 'water', 2, { e: 255 }); S.hl(0, 80, W, 'water', 3, { e: 255 }); S.rect(0, 84, W, 6, 'water', 1.4, { e: 255 });
-    // far embankment: a stone wall with a string of lamps
-    S.rect(0, 77, W, 3, 'stone', 3); S.hl(0, 77, W, 'stone', 5, { n: [0, -0.8] }); for (let x = 3; x < W; x += 9) S.px(x, 76, 'lamp', 10, { e: 255 });
-    // near quay parapet edge
+    // the Seine: the rose horizon on its far edge, dark water toward us
+    S.rect(0, 80, W, 10, 'water', 2, G); S.hl(0, 80, W, 'dusk', 4, G); S.rect(0, 84, W, 6, 'water', 1, G);
+    // far embankment: a stone wall with a row of lamps on posts along the road on top
+    S.rect(0, 77, W, 3, 'stone', 3); S.hl(0, 77, W, 'stone', 5, { n: [0, -0.8] }); for (let x = 3; x < W; x += 9) { S.px(x, 75, 'night', 3, G); S.px(x, 76, 'night', 3, G); S.px(x, 74, 'lamp', 10, G); }
+    // the near quay: flagstones, the parapet edge
+    TX.ashlar(S, 0, FY, W, H - FY, 'stone', 5, { bh: 5, bw: 16, crack: 0.1 });
     S.hl(0, 90, W, 'stone', 7, { n: [0, -0.8] }); S.hl(0, 91, W, 'stone', 4);
     // the street lamp's pool on the quay flags: the flags under it turn warm (same tones on the warm stone ramp) and brighter
     { const Y = S.c, from = X.MI.stone, to = X.MI.mstone; for (let y = 90; y < 102; y++) { const x1 = Math.round(27 + (y - 90) * 0.55 - Math.abs(y - 95) * 0.3); for (let x = 0; x < x1; x++) { const p = y * W + x; if (Y.m[p] === from) Y.m[p] = to; } } }
@@ -698,17 +812,20 @@ X.def('eiffel', {
         if (on) { S.px(X0, y, m, t, { n: [x < 0 ? -0.5 : 0.5, 0], e }); pts.push(X0, y); } } }
     // the great arch between the legs
     { const wi78 = efWi(78); let px0 = null; for (let x = -Math.round(wi78); x <= Math.round(wi78); x++) { const k = Math.abs(x) / wi78, ay = Math.round(67 + 11 * k * k); if (px0) { S.line(px0[0], px0[1], cx + x, ay, 'brass', 7.2); S.line(px0[0], px0[1] + 1, cx + x, ay + 1, 'brass', 4.5); } px0 = [cx + x, ay]; } }
-    // platforms, ringed with lamps
-    const plat = (y, h, ext) => { const a = Math.round(efWo(y)) + ext; S.beg(); S.rect(cx - a, y, a * 2 + 1, h, 'brass', 5.5); S.hl(cx - a, y, a * 2 + 1, 'brass', 7.5, { n: [0, -0.8] }); S.end(); for (let x = cx - a + 1; x < cx + a; x += 2) S.px(x, y + h - 1, 'lamp', 9, { e: L.flood + 1 }); };
+    // platforms, ringed with lamps (the lamps join the sparkle points)
+    const plat = (y, h, ext) => { const a = Math.round(efWo(y)) + ext; S.beg(); S.rect(cx - a, y, a * 2 + 1, h, 'brass', 5.5); S.hl(cx - a, y, a * 2 + 1, 'brass', 7.5, { n: [0, -0.8] }); S.end(); for (let x = cx - a + 1; x < cx + a; x += 2) { S.px(x, y + h - 1, 'lamp', 9, { e: L.flood + 1 }); pts.push(x, y + h - 1); } };
     plat(62, 3, 3); plat(45, 2, 2); plat(15, 2, 1);
     for (let x = cx - Math.round(efWo(63)) - 2; x < cx + Math.round(efWo(63)) + 3; x += 3) S.px(x, 63, 'brass', 3.5);   // the first floor's arcade
     // lantern room, antenna
     S.beg(); S.rect(cx - 2, 10, 5, 5, 'brass', 5); S.rect(cx - 1, 11, 3, 3, 'lamp', 9, { e: 255 }); S.vl(cx, 4, 6, 'iron', 7); S.px(cx, 3, 'red', 8, { e: 255 }); S.end();
     EF.pts = pts;
+    // how much tower stands over each column (its reflection in the river)
+    EF.col = new Float32Array(W); for (let i = 0; i < pts.length; i += 2) if (pts[i + 1] >= 40) EF.col[pts[i]]++;
+    { let mx = 1; for (let x = 0; x < W; x++) mx = Math.max(mx, EF.col[x]); for (let x = 0; x < W; x++) EF.col[x] /= mx; }
     // ── mid: trees along the far bank, the gardens at the tower's feet ──
     S.lay('mid');
     const tree = (x, y, rr) => { S.beg(); for (let k = 0; k < 7; k++) { const a = k / 7 * Math.PI * 2, bx = x + Math.cos(a) * rr * 0.55, by = y + Math.sin(a) * rr * 0.35; S.ell(bx, by, rr * 0.55, rr * 0.45, 'moss', Math.sin(a) < 0 ? 5 : 3, { dome: 1 }); } S.ell(x, y, rr * 0.7, rr * 0.5, 'moss', 4, { dome: 1 }); S.end(); S.rect(x - 1, y + rr * 0.4, 2, 77 - y - rr * 0.4, 'wood', 3); S.px(x - 1, Math.round(y + rr * 0.4), 'wood', 2); };
-    [[6, 68, 9], [18, 70, 8], [36, 71, 9], [114, 71, 9], [130, 69, 10], [145, 70, 8]].forEach(([x, y, rr]) => tree(x, y, rr));
+    [[6, 68, 9], [19, 71, 7], [114, 71, 9], [130, 69, 10], [145, 70, 8]].forEach(([x, y, rr]) => tree(x, y, rr));
     S.noise(0, 58, W, 20, 1, 2.5, 91, { only: 'moss' });
     // ── front: a Paris street lamp, an overhanging chestnut bough, the painter's easel ──
     S.lay('front');
@@ -716,58 +833,66 @@ X.def('eiffel', {
     S.poly([[7, 44], [16, 44], [14, 36], [9, 36]], 'lamp', 7, { e: L.lamp + 1 }); S.vl(8, 40, 4, 'lamp', 6, { e: L.lamp + 1 }); S.vl(14, 40, 4, 'lamp', 5, { e: L.lamp + 1 }); S.rect(8, 35, 7, 1, 'moss', 3); S.px(11, 33, 'moss', 3); S.px(11, 34, 'moss', 4); S.rect(7, 44, 9, 2, 'moss', 3); S.end();
     S.rect(10, 38, 3, 5, 'lamp', 10, { e: L.lamp + 1 }); S.px(11, 39, 'lamp', 11, { e: L.lamp + 1 }); S.px(9, 40, 'lamp', 8, { e: L.lamp + 1 }); S.px(13, 40, 'lamp', 8, { e: L.lamp + 1 });
     S.beg(); for (let i = 0; i < 90; i++) { const u = r(), x = 150 - u * 42, y = 4 + u * u * 16 + r() * (8 - u * 5); S.rect(x, y, 2, 1, 'leaf', 2 + r() * 2.5); } S.line(149, 5, 110, 14, 'wood', 2.5); S.end();
-    // easel with a canvas (the painting in progress is drawn in anim)
+    // easel with a canvas: a rose-and-violet evening already laid in (the tower on it is painted in anim)
     S.beg(); S.line(131, 102, 135, 66, 'wood', 5); S.line(141, 102, 137, 66, 'wood', 4.5); S.line(136, 70, 136, 102, 'wood', 3.5); S.hl(129, 87, 14, 'wood', 5); S.end();
-    S.beg(); S.rect(128, 68, 15, 18, 'night', 3); S.rect(128, 68, 15, 1, 'paper', 8); S.vl(128, 68, 18, 'paper', 7); S.vl(142, 68, 18, 'paper', 5); S.hl(128, 85, 15, 'paper', 5); S.end();
+    S.beg(); S.rect(128, 68, 15, 9, 'dusk', 3); S.rect(128, 77, 15, 5, 'dusk', 5); S.rect(128, 82, 15, 4, 'water', 3); S.rect(128, 68, 15, 1, 'paper', 8); S.vl(128, 68, 18, 'paper', 7); S.vl(142, 68, 18, 'paper', 5); S.hl(128, 85, 15, 'paper', 5); S.end();
     S.beg(); S.rect(144, 98, 3, 5, 'iron', 5); S.px(145, 97, 'crimson', 7); S.px(146, 97, 'gold', 8); S.end();   // paint pot
-    // build the see-through mask for the searchlight (sky pixels only)
+    // the see-through mask for the searchlight (sky pixels only)
     const LL = S.L; EF.mask = new Uint8Array(W * H); for (let p = 0; p < W * H; p++) EF.mask[p] = (LL.back.m[p] || LL.mid.m[p] || LL.front.m[p] || p >= 76 * W) ? 1 : 0;
   },
   anim(D, t, rs) {
-    const st = rs.st, L = EF.L; rs.mul[L.spark] = 0;
-    // the river: the tower's gold and the moon in the water, rolling dashes
-    for (let y = 81; y < 90; y++) { const k = y - 80; for (let x = 0; x < W; x++) { const w = Math.sin(x * 0.7 - t * 2.2 + y * 1.9) + Math.sin(x * 0.23 + t * 1.1 - y);
-      if (w < 1.2) continue; const tw = Math.abs(x - EF.cx) < 18 - k, mo = Math.abs(x - 22) < 4 + k * 0.5; D.px(x, y, tw ? 'lamp' : mo ? 'bone' : 'water', tw ? 8 - k * 0.3 : mo ? 8 : 4.5, { e: 255 }); } }
-    // a tour boat glides downstream now and then, its cabin lit
-    const bq = steps(t + 6, 23); if (bq < 0.6) { const bx = Math.round(170 - bq / 0.6 * 210), by = 86;
-      D.lay('mid'); D.beg(); D.poly([[bx - 18, by - 2], [bx + 16, by - 2], [bx + 14, by + 2], [bx - 15, by + 2]], 'linen', 6); D.hl(bx - 18, by - 2, 34, 'linen', 8); D.hl(bx - 15, by + 1, 30, 'iron', 3); D.end();
-      D.rect(bx - 12, by - 6, 24, 4, 'glass', 3); for (let x = bx - 11; x < bx + 12; x += 3) { D.rect(x, by - 5, 2, 2, 'lamp', 9, { e: 255 }); } D.hl(bx - 12, by - 7, 24, 'linen', 8); D.px(bx + 15, by - 4, 'red', 8, { e: 255 });
-      for (let x = bx - 12; x < bx + 12; x++) if ((x + Math.floor(t * 8)) % 3 === 0) D.px(x, by + 3, 'lamp', 7, { e: 255 }); }
-    // the sparkle: every eleven seconds the tower bursts into white lights for a few seconds
-    const sq = steps(t, EF.SP), sparkle = sq < 0.28, P = EF.pts;
-    if (sparkle) { D.lay('back'); const amt = sq < 0.03 ? sq / 0.03 : sq > 0.24 ? (0.28 - sq) / 0.04 : 1; rs.flash(L.spark, 0.5 * amt); rs.flash(L.flood, 0.2 * amt);
-      for (let k = 0; k < 110 * amt; k++) { const j = Math.floor(R() * P.length / 2) * 2, x = P[j], y = P[j + 1]; D.px(x, y, 'linen', 11, { e: 255 }); if (R() < 0.22) { D.px(x - 1, y, 'ice', 9, { e: 255 }); D.px(x + 1, y, 'ice', 9, { e: 255 }); D.px(x, y - 1, 'ice', 9, { e: 255 }); D.px(x, y + 1, 'ice', 9, { e: 255 }); } }
-      if (!st.sp) { st.sp = 1; rs.burst('glint', EF.cx, 40, 10, { sp: 26, life: 0.9, w: 30, h: 50 }); } } else st.sp = 0;
-    // the painter: short strokes, then a step back to look at his tower
-    D.lay('front'); const pq = steps(t, 7), look = pq > 0.72, strk = Math.sin(t * 9);
-    figure(D, 122, 101, { skin: ['skin', 6], hair: ['hair', 4], top: ['lav', 7], bot: ['denim', 3], boot: ['hair', 2], cap: ['ink', 2], beard: ['hair', 4] }, look ? { aF: 0.6, eF: -1.6, aB: 0.3, eB: -0.3, lean: -0.3 } : { aF: 1.6 + strk * 0.12, eF: -0.5 + strk * 0.2, aB: 0.9, eB: -1.4, lean: 0.25 }, 1);
-    if (!look && !X.noWorkers) D.px(131 + Math.round(strk), 80 - Math.round(strk * 2), 'gold', 8);
-    // on the canvas: a little gold tower on a blue night, filling in as he works
-    const prog = steps(t, 40); for (let y = 0; y < 14; y++) { const hw = Math.round(1 + (13 - y) * 0.42); for (let x = -hw; x <= hw; x++) { const s2 = (y * 7 + x * 13) % 17 / 17; if (s2 < prog * 1.2 && (Math.abs(x) >= hw - 0 || (x + y) % 3 === 0)) D.px(135 + x, 70 + y, 'gold', 7 + (x < 0 ? 1 : 0)); } }
-    X.twinkle(D, t, 8, 40, 31);
-    // a shooting star now and then
-    const mq = steps(t + 2, 15); if (mq < 0.06) { const k = mq / 0.06, x = Math.round(130 - k * 50), y = Math.round(8 + k * 18); D.lay('wall'); for (let i = 0; i < 7; i++) D.px(x + i, y - Math.round(i * 0.36), 'linen', 11 - i * 1.3, { e: 255 }); }
+    const st = rs.st, L = EF.L, s = efShow(t), G = { e: 255 }; rs.mul[L.spark] = 0;
+    // sky: a plane blinking across, behind the drifting cloud deck (lit where a beam crosses it), the first stars
+    D.lay('wall');
+    const pq = steps(t + 3, 21); if (pq < 0.55) { const x = Math.round(-4 + pq / 0.55 * 158), y = 6 + Math.round(pq * 5); D.hl(x - 1, y, 3, 'night', 1, G); D.px(x, y - 1, 'night', 1, G); if (Math.floor(t * 2.2) % 2) D.px(x + 1, y, 'linen', 11, G); else D.px(x - 1, y, 'red', 8, G); }
+    efClouds(D, t, s.beams);
+    X.twinkle(D, t, 6, 14, 31);
+    // car lamps along the far embankment: white heading right, red tail lamps heading left
+    [[0, 1, 9], [70, 1, 6.5], [30, -1, 8], [110, -1, 10], [150, 1, 7.5]].forEach(([x0, dr, sp]) => { const q = ((x0 + t * sp) % 180 + 180) % 180, x = Math.round(dr > 0 ? q - 15 : W + 15 - q); if (x < 4 || x > W - 5) return;
+      if (dr > 0) { D.px(x, 76, 'lamp', 11, G); D.px(x - 1, 76, 'lamp', 9, G); D.px(x + 1, 76, 'lamp', 6, G); } else { D.px(x, 76, 'red', 8, G); D.px(x + 1, 76, 'red', 7, G); } });
+    efRiver(D, t, s.on);
+    if (R() < (s.on ? 0.3 : 0.07)) rs.burst('glint', EF.cx + Math.round((R() - 0.5) * 44), 82 + Math.floor(R() * 7), 1, { sp: 1, life: 0.5 });   // glints on the gold in the water
+    efBoat(D, t, rs);
+    D.lay('back'); efLifts(D, t, rs);
+    // the light show: white sparkles pour down from the top, then dance over the whole tower; the tower and the quay flash
+    if (s.on) { const P = EF.pts, cut = s.sq < 0.05 ? 8 + s.sq / 0.05 * 74 : 99; rs.flash(L.spark, 0.5 * s.amp); rs.flash(L.flood, 0.25 * s.amp);
+      for (let k = 0; k < 130 * s.amp; k++) { const j = Math.floor(R() * P.length / 2) * 2, x = P[j], y = P[j + 1]; if (y > cut) continue; D.px(x, y, 'linen', 11, G); if (R() < 0.2) { D.px(x - 1, y, 'ice', 9, G); D.px(x + 1, y, 'ice', 9, G); D.px(x, y - 1, 'ice', 9, G); D.px(x, y + 1, 'ice', 9, G); } }
+      if (!st.sp) { st.sp = 1; rs.burst('glint', EF.cx, 12, 6, { sp: 18, life: 0.8, w: 6, h: 6 }); }
+      if (R() < 0.35 * s.amp) { const j = Math.floor(R() * P.length / 2) * 2; if (P[j + 1] < cut) rs.burst('glint', P[j], P[j + 1], 1, { sp: 2, life: 0.5 }); } } else st.sp = 0;
+    // the painter: short strokes, a step back to look at his tower — and in the show he turns and points his brush at it
+    D.lay('front'); const pq2 = steps(t, 7), look = pq2 > 0.72, strk = Math.sin(t * 9), lk = { skin: ['skin', 6], hair: ['hair', 4], top: ['lav', 7], bot: ['denim', 3], boot: ['hair', 2], cap: ['ink', 2], beard: ['hair', 4] };
+    if (s.on && s.sq > 0.02) figure(D, 121, 101, lk, { aF: 2.3, eF: 0.2, aB: 0.3, eB: -0.4, lean: -0.3 }, -1);
+    else figure(D, 122, 101, lk, look ? { aF: 0.6, eF: -1.6, aB: 0.3, eB: -0.3, lean: -0.3 } : { aF: 1.6 + strk * 0.12, eF: -0.5 + strk * 0.2, aB: 0.9, eB: -1.4, lean: 0.25 }, 1);
+    if (!look && !s.on && !X.noWorkers) D.px(131 + Math.round(strk), 80 - Math.round(strk * 2), 'gold', 8);
+    // on the canvas: a little gold tower on the evening sky, filling in as he works
+    const prog = steps(t, 40); for (let y = 0; y < 14; y++) { const hw = Math.round(1 + (13 - y) * 0.42); for (let x = -hw; x <= hw; x++) { const s2 = (y * 7 + x * 13) % 17 / 17; if (s2 < prog * 1.2 && (Math.abs(x) >= hw || (x + y) % 3 === 0)) D.px(135 + x, 70 + y, 'gold', 7 + (x < 0 ? 1 : 0)); } }
+    // moths round the street lamp, now and then a chestnut leaf lets go of the bough
+    const ma = t * 3.3; D.px(11 + Math.round(Math.cos(ma) * 6), 40 + Math.round(Math.sin(ma * 1.4) * 4), 'paper', Math.sin(t * 31) > 0 ? 8 : 5); D.px(11 + Math.round(Math.cos(-ma * 0.8 + 2) * 8), 42 + Math.round(Math.sin(ma * 0.9 + 1) * 5), 'paper', Math.sin(t * 27) > 0 ? 7 : 4);
+    if (R() < 0.012) rs.burst('leaf', 114 + R() * 32, 15, 1, { sp: 3, ang: Math.PI, spread: 1.2, life: 5, floor: 101 });
   },
-  // the searchlight on the top: a narrow warm-white beam that sweeps round; it only lights the sky, fades in hard steps with
+  // the searchlight(s) on the top: a narrow warm-white beam that sweeps round; it only lights the sky, fades in hard steps with
   // distance (a bright 1–2 px core in the lamp's own colours, a thin haze on each side) and flares when it faces us
-  post(out, t, rs) {
-    const bx = EF.cx, by = 11, a = t * 0.75, mask = EF.mask, sx = Math.sin(a), toward = Math.cos(a), len = Math.abs(sx) * 160, dir = sx > 0 ? 1 : -1, back = toward < 0 ? 0.6 : 1;
-    const CORE = EF.CORE || (EF.CORE = [[255, 246, 222], [255, 234, 184], [238, 214, 170]]), HALO = [255, 226, 168];
-    if (len > 6) for (let d = 3; d < len; d++) { const x = bx + dir * d; if (x < 3 || x > W - 4) break; const hw = Math.min(4, 0.6 + d * 0.04), yc = by - 1 + d * 0.06, sg = d < 34 ? 0 : d < 80 ? 1 : 2;
-      const ca = [0.88, 0.7, 0.5][sg] * back, ha = [0.3, 0.2, 0.12][sg] * back;
-      for (let y = Math.floor(yc - hw); y <= Math.ceil(yc + hw); y++) { if (y < 3 || y >= 76) continue; const p = y * W + x; if (mask[p]) continue; const u = Math.abs(y + 0.5 - yc); if (u > hw) continue;
-        if (u <= 0.75) X.blendPx(out, p, CORE[sg], ca); else X.blendPx(out, p, HALO, ha); } }
-    // facing us: the lamp flares into a star
-    if (toward > 0.82) { const c = CORE[0], k = Math.round((toward - 0.82) / 0.18 * 6); for (let i = -k; i <= k; i++) { const f = 0.85 - Math.abs(i) / (k + 1) * 0.6; X.blendPx(out, by * W + bx + i, c, f); X.blendPx(out, (by + i) * W + bx, c, f); } }
+  post(out, t) {
+    const s = efShow(t), bx = EF.cx, by = EF.BY, mask = EF.mask, CORE = EF.CORE || (EF.CORE = [[255, 246, 222], [255, 234, 184], [238, 214, 170]]), HALO = [255, 226, 168];
+    s.beams.forEach(b => { const back = b.toward < 0 ? 0.6 : 1, g = b.g;
+      if (b.len > 6) for (let d = 3; d < b.len; d++) { const x = bx + b.dir * d; if (x < 3 || x > W - 4) break; const hw = Math.min(4, 0.6 + d * 0.04), yc = by - 1 + d * 0.06, sg = d < 34 ? 0 : d < 80 ? 1 : 2;
+        const ca = Math.min(0.95, [0.88, 0.7, 0.5][sg] * back * g), ha = [0.3, 0.2, 0.12][sg] * back * g;
+        for (let y = Math.floor(yc - hw); y <= Math.ceil(yc + hw); y++) { if (y < 3 || y >= 76) continue; const p = y * W + x; if (mask[p]) continue; const u = Math.abs(y + 0.5 - yc); if (u > hw) continue;
+          if (u <= 0.75) X.blendPx(out, p, CORE[sg], ca); else X.blendPx(out, p, HALO, ha); } }
+      // facing us: the lamp flares into a star
+      if (b.toward > 0.82) { const c = CORE[0], k = Math.round((b.toward - 0.82) / 0.18 * 6); for (let i = -k; i <= k; i++) { const f = 0.85 - Math.abs(i) / (k + 1) * 0.6; X.blendPx(out, by * W + bx + i, c, f); X.blendPx(out, (by + i) * W + bx, c, f); } } });
   },
 });
 
 // ═════════ 马丘比丘 machu (nature · power · rare) ═════════
-// Sunset in the Andes: the sugarloaf of Huayna Picchu towers over the stone city — green terraces stepping down the
-// slope, granite houses with trapezoid doors, two rebuilt with steep thatch, the carved sun stone on its knoll giving
-// off motes of gold; a waterfall pours off the right cliff into mist; a farmer hoes the lowest terrace, a llama grazes
-// in front, clouds drift, and every twelve seconds a condor glides across the sky.
-const MP = { sun: [28, 47, 7], CP: 12 };
+// Dawn in the Andes: the sun has just cleared the ridge on the right and peeps between the sugarloaf of Huayna Picchu and
+// the cliff; below the stone city a sea of cloud fills the valleys, far ranges standing out of it in blue haze, the tallest
+// with snow the first light catches. Green terraces step down into the cloud and wisps of it climb them; granite houses
+// with trapezoid doors, two with steep thatch, breakfast smoke seeping out; the carved sun stone on its knoll gives off
+// motes of gold; two rays of sun fan across the valley; billows roll slowly along the cloud sea; a waterfall pours off
+// the right cliff; a farmer hoes the lowest terrace, a llama grazes in front, small clouds drift across the sun, and
+// every twelve seconds a condor rides the morning air across the sky and the sun stone flashes.
+const MP = { sun: [122, 20, 4], CP: 12 };
 // a llama, 17 px long, ~21 px to the ears: head up chewing, or down in the grass (two hand-drawn poses), facing left
 const LLAMA_UP = [
   '.ee.............',
@@ -818,35 +943,48 @@ function llama(D, x, y, t) {
   else { D.px(x + 1, hy + 15, 'ink', 1); }
 }
 X.def('machu', {
-  amb: [0.3, 0.26],
+  amb: [0.32, 0.28],
   paint(S, sc) {
-    const L = {}, [sx, sy, sr] = MP.sun;
-    L.sun = sc.light({ x: sx, y: sy, z: 60, r: 300, i: 0.8, c: '#ffb070', tint: 0.4 });
-    L.fire = sc.light({ x: 46, y: 80, z: 12, r: 34, i: 0.8, c: '#ff9040', fl: 'fire', tint: 0.5 });                    // hearth in a hut
+    const L = {}, [sx, sy, sr] = MP.sun, G = { e: 255 };
+    L.sun = sc.light({ x: sx, y: sy, z: 60, r: 300, i: 0.85, c: '#ffe6b8', tint: 0.35 });                                // the morning sun, just up on the right
+    L.fire = sc.light({ x: 46, y: 80, z: 12, r: 34, i: 0.8, c: '#ff9040', fl: 'fire', tint: 0.5 });                    // breakfast fire in a hut
     L.stone = sc.light({ x: 76, y: 50, z: 12, r: 30, i: 0.6, c: '#ffd870', fl: 'pulse', amp: 0.4, sp: 1.6, tint: 0.55 });   // the sun stone
+    L.sky = sc.light({ x: 24, y: 8, z: 50, r: 220, i: 0.3, c: '#a8d0ff', tint: 0.15 });                                // cool light off the open sky
     MP.L = L;
-    S.lay('wall'); const r = S.r;
-    // sky in whole-step dusk bands, the first stars, the low sun with its rings
-    [[0, 2], [10, 3], [19, 4], [27, 5], [34, 6], [41, 7], [47, 8], [53, 9]].forEach(([y, t], i, a) => S.rect(0, y, W, (a[i + 1] ? a[i + 1][0] : FY) - y, 'dusk', t, { e: 255 }));
-    for (let i = 0; i < 14; i++) S.px(r() * W, r() * 16, 'linen', 6 + r() * 3, { e: 255 });
-    for (let k = 3; k >= 1; k--) S.ell(sx, sy, sr + k * 3, sr + k * 2.4, 'dusk', 8 + (3 - k) * 1, { e: 255 });
-    S.ell(sx, sy, sr, sr, 'lamp', 10, { e: 255 }); S.ell(sx - 1.5, sy - 1.5, sr * 0.6, sr * 0.6, 'lamp', 11, { e: 255 });
-    // far ranges, hazier with distance
-    const ridge = (base, amp, fr, ph, m, t) => { for (let x = 0; x < W; x++) { const h = Math.round(base - Math.abs(Math.sin(x * fr + ph)) * amp - Math.sin(x * fr * 2.3 + ph * 1.7) * amp * 0.35); for (let y = h; y < FY; y++) S.px(x, y, m, t + (y === h ? 0.8 : 0), { e: 255 }); } };
-    ridge(58, 12, 0.05, 0.3, 'dusk', 5); ridge(66, 9, 0.07, 1.9, 'dusk', 4); ridge(74, 6, 0.09, 0.7, 'dusk', 3);
-    // Huayna Picchu: the sugarloaf, sunlit on its left flank, jungle-dark on its right
-    for (let y = 12; y < FY; y++) { const k = (y - 12) / 66, hw = 3 + Math.pow(k, 0.7) * 34 + (y > 70 ? (y - 70) * 1.5 : 0), cx = 100 - k * 4; for (let x = Math.round(cx - hw); x <= Math.round(cx + hw); x++) { const u = (x - cx) / hw, lit = u < -0.55; S.px(x, y, lit ? 'leaf' : 'moss', lit ? 5 - (u + 1) * 1.4 : 3.2 - (u > 0.4 ? 1.2 : 0), { e: 255 }); } }
-    S.noise(60, 12, 90, 70, 1, 2.2, 101, { only: 'moss' }); S.noise(60, 12, 90, 70, 1, 2.2, 102, { only: 'leaf' });
-    [[19, 0.5], [24, 0.45], [30, 0.4]].forEach(([y, f]) => { const k = (y - 12) / 66, hw = 3 + Math.pow(k, 0.7) * 34, x0 = Math.round(100 - k * 4 - hw * 0.1); S.hl(x0, y, Math.round(hw * f), 'stone', 4.5, { e: 255 }); S.hl(x0, y - 1, Math.round(hw * f), 'leaf', 4, { e: 255 }); });   // terraces clinging to the summit
-    // the sky mask: clouds only drift over open sky
-    MP.sky = new Uint8Array(W * H); { const Lw = S.L.wall; for (let p = 0; p < W * 60; p++) MP.sky[p] = Lw.m[p] === Lw.m[0] ? 1 : 0; }
+    // two rays of the rising sun fan down across the valley and the city: which pixels each covers, and how deep (1 edge,
+    // 2 core), worked out once here; post washes them in, each breathing on its own
+    MP.ray = []; [[120, 25, 2, 8, -44], [118, 26, 2, 7, -86]].forEach(([rx, y0, w0, w1, dx], i) => { for (let y = y0; y < FY; y++) { const k = (y - y0) / (FY - y0), hw = w0 + (w1 - w0) * k, cx = rx + dx * k;
+      for (let x = Math.max(3, Math.floor(cx - hw)); x <= Math.min(W - 4, Math.ceil(cx + hw)); x++) { const u = Math.abs(x + 0.5 - cx) / hw; if (u < 1) MP.ray.push(y * W + x, i, u < 0.45 ? 2 : 1); } } });
+    S.lay('wall'); const r = S.r, Y = S.c;
+    // sky: whole-step bands of morning blue paling toward the cloud sea, their edges gently waved; the sun in hard rings of light
+    const SK = [[0, 'ice', 5], [10, 'ice', 6], [21, 'ice', 7], [32, 'ice', 8], [43, 'ice', 9], [53, 'paper', 9]], edge = (i, x) => (i ? SK[i][0] + Math.round(Math.sin(x * 0.05 + i * 1.9) * 1.3) : 0);
+    for (let x = 0; x < W; x++) for (let i = 0; i < SK.length; i++) { const y1 = SK[i + 1] ? edge(i + 1, x) : FY; for (let y = edge(i, x); y < y1; y++) S.px(x, y, SK[i][1], SK[i][2], G); }
+    [[10, 8], [7, 9], [4.5, 10]].forEach(([rr, tn]) => S.ell(sx, sy, sr + rr, sr + rr, 'ice', tn, G));
+    S.ell(sx, sy, sr + 1.5, sr + 1.5, 'lamp', 10, G); S.ell(sx, sy, sr, sr, 'lamp', 11, G);
+    const m0 = Uint8Array.from(Y.m), t0 = Float32Array.from(Y.t);   // the bare sky: small clouds drift only over it
+    // far ranges standing out of the cloud sea in blue haze; the tallest wears snow that the sun catches on its right side
+    [[30, 27, 0.95, 0.8, 6, 11], [72, 36, 0.7, 0.85, 6, 5], [6, 43, 0.55, 0.6, 5, 0], [47, 47, 0.6, 0.7, 5, 0]].forEach(([ax, ay, sl, sr2, tn, snow]) => {
+      for (let x = 0; x < W; x++) { const top = Math.round(ay + (x < ax ? (ax - x) * sl : (x - ax) * sr2) + Math.sin(x * 0.7 + ax) * 0.6); if (top >= 66) continue;
+        for (let y = top; y < 66; y++) { const lit = x > ax, sn = snow && y < ay + snow - Math.abs(x - ax) * 0.25 + (Math.sin(x * 1.3) > 0.3 ? 1 : 0);
+          S.px(x, y, sn ? 'linen' : 'glass', sn ? (lit ? 10 : 7) : tn + (lit ? 1 : 0) + (y === top ? 1 : 0), G); } } });
+    // Huayna Picchu, the sugarloaf: jungle-dark, its sunward flank lit, a bright rim where the sun grazes its edge
+    for (let y = 12; y < FY; y++) { const k = (y - 12) / 66, hw = 3 + Math.pow(k, 0.7) * 34 + (y > 70 ? (y - 70) * 1.5 : 0), cx = 100 - k * 4, x0 = Math.round(cx - hw), x1 = Math.round(cx + hw);
+      for (let x = x0; x <= x1; x++) { const u = (x - cx) / hw; S.px(x, y, u > 0.45 ? 'leaf' : 'moss', x >= x1 - (y < 44 ? 1 : 0) ? 9 : u > 0.45 ? 6 + Math.round((u - 0.45) * 2.4) : u < -0.55 ? 2 : 3, G); } }
+    S.noise(60, 12, 90, 56, 1, 2.2, 101, { only: 'moss' }); S.noise(60, 12, 90, 56, 1, 2.2, 102, { only: 'leaf' });
+    [[19, 0.5], [24, 0.45], [30, 0.4]].forEach(([y, f]) => { const k = (y - 12) / 66, hw = 3 + Math.pow(k, 0.7) * 34, x0 = Math.round(100 - k * 4 - hw * 0.1); S.hl(x0, y, Math.round(hw * f), 'stone', 5, G); S.hl(x0, y - 1, Math.round(hw * f), 'leaf', 5, G); S.px(x0 + Math.round(hw * f) - 1, y, 'stone', 7, G); });   // terraces clinging to the summit
+    // the sea of cloud filling the valleys: a sunlit crest, a creamy body, rolls of billows with blue-shadowed undersides
+    MP.cs = new Int8Array(W);
+    for (let x = 0; x < W; x++) { const s0 = 63 + Math.round(Math.sin(x * 0.08 + 0.4) * 1.6 + Math.sin(x * 0.21 + 1.1) * 0.8); MP.cs[x] = s0;
+      for (let y = s0; y < FY; y++) S.px(x, y, 'linen', y === s0 ? 10 : y < s0 + 3 ? 9 : 8, G);
+      [70, 77, 84].forEach((yb, j) => { const top = yb - Math.round(Math.abs(Math.sin(x * 0.17 + j * 1.9)) * 2.4); if (top - 1 <= s0 + 2) return; S.px(x, top - 1, 'ice', 9, G); S.px(x, top, 'linen', 10, G); S.px(x, top + 1, 'linen', 9, G); }); }
+    MP.sky = new Uint8Array(W * H); for (let p = 0; p < W * 60; p++) MP.sky[p] = Y.m[p] === m0[p] && Y.t[p] === t0[p] ? 1 : 0;
     // the right cliff (back layer) the waterfall pours from
     S.lay('back');
     S.beg(); for (let y = 18; y < FY; y++) { const x0 = Math.round(128 + Math.sin(y * 0.3) * 2 + (y < 30 ? (30 - y) * 0.6 : 0)); for (let x = x0; x < W; x++) S.px(x, y, 'rock', 4 + (x === x0 ? 2 : 0) + ((x * 3 + y * 5) % 11 === 0 ? 1.5 : 0), { n: [x === x0 ? -0.7 : 0, 0] }); } S.end();
     S.noise(126, 18, 24, 72, 1, 3, 111, { only: 'rock' }); for (let i = 0; i < 40; i++) S.px(127 + r() * 20, 18 + r() * 70, 'moss', 4 + r() * 3);
     S.rect(134, 28, 7, 2, 'rock', 2);   // the lip the water leaves
     S.beg(); S.ell(137, 88, 9, 2.5, 'water', 5, { n: [0, -0.9] }); S.end();
-    // the stone city: terraces down the left slope, houses on the saddle
+    // the stone city: terraces stepping down the left slope into the cloud, houses on the saddle
     const stoneWall = (x, y, w, h, t) => { S.rect(x, y, w, h, 'stone', t); for (let yy = y + 2; yy < y + h; yy += 2) for (let xx = x + ((yy / 2) % 2 ? 0 : 2); xx < x + w; xx += 4) S.px(xx, yy, 'stone', t - 1.6); S.hl(x, y, w, 'stone', t + 1.2, { n: [0, -0.8] }); };
     for (let k = 0; k < 7; k++) { const y = 56 + k * 5, x0 = 56 - k * 8; S.beg(); stoneWall(x0, y + 2, 76 - x0, 3, 5); S.hl(x0, y, 76 - x0, 'leaf', 6.5, { n: [0, -0.8] }); S.hl(x0, y + 1, 76 - x0, 'leaf', 5); S.end(); }
     S.lay('mid');
@@ -855,12 +993,12 @@ X.def('machu', {
       if (w > 12) { S.poly([[x + 2, y - 5], [x + 4, y - 5], [x + 3.6, y - 8], [x + 2.4, y - 8]], 'ink', 1.5); S.poly([[x + w - 4, y - 5], [x + w - 2, y - 5], [x + w - 2.4, y - 8], [x + w - 3.6, y - 8]], 'ink', 1.5); }
       if (roof) { S.poly([[x - 2, y - h + 1], [x + w / 2, y - h - 9], [x + w + 2, y - h + 1]], 'sand', 6); for (let k = 0; k < 4; k++) S.line(x + w / 2, y - h - 9 + k, x - 1 + k, y - h + 1, 'sand', 4.5 + (k % 2)); S.hl(x - 2, y - h + 1, w + 4, 'sand', 4); }
       S.end(); };
-    // the plaza lawn, the sun-stone knoll
-    S.beg(); S.rect(62, 76, 64, 6, 'leaf', 5.5); S.hl(62, 76, 64, 'leaf', 7, { n: [0, -0.8] }); stoneWall(62, 82, 64, 4, 4.5); S.end();
+    // the plaza lawn on its retaining wall, the sun-stone knoll
+    S.beg(); S.rect(62, 76, 64, 6, 'leaf', 5.5); S.hl(62, 76, 64, 'leaf', 7, { n: [0, -0.8] }); stoneWall(62, 82, 64, 8, 4.5); S.end();
     S.beg(); S.poly([[68, 62], [74, 54], [80, 54], [86, 62]], 'stone', 5); stoneWall(66, 60, 22, 4, 5); S.end();
     S.beg(); S.poly([[75, 54], [79, 54], [79, 50], [77, 48], [75, 50]], 'stone', 7); S.px(76, 49, 'stone', 8); S.end();
     house(90, 68, 12, 7, 1); house(104, 70, 16, 8, 0); house(68, 76, 14, 7, 0); house(112, 80, 12, 6, 1); house(40, 86, 13, 7, 1);
-    // the hut's hearth glows in its doorway
+    // the hut's breakfast fire glows in its doorway
     S.rect(45, 81, 3, 5, 'fire', 5, { e: L.fire + 1 }); S.px(46, 84, 'fire', 8, { e: L.fire + 1 });
     // ── floor: the near lawn and the lowest terrace wall ──
     S.lay('wall'); S.rect(0, FY, W, H - FY, 'leaf', 4); S.noise(0, FY, W, H - FY, 1, 3, 121); for (let x = 0; x < W; x++) { S.px(x, FY, 'leaf', 6 + (x * 7 % 3)); if (r() < 0.3) S.px(x, FY - 1, 'leaf', 5 + r() * 2); }
@@ -870,15 +1008,20 @@ X.def('machu', {
     [[52, 101, 'pink'], [58, 103, 'gold'], [96, 102, 'pink'], [141, 100, 'gold']].forEach(([x, y, m]) => { S.px(x, y - 1, m, 8); S.px(x, y, 'leaf', 6); S.px(x + 1, y - 2, m, 7); });
     sc.emit({ k: 'mist', x: 137, y: 86, w: 8, rate: 3, sp: 5, ang: 0, spread: 1.6, life: 1.6 });
     sc.emit({ k: 'glint', x: 77, y: 48, w: 4, rate: 0.9, sp: 4, ang: 0, spread: 0.5, life: 1.2, h: 2 });
+    sc.emit({ k: 'steam', x: 46, y: 71, rate: 0.7, sp: 3, ang: 0.35, spread: 0.5, life: 2.6 });   // smoke seeping out of the thatch
   },
   anim(D, t, rs) {
-    const st = rs.st, L = MP.L;
-    // clouds drift, lit gold from below
-    D.lay('wall'); [[0, 22, 26, 0.9], [60, 34, 34, 0.6], [110, 14, 22, 1.2]].forEach(([x0, y, w, sp], i) => { const x = ((x0 + t * sp) % (W + w + 20)) - w - 10;
-      for (let k = 0; k < w; k++) { const xx = Math.round(x + k), hh = k < 3 || k > w - 4 ? 1 : 2; if (xx < 0 || xx >= W) continue; if (MP.sky[y * W + xx]) D.px(xx, y, 'dusk', 9 - i * 0.5, { e: 255 }); if (hh > 1 && MP.sky[(y - 1) * W + xx]) D.px(xx, y - 1, 'dusk', 6 + (k % 7 === 0 ? 1 : 0), { e: 255 }); } });
+    const st = rs.st, L = MP.L, G = { e: 255 };
+    // small clouds drift over the sky (and across the sun): white, with a blue-grey underside
+    D.lay('wall'); [[0, 24, 26, 0.9], [60, 36, 34, 0.6], [110, 13, 22, 1.2]].forEach(([x0, y, w, sp]) => { const x = ((x0 + t * sp) % (W + w + 20)) - w - 10;
+      for (let k = 0; k < w; k++) { const xx = Math.round(x + k), hh = k < 3 || k > w - 4 ? 1 : k < 7 || k > w - 8 ? 2 : 3; if (xx < 0 || xx >= W) continue;
+        for (let j = 0; j < hh; j++) if (MP.sky[(y - j) * W + xx]) D.px(xx, y - j, j === 0 ? 'ice' : 'linen', j === 0 ? 8 : j === hh - 1 ? 10 : 9, G); } });
+    // the cloud sea: billows roll slowly along its top, lit on the sun's side, shaded on the other
+    for (let x = 3; x < W - 3; x++) { const q = (x - t * 0.8) * 0.15, b = Math.round(Math.max(0, Math.sin(q)) * 2.2), s0 = MP.cs[x]; if (!b) continue;
+      for (let k = 1; k < b; k++) D.px(x, s0 - k, 'linen', 9, G); const sh = Math.cos(q) > 0.35; D.px(x, s0 - b, sh ? 'ice' : 'linen', sh ? 9 : 10, G); }
     // the waterfall: streaks run down the fall, a bright lip, foam at the foot
-    D.lay('back'); for (let y = 30; y < 87; y++) { const spread = y > 70 ? 1 : 0; for (let x = 135 - spread; x < 140 + spread; x++) { const v = ((y - t * 42 + (x - 135) * 11) % 9 + 9) % 9, w0 = Math.round(Math.sin(y * 0.2) * 0.6); D.px(x + w0, y, 'water', v < 2 ? 11 : v < 5 ? 9 : v < 7 ? 7.5 : 6, { e: 255 }); } }
-    D.hl(134, 29, 7, 'water', 10, { e: 255 }); for (let k = 0; k < 8; k++) D.px(130 + ((k * 5 + Math.floor(t * 9)) % 15), 86 + (k % 2), 'linen', 10, { e: 255 });
+    D.lay('back'); for (let y = 30; y < 87; y++) { const spread = y > 70 ? 1 : 0; for (let x = 135 - spread; x < 140 + spread; x++) { const v = ((y - t * 42 + (x - 135) * 11) % 9 + 9) % 9, w0 = Math.round(Math.sin(y * 0.2) * 0.6); D.px(x + w0, y, 'water', v < 2 ? 11 : v < 5 ? 9 : v < 7 ? 8 : 6, G); } }
+    D.hl(134, 29, 7, 'water', 10, G); for (let k = 0; k < 8; k++) D.px(130 + ((k * 5 + Math.floor(t * 9)) % 15), 86 + (k % 2), 'linen', 10, G);
     // the farmer hoes the lowest terrace: raise, strike, a puff of earth
     D.lay('mid'); const hq = steps(t, 1.6), up = hq < 0.55, aF = up ? 0.6 + hq / 0.55 * 2.2 : 2.8 - Math.min(1, (hq - 0.55) / 0.12) * 2.4;
     figure(D, 24, FY, 'farmer', { aF, eF: -0.3, aB: aF - 0.3, eB: -0.3, lean: up ? 0.05 : 0.5, lF: 0.35, lB: -0.25, kB: 0.2 }, 1);
@@ -887,24 +1030,31 @@ X.def('machu', {
     if (!X.noWorkers && !up && hq > 0.65 && !st.hoe) { st.hoe = 1; rs.burst('dust', 34, FY - 1, 3, { sp: 8, life: 0.8 }); rs.burst('leaf', 34, FY - 2, 1, { sp: 12, ang: 0.4, life: 0.9 }); } if (hq < 0.3) st.hoe = 0;
     // the llama in front
     D.lay('front'); llama(D, 98, 101, t);
-    // the condor: every twelve seconds it glides across on the evening air, a few slow beats
+    // the condor: every twelve seconds it rides the morning air across the sky, a few slow beats; the sun stone flashes as it passes
     const cq = steps(t + 5, MP.CP); if (cq < 0.5) { const k = cq / 0.5, x = Math.round(-24 + k * 196), y = Math.round(36 - Math.sin(k * Math.PI) * 14 + Math.sin(t * 1.3) * 1.5), beat = k > 0.15 && k < 0.4 ? Math.sin(t * 4.2) : 0.15;
-      D.lay('wall'); const G = { e: 255 };
+      D.lay('wall');
       // body, white ruff, bald head; broad wings with a silver band and splayed finger tips — slow beats, then a long glide
-      D.hl(x - 4, y, 9, 'ink', 1, G); D.hl(x - 3, y + 1, 7, 'ink', 1, G); D.hl(x - 5, y + 1, 2, 'ink', 1.5, G); D.px(x - 6, y + 2, 'ink', 1, G);
-      D.px(x + 5, y - 1, 'linen', 8.5, G); D.px(x + 4, y - 1, 'linen', 7, G); D.px(x + 6, y - 1, 'skin', 3, G); D.px(x + 7, y - 1, 'skin', 4, G); D.px(x + 7, y, 'bone', 6, G);
+      D.hl(x - 4, y, 9, 'ink', 1, G); D.hl(x - 3, y + 1, 7, 'ink', 1, G); D.hl(x - 5, y + 1, 2, 'ink', 2, G); D.px(x - 6, y + 2, 'ink', 1, G);
+      D.px(x + 5, y - 1, 'linen', 9, G); D.px(x + 4, y - 1, 'linen', 7, G); D.px(x + 6, y - 1, 'skin', 3, G); D.px(x + 7, y - 1, 'skin', 4, G); D.px(x + 7, y, 'bone', 6, G);
       for (let i = 1; i <= 15; i++) { const lift = Math.round(-beat * i * 0.45 + (i > 10 ? (i - 10) * 0.35 : 0)), th = i < 5 ? 3 : i < 11 ? 2 : 1;
         [x - 1 - i, x + 1 + i].forEach(wx => { for (let j = 0; j < th; j++) D.px(wx, y - 1 + lift + j, i > 4 && i < 12 && j === 0 ? 'linen' : 'ink', i > 4 && i < 12 && j === 0 ? 6 : 1, G); if (i > 12 && i % 2) D.px(wx, y + lift + 1, 'ink', 1, G); }); }
       if (!st.cd && k > 0.3) { st.cd = 1; rs.flash(L.stone, 0.8); rs.burst('glint', 77, 48, 6, { sp: 14, life: 1, w: 6 }); } } else st.cd = 0;
-    X.twinkle(D, t, 5, 14, 41);
+  },
+  // the sun's rays (a warm wash, two hard steps, each ray breathing), then wisps of cloud climbing the lower terraces out of
+  // the cloud sea (a white wash in two hard steps, thinning toward the city)
+  post(out, t) {
+    const RC = [255, 244, 208], f = [0.8 + 0.2 * Math.sin(t * 0.45), 0.7 + 0.3 * Math.sin(t * 0.33 + 2)], A = MP.ray;
+    for (let i = 0; i < A.length; i += 3) { const a = Math.floor((A[i + 2] === 2 ? 0.26 : 0.13) * f[A[i + 1]] * 8) / 8; if (a > 0) X.blendPx(out, A[i], RC, a); }
+    const C = [238, 242, 250];
+    for (let y = 64; y < 90; y++) { const env = Math.min(1, (y - 63) / 6) * Math.min(1, (90 - y) / 8); for (let x = 36; x < 76; x++) { const d = X.vnoise(x * 0.07 + t * 0.18, y * 0.22 - t * 0.12, 13) * env * Math.min(1, (x - 35) / 8, (76 - x) / 16), a = d > 0.5 ? 0.3 : d > 0.34 ? 0.15 : 0; if (a) X.blendPx(out, y * W + x, C, a); } }
   },
 });
 
 if (M.ROOM_D) Object.assign(M.ROOM_D, {
-  venice: '夜里的兵工厂船坞：一艘带桨的大帆船占满船坞，三角主帆上画着金狮、边缘在风里抖，船头船尾的灯笼摇曳、船尾窗户透着灯光，主桅顶上红底金狮旗在飘；后面是两座城门塔的黑影和月亮；岸上木吊车里一个人踩着大轮子走，高高的吊臂从岸边的木架上吊起一门铜炮，转过夜空，放进船舱，甲板上的水手伸手去接；炮一碰到船舷，火星和尘土一溅、金光照亮整条船，两边水花拍船；岸边火盆冒火星，前面有红白条纹的系船桩和一条黑色贡多拉，翘起的船头上立着银色的铁梳',
+  venice: '起雾的夜里的兵工厂船坞，没有月亮，远处的灯火把雾映成淡紫：一艘带桨的大帆船占满船坞，三角主帆上画着金狮、边缘在风里抖，船头船尾的灯笼摇曳、船尾窗户透着灯光，主桅顶上红底金狮旗在飘；后面是两座城门塔的黑影，左边圣马可钟楼的钟亭亮着灯，对岸屋顶的窗户和岸边一排路灯亮着，灯影在水里晃；薄雾一团团从船后和水面上飘过；岸上木吊车里一个人踩着大轮子走，高高的吊臂从岸边的木架上吊起一门铜炮，转过夜空，放进船舱，甲板上的水手伸手去接；炮一碰到船舷，火星和尘土一溅、金光照亮整条船，两边水花拍船；岸边火盆冒火星，前面有红白条纹的系船桩和一条黑色贡多拉，翘起的船头上立着银色的铁梳，船尾挂着一盏灯笼',
   ruhr: '夜里的矿场，天空被工厂映成暗红，远处是厂房、顶上亮着红灯的储气罐和冒烟的烟囱：锈红色的井架上两只天轮跟着绳子转，罐笼载着煤车从井口升上来；戴头灯的矿工把满满一车煤推出来倒进溜槽，煤块滚下去，扬起一团煤灰；对面高炉顶上烧着火炬，每隔一会儿穿灰罩衣的炉前工用长铁杆捅开出铁口，铁水顺着槽流进铁水罐，火花四溅、橙光一亮，罐口透着红光，罐里的铁水慢慢变暗',
-  eiffel: '月夜下的巴黎：铁塔立在塞纳河对岸，镂空的钢架里透出金光，两层平台亮着一圈灯，塔顶探照灯射出一道细细的暖白光束扫过夜空、转到背面就藏到塔后；每隔一会儿整座塔闪起满身白色的星光；河面映着铁塔的金光和月亮，游船亮着舷窗慢慢驶过；远处是巴黎的屋顶、树丛间的金顶和山上的白教堂，近处路灯在河岸石板上照出一圈暖光，一个画家对着画架一笔一笔画着铁塔',
-  machu: '安第斯山的夕阳：尖尖的华纳比丘山一侧被晚霞照亮，山下是石头城——绿色梯田一层层往下，花岗岩房子开着梯形的门，两座盖着陡陡的草顶，小山包上的拴日石冒着金色的光点；右边悬崖上一道瀑布落进水雾；晚霞里的云慢慢飘，农夫在最低一层梯田上锄地，前面一头披着花毯的羊驼低头吃草、抬头嚼嚼，每隔一会儿一只秃鹰滑翔着飞过天空',
-  wolfsburg: '夜里的汽车厂，流水线一站一停：车架从门帘里开进来，橙色机械臂从托盘上夹起车壳落到车架上，另一只机械臂沿车缝焊接，火花四溅，蓝色焊光一闪一闪照亮两只机械臂；两盏绿罩吊灯在流水线和地面上照出暖黄的光圈；小车停在金色检测门下，扫描线扫过、车灯亮起，门前光亮的钢板地面映出车灯的倒影；每三辆就有一辆整辆变成金色，一道金光落下，再顺着流水线一路扫回去，两盏吊灯跟着一亮，天桥上的工长举手欢呼，门上的计数牌一辆一辆往上跳；地上画着工位编号，一辆黄色零件小车闪着灯慢慢来回运零件；挂着轮胎的吊架从窗前慢慢移过',
+  eiffel: '巴黎的黄昏，天空从深蓝过渡到紫色和粉橘，一层低云被晚风吹着慢慢飘：铁塔立在塞纳河对岸，镂空的钢架透出金光，平台亮着一圈灯，亮灯的电梯厢沿着塔腿上上下下；塔顶探照灯转着扫过天空，扫到哪片云，哪片云就被照亮；河面上铁塔的灯光拉成一根根晃动的金色光柱，一艘玻璃顶游船亮着一排窗慢慢驶过，船灯照亮对岸石堤，船尾拖着白色浪花；对岸车灯来来往往，远处屋顶亮着窗、树丛间有金顶、山上有白教堂，一架飞机闪着灯飞过；每隔一会儿灯光秀开始：白色闪光从塔尖往下铺满全塔，第二道探照灯亮起，两道光一起扫过云层，河里的光柱也闪起白光，画家转身举起画笔看；近处路灯照着河岸石板，飞蛾绕着灯飞，栗树枝上不时飘下一片叶子',
+  machu: '安第斯山的清晨：太阳刚从右边山脊升起，夹在尖尖的华纳比丘山和悬崖之间，两道阳光斜斜照过山谷；石头城下面是一片云海，远处的雪山和蓝色山峰从云里露出来，云海表面的云团慢慢翻滚；绿色梯田一层层往下没进云里，一缕缕云雾顺着梯田往上爬；花岗岩房子开着梯形的门，两座盖着陡陡的草顶，草顶里冒出做早饭的烟，小山包上的拴日石冒着金色的光点；右边悬崖上一道瀑布落下；小片白云飘过太阳，农夫在最低一层梯田上锄地，前面一头披着花毯的羊驼低头吃草、抬头嚼嚼，每隔一会儿一只秃鹰滑翔着飞过天空，拴日石跟着一亮',
+  wolfsburg: '夜里的汽车厂，流水线一站一停：车架从门帘里开进来，橙色机械臂从托盘上夹起车壳落到车架上，另一只机械臂沿车缝焊接，火花四溅，蓝色焊光一闪一闪照亮两只机械臂；两盏绿罩吊灯在流水线和地面上照出暖黄的光圈；小车停在金色检测门下，扫描线扫过、车灯亮起，门前光亮的钢板地面映出车灯的倒影；门梁上一排圆指示灯，每下线一辆车就多亮一盏，满六盏重新开始；每三辆就有一辆整辆变成金色，亮起的是金灯，一道金光落下，再顺着流水线一路扫回去，两盏吊灯跟着一亮，亮着的指示灯一起闪，天桥上的工长举手欢呼；地上刷着黄黑相间的警示线，一辆黄色零件小车闪着灯慢慢来回运零件；挂着轮胎的吊架从窗前慢慢移过',
 });
 })();

@@ -1,7 +1,8 @@
 // ==== mc-pxroom-h.js ====
 (function () {
 // Pixel rooms, batch h (written by the pixel-room workflow; see mc-pxroom-a.js for the pattern, docs/design.md §10.1)
-// 泰姬陵 taj · 大本钟 bigben · 自由女神像 liberty · 悉尼歌剧院 opera · 金门大桥 goldengate — five landmark wonders under the sky.
+// 泰姬陵 taj · 大本钟 bigben · 自由女神像 liberty · 悉尼歌剧院 opera · 金门大桥 goldengate — five landmark wonders under five
+// different skies: moonrise, London fog, daybreak, a moonless light show, sunset in the fog.
 const M = window.MC, X = M.PXR; if (!X) return;
 const { W, H, FY, TX, worker, stroll, n1 } = X;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -87,10 +88,10 @@ let MN = null;   // material index → ramp name
 const matName = (m) => { if (!MN) { MN = []; Object.keys(X.MI).forEach(k => { MN[X.MI[k]] = k; }); } return MN[m]; };
 // look up what shows at (x, y) in the static layers, back over wall: [layer 'b' | 'w', ramp name, tone, object id]
 function seen(S, x, y) { const p = y * W + x, B = S.L.back, Wl = S.L.wall; if (B.m[p]) return ['b', matName(B.m[p]), B.t[p], B.o[p]]; if (Wl.m[p]) return ['w', matName(Wl.m[p]), Wl.t[p], 0]; return ['w', 'night', 1, 0]; }
-// the rightmost pixel of the object being painted on each row gets a cold rim (moonlight from the right)
-// (the pixels just inside it drop into shade, so the bright edge stands off a dark terminator)
-function rimR(S, y0, y1, m, t, sh) { const L = S.c, id = S.id, lin = X.MI.linen, own = (x, y) => L.o[y * W + x] === id && L.m[y * W + x] === lin;
-  for (let y = y0; y <= y1; y++) for (let x = W - 1; x >= 0; x--) { const p = y * W + x; if (!own(x, y)) continue; if (L.t[p] >= 4) { S.px(x, y, m, t, { e: 255 }); (sh || [1.2]).forEach((d, k) => { if (own(x - 1 - k, y)) S.tone(x - 1 - k, y, -d); }); } break; } }
+// the topmost marble pixel of each column of the object being painted gets a cold rim (the moon stands right above and
+// behind: its light rims every upper edge), and the pixels just under it drop a little into shade
+function rimT(S, x0, x1, y0, y1, m, t, sh) { const L = S.c, id = S.id, lin = X.MI.linen;
+  for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) { const p = y * W + x; if (L.o[p] !== id || L.m[p] !== lin) continue; if (L.t[p] >= 4) { S.px(x, y, m, t, { e: 255 }); (sh || [1.2]).forEach((d, k) => { const q = (y + 1 + k) * W + x; if (L.o[q] === id && L.m[q] === lin) S.tone(x, y + 1 + k, -d); }); } break; } }
 // a ripple row: shifted by one pixel now and then, a traveling wave down the pool
 const rip = (t, y) => { const s = Math.sin(t * 1.2 - y * 0.5) + 0.35 * Math.sin(t * 0.7 + y * 1.9); return s > 1.05 ? 1 : s < -1.05 ? -1 : 0; };
 const dashAt = (t, x, y) => y % 3 === 1 && ((x + Math.floor(t * (2 + (y % 2))) + y * 13) % 23) < 4;
@@ -100,40 +101,45 @@ const candleStep = (t, ph, kick, gain) => Math.round(((0.9 + 0.08 * n1(t * 9 + (
 const GLOW = { e: 255 };
 
 // ───────── 泰姬陵 taj (fantasy · misc, epic) ─────────
-// the white mausoleum under the moon: onion dome and chhatris, the great iwan with a lamp, four minarets, a long pool that
-// mirrors it all; souls drift up from the water, and every ten seconds three of them fly into the iwan and a shard is born
+// the white mausoleum under the full moon, which stands right behind the great dome (the finial crosses its disc): onion
+// dome and chhatris rimmed by its light, the great iwan with a lamp, four minarets, a long pool that mirrors it all with the
+// moon's own reflection at the foot of the mirrored dome; souls drift up from the water, and every ten seconds three of them
+// fly into the iwan and a shard is born
 const TAJ_DIYA = [22, 34, 46, 58, 92, 104, 116, 128];
 // the pool: water rows 74…87 hold the mausoleum upside down, drawn as a clean squeezed silhouette — plinth, the block with
-// its dark iwan and warm door, drum and chhatris, the great dome widest near the far end, the minarets, the cypresses, the
-// moon — kept in a table so each frame can ripple it and, in the flare, turn its marble violet
+// its dark iwan and warm door, drum and chhatris, the great dome with its tip over the moon's reflection (on the axis, cut
+// by the near kerb), the minarets, the cypresses — kept in a table so each frame can ripple it and, in the flare, turn its
+// marble violet
 const TJ = { x0: 4, x1: 146, y0: 74, y1: 88 }, TJ_M = new Uint8Array(W * 15), TJ_T = new Uint8Array(W * 15), TJ_K = new Uint8Array(W * 15);
 const TJ_DOOR = [], TJ_LAT = [], TJ_RIM = ['ice', 10];   // the iwan door's frame and lattice (glow that steps with the lamp); the moonlit rim
+const TJ_SKYMOON = [75.5, 11.5, 7], TJ_MOON = [75.5, 86.2];   // the full moon right over the dome (the finial crosses it), and its reflection on the pool's axis
 function tajMirror(S) {
   const set = (x, y, m, t) => { x = Math.round(x); y = Math.round(y); if (x < TJ.x0 || x >= TJ.x1 || y < TJ.y0 || y >= TJ.y1) return; const i = (y - TJ.y0) * W + x; TJ_M[i] = X.MI[m]; TJ_T[i] = clamp(Math.round(t), 0, 11); TJ_K[i] = m === 'linen' ? 1 : 0; };
   const flip = (a, b) => ({ px: (x, y, m, t) => set(x, a + b - y, m, t) }), hl = (x, y, w, m, t) => { for (let k = 0; k < w; k++) set(x + k, y, m, t); };
-  const mr = 'linen';
-  // the sky upside down, and the moon far out in it
+  const mr = 'linen', ell = (cx, cy, rx, ry, m, t) => { for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) { const v = (y + 0.5 - cy) / ry; if (Math.abs(v) >= 1) continue; const hw = rx * Math.sqrt(1 - v * v); for (let x = Math.round(cx - hw); x < Math.round(cx + hw); x++) set(x, y, m, t); } };
+  // the sky upside down; round the far end of the mirrored dome the moon's halo, and the moon itself (the dome hangs over it)
   for (let y = TJ.y0; y < TJ.y1; y++) hl(TJ.x0, y, TJ.x1 - TJ.x0, 'water', 2);
-  for (let y = 83; y < 88; y++) { const v = (y - 85.5) / 2.6, hw = 10 * Math.sqrt(Math.max(0, 1 - v * v)); hl(126 - hw, y, hw * 2 + 1, 'water', 3); }
-  hl(123, 85, 7, 'water', 8); hl(122, 86, 9, 'water', 9); hl(124, 87, 5, 'water', 8);
+  ell(TJ_MOON[0], TJ_MOON[1], 15, 4.4, 'water', 3); ell(TJ_MOON[0], TJ_MOON[1], 10, 3.2, 'water', 4);
+  ell(TJ_MOON[0], TJ_MOON[1], 7, 2.6, 'bone', 9); ell(TJ_MOON[0] + 1.5, TJ_MOON[1] + 0.5, 4.6, 1.6, 'bone', 10);
   // the lawn's edge and the cypresses hang down as dark spikes
   hl(TJ.x0, 74, 18, 'leaf', 2); hl(128, 74, TJ.x1 - 128, 'leaf', 2);
-  [[8, 7, 3.2], [16, 9, 3.6], [134, 9, 3.6], [142, 7, 3.2]].forEach(([cx, h, w]) => { for (let k = 0; k < h; k++) { const hw = w * Math.pow(1 - k / h, 0.9); for (let x = Math.round(cx - hw); x <= Math.round(cx + hw); x++) set(x, 75 + k, 'leaf', x < cx ? 3 : 2); } });
-  // the plinth: its shaded face by the water, a row of niches, the lit top
-  hl(22, 74, 107, mr, 4); hl(22, 75, 107, mr, 4); for (let x = 26; x < 125; x += 7) hl(x + 1, 75, 2, 'lav', 2); hl(22, 76, 107, mr, 5);
-  // the minarets: shafts, three balconies, the kiosk, the little dome, all hanging down
-  [31, 119].forEach(cx => { for (let y = 74; y < 85; y++) { const hw = y < 78 ? 2 : 1; for (let x = cx - hw; x <= cx + hw; x++) set(x, y, mr, x < cx ? 6 : x > cx ? 4 : 5); }
-    [77, 80, 83].forEach(y => hl(cx - 3, y, 7, mr, 6)); set(cx - 1, 84, 'lav', 3); set(cx + 1, 84, 'lav', 3); onion(flip(85, 87), cx, 85, 87, 2.4, 1.6, mr, 5, { band: 1 }); });
+  [[8, 6, 3.2], [16, 8, 3.6], [134, 8, 3.6], [142, 6, 3.2]].forEach(([cx, h, w]) => { for (let k = 0; k < h; k++) { const hw = w * Math.pow(1 - k / h, 0.9); for (let x = Math.round(cx - hw); x <= Math.round(cx + hw); x++) set(x, 75 + k, 'leaf', x < cx ? 3 : 2); } });
+  // the plinth: its shaded face by the water with the row of niches, then the lit top
+  hl(22, 74, 107, mr, 4); for (let x = 26; x < 125; x += 7) hl(x + 1, 74, 2, 'lav', 2); hl(22, 75, 107, mr, 5);
+  // the minarets: shafts, three balconies, the kiosk and its little dome, all hanging down
+  [31, 119].forEach(cx => { for (let y = 76; y < 82; y++) { const hw = y < 78 ? 2 : 1; for (let x = cx - hw; x <= cx + hw; x++) set(x, y, mr, x < cx ? 6 : x > cx ? 4 : 5); }
+    [77, 79, 81].forEach(y => hl(cx - 3, y, 7, mr, 6)); onion(flip(82, 84), cx, 82, 84, 2.4, 1.6, mr, 5, { band: 1 }); set(cx, 85, 'gold', 4); });
   // the block: chamfered corners in shade, two rows of niches, the lit pishtaq frame with its inlay round the dark iwan
-  for (let y = 77; y < 81; y++) { hl(50, y, 51, mr, 4); hl(97, y, 4, mr, 3); }
-  [78, 80].forEach(y => [56, 91].forEach(x => hl(x, y, 4, 'lav', 3)));
-  for (let y = 77; y < 81; y++) { hl(62, y, 27, mr, 5); set(63, y, 'arcane', 3); set(87, y, 'arcane', 3); }
-  parch(flip(77, 81), 66, 84, 77, 79, 81, 'lav', 2); parch(flip(77, 81), 68, 82, 77, 79, 81, 'lav', 1);
-  hl(72, 77, 7, 'lamp', 4); hl(73, 78, 5, 'lamp', 5); set(75, 79, 'lamp', 4);
-  // parapet and drum, the chhatris hanging from them, and the great dome — widest two rows from its tip
-  hl(50, 81, 51, mr, 5); hl(65, 81, 21, mr, 4);
-  [57, 93].forEach(cx => { onion(flip(82, 85), cx, 82, 85, 4.4, 3, mr, 5, { band: 1 }); set(cx, 86, 'gold', 4); });
-  onion(flip(82, 88), 75, 82, 88, 13.5, 8.5, mr, 5.8, { band: 1, wv: 0.5 });
+  for (let y = 76; y < 79; y++) { hl(50, y, 51, mr, 4); hl(97, y, 4, mr, 3); }
+  [76, 78].forEach(y => [56, 91].forEach(x => hl(x, y, 4, 'lav', 3)));
+  for (let y = 76; y < 79; y++) { hl(62, y, 27, mr, 5); set(63, y, 'arcane', 3); set(87, y, 'arcane', 3); }
+  parch(flip(76, 78), 66, 84, 76, 77, 78, 'lav', 2); parch(flip(76, 78), 68, 82, 76, 77, 78, 'lav', 1);
+  hl(72, 76, 7, 'lamp', 4); hl(73, 77, 5, 'lamp', 5);
+  // parapet and drum, the chhatris hanging from them, the great dome (its tip over the moon) and the finial, dark on the moon
+  hl(50, 79, 51, mr, 5); hl(65, 79, 21, mr, 4);
+  [57, 93].forEach(cx => { onion(flip(80, 82), cx, 80, 82, 4.4, 3, mr, 5, { band: 1 }); set(cx, 83, 'gold', 4); });
+  onion(flip(80, 84), 75, 80, 84, 13.5, 8.5, mr, 5.8, { band: 1, wv: 0.5 });
+  hl(74, 85, 3, 'gold', 3); set(75, 86, 'gold', 2); set(74, 87, 'gold', 2); set(76, 87, 'gold', 2);
   // a dark water line round every pale shape keeps the silhouette crisp at 1:1
   const wi = X.MI.water, li = X.MI.linen, edge = [];
   for (let y = TJ.y0 + 1; y < TJ.y1; y++) for (let x = TJ.x0 + 1; x < TJ.x1 - 1; x++) { const i = (y - TJ.y0) * W + x; if (TJ_M[i] !== wi || TJ_T[i] > 3) continue; if (TJ_M[i - 1] === li || TJ_M[i + 1] === li || TJ_M[i - W] === li || (y + 1 < TJ.y1 && TJ_M[i + W] === li)) edge.push(i); }
@@ -141,18 +147,19 @@ function tajMirror(S) {
   S.lay('wall'); for (let i = 0; i < TJ_M.length; i++) { const y = TJ.y0 + Math.floor(i / W), x = i % W; if (x >= TJ.x0 && x < TJ.x1 && y < TJ.y1 && TJ_M[i]) S.px(x, y, TJ_M[i], TJ_T[i], GLOW); }
 }
 // the pool at a moment: ripple rows shift a pixel, dark dashes drift, and in the flare the mirrored marble glows violet too
-function tajWater(D, t, fl) {
-  D.lay('wall');
-  for (let y = TJ.y0; y < TJ.y1; y++) { const sh = rip(t, y), dr = y % 3 === 1; if (!sh && !dr && !fl) continue;
-    for (let x = TJ.x0; x < TJ.x1; x++) { const i = (y - TJ.y0) * W + clamp(x - sh, TJ.x0, TJ.x1 - 1), g = dr && dashAt(t, x, y), f = fl && TJ_K[i]; if (!sh && !g && !f) continue;
-      let m = TJ_M[i], tn = TJ_T[i]; if (f) { m = fl > 1 ? X.MI.arcane : X.MI.lav; tn = fl > 1 ? tn + 1 : tn + 3; } if (g) tn = Math.max(1, tn - (m === X.MI.water ? 1 : 2));
+// (lt: the iwan lamp's flicker in whole steps — the mirrored door steps with it)
+function tajWater(D, t, fl, lt) {
+  D.lay('wall'); const LI = X.MI.lamp;
+  for (let y = TJ.y0; y < TJ.y1; y++) { const sh = rip(t, y), dr = y % 3 === 1, lr = y === 76 || y === 77; if (!sh && !dr && !fl && !(lr && lt)) continue;
+    for (let x = TJ.x0; x < TJ.x1; x++) { const i = (y - TJ.y0) * W + clamp(x - sh, TJ.x0, TJ.x1 - 1), g = dr && dashAt(t, x, y), f = fl && TJ_K[i], lp = lt && TJ_M[i] === LI; if (!sh && !g && !f && !lp) continue;
+      let m = TJ_M[i], tn = TJ_T[i]; if (f) { m = fl > 1 ? X.MI.arcane : X.MI.lav; tn = fl > 1 ? tn + 1 : tn + 3; } if (lp) tn = clamp(tn + lt, 3, 8); if (g) tn = Math.max(1, tn - (m === X.MI.water ? 1 : 2));
       D.px(x, y, m, tn, GLOW); } }
 }
 const TAJ_LOOK = { skin: ['skin', 4], hair: ['hair', 2], top: ['linen', 8], bot: ['linen', 6], boot: ['leather', 3], beard: ['hair', 2] };
 X.def('taj', {
   amb: [0.3, 0.3],
   paint(S, sc) {
-    X.sky(S, sc, { horizon: 60, moon: [126, 17, 5], far: 'trees', floor: 'stone' });                                      // 0 moon
+    X.sky(S, sc, { horizon: 60, moon: TJ_SKYMOON, far: 'trees', floor: 'stone' });                                        // 0 moon, right over the dome
     sc.light({ x: 75, y: 57, z: 8, r: 30, i: 0.9, c: '#ffc070', fl: 'candle', tint: 0.55 });                              // 1 lamp in the iwan
     sc.light({ x: 40, y: 86, z: 24, r: 48, i: 0.75, c: '#ffa040', fl: 'fire', tint: 0.45 });                              // 2 diyas left
     sc.light({ x: 110, y: 86, z: 24, r: 48, i: 0.75, c: '#ffa040', fl: 'fire', ph: 2, tint: 0.45 });                     // 3 diyas right
@@ -179,7 +186,7 @@ X.def('taj', {
       [52, 40, 29].forEach(y => { S.box(cx - 4, y, 9, 2, mar, 7.5); S.hl(cx - 3, y + 2, 7, mar, 3.5); });
       for (let y = 21; y < 25; y++) { S.px(cx - 2, y, mar, 7); S.px(cx + 2, y, mar, 5.5); S.px(cx, y, mar, 2.5); S.px(cx - 1, y, mar, 3); S.px(cx + 1, y, mar, 3); }
       S.hl(cx - 3, 20, 7, mar, 8); onion(S, cx, 14, 20, 3.2, 2.2, mar, 8, { band: 1 }); S.vl(cx, 12, 3, 'gold', 7); S.px(cx, 11, 'gold', 9);
-      rimR(S, 14, 64, TJ_RIM[0], TJ_RIM[1] - 1, [1]); S.end(); });
+      rimT(S, cx - 4, cx + 4, 12, 64, TJ_RIM[0], TJ_RIM[1] - 1, [1]); S.end(); });
     // main block: chamfered corners, two storeys of niches either side, parapet with corner pinnacles
     S.beg();
     S.box(50, 40, 51, 25, mar, 7); S.rect(50, 40, 5, 25, mar, 5.8, { n: [-0.6, 0] }); S.rect(96, 40, 5, 25, mar, 5.4, { n: [0.6, 0] });
@@ -206,12 +213,13 @@ X.def('taj', {
     S.end();
     // drum, the great onion dome, lotus top and gilded finial
     S.beg(); S.cyl(65, 31, 21, 6, mar, 7.2, { rim: 1.6 }); S.hl(65, 31, 21, mar, 8.6); for (let x = 66; x < 86; x += 3) S.px(x, 34, mar, 5);
-    onion(S, 75, 11, 31, 15, 9, mar, 7.8, { band: 1, wv: 0.5 }); rimR(S, 12, 30, TJ_RIM[0], TJ_RIM[1], [1.6, 1.2, 0.6]);   // moonlit right rim over a band of shade
-    S.rect(74, 9, 3, 2, 'gold', 7.5); S.px(74, 9, 'gold', 9); S.vl(75, 6, 3, 'gold', 7); [[74, 4], [74, 5], [75, 6], [76, 5], [76, 4]].forEach(([x, y]) => S.px(x, y, 'gold', 8.5));   // finial: bulbs and a crescent
+    onion(S, 75, 11, 31, 15, 9, mar, 7.8, { band: 1, wv: 0.5 }); rimT(S, 59, 91, 11, 30, TJ_RIM[0], TJ_RIM[1], [1.4, 0.7]);   // moonlit upper rim over a band of shade
     S.end();
+    // the finial: lotus, rod and crescent, a thin dark silhouette on the moon behind (no outline, so the disc stays whole)
+    S.beg(); S.hl(74, 10, 3, 'gold', 3.5); S.px(75, 9, 'gold', 4); S.px(74, 10, 'gold', 5.5); S.vl(75, 6, 3, 'gold', 3); [[74, 4], [74, 5], [75, 6], [76, 5], [76, 4]].forEach(([x, y]) => S.px(x, y, 'gold', 3.5)); S.end({ none: 1 });
     // chhatris on the roof corners
     [57, 93].forEach(cx => { S.beg(); S.hl(cx - 5, 29, 11, mar, 8); for (let y = 30; y < 38; y++) { S.px(cx - 4, y, mar, 7.5); S.px(cx, y, mar, 7); S.px(cx + 4, y, mar, 5.8); if (y > 30) { S.px(cx - 3, y, 'lav', 2); S.px(cx - 2, y, 'lav', 2); S.px(cx - 1, y, 'lav', 2); S.px(cx + 1, y, 'lav', 2); S.px(cx + 2, y, 'lav', 2); S.px(cx + 3, y, 'lav', 2); } }
-      onion(S, cx, 21, 29, 4.6, 3.2, mar, 8, { band: 1 }); rimR(S, 22, 28, TJ_RIM[0], TJ_RIM[1] - 1, [1.2]); S.vl(cx, 19, 3, 'gold', 7.5); S.end(); });
+      onion(S, cx, 21, 29, 4.6, 3.2, mar, 8, { band: 1 }); rimT(S, cx - 5, cx + 5, 21, 28, TJ_RIM[0], TJ_RIM[1] - 1, [1.2]); S.vl(cx, 19, 3, 'gold', 7.5); S.end(); });
     // the pool mirrors all of it (static; the frames ripple it)
     tajMirror(S);
     // near side: diyas on the pool's near kerb, a stone lotus urn at each end
@@ -226,16 +234,17 @@ X.def('taj', {
   anim(D, t, rs) {
     const st = rs.st, q = steps(t, 10.5), fl = q > 0.66 && q < 0.86 ? (q > 0.7 && q < 0.8 ? 2 : 1) : 0;
     // the pool: the mirrored mausoleum ripples (and flares violet with the facade)
-    tajWater(D, t, fl);
-    // the iwan's lamp: door frame, lattice and the two hanging lamps step with its flicker; its light runs down the water
-    const lt = candleStep(t, 0, rs.kick[1]); D.lay('back');
+    const lt = candleStep(t, 0, rs.kick[1]);
+    tajWater(D, t, fl, lt);
+    // the iwan's lamp: door frame, lattice and the two hanging lamps step with its flicker (the mirrored door with them)
+    D.lay('back');
     TJ_DOOR.forEach(([x, y]) => D.px(x, y, 'lamp', clamp(5 + lt, 4, 10), GLOW)); TJ_LAT.forEach(([x, y]) => D.px(x, y, 'lamp', clamp(6 + lt, 4, 10), GLOW));
     [57, 92].forEach(x => { D.rect(x, 58, 3, 2, 'lamp', clamp(7 + lt, 5, 10), GLOW); D.px(x + 1, 60, 'lamp', clamp(5 + lt, 4, 9), GLOW); });
     D.lay('wall');
-    for (let y = TJ.y0; y < TJ.y1; y++) { const d = y - TJ.y0; if (d > 3 && (y * 7 + Math.floor(t * 5)) % 5 === 0) continue;   // broken, like light on moving water
-      const w = d < 4 ? 3 : d < 9 ? 2 : 1, x = 75 - (w >> 1) + ((y + Math.floor(t * 2.5)) & 1), tn = clamp((d < 4 ? 7 : d < 9 ? 6 : 5) + lt, 4, 10);
-      D.hl(x, y, w, 'lamp', tn, GLOW); }
-    for (let y = 75; y < 88; y += 2) { const w = 2 + ((y * 7 + Math.floor(t * 4)) % 4), x = 126 + Math.round(Math.sin(t * 1.3 + y) * 2) - (w >> 1); D.hl(x, y, w, 'water', 10 + ((y + Math.floor(t * 6)) % 3 === 0 ? 1 : 0), { e: 255 }); }   // the moon's glitter on the water
+    // the moon's glitter on the pool: sparks either side of its reflection, wandering, a dash of lamplight under the door
+    for (let y = 84; y < 88; y++) for (let k = 0; k < 2; k++) { const ph = t * (1.1 + k * 0.5) + y * 2.3 + k * 2.9, sd = Math.sin(ph) > 0 ? 1 : -1, x = Math.round(TJ_MOON[0] + sd * (7 + ((y * 5 + k * 3 + Math.floor(t * 2.2)) % 9) + (y - 84) * 1.5)), on = Math.sin(t * 3.1 + y * 1.7 + k * 4) > -0.2;
+      if (on) D.hl(x - (sd < 0 ? 1 : 0), y, 1 + ((y + k + Math.floor(t * 3)) & 1), 'bone', 10, GLOW); }
+    if ((Math.floor(t * 5) % 3) !== 0) D.hl(74 + (Math.floor(t * 2.5) & 1), 78, 2, 'lamp', clamp(4 + lt, 3, 7), GLOW);
     X.twinkle(D, t, 9, 48, 17);
     D.lay('front'); TAJ_DIYA.forEach((x, i) => flame(D, x, 86, 3, t, i * 1.9));
     // the moment: three souls rise from the pool, curl into the iwan, the facade flares violet and a shard is born
@@ -262,9 +271,10 @@ X.def('taj', {
 });
 
 // ───────── 大本钟 bigben (steam · store, rare) ─────────
-// the clock tower over a wet Westminster street: a glowing clock face whose minute hand sweeps round, the bell in its
-// arcade, Parliament's lit windows and pinnacles, a gas lamp, a costermonger's barrow of goods, a constable on his beat.
-// At the top of each turn the bell tolls: the face flares, rings of sound roll out, the pigeons scatter and come back
+// the clock tower on a foggy Westminster night: no moon, no stars; fog banks drift across, the clock face glows through
+// them in a hard-edged halo, the minute hand sweeps round, the bell hangs in its arcade; Parliament's lit windows and
+// pinnacles, two gas lamps with halos of lit fog, a costermonger's barrow, a constable on his beat; now and then a fine
+// drizzle. At the top of each turn the bell tolls: the face flares, rings of sound roll out, the pigeons scatter and return
 const BB = { cx: 100, fy: 36, fr: 8, per: 12 };
 const BB_BIRDS = [[93, 26, -1], [96, 26, -1], [104, 26, 1], [107, 26, 1], [90, 45, -1]];
 // a London fog night: no moon, no stars. Fog banks drift across at three heights as a hard two-step veil (core and rim),
@@ -414,9 +424,10 @@ X.def('bigben', {
 });
 
 // ───────── 自由女神像 liberty (water · luck, epic) ─────────
-// seen from the rail of a night ferry: the copper-green goddess on her granite pedestal and star fort, floodlit from below,
-// her torch burning; the torch is a beacon whose beam turns over the harbour (a glare each time it faces us), gulls wheel
-// round her, a steamer crosses under the Manhattan lights, a sailor at the rail watches through his spyglass
+// seen from the rail of a ferry at daybreak: a pastel sky (night blue, lilac, pink, a gold rim), the sun half out of the sea
+// between the island and Manhattan; the copper-green goddess on her granite pedestal and star fort, rimmed on her sunward
+// side, her torch burning; the torch is a beacon whose beam turns over the harbour (a glare each time it faces us), pink-lit
+// clouds drift, gulls wheel round her, a steamer crosses the sun, a sailor at the rail watches through his spyglass
 const LB = { tx: 55, ty: 11, per: 10, sx: 99, sy: 66, sr: 6, wx: 129 };   // torch; the beacon's turn; the sun coming up behind Manhattan
 const LB_LOOK = { skin: ['skin', 6], hair: ['hair', 4], top: ['linen', 8.5], bot: ['denim', 3], boot: ['hair', 2], cap: ['linen', 9] };
 function lbBeam(t) { const ph = steps(t, LB.per) * Math.PI * 2; return { c: Math.cos(ph), s: Math.sin(ph), ph }; }   // s > 0: turned toward us
@@ -545,10 +556,11 @@ X.def('liberty', {
 });
 
 // ───────── 悉尼歌剧院 opera (cartoon · luck, rare) ─────────
-// the white sails on their granite podium, lit up for a festival: projected patterns in colour sweep across the white
-// tiles, the glass mouths glow, notes float up, the harbour holds the sails upside down; the Harbour Bridge glitters
-// behind, festoon bulbs hang over the quay, a violinist busks by his open case; every nine seconds fireworks burst over
-// the harbour and colour floods the whole roof for a few seconds
+// the white sails on their granite podium on a moonless night, lit up for a festival: round after round the projection
+// changes colour (pink, teal, gold, violet) and pattern, the projector's light on the podium, the quay and the water turns
+// with it, lasers fan up from behind the roof and chase lights run along the Harbour Bridge's arch; the glass mouths glow,
+// notes float up, the harbour holds the sails upside down, festoon bulbs hang over the quay, a violinist busks by his open
+// case; every nine seconds fireworks burst over the harbour and colour floods the whole roof for a few seconds
 const OP_SHELLS = [   // [tip x, tip y, base left, base right, lean bulge] back to front
   [103, 47, 96, 114, 3], [94, 41, 86, 110, 3.5], [85, 36, 78, 103, 4],
   [70, 41, 63, 91, 4], [58, 34, 50, 86, 4.5], [45, 28, 36, 76, 5],
@@ -578,7 +590,12 @@ function opMirror(S) {
 }
 { const r = X.rng(9); for (let x = 4; x < 147; x += 6) { const u = (x - 75) / 71; OP_BULBS.push([x, Math.round(5 + 9 * (1 - u * u)), ['candy', 'gold', 'teal', 'lamp'][Math.floor(r() * 4)], r() * 7]); } }
 function opEdge(sh, y) { const [tx, ty, b0, b1, bu] = sh, v = clamp((y - ty) / (OP_BY - ty), 0, 1); return [tx + (b0 - tx) * v - bu * Math.sin(Math.PI * v), tx + (b1 - tx) * Math.pow(Math.sin(Math.PI / 2 * v), 0.75), v]; }
-const OP_LOOK = { skin: ['skin', 6], hair: ['hair', 2], top: ['linen', 8.4], bot: ['night', 3], boot: ['hair', 1], apron: ['night', 3.4] };
+// the busker stands out on the dark water: warm brown trousers and a wine waistcoat over the white shirt, and the far lights
+// of the bridge rim his back edge (opRim) so his outline never sinks into the harbour
+const OP_LOOK = { skin: ['skin', 6], hair: ['hair', 2], top: ['linen', 8.4], bot: ['leather', 4], boot: ['hair', 1], apron: ['crimson', 4.5] };
+// a 1-px cold rim down the right edge of the object just drawn (its outline pixel on that side takes the light)
+function opRim(D, x0, x1, y0, y1) { const L = D.c, id = D.id;
+  for (let y = y0; y <= y1; y++) for (let x = x1; x >= x0; x--) { const p = y * W + x; if (L.o[p] === id && L.m[p]) { D.px(x, y, 'ice', L.m[p] === X.MI.linen ? 9 : 7, GLOW); break; } } }
 X.def('opera', {
   amb: [0.3, 0.3],
   paint(S, sc) {
@@ -629,9 +646,16 @@ X.def('opera', {
     S.lay('front');
     for (let x = 22; x < 146; x += 20) { S.beg(); S.box(x, 83, 3, 7, 'iron', 5.5, { top: 1 }); S.px(x + 1, 82, 'brass', 8); S.end(); if (x + 20 < 146) for (let k = 1; k < 20; k++) S.px(x + 1 + k, 84 + Math.round(Math.sin(k / 20 * Math.PI) * 2), 'iron', 4 + (k % 2)); }
     S.beg(); S.cyl(9, 54, 3, 36, 'iron', 4.5, { rim: 1 }); S.box(7, 86, 7, 4, 'iron', 4, { top: 1 }); S.hl(6, 55, 9, 'iron', 6); S.ell(10.5, 50, 3.5, 3.5, 'linen', 10, { e: 3 }); S.px(9, 49, 'linen', 11, { e: 255 }); S.end();
-    S.beg(); S.box(104, 86, 14, 4, 'leather', 4, { top: 1 }); S.rect(105, 87, 12, 2, 'crimson', 5); S.poly([[104, 86], [117, 86], [115, 80], [106, 80]], 'leather', 5.5); S.hl(106, 80, 9, 'leather', 7); S.end();
-    [[108, 87], [111, 88], [114, 87], [110, 86]].forEach(([x, y]) => S.px(x, y, 'gold', 9));
-    sc.emit({ k: 'glint', x: 111, y: 86, w: 8, h: 2, rate: 0.5, sp: 2, life: 0.6 });
+    // the open violin case lies flat on the quay: the lid leans back behind it (a thin leather slab, its crimson lining in
+    // shade, a lit top edge); the low tray in front shows its violin-shaped velvet bed (two bouts, a pinched waist) with the
+    // evening's coins on it
+    { const c = 106;
+      S.beg(); S.poly([[c, 86], [c + 14, 86], [c + 12, 81], [c + 2, 81]], 'crimson', 2.6); S.line(c, 85, c + 2, 82, 'leather', 5.5); S.hl(c + 2, 81, 10, 'leather', 7.5, { n: [0, -0.8] }); S.line(c + 13, 85, c + 12, 82, 'leather', 3.5); S.end();
+      S.beg(); S.rect(c, 86, 14, 6, 'leather', 4.5); S.hl(c, 86, 14, 'leather', 6, { n: [0, -0.8] }); S.hl(c, 90, 14, 'leather', 7, { n: [0, -0.8] }); S.vl(c + 13, 87, 5, 'leather', 3.5);
+      ['.VVVV....VVVV.', '.VVVVVVVVVVVV.', '..VVV....VVV..'].forEach((row, j) => { for (let i = 0; i < 14; i++) if (row[i] === 'V') S.px(c + i, 87 + j, 'crimson', j ? 6.5 : 5); });
+      S.end();
+      [[c + 2, 88], [c + 4, 87], [c + 7, 88], [c + 10, 88], [c + 11, 89]].forEach(([x, y], k) => S.px(x, y, 'gold', k === 2 ? 10 : 9));
+      sc.emit({ k: 'glint', x: c + 7, y: 88, w: 10, h: 2, rate: 0.5, sp: 2, life: 0.6 }); }
   },
   anim(D, t, rs) {
     const st = rs.st;
@@ -676,22 +700,23 @@ X.def('opera', {
     for (let x = 121; x < 146; x += 3) { const y = 80 + ((x * 5 + Math.floor(t * 3)) % 3 === 0 ? 1 : 0), dx = Math.round(Math.sin(t * 1.4 + x) * 0.8); D.hl(x + dx, y, 2, 'lamp', 5, GLOW); if ((x + Math.floor(t * 2)) % 2) D.px(x + dx + 1, y + 2, 'lamp', 4, GLOW); }
     // festoon bulbs over the quay twinkle
     D.lay('front'); for (let i = 0; i < OP_BULBS.length; i++) { const [x, y, m, ph] = OP_BULBS[i], a = Math.sin(t * 2.2 + ph); D.px(x, y, m, a > 0.2 ? 10 : 6, { e: 255 }); D.px(x, y + 1, m, a > 0.2 ? 8 : 5, { e: 255 }); if (i) { const [px, py] = OP_BULBS[i - 1]; for (let xx = px + 1; xx < x; xx++) D.px(xx, Math.round(py + (y - py) * (xx - px) / (x - px) - Math.sin((xx - px) / (x - px) * Math.PI) * 0.8) - 1, 'night', 3, { e: 255 }); } D.px(x, y - 1, 'night', 4, { e: 255 }); }
-    // fireworks: a rocket climbs from the harbour and bursts twice
+    // fireworks: a rocket climbs from the harbour and bursts twice (the outer ring flies ~15 px, so both bursts stay well
+    // inside the frame)
     D.lay('wall');
     if (!st.fw) st.fw = [];
-    [[0.02, 118, 22, 'candy'], [0.2, 134, 30, 'gold']].forEach(([at, fx, fy, fm], k) => { const q = fq - at;
+    [[0.02, 118, 22, 'candy'], [0.2, 124, 30, 'gold']].forEach(([at, fx, fy, fm], k) => { const q = fq - at;
       if (q > 0 && q < 0.13) { const kk = q / 0.13, y = 76 - (76 - fy) * (1 - (1 - kk) * (1 - kk)); D.px(fx, y, 'fire', 10, { e: 255 }); D.px(fx, y + 1, 'fire', 8, { e: 255 }); D.px(fx, y + 2, 'fire', 6, { e: 255 }); }
-      if (q >= 0.13 && !st['b' + k]) { st['b' + k] = 1; for (let i = 0; i < 40; i++) { const a = i / 20 * Math.PI * 2 + (i >= 20 ? 0.16 : 0), sp = i < 20 ? 26 : 14; st.fw.push({ x: fx, y: fy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, t: 0, m: i >= 20 ? 'linen' : fm }); } st.fl = 1; rs.burst('glint', fx, fy, 6, { sp: 16, life: 0.6 }); }
+      if (q >= 0.13 && q < 0.2 && !st['b' + k]) { st['b' + k] = 1; for (let i = 0; i < 40; i++) { const a = i / 20 * Math.PI * 2 + (i >= 20 ? 0.16 : 0), sp = i < 20 ? 26 : 14; st.fw.push({ x: fx, y: fy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, t: 0, m: i >= 20 ? 'linen' : fm }); } st.fl = 1; rs.burst('glint', fx, fy, 6, { sp: 16, life: 0.6 }); }
       if (q < 0) st['b' + k] = 0; });
     const dt = st.lt == null ? 0 : clamp(t - st.lt, 0, 0.1); st.lt = t;
     for (let i = st.fw.length - 1; i >= 0; i--) { const p = st.fw[i]; p.t += dt; p.vx *= Math.exp(-dt * 1.6); p.vy = p.vy * Math.exp(-dt * 1.6) + 14 * dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.t > 1.6) { st.fw.splice(i, 1); continue; }
       const tn = Math.round(11 - p.t * 4); D.px(p.x, p.y, p.m, tn, { e: 255 }); D.px(p.x - Math.sign(p.vx), p.y - Math.sign(p.vy) * (Math.abs(p.vy) > Math.abs(p.vx) * 0.5 ? 1 : 0), p.m, tn - 2, { e: 255 }); if (p.t < 0.9) D.px(p.x - p.vx * 0.09, p.y - p.vy * 0.09, p.m, tn - 4, { e: 255 });
       if (p.t > 0.9 && ((p.t * 20 + i) | 0) % 3 === 0) D.px(p.x, p.y, 'linen', 10, { e: 255 }); }
     st.fl = (st.fl || 0) * Math.exp(-dt * 3); rs.mul[1] = st.fl * 1.1;
-    // notes float up from the violin and, now and then, out of the halls
-    D.lay('mid');
-    // the violinist, out on the quay against the dark water, facing the hall: the fiddle lies level under his chin, his left
-    // hand holds the neck, and the bow (a bright line) saws across the body near the bridge — sliding and tipping each stroke
+    // the violinist, out on the quay in front of the railing against the dark water, facing the hall: the fiddle lies level
+    // under his chin, his left hand holds the neck, and the bow (a bright line) saws across the body near the bridge — sliding
+    // and tipping each stroke
+    D.lay('front');
     const x0 = 136, dir = -1, bw = Math.sin(t * 5.2), lean = -0.1 + 0.2 * Math.sin(t * 1.6), sx = x0 + Math.round(lean * 3 * dir), shY = FY - 21, hx = sx;
     const V = (u, v) => [hx + dir * u, shY + v];                                   // u forward from the chin, v down from the shoulders
     const bk = 3.5 + 1.5 * bw, bth = 0.65 + 0.12 * bw, bd = [Math.sin(bth), -Math.cos(bth)], bH = [3 - bk * bd[0], 1 - bk * bd[1]], bT = [bH[0] + 10 * bd[0], bH[1] + 10 * bd[1]];
@@ -701,6 +726,7 @@ X.def('opera', {
     worker(D, x0, FY, OP_LOOK, p, dir);
     const notes = st.notes || (st.notes = []), nm = () => ['candy', 'gold', 'teal'][Math.floor(R() * 3)];
     if (!X.noWorkers) {
+      opRim(D, x0 - 9, x0 + 9, shY - 8, FY - 1);
       const P = (u, v, m, tn) => { const [x, y] = V(u, v); D.px(x, y, m, tn); };
       D.beg();   // the violin: two bouts of red-brown varnish pinched at the waist, a lit top edge, the dark fingerboard running on into the neck, the scroll
       [-1, 0, 1, 3, 4].forEach(u => { P(u, 0, 'copper', 9); P(u, 2, 'copper', 5.5); }); for (let u = -1; u <= 4; u++) P(u, 1, 'copper', 7.5);
@@ -711,7 +737,8 @@ X.def('opera', {
       D.line(hxB, hyB, txB, tyB, 'linen', 10);                                                                         // the bow
       const hbx = Math.round(hxB), hby = Math.round(hyB); D.rect(hbx - (dir > 0 ? 1 : 0), hby, 2, 2, 'skin', 6); D.px(hbx - dir * 2, hby + 1, 'linen', 6.5); D.px(hbx - dir * 2 - (dir > 0 ? 1 : 0), hby, 'linen', 7);   // bow hand and cuff
     }
-    const [nvx, nvy] = V(10, -8);
+    // notes float up from the violin and, now and then, out of the halls
+    D.lay('mid'); const [nvx, nvy] = V(10, -8);
     if (st.nt == null || t - st.nt > 0.7 || t < st.nt) { st.nt = t; if (!X.noWorkers) notes.push({ x: nvx, y: nvy, t0: t, m: nm(), s: R() < 0.5 }); if (R() < 0.35) notes.push({ x: 30 + R() * 50, y: 56, t0: t, m: nm(), s: R() < 0.5 }); }
     for (let i = notes.length - 1; i >= 0; i--) { const n = notes[i], a = t - n.t0; if (a > 3.2 || a < 0) { notes.splice(i, 1); continue; } const x = Math.round(n.x - a * 5 + Math.sin(a * 3) * 2), y = Math.round(n.y - a * 9), tn = a < 2.2 ? 9 : 9 - (a - 2.2) * 4;
       const tq = Math.round(tn); D.rect(x, y + 3, 2, 2, n.m, tq, { e: 255 }); D.vl(x + 1, y, 3, n.m, tq, { e: 255 }); if (n.s) D.px(x + 2, y + 1, n.m, tq - 1, { e: 255 }); else D.px(x + 2, y, n.m, tq - 1, { e: 255 }); }
@@ -805,10 +832,10 @@ X.def('goldengate', {
 
 // what each pixel room shows, in words (M.ROOM_D; docs/effects.md §R is generated from it)
 const D_ = {
-  taj: '月光下的白色陵墓：洋葱圆顶、两座小亭、大拱门里一盏灯，两侧宣礼塔立在台基上，柏树成排，圆顶和塔身朝月亮的一边镶着一道冷白的亮边；长水池里倒映着倒过来的圆顶、宣礼塔和拱门，水面一道道晃动，拱门的暖光在水上拉成一条断断续续的光带，月光在水上闪，岸边一排油灯摇曳；灵魂从水里慢慢升起，每隔一会儿三团魂光飞进拱门，墙面、镶边和水里的倒影一起泛起紫光，结出一枚灵魂碎片飞走；守陵人提着灯沿池边巡夜',
-  bigben: '钟楼的表盘在夜里发光，分针一圈圈转；转到整点大钟一摆、表盘一亮，声波一圈圈荡开，鸽子从钟楼上飞散又飞回；议会大楼的尖塔和窗灯、烟囱冒烟，云从月亮前飘过；街上煤气灯摇曳，湿石板上的水洼倒映着钟楼，推车上堆着货箱和苹果，巡警踱步、钟响时掏出怀表对时',
-  liberty: '从夜渡轮的栏杆望出去：铜绿色的女神站在花岗岩基座和星形堡垒上，被脚下的灯从下往上照亮，王冠的小窗亮着，高举的火炬熊熊燃烧；火炬是一座灯塔，光束在港口上空转圈，每转到正对你时一阵强光；海鸥绕着她盘旋，远处轮船载着灯火驶过曼哈顿的夜景；水手靠在栏杆边，光束扫过时举起望远镜，船灯摇晃、旗子飘动',
-  opera: '海边浅色花岗岩台基上一片白色贝壳屋顶，台基左头是一段宽台阶，彩色灯光在瓦面上投出斜条纹、扫过的光带和一圈圈光环，几秒换一种；玻璃幕墙透出暖光；码头上一个街头小提琴手把琴夹在下巴下来回拉弓，音符从琴弦和大厅里飘起；背后港湾大桥亮着一串灯，码头上挂着彩灯，海里倒映着倒过来的浅色扇片；每隔一会儿烟花从海面升起炸开，整片屋顶从右到左被染成粉、青、金色，连同倒影一起亮上两三秒再褪回白色',
+  taj: '月光下的白色陵墓：满月正好升在大圆顶后面，顶上细细的金色尖饰映在月亮上；洋葱圆顶、两座小亭、大拱门里一盏灯，两侧宣礼塔立在台基上，柏树成排，圆顶和塔顶的上沿镶着一道冷白的月光边；长水池里倒映着倒过来的陵墓，倒影最下面正是月亮的倒影，水面一道道晃动，月亮倒影两边碎光闪烁，拱门的暖光在倒影里一明一暗，岸边一排油灯摇曳；灵魂从水里慢慢升起，每隔一会儿三团魂光飞进拱门，墙面、镶边和水里的倒影一起泛起紫光，结出一枚灵魂碎片朝月亮飞走；守陵人提着灯沿池边巡夜',
+  bigben: '雾夜的伦敦，看不见月亮和星星：钟楼的表盘在雾里发光，外面罩着一圈圈光晕，分针一圈圈转；转到整点大钟一摆、表盘一亮，声波一圈圈荡开，鸽子从钟楼上飞散又飞回；雾带一层层横着飘过议会大楼和街道，一近一远两盏煤气路灯各罩着一圈硬边光晕、灯火摇曳；议会大楼的尖塔和窗灯、烟囱冒烟；时不时下起细雨，雨丝经过灯下被照亮，湿石板和水洼上溅起小水圈，水洼倒映着钟楼；推车上堆着货箱和苹果，巡警踱步、钟响时掏出怀表对时',
+  liberty: '黎明时从渡轮的栏杆望出去：天空从头顶的深蓝变成淡紫、粉红，海天交界一片金色，太阳在自由岛和曼哈顿之间刚露出半个，几道薄云横过日面；铜绿色的女神站在花岗岩基座和星形堡垒上，朝太阳的一侧镶着一道亮边，高举的火炬熊熊燃烧；火炬是一座灯塔，光束在港口上空转圈，每转到正对你时一阵强光；被照成粉色的云慢慢飘，海面上粉光金光闪烁，海鸥绕着她盘旋，远处轮船从太阳前驶过；曼哈顿的楼顶镶着金边，还有几扇窗亮着；水手靠在栏杆边，光束扫过时举起望远镜，船灯摇晃、旗子飘动',
+  opera: '没有月亮的港湾夜里，浅色花岗岩台基上一片白色贝壳屋顶，台基左头是一段宽台阶；灯光秀一轮换一种颜色（粉、青、金、紫）：瓦面上投出斜条纹、扫过的光带或一圈圈光环，台基和码头也被照成同一种颜色，几道激光从屋顶后面射向夜空、慢慢摆动，港湾大桥的拱上彩灯一串串跑过；玻璃幕墙透出暖光；码头上一个街头小提琴手把琴夹在下巴下来回拉弓，音符从琴弦和大厅里飘起；码头上挂着彩灯，海里倒映着倒过来的浅色扇片；每隔一会儿烟花从海面升起炸开，整片屋顶从右到左被染成粉、青、金色，连同倒影一起亮上两三秒再褪回白色',
   goldengate: '夕阳下的红色悬索桥：装饰艺术风格的桥塔、主缆垂成弧线，桥面上一串钠灯，车灯来回流动，塔顶红灯一闪一闪；雾一层层从海面滚过，远处货轮从桥下驶过，海面倒映着夕阳和桥；岸边石码头上立着蒸汽雾笛和小锅炉，每隔一会儿看守人一拉链条，雾笛喷出一大团蒸汽、声波一圈圈荡开',
 };
 if (M.ROOM_D) Object.assign(M.ROOM_D, D_);

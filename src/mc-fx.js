@@ -6,6 +6,26 @@ const eo = (t) => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
 const eback = (t) => { t = clamp(t, 0, 1); const c = 1.9; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
 const eel = (t) => { t = clamp(t, 0, 1); if (t === 0 || t === 1) return t; return Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * (2 * Math.PI / 3)) + 1; };
 M.ease = { eo, eback, eel, clamp };
+// Unity 动画曲线（关键帧 [时间, 值, 入切线, 出切线]，Hermite 插值）：滚轮停轮、机箱跳一下、结果弹出都照卡皮的原始曲线走
+const curve = (K, t) => {
+  if (t <= K[0][0]) return K[0][1]; const z = K[K.length - 1]; if (t >= z[0]) return z[1];
+  let i = 0; while (i < K.length - 2 && K[i + 1][0] <= t) i++;
+  const a = K[i], b = K[i + 1], d = b[0] - a[0], s = (t - a[0]) / d, s2 = s * s, s3 = s2 * s;
+  return (2 * s3 - 3 * s2 + 1) * a[1] + (s3 - 2 * s2 + s) * a[3] * d + (-2 * s3 + 3 * s2) * b[1] + (s3 - s2) * b[2] * d;
+};
+M.curve = curve;
+M.CURVE = {
+  // 停轮：正好转到结果那格时猛地停住，往回弹一点（0.33 秒）
+  stop: [[0, 0, 1.836, 1.836], [0.1667, -0.0146, 0, 0], [0.3333, 0, 0, 0]],
+  // 再挪一格：先冲出去 38%，再慢慢挪到位、略过头一点再回来（1.33 秒，0 → 1）
+  nudge: [[0, 0, 2.947, 2.947], [0.1667, 0.3821, 1.693, 1.693], [1.1667, 1.0098, 0, 0], [1.3333, 1, 0, 0]],
+  // 机箱被拉杆带得往上跳两下（0.42 秒，单位 = 原图 1920 高的画布单位）
+  jolt: [[0, 0, 0, 0], [0.1667, 20, 0, 0], [0.25, 0, 0, 0], [0.3333, 10, 0, 0], [0.4167, 0, 0, 0]],
+  // 结果字弹出：0 → 1.1 → 0.96 → 1.02 → 0.99 → 1，每 0.1 秒一下
+  pop: [[0, 0, 17.54, 17.54], [0.1, 1.1, 0, 0], [0.2, 0.96, 0, 0], [0.3, 1.02, 0, 0], [0.4, 0.99, 0, 0], [0.5, 1, 0, 0]],
+  // 坏消息的字：从上面砸下来、略冲过头再站住（单位 px）
+  drop: [[0, 0, 3419.7, 3419.7], [0.1333, 230, -0.43, -0.43], [0.3667, 218, 0, 0]],
+};
 // ───────── Pixel Juice 画布工具（docs/design.md §11.5）：调色板、按帧步进、字号阶梯 ─────────
 const U = M.UI, P = (M.PJ && M.PJ.PAL) || {};
 const PC = new Map(), palC = (c) => { if (typeof c !== 'string') return c; let r = PC.get(c); if (r === undefined) { r = U.pal(c); if (PC.size > 600) PC.clear(); PC.set(c, r); } return r; };
@@ -211,14 +231,19 @@ M.FxLayer = class {
 };
 
 // ───────── the great reel (slot cabinet) ─────────
+// 照卡皮的老虎机：拉杆后全速转（约 10 格/秒，0.15 秒起速），正好转到结果那格时猛地停住、往回弹一点；
+// 之后每升一档按「再挪一格」曲线走 0.5 秒
+M.REEL_GO = 0.3; M.REEL_STOP = 1.95;
 M.reelP = function (r) {
-  const N = r.tiles.length, L0 = N * 4 + r.land, t = r.t;
-  let p = L0 * (1 - Math.pow(1 - clamp((t - 0.45) / 1.9, 0, 1), 3.2));
-  for (let i = 0; i < r.ups; i++) { const at = 2.55 + i * 0.95; if (t >= at) p = L0 + i + eback((t - at) / 0.4); }
+  const N = r.tiles.length, t = r.t, R = 0.15, D = M.REEL_STOP - M.REEL_GO, L0 = N * Math.max(2, Math.round((10 * (D - R / 2) - r.land) / N)) + r.land;
+  const v = L0 / (D - R / 2), u = clamp(t - M.REEL_GO, 0, D);
+  let p = t >= M.REEL_STOP ? L0 + 4 * curve(M.CURVE.stop, t - M.REEL_STOP) : u < R ? v * u * u / (2 * R) : v * (u - R / 2);
+  for (let i = 0; i < r.ups; i++) { const at = 2.55 + i * 0.95; if (t >= at) p = L0 + i + curve(M.CURVE.nudge, (t - at) * 2.667); }
   if (r.tease) { const at = 2.55 + r.ups * 0.95; if (t >= at) { const q = clamp((t - at) / 0.75, 0, 1); p = L0 + r.ups + (q < 0.55 ? 0.47 * eo(q / 0.55) : 0.47 * (1 - eback((q - 0.55) / 0.45))); } }
   return p;
 };
-M.reelLock = (r) => 2.55 + r.ups * 0.95 + (r.tease ? 0.75 : 0);
+// 不升档也不「再上一格？」时，停轮那一下就是锁定
+M.reelLock = (r) => (r.ups || r.tease ? 2.55 + r.ups * 0.95 + (r.tease ? 0.75 : 0) : M.REEL_STOP);
 // 锁定后的余韵按结果分：普通 / 稀有 0.9 秒，史诗以上 1.5 秒（负面的快速过去）
 M.reelDur = (r) => M.reelLock(r) + (r.itemMode && r.ups < 2 ? 0.9 : 1.5);
 // 每一次往上冲（升品、最后的「再上一格？」）的时刻：冲之前 0.42 秒是蓄力
@@ -249,7 +274,7 @@ M.drawReel = function (ctx, r, fx) {
   // 传说锁定前黑场一下
   const legend = r.itemMode && r.ups >= 3, black = legend && t > lockT - 0.18 && t < lockT ? 1 : 0;
   const SC = inA * (0.85 + 0.15 * outA) * (1 + 0.08 * ant * ant + 0.04 * chg) * punch * upP, jig = () => Math.round((Math.random() - 0.5) * (sh + ant * 5 + chg * 8));
-  ctx.translate(X + jig(), Y + jig()); ctx.scale(SC, SC);
+  ctx.translate(X + jig(), Y + jig() - Math.round(curve(M.CURVE.jolt, t - 0.2) * 0.7)); ctx.scale(SC, SC);
   const W = 820, H = 640, hw = W / 2, hh = H / 2;
   // 机箱：酒红铁皮面板（墨框、斜面、铆钉、12px 硬投影）；锁定后外面多一圈 3px 品质色
   U.plate(ctx, -hw, -hh, W, H, { fill: P.wine, hi: P.red, lo: P.umber });
@@ -276,12 +301,13 @@ M.drawReel = function (ctx, r, fx) {
     const da = ang - 0.31; if (Math.abs(da) < 1.5) { ctx.globalAlpha = outA * st4(Math.pow(Math.cos(da), 2)); R(ctx, WX, cy + Math.sin(da) * RR - 1, WW, 3, P.dusk); ctx.globalAlpha = outA; }
     if (Math.abs(ang) > 1.5) continue;
     const y = cy + Math.sin(ang) * RR, sy = Math.cos(ang), br = Math.pow(Math.cos(ang), 2), tc = palC(tile.c);
-    const blurN = vel > 3 ? 3 : 1;
-    for (let b = 0; b < blurN; b++) {
-      ctx.save(); ctx.globalAlpha = outA * (blurN > 1 ? 0.4 : 1) * br; ctx.translate(0, y + (b - 1) * (blurN > 1 ? vel * 1.6 : 0)); ctx.scale(1, sy);
+    // 全速转时换成拖影：本体竖着拉长 1.17 倍，身后（下方）拖两道越来越淡的残影
+    const blurN = vel > 3 ? 3 : 1, gap = Math.min(40, vel * 2.4);
+    for (let b = blurN - 1; b >= 0; b--) {
+      ctx.save(); ctx.globalAlpha = outA * (blurN > 1 ? [0.85, 0.35, 0.15][b] : 1) * br; ctx.translate(0, y + b * gap); ctx.scale(1, sy * (blurN > 1 ? 1.17 : 1));
       // 品质色硬边签：左右各一块
       [-WW / 2 + 15, WW / 2 - 33].forEach(sx => { R(ctx, sx - 3, -42, 24, 84, P.ink); R(ctx, sx, -39, 18, 78, tc); });
-      const ghost = blurN > 1 && b !== 1; // 拖影副本不描边，省一点
+      const ghost = blurN > 1 && b > 0; // 拖影副本不描边，省一点
       U.text(ctx, tile.n, 0, tile.sub ? -18 : 0, 88, tc, ghost ? { shadow: false } : { outline: true });
       if (tile.sub) U.text(ctx, tile.sub, 0, 50, 30, P.cream, { shadow: !ghost });
       ctx.restore();

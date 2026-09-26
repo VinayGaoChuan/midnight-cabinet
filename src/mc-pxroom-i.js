@@ -3,7 +3,8 @@
 // Pixel rooms, batch i (written by the pixel-room workflow; see mc-pxroom-a.js for the pattern, docs/design.md §10.1):
 // 阿蒙森-斯科特科考站 amundsen · 布达拉宫 potala · 圣米歇尔山 michel · 亚历山大灯塔 lighthouse · 吴哥窟 angkor.
 // All five are wonders under the open sky: X.sky for the backdrop, the landmark in the middle distance, a framing
-// foreground, and one signature moment each (aurora surge + balloon launch, wind gust, bell toll, beam sweep, gong).
+// foreground, and one signature moment each (aurora surge + balloon launch, wind gust + sunrise flare, the tide coming in,
+// beam sweep, gong).
 const M = window.MC, X = M.PXR; if (!X) return;
 const { W, H, FY, TX, worker, n1, vnoise } = X;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -216,15 +217,23 @@ X.def('amundsen', {
 });
 
 // ───────── 布达拉宫 potala (epic · magic · luck) ─────────
-// the palace on its hill under a moon and snow peaks, floodlit warm from below: white wings, the red palace, gilded roofs;
-// a string of prayer flags across the sky, a juniper burner smoking at the left, a great prayer wheel in its shrine at the
-// right that a monk keeps turning (a bell rings each turn and mantra runes rise); a pilgrim walks the kora with a hand
-// wheel; every ~11 s a gust streams the flags out flat, presses the smoke level, tears wind-horse papers off the string into
-// the night sky, and at its height the floodlights surge and every gilded roof blazes.
+// the palace on its hill at sunrise over the snow peaks: the sun is just cresting the ridge behind the right wing, its rays
+// fan up into a sky going from night indigo to rose and gold, the first light turns the snow summits pink and gold and
+// catches the gilded roofs first, while the white wings and the red palace below are still in blue dawn shade with lamps
+// lit in the windows; a plume of snow streams off the highest summit; a string of prayer flags crosses the sky, a juniper
+// burner smokes at the left, a great prayer wheel in its shrine at the right is kept turning by a monk (a bell rings each
+// turn and mantra runes rise); a pilgrim walks the kora with a hand wheel; every ~11 s a gust streams the flags out flat,
+// presses the smoke level, tears wind-horse papers off the string into the sky, and at its height the sun flares over the
+// ridge: its rays blaze and every gilded roof lights up.
 const PO_FLAGS = [['denim', 6.5], ['linen', 9], ['red', 6.5], ['leaf', 7.5], ['gold', 8]];
 const PO_PEAKS = [[4, 38, 0.9], [26, 27, 1.05], [52, 36, 0.8], [80, 33, 0.9], [118, 15, 1.0], [146, 30, 0.9]];
 const poPeak = (x) => { let best = 1e9, pk = null; PO_PEAKS.forEach(p => { const y = p[1] + Math.abs(x - p[0]) * p[2] + Math.sin(x * 0.61 + p[0]) * 0.8 + Math.sin(x * 0.23) * 1.2; if (y < best) { best = y; pk = p; } }); return [best, pk]; };
 const poHill = (x) => 71 - 13 * Math.exp(-((x - 75) / 46) * ((x - 75) / 46));
+const PO_SUN = [106, 25, 5];   // the sun, only its top showing over the ridge left of the highest peak
+// dawn sky: night indigo overhead to rose and gold at the ridge line, brightest round the sun
+const poSky = (x, y) => { const v = clamp(y, 0, 50) / 50, g = (x - PO_SUN[0]) / 42; return 1.3 + 6.2 * Math.pow(v, 1.5) + 3.4 * Math.exp(-g * g) * Math.pow(v, 1.3); };
+const PO_RAYS = [-2.62, -2.2, -1.86, -1.5, -1.16, -0.8];   // ray angles from the sun (radians, 0 = right, −π/2 = straight up)
+const PO = {};
 const poStr = (x) => { const u = (x - 8) / 138; return 12 + (5 - 12) * u + 9 * 4 * u * (1 - u) * 0.9; };   // flag string: pole top → right edge, sagging
 // a battered Tibetan wall block: sides lean in going up, a dark frieze with gold studs under a white parapet, small windows
 function tibBlock(S, x0, x1, top, bot, m, tn, o) {
@@ -260,22 +269,31 @@ function goldRoofLit(D, cx, by, w, h, tn) {
 // wind-horse papers (lungta): five colours, bright face / darker back as they tumble
 const PO_LUNG = [['denim', 8.5], ['linen', 10], ['red', 8], ['leaf', 9], ['gold', 9]];
 X.def('potala', {
-  amb: [0.28, 0.3],
+  amb: [0.32, 0.32],
   paint(S, sc) {
-    X.sky(S, sc, { horizon: 50, far: 'none', floor: 'stone', moon: [40, 23, 5] });                                  // 0 moon
-    sc.light({ x: 75, y: 104, z: 40, r: 108, i: 0.8, c: '#ffc27a', tint: 0.3 });                                     // 1 floodlights from below
+    X.sky(S, sc, { horizon: 50, dusk: 1, far: 'none', floor: 'stone' });
+    sc.light({ x: PO_SUN[0], y: PO_SUN[1], z: 40, r: 175, i: 0.5, c: '#ffb080', tint: 0.3 });                           // 0 the rising sun
+    sc.light({ x: 80, y: 13, z: 18, r: 40, i: 0.45, c: '#ffd070', fl: 'pulse', amp: 0.12, sp: 0.9, tint: 0.5 });          // 1 the first light on the gilded roofs
     sc.light({ x: 75, y: 50, z: 22, r: 30, i: 0.45, c: '#ffb060', fl: 'candle', ph: 3, tint: 0.15 });                  // 2 lamps in the windows
     sc.light({ x: 19, y: 77, z: 14, r: 38, i: 1, c: '#ff8a30', fl: 'fire', tint: 0.3 });                              // 3 juniper burner
     sc.light({ x: 137, y: 74, z: 12, r: 30, i: 0.7, c: '#ffc060', fl: 'candle', ph: 1, tint: 0.45 });                  // 4 butter lamp at the wheel
     const r = S.r;
-    // snow peaks: faces toward the moon (left) lit, snow on the upper slopes running down the gullies, dark rock below
-    S.lay('wall');
-    for (let x = 0; x < W; x++) { const [top, pk] = poPeak(x), lit = x < pk[0], sl = pk[1] + 10 + Math.sin(x * 0.9) * 1.5 + ((x * 7) % 5 === 0 ? 4 : (x * 3) % 7 === 0 ? 2 : 0);
+    // the dawn sky and the sun's sliver with its glow (the peaks painted next hide the rest of it); a few last stars
+    S.lay('wall'); const [SX, SY, SR] = PO_SUN;
+    for (let y = 0; y < 52; y++) for (let x = 0; x < W; x++) S.px(x, y, 'dusk', poSky(x, y), { e: 255 });
+    for (let k = 3; k >= 1; k--) S.ell(SX, SY, SR + k * 3.2, SR + k * 2.6, 'dusk', 9 + (3 - k) * 0.7, { e: 255 });
+    S.ell(SX, SY, SR, SR, 'lamp', 10, { e: 255 }); S.ell(SX - 1, SY - 1, SR - 2, SR - 2, 'lamp', 11, { e: 255 });
+    [[14, 6], [33, 12], [52, 5], [9, 19], [61, 14], [140, 7]].forEach(([x, y], i) => S.px(x, y, 'linen', i < 2 ? 8 : 6.5, { e: 255 }));
+    [[18, 30, 16], [44, 24, 12], [128, 36, 14]].forEach(([x, y, w]) => { S.hl(x, y, w, 'dusk', poSky(x, y) + 1.4, { e: 255 }); S.hl(x + 3, y + 1, w - 5, 'dusk', poSky(x, y) + 2.4, { e: 255 }); });   // thin clouds lit from below
+    // snow peaks in the first light: the faces toward the sun glow pink and gold (the summits brightest), the far faces
+    // stay cold lavender, snow runs down the gullies, dark rock below
+    for (let x = 0; x < W; x++) { const [top, pk] = poPeak(x), lit = pk[0] < SX ? x > pk[0] : x < pk[0], sl = pk[1] + 10 + Math.sin(x * 0.9) * 1.5 + ((x * 7) % 5 === 0 ? 4 : (x * 3) % 7 === 0 ? 2 : 0);
       for (let y = Math.round(top); y < FY; y++) { const snow = y < sl, d = y - top;
-        S.px(x, y, snow ? 'linen' : 'night', snow ? (lit ? 8 : 5.4) - (d > 7 ? 0.7 : 0) : (lit ? 2.6 : 1.7), { e: 255 }); }
-      S.px(x, Math.round(top), lit ? 'linen' : 'lav', lit ? 10 : 7, { e: 255 }); }
-    // nearer foothills, darker, no snow
-    for (let x = 0; x < W; x++) { const top = Math.round(60 - 6 * Math.abs(Math.sin(x * 0.05 + 2)) - 2 * Math.sin(x * 0.13)); for (let y = top; y < FY; y++) S.px(x, y, 'night', 1.2 + (y === top ? 0.8 : 0), { e: 255 }); }
+        if (snow) S.px(x, y, lit ? 'dusk' : 'lav', lit ? (d < 3 ? 9.4 : 7.7 - (d > 8 ? 0.8 : 0)) : 6.4 - (d > 7 ? 0.8 : 0), { e: 255 });
+        else S.px(x, y, lit ? 'dusk' : 'night', lit ? 3 : 2.2, { e: 255 }); }
+      S.px(x, Math.round(top), lit ? 'dusk' : 'lav', lit ? 10.5 : 7.6, { e: 255 }); }
+    // nearer foothills, still in shadow, no snow
+    for (let x = 0; x < W; x++) { const top = Math.round(60 - 6 * Math.abs(Math.sin(x * 0.05 + 2)) - 2 * Math.sin(x * 0.13)); for (let y = top; y < FY; y++) S.px(x, y, 'lav', 2 + (y === top ? 1 : 0), { e: 255 }); }
     // ── Marpo Ri, the hill under the palace (back)
     S.lay('back');
     S.beg(); for (let x = 4; x < W - 4; x++) { const top = Math.round(poHill(x)); for (let y = top; y < FY; y++) S.px(x, y, 'mstone', 4.6 + (y === top ? 1 : 0), { n: [0, -0.4] }); } S.noise(4, 55, W - 8, 35, 1, 4, 7); S.end({ none: 1 });
@@ -320,11 +338,18 @@ X.def('potala', {
     // juniper smoke: a slow curl leaning right in calm air; in the gust it is pressed flat and torn away to the right
     sc.emit({ k: 'steam', x: 19, y: 66, rate: 2.4, sp: 7, ang: 0.25, spread: 0.4, life: 1.8, when: (t, s) => !(s.st.gust > 0.3) });
     sc.emit({ k: 'steam', x: 20, y: 66, rate: 6, sp: 30, ang: 1.5, spread: 0.2, life: 1.3, when: (t, s) => s.st.gust > 0.3 });
+    // where the sun's rays may show: open sky above the ridge line, nothing of the palace, the hill or the flag pole in front
+    const L = S.L; PO.sky = new Uint8Array(W * H);
+    for (let x = 4; x < W - 4; x++) { const top = poPeak(x)[0]; for (let y = 4; y < top - 0.5; y++) { const p = y * W + x; if (!L.back.m[p] && !L.mid.m[p] && !L.front.m[p]) PO.sky[p] = 1; } }
   },
   anim(D, t, rs) {
     const st = rs.st, gq = steps(t, 11), gust = gq < 0.3 ? Math.sin(gq / 0.3 * Math.PI) : 0; st.gust = gust;
-    // stars
-    D.lay('wall'); X.twinkle(D, t, 10, 30, 11);
+    // the last stars fading overhead
+    D.lay('wall'); X.twinkle(D, t, 5, 18, 11);
+    // a plume of snow blown off the highest summit, gold where the sun catches it, longer in the gust
+    const pl = 1 + gust * 0.8, PL = Math.round(26 * pl); for (let i = 1; i < PL; i++) { const k = i / PL, x = 119 + i, yc = 17 + k * 5 + Math.sin(t * 1.7 - i * 0.28) * k * 1.3, th = Math.max(1, Math.round(Math.sin(Math.min(1, k * 1.5) * Math.PI) * 2.6 + (k < 0.5 ? 0.6 : 0)));
+      if (k > 0.45 && vnoise(i * 0.3 - t * 2.1, 3, 5) < (k - 0.45) * 1.3) continue;   // the tail breaks up into wisps
+      for (let j = 0; j < th; j++) { const y = Math.round(yc - th / 2 + j); D.px(x, y, j < th - 1 || th === 1 ? (k < 0.25 ? 'dusk' : 'bone') : 'lav', j === 0 ? (k < 0.25 ? 10 : 9.4 - k * 1.2) : j < th - 1 ? 8.2 - k : 7.4, { e: 255 }); } }
     // the gust's wind: two rows of long streaks with bright heads, running over the sky and the snow peaks (behind the palace)
     if (gust > 0.12) for (let r = 0; r < 2; r++) { const fr = ((gq / 0.3) * 2.2 + r * 0.45) % 1, hx = Math.round(-12 + fr * 178), L = Math.round(12 + gust * 6), yr = r ? 35 : 24;
       for (let j = 0; j < L; j++) { const x = hx - j; if (x < 4 || x > 145 || (j > L - 5 && j % 2)) continue; const y = yr + Math.round(Math.sin(x * 0.09 + r * 2) * 1.2);
@@ -361,7 +386,7 @@ X.def('potala', {
       for (let k = 0; k < 5; k++) { const dx = Math.round(sw * k / 4), dy = gust > 0.25 ? -Math.round(gust * (k / 4) * (k / 4) * 2.4) : 0, fl = gust > 0.25 && Math.sin(t * 24 + i * 1.3 + k) > 0.5 ? 0.8 : 0;
         for (let j = 0; j < 4; j++) D.px(x + j + dx, y0 + k + dy, m, tn + fl + (j === 0 ? 0.6 : j === 3 ? -0.8 : 0) + (k === 4 ? -0.6 : 0)); } }
     // the gust's wind-horse papers: 22 squares torn off the string, tumbling (3 → 2 → 1 px wide as they turn). They drop clear of
-    // the flags into the night sky: the left dozen sweep over the moon and the left peak, then climb steeply over the gilded roofs
+    // the flags into the dawn sky: the left dozen sweep over the left peaks, then climb steeply over the gilded roofs
     // and out of the top; the right ten blow out over the right peaks. Never across the white walls.
     if (gq < 0.5) for (let i = 0; i < 22; i++) { const A = i < 12, d = ((i * 7) % 11) / 11 * 0.1 + (A ? 0 : 0.02), k = (gq - d) / 0.3; if (k < 0 || k > 1) continue;
       const x0 = A ? 12 + ((i * 17) % 35) : 96 + ((i * 13) % 33), ys = poStr(x0) + 2, yl = A ? 27 + ((i * 5) % 12) : 22 + ((i * 5) % 14), wob = Math.sin(k * 10 + i * 1.7) * 1.5, e = Math.min(1, k / 0.2), drop = ys + (yl - ys) * e * e * (3 - 2 * e);
@@ -369,116 +394,212 @@ X.def('potala', {
       else { x = x0 + (160 - x0) * k * (0.6 + 0.4 * k); y = drop + wob; }
       if (x > 146 || y < 4) continue;
       const f = Math.sin(t * (8 + (i % 5) * 2.3) + i), wd = Math.abs(f) > 0.7 ? (i % 3 ? 3 : 2) : Math.abs(f) > 0.3 ? 2 : 1, [m, tn] = PO_LUNG[i % 5];
-      const px0 = Math.round(x) - (wd >> 1), py0 = Math.round(y); D.rect(px0, py0, wd, 2, m, f > 0 ? tn : tn - 2.5, { e: 255 }); D.hl(px0, py0 + 2, wd, 'ink', 1, { e: 255 }); }   // a dark underside: invisible on the night sky, it keeps the paper readable over snow and the moon
-    // a gleam slides across the gilded roofs; at the height of the gust the floodlights surge and every gilded roof blazes
+      const px0 = Math.round(x) - (wd >> 1), py0 = Math.round(y); D.rect(px0, py0, wd, 2, m, f > 0 ? tn : tn - 2.5, { e: 255 }); D.hl(px0, py0 + 2, wd, 'ink', 1, { e: 255 }); }   // a dark underside keeps the paper readable over the bright sky and the snow
+    // a gleam slides across the gilded roofs; at the height of the gust the sun flares over the ridge and every gilded roof blazes
     D.lay('back'); const gx = 52 + ((t * 11) % 70); PO_ROOFS.forEach(([cx, by, w, h]) => { if (Math.abs(gx - cx) > w / 2) return; for (let y = by - h + 1; y < by; y++) D.px(Math.round(gx - (y - by) * 0.4), y, 'gold', 9.5, { e: 255 }); });
     if (gq > 0.06 && gq < 0.3 && !st.g) { st.g = 1; rs.flash(3, 0.6); } if (gq < 0.03) st.g = 0;   // the wind fans the burner
-    if (gq >= 0.15 && gq < 0.3 && !st.pk) { st.pk = 1; st.pkT = t; rs.flash(1, 0.5); rs.burst('glint', 76, 20, 4, { sp: 10, life: 0.6, w: 30, h: 8 }); } if (gq < 0.03) st.pk = 0;
+    if (gq >= 0.15 && gq < 0.3 && !st.pk) { st.pk = 1; st.pkT = t; rs.flash(0, 0.5); rs.flash(1, 1.4); rs.burst('glint', 76, 20, 5, { sp: 10, life: 0.7, w: 30, h: 8 }); rs.burst('glint', PO_SUN[0], PO_SUN[1] - 3, 3, { sp: 18, life: 0.5 }); } if (gq < 0.03) st.pk = 0;
     const pa = st.pkT != null ? t - st.pkT : 9;
-    if (pa >= 0 && pa < 0.32) { const tn = pa < 0.2 ? 10 : 8.6; PO_ROOFS.forEach(([cx, by, w, h]) => goldRoofLit(D, cx, by, w, h, tn)); PO_BANNERS.forEach(([x, y]) => { D.rect(x - 1, y - 4, 3, 4, 'gold', tn, { e: 255 }); D.px(x, y - 5, 'gold', 11, { e: 255 }); }); }
+    if (pa >= 0 && pa < 0.6) { const tn = pa < 0.2 ? 10 : pa < 0.4 ? 9.2 : 8.4; PO_ROOFS.forEach(([cx, by, w, h]) => goldRoofLit(D, cx, by, w, h, tn)); PO_BANNERS.forEach(([x, y]) => { D.rect(x - 1, y - 4, 3, 4, 'gold', tn, { e: 255 }); D.px(x, y - 5, 'gold', 11, { e: 255 }); }); }
+  },
+  // the sun's rays: hard-edged wedges fanning up from behind the ridge (open sky only), breathing slowly; when the sun
+  // flares at the height of the gust they blaze and a star flare crosses the sun
+  post(out, t, s, o, I) {
+    if (!PO.sky || I[0] < 0.2) return;   // dark until the sun is up (a room being built)
+    const [SX, SY] = PO_SUN, cy = SY - 2, warm = [255, 190, 120], core = [255, 240, 200], pa = s.st.pkT != null ? t - s.st.pkT : 9, fl = pa >= 0 && pa < 1.2 ? (pa < 0.25 ? 1 : 1 - (pa - 0.25) / 0.95) : 0;
+    const br = PO_RAYS.map((a, i) => Math.round((0.6 + 0.4 * Math.sin(t * 0.55 + i * 1.9)) * (1 + fl * 1.3) * 4) / 4);
+    for (let y = 4; y < cy; y++) for (let x = 4; x < W - 4; x++) { const p = y * W + x; if (!PO.sky[p]) continue; const dx = x + 0.5 - SX, dy = y + 0.5 - cy, d = Math.hypot(dx, dy); if (d < 6) continue; const an = Math.atan2(dy, dx);
+      for (let i = 0; i < PO_RAYS.length; i++) { const da = Math.abs(an - PO_RAYS[i]); if (da > 0.075) continue; const a = (da < 0.03 ? 0.15 : 0.07) * (d < 36 ? 1 : d < 64 ? 0.6 : 0.3) * br[i]; if (a > 0.02) X.addPx(out, p, warm, a); break; } }
+    if (fl > 0.3) { const L2 = Math.round(fl * 12); for (let i = -L2; i <= L2; i++) { const q = 1 - Math.abs(i) / (L2 + 1), aa = Math.round(q * fl * 4) / 5; [[SX + i, cy], [SX, cy + i]].forEach(([x, y]) => { if (x < 4 || x > W - 5 || y < 4 || y > H - 5) return; const pp = y * W + x; if (!PO.sky[pp] && Math.abs(i) > 3) return; if (Math.abs(i) <= 1) X.blendPx(out, pp, core, 0.9); else X.addPx(out, pp, warm, aa); }); } }
   },
 });
 
 // ───────── 圣米歇尔山 michel (epic · water · defense) ─────────
-// the tidal island under a full moon: granite ramparts and round towers at the waterline, a village of slate roofs and lit
-// windows climbing the rock, the abbey and its spire on top with the gilded archangel; the lit windows shiver in the sea,
-// the moon lays a path of glitter, a cloud drifts over the moon; on the pier a guard with a halberd walks under a lamp,
-// a rowboat bobs; every ~10 s the abbey bell tolls: the archangel flares and a golden ward sweeps out over the island.
-const MI_WL = 77;   // the island's waterline
-const MI_WIN = [[62, 60], [70, 58], [83, 55], [93, 60], [112, 59], [118, 64], [57, 66]];   // lit village windows
-const miRock = [[39, MI_WL], [47, 70], [55, 62], [63, 53], [71, 44], [79, 36], [95, 36], [103, 44], [111, 53], [120, 62], [128, 70], [135, MI_WL]];
-function miSea(D, t, y0, y1, mx, skip) {
-  for (let y = y0; y < y1; y++) { const k = (y - y0) / Math.max(1, y1 - y0);
-    for (let x = 4; x < W - 4; x++) { const near = Math.abs(x - mx) < 5 + k * 16, w = Math.sin(x * 0.45 - t * 1.6 + y * 1.3) + Math.sin(x * 0.17 + t * 0.9 - y * 0.7);
-      if (skip(x, y) && !near) continue; if (w > (near ? 0.95 : 1.62 - k * 0.12)) D.px(x, y, 'water', (near ? 9.5 - (w < 1.3 ? 2 : 0) : 5 + k * 1.6), { e: 255 }); } }
+// the tidal island at dusk, at low tide: the sun has just gone down behind the far hills on the left and the bay of wet sand
+// mirrors the afterglow a few steps darker between long ribbed sandbanks; the ramparts and round towers stand on the sand,
+// the village of slate roofs and lit windows climbs the rock, the abbey and its spire with the gilded archangel on top, the
+// west side rimmed rose and gold. A stone causeway runs out to the gate with a lantern and a guard with a halberd walking
+// it; a fishing boat lies heeled over on the sand, oystercatchers peck along the banks, a tidal channel winds away, salt
+// grass frames the corners. Every 10 s the abbey bell tolls and the tide comes in "at the speed of a galloping horse" (the
+// Mont's own defence): a foaming front races across the flats from the open bay, the sand turns to one mirror with the
+// whole Mont in it, the birds lift off and the boat floats upright and bobs; then the water drains back toward the bay
+// and what is left soaks away pool by pool.
+const MI_WL = 77, MI_HZ = 63, MI_SX = 24;   // the island's foot on the sand; the far bay's horizon; where the sun went down
+const MI_WIN = [[62, 60], [70, 58], [83, 55], [93, 60], [112, 59], [118, 64], [57, 66]];
+const miRock = [[42, MI_WL], [46, 69], [55, 62], [63, 53], [71, 44], [79, 36], [95, 36], [103, 44], [111, 53], [120, 62], [128, 70], [135, MI_WL]];
+const miSky = (x, y) => { const v = clamp(y, 0, MI_HZ) / MI_HZ, g = (x - MI_SX) / 50; return 1.5 + 6 * Math.pow(v, 1.6) + 3.3 * Math.exp(-g * g) * Math.pow(v, 2.4); };
+const miRow = (y) => MI_HZ - 2 - (y - MI_HZ) * 0.7;          // the sky row that wet sand at row y mirrors
+const miRoad = (x) => 88 - (x - 4) * 0.155;              // the causeway's top at x
+const MI_BIRD = [[58, 92], [65, 89], [73, 93], [81, 90], [90, 94], [127, 86], [135, 90]];
+const MI_GRASS = [[5, 99, 7], [9, 101, 9], [13, 100, 6], [130, 99, 7], [134, 101, 10], [138, 98, 8], [142, 100, 9], [145, 97, 6]];
+const MIT = {};   // the flats' mirror image (painted once): material and tone of every pixel of wet sand, sky or Mont in it
+// the tide (10 s): the bell tolls at 0, the front gallops in 0.03–0.2, holds, drains back 0.28–0.6 leaving pools, dry after
+const MI_S0 = 176, MI_S1 = 10;
+function miTide(q) {
+  if (q < 0.03) return { s: MI_S0, thr: 2 };
+  if (q < 0.2) { const k = (q - 0.03) / 0.17; return { s: MI_S0 - (MI_S0 - MI_S1) * (1 - Math.pow(1 - k, 1.7)), thr: 2, rush: 1 }; }
+  if (q < 0.28) return { s: MI_S1, thr: 2 };
+  if (q < 0.6) { const k = (q - 0.28) / 0.32; return { s: MI_S1 + (MI_S0 - MI_S1) * Math.pow(k, 1.25), thr: 0.56 + k * 0.5, ebb: 1 }; }
+  return { s: MI_S0, thr: 2 };
 }
+const miFront = (s, y, t) => s + (y - MI_HZ - 3) * 1.1 + Math.sin(y * 0.9 + t * 4) * 2.2 + n1(y * 0.31 + t * 0.7) * 1.6;
 X.def('michel', {
   amb: [0.3, 0.3],
   paint(S, sc) {
-    X.sky(S, sc, { horizon: 60, far: 'none', floor: 'water', moon: [124, 19, 6] });                                    // 0 moon
+    X.sky(S, sc, { horizon: MI_HZ, dusk: 1, far: 'none', floor: 'sand' });
+    sc.light({ x: 18, y: 60, z: 46, r: 230, i: 0.6, c: '#ff9a68', tint: 0.4 });                                        // 0 afterglow from the west
     sc.light({ x: 96, y: 44, z: 20, r: 40, i: 0.45, c: '#ffc070', fl: 'candle', ph: 1, tint: 0.14 });                 // 1 abbey windows
     sc.light({ x: 84, y: 62, z: 16, r: 42, i: 0.45, c: '#ffb060', fl: 'candle', ph: 4, tint: 0.18 });                 // 2 village windows
-    sc.light({ x: 50, y: 60, z: 14, r: 46, i: 0.95, c: '#ffb050', fl: 'fire', ph: 2, tint: 0.5 });                     // 3 pier lamp
+    sc.light({ x: 50, y: 56, z: 14, r: 44, i: 0.95, c: '#ffb050', fl: 'fire', ph: 2, tint: 0.5 });                     // 3 causeway lantern
     sc.light({ x: 87, y: 10, z: 12, r: 64, i: 0.25, c: '#ffd870', fl: 'pulse', amp: 0.2, sp: 1.2, tint: 0.5 });        // 4 the archangel (flares when the bell tolls)
-    sc.light({ x: 88, y: 76, z: 60, r: 96, i: 0.42, c: '#ffc27a', tint: 0.22 });                                        // 5 floodlight on the abbey from below
-    const r = S.r;
-    // the night sea, darker toward us; the mainland's low coast on the left horizon with a few far lights
-    S.lay('wall'); S.vgrad(0, 64, W, FY - 64, 'water', 2.6, 1.8, { e: 255 }); S.hl(0, 64, W, 'water', 3.4, { e: 255 });
-    S.vgrad(0, FY, W, H - FY, 'water', 2.6, 1.6, { n: [0, -0.9] });
-    for (let x = 0; x < 44; x++) { const top = Math.round(61 + Math.abs(Math.sin(x * 0.12)) * 1.5 + x * 0.04); for (let y = top; y < 65; y++) S.px(x, y, 'night', 1.4 + (y === top ? 0.8 : 0), { e: 255 }); }
-    [[6, 62], [11, 63], [19, 62], [30, 63], [36, 64]].forEach(([x, y]) => S.px(x, y, 'lamp', 7, { e: 255 }));
-    // the island's reflection darkens the sea under it
-    S.poly([[42, MI_WL], [132, MI_WL], [122, 84], [104, 90], [70, 90], [52, 84]], 'water', 1.4, { e: 255 });
-    // ── the rock: warm granite, moonlit on the right, scrub on the shaded north slope
+    sc.light({ x: 100, y: 90, z: 24, r: 80, i: 0.3, c: '#ff9a70', tint: 0.3, bake: false });                           // 5 the afterglow thrown back off the flooded flats
+    const r = S.r, L = S.L;
+    // the afterglow sky: indigo overhead, rose, then orange and gold low in the west; bands curve round the set sun
+    S.lay('wall');
+    for (let y = 0; y < MI_HZ; y++) for (let x = 0; x < W; x++) S.px(x, y, 'dusk', miSky(x, y), { e: 255 });
+    [[104, 7], [121, 12], [134, 5], [66, 9], [142, 19], [112, 22], [58, 4], [128, 27]].forEach(([x, y], i) => S.px(x, y, 'linen', i < 3 ? 8 : 6.5, { e: 255 }));
+    // the far shore: low hills against the glow on the left with a few lights, the islet of Tombelaine before them, a flat coast right
+    for (let x = 0; x < 64; x++) { const top = Math.round(58.6 + 2.2 * Math.sin(x * 0.085 + 0.9) + Math.sin(x * 0.29) * 0.7 + x * 0.05); for (let y = top; y < MI_HZ + 1; y++) S.px(x, y, 'dusk', y === top ? 3.4 : 2.3, { e: 255 }); }
+    S.poly([[9, MI_HZ + 1], [13, 56], [16, 54], [20, 55], [24, MI_HZ + 1]], 'dusk', 1.6, { e: 255 }); S.px(15, 54, 'dusk', 3, { e: 255 }); S.px(16, 53, 'dusk', 2.6, { e: 255 });
+    for (let x = 100; x < W; x++) { const top = Math.round(61.4 - Math.abs(Math.sin(x * 0.07)) * 0.9); for (let y = top; y < MI_HZ + 1; y++) S.px(x, y, 'dusk', y === top ? 3.2 : 2.4, { e: 255 }); }
+    [[31, 60], [38, 59], [46, 61], [53, 61], [109, 61], [121, 62], [138, 61]].forEach(([x, y]) => S.px(x, y, 'lamp', 7.5, { e: 255 }));
+    // ── the bay at low tide: open water far out, then the flats to our feet — a sheet of wet sand that mirrors the sky a
+    // couple of steps darker, broken by long low sandbanks (ribbed, warm, lit only by the lights) with a bright wet lip
+    MIT.pn = new Float32Array(W * H); MIT.bank = new Uint8Array(W * H);
+    const bankAt = (x, y) => vnoise(x * 0.034, y * 0.2, 13) * 0.68 + vnoise(x * 0.11, y * 0.45, 14) * 0.32 > 0.5 - (y - MI_HZ) * 0.004;
+    for (let y = MI_HZ + 1; y < H; y++) { const k = (y - MI_HZ) / (H - MI_HZ);
+      for (let x = 0; x < W; x++) { const p = y * W + x; MIT.pn[p] = vnoise(x * 0.09, y * 0.35, 21) * 0.7 + vnoise(x * 0.3, y * 0.7, 22) * 0.3;
+        if (y < MI_HZ + 3 || !bankAt(x, y)) { const gl = vnoise(x * 0.07, y * 1.3, 17) > 0.66; S.px(x, y, 'dusk', miSky(x, miRow(y)) - (y < MI_HZ + 3 ? 0.2 : gl ? -0.6 : 0.9), { e: 255 }); continue; }
+        MIT.bank[p] = 1; const lip = !bankAt(x, y - 1), rib = !lip && y > 78 && ((y + Math.round(Math.sin(x * 0.3 + y * 0.7) * 1.3)) % 3 === 0);
+        if (lip) S.px(x, y, 'dusk', miSky(x, miRow(y)) + 0.6, { e: 255 });
+        else S.px(x, y, 'sand', 2.5 + k * 1.5 + (rib ? 1.1 : 0), { n: [0, rib ? -0.95 : -0.7] }); } }
+    // a tidal channel winding away from the Mont's foot, and a thin second one out to the open bay on the left
+    const chan = (y0, y1, cxf, hwf) => { for (let y = y0; y < y1; y++) { const cx = cxf(y), hw = hwf(y);
+      for (let x = Math.floor(cx - hw - 1); x <= Math.ceil(cx + hw + 1); x++) { const u = Math.abs(x + 0.5 - cx) / hw; if (u > 1.4) continue; MIT.bank[y * W + x] = 0; if (u > 1) S.px(x, y, 'sand', 2, { n: [0, -0.8] }); else S.px(x, y, 'dusk', miSky(x, miRow(y)) + (u < 0.4 ? 0.3 : -0.4), { e: 255 }); } } };
+    chan(MI_WL + 1, H - 3, (y) => 110 + (y - MI_WL) * 1.15 + Math.sin(y * 0.24) * 4, (y) => 0.7 + (y - MI_WL) * 0.13);
+    chan(MI_HZ + 2, MI_WL + 4, (y) => 32 + (y - MI_HZ) * 0.9 + Math.sin(y * 0.5) * 1.5, (y) => 0.5 + (y - MI_HZ) * 0.05);
+    MI_BIRD.forEach(([x, y]) => { for (let yy = y - 1; yy <= y + 1; yy++) for (let xx = x - 5; xx <= x + 5; xx++) { if (Math.abs(xx - x) > 5 - (yy - y + 1) * 1.5 + 1.5) continue; MIT.bank[yy * W + xx] = 1; S.px(xx, yy, 'sand', yy < y ? 4.6 : 3.6, { n: [0, -0.8] }); } });
+    // ── the rock: warm granite, its west side rimmed by the afterglow, scrub on the lower slopes
     S.lay('back');
-    S.beg(); S.poly(miRock, 'mstone', 4.4); S.end();
+    S.beg(); S.poly(miRock, 'mstone', 4.2); S.end();
     S.noise(40, 34, 96, 44, 1, 3.5, 5, { only: 'mstone' });
-    for (let y = 36; y < MI_WL; y++) for (let x = 40; x < 136; x++) { if (S.at(x, y) !== X.MI.mstone) continue; if (!S.at(x + 2, y) && x > 88) { S.px(x, y, 'mstone', 7.2, { n: [0.7, -0.3] }); S.px(x - 1, y, 'mstone', 6); } }
+    for (let y = 36; y < MI_WL; y++) for (let x = 40; x < 90; x++) { if (S.at(x, y) !== X.MI.mstone || !S.at(x - 1, y)) continue; if (!S.at(x - 2, y) || !S.at(x - 3, y)) S.px(x, y, 'mstone', 7.4, { n: [-0.7, -0.3] }); }
     for (let i = 0; i < 26; i++) { const x = 44 + r() * 26, y = 58 + r() * 16; if (S.at(x, y)) S.px(x, y, 'moss', 4 + r() * 3); }
     // ── abbey on the summit: the Merveille's buttressed wall, the lodgings, the church, the tower and spire
     S.beg(); S.rect(94, 34, 20, 24, 'stone', 6); for (let x = 95; x < 114; x += 4) { S.vl(x, 34, 24, 'stone', 7.4, { n: [-0.5, 0] }); S.vl(x + 1, 34, 24, 'stone', 4.4, { n: [0.5, 0] }); }
     S.poly([[93, 34], [115, 34], [112, 30], [96, 30]], 'iron', 3.5); S.hl(96, 30, 16, 'iron', 5.5, { n: [0, -0.8] });
     for (let x = 97; x < 113; x += 4) { S.vl(x, 38, 4, 'lamp', 7.5, { e: 2 }); S.vl(x, 48, 3, 'lamp', 7, { e: 2 }); } S.end();
     S.beg(); S.rect(85, 36, 10, 21, 'stone', 5.2); S.hl(85, 36, 10, 'stone', 6.6, { n: [0, -0.8] }); S.rect(88, 41, 2, 3, 'lamp', 7, { e: 2 }); S.rect(88, 49, 2, 3, 'ink', 1); S.end();
-    S.beg(); S.rect(68, 38, 18, 16, 'stone', 5.6); S.poly([[67, 38], [87, 38], [84, 34], [70, 34]], 'iron', 3.4); for (let x = 71; x < 85; x += 4) S.rect(x, 43, 2, 3, 'lamp', 7, { e: 2 }); S.hl(68, 48, 18, 'stone', 4); S.end();
-    S.beg(); S.rect(76, 26, 22, 10, 'stone', 6.6); S.poly([[75, 26], [99, 26], [96, 21], [78, 21]], 'iron', 4); S.hl(78, 21, 18, 'iron', 6, { n: [0, -0.8] }); for (let x = 79; x < 96; x += 4) S.vl(x, 29, 4, 'lamp', 7, { e: 2 }); S.end();
-    S.beg(); S.rect(83, 16, 9, 11, 'stone', 7); S.vl(91, 16, 11, 'stone', 5); S.vl(83, 16, 11, 'stone', 8); [85, 87, 89].forEach(x => S.rect(x, 19, 1, 4, 'ink', 1)); S.hl(82, 16, 11, 'stone', 8.5, { n: [0, -0.8] });
+    S.beg(); S.rect(68, 38, 18, 16, 'stone', 5.6); S.vl(68, 38, 16, 'stone', 7.2, { n: [-0.6, 0] }); S.poly([[67, 38], [87, 38], [84, 34], [70, 34]], 'iron', 3.4); for (let x = 71; x < 85; x += 4) S.rect(x, 43, 2, 3, 'lamp', 7, { e: 2 }); S.hl(68, 48, 18, 'stone', 4); S.end();
+    S.beg(); S.rect(76, 26, 22, 10, 'stone', 6.6); S.vl(76, 26, 10, 'stone', 8, { n: [-0.6, 0] }); S.poly([[75, 26], [99, 26], [96, 21], [78, 21]], 'iron', 4); S.hl(78, 21, 18, 'iron', 6, { n: [0, -0.8] }); for (let x = 79; x < 96; x += 4) S.vl(x, 29, 4, 'lamp', 7, { e: 2 }); S.end();
+    S.beg(); S.rect(83, 16, 9, 11, 'stone', 7); S.vl(91, 16, 11, 'stone', 5); S.vl(83, 16, 11, 'stone', 8.4); [85, 87, 89].forEach(x => S.rect(x, 19, 1, 4, 'ink', 1)); S.hl(82, 16, 11, 'stone', 8.5, { n: [0, -0.8] });
     [82, 92].forEach(x => { S.vl(x, 12, 4, 'stone', 7.5); S.px(x, 11, 'stone', 9); }); S.end();
-    S.beg(); for (let y = 8; y < 16; y++) { const hw = (y - 8) * 0.55; for (let x = Math.round(87.5 - hw); x <= Math.round(87.5 + hw); x++) S.px(x, y, 'iron', x > 87.5 ? 6.5 : 4, { n: [x > 87.5 ? 0.6 : -0.3, -0.3] }); if (y % 3 === 0) { S.px(Math.round(87.5 - hw) - 1, y, 'iron', 5); S.px(Math.round(87.5 + hw) + 1, y, 'iron', 7); } } S.end();
+    S.beg(); for (let y = 8; y < 16; y++) { const hw = (y - 8) * 0.55; for (let x = Math.round(87.5 - hw); x <= Math.round(87.5 + hw); x++) S.px(x, y, 'iron', x < 87.5 ? 6.5 : 4, { n: [x < 87.5 ? -0.6 : 0.3, -0.3] }); if (y % 3 === 0) { S.px(Math.round(87.5 - hw) - 1, y, 'iron', 7); S.px(Math.round(87.5 + hw) + 1, y, 'iron', 5); } } S.end();
     // ── the village: slate-roofed houses stepping up behind the walls, windows lit
     [[58, 66, 7], [66, 64, 6], [74, 63, 8], [84, 64, 7], [93, 65, 6], [101, 64, 8], [110, 66, 7], [118, 67, 6], [62, 57, 6], [71, 55, 7], [110, 56, 6], [117, 60, 6]].forEach(([x, by, w], i) => {
-      const hh = 5 + (i % 3); S.beg(); S.rect(x, by - hh, w, hh, i % 2 ? 'stone' : 'bone', i % 2 ? 6 : 6.4); S.poly([[x - 1, by - hh], [x + w + 1, by - hh], [x + w / 2 + 0.5, by - hh - 4]], 'iron', 3.4 + (i % 2) * 0.6); S.hl(x, by - hh, w, 'iron', 2.4);
+      const hh = 5 + (i % 3); S.beg(); S.rect(x, by - hh, w, hh, i % 2 ? 'stone' : 'bone', i % 2 ? 6 : 6.4); S.vl(x, by - hh, hh, i % 2 ? 'stone' : 'bone', 7.6, { n: [-0.6, 0] }); S.poly([[x - 1, by - hh], [x + w + 1, by - hh], [x + w / 2 + 0.5, by - hh - 4]], 'iron', 3.4 + (i % 2) * 0.6); S.hl(x, by - hh, w, 'iron', 2.4);
       S.px(Math.round(x + w / 2), by - hh - 4, 'iron', 6); S.end(); });
     MI_WIN.forEach(([x, y]) => { S.rect(x, y, 2, 2, 'lamp', 8, { e: 3 }); S.px(x, y, 'lamp', 9.5, { e: 3 }); });
-    // ── ramparts: a crenellated granite wall along the waterline with round towers and the gate
+    // ── ramparts: a crenellated granite wall standing on the sand, round towers, the gate; a dark tide line along its foot
     S.beg(); TX.ashlar(S, 43, 67, 90, 10, 'stone', 5.4, { bh: 4, bw: 7, crack: 0.05 }); for (let x = 43; x < 133; x += 4) S.rect(x, 65, 2, 2, 'stone', 6.4); S.hl(43, 67, 90, 'stone', 7, { n: [0, -0.8] }); S.end();
-    [[46, 62, 7, 15], [69, 60, 9, 17], [100, 61, 7, 16], [124, 63, 7, 14]].forEach(([x, y, w, h], i) => { S.beg(); S.cyl(x, y, w, h, 'stone', 5.8, { rim: 2.4 }); for (let k = 0; k < w; k += 2) S.px(x + k, y - 1, 'stone', 7); S.hl(x, y, w, 'stone', 7.6, { n: [0, -0.8] }); S.rect(x + 2, y + 4, 1, 3, 'ink', 1); if (i === 1) { S.rect(x + 2, y + 9, 5, 8, 'ink', 1); S.px(x + 3, y + 8, 'ink', 1); S.px(x + 5, y + 8, 'ink', 1); S.rect(x + 3, y + 12, 3, 5, 'lamp', 5, { e: 3 }); } S.end(); });
-    // weed and wet stone at the waterline
-    for (let x = 40; x < 135; x++) if (S.at(x, MI_WL - 1)) { S.px(x, MI_WL - 1, 'moss', 3 + (x % 3)); if (x % 4 === 0) S.px(x, MI_WL - 2, 'moss', 2.5); }
-    // ── the pier (mid): planks on posts, a lamp post; the mooring rope to the boat
+    [[46, 62, 7, 15], [69, 60, 9, 17], [100, 61, 7, 16], [124, 63, 7, 14]].forEach(([x, y, w, h], i) => { S.beg(); S.cyl(x, y, w, h, 'stone', 5.8, { rim: 2.4 }); S.vl(x + 1, y, h, 'stone', 7.4, { n: [-0.7, 0] }); for (let k = 0; k < w; k += 2) S.px(x + k, y - 1, 'stone', 7); S.hl(x, y, w, 'stone', 7.6, { n: [0, -0.8] }); S.rect(x + 2, y + 4, 1, 3, 'ink', 1); if (i === 1) { S.rect(x + 2, y + 9, 5, 8, 'ink', 1); S.px(x + 3, y + 8, 'ink', 1); S.px(x + 5, y + 8, 'ink', 1); S.rect(x + 3, y + 12, 3, 5, 'lamp', 5, { e: 3 }); } S.end(); });
+    for (let x = 40; x < 136; x++) for (let y = MI_WL - 4; y < MI_WL; y++) { if (!S.at(x, y) || S.at(x, y + 1)) continue; S.px(x, y, 'moss', 2.5); S.px(x, y - 1, 'moss', 3.5 + (x % 3) * 0.5); if (x % 4 === 0) S.px(x, y - 2, 'moss', 3); }
+    // ── the Mont mirrored in the wet sand: where there is a film of water under it, that pixel shows the Mont upside down
+    // (a dark plum silhouette, its lit windows as warm streaks); MIT.m / MIT.t keep the whole mirror for when the tide floods in
+    S.lay('wall');
+    MIT.m = new Uint8Array(W * H); MIT.t = new Float32Array(W * H); const DU = X.MI.dusk, LA = X.MI.lamp;
+    for (let y = MI_HZ + 1; y < H - 3; y++) { const sy = y >= MI_WL ? Math.round(MI_WL - 1 - (y - MI_WL) * 1.6) : -1;
+      for (let x = 4; x < W - 4; x++) { const p = y * W + x; let m = DU, tn = miSky(x, miRow(y)) - 0.4;
+        if (sy >= 4) { const sp = sy * W + x; if (L.back.m[sp]) { if (L.back.e[sp]) { m = LA; tn = 7; } else tn = 2.2 + clamp(L.back.t[sp] - 4, 0, 4) * 0.35; } }
+        MIT.m[p] = m; MIT.t[p] = tn;
+        if (sy >= 4 && !MIT.bank[p] && L.back.m[sy * W + x]) S.px(x, y, m, tn - (m === LA ? 1 : 1.2), { e: 255 }); } }
+    // ── the causeway out to the gate: a stone dyke with a lit top, block joints, bollards, a lantern post
     S.lay('mid');
-    S.beg(); TX.planks(S, 4, 86, 52, 4, 'wood', 5, { ph: 2, pw: 10 }); S.hl(4, 86, 52, 'wood', 7, { n: [0, -0.8] }); for (let x = 8; x < 56; x += 12) { S.box(x, 90, 3, 11, 'wood', 3.5); S.hl(x, 97, 3, 'moss', 4); } S.end();
-    S.beg(); S.cyl(49, 60, 3, 26, 'iron', 4, { rim: 1.5 }); S.rect(47, 84, 7, 2, 'iron', 5); S.box(46, 52, 9, 2, 'iron', 6); S.rect(47, 54, 1, 6, 'iron', 5); S.rect(53, 54, 1, 6, 'iron', 4); S.rect(48, 54, 5, 6, 'lamp', 5, { e: 4 }); S.hl(47, 60, 7, 'iron', 5); S.px(50, 51, 'iron', 7); S.end();
-    S.beg(); S.cyl(53, 83, 3, 3, 'iron', 5); S.end();
-    sc.emit({ k: 'mist', x: 90, y: 80, w: 100, h: 6, rate: 0.35, sp: 2, ang: 1.4, spread: 0.3, life: 3.5 });
+    S.beg(); for (let x = 4; x < 70; x++) { const y = Math.round(miRoad(x)); S.px(x, y, 'stone', 7.4, { n: [0, -0.85] }); S.px(x, y + 1, 'stone', 6.2, { n: [0, -0.5] });
+      for (let k = 2; k < 7; k++) { const joint = ((x + (k > 3 ? 5 : 0)) % 9) === 0 || k === 4; S.px(x, y + k, 'stone', (joint ? 3.2 : 4.8) - (k === 6 ? 1 : 0)); } } S.end();
+    for (let x = 10; x < 66; x += 12) { if (Math.abs(x - 49) < 5) continue; const y = Math.round(miRoad(x)); S.beg(); S.box(x, y - 3, 2, 3, 'stone', 6.4); S.end(); }
+    S.beg(); const ly = Math.round(miRoad(50)); S.cyl(49, 60, 3, ly - 60, 'iron', 4, { rim: 1.5 }); S.rect(47, ly - 2, 7, 2, 'iron', 5); S.box(46, 50, 9, 2, 'iron', 6); S.rect(47, 52, 1, 6, 'iron', 5); S.rect(53, 52, 1, 6, 'iron', 4); S.rect(48, 52, 5, 6, 'lamp', 5, { e: 4 }); S.hl(47, 58, 7, 'iron', 5); S.px(50, 49, 'iron', 7); S.end();
+    S.lay('wall'); S.shadow([[4, 94], [70, 84], [72, 86], [4, 97]], 1.4);
+    // an anchor stuck in the sand off the boat's bow, its rope running up to the boat (anim)
+    S.lay('mid'); S.beg(); S.vl(132, 93, 4, 'iron', 5); S.line(130, 97, 134, 97, 'iron', 4); S.px(129, 96, 'iron', 4); S.px(135, 96, 'iron', 4); S.px(131, 92, 'iron', 6); S.end();
+    // salt-marsh grass framing the lower corners (the swaying tips are anim), sea lavender among it
+    S.lay('front');
+    MI_GRASS.forEach(([x, y, h], i) => { S.beg(); for (let k = -2; k <= 2; k++) S.vl(x + k, y - Math.round(h * 0.5 * (1 - Math.abs(k) / 3)), Math.round(h * 0.5 * (1 - Math.abs(k) / 3)) + (H - 3 - y), 'leaf', 3.4 + (k < 0 ? 0.8 : 0) - Math.abs(k) * 0.3); S.end(); if (i % 2) { S.px(x - 1, y - h * 0.5 - 1, 'lav', 7.5); S.px(x + 1, y - h * 0.5, 'lav', 6.5); } });
+    sc.emit({ k: 'glint', x: 96, y: 80, w: 100, h: 16, rate: 0.6, sp: 2, life: 1 });
   },
   anim(D, t, rs) {
-    const st = rs.st, bq = steps(t, 10), toll = bq < 0.18;
-    D.lay('wall'); X.twinkle(D, t, 9, 40, 23);
-    // a cloud drifts over the moon; the moonlight dims while it covers it
-    const cx = 170 - ((t * 3.2) % 240), cy = 18, cov = Math.max(0, 1 - Math.abs(cx - 124) / 16);
-    rs.mul[0] = 1 - cov * 0.55;
-    [[-14, 1, 12, 1.6], [0, 0, 16, 2.6], [5, -2, 9, 2.2], [20, 1, 14, 1.8], [34, 0, 9, 1.4]].forEach(([dx, dy, rx, ry]) => { const x0 = cx + dx, y0 = cy + dy; for (let y = Math.floor(y0 - ry); y <= y0 + ry; y++) for (let x = Math.floor(x0 - rx); x <= x0 + rx; x++) { const u = (x - x0) / rx, v = (y - y0) / ry, d = u * u + v * v; if (d > 1 || x < 4 || x > 145) continue;
-      const dm = Math.hypot(x - 124, y - 19), rim = d > 0.55 && dm < 16; D.px(x, y, rim ? 'lav' : 'night', rim ? 9 - dm * 0.18 : v < -0.3 ? 3.8 : 3.2, { e: 255 }); } });
-    // the sea: rolling glints, a glitter path under the moon, the lit windows shivering on the water
-    miSea(D, t, 66, 101, 124, (x, y) => y >= MI_WL && y < 90 && x > 46 && x < 128);
-    [[58, 5], [63, 4], [73, 5], [95, 4], [103, 6], [113, 4], [119, 5]].forEach(([x, n], i) => { for (let k = 0; k < n; k++) { const yy = MI_WL + 2 + k * 2, wob = Math.round(Math.sin(t * 2.2 + k * 1.3 + i) * 0.8); if (Math.sin(t * 3 + k * 2.1 + i * 1.7) > -0.3) D.hl(x + wob, yy, k < 2 ? 2 : 1, 'lamp', 7.5 - k * 0.6, { e: 255 }); } });
-    for (let k = 0; k < 7; k++) { const yy = 91 + k * 1.5, wob = Math.round(Math.sin(t * 2.6 + k * 1.1) * (0.6 + k * 0.25)); D.hl(49 + wob - (k > 2 ? 1 : 0), Math.round(yy), k > 2 ? 4 : 3, 'lamp', 9 - k * 0.6, { e: 255 }); }   // the pier lamp's long reflection
-    for (let x = 40; x < 136; x++) { const f = Math.sin(x * 0.7 + t * 2.4) + Math.sin(x * 0.23 - t * 1.1); if (f > 0.8) D.px(x, MI_WL, 'water', 10, { e: 255 }); }
-    // the bell tolls: the archangel flares gold, a ward sweeps out over the island, rings spread on the water
+    const st = rs.st, q = steps(t, 10), T = miTide(q), DU = X.MI.dusk;
+    // stars coming out overhead, the evening star low in the west
+    D.lay('wall'); X.twinkle(D, t, 6, 24, 23);
+    const vs = 0.5 + 0.5 * Math.sin(t * 2.3); D.px(38, 21, 'linen', 10, { e: 255 }); if (vs > 0.4) { D.px(37, 21, 'lamp', 8, { e: 255 }); D.px(39, 21, 'lamp', 8, { e: 255 }); } if (vs > 0.8) { D.px(38, 20, 'lamp', 7.5, { e: 255 }); D.px(38, 22, 'lamp', 7.5, { e: 255 }); }
+    // long thin clouds drifting east, lit from below by the set sun
+    [[30, 46, 34, 1.1], [44, 12, 26, 0.7], [18, 118, 22, 0.9]].forEach(([y, x0, len, sp], i) => { const x1 = ((x0 + t * sp) % 200) - 30;
+      for (let k = 0; k < len; k++) { const x = Math.round(x1 + k), e = Math.min(k, len - 1 - k); if (x < 4 || x > 145) continue; const g = Math.exp(-((x - MI_SX) / 60) * ((x - MI_SX) / 60)), lit = 6.2 + g * 2.4 + (y > 35 ? 1 : 0);
+        if (e > 1) D.px(x, y - 1, 'dusk', miSky(x, y) - 1.2, { e: 255 }); D.px(x, y, 'dusk', e > 2 ? lit : lit - 1.2, { e: 255 }); if (e > 4 && (k + i) % 9 < 6) D.px(x + 2, y + 1, 'dusk', lit - 0.8, { e: 255 }); } });
+    // the far bay glitters at the horizon
+    for (let x = 4; x < W - 4; x++) { const w = Math.sin(x * 0.6 - t * 1.8) + Math.sin(x * 0.21 + t * 0.9); if (w > 1.5) D.px(x, MI_HZ + 1 + (x & 1), 'dusk', 10.5, { e: 255 }); }
+    // ── the tide: the front gallops in from the open bay (the near rows lag), the flats flood into one mirror with the whole
+    // Mont in it; then the edge drains back toward the bay and the water left behind soaks away, pool by pool
+    let wet = 0, cov = 0; const bx = 113, by = 98;
+    if (T.s < W + 40 || T.thr < 1.2) {
+      const y0 = MI_HZ + 3, spray = st.sp == null || t - st.sp > 0.09;
+      for (let y = y0; y < H - 3; y++) { const xf = miFront(T.s, y, t), a = Math.max(4, Math.ceil(xf)), rp = y * W;
+        for (let x = 4; x < W - 4; x++) { const p = rp + x, in1 = x >= a, pool = !in1 && T.ebb && MIT.pn[p] > T.thr; if (!in1 && !pool) continue;
+          const w = Math.sin(x * 0.42 - t * 2.6 + y * 1.7) + Math.sin(x * 0.13 + t * 1.2 - y * 0.8); let tn = MIT.t[p] + (w > 1.35 ? 2.2 : 0.4);
+          if (pool && MIT.pn[p] < T.thr + 0.04) tn = MIT.t[p] + 1;   // a bright lip round each shrinking pool
+          D.px(x, y, MIT.m[p], tn, { e: 255 }); wet++; }
+        if (a < W - 4 && !T.ebb) {   // the foaming edge: a dark trough ahead, a white crest, broken foam trailing behind it
+          if (a > 5) { D.px(a - 1, y, DU, 2.2, { e: 255 }); D.px(a - 2, y, DU, 3, { e: 255 }); }
+          const cw = 3 + ((y * 5) % 3); for (let i = 0; i < cw; i++) D.px(a + i, y, i < 2 ? 'linen' : 'ice', i === 0 ? 11 : i < 2 ? 10 : 9.5 - (i - 2) * 0.6, { e: 255 });
+          const fl = (y * 7) % 5; if (fl < 3) D.hl(a + cw + 2 + fl * 3, y, 2 + (y % 3), 'ice', 8.6, { e: 255 }); if (fl === 1) D.hl(a + cw + 11, y, 3, 'ice', 8, { e: 255 });
+          if (T.rush && spray && (y * 13 + Math.floor(t * 20)) % 17 === 0) rs.burst('mist', a + 1, y - 1, 1, { sp: 6, ang: -0.6, spread: 0.8, life: 0.5 }); }
+        else if (a < W - 4 && T.ebb) { D.px(a, y, DU, MIT.t[rp + a] + 1.6, { e: 255 }); } }
+      if (spray) st.sp = t;
+      cov = wet / ((H - 3 - y0) * (W - 8));
+      const bf = miFront(T.s, by, t); wet = bx + 10 >= bf || (T.ebb && MIT.pn[by * W + bx] > T.thr) ? 1 : 0;
+    }
+    rs.mul[5] = 0.15 + cov * 1.6;
+    // the boat lies aground heeled over, its keel sunk in the sand, the mast leaning; when the water reaches it, it lifts,
+    // rights itself and bobs on the flood
+    st.fl = (st.fl || 0) + ((wet ? 1 : 0) - (st.fl || 0)) * Math.min(1, 1.8 * (t - (st.bt == null ? t : st.bt))); st.bt = t;
+    const fl = st.fl, heel = 1 - fl, yb = by + Math.round(heel * 2 - fl * 1.5 + fl * Math.sin(t * 2.2) * 0.7), cut = Math.round(heel * 2.4), lean = heel * 0.42 + fl * Math.sin(t * 1.9) * 0.12;
+    const gw = (x) => yb - 7 - Math.max(0, x - bx - 6) * 0.3;   // the gunwale, the sheer rising to the bow on the right
+    D.lay('mid'); D.beg();
+    D.poly([[bx - 15, yb - 7], [bx + 15, yb - 10], [bx + 12, yb - cut], [bx - 11, yb - cut]], 'denim', 5);
+    const dk = Math.round(heel * 2); for (let x = bx - 15; x <= bx + 15; x++) { const g = Math.round(gw(x)); for (let k = 1; k <= dk; k++) D.px(x, g - k, 'paper', (x & 3) ? 7.2 - k * 0.8 : 5.6, { n: [0, -0.8] }); D.px(x, g, 'wood', 8.4, { n: [0, -0.7] }); if (x > bx - 14 && x < bx + 14 && g + 2 < yb - cut) D.px(x, g + 2, 'linen', 8.5); if (!cut && x > bx - 11 && x < bx + 12) D.px(x, yb - 1, 'crimson', 4); }
+    const mx0 = bx + 1, my0 = Math.round(gw(mx0)) - dk, mx1 = mx0 + Math.sin(lean) * 19, my1 = my0 - Math.cos(lean) * 19;
+    D.line(mx0, my0, mx1, my1, 'wood', 8.6, { n: [-0.6, 0] }); D.line(mx0 + 1, my0, mx1 + 1, my1, 'wood', 5); const bm = [mx0 + Math.sin(lean) * 4, my0 - Math.cos(lean) * 4]; D.line(bm[0], bm[1], bm[0] - 10, bm[1] + 1 - heel * 2, 'wood', 5);
+    D.line(bm[0] - 9, bm[1] - 1 - heel * 2, bm[0] - 1, bm[1] - 2, 'crimson', 7, { w: 2 }); D.line(mx1, my1, bx + 14, gw(bx + 14), 'hair', 4);
+    D.end();
+    D.line(bx + 14, gw(bx + 14) + 1, 132, 92, 'hair', 4);
+    if (heel > 0.5) for (let x = bx - 12; x <= bx + 13; x++) D.px(x, yb - cut - ((x * 7) % 5 === 0 ? 1 : 0), 'sand', (x * 3) % 4 ? 4.4 : 5.2, { n: [0, -0.8] });   // sand heaped along the buried keel
+    if (fl > 0.5) for (let x = bx - 12; x <= bx + 12; x++) { if ((x + Math.floor(t * 5)) % 5 < 2) D.px(x, yb + 1, 'linen', 8.5, { e: 255 }); }
+    // oystercatchers peck along the flats; as the front runs at them they lift off and fly west, and glide back in after the ebb
+    if (q < 0.03) st.fly = [];
+    MI_BIRD.forEach(([x, y], i) => { let px = x, py = y, fly = 0, fa = 0;
+      if (st.fly && st.fly[i] == null && T.rush && miFront(T.s, y, t) < x + 14) st.fly[i] = t;
+      const f0 = st.fly && st.fly[i];
+      if (f0 != null && q < 0.62) { const k = t - f0; px = x - k * (26 + i * 3); py = y - k * (16 + (i % 3) * 5) - k * k * 3; fly = 1; }
+      else if (q >= 0.62 && q < 0.8) { const k = (q - 0.62) / 0.18, e = 1 - (1 - k) * (1 - k); px = x + (1 - e) * (60 + i * 4); py = y - (1 - e) * (34 + (i % 3) * 4); fly = k < 0.92 ? 1 : 0; }
+      if (px < 4 || px > 145 || py < 4) return; px = Math.round(px); py = Math.round(py);
+      if (fly) { const up = Math.sin(t * 18 + i * 1.9) > 0; D.px(px, py, 'iron', 2, { e: 255 }); D.px(px + 1, py, 'fire', 7, { e: 255 }); D.px(px - 1, py - (up ? 1 : 0), 'iron', 2.5, { e: 255 }); D.px(px + 1, py - (up ? 1 : 0), 'linen', 7, { e: 255 }); if (up) { D.px(px - 2, py - 2, 'iron', 3, { e: 255 }); D.px(px + 2, py - 2, 'linen', 6, { e: 255 }); } return; }
+      const peck = Math.sin(t * 3.1 + i * 2.3) > 0.6 ? 1 : 0, d = i % 2 ? 1 : -1;   // black back and head, white belly, orange bill and legs
+      D.beg(); D.hl(Math.min(px - 2 * d, px + d), py - 3, 4, 'iron', 2.2); D.px(px - 2 * d, py - 2, 'iron', 2); D.hl(Math.min(px - d, px + d), py - 2, 3, 'linen', 9); D.hl(Math.min(px - d, px + d), py - 1, 2, 'linen', 7.5);
+      D.px(px + 2 * d, py - 4 + peck, 'iron', 2.5); D.px(px + d, py - 4 + peck, 'iron', 2); D.end({ none: 1 }); D.px(px + 3 * d, py - 4 + peck * 2, 'fire', 8); if (!peck) D.px(px + 4 * d, py - 4, 'fire', 7); D.px(px, py, 'fire', 6); D.px(px - d, py, 'fire', 5); });
+    // the bell tolls from the tower: the archangel flares gold, rings of sound spread over the sky
     D.lay('back');
-    const sg = toll ? 1 - bq / 0.18 : 0; D.px(87, 7, 'gold', 8.5 + sg * 2.5, { e: 255 }); D.px(86, 6, 'gold', 8 + sg * 2, { e: 255 }); D.px(88, 6, 'gold', 8 + sg * 2, { e: 255 }); D.px(87, 5, 'gold', 7.5 + sg * 3, { e: 255 }); D.px(87, 6, 'gold', 9.5 + sg, { e: 255 });
-    if (bq < 0.02 && !st.b) { st.b = 1; rs.flash(4, 3.2); rs.flash(1, 0.4); rs.burst('glint', 87, 7, 5, { sp: 26, life: 0.7 }); } if (bq > 0.5) st.b = 0;
-    if (toll) { const k = bq / 0.18, Rw = 8 + k * 70, a = 1 - k;
-      for (let i = 0; i < 180; i++) { const th = Math.PI + i / 179 * Math.PI, x = 87 + Math.cos(th) * Rw, y = MI_WL + Math.sin(th) * Rw * 0.78; if (y < 5 || x < 4 || x > 145 || (a < 0.45 && i % 2)) continue; D.px(x, y, 'gold', 6 + a * 4, { e: 255 }); if (a > 0.6) D.px(x, y + 1, 'gold', 5, { e: 255 }); }
-      D.lay('wall'); const rw = 6 + k * 40; for (let i = 0; i < 120; i++) { const th = i / 120 * Math.PI * 2, x = 87 + Math.cos(th) * rw, y = MI_WL + 4 + Math.sin(th) * rw * 0.14; if (y < MI_WL + 1 || (a < 0.5 && i % 2)) continue; D.px(x, y, 'water', 8 + a * 2, { e: 255 }); } }
-    // a bell buoy rocking far out, its light blinking red
-    const bx = 22, byy = 70 + Math.round(Math.sin(t * 1.7) * 0.6), btl = Math.round(Math.sin(t * 1.7 + 1) * 1);
-    D.beg(); D.rect(bx - 1, byy, 3, 2, 'red', 5); D.line(bx, byy, bx + btl, byy - 4, 'iron', 5); D.end({ none: 1 }); if (steps(t, 2.4) < 0.3) { D.px(bx + btl, byy - 5, 'red', 10, { e: 255 }); D.px(bx + btl, byy + 3, 'red', 6, { e: 255 }); }
-    // lamp flame
-    D.lay('mid'); flame(D, 50, 59, 4, t, 0.4);
-    // the guard walks the pier with his halberd; at the end he stops and looks out to sea
-    const w = X.stroll(t, 12, 40, 5, 0.2, 3), look = { skin: ['skin', 6], hair: ['hair', 3], top: ['tile', 5], bot: ['iron', 4], boot: ['hair', 2], cap: ['iron', 8] };
-    const pose = Object.assign(w.pose, { aF: 0.9, eF: -1.2 }), hd = handAt(w.x, 86, pose, w.dir);
-    worker(D, w.x, 86, look, pose, w.dir);
+    const sg = q < 0.14 ? 1 - q / 0.14 : 0; D.px(87, 7, 'gold', 8.5 + sg * 2.5, { e: 255 }); D.px(86, 6, 'gold', 8 + sg * 2, { e: 255 }); D.px(88, 6, 'gold', 8 + sg * 2, { e: 255 }); D.px(87, 5, 'gold', 7.5 + sg * 3, { e: 255 }); D.px(87, 6, 'gold', 9.5 + sg, { e: 255 });
+    if (q < 0.02 && !st.b) { st.b = 1; rs.flash(4, 3.2); rs.flash(1, 0.4); rs.burst('glint', 87, 7, 5, { sp: 26, life: 0.7 }); } if (q > 0.5) st.b = 0;
+    // the lantern on the causeway
+    D.lay('mid'); flame(D, 50, 57, 4, t, 0.4);
+    // the guard walks the causeway with his halberd; at the far end he stops and looks out over the bay
+    const w = X.stroll(t, 12, 38, 5, 0.2, 3), look = { skin: ['skin', 6], hair: ['hair', 3], top: ['tile', 5], bot: ['iron', 4], boot: ['hair', 2], cap: ['iron', 8] }, gy = Math.round(miRoad(w.x));
+    const pose = Object.assign(w.pose, { aF: 0.9, eF: -1.2 }), hd = handAt(w.x, gy, pose, w.dir);
+    worker(D, w.x, gy, look, pose, w.dir);
     D.beg(); D.line(hd[0], hd[1] + 6, hd[0], hd[1] - 16, 'wood', 6); D.poly([[hd[0] - 1, hd[1] - 16], [hd[0] + 1, hd[1] - 16], [hd[0], hd[1] - 21]], 'iron', 9); D.line(hd[0], hd[1] - 15, hd[0] + 3 * w.dir, hd[1] - 13, 'iron', 7); D.end();
-    const sx = w.x + Math.round((pose.lean || 0) * 3 * w.dir); D.px(sx, 86 - 21 + 4, 'linen', 9); D.px(sx, 86 - 21 + 5, 'linen', 9); D.px(sx - 1, 86 - 21 + 5, 'linen', 8); D.px(sx + 1, 86 - 21 + 5, 'linen', 8);   // the cross on his tabard
-    // a rowboat bobbing at the pier, its rope sagging
-    D.lay('front'); const by = 96 + Math.round(Math.sin(t * 1.3) * 0.8), tilt = Math.sin(t * 1.3 + 0.8) * 0.6;
-    D.beg(); D.poly([[66, by - 3 + tilt], [98, by - 3 - tilt], [94, by + 2], [70, by + 2]], 'wood', 6); D.hl(66, Math.round(by - 3 + tilt), 32, 'wood', 8.5); D.hl(70, by + 1, 24, 'wood', 3.5); D.hl(69, by - 1, 27, 'crimson', 5); D.px(65, Math.round(by - 4 + tilt), 'wood', 7);
-    D.line(74, by - 3, 64, by + 3, 'wood', 6); D.line(90, by - 3, 100, by + 2, 'wood', 6); D.end();
-    for (let x = 69; x < 96; x++) if ((x + Math.floor(t * 4)) % 5 < 2) D.px(x, by + 3, 'water', 8, { e: 255 });
-    D.line(54, 84, 60, 90, 'hair', 4); D.line(60, 90, 67, by - 3, 'hair', 4);
+    const sx = w.x + Math.round((pose.lean || 0) * 3 * w.dir); D.px(sx, gy - 17, 'linen', 9); D.px(sx, gy - 16, 'linen', 9); D.px(sx - 1, gy - 16, 'linen', 8); D.px(sx + 1, gy - 16, 'linen', 8);
+    // the grass tips sway in the evening wind
+    D.lay('front'); MI_GRASS.forEach(([x, y, h], i) => { for (let k = -2; k <= 2; k += 2) { const hh = Math.round(h * 0.5 * (1 - Math.abs(k) / 3)) + 1, sw = Math.sin(t * 1.6 + i * 1.3 + k) * 1.2 + k * 0.4; for (let j = 0; j < hh; j++) D.px(x + k + Math.round(sw * j / hh), y - Math.round(h * 0.5 * (1 - Math.abs(k) / 3)) - j, 'leaf', 4.2 + j * 0.25 + (k < 0 ? 0.6 : 0)); } });
   },
 });
 
@@ -736,8 +857,8 @@ X.def('angkor', {
 // what each pixel room shows, in words (replaces the old scene's line in M.ROOM_D)
 const D_ = {
   amundsen: '极光在夜空翻卷，不时一道亮波沿光幕跑过、下缘泛粉，雪地跟着被照绿；高架科考站亮着一排窗，屋顶天线慢慢转，雷达球顶上红灯闪；冰屋门口透出火光，极点银球两边插着三面小旗在飘；科学家从氦气瓶给探空气球充气、放飞，再拿夹板记下；企鹅摇摇摆摆走过，远处雪地车亮着车灯开过',
-  potala: '布达拉宫被脚下的灯照得暖白，红宫顶上金顶发亮，身后是月光下的雪山；一串经幡横过夜空飘；左边香炉冒烟和火星；右边僧人推着大转经筒，每转一圈铃响一声、紫色经文升起；朝圣者摇着手转经筒走过；一阵风来，天上划过两道风线，经幡被吹得拉平，香炉的烟压成一条横线，五色风马纸从经幡绳上卷起，飞过月亮和雪山，风最大时灯光一亮、金顶全部闪一下',
-  michel: '满月下的海中孤岛：水边是城墙和圆塔，小镇的窗沿山坡亮上去，山顶修道院尖塔上站着金色天使；窗光倒映在海里晃，月下铺开一条碎光，云慢慢飘过月亮；码头上卫兵扛着长矛巡逻，小船随浪起伏，远处浮标闪红灯；每隔一会儿钟声响起，天使一亮，一圈金光罩住整座岛',
+  potala: '雪山日出：太阳刚从右边山脊后露出一角，光芒向天上散开，天空从夜蓝变成玫瑰色和金色；第一缕阳光把雪峰顶染成粉金色，最先照亮布达拉宫的金顶，下面的白宫和红宫还在清晨的蓝影里，窗里亮着灯，最高的雪峰顶上飘着一缕雪雾；一串经幡横过天空飘；左边香炉冒烟和火星；右边僧人推着大转经筒，每转一圈铃响一声、紫色经文升起；朝圣者摇着手转经筒走过；一阵风来，天上划过两道风线，经幡被吹得拉平，香炉的烟压成一条横线，五色风马纸从经幡绳上卷起飞上天，风最大时太阳一亮、光芒大盛，金顶全部闪一下',
+  michel: '暮色里退潮的海湾：太阳刚落到左边远山后，天空从靛蓝变成玫瑰色和金色；圣米歇尔山立在湿沙滩上，城墙、圆塔、亮窗的小镇和山顶修道院尖塔被晚霞勾出金边，塔尖站着金色天使；湿沙像镜子一样映着晚霞和山影，沙洲一道道隆起，一条潮沟弯弯伸向远处；石堤上卫兵扛着长矛巡逻，提灯火光摇晃，一条小渔船斜躺在沙上，黑白海鸟在沙洲上啄食，角落里的盐沼草轻轻摆；每隔一会儿修道院钟声一响、天使一亮，潮水像奔马一样从海湾冲上沙滩：一道白浪线飞快扫过，整片沙滩变成映着山影的水镜，海鸟惊起飞走，小船被托起扶正、随水起伏；随后潮水退回海湾，留下一个个发亮的水洼慢慢渗干',
   lighthouse: '夜海礁石上的灯塔：方形白石塔身、八角层、圆形火室，顶上铜像举着三股叉；火室里火焰翻滚，铜镜转着把一道暖光扫过海面，转到正对这边时整个画面一亮、满海金光；海鸥绕着塔顶飞，浪拍上礁石溅起水花，远处挂条纹帆的商船提着灯从岛后驶过；码头上搬运工把货箱搬到陶罐和粮袋旁，火盆冒火星',
   angkor: '夕阳下的吴哥窟：一层层回廊和七座莲花苞石塔衬着橙色的天，整座寺倒映在莲池里；水面碎光跟着太阳晃，莲花轻摇，萤火虫在池面闪，棕榈叶摆动；穿橘色袈裟的僧人站在石阶上，身旁是扇形七头蛇栏杆，锣下点着供烛；他每隔一会儿敲一下铜锣：锣面一亮，池面荡开波纹，一群鸟从塔尖飞起掠过晚霞',
 };

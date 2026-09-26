@@ -53,10 +53,18 @@ function burstPx(D, x, y, k, n, m, tn, Rr) { if (k < 0 || k > 1) return; const e
 // a four-point twinkle, sized by a (0…1)
 function star4(D, x, y, m, t, a) { if (a <= 0.15) return; D.px(x, y, m, t, G); if (a > 0.55) { D.px(x - 1, y, m, t - 2, G); D.px(x + 1, y, m, t - 2, G); D.px(x, y - 1, m, t - 2, G); D.px(x, y + 1, m, t - 2, G); } if (a > 0.9) { D.px(x - 2, y, m, t - 4, G); D.px(x + 2, y, m, t - 4, G); D.px(x, y - 2, m, t - 4, G); D.px(x, y + 2, m, t - 4, G); } }
 
+// the terrain's own ground fills the cell to a ragged margin of plain rock (about 6–14 px): a rounded, squarish
+// outline (superellipse) with a slow wobble, whose last few pixels break up in clusters into the rock
+const fillE = (x, y, s, o) => { o = o || {}; const cx = o.cx != null ? o.cx : 75, cy = o.cy != null ? o.cy : 52, rx = o.rx || 66, ry = o.ry || 44, p = o.p || 4;
+  return Math.pow(Math.pow(Math.abs(x + 0.5 - cx) / rx, p) + Math.pow(Math.abs(y + 0.5 - cy) / ry, p), 1 / p) + (vnoise(x / 9, y / 9, s) - 0.5) * (o.amp || 0.12) + (vnoise(x / 3.5, y / 3.5, s + 1) - 0.5) * 0.05; };
+const inFill = (x, y, s, o) => { if (x < 5 || y < 5 || x > W - 6 || y > H - 6) return false; const e = fillE(x, y, s, o), k = (o && o.brk) || 0.08; if (e > 1) return false; return !(e > 1 - k && vnoise(x / 2.2, y / 2.2, s + 2) < (e - (1 - k)) / k); };
+// floor-seam pixels lie flat and recede like the floor rows they sit in
+const FZ = (y) => ({ z: (y - 90) * 2, n: [0, -0.9] });
+
 // ═════════ 大地之心 heart ═════════
 // a garnet heart hangs in a hollow at the middle of the rock, held by arteries that run out into the stone;
 // it beats (lub-dub), a pulse runs down every artery, and every 9 s a great beat sends a ring through the hollow
-const HC = [75, 50], HCAV = [75, 51, 34, 26];
+const HC = [75, 53], HCAV = [75, 52, 43, 31], HGEO = 4;
 const beat = (t) => { const q = steps(t, 1.25), g = (c, w) => Math.exp(-((q - c) / w) * ((q - c) / w)); return g(0.04, 0.05) + 0.65 * g(0.24, 0.05); };
 const inCav = (x, y) => ed(x, y, HCAV[0], HCAV[1], HCAV[2], HCAV[3]) < 1 + (vnoise(x / 5, y / 5, 5) - 0.5) * 0.26;
 // heart sprites at rest and at the beat: pillow-shaded garnet, hot pink core, a gloss on the left lobe, a dark rim
@@ -78,11 +86,11 @@ function heartSpr(s) {
   Object.keys(m).forEach(kk => { const [x, y] = kk.split(',').map(Number); [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([a, b]) => { const q = (x + a) + ',' + (y + b); if (!m[q] && !m['o' + q]) { m['o' + q] = 1; out.unshift([x + a, y + b, 'crimson', b < 0 || a < 0 ? 2 : 1]); } }); });
   return out;
 }
-const HSPR = [heartSpr(12.6), heartSpr(13.5)];
+const HSPR = [heartSpr(15.4), heartSpr(16.4)];
 // arteries: a few big vessels leave the heart, curve and branch, then burrow into the stone as veins
-const ART = []; { const r = X.rng(313); [[-2.55, 42], [-1.95, 30], [-1.2, 36], [-0.45, 46], [0.35, 52], [1.1, 36], [2.0, 38], [2.75, 48]].forEach(([a, l], i) => { const sx = HC[0] + Math.cos(a) * 11, sy = HC[1] + Math.sin(a) * 9 + 1; walk(r, sx, sy, a + (r() - 0.5) * 0.4, l + Math.floor(r() * 10), { wig: 0.55, to: a, pull: 0.06, br: 0.06, maxD: 2, x0: 7, y0: 7 }, ART); }); }
+const ART = []; { const r = X.rng(313); [[-2.55, 42], [-1.95, 30], [-1.2, 36], [-0.45, 46], [0.35, 52], [1.1, 36], [2.0, 38], [2.75, 48]].forEach(([a, l], i) => { const sx = HC[0] + Math.cos(a) * 14, sy = HC[1] - 3 + Math.sin(a) * 12 + 1; walk(r, sx, sy, a + (r() - 0.5) * 0.4, l + 10 + Math.floor(r() * 8), { wig: 0.5, to: a, pull: 0.07, br: 0.07, maxD: 1, x0: 8, y0: 8 }, ART); }); }
 ART.forEach(A => { A.cav = A.pts.map(([x, y]) => inCav(x, y)); });
-const MOTES = []; { const r = X.rng(312); for (let i = 0; i < 12; i++) MOTES.push([HCAV[0] + (r() - 0.5) * 46, r(), 0.08 + r() * 0.1, r() * 7]); }
+const MOTES = []; { const r = X.rng(312); for (let i = 0; i < 14; i++) MOTES.push([HCAV[0] + (r() - 0.5) * 62, r(), 0.08 + r() * 0.1, r() * 7]); }
 // the stone round the heart, remembered pixel by pixel (sorted by distance out from the hollow) so a beat can run out
 // through it as a brighter band of the same stone: [d, x, y, material, tone, nx, ny]
 const HWAVE = [];
@@ -90,24 +98,23 @@ const hwaveRange = (d0, d1, fn) => { let lo = 0, hi = HWAVE.length; while (lo < 
 X.def('_tile_heart', {
   noFrame: 1, noFloor: 1, amb: [0.5, 0.42],
   paint(S, sc) {
-    sc.light({ x: HC[0], y: HC[1], z: 20, r: 64, i: 1, c: '#ff6a8a', tint: 0.5 });                   // 0 the heart (beats: rs.mul)
-    sc.light({ x: 75, y: 76, z: 6, r: 30, i: 0.4, c: '#ff4060', fl: 'pulse', amp: 0.25, sp: 1.1, tint: 0.45 });   // 1 glow pooled under it
-    bed(S, 4, (x, y, r2) => ed(x, y, 75, 51, 70, 52) < 1.05 + r2 / 40);
+    sc.light({ x: HC[0], y: HC[1] - 3, z: 20, r: 86, i: 1, c: '#ff6a8a', tint: 0.46 });                   // 0 the heart (beats: rs.mul)
+    sc.light({ x: 75, y: 80, z: 6, r: 38, i: 0.45, c: '#ff4060', fl: 'pulse', amp: 0.25, sp: 1.1, tint: 0.45 });   // 1 glow pooled under it
+    bed(S, 4, (x, y, r2) => fillE(x, y, HGEO) < 1 + r2 / 50);
     // flesh-stone: layers wrapped round the hollow, fading out into the rock (and breaking up well before the cell's edge)
     const wv = [];
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const d = ed(x, y, HCAV[0], HCAV[1], HCAV[2], HCAV[3]) + (vnoise(x / 8, y / 8, 6) - 0.5) * 0.3; if (d < 1 || d > 2.1 || x < 4 || x > W - 5 || y < 4 || y > H - 5) continue;
-      const ring = Math.floor((d - 1) * 7), bd = Math.min(y - 4, H - 5 - y, x - 4, W - 5 - x); if (d > 1.7 && vnoise(x / 2.2, y / 2.2, 3) < (d - 1.7) / 0.4) continue;
-      if (bd < 10 && vnoise(x / 2.2, y / 2.2, 3) < (10 - bd) / 6) continue;
-      S.px(x, y, ring % 3 === 1 ? 'mstone' : 'crimson', ring === 0 ? 4 : ring % 3 === 2 ? 2 : 3, { n: [0, 0] }); wv.push([d, x, y]); }
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const d = ed(x, y, HCAV[0], HCAV[1], HCAV[2], HCAV[3]) + (vnoise(x / 8, y / 8, 6) - 0.5) * 0.3; if (d < 1 || !inFill(x, y, HGEO)) continue;
+      const ring = Math.floor((d - 1) * 7); S.px(x, y, ring % 3 === 1 ? 'mstone' : 'crimson', ring === 0 ? 4 : ring % 3 === 2 ? 2 : 3, { n: [0, 0] }); wv.push([d, x, y]); }
     S.noise(8, 4, W - 16, H - 8, 1, 3, 17, { only: 'crimson' });
     // the hollow: dark back wall, drips from its roof, a lit lip along its floor
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (inCav(x, y)) { S.px(x, y, 'crimson', 0.8 + (y - HCAV[1]) / HCAV[3] * 0.5, { n: [0, 0] }); wv.push([ed(x, y, HCAV[0], HCAV[1], HCAV[2], HCAV[3]), x, y]); }
-    S.noise(40, 22, 72, 58, 1, 5, 19, { only: 'crimson' });
-    for (let x = 40; x < 110; x++) { let top = -1, bot = -1; for (let y = 18; y < 84; y++) if (inCav(x, y)) { if (top < 0) top = y; bot = y; } if (top < 0) continue;
+    S.noise(30, 18, 92, 68, 1, 5, 19, { only: 'crimson' });
+    for (let x = 30; x < 121; x++) { let top = -1, bot = -1; for (let y = 16; y < 90; y++) if (inCav(x, y)) { if (top < 0) top = y; bot = y; } if (top < 0) continue;
       S.px(x, top, 'ink', 0); if (hh(x, 1, 7) < 0.25) { const l = 1 + Math.floor(hh(x, 2, 7) * 4); for (let k = 0; k < l; k++) S.px(x, top + k, 'crimson', 3 - k * 0.5); }
       S.px(x, bot, 'crimson', 5, { n: [0, -0.8] }); S.px(x, bot - 1, 'crimson', 3); }
     // garnets growing from the hollow's floor
-    [[53, 71, 1], [59, 73, 0], [92, 72, 1], [98, 69, 0]].forEach(([x, y, big]) => { S.beg(); const h = big ? 6 : 4; S.poly([[x - 2, y + 1], [x - 2, y - h + 2], [x, y - h], [x + 2, y - h + 2], [x + 2, y + 1]], 'crimson', 5); S.vl(x - 1, y - h + 2, h - 1, 'crimson', 8); S.px(x, y - h + 1, 'candy', 9); S.vl(x + 1, y - h + 3, h - 2, 'crimson', 3); S.end(); });
+    const cavBot = (x) => { let b = -1; for (let y = 16; y < 90; y++) if (inCav(x, y)) b = y; return b; };
+    [[49, 1], [56, 0], [95, 0], [102, 1]].map(([x, big]) => [x, cavBot(x) - 1, big]).forEach(([x, y, big]) => { S.beg(); const h = big ? 6 : 4; S.poly([[x - 2, y + 1], [x - 2, y - h + 2], [x, y - h], [x + 2, y - h + 2], [x + 2, y + 1]], 'crimson', 5); S.vl(x - 1, y - h + 2, h - 1, 'crimson', 8); S.px(x, y - h + 1, 'candy', 9); S.vl(x + 1, y - h + 3, h - 2, 'crimson', 3); S.end(); });
     // arteries: round garnet vessels leave the heart across the hollow; in the stone they run on as sunken vessels —
     // the big ones 2 px (a lit upper edge, a glowing red core, a dark lower lip), the branches 1 px — and over their last
     // stretch they dim and sink into the stone
@@ -141,9 +148,9 @@ X.def('_tile_heart', {
     // a pulse down every artery after each beat (it fades out where the vessel sinks into the stone)
     ART.forEach((A, i) => { D.lay('back'); runPulse(D, A.live, (ph - 0.03) * 60 - A.depth * 8, 'candy', 9, 4); });
     // motes rising through the hollow
-    D.lay('mid'); MOTES.forEach(([x0, p0, sp, w]) => { const q = (p0 + t * sp) % 1, y = 74 - q * 46, x = x0 + Math.sin(t * 0.9 + w) * 3; if (!inCav(x, y)) return; D.px(x, y, 'candy', q < 0.6 ? 8 : 6, G); });
+    D.lay('mid'); MOTES.forEach(([x0, p0, sp, w]) => { const q = (p0 + t * sp) % 1, y = 80 - q * 56, x = x0 + Math.sin(t * 0.9 + w) * 3; if (!inCav(x, y)) return; D.px(x, y, 'candy', q < 0.6 ? 8 : 6, G); });
     // the great beat: the heart throws sparks
-    if (big < 0.08) burstPx(D, HC[0], HC[1] - 2, big / 0.08, 10, 'candy', 10, 22);
+    if (big < 0.08) burstPx(D, HC[0], HC[1] - 4, big / 0.08, 12, 'candy', 10, 28);
     if (big < 0.02 && !st.g) { st.g = 1; rs.flash(1, 1.4); } if (big > 0.5) st.g = 0;
   },
 });
@@ -156,84 +163,113 @@ X.TILEF.heart = (D, t) => {
 };
 
 // ═════════ 陨星坑 star ═════════
-// a buried crater: a bowl of shattered rock lined with black impact glass under a thin glittering layer; at its bottom
-// the fallen star, a thumb-printed iron stone with starlight pouring out of its cracks. Fractures radiate from it; every
-// 10 s a shooting star falls into it, the stone flares and the fractures light up one after another
-const SM = [75, 69], BOWL = [75, 27, 58, 55];
-const inBowl = (x, y) => y > BOWL[1] && ed(x, y, BOWL[0], BOWL[1], BOWL[2], BOWL[3]) < 1 + (vnoise(x / 6, y / 6, 21) - 0.5) * 0.08;
-const inMet = (x, y) => ed(x, y, SM[0], SM[1], 20, 13) < 1 + (vnoise(x / 4, y / 4, 23) - 0.5) * 0.28;
-// glowing cracks across the stone, out from a bright core near its top
-const SCORE = [SM[0] - 4, SM[1] - 4], SCR = []; { const r = X.rng(326); [-2.9, -2.2, -1.3, -0.5, 0.3, 1.2, 2.1, 2.7].forEach((a, i) => walk(r, SCORE[0], SCORE[1], a, 6 + Math.floor(r() * 12) + (Math.abs(Math.cos(a)) > 0.8 ? 6 : 0), { wig: 0.9, to: a, pull: 0.15, br: 0.12, maxD: 1, x0: 6, y0: 6 }, SCR)); }
-const SFR = []; { const r = X.rng(321); [-2.85, -2.4, -1.95, -1.5, -1.05, -0.6, -0.2, 3.1, 0.15].forEach(a => walk(r, SM[0] + Math.cos(a) * 19, SM[1] + Math.sin(a) * 12, a, 16 + Math.floor(r() * 18), { wig: 0.35, to: a, pull: 0.1, br: 0.05, maxD: 1, x0: 8, y0: 8 }, SFR)); }
-const STW = [[-12, -8, 0], [8, -9, 1], [14, -3, 0], [-16, -1, 1], [-7, -17, 0], [4, -19, 1], [16, -14, 0], [-18, -12, 1]].map(([dx, dy, w], i) => [SM[0] + dx, SM[1] + dy, w, i * 2.3, 0.9 + (i % 3) * 0.35]);   // starlight glinting on and over the stone
-const SSTARS = []; { const r = X.rng(322); for (let i = 0; i < 60 && SSTARS.length < 16; i++) { const x = 20 + r() * 110, y = 30 + r() * 50; if (inBowl(x, y) && !inMet(x, y)) SSTARS.push([Math.round(x), Math.round(y), r() * 7, 0.8 + r() * 1.6]); } }
+// a buried impact crater in section. Below the old ground surface the beds it punched through are dragged down round
+// its bowl, pale shatter streaks radiate through them and a pale ejecta blanket lies on the surface by the rim, with
+// black glass beads (tektites) in it. The bowl holds a lens of rubble with younger beds sagging into it from above,
+// and at its bottom lies the fallen star: a dark iron stone cut open by the section, its face etched with crossing
+// Widmanstätten lines under a black fusion crust; starlight shows only in its cracks. Every 10 s a shooting star
+// falls into the crater, the cracks flare and an echo runs out along the shatter streaks
+const SGEO = 7, SBX = 75, SBR = 48, SBD = 52, SMT = [75, 69], SMR = [20, 12.5], SMP = [75, 66];
+const sSurf = (x) => 30 + Math.sin(x * 0.06) * 1.2 + (vnoise(x / 7, 3, 336) - 0.5) * 2 - 2 * Math.exp(-(((Math.abs(x - SBX) - SBR) / 5) ** 2));   // the old ground surface, raised at the rim
+const sBot = (x) => { const u = (x - SBX) / SBR; return 30 + SBD * (1 - u * u); };
+const inSB = (x, y) => Math.abs(x - SBX) < SBR && y >= sSurf(x) && y <= sBot(x) + (vnoise(x / 4, y / 4, 21) - 0.5) * 1.4;
+const inSM = (x, y) => ed(x, y, SMT[0], SMT[1], SMR[0], SMR[1]) < 1 + (vnoise(x / 4, y / 4, 23) - 0.5) * 0.24;
+// distance from the bowl (chamfer), for the drag on the old beds and the shatter streaks
+const SDB = new Float32Array(W * H); { for (let p = 0; p < W * H; p++) SDB[p] = inSB(p % W, (p / W) | 0) ? 0 : 999;
+  const pass = (y0, y1, dy, x0, x1, dx) => { for (let y = y0; y !== y1; y += dy) for (let x = x0; x !== x1; x += dx) { const p = y * W + x; let v = SDB[p]; const a = x - dx, b = y - dy; if (a >= 0 && a < W) v = Math.min(v, SDB[y * W + a] + 1); if (b >= 0 && b < H) { v = Math.min(v, SDB[b * W + x] + 1); if (a >= 0 && a < W) v = Math.min(v, SDB[b * W + a] + 1.41); } SDB[p] = v; } };
+  pass(0, H, 1, 0, W, 1); pass(H - 1, -1, -1, W - 1, -1, -1); pass(0, H, 1, W - 1, -1, -1); pass(H - 1, -1, -1, 0, W, 1); }
+// old beds 3–6 px thick with a thin pale marker every fifth; young beds 2–3 px, warmer
+const mkBeds = (n, s, thin) => { const B = [], K = []; let b = -30; for (let i = 0; i < n; i++) { B.push(b); K.push(i % (thin ? 4 : 5)); b += thin ? (i % 4 === 3 ? 1 : 2 + Math.floor(hh(i, 2, s) * 2)) : i % 5 === 4 ? 2 : 3 + Math.floor(hh(i, 1, s) * 4); } return [B, K]; };
+const [SOB, SOK] = mkBeds(50, 328), [SYB, SYK] = mkBeds(70, 338, 1);
+const SOLD = [['stone', 5], ['rock', 4.2], ['mstone', 4.6], ['stone', 3.2], ['stone', 7]], SYNG = [['earth', 3.4], ['earth', 4.4], ['mstone', 3.4], ['earth', 5.4]];
+const bedAt = (B, bv) => { let lo = 0, hi = B.length - 2; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (B[m] <= bv) lo = m; else hi = m - 1; } return lo; };
+// the young beds sag over and into the crater (deeper the lower they lie); the old ones are dragged down by its wall
+const sYoung = (x, y) => { const u = (x - SBX) / SBR, c = Math.max(0, 1 - u * u), s = y < 30 ? 12 * c * Math.pow(clamp(1 - (30 - y) / 24, 0, 1), 1.5) : 12 * c + (y - 30) * 0.42 * c; return y - s; };
+const sOld = (x, y) => { const k = Math.max(0, 1 - SDB[y * W + x] / 26); return y - 8 * k * k + x * 0.02; };
+// shatter streaks: out through the old beds from the impact, starting at the bowl's wall
+const SRAY = []; { const r = X.rng(327), n = 15; for (let i = 0; i < n; i++) { const a = -0.25 + (i + 0.25 + r() * 0.5) / n * (Math.PI + 0.5) - 0.0, dx = Math.cos(a), dy = Math.sin(a); let x = SMP[0], y = SMP[1], k = 0; while (k < 90 && inSB(Math.round(x), Math.round(y))) { x += dx; y += dy; k++; }
+  const L = 14 + Math.floor(r() * 18), pts = []; for (let j = 0; j < L; j++) { const X2 = Math.round(x + dx * (j + 1)), Y2 = Math.round(y + dy * (j + 1)); if (!inFill(X2, Y2, SGEO) || inSB(X2, Y2) || Y2 < sSurf(X2) + 1) break; const l = pts[pts.length - 1]; if (!l || l[0] !== X2 || l[1] !== Y2) pts.push([X2, Y2]); }
+  if (pts.length > 4) SRAY.push({ pts, a, i }); } }
+// tektites: black glass beads fallen on the old surface round the crater, a few buried a little higher
+const STEK = [[16, 38], [33, 19], [52, 13], [118, 16], [134, 36], [21, 64], [131, 66], [112, 90]].map(([x, y], i) => [x, y, i % 3, i * 2.3, 0.6 + (i % 4) * 0.3]).filter(([x, y]) => inFill(x - 2, y - 2, SGEO) && inFill(x + 2, y + 2, SGEO) && !inSB(x, y + 3));
+// cracks across the stone out from a bright core; the etched lines of its face (for the sheen that crosses it)
+const SCORE = [SMT[0] + 3, SMT[1] - 3], SCR = []; { const r = X.rng(326); [-2.75, -1.9, -0.45, 0.35, 2.3].forEach((a) => walk(r, SCORE[0], SCORE[1], a, 10 + Math.floor(r() * 9), { wig: 0.8, to: a, pull: 0.14, br: 0.1, maxD: 1, x0: 6, y0: 6 }, SCR)); SCR.forEach(C => { C.pts = C.pts.filter(([x, y]) => inSM(x, y) && inSM(x + 1, y + 1) && inSM(x - 1, y - 1)); }); }
+const SCP = [].concat(...SCR.map(C => C.pts));
+const SWA = [0.32, 0.32 + Math.PI / 3, 0.32 + 2 * Math.PI / 3], SWL = [];
 X.def('_tile_star', {
   noFrame: 1, noFloor: 1, amb: [0.5, 0.42],
   paint(S, sc) {
-    sc.light({ x: SM[0] - 2, y: SM[1] - 10, z: 18, r: 60, i: 1.15, c: '#9fb8ff', tint: 0.45 });                            // 0 the fallen star (breathes: rs.mul)
-    sc.light({ x: 75, y: 26, z: 10, r: 1, i: 1, c: '#c8d8ff', fl: 'pulse', amp: 0.8, sp: 0.9, tint: 0 });                // 1 lights nothing: the glitter layer breathes with it
-    bed(S, 7, (x, y) => ed(x, y, 75, 50, 66, 50) < 1.05);
-    // sediments laid over the crater, bent up where the rim was thrown up
-    for (let y = 4; y < H - 4; y++) for (let x = 4; x < W - 4; x++) { if (inBowl(x, y)) continue; const e = ed(x, y, 75, 42, 70, 52); if (e > 1 + (vnoise(x / 6, y / 6, 25) - 0.5) * 0.3) continue;
-      if (y < 13 && vnoise(x / 3.2, y / 2.6, 27) < (13 - y) / 8) continue;   // the beds break up before the cell's top edge
-      const up = 7 * Math.exp(-Math.pow((Math.abs(x - 75) - 56) / 9, 2)) * (y > 22 ? 1 : 0.3), yy = y + up + Math.sin(x * 0.05) * 1.5, band = Math.floor(yy / 5);
-      S.px(x, y, band % 3 === 0 ? 'stone' : 'rock', band % 3 === 0 ? 3 : band % 3 === 1 ? 4 : 5, { n: [0, 0] }); }
-    S.noise(4, 4, W - 8, H - 8, 1, 3, 26, { only: 'stone' });
-    // the bowl: breccia, angular broken blocks in a dark matrix (nearest-seed cells)
-    const r = X.rng(324), seeds = []; for (let i = 0; i < 70; i++) seeds.push([17 + r() * 116, 27 + r() * 56, 2 + Math.floor(r() * 3.5), r() < 0.2 ? 'mstone' : r() < 0.5 ? 'scifi' : 'stone']);
-    for (let y = 27; y < H - 4; y++) for (let x = 4; x < W - 4; x++) { if (!inBowl(x, y)) continue; let d1 = 1e9, d2 = 1e9, bi = 0; for (let i = 0; i < seeds.length; i++) { const dx = x - seeds[i][0], dy = (y - seeds[i][1]) * 1.3, d = Math.abs(dx) + Math.abs(dy) * 0.9 + Math.max(Math.abs(dx), Math.abs(dy)) * 0.6; if (d < d1) { d2 = d1; d1 = d; bi = i; } else if (d < d2) d2 = d; }
-      const s = seeds[bi], edge = d2 - d1 < 1.6; S.px(x, y, edge ? 'stone' : s[3], edge ? 1 : s[2] + ((x - s[0]) + (y - s[1]) < -2 ? 1 : 0), { n: [0, 0] }); }
-    // the lining: black impact glass with a few glints; the glitter layer across the top of the old ground
-    for (let y = 27; y < H - 4; y++) for (let x = 4; x < W - 4; x++) { if (!inBowl(x, y)) continue; const e = ed(x, y, BOWL[0], BOWL[1], BOWL[2], BOWL[3]); if (e > 0.88) { const nearM = ed(x, y, SM[0], SM[1], 26, 19) < 1; S.px(x, y, nearM ? 'scifi' : e > 0.95 ? 'night' : 'scifi', nearM ? 4 - (e > 0.97 ? 1 : 0) : e > 0.95 ? 1 : 2, { n: [0, 0] }); } if (e > 0.9 && hh(x, y, 5) < 0.05) S.px(x, y, 'glass', 8, { n: [-0.5, -0.5] }); }
-    for (let x = 12; x < W - 12; x++) { const y = 26 + Math.round(Math.sin(x * 0.07) * 0.6); S.px(x, y, 'glass', 1); S.px(x, y + 1, 'scifi', 3); if (hh(x, 9, 6) < 0.3) S.px(x, y, 'ice', 6 + Math.floor(hh(x, 3, 6) * 3), { e: 2 }); }
-    // shatter fractures running out from the star, lit from inside near it
-    SFR.forEach(F => F.pts.forEach(([x, y], k) => { if (inMet(x, y)) return; S.px(x, y, 'ink', 0); S.px(x + 1, y + 1, 'stone', 5); if (k < 12) S.px(x, y, 'glass', 7 - k * 0.3, { e: 1 }); }));
-    // blue shards grown round the stone
-    S.lay('back'); [[52, 78, -0.6, 8], [57, 80, -0.25, 6], [95, 79, 0.5, 9], [99, 80, 0.9, 5], [58, 57, -1.0, 6], [92, 56, 1.0, 6], [88, 81, 0.2, 5]].forEach(([x, y, a, l]) => { S.beg(); const ex = x + Math.sin(a) * l, ey = y - Math.cos(a) * l; S.poly([[x - 2, y + 1], [ex, ey], [x + 2, y + 1]], 'ice', 5); S.line(x - 1, y, ex, ey + 1, 'ice', 9); S.px(ex, ey, 'linen', 10); S.end(); });
-    // the fallen star: an iron stone, thumb-printed
-    S.lay('mid'); S.beg(); for (let y = SM[1] - 16; y <= SM[1] + 16; y++) for (let x = SM[0] - 24; x <= SM[0] + 24; x++) { if (!inMet(x, y)) continue; const u = (x - SM[0]) / 20, v = (y - SM[1]) / 13; S.px(x, y, 'iron', 4.4 - v * 1.6 - u * 0.9 + (u * u + v * v > 0.8 ? -1 : 0), { n: [u * 0.8, v * 0.8] }); }
-    for (let x = SM[0] - 22; x <= SM[0] + 22; x++) { let top = -1; for (let y = SM[1] - 16; y <= SM[1]; y++) if (inMet(x, y)) { top = y; break; } if (top < 0) continue; const u = (x - SM[0]) / 20; S.px(x, top, 'iron', 8.5 - Math.abs(u + 0.3) * 3, { n: [0, -0.8] }); if (u < 0.2) S.px(x, top + 1, 'iron', 7 - Math.abs(u + 0.3) * 3); }
-    [[62, 64], [85, 61], [89, 73], [68, 76], [80, 77], [59, 71], [93, 66], [72, 58], [84, 70]].forEach(([x, y]) => { S.px(x, y, 'iron', 2.5); S.px(x + 1, y, 'iron', 3); S.px(x, y + 1, 'iron', 3); });
+    sc.light({ x: SMT[0], y: SMT[1] - 5, z: 18, r: 74, i: 1.1, c: '#9fb8ff', tint: 0.2 });                           // 0 the fallen star (breathes, flares: rs.mul)
+    sc.light({ x: 75, y: 60, z: 10, r: 1, i: 1, c: '#9fb8ff', fl: 'pulse', amp: 0.45, sp: 1.1, tint: 0 });             // 1 lights nothing: the cracks breathe with it
+    bed(S, 7, (x, y, r2) => fillE(x, y, SGEO) < 1 + r2 / 50);
+    // the ground: old beds under the surface, young beds over it and down into the bowl, a rubble lens at its bottom
+    const r = X.rng(324), cl = []; for (let i = 0; i < 40; i++) { const x = SBX + (r() - 0.5) * 70; cl.push([x, sBot(x) - r() * 20, r() < 0.35 ? ['mstone', 5.2] : r() < 0.6 ? ['stone', 4.6] : ['rock', 6.4], r() * 1.2]); }
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { if (!inFill(x, y, SGEO)) continue; const sf = sSurf(x), inB = inSB(x, y);
+      if (!inB && y >= sf) { const bv = sOld(x, y) + (vnoise(x / 14, y / 10, 331) - 0.5) * 1.4, i = bedAt(SOB, bv), f = bv - SOB[i], th = SOB[i + 1] - SOB[i], [m, tn] = SOLD[SOK[i]]; S.px(x, y, m, tn + (f < 1 ? 0.8 : f >= th - 1 && th > 2 ? -0.8 : 0), { n: [0, f < 1 ? -0.5 : 0] }); continue; }
+      const u = (x - SBX) / SBR, rub = inB && y > sBot(x) - 3 - 19 * Math.sqrt(Math.max(0, 1 - u * u)) + (vnoise(x / 4, 7, 339) - 0.5) * 4;
+      if (rub) { let d1 = 1e9, d2 = 1e9, bi = 0; for (let i = 0; i < cl.length; i++) { const dx = x - cl[i][0], dy = (y - cl[i][1]) * 1.25, d = Math.abs(dx) + Math.abs(dy) * 0.9 + Math.max(Math.abs(dx), Math.abs(dy)) * 0.6; if (d < d1) { d2 = d1; d1 = d; bi = i; } else if (d < d2) d2 = d; }
+        const c = cl[bi], edge = d2 - d1 < 1.7; S.px(x, y, edge ? 'rock' : c[2][0], edge ? 1.6 : c[2][1] - 1 + c[3] + ((x - c[0]) + (y - c[1]) < -2 ? 0.9 : 0), { n: [0, 0] }); continue; }
+      const bv = sYoung(x, y), i = bedAt(SYB, bv), f = bv - SYB[i], [m, tn] = SYNG[SYK[i]]; S.px(x, y, m, tn + (f < 1 ? 0.5 : 0), { n: [0, 0] }); }
+    S.noise(6, 6, W - 12, H - 12, 1, 4, 332, { only: 'stone' });
+    // the ejecta blanket: a pale wedge on the old surface, thinning away from the rim
+    for (let x = 6; x < W - 6; x++) { const d = Math.abs(x - SBX) - SBR; if (d < -1 || d > 34) continue; const sf = Math.round(sSurf(x)), th = Math.round(3.2 * (1 - d / 34) + (vnoise(x / 3, 5, 340) - 0.5) * 1.2); for (let k = 1; k <= th; k++) { const y = sf - k; if (!inFill(x, y, SGEO)) continue; S.px(x, y, 'stone', k === th ? 6.6 : hh(x, y, 341) < 0.2 ? 3.6 : 5.6); } if (inFill(x, sf, SGEO)) S.px(x, sf, 'rock', 1.5); }
+    // the bowl's wall: a dark seam inside, a pale shocked lip outside where it faces up
+    for (let y = 20; y < H - 4; y++) for (let x = 5; x < W - 5; x++) { const a = inSB(x, y); if (a && y > sSurf(x) + 1 && (!inSB(x - 1, y) || !inSB(x + 1, y) || !inSB(x, y + 1))) S.px(x, y, 'ink', 1); else if (!a && inFill(x, y, SGEO) && inSB(x, y - 1) && y > sSurf(x) + 2) S.px(x, y, 'stone', 7, { n: [0, -0.7] }); }
+    // shatter streaks, pale and dashed, fading out
+    SRAY.forEach(R => R.pts.forEach(([x, y], k) => { const f = k / R.pts.length; if (f > 0.35 && hh(R.i, k, 334) < f * 0.5) return; S.px(x, y, 'linen', 6.4 - f * 2.4); if (k < 4 && k % 2 === 0) S.px(x + (Math.abs(Math.cos(R.a)) < 0.6 ? 1 : 0), y + (Math.abs(Math.cos(R.a)) < 0.6 ? 0 : 1), 'linen', 4.8); }));
+    // tektites: black glass drops with a glint
+    STEK.forEach(([x, y, k]) => { S.beg(); S.spr(x - 1, y - 1, [['.#.', '###', '.#.'], ['.##', '###', '##.', '#..'], ['##.', '###', '.##']][k], { '#': ['night', 1.4] }); S.px(x - (k === 1 ? 0 : 1), y - (k === 1 ? 1 : 0), 'glass', 7.5, { n: [-0.5, -0.5] }); S.end(); });
+    // the fallen star: black fusion crust round a cut face etched with crossing lines (a dark partner under each bright one)
+    S.lay('mid'); S.beg(); SWL.length = 0;
+    for (let y = SMT[1] - 16; y <= SMT[1] + 16; y++) for (let x = SMT[0] - 24; x <= SMT[0] + 24; x++) { if (!inSM(x, y)) continue; const u = (x - SMT[0]) / SMR[0], v = (y - SMT[1]) / SMR[1];
+      const c1 = !inSM(x - 1, y) || !inSM(x + 1, y) || !inSM(x, y - 1) || !inSM(x, y + 1), c2 = !inSM(x - 2, y) || !inSM(x + 2, y) || !inSM(x, y - 2) || !inSM(x, y + 2);
+      if (c1 || c2) { S.px(x, y, 'iron', (c1 ? 1 : 2) + (u + v < -0.6 ? 2.4 : 0), { n: [u * 0.8, v * 0.8] }); continue; }
+      let tn = 3 - v * 0.9 - u * 0.5, bright = false, dark = false;
+      SWA.forEach((a, k) => { const c = x * Math.cos(a) + y * Math.sin(a), al = -x * Math.sin(a) + y * Math.cos(a), m = ((c % 5) + 5) % 5; if (hh(Math.floor(c / 5), Math.floor(al / 7), 40 + k) < 0.3) return; if (m < 1) bright = true; else if (m < 2) dark = true; });
+      if (bright) { tn += 4.4; SWL.push([x, y]); } else if (dark) tn -= 1.2;
+      S.px(x, y, 'iron', tn, { n: [u * 0.6, v * 0.6] }); }
     S.end();
-    // starlight thrown back up off the crater floor: a cold rim along the stone's lower-left edge, so it stands off the glass
-    for (let y = SM[1] - 2; y <= SM[1] + 16; y++) for (let x = SM[0] - 24; x <= SM[0] + 14; x++) { if (!inMet(x, y)) continue; const lo = !inMet(x, y + 1), lf = !inMet(x - 1, y); if (!lo && !lf) continue;
-      const k = (x - SM[0] + 24) / 38; S.px(x, y, 'ice', k < 0.6 ? 5 : 4, { e: 1 }); if (lo && k < 0.45 && inMet(x, y - 1)) S.px(x, y - 1, 'iron', 4.5, { n: [-0.3, 0.6] }); }
-    // the cracks: dark lips, a lit seam; the core where the light pours out
-    SCR.forEach(C => C.pts.forEach(([x, y], k) => { if (!inMet(x, y) || !inMet(x + 1, y + 1)) return; S.px(x + 1, y + 1, 'iron', 1.5); S.px(x, y, 'ice', clamp(10 - k * 0.45 - C.depth * 1.5, 6, 10), { e: 1 }); if (k < 4 && C.depth === 0) S.px(x, y + 1, 'ice', 8, { e: 1 }); }));
-    S.ell(SCORE[0], SCORE[1], 3, 2.2, 'ice', 10, { e: 1 }); S.ell(SCORE[0], SCORE[1], 1.6, 1.2, 'linen', 11, G); S.px(SCORE[0] - 1, SCORE[1] - 3, 'iron', 8);
+    // cracks: a dark lip under a seam of starlight, a core where it pours out
+    SCR.forEach(C => C.pts.forEach(([x, y], k) => { S.px(x + 1, y + 1, 'iron', 0.5); S.px(x, y, 'ice', clamp(10.2 - k * 0.28 - C.depth * 1.2, 7, 10.2), { e: 2 }); if (k < 5 && !C.depth) S.px(x, y - 1, 'ice', 8.6, { e: 2 }); }));
+    S.ell(SCORE[0], SCORE[1], 3, 2.2, 'ice', 9.8, { e: 2 }); S.px(SCORE[0], SCORE[1], 'linen', 11, G); S.px(SCORE[0] - 1, SCORE[1], 'ice', 10.5, G);
+    // rubble lapping over the stone's foot
+    S.lay('front'); [[56, 81, 4], [63, 83, 3], [70, 84, 2.5], [83, 83.5, 3.5], [92, 81, 4]].forEach(([x, y, s], i) => { S.beg(); S.poly([[x - s, y + 1], [x - s * 0.6, y - s * 0.8], [x + s * 0.3, y - s], [x + s, y - s * 0.3], [x + s * 0.8, y + 1]], i % 2 ? 'mstone' : 'rock', i % 2 ? 4.6 : 5.6); S.hl(x - s * 0.6 + 1, Math.round(y - s * 0.8), Math.max(1, Math.round(s * 0.8)), i % 2 ? 'mstone' : 'rock', i % 2 ? 6.2 : 7.4); S.end(); });
   },
   anim(D, t, rs) {
-    const st = rs.st, q = steps(t, 10), fall = q > 0.9 ? (q - 0.9) / 0.1 : -1, hitK = q < 0.14 ? q / 0.14 : -1;
-    // stars in the rock twinkle; stars inside the stone drift
-    D.lay('wall'); SSTARS.forEach(([x, y, p, sp]) => { const a = Math.sin(t * sp + p); star4(D, x, y, 'ice', 10, a > 0.6 ? (a - 0.6) / 0.4 : 0); });
-    D.lay('mid'); SCR.forEach((C, i) => runPulse(D, C.pts, ((t * 6 + i * 5) % 26), 'linen', 11, 2));
-    star4(D, SCORE[0], SCORE[1], 'linen', 11, 0.6 + 0.4 * Math.sin(t * 2.3));
-    STW.forEach(([x, y, w, p, sp]) => { const a = Math.sin(t * sp + p); if (a > 0.72) star4(D, x, y, w ? 'linen' : 'ice', w ? 11 : 10, (a - 0.72) / 0.28); });
-    if (q < 0.08) { D.lay('front'); burstPx(D, SM[0], SM[1] - 3, q / 0.08, 10, 'ice', 10, 18); }
-    // the light breathes; the fractures carry slow pulses out from the stone
-    rs.mul[0] = 1 + 0.08 * Math.sin(t * 1.3) + (hitK >= 0 ? (1 - hitK) * (1 - hitK) * 1.4 : 0);
-    D.lay('wall'); SFR.forEach((F, i) => runPulse(D, F.pts, ((t * 8 + i * 11) % 50), 'ice', 9, 3));
-    if (hitK >= 0) SFR.forEach((F, i) => runPulse(D, F.pts, hitK * 60 - (i % 3) * 3, 'linen', 11, 7));
-    // the shooting star: in from the upper left, down into the split
-    if (fall >= 0) { const x0 = 18, y0 = 8, x1 = SCORE[0], y1 = SCORE[1], k = fall * fall, x = x0 + (x1 - x0) * k, y = y0 + (y1 - y0) * k; D.lay('front');
-      for (let j = 1; j < 16; j++) { const b = Math.max(0, k - j * 0.014), xx = x0 + (x1 - x0) * b, yy = y0 + (y1 - y0) * b; D.px(xx, yy, j < 3 ? 'linen' : 'ice', j < 3 ? 11 : 10.4 - j * 0.45, G); }
+    const st = rs.st, q = steps(t, 10), fall = q > 0.91 ? (q - 0.91) / 0.09 : -1, hitK = q < 0.16 ? q / 0.16 : -1;
+    rs.mul[0] = 1 + 0.07 * Math.sin(t * 1.3) + (hitK >= 0 ? (1 - hitK) * (1 - hitK) * 1.6 : 0);
+    // a sheen crosses the etched face every 5 s
+    D.lay('mid'); const sw = steps(t, 5) * 80 - 30; SWL.forEach(([x, y]) => { const d = (x - SMT[0]) + (y - SMT[1]) * 0.7 - sw; if (d > -2.5 && d < 2.5) D.px(x, y, 'iron', 10.6 - Math.abs(d) * 0.9, G); });
+    // starlight twinkles in the cracks and creeps along them; motes of it rise out of the core
+    for (let i = 0; i < 3; i++) { const c = t * 0.55 + i / 3, n = Math.floor(c), f = c - n, p = SCP[Math.floor(hh(n, i, 335) * SCP.length)]; if (p) star4(D, p[0], p[1], i ? 'ice' : 'linen', i ? 10.5 : 11, Math.sin(f * Math.PI)); }
+    SCR.forEach((C, i) => runPulse(D, C.pts, (t * 5 + i * 7) % (C.pts.length + 14), 'ice', 10.6, 3));
+    for (let i = 0; i < 4; i++) { const k = (t * 0.22 + i / 4) % 1, x = SCORE[0] + Math.sin(t * 0.8 + i * 1.9) * (3 + k * 6), y = SCORE[1] - 3 - k * 28; if (k < 0.85) D.px(x, y, 'ice', k < 0.5 ? 9.5 : 8, G); }
+    // the tektites catch the light now and then
+    D.lay('wall'); STEK.forEach(([x, y, k, p, sp]) => { const a = Math.sin(t * sp + p); if (a > 0.8) D.px(x - (k === 1 ? 0 : 1), y - (k === 1 ? 1 : 0), 'glass', 10.5, G); });
+    // the impact: the cracks run white, sparks ring out, an echo runs out along every streak
+    if (hitK >= 0) { D.lay('mid'); SCR.forEach(C => runPulse(D, C.pts, hitK * 40, 'linen', 11, 6)); if (hitK < 0.5) { D.lay('front'); burstPx(D, SCORE[0], SCORE[1], hitK / 0.5, 12, 'ice', 10.5, 16); }
+      D.lay('wall'); SRAY.forEach(R => runPulse(D, R.pts, (hitK - 0.1) * 60 - (R.i % 3) * 2, 'ice', 9.6, 5)); }
+    // the shooting star: in from the upper left, down into the crater
+    if (fall >= 0) { const x0 = 10, y0 = 3, x1 = SCORE[0], y1 = SCORE[1], k = fall * fall, x = x0 + (x1 - x0) * k, y = y0 + (y1 - y0) * k; D.lay('front');
+      for (let j = 1; j < 18; j++) { const b = Math.max(0, k - j * 0.013), xx = x0 + (x1 - x0) * b, yy = y0 + (y1 - y0) * b; D.px(xx, yy, j < 3 ? 'linen' : 'ice', j < 3 ? 11 : Math.max(6, 10.6 - j * 0.35), G); }
       star4(D, x, y, 'linen', 11, 1); }
-    if (q < 0.03 && !st.h) { st.h = 1; rs.flash(0, 1.4); rs.burst('mist', SM[0], SM[1] - 6, 4, { sp: 8, ang: 0, spread: 1.4, life: 1.4 }); } if (q > 0.5) st.h = 0;
+    if (q < 0.03 && !st.h) { st.h = 1; rs.flash(0, 1.3); rs.flash(1, 1); rs.burst('mist', SCORE[0], SCORE[1] - 4, 4, { sp: 8, ang: 0, spread: 1.6, life: 1.4 }); } if (q > 0.5) st.h = 0;
   },
 });
 X.TILEF.star = (D, t) => {
-  // a band of black impact glass along the floor, blue-white specks twinkling in it
-  for (let x = 3; x < 147; x++) { const y = 94 + Math.round(Math.sin(x * 0.06) * 0.7); D.px(x, y, 'glass', 1); D.px(x, y + 1, 'glass', 2); D.px(x, y - 1, 'scifi', 3);
-    const a = Math.sin(t * (0.9 + hh(x, 4, 8) * 1.8) + hh(x, 5, 8) * 9); if (hh(x, 6, 8) < 0.16) D.px(x, y, 'ice', a > 0.7 ? 10 : 6, G); if (hh(x, 6, 8) < 0.03 && a > 0.85) { D.px(x, y - 1, 'ice', 7, G); D.px(x - 1, y, 'ice', 7, G); D.px(x + 1, y, 'ice', 7, G); } }
+  // a thread of black impact glass wandering along the floor, pale starlight specks in it and a tektite bead now and then
+  const yy = (x) => 95 + Math.round(Math.sin(x * 0.08 + 2) * 1.1 + Math.sin(x * 0.21) * 0.5);
+  for (let x = 3; x < 147; x++) { const y = yy(x); D.px(x, y, 'night', 1, FZ(y)); if (hh(x, 6, 8) < 0.1) { const a = Math.sin(t * (0.9 + hh(x, 4, 8) * 1.8) + hh(x, 5, 8) * 9); D.px(x, y, 'ice', a > 0.7 ? 10.5 : 6.5, G); } }
+  [19, 58, 97, 131].forEach((x, i) => { const y = yy(x) - 1; D.px(x, y, 'night', 1.5, FZ(y)); D.px(x + 1, y, 'night', 1.5, FZ(y)); D.px(x, y + 1, 'night', 1, FZ(y + 1)); D.px(x + 1, y + 1, 'night', 1, FZ(y + 1)); D.px(x, y, 'glass', Math.sin(t * 1.1 + i * 2.1) > 0.75 ? 10.5 : 7.5, G); });
 };
 
 // ═════════ 雷暴核心 storm ═════════
 // a round pocket in blue slate with a ball of lightning caught in it: filaments writhe out from it to the pocket's glassy
 // wall like a plasma globe, ions circle it, and lightning-glass (fulgurite) branches out through the stone. Every 7 s it charges,
 // then a bolt runs the longest fulgurite out to the edge of the cell and the whole ground flashes
-const SO = [75, 50], SCAV = [75, 50, 24, 20];
+const SO = [75, 51], SCAV = [75, 51, 31, 25], SGE2 = 3, SFO = { amp: 0.17, p: 3.6 };
 const inPock = (x, y) => ed(x, y, SCAV[0], SCAV[1], SCAV[2], SCAV[3]) < 1 + (vnoise(x / 3.5, y / 3.5, 31) - 0.5) * 0.34 + (vnoise(x / 9, y / 9, 34) - 0.5) * 0.2;
-const FUL = []; { const r = X.rng(331); [-2.8, -2.05, -1.2, -0.35, 0.5, 1.45, 2.4].forEach((a, i) => walk(r, SO[0] + Math.cos(a) * SCAV[2], SO[1] + Math.sin(a) * SCAV[3], a, 26 + Math.floor(r() * 26) + (Math.abs(Math.cos(a)) > 0.8 ? 16 : 0), { wig: 1.1, to: a, pull: 0.22, br: Math.abs(Math.cos(a)) > 0.8 ? 0.035 : 0.05, maxD: 1, x0: 7, y0: 7 }, FUL)); }
+const FUL = []; { const r = X.rng(331); [-2.8, -2.05, -1.2, -0.35, 0.5, 1.45, 2.4].forEach((a, i) => walk(r, SO[0] + Math.cos(a) * SCAV[2], SO[1] + Math.sin(a) * SCAV[3], a, 30 + Math.floor(r() * 26) + (Math.abs(Math.cos(a)) > 0.8 ? 18 : 0), { wig: 1.1, to: a, pull: 0.22, br: Math.abs(Math.cos(a)) > 0.8 ? 0.035 : 0.05, maxD: 1, x0: 7, y0: 7 }, FUL)); }
 // slate stratigraphy: a dipping, gently bent bedding coordinate, stepped across three faults; laminae of 2–5 px
 const SFAULT = [[46, 0.32, 3], [79, -0.18, -2], [108, 0.4, 2]];
 const slateS = (x, y) => { let s = y + Math.sin(x * 0.07) * 2.2 + x * 0.12 + (vnoise(x / 16, y / 11, 35) - 0.5) * 1.8; SFAULT.forEach(([fx, sl, off]) => { if (x > fx + (y - 50) * sl) s += off; }); return s; };
@@ -248,13 +284,13 @@ function bolt(D, x0, y0, x1, y1, t, seed, amp, m, tn, n) {
 X.def('_tile_storm', {
   noFrame: 1, noFloor: 1, amb: [0.5, 0.42],
   paint(S, sc) {
-    sc.light({ x: SO[0], y: SO[1], z: 18, r: 58, i: 1.05, c: '#8ff6ff', tint: 0.4 });                          // 0 the ball (crackles: rs.mul)
+    sc.light({ x: SO[0], y: SO[1], z: 18, r: 80, i: 1.05, c: '#8ff6ff', tint: 0.36 });                          // 0 the ball (crackles: rs.mul)
     sc.light({ x: 75, y: 50, z: 12, r: 1, i: 1, c: '#8ff6ff', fl: 'pulse', amp: 0.5, sp: 2.3, tint: 0 });       // 1 lights nothing: the fulgurites breathe with it
-    bed(S, 3, (x, y) => ed(x, y, 75, 52, 62, 46) < 1.05);
+    bed(S, 3, (x, y, r2) => fillE(x, y, SGE2, SFO) < 1 + r2 / 50);
     // blue slate round the pocket: split laminae 2–5 px thick, each with a lit upper edge and a dark underside,
     // stepped along three faults, a few cleavage seams across them; it breaks off in chunks into the rock
     const SL = new Int16Array(W * H).fill(-1), SF = new Float32Array(W * H);
-    for (let y = 4; y < H - 4; y++) for (let x = 4; x < W - 4; x++) { const e = ed(x, y, 75, 51, 64, 46) + (vnoise(x / 7, y / 7, 32) - 0.5) * 0.3; if (e > 1) continue; if (e > 0.78 && vnoise(x / 5, y / 5, 4) < (e - 0.78) / 0.22) continue;
+    for (let y = 4; y < H - 4; y++) for (let x = 4; x < W - 4; x++) { if (!inFill(x, y, SGE2, SFO)) continue;
       const sv = slateS(x, y), i = slateI(sv), f = sv - SLB[i], p = y * W + x; SL[p] = i; SF[p] = f;
       S.px(x, y, 'scifi', SLT[i], { n: [0, 0] }); }
     S.noise(8, 4, W - 16, H - 8, 1, 5, 33, { only: 'scifi' });
@@ -269,22 +305,22 @@ X.def('_tile_storm', {
     // fulgurites: branching tubes of lightning glass, dark lips, a core that breathes
     FUL.forEach(F => F.pts.forEach(([x, y], k) => { const w = F.depth === 0 && k < F.pts.length * 0.6; S.px(x + 1, y + 1, 'night', 1); if (w) { S.px(x, y - 1, 'glass', 3); S.px(x - 1, y, 'glass', 3); } S.px(x, y, F.depth ? 'ice' : 'teal', F.depth ? 6 : 7, { e: 2 }); }));
     // the pocket: black inside, a glassy rim
-    for (let y = 26; y < 76; y++) for (let x = 48; x < 103; x++) { if (!inPock(x, y)) continue; const e = ed(x, y, SCAV[0], SCAV[1], SCAV[2], SCAV[3]); S.px(x, y, e > 0.86 ? 'glass' : 'night', e > 0.86 ? 2 : 0.6 + (y - SO[1]) / 18 * 0.4, { n: [0, 0] }); if (!inPock(x, y - 1)) S.px(x, y, 'ink', 0); if (!inPock(x, y + 1)) S.px(x, y, 'glass', 5, { n: [0, -0.8] }); }
+    for (let y = 18; y < 86; y++) for (let x = 38; x < 113; x++) { if (!inPock(x, y)) continue; const e = ed(x, y, SCAV[0], SCAV[1], SCAV[2], SCAV[3]); S.px(x, y, e > 0.86 ? 'glass' : 'night', e > 0.86 ? 2 : 0.6 + (y - SO[1]) / 18 * 0.4, { n: [0, 0] }); if (!inPock(x, y - 1)) S.px(x, y, 'ink', 0); if (!inPock(x, y + 1)) S.px(x, y, 'glass', 5, { n: [0, -0.8] }); }
   },
   anim(D, t, rs) {
     const st = rs.st, q = steps(t, 7), charge = q > 0.75 ? (q - 0.75) / 0.25 : 0, hit = q < 0.1 ? 1 - q / 0.1 : 0;
     rs.mul[0] = 0.9 + 0.12 * n1(t * 13) + 0.1 * n1(t * 31) + charge * 0.5 + hit * 1.2;
     // the ball: churning bands round a white core
-    D.lay('mid'); const Rb = 9.5 + charge * 1.5 + hit * 1.5;
-    for (let y = -13; y <= 13; y++) for (let x = -13; x <= 13; x++) { const d = Math.hypot(x, y); if (d > Rb) continue; const an = Math.atan2(y, x), sw = Math.sin(an * 3 + t * 4.2 - d * 0.7) + Math.sin(an * 2 - t * 2.7 + d * 0.5) * 0.6;
+    D.lay('mid'); const Rb = 12 + charge * 1.5 + hit * 1.5;
+    for (let y = -16; y <= 16; y++) for (let x = -16; x <= 16; x++) { const d = Math.hypot(x, y); if (d > Rb) continue; const an = Math.atan2(y, x), sw = Math.sin(an * 3 + t * 4.2 - d * 0.7) + Math.sin(an * 2 - t * 2.7 + d * 0.5) * 0.6;
       let tn = 5.5 + (1 - d / Rb) * 5 + (sw > 0.7 ? 1.4 : sw < -0.9 ? -1.2 : 0) + charge * 1.2 + hit; if (d > Rb - 1) tn = Math.min(tn, 6.5); tn = clamp(tn, 4, 11.4); D.px(SO[0] + x, SO[1] + y, tn > 8.5 ? 'teal' : 'ice', tn > 8.5 ? Math.min(11, tn) : tn, G); }
-    D.px(SO[0] - 3, SO[1] - 4, 'linen', 11, G); D.px(SO[0] - 4, SO[1] - 3, 'linen', 10, G); D.px(SO[0] - 2, SO[1] - 4, 'linen', 10, G);
+    D.px(SO[0] - 4, SO[1] - 5, 'linen', 11, G); D.px(SO[0] - 5, SO[1] - 4, 'linen', 10, G); D.px(SO[0] - 3, SO[1] - 5, 'linen', 10, G); D.px(SO[0] - 4, SO[1] - 4, 'linen', 10, G);
     // filaments: they wander round the ball and strike the pocket wall, which glows where they land
     for (let i = 0; i < 6; i++) { const an = i * 1.047 + Math.sin(t * (0.5 + i * 0.13) + i * 1.7) * 0.7 + t * 0.15, on = Math.sin(t * (1.7 + i * 0.41) + i * 2.3) + charge * 1.5; if (on < -0.2) continue;
-      const sx = SO[0] + Math.cos(an) * (Rb - 1), sy = SO[1] + Math.sin(an) * (Rb - 1); let ex = sx, ey = sy; for (let k = 0; k < 30; k++) { const nx = ex + Math.cos(an), ny = ey + Math.sin(an); if (!inPock(Math.round(nx), Math.round(ny))) break; ex = nx; ey = ny; }
-      bolt(D, sx, sy, ex, ey, t, i, 2.2, on > 0.6 ? 'teal' : 'ice', on > 0.6 ? 10 : 8, 6); D.px(ex, ey, 'linen', 11, G); D.px(ex + Math.cos(an), ey + Math.sin(an), 'teal', 9, G); }
+      const sx = SO[0] + Math.cos(an) * (Rb - 1), sy = SO[1] + Math.sin(an) * (Rb - 1); let ex = sx, ey = sy; for (let k = 0; k < 40; k++) { const nx = ex + Math.cos(an), ny = ey + Math.sin(an); if (!inPock(Math.round(nx), Math.round(ny))) break; ex = nx; ey = ny; }
+      bolt(D, sx, sy, ex, ey, t, i, 2.8, on > 0.6 ? 'teal' : 'ice', on > 0.6 ? 10 : 8, 6); D.px(ex, ey, 'linen', 11, G); D.px(ex + Math.cos(an), ey + Math.sin(an), 'teal', 9, G); }
     // ions circling the ball
-    for (let i = 0; i < 7; i++) { const a = t * (1.6 + i * 0.13) + i * 0.9, rr = 13 + (i % 3) * 2.5, x = SO[0] + Math.cos(a) * rr, y = SO[1] + Math.sin(a) * rr * 0.55 * (i % 2 ? 1 : -1); D.px(x, y, 'teal', Math.sin(a) > 0 ? 9 : 7, G); }
+    for (let i = 0; i < 7; i++) { const a = t * (1.6 + i * 0.13) + i * 0.9, rr = 16 + (i % 3) * 3, x = SO[0] + Math.cos(a) * rr, y = SO[1] + Math.sin(a) * rr * 0.55 * (i % 2 ? 1 : -1); D.px(x, y, 'teal', Math.sin(a) > 0 ? 9 : 7, G); }
     // pulses creep out along the fulgurites
     D.lay('wall'); FUL.forEach((F, i) => { if (F.depth) return; runPulse(D, F.pts, (t * 14 + i * 17) % (F.pts.length + 30), 'teal', 10, 3); });
     // the strike: a bolt down the longest fulgurite to the edge of the cell
@@ -375,26 +411,26 @@ X.TILEF.bones = (D, t) => {
 // layered sands of time with clock gears fossilised in them — still turning; in a hollow among them a great hourglass
 // floats, its sand running down in a thread of light. Every 10 s the lower bulb is full: the glass turns over, a ring of
 // gold runs out through the sand and the grains in the strata stir
-const HG = [75, 49], HGC = [75, 52, 29, 35], HP = 10;
+const HG = [75, 50], HGC = [75, 53, 35, 40], HP = 10, HV = 26, HU = 18, TGEO = 6;   // HV: half-height of a bulb, HU: outer half-width
 const inHollow = (x, y) => ed(x, y, HGC[0], HGC[1], HGC[2], HGC[3]) < 1 + (vnoise(x / 5, y / 5, 51) - 0.5) * 0.14;
-const bulbW = (a) => 1.2 + 10.6 * Math.pow(Math.max(0, Math.sin(a * Math.PI * 0.92)), 0.6);   // half-width of the glass at a = |v|/22
+const bulbW = (a) => 1.4 + 13.2 * Math.pow(Math.max(0, Math.sin(a * Math.PI * 0.92)), 0.6);   // half-width of the glass at a = |v|/HV
 // one pixel of the hourglass in its own frame (u across, v down from the neck); k = share of sand already run down
 function hgPix(u, v, k, t) {
   const av = Math.abs(v), au = Math.abs(u);
-  if (av >= 22 && av < 26 && au <= 15) { const edge = av >= 25 || au >= 15; return ['gold', edge ? 4 : av === 22 ? 8 : 6 - (u > 8 ? 1 : 0), 0]; }   // end caps
-  if (av < 22 && au >= 13 && au < 15) return ['wood', u < 0 ? (au < 14 ? 7 : 5) : (au < 14 ? 5 : 3), 0];                                         // posts
-  if (av < 22 && Math.round(av) % 7 === 3 && au >= 12 && au < 16) return ['gold', 7, 0];                                                            // post rings
-  const w = bulbW(av / 22); if (av >= 22 || au > w) return null;
+  if (av >= HV && av < HV + 4 && au <= HU) { const edge = av >= HV + 3 || au >= HU; return ['gold', edge ? 4 : av === HV ? 8 : 6 - (u > HU - 7 ? 1 : 0), 0]; }   // end caps
+  if (av < HV && au >= HU - 2 && au < HU) return ['wood', u < 0 ? (au < HU - 1 ? 7 : 5) : (au < HU - 1 ? 5 : 3), 0];                                     // posts
+  if (av < HV && Math.round(av) % 8 === 4 && au >= HU - 3 && au < HU + 1) return ['gold', 7, 0];                                                       // post rings
+  const w = bulbW(av / HV); if (av >= HV || au > w) return null;
   if (au > w - 1) return ['glass', u < 0 ? 9 : 6, 0];                                                                                              // the glass wall
   // sand: the upper bulb drains from its top down to the neck (a funnel dip), the lower one fills up (a heap)
   const sh = u < -w * 0.35 ? 1 : u > w * 0.45 ? -1 : 0;
-  if (v < 0) { const lvl = -22 + 21 * k; if (v > lvl && v < 0) return ['gold', 8 + sh + (v - lvl < 1.2 ? 1 : 0), 1]; }
-  else { const lvl = 22 - 21 * k - Math.max(0, 5 - au) * 0.7 * (k > 0.02 ? 1 : 0); if (v > lvl) return ['gold', 7.6 + sh + (v - lvl < 1.2 ? 1.4 : 0), 1]; if (au < 1 && k < 0.985 && ((Math.round(v) + Math.floor(t * 24)) % 3)) return ['gold', 10, 1]; }
+  if (v < 0) { const lvl = -HV + (HV - 1) * k; if (v > lvl && v < 0) return ['gold', 8 + sh + (v - lvl < 1.2 ? 1 : 0), 1]; }
+  else { const lvl = HV - (HV - 1) * k - Math.max(0, 6 - au) * 0.7 * (k > 0.02 ? 1 : 0); if (v > lvl) return ['gold', 7.6 + sh + (v - lvl < 1.2 ? 1.4 : 0), 1]; if (au < 1 && k < 0.985 && ((Math.round(v) + Math.floor(t * 24)) % 3)) return ['gold', 10, 1]; }
   // empty glass: see-through, a gleam down the left side
-  if (u < -w * 0.45 && u > -w * 0.75 && av > 4 && av < 19 && (v < 0 || av < 12)) return ['glass', 9, 1];
+  if (u < -w * 0.45 && u > -w * 0.75 && av > 4 && av < HV - 3 && (v < 0 || av < 14)) return ['glass', 9, 1];
   return null;
 }
-const HGEARS = [[27, 30, 9, 7, 10, 0.25], [124, 72, 11, 8, 12, -0.2], [30, 80, 6, 4, 7, -0.4], [121, 26, 6, 4, 7, 0.35]];
+const HGEARS = [[26, 29, 9, 7, 10, 0.25], [125, 73, 11, 8, 12, -0.2], [27, 79, 7, 5, 8, -0.4], [123, 26, 7, 5, 8, 0.35], [137, 50, 4, 2.5, 6, 0.5], [16, 54, 4, 2.5, 6, -0.45]];
 function gearD(D, cx, cy, R0, R1, n, a, m, t0) {
   for (let y = -R0 - 1; y <= R0 + 1; y++) for (let x = -R0 - 1; x <= R0 + 1; x++) { const d = Math.hypot(x, y); if (d > R0 + 0.5) continue; const th = Math.atan2(y, x) - a, tooth = Math.cos(th * n) > 0.2;
     if (d > R1 + 0.5 && !tooth) continue; if (d < 1.8) { D.px(cx + x, cy + y, 'ink', 1); continue; } if (d < R1 - 1.5 && d > 2.8 && Math.abs(Math.sin(th * 2)) > 0.35) continue;
@@ -405,21 +441,21 @@ const dune = (x, y) => y + Math.sin(x * 0.045 + y * 0.02) * 4 + Math.sin(x * 0.1
 X.def('_tile_hourglass', {
   noFrame: 1, noFloor: 1, amb: [0.5, 0.42],
   paint(S, sc) {
-    sc.light({ x: HG[0], y: HG[1], z: 18, r: 64, i: 1, c: '#ffe08a', fl: 'pulse', amp: 0.06, sp: 1, tint: 0.45 });   // 0 the hourglass (turns: rs.mul / flash)
-    sc.light({ x: HG[0], y: 80, z: 6, r: 30, i: 0.5, c: '#ffc860', tint: 0.4 });                                        // 1 the glow it throws on the hollow's floor
-    bed(S, 6, (x, y) => ed(x, y, 75, 52, 66, 48) < 1.05);
+    sc.light({ x: HG[0], y: HG[1], z: 18, r: 82, i: 1, c: '#ffe08a', fl: 'pulse', amp: 0.06, sp: 1, tint: 0.45 });   // 0 the hourglass (turns: rs.mul / flash)
+    sc.light({ x: HG[0], y: 86, z: 6, r: 36, i: 0.5, c: '#ffc860', tint: 0.4 });                                        // 1 the glow it throws on the hollow's floor
+    bed(S, 6, (x, y, r2) => fillE(x, y, TGEO) < 1 + r2 / 50);
     // the sands: wavy beds of gold and umber, cross-bedded, fading into the rock at the edges
-    for (let y = 5; y < H - 5; y++) for (let x = 5; x < W - 5; x++) { const e = ed(x, y, 75, 52, 70, 50) + (vnoise(x / 7, y / 7, 53) - 0.5) * 0.25; if (e > 1) continue; if (e > 0.86 && vnoise(x / 2.2, y / 2.2, 7) < (e - 0.86) / 0.14) continue; if (y < 11 && vnoise(x / 2.2, y / 2.2, 7) < (11 - y) / 6) continue;
+    for (let y = 5; y < H - 5; y++) for (let x = 5; x < W - 5; x++) { if (!inFill(x, y, TGEO)) continue;
       const d = dune(x, y), band = Math.floor(d / 4), sub = ((d % 4) + 4) % 4, cross = Math.floor((d + x * 0.35) / 2) % 5 === 0 && band % 3 === 1;
       S.px(x, y, band % 4 === 3 ? 'earth' : 'sand', band % 4 === 3 ? 4 : (band % 2 ? 4 : 5) + (sub < 1 ? 1 : 0) - (cross ? 1 : 0), { n: [0, 0] }); }
     S.noise(8, 6, W - 16, H - 12, 1, 3, 54, { only: 'sand' });
     // the hollow: shadowed sand behind, a lit rim, a drift of sand on its floor
-    for (let y = 14; y < 90; y++) for (let x = 44; x < 107; x++) { if (!inHollow(x, y)) continue; S.px(x, y, 'sand', 1.4 + (y - 20) / 70, { n: [0, 0] }); if (!inHollow(x, y - 1)) S.px(x, y, 'sand', 0.6); if (!inHollow(x, y + 1)) S.px(x, y, 'sand', 6, { n: [0, -0.8] }); }
-    S.noise(46, 16, 60, 72, 1, 4, 55, { only: 'sand' });
-    S.lay('back'); S.beg(); for (let x = 50; x < 101; x++) { const hgt = 4 + Math.round(3 * Math.cos((x - 75) / 25 * 1.5)) + (x % 7 === 0 ? 1 : 0); for (let y = 0; y < hgt; y++) { const yy = 86 - y; if (inHollow(x, yy)) S.px(x, yy, 'sand', y === hgt - 1 ? 7 : 5 - (y < 2 ? 1 : 0), { n: [0, y === hgt - 1 ? -0.8 : 0] }); } } S.end();
+    for (let y = 10; y < 97; y++) for (let x = 36; x < 115; x++) { if (!inHollow(x, y)) continue; S.px(x, y, 'sand', 1.4 + (y - 20) / 70, { n: [0, 0] }); if (!inHollow(x, y - 1)) S.px(x, y, 'sand', 0.6); if (!inHollow(x, y + 1)) S.px(x, y, 'sand', 6, { n: [0, -0.8] }); }
+    S.noise(38, 12, 76, 84, 1, 4, 55, { only: 'sand' });
+    S.lay('back'); S.beg(); for (let x = 44; x < 107; x++) { const hgt = 4 + Math.round(3 * Math.cos((x - 75) / 31 * 1.5)) + (x % 7 === 0 ? 1 : 0); for (let y = 0; y < hgt; y++) { const yy = 91 - y; if (inHollow(x, yy)) S.px(x, yy, 'sand', y === hgt - 1 ? 7 : 5 - (y < 2 ? 1 : 0), { n: [0, y === hgt - 1 ? -0.8 : 0] }); } } S.end();
     // gear sockets (the gears themselves turn)
     S.lay('wall'); HGEARS.forEach(([x, y, R0]) => { S.ell(x, y, R0 + 1.5, R0 + 1.5, 'earth', 2); });
-    sc.emit({ k: 'dust', x: HG[0], y: 60, w: 50, h: 40, rate: 3, sp: 3, life: 3 });
+    sc.emit({ k: 'dust', x: HG[0], y: 58, w: 62, h: 50, rate: 3, sp: 3, life: 3 });
   },
   anim(D, t, rs) {
     const st = rs.st, q = steps(t, HP), k = Math.min(1, q / 0.84), fl = q > 0.86 ? (q - 0.86) / 0.14 : 0, th = Math.PI * (fl < 0.5 ? 2 * fl * fl : 1 - 2 * (1 - fl) * (1 - fl)), post = q < 0.12 ? 1 - q / 0.12 : 0;
@@ -427,16 +463,16 @@ X.def('_tile_hourglass', {
     // fossil gears in the sand, turning a tooth at a time (smoothly)
     D.lay('wall'); HGEARS.forEach(([x, y, R0, R1, n, sp], i) => { const tick = t * sp * 1.2, a = (Math.floor(tick) + sm(tick - Math.floor(tick))) * 2 * Math.PI / n * Math.sign(sp); gearD(D, x, y, R0, R1, n, a, 'brass', 5 + (i % 2)); });
     // grains drifting along the beds
-    GRAINS.forEach(([p, y0, sp, w]) => { const x = 8 + ((p * 134 + t * sp * (post ? 3 : 1)) % 134), y = y0 + Math.sin(x * 0.045 + y0 * 0.02) * -4; if (inHollow(x, y) || ed(x, y, 75, 52, 70, 50) > 0.85) return; D.px(x, y, 'gold', 9, G); D.px(x - 1, y, 'gold', 7, G); });
+    GRAINS.forEach(([p, y0, sp, w]) => { const x = 8 + ((p * 134 + t * sp * (post ? 3 : 1)) % 134), y = y0 + Math.sin(x * 0.045 + y0 * 0.02) * -4; if (inHollow(x, y) || !inFill(x, y, TGEO)) return; D.px(x, y, 'gold', 9, G); D.px(x - 1, y, 'gold', 7, G); });
     // the hourglass floats, bobbing; while it turns it is drawn rotated, pixel by pixel
-    D.lay('mid'); const cy = HG[1] + Math.round(Math.sin(t * 1.1) * 1.2), c = Math.cos(th), s2 = Math.sin(th), Rr = fl > 0 ? 30 : 0;
+    D.lay('mid'); const cy = HG[1] + Math.round(Math.sin(t * 1.1) * 1.2), c = Math.cos(th), s2 = Math.sin(th), Rr = fl > 0 ? 35 : 0;
     D.beg();
-    if (!Rr) { for (let v = -26; v <= 25; v++) for (let u = -15; u <= 15; u++) { const P = hgPix(u, v, k, t); if (P) D.px(HG[0] + u, cy + v, P[0], P[1], P[2] ? G : undefined); } }
-    else for (let y = -Rr; y <= Rr; y++) for (let x = -Rr; x <= Rr; x++) { const u = Math.round(c * x + s2 * y), v = Math.round(-s2 * x + c * y); if (Math.abs(u) > 15 || v < -26 || v > 25) continue; const P = hgPix(u, v, 1, t); if (P) D.px(HG[0] + x, cy + y, P[0], P[1], P[2] ? G : undefined); }
+    if (!Rr) { for (let v = -HV - 4; v <= HV + 3; v++) for (let u = -HU; u <= HU; u++) { const P = hgPix(u, v, k, t); if (P) D.px(HG[0] + u, cy + v, P[0], P[1], P[2] ? G : undefined); } }
+    else for (let y = -Rr; y <= Rr; y++) for (let x = -Rr; x <= Rr; x++) { const u = Math.round(c * x + s2 * y), v = Math.round(-s2 * x + c * y); if (Math.abs(u) > HU || v < -HV - 4 || v > HV + 3) continue; const P = hgPix(u, v, 1, t); if (P) D.px(HG[0] + x, cy + y, P[0], P[1], P[2] ? G : undefined); }
     D.end();
     // the turn: a ring of gold runs out through the sand, glints, the gleam on the glass
-    if (post > 0) { const kk = 1 - post, rx = 18 + kk * 44, ry = 14 + kk * 30; D.lay('wall'); for (let a = 0; a < 6.283; a += 0.02) { const x = HG[0] + Math.cos(a) * rx, y = HG[1] + Math.sin(a) * ry; if (!inHollow(x, y) && x > 6 && x < W - 6 && y > 6 && y < H - 6) D.px(x, y, 'gold', 9 - kk * 4, G); } }
-    if (q > 0.86 && !st.f) { st.f = 1; rs.burst('glint', HG[0], cy, 6, { sp: 26, life: 0.7, w: 20, h: 30 }); } if (q < 0.5) st.f = 0;
+    if (post > 0) { const kk = 1 - post, rx = 22 + kk * 50, ry = 16 + kk * 34; D.lay('wall'); for (let a = 0; a < 6.283; a += 0.02) { const x = HG[0] + Math.cos(a) * rx, y = HG[1] + Math.sin(a) * ry; if (!inHollow(x, y) && x > 6 && x < W - 6 && y > 6 && y < H - 6) D.px(x, y, 'gold', 9 - kk * 4, G); } }
+    if (q > 0.86 && !st.f) { st.f = 1; rs.burst('glint', HG[0], cy, 7, { sp: 28, life: 0.7, w: 24, h: 36 }); } if (q < 0.5) st.f = 0;
     if (q < 0.01 && !st.g) { st.g = 1; rs.flash(0, 0.8); rs.flash(1, 0.8); } if (q > 0.5) st.g = 0;
   },
 });
@@ -447,28 +483,35 @@ X.TILEF.hourglass = (D, t) => {
 };
 
 // ═════════ 梦境裂隙 dream ═════════
-// a tear through the rock with a dream showing through it: a night sky in hard bands that warm from indigo to pink
-// towards the bottom, a thin pink nebula, stars, a ringed crescent moon, light clouds drifting past, a slow vortex. The
-// lips of the tear burn hot pink, a side crack runs off it, two clumps of pink crystal grow on its lips, bubbles float
-// out. Every 8 s the tear flares and a dream moth flutters out, loops and melts into sparkles
-const rcx = (y) => 50 + (y - 8) * 0.52 + Math.sin(y * 0.07 + 0.5) * 7 + Math.sin(y * 0.15 + 1) * 2.2;
-// the lips are torn: a sawtooth of uneven teeth on each side over a pointed lens, widest (~22 px a side) at y 45–65
-const rhw = (y, side) => { if (y < 8 || y > 96) return 0; const a = Math.sin(Math.PI * (y - 8) / 88), ph = (y + side * 3.7) / (6 + side), c = Math.floor(ph), f = ph - c, tooth = (f < 0.65 ? f / 0.65 : (1 - f) / 0.35) * (1.6 + hh(c, side, 68) * 2.6);
-  return Math.max(0, 22 * Math.pow(a, 1.2) * (1 + (vnoise(y / 13, side * 5, 61) - 0.5) * 0.5) + (tooth - 1.5 + (vnoise(y / 2, side * 9, 67) - 0.5)) * Math.min(1, a * 2.5)); };
-// the side crack: off the right lip, up and away to the right; distance field so it shares the tear's lips and glow
-const DBR = []; { const r = X.rng(364), zig = (x, y, a, n, dep) => { const P = [[x, y]]; let s = r() < 0.5 ? 1 : -1; for (let i = 0; i < n; i++) { const l = 3 + Math.floor(r() * 4), aa = a + s * (0.45 + r() * 0.3); for (let k = 0; k < l; k++) { x += Math.cos(aa); y += Math.sin(aa); P.push([Math.round(x), Math.round(y)]); } s = -s; } DBR.push({ pts: P, depth: dep }); return P; };
-  zig(82, 37, -0.34, 7, 0); }
-const DBRD = new Float32Array(W * H).fill(99); DBR.forEach(B => { const n = B.pts.length; B.pts.forEach(([x, y], k) => { const hw = B.depth ? 0.5 * (1 - k / n) + 0.3 : 1.3 * Math.pow(1 - k / n, 0.7) + 0.3; for (let dy = -5; dy <= 5; dy++) for (let dx = -5; dx <= 5; dx++) { const X2 = x + dx, Y2 = y + dy; if (X2 < 0 || Y2 < 0 || X2 >= W || Y2 >= H) continue; const d = Math.hypot(dx, dy) - hw, p = Y2 * W + X2; if (d < DBRD[p]) DBRD[p] = d; } }); });
-const riftM = (x, y) => { const d = x - rcx(y); return Math.abs(d) - (d < 0 ? rhw(y, 0) : rhw(y, 1)); };
-const riftD = (x, y) => { const d = x - rcx(y), w = d < 0 ? rhw(y, 0) : rhw(y, 1), xi = Math.round(x), yi = Math.round(y); return Math.min(Math.abs(d) - w, xi >= 0 && yi >= 0 && xi < W && yi < H ? DBRD[yi * W + xi] : 99); };   // < 0 inside
+// a long tear across the rock, upper left to lower right, with a dream showing through it: a night sky in hard bands
+// that warm from indigo to pink towards the bottom, a thin pink nebula, stars, a ringed crescent moon, light clouds
+// drifting past, a slow vortex. The lips of the tear burn hot pink, two side cracks run off it, the rock round it has
+// turned to banded violet dream-stone, pink crystals grow on its lips, bubbles float out. Every 8 s the tear flares
+// and a dream moth flutters out, loops and melts into sparkles
+const DA = [24, 17], DB = [127, 88], DLEN = Math.hypot(DB[0] - DA[0], DB[1] - DA[1]), DCO = (DB[0] - DA[0]) / DLEN, DSI = (DB[1] - DA[1]) / DLEN, DGEO = 8;
+const dMean = (s) => Math.sin(s * 0.055 + 0.5) * 5 + Math.sin(s * 0.13 + 1) * 2;   // the tear's middle line meanders about its axis
+// s along the axis, n across it (n > 0: the lower-left side); dPt(s, n) back to the cell (n measured from the middle line)
+const dFrame = (x, y) => { const dx = x - DA[0], dy = y - DA[1]; return [dx * DCO + dy * DSI, -dx * DSI + dy * DCO]; };
+const dPt = (s, n) => { const m = n + dMean(s); return [DA[0] + DCO * s - DSI * m, DA[1] + DSI * s + DCO * m]; };
+// the lips are torn: a sawtooth of uneven teeth on each side over a pointed lens, widest (~21 px a side) in the middle
+const rhw = (s, side) => { if (s < 0 || s > DLEN) return 0; const a = Math.sin(Math.PI * s / DLEN), ph = (s + side * 3.7) / (6 + side), c = Math.floor(ph), f = ph - c, tooth = (f < 0.65 ? f / 0.65 : (1 - f) / 0.35) * (1.6 + hh(c, side, 68) * 2.6);
+  return Math.max(0, 19 * Math.pow(a, 1.1) * (1 + (vnoise(s / 13, side * 5, 61) - 0.5) * 0.5) + (tooth - 1.5 + (vnoise(s / 2, side * 9, 67) - 0.5)) * Math.min(1, a * 2.5)); };
+const dLip = (s, side) => dPt(s, (side ? 1 : -1) * (rhw(s, side) - 0.5));
+// the side cracks: off the upper lip up and away, off the lower lip down and away; a distance field so they share the lips and glow
+const DBR = []; { const r = X.rng(364), zig = (x, y, a, n, dep) => { const P = [[Math.round(x), Math.round(y)]]; let s = r() < 0.5 ? 1 : -1; for (let i = 0; i < n; i++) { const l = 3 + Math.floor(r() * 4), aa = a + s * (0.45 + r() * 0.3); for (let k = 0; k < l; k++) { x += Math.cos(aa); y += Math.sin(aa); P.push([Math.round(x), Math.round(y)]); } s = -s; } DBR.push({ pts: P, depth: dep }); return P; };
+  const p0 = dLip(DLEN * 0.44, 0), p1 = dLip(DLEN * 0.7, 1); zig(p0[0], p0[1], -1.15, 6, 0); zig(p1[0], p1[1], 2.2, 4, 1); }
+const DBRD = new Float32Array(W * H).fill(99); DBR.forEach(B => { const n = B.pts.length; B.pts.forEach(([x, y], k) => { const hw = B.depth ? 1.0 * Math.pow(1 - k / n, 0.7) + 0.3 : 1.3 * Math.pow(1 - k / n, 0.7) + 0.3; for (let dy = -5; dy <= 5; dy++) for (let dx = -5; dx <= 5; dx++) { const X2 = x + dx, Y2 = y + dy; if (X2 < 0 || Y2 < 0 || X2 >= W || Y2 >= H) continue; const d = Math.hypot(dx, dy) - hw, p = Y2 * W + X2; if (d < DBRD[p]) DBRD[p] = d; } }); });
+const riftM = (x, y) => { const [s, n] = dFrame(x, y), d = n - dMean(s); return Math.abs(d) - (d < 0 ? rhw(s, 0) : rhw(s, 1)) + Math.max(0, -s, s - DLEN); };
+const riftD = (x, y) => { const xi = Math.round(x), yi = Math.round(y); return Math.min(riftM(x, y), xi >= 0 && yi >= 0 && xi < W && yi < H ? DBRD[yi * W + xi] : 99); };   // < 0 inside
 // the dream's sky: hard bands, indigo at the top to pink at the bottom, with a gently stepped edge between them
-const DSKY = [[22, 'night', 2], [31, 'night', 3], [39, 'magic', 3], [47, 'magic', 4], [55, 'magic', 5], [63, 'pink', 3], [72, 'pink', 4], [999, 'pink', 5]];
+const DSKY = [[26, 'night', 2], [34, 'night', 3], [42, 'magic', 3], [50, 'magic', 4], [58, 'magic', 5], [66, 'pink', 3], [75, 'pink', 4], [999, 'pink', 5]];
 const dsky = (x, y) => { const yy = y + Math.round(Math.sin(x * 0.23 + y * 0.05) * 1.1); for (let i = 0; i < DSKY.length; i++) if (yy < DSKY[i][0]) return DSKY[i]; return DSKY[DSKY.length - 1]; };
-const DSTARS = []; { const r = X.rng(361); for (let i = 0; i < 120 && DSTARS.length < 13; i++) { const y = 14 + r() * 40, x = rcx(y) + (r() - 0.5) * 40; if (riftD(x, y) < -3 && Math.hypot(x - 71, y - 31) > 9) DSTARS.push([Math.round(x), Math.round(y), r() * 7, 0.7 + r() * 1.6]); } }
-const DMOON = [71, 31], DSP = [Math.round(rcx(62)) + 2, 62];
-const DBUB = []; { const r = X.rng(362); for (let i = 0; i < 7; i++) DBUB.push([r(), 24 + r() * 58, 0.1 + r() * 0.1, r() * 7, r() < 0.5 ? -1 : 1]); }
-// crystals: two clumps on the right lip, two on the left, leaning along the tear: [side, y, angle]
-const DXT = [[1, 64, 0.2, 3], [-1, 40, -2.5, 2], [-1, 77, 2.3, 3]];
+const DMOON = dPt(DLEN * 0.3, -3).map(Math.round), DSP = dPt(DLEN * 0.68, 3).map(Math.round);
+const DSTARS = []; { const r = X.rng(361); for (let i = 0; i < 200 && DSTARS.length < 15; i++) { const [x, y] = dPt(r() * DLEN, (r() - 0.5) * 30); if (y < 62 && riftD(x, y) < -3 && Math.hypot(x - DMOON[0], y - DMOON[1]) > 9 && Math.hypot(x - DSP[0], y - DSP[1]) > 12) DSTARS.push([Math.round(x), Math.round(y), r() * 7, 0.7 + r() * 1.6]); } }
+const DBUB = []; { const r = X.rng(362); for (let i = 0; i < 9; i++) DBUB.push([r(), DLEN * (0.2 + r() * 0.6), 0.1 + r() * 0.1, r() * 7, i % 2]); }
+// crystals: clumps on the lips, leaning out of the tear: [side, s, angle, how many]
+const DOUT = [Math.atan2(-DCO, DSI), Math.atan2(DCO, -DSI)];   // outward from the upper lip, from the lower lip
+const DXT = [[0, DLEN * 0.62, DOUT[0] + 0.25, 3], [1, DLEN * 0.28, DOUT[1] - 0.3, 2], [1, DLEN * 0.83, DOUT[1] + 0.2, 3], [0, DLEN * 0.2, DOUT[0] - 0.2, 2]];
 // cloud sprites: a few overlapping puffs; each pixel knows whether it is a top edge (lit), body or underside
 const DCLOUD = [['....llll.....', '.lll.cccl.ll.', 'lcccccccccccl', 'pcccccccccccp', '.ppppppppppp.'], ['...lll...', '.llcccll.', 'lcccccccl', '.ppppppp.']].map(rows => { const px = []; rows.forEach((row, y) => { for (let x = 0; x < row.length; x++) { const k = 'lcp'.indexOf(row[x]); if (k >= 0) px.push([x, y - rows.length + 1, k]); } }); return px; });
 const DCL = [['linen', 9], ['candy', 8], ['pink', 6]];
@@ -484,56 +527,56 @@ function dShard(S, x, y, a, l, hw) {
 X.def('_tile_dream', {
   noFrame: 1, noFloor: 1, amb: [0.5, 0.42],
   paint(S, sc) {
-    sc.light({ x: rcx(56), y: 56, z: 18, r: 64, i: 1, c: '#ff3aa0', tint: 0.32 });                                  // 0 the tear (flares: rs.mul)
-    sc.light({ x: rcx(52), y: 52, z: 10, r: 1, i: 1, c: '#ff3aa0', fl: 'pulse', amp: 0.4, sp: 1.7, tint: 0 });      // 1 lights nothing: the lips and crystals breathe with it
-    bed(S, 8, (x, y, r2) => riftD(x, y) < 30 + r2);
-    // dream-stone: the rock near the tear turns violet and glassy in bands, breaking up into the plain rock
-    for (let y = 4; y < H - 4; y++) for (let x = 4; x < W - 4; x++) { const d = riftD(x, y) + (vnoise(x / 6, y / 6, 63) - 0.5) * 10, lim = 24 * Math.min(1, (y - 4) / 14, (H - 5 - y) / 14, (x - 4) / 14, (W - 5 - x) / 14); if (d < 0 || d > lim) continue; if (d > lim * 0.7 && vnoise(x / 2.2, y / 2.2, 5) < (d - lim * 0.7) / (lim * 0.3)) continue;
-      const band = Math.floor((d + Math.sin(y * 0.2) * 2) / 4); S.px(x, y, band % 2 ? 'lav' : 'magic', band % 2 ? 3 : 4 - (band > 3 ? 1 : 0) + (band === 0 ? 1 : 0), { n: [0, 0] }); }
+    const mid = dPt(DLEN * 0.52, 0);
+    sc.light({ x: mid[0], y: mid[1], z: 18, r: 84, i: 1, c: '#ff3aa0', tint: 0.3 });                              // 0 the tear (flares: rs.mul)
+    sc.light({ x: mid[0], y: mid[1], z: 10, r: 1, i: 1, c: '#ff3aa0', fl: 'pulse', amp: 0.4, sp: 1.7, tint: 0 });   // 1 lights nothing: the lips and crystals breathe with it
+    bed(S, 8, (x, y, r2) => fillE(x, y, DGEO) < 1 + r2 / 50);
+    // dream-stone: the rock round the tear has turned violet and glassy in bands that follow it out to the plain rock
+    for (let y = 4; y < H - 4; y++) for (let x = 4; x < W - 4; x++) { if (!inFill(x, y, DGEO)) continue; const d = riftD(x, y) + (vnoise(x / 6, y / 6, 63) - 0.5) * 8; if (d < 0) continue;
+      const band = Math.floor((d + Math.sin(y * 0.2 + x * 0.05) * 2) / 4.5); S.px(x, y, band % 2 ? 'lav' : 'magic', band % 2 ? 3 - (band > 6 ? 0.5 : 0) : 4 - (band > 3 ? 1 : 0) + (band === 0 ? 1 : 0), { n: [0, 0] }); }
     S.noise(4, 4, W - 8, H - 8, 1, 3, 64, { only: 'lav' });
     // the dream behind: the sky in hard bands, faint star dust; the burning lips
-    for (let y = 6; y < 99; y++) for (let x = 20; x < 130; x++) { const d = riftD(x, y); if (d >= 0) continue; const b = dsky(x, y);
-      let m = b[1], tn = b[2]; if (riftM(x, y) >= 0) { const k = Math.hypot(x - 82, y - 37); m = k < 6 ? 'candy' : 'pink'; tn = k < 6 ? 8 : hh(x, y, 71) < 0.2 ? 7 : 5; } else if (d > -1.5) { m = 'candy'; tn = 9; } else if (d > -2.5) { m = 'pink'; tn = 7; }
+    for (let y = 4; y < H - 4; y++) for (let x = 4; x < W - 4; x++) { const d = riftD(x, y); if (d >= 0) continue; const b = dsky(x, y);
+      let m = b[1], tn = b[2]; if (riftM(x, y) >= 0) { m = d > -1.2 ? 'candy' : 'pink'; tn = d > -1.2 ? 8 : hh(x, y, 71) < 0.2 ? 7 : 5; } else if (d > -1.5) { m = 'candy'; tn = 9; } else if (d > -2.5) { m = 'pink'; tn = 7; }
       S.px(x, y, m, tn, { e: d > -2.5 ? 1 : 255 });
-      if (d < -3 && y < 60 && hh(x, y, 66) < 0.03) S.px(x, y, 'linen', 6, G); }
+      if (d < -3 && y < 62 && hh(x, y, 66) < 0.03) S.px(x, y, 'linen', 6, G); }
     // the nebula: short curved wisps along the tear, a brighter core with a soft pink edge under it
-    [[-9, 18, 13, 4], [7, 50, 13, -4], [-5, 72, 11, 3]].forEach(([off, y0, n, bul]) => { for (let k = 0; k < n; k++) { const u = k / (n - 1), y = y0 + k, x = Math.round(rcx(y) + off + Math.sin(u * Math.PI) * bul); if (riftD(x, y) > -3) continue; const mid = u > 0.2 && u < 0.8;
-      S.px(x, y, 'candy', mid ? 7 : 6, G); if (mid) S.px(x + (bul > 0 ? -1 : 1), y, 'pink', 5, G); if (u > 0.35 && u < 0.65) S.px(x + (bul > 0 ? 1 : -1), y, 'candy', 6, G); } });
+    [[-9, 0.12, 16, 4], [7, 0.44, 16, -4], [-5, 0.74, 14, 3]].forEach(([off, s0, n, bul]) => { for (let k = 0; k < n; k++) { const u = k / (n - 1), [x, y] = dPt(DLEN * s0 + k, off + Math.sin(u * Math.PI) * bul).map(Math.round); if (riftD(x, y) > -3) continue; const mid2 = u > 0.2 && u < 0.8;
+      S.px(x, y, 'candy', mid2 ? 7 : 6, G); if (mid2) S.px(x, y + (bul > 0 ? -1 : 1), 'pink', 5, G); if (u > 0.35 && u < 0.65) S.px(x, y + (bul > 0 ? 1 : -1), 'candy', 6, G); } });
     // the moon: a crescent, lit on its outer edge, a crater or two, a ring of light round it
     for (let y = -9; y <= 9; y++) for (let x = -9; x <= 9; x++) { const X2 = DMOON[0] + x, Y2 = DMOON[1] + y; if (riftD(X2, Y2) > -2.5) continue; const d = Math.hypot(x + 0.5, y + 0.5), dc = Math.hypot(x + 0.5 - 2.4, y + 0.5 + 1.3);
       if (d < 5.2 && dc > 4.3) S.px(X2, Y2, 'bone', dc < 5.3 ? 8 : d > 4.3 ? 10 : 9, G);
       else if (d > 7 && d < 8) S.px(X2, Y2, 'lav', x + y < 0 ? 9 : 7, G); }
     S.px(DMOON[0] - 3, DMOON[1] + 1, 'bone', 7, G); S.px(DMOON[0] - 2, DMOON[1] + 3, 'bone', 7, G);
     // lips: a dark rim just outside the burning edge
-    for (let y = 6; y < 99; y++) for (let x = 20; x < 130; x++) { const d = riftD(x, y); if (d >= 0 && d < 1.2) S.px(x, y, 'magic', 1); }
+    for (let y = 4; y < H - 4; y++) for (let x = 4; x < W - 4; x++) { const d = riftD(x, y); if (d >= 0 && d < 1.2) S.px(x, y, 'magic', 1); }
     // hairline cracks in the dream-stone off the lips (dark, unlit): the rock has been torn, not cut
-    { const r = X.rng(365); for (let i = 0; i < 7; i++) { const y = 20 + r() * 64, side = i % 2 ? 1 : -1, x = rcx(y) + side * (rhw(y, side > 0 ? 1 : 0) + 1); if (riftD(x, y) < 0 || (side > 0 && y < 48 && y > 34)) continue; let cx = x, cy = y; const a = (side > 0 ? 0 : Math.PI) + (r() - 0.5) * 1.2;
-      for (let k = 0; k < 5 + r() * 5; k++) { cx += Math.cos(a) + (r() - 0.5) * 0.8; cy += Math.sin(a) + (r() - 0.5) * 0.8; if (riftD(cx, cy) < 0.5) continue; S.px(cx, cy, 'magic', 1); S.px(cx, cy + 1, 'lav', 5); } } }
-    // pink crystals growing out of the lips in two clumps, leaning along the tear
-    S.lay('back'); DXT.forEach(([side, y, a, n]) => { const lip = (yy) => rcx(yy) + side * (rhw(yy, side > 0 ? 1 : 0) - 0.5);
-      [[-0.38, 5, 1.5, -2], [0.36, 4, 1.4, 2], [0, 8, 2, 0]].slice(3 - n).forEach(([da, l, hw, dy]) => { const yy = y + dy; S.beg(); dShard(S, lip(yy), yy, a + da, l + (n === 2 ? -1 : 0), hw); S.end(); }); });
+    { const r = X.rng(365); for (let i = 0; i < 10; i++) { const side = i % 2, s = DLEN * (0.12 + r() * 0.76), [x, y] = dPt(s, (side ? 1 : -1) * (rhw(s, side) + 1)); if (riftD(x, y) < 0) continue; let cx = x, cy = y; const a = DOUT[side] + (r() - 0.5) * 1.1;
+      for (let k = 0; k < 6 + r() * 7; k++) { cx += Math.cos(a) + (r() - 0.5) * 0.8; cy += Math.sin(a) + (r() - 0.5) * 0.8; if (riftD(cx, cy) < 0.5 || !inFill(Math.round(cx), Math.round(cy), DGEO)) continue; S.px(cx, cy, 'magic', 1); S.px(cx, cy + 1, 'lav', 5); } } }
+    // pink crystals growing out of the lips in clumps, leaning out of the tear
+    S.lay('back'); DXT.forEach(([side, s0, a, n]) => { [[-0.38, 5, 1.5, -3], [0.36, 4, 1.4, 3], [0, 8, 2, 0]].slice(3 - n).forEach(([da, l, hw, ds]) => { const [x, y] = dLip(s0 + ds, side); S.beg(); dShard(S, x, y, a + da, l + (n === 2 ? -1 : 0), hw); S.end(); }); });
   },
   anim(D, t, rs) {
     const st = rs.st, q = steps(t, 8), flare = q < 0.12 ? Math.sin(q / 0.12 * Math.PI) : 0, moth = q < 0.5 ? q / 0.5 : -1;
     rs.mul[0] = 1 + 0.08 * Math.sin(t * 1.7) + flare * 0.9;
     // light clouds drifting across the dream
-    D.lay('wall'); [[46, 2.6, 0], [69, 3.2, 1], [40, 1.7, 1]].forEach(([cy, sp, ci], i) => { const span = 70, cx = rcx(cy) - 35 + ((t * sp + i * 23) % span);
+    D.lay('wall'); [[0.3, 2.6, 0, -3], [0.64, 3.2, 1, 5], [0.46, 1.7, 1, -9], [0.8, 2.2, 0, 2]].forEach(([sf, sp, ci, off], i) => { const [bx, by] = dPt(DLEN * sf, off), cx = bx - 36 + ((t * sp + i * 23) % 72), cy = Math.round(by);
       DCLOUD[ci].forEach(([x, y, k]) => { const X2 = Math.round(cx) + x, Y2 = cy + y; if (riftD(X2, Y2) < -2.5) D.px(X2, Y2, DCL[k][0], DCL[k][1], G); }); });
     // the dream's own slow vortex: two pink arms turning round a white eye
-    for (let arm = 0; arm < 2; arm++) for (let k = 3; k < 40; k++) { const rr = k * 0.36, an = k * 0.23 + arm * Math.PI - t * 0.6, x = DSP[0] + Math.cos(an) * rr * 1.1, y = DSP[1] + Math.sin(an) * rr * 0.8; if (riftD(x, y) > -2.5) continue; D.px(x, y, k < 14 ? 'candy' : 'pink', k < 14 ? 9 - k * 0.15 : 7 - (k - 14) * 0.1, G); }
+    for (let arm = 0; arm < 2; arm++) for (let k = 3; k < 44; k++) { const rr = k * 0.38, an = k * 0.23 + arm * Math.PI - t * 0.6, x = DSP[0] + Math.cos(an) * rr * 1.1, y = DSP[1] + Math.sin(an) * rr * 0.8; if (riftD(x, y) > -2.5) continue; D.px(x, y, k < 14 ? 'candy' : 'pink', k < 14 ? 9 - k * 0.15 : 7 - (k - 14) * 0.1, G); }
     D.px(DSP[0], DSP[1], 'linen', 11, G); D.px(DSP[0] + 1, DSP[1], 'candy', 10, G); D.px(DSP[0] - 1, DSP[1], 'candy', 10, G);
     // stars twinkle; the moon's ring glints round
     DSTARS.forEach(([x, y, p, sp]) => { const a = Math.sin(t * sp + p); if (a > 0.3) star4(D, x, y, 'linen', 10, (a - 0.3) / 0.7); });
     { const a = t * 0.8; D.px(DMOON[0] + Math.cos(a) * 7.5, DMOON[1] + Math.sin(a) * 7.5, 'linen', 10, G); }
-    // the burning lips shimmer: a bright crawl up each side
-    for (let s2 = 0; s2 < 2; s2++) { const y = 8 + ((t * 22 + s2 * 44) % 88), x = rcx(y) + (s2 ? 1 : -1) * (rhw(y, s2) - 0.5); D.px(x, y, 'linen', 11, G); D.px(x, y - 1, 'candy', 10, G); D.px(x, y + 1, 'candy', 10, G); }
-    { const B = DBR[DBR.length - 1].pts, k = Math.floor((t * 14) % (B.length + 20)); if (k < B.length) { D.px(B[k][0], B[k][1], 'linen', 11, G); if (k > 0) D.px(B[k - 1][0], B[k - 1][1], 'candy', 10, G); } }
-    if (flare > 0) for (let y = 9; y < 96; y += 1) { if ((y + Math.floor(t * 30)) % 3) continue; D.px(rcx(y) - rhw(y, 0) + 0.5, y, 'candy', 9 + Math.round(flare * 2), G); D.px(rcx(y) + rhw(y, 1) - 0.5, y, 'candy', 9 + Math.round(flare * 2), G); }
+    // the burning lips shimmer: a bright crawl along each side
+    for (let s2 = 0; s2 < 2; s2++) { const s = (t * 30 + s2 * DLEN / 2) % DLEN, [x, y] = dLip(s, s2); D.px(x, y, 'linen', 11, G); const [ax, ay] = dLip(s - 1, s2), [bx, by] = dLip(s + 1, s2); D.px(ax, ay, 'candy', 10, G); D.px(bx, by, 'candy', 10, G); }
+    DBR.forEach((B, i) => { const P = B.pts, k = Math.floor((t * 14 + i * 13) % (P.length + 20)); if (k < P.length) { D.px(P[k][0], P[k][1], 'linen', 11, G); if (k > 0) D.px(P[k - 1][0], P[k - 1][1], 'candy', 10, G); } });
+    if (flare > 0) for (let s = 1; s < DLEN; s += 1) { if ((Math.round(s) + Math.floor(t * 30)) % 3) continue; [0, 1].forEach(sd => { const [x, y] = dLip(s, sd); D.px(x, y, 'candy', 9 + Math.round(flare * 2), G); }); }
     // bubbles floating out over the lips, rising, popping
-    D.lay('mid'); DBUB.forEach(([p, y0, sp, w, dir]) => { const k = (p + t * sp) % 1, y = y0 - k * Math.min(22, y0 - 10), x = rcx(y0) + dir * (rhw(y0, dir > 0 ? 1 : 0) - 2 + k * 18) + Math.sin(t * 1.3 + w) * 2; if (k > 0.9) { if (k < 0.95) star4(D, x, y, 'candy', 9, 0.7); return; }
+    D.lay('mid'); DBUB.forEach(([p, s0, sp, w, sd]) => { const k = (p + t * sp) % 1, [lx, ly] = dLip(s0, sd), oa = DOUT[sd], x = lx + Math.cos(oa) * (k * 12 - 2) + Math.sin(t * 1.3 + w) * 2, y = ly + Math.sin(oa) * (k * 12 - 2) - k * 14; if (k > 0.9) { if (k < 0.95) star4(D, x, y, 'candy', 9, 0.7); return; }
       D.px(x, y - 1, 'candy', 8, G); D.px(x - 1, y, 'candy', 7, G); D.px(x + 1, y, 'candy', 6, G); D.px(x, y + 1, 'candy', 6, G); D.px(x - 1, y - 1, 'linen', 10, G); });
     // the dream moth: out of the vortex, a wide loop, then it melts into sparkles (a glint trail behind it)
-    if (moth >= 0) { const k = moth, x0 = DSP[0], y0 = DSP[1], mp = (kk) => [x0 - kk * 50 - Math.sin(kk * 6) * 8, y0 - kk * 34 + Math.sin(kk * 9) * 6], [x, y] = mp(k), fl = Math.sin(t * 18) > 0, fade = k > 0.82 ? (k - 0.82) / 0.18 : 0;
+    if (moth >= 0) { const k = moth, x0 = DSP[0], y0 = DSP[1], mp = (kk) => [x0 - kk * 56 - Math.sin(kk * 6) * 8, y0 - kk * 40 + Math.sin(kk * 9) * 6], [x, y] = mp(k), fl = Math.sin(t * 18) > 0, fade = k > 0.82 ? (k - 0.82) / 0.18 : 0;
       if (fade < 0.8) { D.lay('front'); const f3 = fade * 3, pal = { '#': ['candy', 9 - f3, G], w: ['pink', 6 - f3, G], o: ['linen', 10 - f3, G], b: ['linen', 10 - f3, G], a: ['linen', 8 - f3, G] };
         D.spr(Math.round(x) - 6, Math.round(y) - 4, DMOTH[fl ? 0 : 1], pal);
         if (k < 0.82 && (st.gl == null || t - st.gl > 0.15 || t < st.gl)) { st.gl = t; rs.burst('glint', x + (Math.random() - 0.5) * 4, y + 3, 1, { sp: 4, life: 0.7 }); } }
@@ -555,12 +598,12 @@ X.TILEF.dream = (D, t) => {
 // mushrooms sit on the shoulders, and at the bottom the root tips cradle a green seed. Sap flows down, spores drift,
 // a leaf now and then falls through from above. Every 9 s a surge of sap runs down every root at once, the seed flares
 // and throws a ring of light, the mushrooms puff
-const YTOP = 12;   // the rock lip the taproot comes down out of
+const YTOP = 12, YGEO = 2;   // the rock lip the taproot comes down out of
 // a root path that never turns upward (kept at least 0.35 rad below horizontal): [x, y, angle] per pixel step
 function yWalk(r, x, y, a, len, o) {
   const P = [];
   for (let k = 0; k <= len; k++) { if (k) { a += (r() - 0.5) * (o.wig || 0.3); if (o.to != null) a += Math.sin(o.to - a) * (o.pull || 0.05); a = clamp(a, 0.35, Math.PI - 0.35); x += Math.cos(a); y += Math.sin(a); }
-    if (x < 5 || x > W - 6 || y > H - 7) break; const q = [Math.round(x), Math.round(y), a], l = P[P.length - 1]; if (!l || l[0] !== q[0] || l[1] !== q[1]) P.push(q); }
+    if (x < 9 || x > W - 10 || y > H - 10) break; const q = [Math.round(x), Math.round(y), a], l = P[P.length - 1]; if (!l || l[0] !== q[0] || l[1] !== q[1]) P.push(q); }
   return P;
 }
 const YR = []; { const r = X.rng(371);
@@ -569,10 +612,10 @@ const YR = []; { const r = X.rng(371);
   // the taproot: out of the rock lip, straight down
   const T = add(yWalk(r, 70, 3, Math.PI / 2, 44, { wig: 0.1, to: Math.PI / 2, pull: 0.25 }), 13, 0, 0, 'back', 'tap');
   // main roots off the taproot, and two thin roots down from the tree above (they come in over the top edge)
-  [[17, 2.78, 42, 5.5], [19, 0.36, 44, 5.5], [27, 2.45, 62, 9.5], [29, 0.62, 60, 9.5], [38, 2.02, 46, 7], [40, 1.1, 46, 7]].forEach(([yy, a, len, w0]) => { const k = at(T, yy), p = T.pts[k];
+  [[17, 2.78, 60, 5.5], [19, 0.36, 60, 5.5], [27, 2.45, 72, 9.5], [29, 0.62, 72, 9.5], [38, 2.02, 56, 7], [40, 1.1, 56, 7]].forEach(([yy, a, len, w0]) => { const k = at(T, yy), p = T.pts[k];
     add(yWalk(r, p[0] + Math.cos(a) * 3, p[1], a, len, { wig: 0.3, to: a * 0.72 + Math.PI / 2 * 0.28, pull: 0.05 }), w0, 0, k); });
   const tk = T.pts.length - 1, C = add(yWalk(r, T.pts[tk][0], T.pts[tk][1], Math.PI / 2, 24, { wig: 0.08, to: Math.PI / 2, pull: 0.35 }), 8, 0, tk);
-  [[47, 0, 1.85, 52, 4], [99, 0, 1.2, 48, 3.5]].forEach(([x, y, a, len, w0]) => add(yWalk(r, x, y, a, len, { wig: 0.25, to: a * 0.8 + Math.PI / 2 * 0.2, pull: 0.05 }), w0, 0, -8, 'wall', 'top'));
+  [[44, 0, 1.95, 60, 4], [102, 0, 1.15, 58, 3.5]].forEach(([x, y, a, len, w0]) => add(yWalk(r, x, y, a, len, { wig: 0.25, to: a * 0.8 + Math.PI / 2 * 0.2, pull: 0.05 }), w0, 0, -8, 'wall', 'top'));
   // branches off the main roots
   YR.slice(1).filter(Y => Y !== C).forEach(Y => { const n = Y.pts.length, nb = Y.w0 >= 7 ? 2 : 1; for (let b = 0; b < nb; b++) { const k = Math.floor(n * (0.3 + b * 0.25 + r() * 0.12)), p = Y.pts[k]; if (!p) continue; const a = p[2] + (b % 2 ? 0.55 : -0.55) * (p[2] < Math.PI / 2 ? -1 : 1);
     add(yWalk(r, p[0], p[1], a, Math.round((n - k) * (0.45 + r() * 0.2)), { wig: 0.4, to: a * 0.7 + Math.PI / 2 * 0.3, pull: 0.05 }), Math.max(2.5, Y.w0 * 0.42), 1, Y.s0 + k); } });
@@ -604,16 +647,16 @@ function yBand(D, Y, s, len) { const k = Math.floor(s); if (k < 0 || k >= Y.len 
 X.def('_tile_ygg', {
   noFrame: 1, noFloor: 1, amb: [0.5, 0.42],
   paint(S, sc) {
-    sc.light({ x: YSEED[0], y: YSEED[1], z: 16, r: 56, i: 1.4, c: '#7aff9a', tint: 0.26 });                          // 0 the seed (surges: rs.mul)
-    sc.light({ x: 72, y: 60, z: 14, r: 50, i: 0.7, c: '#7aff9a', fl: 'pulse', amp: 0.18, sp: 0.9, tint: 0.25 });      // 1 sap glow over the lower roots
+    sc.light({ x: YSEED[0], y: YSEED[1], z: 16, r: 72, i: 1.4, c: '#7aff9a', tint: 0.2 });                          // 0 the seed (surges: rs.mul)
+    sc.light({ x: 72, y: 58, z: 14, r: 70, i: 0.7, c: '#7aff9a', fl: 'pulse', amp: 0.18, sp: 0.9, tint: 0.25 });      // 1 sap glow over the lower roots
     sc.light({ x: 75, y: 50, z: 10, r: 1, i: 1, c: '#7aff9a', fl: 'pulse', amp: 0.4, sp: 1.2, tint: 0 });               // 2 lights nothing: sap lanes and mushroom caps breathe with it
     YGL.forEach(([x, y], i) => sc.light({ x, y, z: 10, r: 26, i: 0.5, c: '#7aff9a', fl: 'pulse', amp: 0.15, sp: 0.7, ph: i * 2, tint: 0.45 }));   // 3, 4 green rim light on the bark
-    bed(S, 2, (x, y) => ed(x, y, 75, 48, 64, 50) < 1.05);
+    bed(S, 2, (x, y, r2) => fillE(x, y, YGEO) < 1 + r2 / 50);
     // dark rich soil round the roots, a band of moist clay
-    for (let y = 4; y < H - 4; y++) for (let x = 4; x < W - 4; x++) { const e = ed(x, y, 75, 46, 68, 52) + (vnoise(x / 7, y / 7, 74) - 0.5) * 0.28; if (e > 1) continue; if (e > 0.84 && vnoise(x / 2.2, y / 2.2, 8) < (e - 0.84) / 0.16) continue; if (y < 10 && vnoise(x / 2.2, y / 2.2, 8) < (10 - y) / 6) continue;
+    for (let y = 4; y < H - 4; y++) for (let x = 4; x < W - 4; x++) { if (!inFill(x, y, YGEO)) continue;
       const band = Math.floor((y + Math.sin(x * 0.07) * 3) / 9); S.px(x, y, band === 6 ? 'mstone' : 'earth', band === 6 ? 3 : 3 + (band % 2), { n: [0, 0] }); }
     S.noise(6, 4, W - 12, H - 8, 1, 3, 75, { only: 'earth' });
-    for (let i = 0; i < 26; i++) { const x = 10 + hh(i, 1, 76) * 130, y = 8 + hh(i, 2, 76) * 88; if (ed(x, y, 75, 46, 62, 46) > 1) continue; S.px(x, y, 'stone', 5); S.px(x + 1, y, 'stone', 4); }
+    for (let i = 0; i < 26; i++) { const x = 10 + hh(i, 1, 76) * 130, y = 8 + hh(i, 2, 76) * 88; if (!inFill(Math.round(x), Math.round(y), YGEO)) continue; S.px(x, y, 'stone', 5); S.px(x + 1, y, 'stone', 4); }
     // rootlets and root hairs first (behind everything), darkening toward their tips
     S.lay('wall'); YR.hairs.forEach(P => P.forEach(([x, y], k) => S.px(x, y, 'wood', k < 2 ? 4.4 : k < P.length * 0.6 ? 3.6 : 2.6)));
     // roots, thinnest first so the big ones lie over them
@@ -627,14 +670,26 @@ X.def('_tile_ygg', {
     S.lay('back'); { let c = 0; YR.forEach((Y, i) => { if (Y.w0 < 7 || Y.prof === 'tap') return; [0.36, 0.64].forEach((f, j) => { const k0 = Math.floor(Y.len * f); if (YMUSH.some(([mx, my]) => Math.abs(mx - Y.pts[k0][0]) < 8 && Math.abs(my - Y.pts[k0][1]) < 8)) return; if (c > 5) return; c++; const n = 4 + ((i + j) % 3);
       for (let k = k0; k < k0 + n && k < Y.len; k++) { const [x, y] = Y.pts[k]; let [nx, ny] = Y.nm[k]; if (ny > 0) { nx = -nx; ny = -ny; } const hw = Y.w[k] / 2 - 0.5, tx = x + nx * hw, ty = y + ny * hw;
         S.px(tx, ty, 'leaf', 7, { n: [0, -0.7] }); S.px(tx - nx, ty - ny, 'leaf', 4.6); if (k === k0 + 1 || k === k0 + n - 2) S.px(tx + nx, ty + ny, 'leaf', 8, { n: [0, -0.7] }); } }); }); }
-    // the fissure the taproot comes down out of: the bark stops at a jagged crack (above it is the cell's own rock), a dark
-    // gap, a lip of rock over the bark (lit edge, dark underside), a few chips; the crack runs on into the rock either side
+    // the fissure the taproot comes down out of: the bark stops at a jagged crack (above it is the cell's own rock) and one
+    // ragged overhang of that rock juts over it — lit top edge, a body, a dark underside that shades the bark just below,
+    // two notches of different sizes; past its ends the crack runs on into the rock either side
     const yb = (x) => Math.round(YTOP - 1 + (vnoise(x / 2.4, 3, 81) - 0.5) * 3.4 + Math.pow(Math.abs(x - 70) / 15, 2) * 1.6);
-    for (let x = 42; x <= 98; x++) { const e = yb(x), inT = x >= 55 && x <= 85;
-      if (inT) { S.lay('back'); for (let y = 0; y < e; y++) S.px(x, y, 0, 0); S.px(x, e, 'ink', 0); S.lay('mid'); S.px(x, e - 1, 'rock', 3, { n: [0, 0.6] }); S.px(x, e - 2, 'rock', 7, { n: [0, -0.6] }); if (hh(x, 1, 85) < 0.3) S.px(x, e - 3, 'rock', 6); }
-      else { const f = Math.min(Math.abs(x - 55), Math.abs(x - 85)) / 14; if (hh(x, 2, 85) < f * 0.7) continue; S.lay('wall'); S.px(x, e, 'ink', 0); S.px(x, e + 1, 'rock', 7, { n: [0, -0.6] }); } }
-    S.lay('back'); S.ao(54, YTOP - 3, 33, 10, 't', 3.5);
-    S.lay('mid'); [[58, 0], [63, 1], [69, -1], [76, 1], [81, 0]].forEach(([x, dy], i) => { const e = yb(x), rx = 1.6 + hh(i, 3, 84) * 1.2; S.beg(); S.ell(x, e - 1 + dy, rx, rx * 0.75, 'rock', 6 + Math.round(hh(i, 5, 84) * 2), { dome: 1 }); S.end(); });
+    for (let x = 42; x <= 98; x++) { const e = yb(x);
+      if (x >= 54 && x <= 86) { S.lay('back'); for (let y = 0; y < e; y++) S.px(x, y, 0, 0); S.px(x, e, 'ink', 0); }
+      else { const f = Math.min(Math.abs(x - 54), Math.abs(x - 86)) / 14; if (hh(x, 2, 85) < f * 0.7) continue; S.lay('wall'); S.px(x, e, 'ink', 0); S.px(x, e + 1, 'rock', 7, { n: [0, -0.6] }); } }
+    { // top edge and underside per column x 54…86: thicker in the middle where it juts furthest, a 2-px notch left of the
+      // taproot's axis and a 1-px one right of it, the underside ragged by a pixel
+      const TOP = [11, 10, 10, 9, 9, 9, 9, 11, 11, 9, 8, 8, 8, 8, 9, 9, 9, 9, 9, 9, 9, 9, 9, 10, 9, 9, 9, 9, 9, 9, 10, 10, 11],
+        RAG = [0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0];
+      for (let x = 54; x <= 86; x++) { const i = x - 54, top = TOP[i], u = Math.max(yb(x), 12 + (x > 80 ? 1 : 0)) + RAG[i], tl = TOP[i - 1] == null ? 99 : TOP[i - 1], tr = TOP[i + 1] == null ? 99 : TOP[i + 1];
+        S.lay('mid'); S.px(x, u, 'ink', 0);
+        for (let y = top + 1; y < u; y++) S.px(x, y, 'rock', y < top + 2 ? 5 : 4, { n: [0, 0] });
+        for (let y = top + 1; y < Math.min(u, tl); y++) S.px(x, y, 'rock', 6, { n: [-0.7, 0] });   // a face turned to the light where it stands above its left neighbour
+        for (let y = top + 1; y < Math.min(u, tr); y++) S.px(x, y, 'rock', 3, { n: [0.7, 0] });    // and one turned away on the right
+        S.px(x, top, 'rock', 7, { n: [0, -0.7] });
+        ['back', 'wall'].forEach(k => { S.lay(k); S.tone(x, u + 1, -2.4); S.tone(x, u + 2, -1.3); S.tone(x, u + 3, -0.5); }); }   // its shadow on the bark just below
+      // two loose chips on it, off to the sides
+      S.lay('mid'); S.px(57, 8, 'rock', 8, { n: [-0.5, -0.6] }); S.px(58, 8, 'rock', 5); S.px(83, 8, 'rock', 7, { n: [0, -0.7] }); }
     // the seed and the root tips that hold it
     S.lay('mid'); YCRADLE.forEach((P, i) => { const Y = { pts: P, w: P.map((_, k) => 3 - k / P.length * 1.5), nm: P.map((p, k) => { const a = P[Math.max(0, k - 1)], b = P[Math.min(P.length - 1, k + 1)], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1; return [-dy / l, dx / l]; }) }; S.beg(); rootTube(S, Y, 80 + i); S.end(); });
     // glowing mushrooms on the roots
@@ -653,7 +708,7 @@ X.def('_tile_ygg', {
     if (ring >= 0 && ring < 1) { const rr = 7 + sm(ring) * 14, n = Math.round(rr * 5); D.lay('front'); for (let i = 0; i < n; i++) { const a = i / n * 6.283; if ((i + Math.floor(ring * 12)) % 4 === 3) continue; D.px(YSEED[0] + Math.cos(a) * rr, YSEED[1] + Math.sin(a) * rr * 0.8, 'screen', ring < 0.5 ? 10 : 8, G); } }
     if (ring >= 0 && !st.r) { st.r = 1; rs.flash(1, 0.9); rs.burst('heal', YSEED[0], YSEED[1], 8, { sp: 18, life: 1.3 }); rs.burst('leaf', YSEED[0], YSEED[1] - 4, 3, { sp: 14, life: 1.8 }); } if (q > 0.5) st.r = 0;
     // spores drifting up out of the soil
-    YSPORE.forEach(([x0, y0, p, sp]) => { const k = (p / 7 + t * sp * 0.1) % 1, x = x0 + Math.sin(t * 0.7 + p) * 4, y = y0 - k * 18; if (ed(x, y, 75, 46, 62, 46) > 1) return; D.px(x, y, 'screen', k < 0.7 ? 9 : 7, G); });
+    YSPORE.forEach(([x0, y0, p, sp]) => { const k = (p / 7 + t * sp * 0.1) % 1, x = x0 + Math.sin(t * 0.7 + p) * 4, y = y0 - k * 18; if (!inFill(Math.round(x), Math.round(y), YGEO)) return; D.px(x, y, 'screen', k < 0.7 ? 9 : 7, G); });
     if (surge >= 0 && surge < 0.9) YMUSH.forEach(([x, y], i) => { const kk = clamp(surge * 1.4 - i * 0.05, 0, 1); if (kk > 0 && kk < 1) burstPx(D, x, y - 4, kk, 5, 'screen', 10, 6); });
     if (q < 0.02 && !st.s) { st.s = 1; rs.flash(2, 0.8); } if (q > 0.5) st.s = 0;
   },
@@ -737,10 +792,12 @@ X.def('_tile_crown', {
   },
 });
 X.TILEF.crown = (D, t) => {
-  // a strip of gilded inlay along the floor with little set stones; a gleam runs along it
-  const p = steps(t, 4) * 200 - 30;
-  for (let x = 3; x < 147; x++) { const y = 94, d = Math.abs(x - p); D.px(x, y - 1, 'gold', 4); D.px(x, y, 'gold', d < 3 ? 10 - d : 6, d < 3 ? G : undefined); D.px(x, y + 1, 'gold', 3);
-    if (x % 18 === 9) { D.px(x, y, (x / 18 | 0) % 2 ? 'red' : 'tile', 8, G); D.px(x - 1, y, 'gold', 8); D.px(x + 1, y, 'gold', 8); } }
+  // a thread of gold wandering along the floor with gold flecks strewn beside it, a ruby chip here and there; a gleam runs it
+  const yy = (x) => 95 + Math.round(Math.sin(x * 0.085 + 4) * 1.2 + Math.sin(x * 0.19 + 1) * 0.6), p = steps(t, 4) * 200 - 30;
+  for (let x = 3; x < 147; x++) { const y = yy(x), d = Math.abs(x - p); if (d < 3) D.px(x, y, 'gold', 10.6 - d, G); else D.px(x, y, 'gold', 6.4, FZ(y)); }
+  for (let x = 8, i = 0; x < 143; i++) { const y = yy(x) + (hh(i, 2, 94) < 0.5 ? -2 : 2), tw = Math.sin(t * (1 + hh(i, 4, 94)) + i * 2.3);
+    D.px(x, y, 'gold', tw > 0.85 ? 10 : 7.6, tw > 0.85 ? G : FZ(y)); if (hh(i, 3, 94) < 0.45) D.px(x + 1, y, 'gold', 5, FZ(y));
+    if (i % 4 === 2) D.px(x + 3, yy(x + 3), 'red', 8, G); x += 9 + Math.floor(hh(i, 1, 94) * 8); }
 };
 
 })();

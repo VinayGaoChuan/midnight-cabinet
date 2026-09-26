@@ -18,89 +18,144 @@ const inArch = (x, y, pad) => { pad = pad || 0; const hx = (AX1 - AX0) / 2 + pad
   const r = (AX1 - AX0) * 0.95 + pad, cxL = CX - hx + r, cxR = CX + hx - r, cy = ASP; const dL = Math.hypot(x + 0.5 - cxL, y + 0.5 - cy), dR = Math.hypot(x + 0.5 - cxR, y + 0.5 - cy);
   return (x + 0.5 <= CX ? dL <= r : dR <= r) && y + 0.5 >= AAP - pad; };
 
-const WIN = [[40, 82], [76, 82], [112, 82], [252, 82], [288, 82], [324, 82]];   // upper-storey windows (x, top y), 16×18
-const LANT = [[34, 80], [146, 78], [234, 78], [346, 80]];                         // eave lanterns (x, hook y)
+// two different wings: the warehouse (left, loading bay and hoist) and the counting house (right, oriel, balcony, shop sign)
+const WIN = [[36, 82], [110, 82], [228, 82], [322, 82]];   // plain upper windows (x, top y), 16×18
+const LANT = [[34, 80], [146, 78], [234, 78], [346, 80]];  // eave lanterns (x, hook y)
+const LI = { portal: 0, clock: 1, win: 2, oriel: 6, arch: 7, brzL: 8, brzR: 9, bay: 10, moon: 11, dormer: 12, door: 13, lant: 14, alarm: 18, postL: 19, postR: 20 };
+const PLZ0 = GY, PLZ1 = 177;                                 // plaza rows; the shaft starts under it
 
 X.def('_mainbase', {
   size: [AW, AH], fy: GY, clear: 1, noFrame: 1, noFloor: 1, amb: [0.34, 0.3],
   paint(S, sc) {
     const r = S.r;
     // ── lights ──
-    sc.light({ x: CX, y: 112, z: 24, r: 175, i: 0.95, c: '#5fd0c0', fl: 'pulse', amp: 0.1, sp: 1.6, tint: 0.55 });   // 0 portal
-    sc.light({ x: CX, y: 36, z: 12, r: 44, i: 0.55, c: '#fff0c0', tint: 0.3 });                                         // 1 clock face
-    WIN.forEach(([x, y], i) => sc.light({ x: x + 8, y: y + 9, z: 12, r: 46, i: 0.62, c: '#ffb060', fl: 'candle', ph: i * 1.7, tint: 0.5 }));   // 2–7 windows
-    sc.light({ x: 141, y: 138, z: 22, r: 74, i: 1.05, c: '#ff9a40', fl: 'fire', tint: 0.55 });                         // 8 brazier left
-    sc.light({ x: 239, y: 138, z: 22, r: 74, i: 1.05, c: '#ff9a40', fl: 'fire', ph: 2.3, tint: 0.55 });                // 9 brazier right
-    sc.light({ x: 300, y: 134, z: 16, r: 72, i: 0.85, c: '#ffc070', fl: 'candle', ph: 4, tint: 0.5 });                   // 10 open warehouse door
-    sc.light({ x: 470, y: -120, z: 140, r: 760, i: 0.3, c: '#b8c4ff', tint: 0.25 });                                     // 11 moon (rim on the roofs)
-    sc.light({ x: 90, y: 60, z: 10, r: 30, i: 0.5, c: '#ffb060', fl: 'candle', ph: 5, tint: 0.45 });                    // 12 dormer left
-    sc.light({ x: 290, y: 60, z: 10, r: 30, i: 0.5, c: '#ffb060', fl: 'candle', ph: 6, tint: 0.45 });                   // 13 dormer right
-    LANT.forEach(([x, y], i) => sc.light({ x, y: y + 9, z: 16, r: 30, i: 0.55, c: '#ffc070', fl: 'candle', ph: i * 2.1, tint: 0.45 }));   // 14–17 lanterns
-    sc.light({ x: CX, y: 104, z: 22, r: 130, i: 0.9, c: '#ff4040', fl: 'buzz', ph: 3, tint: 0.6, bake: false });      // 18 alarm red (portal badly damaged)
+    sc.light({ x: CX, y: 112, z: 24, r: 175, i: 0.95, c: '#5fd0c0', fl: 'pulse', amp: 0.1, sp: 1.6, tint: 0.55 });
+    sc.light({ x: CX, y: 36, z: 12, r: 44, i: 0.55, c: '#fff0c0', tint: 0.3 });
+    WIN.forEach(([x, y], i) => sc.light({ x: x + 8, y: y + 9, z: 12, r: 46, i: 0.62, c: '#ffb060', fl: 'candle', ph: i * 1.7, tint: 0.5 }));
+    sc.light({ x: 281, y: 92, z: 18, r: 52, i: 0.75, c: '#ffc070', fl: 'candle', ph: 7, tint: 0.5 });          // oriel
+    sc.light({ x: 262, y: 128, z: 12, r: 50, i: 0.6, c: '#ffb060', fl: 'candle', ph: 8, tint: 0.5 });          // arched windows
+    sc.light({ x: 141, y: 138, z: 22, r: 74, i: 1.05, c: '#ff9a40', fl: 'fire', tint: 0.55 });
+    sc.light({ x: 239, y: 138, z: 22, r: 74, i: 1.05, c: '#ff9a40', fl: 'fire', ph: 2.3, tint: 0.55 });
+    sc.light({ x: 74, y: 138, z: 16, r: 78, i: 0.9, c: '#ffc070', fl: 'candle', ph: 4, tint: 0.5 });           // loading bay
+    sc.light({ x: 470, y: -120, z: 140, r: 760, i: 0.3, c: '#b8c4ff', tint: 0.25 });
+    sc.light({ x: 290, y: 60, z: 10, r: 30, i: 0.5, c: '#ffb060', fl: 'candle', ph: 6, tint: 0.45 });          // dormer
+    sc.light({ x: 322, y: 120, z: 14, r: 40, i: 0.7, c: '#ffc070', fl: 'candle', ph: 9, tint: 0.5 });          // door lamp
+    LANT.forEach(([x, y], i) => sc.light({ x, y: y + 9, z: 16, r: 30, i: 0.55, c: '#ffc070', fl: 'candle', ph: i * 2.1, tint: 0.45 }));
+    sc.light({ x: CX, y: 104, z: 22, r: 130, i: 0.9, c: '#ff4040', fl: 'buzz', ph: 3, tint: 0.6, bake: false });
+    sc.light({ x: 22, y: 136, z: 26, r: 64, i: 0.8, c: '#ffd08a', fl: 'candle', ph: 10, tint: 0.4 });           // lamp posts
+    sc.light({ x: 358, y: 136, z: 26, r: 64, i: 0.8, c: '#ffd08a', fl: 'candle', ph: 11, tint: 0.4 });
 
     S.lay('wall');
-    // ── roofs over the wings: hipped, red tile rows with scalloped edges, gold ridge, moonlit toward the ridge ──
-    const roof = (x0, x1, top, bot, inset) => {
-      for (let y = top; y <= bot; y++) { const k = (y - top) / (bot - top), a = Math.round(x0 + inset * (1 - k)), b = Math.round(x1 - inset * (1 - k)), row = y - top;
-        for (let x = a; x < b; x++) { const scal = ((x + (Math.floor(row / 4) % 2) * 3) % 6), edge = row % 4 === 3, tn = 5.2 - k * 1.8 + (edge ? -1.6 : 0) + (scal === 0 && row % 4 === 2 ? -0.8 : 0) + (row % 4 === 0 ? 0.7 : 0);
+    // ── roofs: staggered tile courses (each tile lit top-left, jointed, a dark course line), half-round ridge caps,
+    //    moss near the eaves, two slipped tiles; moonlight from the right warms nothing, it only lifts the right half ──
+    const roof = (x0, x1, top, bot, inset, seed) => {
+      const rr = X.rng(seed);
+      for (let y = top; y <= bot; y++) { const k = (y - top) / (bot - top), a = Math.round(x0 + inset * (1 - k)), b = Math.round(x1 - inset * (1 - k)), row = y - top, course = Math.floor(row / 4), ry = row % 4;
+        for (let x = a; x < b; x++) { const tx = x + (course % 2) * 3, tile = Math.floor(tx / 6), tp = tx % 6, jit = (X.vnoise(tile * 0.9, course * 1.7, seed) - 0.5) * 1.2;
+          let tn = 4.6 - k * 1.2 + jit + (x - a) / Math.max(1, b - a) * 0.6;
+          if (ry === 3) tn -= 1.8; else if (tp === 5 && ry > 0) tn -= 1.1; else if (tp === 0 && ry === 0) tn += 1.2; else if (ry === 0) tn += 0.5;
           S.px(x, y, 'crimson', tn, { n: [0, -0.55] }); } }
-      S.beg(); S.rect(x0 + inset, top - 2, x1 - x0 - inset * 2, 2, 'gold', 6, { n: [0, -0.8] }); S.hl(x0 + inset, top - 2, x1 - x0 - inset * 2, 'gold', 8.5, { n: [0, -0.9] }); S.end();
-      [x0 + inset, x1 - inset - 1].forEach(x => { S.px(x, top - 3, 'gold', 9); S.px(x, top - 4, 'gold', 7); });
-      S.rect(x0 - 1, bot + 1, x1 - x0 + 2, 2, 'wood', 3); S.hl(x0 - 1, bot + 1, x1 - x0 + 2, 'wood', 5);   // eave board
-      for (let x = x0 + 2; x < x1 - 1; x += 6) S.px(x, bot + 3, 'wood', 2);                                  // rafter tails
+      // hips: a ridge line down each sloped end
+      for (let y = top; y <= bot; y++) { const k = (y - top) / (bot - top); [Math.round(x0 + inset * (1 - k)), Math.round(x1 - inset * (1 - k)) - 1].forEach(x => { S.px(x, y, 'crimson', 6.5, { n: [0, -0.8] }); }); }
+      // ridge caps
+      for (let x = x0 + inset; x < x1 - inset; x += 3) { S.px(x, top - 2, 'crimson', 5.5); S.px(x + 1, top - 2, 'crimson', 7); S.px(x + 1, top - 3, 'crimson', 6.2); S.px(x + 2, top - 2, 'crimson', 4); } S.hl(x0 + inset, top - 1, x1 - x0 - inset * 2, 'crimson', 3);
+      [x0 + inset - 1, x1 - inset].forEach(x => { S.px(x, top - 3, 'gold', 9); S.px(x, top - 4, 'gold', 7); S.px(x, top - 5, 'gold', 9); });
+      // moss and slipped tiles
+      for (let i = 0; i < 6; i++) { const mx = x0 + 10 + Math.floor(rr() * (x1 - x0 - 20)), my = bot - 2 - Math.floor(rr() * 12); for (let k = 0; k < 5; k++) S.px(mx + Math.floor(rr() * 4), my + Math.floor(rr() * 2), 'moss', 4 + rr() * 3); }
+      for (let i = 0; i < 2; i++) { const mx = x0 + inset + 12 + Math.floor(rr() * (x1 - x0 - inset * 2 - 24)), my = top + 6 + Math.floor(rr() * 20); S.rect(mx, my, 5, 3, 'wood', 1.5); S.hl(mx + 1, my + 3, 5, 'crimson', 3.5); }
+      S.rect(x0 - 1, bot + 1, x1 - x0 + 2, 2, 'wood', 3); S.hl(x0 - 1, bot + 1, x1 - x0 + 2, 'wood', 5);
+      for (let x = x0 + 2; x < x1 - 1; x += 6) S.px(x, bot + 3, 'wood', 2);
     };
-    // chimneys (behind the roofs)
-    [[50, 30], [322, 30]].forEach(([x, y]) => { S.beg(); TX.bricks(S, x, y, 12, 22, 'brick', 4, { bw: 6, bh: 4, v: 1, pits: 0 }); S.box(x - 1, y - 3, 14, 3, 'stone', 6, { top: 1 }); S.rect(x + 2, y - 3, 8, 1, 'ink', 1); S.end(); });
-    roof(18, 164, 42, 78, 24); roof(216, 362, 42, 78, 24);
-    // dormers
-    [[80, 48], [280, 48]].forEach(([x, y], i) => { S.beg(); S.poly([[x - 3, y + 8], [x + 10, y - 4], [x + 23, y + 8]], 'crimson', 5); S.rect(x, y + 8, 20, 14, 'linen', 5); S.box(x + 4, y + 10, 12, 11, 'wood', 3); S.rect(x + 5, y + 11, 10, 9, 'lamp', 7, { e: 13 + i }); S.vl(x + 10, y + 11, 9, 'wood', 3); S.hl(x + 5, y + 15, 10, 'wood', 3); S.hl(x - 3, y + 8, 26, 'gold', 6); S.end(); });
-    // ── wings: brick lower storey, half-timbered upper storey ──
-    const wing = (x0, x1) => {
-      TX.bricks(S, x0, 108, x1 - x0, 38, 'brick', 4.5, { bw: 9, bh: 4, v: 1.1, chip: 0.15, pits: 1 }); S.noise(x0, 108, x1 - x0, 38, 1, 5, x0 + 3);
-      // quoins at the corners
-      [x0, x1 - 6].forEach(x => { for (let y = 108; y < 146; y += 6) { S.box(x, y, (y / 6) % 2 ? 6 : 5, 6, 'stone', 6); } });
-      // upper storey: plaster panels between oak posts and beams, braces
-      S.rect(x0, 78, x1 - x0, 30, 'linen', 4.6); S.noise(x0, 78, x1 - x0, 30, 1, 4, x0 + 9);
-      for (let x = x0; x <= x1 - 3; x += 18) { S.beg(); S.rect(Math.min(x, x1 - 3), 78, 3, 30, 'wood', 3.2); S.vl(Math.min(x, x1 - 3), 78, 30, 'wood', 4.4, { n: [-0.6, 0] }); S.end(); }
-      [78, 92, 105].forEach(y => { S.beg(); S.rect(x0, y, x1 - x0, 3, 'wood', 3.4); S.hl(x0, y, x1 - x0, 'wood', 4.8, { n: [0, -0.7] }); S.end(); });
-      for (let x = x0 + 3; x < x1 - 18; x += 36) { S.line(x, 104, x + 15, 95, 'wood', 3.2, { w: 2 }); }
-      S.rect(x0, 106, x1 - x0, 2, 'wood', 2.2);   // jetty shadow line between the storeys
-    };
-    wing(28, 158); wing(222, 352);
-    // upper windows: shutters, mullions, warm panes that flicker with their light, flower boxes
-    WIN.forEach(([x, y], i) => { S.beg(); S.box(x - 1, y - 1, 18, 20, 'wood', 3); S.rect(x + 1, y + 1, 14, 16, 'lamp', 7.6, { e: 3 + i }); for (let k = 0; k < 3; k++) S.px(x + 2 + k * 4, y + 2, 'lamp', 10, { e: 3 + i });
+    // chimneys: a big brick stack with a pot on the warehouse, an iron stovepipe on the counting house
+    S.beg(); TX.bricks(S, 48, 26, 14, 26, 'brick', 4, { bw: 6, bh: 4, v: 1, pits: 0 }); S.box(46, 23, 18, 3, 'stone', 6, { top: 1 }); S.cyl(52, 17, 6, 6, 'brick', 5, { rim: 1.5 }); S.rect(53, 17, 4, 1, 'ink', 1); S.end();
+    S.beg(); S.cyl(324, 30, 5, 22, 'iron', 4, { rim: 1.5 }); S.hcyl(322, 28, 9, 2, 'iron', 6); S.poly([[321, 26], [331, 26], [326, 22]], 'iron', 5); S.end();
+    roof(18, 164, 42, 78, 24, 11); roof(216, 362, 42, 78, 24, 23);
+    // skylights on the warehouse roof, a dormer on the counting house
+    [[62, 54], [86, 50], [110, 54]].forEach(([x, y]) => { S.beg(); S.box(x, y, 11, 8, 'wood', 3); S.rect(x + 1, y + 1, 9, 6, 'glass', 4); S.px(x + 7, y + 2, 'glass', 10); S.px(x + 8, y + 3, 'glass', 8); S.vl(x + 5, y + 1, 6, 'wood', 3); S.end(); });
+    S.beg(); const dx = 280, dy = 48; S.poly([[dx - 3, dy + 8], [dx + 10, dy - 4], [dx + 23, dy + 8]], 'crimson', 5); S.rect(dx, dy + 8, 20, 14, 'linen', 5); S.box(dx + 4, dy + 10, 12, 11, 'wood', 3); S.rect(dx + 5, dy + 11, 10, 9, 'lamp', 7, { e: LI.dormer + 1 }); S.vl(dx + 10, dy + 11, 9, 'wood', 3); S.hl(dx + 5, dy + 15, 10, 'wood', 3); S.hl(dx - 3, dy + 8, 26, 'gold', 6); S.end();
+
+    // ── the warehouse wing (left): brick below with a loading bay, timber above with a hayloft door ──
+    TX.bricks(S, 28, 108, 130, 38, 'brick', 4.5, { bw: 9, bh: 4, v: 1.1, chip: 0.15, pits: 1 }); S.noise(28, 108, 130, 38, 1, 5, 31);
+    [28, 152].forEach(x => { for (let y = 108; y < 146; y += 6) S.box(x, y, (y / 6) % 2 ? 6 : 5, 6, 'stone', 6); });
+    S.rect(28, 78, 130, 30, 'linen', 4.6); S.noise(28, 78, 130, 30, 1, 4, 37);
+    for (let x = 28; x <= 155; x += 18) { S.beg(); S.rect(Math.min(x, 155), 78, 3, 30, 'wood', 3.2); S.vl(Math.min(x, 155), 78, 30, 'wood', 4.4, { n: [-0.6, 0] }); S.end(); }
+    [78, 92, 105].forEach(y => { S.beg(); S.rect(28, y, 130, 3, 'wood', 3.4); S.hl(28, y, 130, 'wood', 4.8, { n: [0, -0.7] }); S.end(); });
+    [31, 103, 139].forEach(x => S.line(x, 104, x + 15, 95, 'wood', 3.2, { w: 2 }));
+    S.rect(28, 108, 130, 2, 'wood', 1.8); S.ao(28, 110, 130, 5, 't', 1.4);                         // the jetty's shadow on the brick
+    // loading bay: a corrugated shutter half up, warm crates inside, a timber lintel, a crate sign over it
+    S.beg(); S.box(44, 111, 62, 4, 'wood', 4.5); S.end();
+    S.rect(48, 115, 54, 31, 'lamp', 4.2); S.vgrad(48, 128, 54, 18, 'lamp', 6.2, 4.4, { e: LI.bay + 1 });
+    S.beg(); [[52, 146, 12, 10], [64, 146, 10, 8], [53, 136, 9, 8], [80, 146, 14, 12], [94, 146, 7, 6]].forEach(([x, y, w, h]) => { S.box(x, y - h, w, h, 'wood', 3.6, { top: 1 }); S.hl(x + 1, y - Math.round(h / 2), w - 2, 'wood', 2.4); }); S.end();
+    for (let x = 48; x < 102; x++) for (let y = 115; y < 128; y++) S.px(x, y, 'iron', ((x - 48) % 3 === 0 ? 3.2 : (x - 48) % 3 === 1 ? 5.4 : 4.4) - (y - 115) * 0.05, { n: [(x - 48) % 3 === 1 ? -0.4 : 0.3, 0] });
+    S.beg(); S.box(47, 127, 56, 2, 'iron', 6.5); S.px(74, 129, 'iron', 7); S.px(75, 130, 'iron', 5); S.end();
+    S.beg(); S.box(64, 100, 22, 0, 'wood', 4); S.end();
+    S.beg(); S.box(66, 111 - 10, 18, 9, 'wood', 5.5); S.box(71, 103, 8, 6, 'wood', 7); S.hl(71, 106, 8, 'wood', 5); S.line(71, 103, 78, 108, 'wood', 5); S.end();
+    // loading dock in front of the bay: planks on the plinth, rubber bumpers
+    S.beg(); TX.planks(S, 42, 146, 66, 4, 'wood', 5, { ph: 2, pw: 16, nails: false }); [46, 102].forEach(x => S.rect(x, 147, 3, 5, 'hair', 2)); S.end();
+    // upper: two lit windows, the hayloft doors (one open, dark inside), a hoist beam over them
+    const window = (x, y, li) => { S.beg(); S.box(x - 1, y - 1, 18, 20, 'wood', 3); S.rect(x + 1, y + 1, 14, 16, 'lamp', 7.6, { e: li + 1 }); for (let k = 0; k < 3; k++) S.px(x + 2 + k * 4, y + 2, 'lamp', 10, { e: li + 1 });
       S.vl(x + 8, y + 1, 16, 'wood', 2.5); S.hl(x + 1, y + 8, 14, 'wood', 2.5); S.rect(x - 5, y, 4, 18, 'leaf', 3.5); S.rect(x + 17, y, 4, 18, 'leaf', 3.5); S.hl(x - 5, y + 6, 4, 'leaf', 2); S.hl(x + 17, y + 11, 4, 'leaf', 2);
-      S.box(x - 2, y + 19, 20, 3, 'wood', 4); for (let k = 0; k < 7; k++) S.px(x - 1 + k * 3, y + 18 - (k % 2), k % 3 ? 'pink' : 'red', 7 + (k % 2)); S.end(); });
-    // lower storey: barred windows and the barn doors (the right one stands ajar, lit from inside)
-    [[40, 116], [124, 116], [236, 116], [334, 116]].forEach(([x, y]) => { S.beg(); S.box(x - 1, y - 1, 12, 12, 'stone', 6); S.rect(x + 1, y + 1, 8, 8, 'night', 1); for (let k = 0; k < 3; k++) S.vl(x + 2 + k * 3, y + 1, 8, 'iron', 6); S.end(); });
-    const door = (x, open) => {
-      S.beg(); S.rect(x - 3, 110, 42, 36, 'stone', 6); for (let k = 0; k < 7; k++) { const a = Math.PI * (1 - k / 6); S.box(x + 18 + Math.round(Math.cos(a) * 19) - 2, 118 - Math.round(Math.sin(a) * 8) - 2, 5, 4, 'stone', 7); } S.end();
-      if (open) { S.rect(x, 118, 36, 28, 'lamp', 5); S.vgrad(x, 118, 36, 28, 'lamp', 6.5, 4.5, { e: 10 + 1 }); for (let k = 0; k < 3; k++) { S.box(x + 20 + k * 5, 134 - k * 5, 9, 12 + k * 5 > 20 ? 12 : 12, 'wood', 5 - k * 0.5); } S.rect(x + 2, 140, 14, 6, 'sand', 5); }
-      const leaf = (lx, w) => { TX.vplanks(S, lx, 118, w, 28, 'wood', 4.4, { pw: 5 }); [122, 138].forEach(y => { S.hl(lx, y, w, 'iron', 4); S.px(lx + (w > 10 ? 2 : 1), y, 'iron', 7); }); };
-      S.beg(); if (open) { leaf(x, 12); S.rect(x + 12, 118, 3, 28, 'wood', 2); } else { leaf(x, 18); leaf(x + 18, 18); S.vl(x + 18, 118, 28, 'wood', 2); S.px(x + 16, 132, 'brass', 8); S.px(x + 20, 132, 'brass', 8); } S.end();
-    };
-    door(70, false); door(282, true);
-    // ivy up the left corner
+      S.box(x - 2, y + 19, 20, 3, 'stone', 6); S.ao(x - 2, y + 22, 20, 3, 't', 1.6); S.end(); };
+    WIN.forEach(([x, y], i) => window(x, y, LI.win + i));
+    S.beg(); S.box(64, 81, 22, 25, 'wood', 3); S.rect(66, 83, 18, 22, 'ink', 1.5); TX.vplanks(S, 66, 83, 9, 22, 'wood', 4.2, { pw: 3 }); S.rect(66, 91, 9, 1, 'iron', 4); S.px(74, 93, 'iron', 7);
+    S.rect(76, 96, 6, 9, 'sand', 3.5); S.px(78, 95, 'sand', 5); S.end();                                    // a sack inside the loft
+    S.beg(); S.box(72, 76, 26, 3, 'wood', 5); S.rect(71, 75, 3, 5, 'wood', 3); S.ell(95.5, 80, 1.6, 1.6, 'iron', 6); S.end();
+    // drainpipes with brackets
+    [[27, 80, 146], [353, 80, 146]].forEach(([x, y0, y1]) => { S.beg(); S.cyl(x, y0, 3, y1 - y0, 'copper', 5, { rim: 1 }); for (let y = y0 + 6; y < y1; y += 16) S.hl(x - 1, y, 5, 'iron', 4); S.rect(x - 1, y1 - 2, 5, 2, 'copper', 6); S.end(); });
+
+    // ── the counting house wing (right): dressed warm stone below, timber above with an oriel and a balcony ──
+    TX.ashlar(S, 222, 108, 130, 38, 'mstone', 6, { bh: 7, bw: 14, crack: 0.1 }); S.noise(222, 108, 130, 38, 1, 5, 41);
+    S.rect(222, 78, 130, 30, 'linen', 4.8); S.noise(222, 78, 130, 30, 1, 4, 43);
+    for (let x = 222; x <= 349; x += 18) { S.beg(); S.rect(Math.min(x, 349), 78, 3, 30, 'wood', 3.2); S.vl(Math.min(x, 349), 78, 30, 'wood', 4.4, { n: [-0.6, 0] }); S.end(); }
+    [78, 92, 105].forEach(y => { S.beg(); S.rect(222, y, 130, 3, 'wood', 3.4); S.hl(222, y, 130, 'wood', 4.8, { n: [0, -0.7] }); S.end(); });
+    [225, 333].forEach(x => S.line(x, 104, x + 15, 95, 'wood', 3.2, { w: 2 }));
+    S.rect(222, 108, 130, 2, 'wood', 1.8); S.ao(222, 110, 130, 5, 't', 1.4);
+    // two tall arched windows with iron grilles and flower boxes
+    [[240, 116], [270, 116]].forEach(([x, y]) => { S.beg(); for (let k = 0; k < 7; k++) { const a = Math.PI * (1 - k / 6); S.box(x + 7 + Math.round(Math.cos(a) * 9) - 2, y + 2 - Math.round(Math.sin(a) * 5) - 2, 4, 3, 'stone', 7.5); }
+      for (let yy = y; yy < y + 22; yy++) for (let xx = x; xx < x + 14; xx++) { const u = (xx + 0.5 - x - 7) / 7, top = y + 4 - Math.round(4 * Math.sqrt(Math.max(0, 1 - u * u))); if (yy >= top) S.px(xx, yy, 'lamp', 7.2 + (yy < y + 6 ? 1 : 0), { e: LI.arch + 1 }); }
+      for (let k = 1; k < 4; k++) S.vl(x + k * 3.5, y + 1, 21, 'iron', 3); S.hl(x, y + 11, 14, 'iron', 3);
+      S.box(x - 2, y + 22, 18, 3, 'wood', 4); for (let k = 0; k < 6; k++) S.px(x - 1 + k * 3, y + 21 - (k % 2), k % 3 ? 'pink' : 'red', 7 + (k % 2)); S.end(); });
+    // front door: studded, arched, a lamp beside, a striped awning over it, two steps
+    S.beg(); for (let k = 0; k < 7; k++) { const a = Math.PI * (1 - k / 6); S.box(309 + Math.round(Math.cos(a) * 12) - 2, 120 - Math.round(Math.sin(a) * 7) - 2, 5, 4, 'stone', 7.5); }
+    TX.vplanks(S, 299, 120, 20, 26, 'wood', 4, { pw: 5 }); for (let y = 124; y < 146; y += 5) for (let x = 301; x < 318; x += 5) S.px(x, y, 'iron', 7); S.px(315, 133, 'brass', 9); S.end();
+    S.beg(); S.box(296, 146, 26, 3, 'stone', 6.5, { top: 1 }); S.end();
+    S.beg(); S.box(323, 116, 2, 8, 'iron', 5); S.rect(322, 118, 5, 6, 'lamp', 8, { e: LI.door + 1 }); S.hl(322, 117, 5, 'iron', 6); S.end();
+    // oriel: a bay window standing out on corbels, its own little tiled roof, three lit panes
+    S.beg(); for (let x = 263; x < 300; x++) { const k = (x - 263) / 37; S.px(x, 76 - Math.round(4 * (1 - Math.abs(k * 2 - 1))), 'crimson', 6); } S.poly([[260, 80], [303, 80], [298, 75], [265, 75]], 'crimson', 5);
+    for (let x = 262; x < 302; x += 3) S.px(x, 80, 'crimson', 3);
+    S.box(262, 81, 40, 24, 'wood', 4, { side: 2 }); [266, 279, 292].forEach((x, i) => { S.rect(x, 84, 9, 15, 'lamp', 7.8, { e: LI.oriel + 1 }); S.px(x + 1, 85, 'lamp', 10, { e: LI.oriel + 1 }); S.hl(x, 91, 9, 'wood', 2.5); });
+    S.box(261, 105, 42, 3, 'wood', 5); [264, 280, 296].forEach(x => S.poly([[x, 108], [x + 4, 108], [x + 2, 113]], 'wood', 4)); S.end();
+    // balcony with an iron railing and pots, the balcony door lit
+    S.beg(); S.box(310, 104, 38, 3, 'stone', 6.5, { top: 1 }); for (let x = 311; x < 347; x += 3) S.vl(x, 96, 8, 'iron', 4); S.hl(310, 95, 38, 'iron', 6); S.hl(310, 101, 38, 'iron', 3);
+    [[314, 'red'], [330, 'pink'], [342, 'leaf']].forEach(([x, m]) => { S.box(x, 99, 5, 5, 'brick', 5); S.px(x + 1, 97, m, 8); S.px(x + 3, 96, m, 7); S.px(x + 2, 97, 'leaf', 6); }); S.end();
+    // ivy up the warehouse's left corner
     for (let i = 0; i < 70; i++) { const y = 146 - Math.floor(r() * 60), x = 29 + Math.floor(r() * (8 + (146 - y) * 0.1)); S.px(x, y, 'leaf', 3 + r() * 4); }
+
     // ── gate tower: dressed stone, a spire roof with a finial, a midnight clock ──
     TX.ashlar(S, 150, 22, 80, 124, 'stone', 5.8, { bh: 8, bw: 14, crack: 0.12 }); S.noise(150, 22, 80, 124, 1, 6, 57);
     [150, 226].forEach(x => { for (let y = 26; y < 146; y += 7) S.box(x, y, 4 + ((y / 7) % 2), 7, 'stone', 7.2); });
-    S.beg(); for (let y = 2; y <= 24; y++) { const k = (y - 2) / 22, hw = Math.round(4 + k * 40); for (let x = CX - hw; x < CX + hw; x++) { const row = y - 2, tn = 5.5 - k * 1.6 + (row % 3 === 2 ? -1.4 : 0) + (x < CX ? 0.6 : -0.3); S.px(x, y, 'crimson', tn, { n: [x < CX ? -0.5 : 0.5, -0.5] }); } }
+    S.beg(); for (let y = 2; y <= 24; y++) { const k = (y - 2) / 22, hw = Math.round(4 + k * 40); for (let x = CX - hw; x < CX + hw; x++) { const row = y - 2, tx = x + (Math.floor(row / 3) % 2) * 2, tn = 5.5 - k * 1.6 + (row % 3 === 2 ? -1.4 : 0) + (tx % 4 === 0 && row % 3 !== 2 ? -0.7 : 0) + (x < CX ? 0.6 : -0.3); S.px(x, y, 'crimson', tn, { n: [x < CX ? -0.5 : 0.5, -0.5] }); } }
     S.hl(CX - 44, 24, 88, 'gold', 7); S.end();
     S.beg(); S.vl(CX, -1, 4, 'gold', 8); S.ell(CX + 0.5, 3, 1.6, 1.6, 'gold', 9, { dome: 1 }); S.end();
-    S.beg(); S.box(152, 25, 76, 3, 'stone', 7.5, { top: 1 }); S.box(152, 52, 76, 3, 'stone', 7.5, { top: 1 }); S.hl(152, 55, 76, 'gold', 5.5); S.end();
+    S.beg(); S.box(152, 25, 76, 3, 'stone', 7.5, { top: 1 }); S.box(152, 52, 76, 3, 'stone', 7.5, { top: 1 }); S.hl(152, 55, 76, 'gold', 5.5); for (let x = 155; x < 226; x += 5) S.px(x, 56, 'stone', 4); S.end();
     S.beg(); S.ell(CX + 0.5, 39.5, 12.5, 12.5, 'brass', 6, { ring: 2, dome: 1 }); S.ell(CX + 0.5, 39.5, 10.5, 10.5, 'paper', 8.6, { e: 2 });
     for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2, rr = k % 3 ? 8.6 : 8; S.px(CX + Math.sin(a) * rr, 39 - Math.cos(a) * rr, 'ink', k % 3 ? 2 : 1, { e: 255 }); if (!(k % 3)) S.px(CX + Math.sin(a) * (rr - 1), 39 - Math.cos(a) * (rr - 1), 'ink', 2, { e: 255 }); }
     S.end();
-    // portal recess (dark stone the swirl fills) and the threshold
+    // portal recess: dark stone the tunnel fills; its inner lip glows with the portal
     for (let y = AAP - 4; y <= ATH; y++) for (let x = AX0 - 4; x <= AX1 + 4; x++) if (inArch(x, y, 4)) S.px(x, y, 'stone', inArch(x, y) ? 1 : 3);
-    // plinth and plaza
+    for (let y = AAP - 1; y <= ATH; y++) for (let x = AX0 - 1; x <= AX1 + 1; x++) if (inArch(x, y, 1) && !inArch(x, y)) S.px(x, y, 'teal', 6.5, { e: 1 });
+    // plinth
     S.beg(); TX.ashlar(S, 24, 146, 332, 20, 'stone', 4.6, { bh: 7, bw: 22, crack: 0.1 }); S.box(22, 144, 336, 3, 'stone', 6.5, { top: 1 }); S.end();
-    for (let y = GY; y < 172; y++) { const inset = (y - GY) * 3; for (let x = 20 + inset - Math.floor(r() * 3); x < 360 - inset + Math.floor(r() * 3); x++) S.px(x, y, 'stone', 4.2 + ((x + (y % 2) * 3) % 6 === 0 ? -1.6 : 0) + (r() < 0.15 ? 0.8 : 0)); }
+    // plaza: cobbles in rows that grow toward the eye, grass at the ragged ends, two puddles
+    const rowsH = [1, 1, 2, 2, 2, 3];
+    for (let y = PLZ0, ri = 0; y < PLZ1; ri++) { const h = rowsH[Math.min(ri, rowsH.length - 1)], w = 3 + h * 2, off = (ri % 2) * Math.round(w / 2), inset = Math.max(0, 8 - ri * 2);
+      for (let x = 14 + inset; x < 366 - inset; x++) { const cx0 = x + off, cell = Math.floor(cx0 / w), cxp = cx0 % w; for (let k = 0; k < h && y + k < PLZ1; k++) { const edge = cxp === 0 || k === h - 1; S.px(x, y + k, 'stone', edge ? 2.4 : 4.4 + (X.vnoise(cell, ri * 3, 7) - 0.5) * 1.6 + (k === 0 && cxp === 1 ? 1 : 0)); } }
+      y += h; }
+    for (let x = 6; x < 20; x++) for (let y = PLZ0 + 2; y < PLZ1; y++) if (r() < 0.6) S.px(x, y, 'leaf', 2 + r() * 2); for (let x = 360; x < 374; x++) for (let y = PLZ0 + 2; y < PLZ1; y++) if (r() < 0.6) S.px(x, y, 'leaf', 2 + r() * 2);
     S.floor(GY);
     // ── the shaft down to the underground (behind the plaza) ──
-    S.lay('back'); S.rect(171, 172, 38, 38, 'ink', 1); for (let y = 172; y < AH; y += 8) { S.box(169, y, 42, 3, 'wood', 4); } S.box(167, 172, 4, 38, 'wood', 5); S.box(209, 172, 4, 38, 'wood', 5);
-    for (let y = 172; y < AH; y++) { S.px(183, y, 'iron', 5); S.px(197, y, 'iron', 5); }
+    S.lay('back'); S.rect(171, PLZ1, 38, AH - PLZ1, 'ink', 1); for (let y = PLZ1; y < AH; y += 8) S.box(169, y, 42, 3, 'wood', 4); S.box(167, PLZ1, 4, AH - PLZ1, 'wood', 5); S.box(209, PLZ1, 4, AH - PLZ1, 'wood', 5);
+    for (let y = PLZ1; y < AH; y++) { S.px(183, y, 'iron', 5); S.px(197, y, 'iron', 5); }
     // ── columns, the voussoir ring with runes, the steps, braziers ──
     S.lay('mid');
     [154, 218].forEach(x => { S.beg(); S.box(x - 1, 146, 10, 4, 'stone', 6.5, { top: 1 }); S.cyl(x, 70, 8, 76, 'stone', 7, { rim: 2 }); for (let y = 74; y < 142; y += 9) S.hl(x + 1, y, 6, 'stone', 5.6); S.box(x - 1, 64, 10, 6, 'brass', 6, { top: 1 }); S.hl(x - 1, 67, 10, 'brass', 4); S.end(); });
@@ -108,68 +163,75 @@ X.def('_mainbase', {
     for (let y = AAP - 7; y <= ATH; y++) for (let x = AX0 - 7; x <= AX1 + 7; x++) { if (!inArch(x, y, 6) || inArch(x, y, 1)) continue; const ang = Math.atan2(y - ASP, x + 0.5 - CX), seg = Math.floor((ang + Math.PI) / (Math.PI / 9)), side = y >= ASP;
       const joint = side ? (y - ASP) % 9 === 0 : Math.abs(Math.sin((ang + Math.PI) * 9 / 2)) < 0.12; S.px(x, y, 'stone', joint ? 3.5 : 7.4 - (inArch(x, y, 3) ? 0.9 : 0) + ((seg + (side ? Math.floor(y / 9) : 0)) % 2) * 0.5, { n: [x < CX ? 0.4 : -0.4, -0.3] }); }
     S.end();
-    // runes cut into the ring, glowing with the portal light
     const RUNE = ['101', '010', '111'], RUNE2 = ['110', '011', '010'], RUNE3 = ['111', '100', '110'];
     [[164, 132], [164, 116], [164, 100], [168, 82], [178, 67], [216, 132], [216, 116], [216, 100], [212, 82], [202, 67]].forEach(([x, y], i) => { const g = [RUNE, RUNE2, RUNE3][i % 3]; for (let a = 0; a < 3; a++) for (let b = 0; b < 3; b++) if (g[b][a] === '1') S.px(x - 1 + a, y - 1 + b, 'teal', 7.5, { e: 1 }); });
     S.beg(); S.poly([[CX - 5, AAP - 8], [CX + 5, AAP - 8], [CX + 4, AAP + 1], [CX - 4, AAP + 1]], 'stone', 8); S.ell(CX + 0.5, AAP - 3.5, 2.2, 2.6, 'teal', 9, { e: 1 }); S.px(CX, AAP - 5, 'teal', 11, { e: 1 }); S.end();
-    // steps
     [[150, 160, 80, 6], [156, 155, 68, 5], [162, 151, 56, 4]].forEach(([x, y, w, h]) => { S.beg(); S.box(x, y, w, h, 'stone', 6.2, { top: 2, tt: 1.8 }); S.end(); });
-    // braziers: tripod and bowl
-    [141, 239].forEach(x => { S.beg(); S.line(x - 5, 156, x - 1, 142, 'iron', 4); S.line(x + 5, 156, x + 1, 142, 'iron', 4); S.vl(x, 144, 12, 'iron', 5); S.poly([[x - 7, 138], [x + 7, 138], [x + 4, 143], [x - 4, 143]], 'iron', 5); S.hl(x - 7, 138, 14, 'iron', 8); for (let k = -5; k <= 5; k += 2) S.px(x + k, 137, 'fire', 6 + (k & 2), { e: 9 + (x > CX ? 1 : 0) }); S.end(); });
-    // crane on the right wing: a jib, a pulley (the rope and crate swing in anim)
-    S.beg(); S.rect(352, 66, 4, 16, 'wood', 4); S.line(352, 66, 374, 64, 'wood', 5, { w: 2 }); S.line(356, 80, 372, 66, 'wood', 3); S.ell(372.5, 67, 2, 2, 'iron', 6); S.end();
-    // ── the plaza, near the eye: crates, barrels, a lamp post, a cart ──
+    [141, 239].forEach(x => { S.beg(); S.line(x - 5, 156, x - 1, 142, 'iron', 4); S.line(x + 5, 156, x + 1, 142, 'iron', 4); S.vl(x, 144, 12, 'iron', 5); S.poly([[x - 7, 138], [x + 7, 138], [x + 4, 143], [x - 4, 143]], 'iron', 5); S.hl(x - 7, 138, 14, 'iron', 8); for (let k = -5; k <= 5; k += 2) S.px(x + k, 137, 'fire', 6 + (k & 2), { e: (x > CX ? LI.brzR : LI.brzL) + 1 }); S.end(); });
+    // shop sign bracket (the sign swings in anim)
+    S.beg(); S.hl(326, 108, 14, 'iron', 6); S.line(326, 112, 336, 108, 'iron', 4); S.end();
+    // ── near the eye: crates, barrels, a cart, lamp posts ──
     S.lay('front');
     const crate = (x, y, w, h, tn) => { S.beg(); S.box(x, y - h, w, h, 'wood', tn, { top: 2 }); S.hl(x + 1, y - Math.round(h / 2), w - 2, 'wood', tn - 2); S.line(x + 1, y - h + 1, x + w - 2, y - 2, 'wood', tn - 1.5); S.end(); };
-    crate(26, 171, 14, 12, 5.5); crate(40, 171, 11, 9, 4.8); crate(30, 159, 11, 9, 6);
-    [[58, 171], [66, 171]].forEach(([x, y]) => { S.beg(); S.cyl(x - 4, y - 11, 8, 11, 'wood', 5, { rim: 2 }); S.hcyl(x - 4, y - 9, 8, 1, 'iron', 5); S.hcyl(x - 4, y - 3, 8, 1, 'iron', 4); S.ell(x, y - 11, 4, 1, 'wood', 7); S.end(); });
-    crate(338, 171, 16, 13, 5); crate(326, 171, 11, 8, 6); crate(341, 158, 10, 8, 4.5);
-    S.beg(); S.hl(304, 166, 20, 'wood', 5); S.line(304, 166, 300, 160, 'wood', 5); S.ell(308, 168, 3, 3, 'wood', 3, { ring: 1 }); S.ell(320, 168, 3, 3, 'wood', 3, { ring: 1 }); S.box(302, 158, 20, 7, 'wood', 5.5); S.end();
-    sc.emit({ k: 'steam', x: 56, y: 25, rate: 0.9, sp: 5, ang: 0.35, spread: 0.5, life: 3.2 });
-    sc.emit({ k: 'steam', x: 328, y: 25, rate: 0.7, sp: 5, ang: 0.35, spread: 0.5, life: 3 });
+    crate(30, 171, 14, 12, 5.5); crate(44, 171, 11, 9, 4.8); crate(34, 159, 11, 9, 6);
+    [[112, 173], [120, 173]].forEach(([x, y]) => { S.beg(); S.cyl(x - 4, y - 11, 8, 11, 'wood', 5, { rim: 2 }); S.hcyl(x - 4, y - 9, 8, 1, 'iron', 5); S.hcyl(x - 4, y - 3, 8, 1, 'iron', 4); S.ell(x, y - 11, 4, 1, 'wood', 7); S.end(); });
+    crate(330, 173, 14, 11, 5); crate(318, 173, 10, 7, 6);
+    S.beg(); S.hl(262, 169, 20, 'wood', 5); S.line(262, 169, 258, 163, 'wood', 5); S.ell(266, 171, 3, 3, 'wood', 3, { ring: 1 }); S.ell(278, 171, 3, 3, 'wood', 3, { ring: 1 }); S.box(260, 161, 20, 7, 'wood', 5.5); S.rect(263, 158, 6, 3, 'sand', 5); S.end();
+    [[22, 1], [358, -1]].forEach(([x], i) => { S.beg(); S.rect(x - 1, 138, 3, 36, 'iron', 3.5); S.rect(x - 2, 172, 5, 2, 'iron', 5); S.poly([[x - 4, 130], [x + 4, 130], [x + 3, 137], [x - 3, 137]], 'iron', 4); S.rect(x - 2, 131, 5, 5, 'lamp', 9, { e: (i ? LI.postR : LI.postL) + 1 }); S.px(x, 132, 'lamp', 11, { e: (i ? LI.postR : LI.postL) + 1 }); S.hl(x - 5, 129, 11, 'iron', 6); S.px(x, 128, 'iron', 7); S.end(); });
+    sc.emit({ k: 'steam', x: 55, y: 16, rate: 0.9, sp: 5, ang: 0.35, spread: 0.5, life: 3.2 });
+    sc.emit({ k: 'steam', x: 326, y: 21, rate: 0.6, sp: 4, ang: 0.35, spread: 0.4, life: 2.6 });
     sc.emit({ k: 'ember', x: 141, y: 134, w: 8, rate: 3, sp: 7, ang: 0, spread: 0.6, life: 1.8 });
     sc.emit({ k: 'ember', x: 239, y: 134, w: 8, rate: 3, sp: 7, ang: 0, spread: 0.6, life: 1.8 });
   },
   anim(D, t, rs, o) {
     const st = rs.st, po = clamp(o.po || 0, 0, 1), hp = o.hp == null ? 1 : o.hp, low = hp < 0.35;
     rs.mul[0] = 1 + po * 1.3 + (o.hovDoor ? 0.25 : 0); if (low) rs.mul[0] *= 0.75 + 0.25 * (Math.sin(t * 23) > 0.3 ? 1 : 0.2);
-    rs.mul[18] = low ? 0.55 + 0.45 * Math.max(0, Math.sin(t * 4.2)) : 0;
-    // ── the swirl: two spiral arms turning, stars drawn inward; spins up and brightens as the portal opens ──
-    D.lay('back'); const sp = 0.45 + po * 2.6, cy = 112;
+    rs.mul[LI.alarm] = low ? 0.55 + 0.45 * Math.max(0, Math.sin(t * 4.2)) : 0;
+    if (o.hovWing) { rs.mul[LI.bay] = 1.3; rs.mul[LI.oriel] = 1.3; } else { rs.mul[LI.bay] = 1; rs.mul[LI.oriel] = 1; }
+    // ── the portal: a tunnel. Rings rush outward from a bright far end, two spiral arms turn through them ──
+    D.lay('back'); const sp = 0.45 + po * 2.6, cy = 110, ringV = 0.35 + po * 1.6;
     for (let y = AAP; y <= ATH; y++) for (let x = AX0; x <= AX1; x++) { if (!inArch(x, y)) continue; const dx = x + 0.5 - CX, dy = (y + 0.5 - cy) * 0.62, d = Math.hypot(dx, dy), a = Math.atan2(dy, dx);
-      const arm = Math.sin(a * 2 - d * 0.32 + t * sp * 2.2), glow = Math.max(0, 1 - d / 34), v = (arm * 0.5 + 0.5) * (0.55 + 0.45 * glow);
-      let tn = 1 + v * (2.8 + po * 5.1) + glow * glow * (1.2 + po * 3.3); if (low && ((x * 7 + y * 3 + Math.floor(t * 12)) % 29 === 0)) tn += 3;
-      D.px(x, y, 'teal', Math.min(11, tn), { e: 255 }); }
+      const depth = Math.max(0, 1 - d / 36), rings = ((Math.log(d + 2) * 3.2 - t * ringV * 3) % 1 + 1) % 1, arm = Math.sin(a * 2 - d * 0.28 + t * sp * 2.2) * 0.5 + 0.5;
+      let tn = 1.2 + depth * depth * (3.2 + po * 5) + arm * (1.3 + po * 2.2) * (0.4 + depth * 0.6) + (rings < 0.14 ? 0.9 + po : 0);
+      if (low && ((x * 7 + y * 3 + Math.floor(t * 12)) % 29 === 0)) tn += 3;
+      D.px(x, y, depth > 0.86 && po > 0.3 ? 'ice' : 'teal', Math.min(11, tn), { e: 255 }); }
     if (!st.stars) st.stars = []; const sa = st.stars;
     if (sa.length < 14 + po * 20 && R() < 0.3 + po) sa.push({ a: R() * Math.PI * 2, d: 26 + R() * 8, v: 6 + R() * 8 });
     for (let i = sa.length - 1; i >= 0; i--) { const q = sa[i]; q.d -= q.v * (0.03 + po * 0.05); q.a += (0.04 + po * 0.1); if (q.d < 2) { sa.splice(i, 1); continue; } const x = Math.round(CX + Math.cos(q.a) * q.d), y = Math.round(cy + Math.sin(q.a) * q.d / 0.62); if (inArch(x, y)) D.px(x, y, 'ice', 10, { e: 255 }); }
-    // cracks when the portal is badly damaged
+    // the portal in the puddle at the foot of the steps: a flipped, darker, rippling copy
+    D.lay('wall'); for (let y = 167; y < 176; y++) { const k = (y - 167) / 9, hw = Math.round(20 - k * 4); for (let x = CX - hw; x <= CX + hw; x++) { const sy = 158 - (y - 167) * 3 + Math.round(Math.sin(x * 0.5 + t * 3 + y) * 1.2), dx2 = x + 0.5 - CX, dd = Math.hypot(dx2, (sy - cy) * 0.62), dp = Math.max(0, 1 - dd / 36), arm = Math.sin(Math.atan2((sy - cy) * 0.62, dx2) * 2 - dd * 0.28 + t * sp * 2.2) * 0.5 + 0.5;
+      if (Math.abs(dx2) > hw - 1 && (x + y) % 2) continue; D.px(x, y, 'teal', Math.min(8, 1 + dp * dp * (2 + po * 3) + arm * (0.8 + po)) - k * 0.8, { e: 255 }); } }
     if (low) { D.lay('mid'); [[161, 92, 1, 16], [218, 116, -1, 14], [183, 55, 1, 9], [196, 57, -1, 8], [162, 136, 1, 10]].forEach(([x, y, d, n], i) => { let cx = x, yy = y; for (let k = 0; k < n; k++) { D.px(cx, yy, 'ink', 1); D.px(cx + 1, yy, 'stone', 9); yy++; if ((k + i) % 3 === 0) cx += d; } });
       if (R() < 0.04) rs.burst('spark', 170 + R() * 40, 70 + R() * 70, 4, { sp: 30, life: 0.6, floor: GY }); }
     // ── clock hands: near midnight; the minute hand ticks each second ──
     D.lay('wall'); const mn = (55 + Math.floor(t) / 60 * 5) % 60, ha = (11 + mn / 60) / 12 * Math.PI * 2, ma = mn / 60 * Math.PI * 2;
     D.line(CX, 39, CX + Math.sin(ha) * 5, 39 - Math.cos(ha) * 5, 'ink', 1, { e: 255 }); D.line(CX, 39, CX + Math.sin(ma) * 8, 39 - Math.cos(ma) * 8, 'ink', 2, { e: 255 }); D.px(CX, 39, 'brass', 9, { e: 255 });
-    // a figure passes behind a window now and then
-    const wp = steps(t, 17), wi = Math.floor(t / 17) % WIN.length, wx = WIN[wi][0] + Math.round(wp * 60) - 22;
-    if (wp < 0.35) for (let y = 0; y < 13; y++) for (let x = 0; x < 6; x++) { const X0 = wx + x, Y0 = WIN[wi][1] + 5 + y; if (X0 <= WIN[wi][0] || X0 >= WIN[wi][0] + 15 || (y < 4 && (x === 0 || x === 5))) continue; D.px(X0, Y0, 'lamp', 3.2, { e: 255 }); }
-    // ── banners on the tower flanks, the bottom edge waving ──
+    // a figure passes behind the oriel now and then
+    const wp = steps(t, 17); if (wp < 0.4) { const fx = 262 + Math.round(wp / 0.4 * 44); for (let y = 0; y < 13; y++) for (let x = 0; x < 6; x++) { const X0 = fx + x, Y0 = 88 + y; if (y < 4 && (x === 0 || x === 5)) continue; if ((X0 >= 266 && X0 < 275) || (X0 >= 279 && X0 < 288) || (X0 >= 292 && X0 < 301)) D.px(X0, Y0, 'lamp', 3.2, { e: 255 }); } }
+    // ── banners on the tower flanks ──
     D.lay('mid'); [[134, 1], [240, -1]].forEach(([x, dir], j) => { D.beg(); D.hl(x - 1, 84, 14, 'gold', 7); for (let y = 86; y < 118; y++) { const w = Math.round(Math.sin(t * 2.2 + y * 0.2 + j) * (y - 86) / 32 * 1.5); for (let k = 0; k < 12; k++) D.px(x + k + w, y, 'teal', (k === 0 ? 3.5 : k === 11 ? 2.4 : 4.6) + (y < 90 ? 0.6 : 0)); }
       for (let k = 0; k < 12; k += 2) D.px(x + k + Math.round(Math.sin(t * 2.2 + 6.4 + j) * 1.5), 118 + (k % 4 ? 1 : 0), 'teal', 3.5);
       const bx = x + 6 + Math.round(Math.sin(t * 2.2 + 20 + j) * 0.7); D.poly([[bx - 3, 101], [bx, 96], [bx + 3, 101], [bx, 106]], 'gold', 7.5); D.px(bx, 101, 'teal', 9, { e: 1 }); D.end(); });
-    // ── eave lanterns swinging ──
-    LANT.forEach(([x, y], i) => { const a = Math.sin(t * 1.4 + i * 1.3) * 0.18, lx = Math.round(x + Math.sin(a) * 6), ly = y + 6; D.line(x, y, lx, ly - 1, 'iron', 3); D.beg(); D.rect(lx - 2, ly, 5, 1, 'iron', 5); D.rect(lx - 2, ly + 1, 5, 6, 'lamp', 8, { e: 15 + i }); D.px(lx, ly + 3, 'lamp', 11, { e: 15 + i }); D.vl(lx - 2, ly + 1, 6, 'iron', 4); D.vl(lx + 2, ly + 1, 6, 'iron', 4); D.rect(lx - 1, ly + 7, 3, 1, 'iron', 5); D.end({ none: 1 }); });
+    // ── eave lanterns ──
+    LANT.forEach(([x, y], i) => { const a = Math.sin(t * 1.4 + i * 1.3) * 0.18, lx = Math.round(x + Math.sin(a) * 6), ly = y + 6, e = LI.lant + i + 1; D.line(x, y, lx, ly - 1, 'iron', 3); D.beg(); D.rect(lx - 2, ly, 5, 1, 'iron', 5); D.rect(lx - 2, ly + 1, 5, 6, 'lamp', 8, { e }); D.px(lx, ly + 3, 'lamp', 11, { e }); D.vl(lx - 2, ly + 1, 6, 'iron', 4); D.vl(lx + 2, ly + 1, 6, 'iron', 4); D.rect(lx - 1, ly + 7, 3, 1, 'iron', 5); D.end({ none: 1 }); });
     // ── brazier flames ──
     [141, 239].forEach((x, i) => { for (let k = -4; k <= 4; k++) { const hh = Math.round(4 + 3 * Math.sin(t * 9 + k * 1.7 + i) + (4 - Math.abs(k)) * 0.9); for (let y = 0; y < hh; y++) D.px(x + k + (y > 2 ? Math.round(n1(t * 5 + k + i * 3)) : 0), 136 - y, 'fire', clamp(11 - y * 1.6 - Math.abs(k) * 0.5, 3, 11), { e: 255 }); } });
-    // ── crane: rope and a crate that sways, lowered and raised now and then ──
-    const cq = steps(t, 22), drop = cq < 0.15 ? cq / 0.15 : cq < 0.55 ? 1 : cq < 0.7 ? 1 - (cq - 0.55) / 0.15 : 0, ry = Math.round(92 + drop * 40), sw = Math.round(Math.sin(t * 1.1) * 1.5);
-    D.line(372, 69, 372 + sw, ry, 'hair', 3); D.beg(); D.box(367 + sw, ry, 11, 9, 'wood', 5.5); D.hl(368 + sw, ry + 4, 9, 'wood', 3.5); D.end();
-    // ── a black cat walks the left roof ridge every 26 s, sits, flicks its tail ──
+    // ── the warehouse hoist: rope and a sack that sways, lowered to the dock and pulled up again ──
+    const cq = steps(t, 22), drop = cq < 0.2 ? cq / 0.2 : cq < 0.55 ? 1 : cq < 0.75 ? 1 - (cq - 0.55) / 0.2 : 0, ry = Math.round(84 + drop * 50), sw = Math.round(Math.sin(t * 1.1) * 1.2);
+    D.line(95, 81, 95 + sw, ry, 'hair', 3); D.beg(); D.rect(92 + sw, ry, 7, 8, 'sand', 5.5); D.hl(93 + sw, ry + 1, 5, 'sand', 7); D.px(95 + sw, ry - 1, 'sand', 4); D.hl(92 + sw, ry + 7, 7, 'sand', 3.5); D.end();
+    // ── the shop sign swings on its bracket; the weathervane turns a little with the wind ──
+    const sa2 = Math.sin(t * 1.3) * 0.12, sgx = 333 + Math.round(Math.sin(sa2) * 3); D.line(329, 108, sgx - 3, 112, 'iron', 4); D.line(337, 108, sgx + 3, 112, 'iron', 4);
+    D.beg(); D.box(sgx - 6, 112, 13, 11, 'wood', 5); D.ell(sgx + 0.5, 117.5, 3.5, 3.5, 'gold', 8, { dome: 1 }); D.px(sgx, 117, 'gold', 5); D.px(sgx + 1, 117, 'gold', 5); D.end();
+    const va = Math.sin(t * 0.37) * 0.8 + n1(t * 0.9) * 0.3, vx = 296; D.beg(); D.vl(vx, 34, 12, 'iron', 5); D.ell(vx + 0.5, 34, 1.5, 1.5, 'gold', 8);
+    const vw = Math.round(Math.cos(va) * 7); D.line(vx - vw, 32, vx + vw, 32, 'iron', 6); D.poly([[vx + vw, 32], [vx + vw - Math.sign(vw || 1) * 3, 29], [vx + vw - Math.sign(vw || 1) * 4, 32]], 'iron', 6); D.px(vx - vw, 31, 'iron', 7); D.px(vx - vw, 33, 'iron', 7); D.end();
+    // ── a black cat walks the warehouse ridge every 26 s, sits, flicks its tail ──
     const kq = steps(t, 26); if (kq < 0.55) { const kx = Math.round(44 + Math.min(1, kq / 0.4) * 60), sit = kq > 0.4, ky = 39;
       const body = sit ? ['  ##', '  ##', ' ###', '####'] : ['#  #', '####', '### ', '#  #'];
       D.beg(); body.forEach((row, j) => { for (let i = 0; i < row.length; i++) if (row[i] === '#') D.px(kx + i, ky - 4 + j + (sit ? 0 : 1), 'ink', 1); }); D.px(kx + 3, ky - 5, 'ink', 1); D.px(kx + 4, ky - 4, 'ink', 1); D.px(kx + 3, ky - 4, 'screen', 8, { e: 255 });
       const tl = Math.round(Math.sin(t * (sit ? 3 : 8)) * 1.5); D.px(kx - 1, ky - 3 + tl, 'ink', 1); D.px(kx - 2, ky - 4 + tl, 'ink', 1); D.end({ none: 1 }); }
-    // ── a porter shifts crates between the open door and the cart ──
-    const w = stroll(t, 262, 300, 7, 0.3, 2.2); worker(D, w.x, GY + 3, 'worker', Object.assign(w.pose, w.dir > 0 ? {} : { aF: 1.2, eF: -1.2, aB: 1, eB: -1, tool: 'box' }), w.dir);
+    // ── a porter carries sacks from the dock to the cart; a clerk steps out of the counting house now and then ──
+    const w = stroll(t, 60, 256, 12, 0.3, 2); worker(D, w.x, GY + 4, 'worker', Object.assign(w.pose, w.dir > 0 ? { aF: 1.2, eF: -1.2, aB: 1, eB: -1, tool: 'box' } : {}), w.dir);
+    const cq2 = steps(t, 19); if (cq2 > 0.1 && cq2 < 0.6) { const k = (cq2 - 0.1) / 0.5, x = Math.round(308 + Math.sin(k * Math.PI) * 18); worker(D, x, 149, { skin: ['skin', 6], hair: ['hair', 2], top: ['crimson', 5], bot: ['hair', 3], boot: ['hair', 2], hat: ['hair', 3] }, { aF: 1.3, eF: -1.3, tool: 'board', bob: Math.round(Math.abs(Math.sin(t * 8)) * -0.6) }, k < 0.5 ? 1 : -1); }
     // ── moths round the lanterns, fireflies over the plaza ──
     D.lay('front'); LANT.forEach(([x, y], i) => { const a = t * 3.3 + i * 2, mx = x + Math.cos(a) * 5, my = y + 10 + Math.sin(a * 1.4) * 3; D.px(mx, my, 'paper', Math.sin(t * 30 + i) > 0 ? 8 : 5); });
     for (let i = 0; i < 7; i++) { const a = Math.sin(t * (0.9 + i * 0.13) + i * 5), fx = 40 + ((i * 53 + t * 6 * (i % 2 ? 1 : -1)) % 300 + 300) % 300, fy = 150 + Math.sin(t * 1.3 + i * 2) * 8; if (a > 0.2) D.px(fx, fy, 'leaf', 10 + (a > 0.7 ? 1 : 0), { e: 255 }); }
