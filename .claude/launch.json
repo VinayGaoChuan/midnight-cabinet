@@ -64,6 +64,16 @@
         "8061"
       ],
       "port": 8061
+    },
+    {
+      "name": "game-opening",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8071"
+      ],
+      "port": 8071
     }
   ]
 }
