@@ -8,7 +8,7 @@
 // moving: torches, stars, the visitor's own props), the choice gets its reaction (happy hop and coins, a sad little rain
 // cloud, a spell, digging), the visitor walks back into the gate and the window closes. Only then does the choice take
 // effect (what was paid, what was given, a vein changing, a blessing waiting). A click on the dim area speeds it up.
-// Visitors: 流浪商人 (one thing only), 占卜师, 勘探队, 瘟疫医生, 丰收的公鸡, and — once there is faith — 朝圣者.
+// Visitors: 流浪商人 (one thing only), 占卜师, 瘟疫医生, 丰收的公鸡, and — once there is faith — 朝圣者.
 const M = window.MC, G = M.Game.prototype, S = M.Sfx, U = M.UI, P = M.PJ.PAL, now = () => performance.now();
 const cl = (v, a, b) => Math.max(a, Math.min(b, v)), eo = (q) => 1 - Math.pow(1 - q, 3), eback = (q) => { const c = 1.7; return 1 + (c + 1) * Math.pow(q - 1, 3) + c * Math.pow(q - 1, 2); };
 const RM = () => !!(M.PJ && M.PJ.reduced);
@@ -19,9 +19,9 @@ const EV = M.DAYEV;
 // ───────── the calendar's events become visitors ─────────
 if (EV) {
   delete EV.recruit;   // one leader: nothing left to recruit (2026-09-25)
+  delete EV.ley;       // no terrain any more (2026-09-26): no surveyors
   Object.assign(EV.merchant, { n: '流浪商人', d: '流浪商人来访：只卖一样东西。' });
   Object.assign(EV.star, { n: '占卜师', d: '占卜师来访：三选一，下一次出征的祝福。' });
-  Object.assign(EV.ley, { n: '勘探队', d: '勘探队来访：把岩层变成特殊地形。' });
   Object.assign(EV.plague, { n: '疫病', d: '瘟疫医生来访：花物资治好领袖，或者硬扛。' });
   Object.assign(EV.harvest, { n: '丰收', d: '公鸡打鸣：所有挖掘和建造各推进 1 天。' });
   EV.pilgrim = { n: '朝圣者', ic: 'f_faith', c: '#ffe6a0', d: '朝圣者来访：留下信仰值。', w: 3, need: (m) => !!(M.faithOn && M.faithOn(m)) };
@@ -31,7 +31,6 @@ if (EV) {
 const WHO = {
   merchant: { key: 'Landlord', who: '推着车的商人', prop: 'cart', text: '「路过贵地，好东西只卖一样，挑吧。」' },
   star: { key: 'MoonlightApostle', who: '摇着水晶球的占卜师', prop: 'orb', text: '「下一次出征，我能给你一点运气。」' },
-  ley: { key: 'Supervisor', who: '扛着镐的勘探队长', prop: 'pick', text: '「我们在你的城下找到了地脉，挖不挖？」' },
   plague: { key: 'VoodooBeliever', who: '提着药灯的瘟疫医生', prop: 'miasma', text: '「城里闹病了，你的领袖也没躲过。」' },
   harvest: { key: 'Rooster', who: '天没亮就打鸣的公鸡', prop: 'dawn', text: '「喔喔——」天还没亮，全城都起来干活了。' },
   pilgrim: { key: 'DesertBeliever', who: '捧着蜡烛的朝圣者', prop: 'candle', text: '「让我在你的神殿前祈祷一夜吧。」' },
@@ -48,10 +47,6 @@ function offer(g, k) {
     o.push({ t: '不买了', sub: '', react: 'sad', say: '下回再来……', apply: () => {} });
   } else if (k === 'star') {
     const B = M.BLESS || []; B.map((b, i) => i).sort(() => rnd() - 0.5).slice(0, 3).forEach(i => o.push({ t: B[i].n, sub: '下一次出征', react: 'magic', say: '星星会记得。', apply: () => { m.bless = i; g.toast('下一次出征：' + B[i].n, EV.star.c); } }));
-  } else if (k === 'ley') {
-    const one = (n) => () => { let got = 0; for (let i = 0; i < n; i++) { const tk = M.dropTile(), at = M.tileSpot && M.tileSpot(m, tk); if (!at) continue; const [c, r] = at; M.cell(m, c, r).tile = tk; got++; g.homeQueue(g.tileReveal(c, r, tk)); } if (!got) g.toast('勘探队：没有能变的岩层', EV.ley.c); };
-    o.push({ t: '开挖', sub: '一格岩层变成特殊地形', react: 'work', say: '开挖！', apply: one(1) });
-    o.push({ t: '多挖一处', sub: '80 物资，再变一格', react: 'work', say: '加把劲！', dis: m.supplies < 80, why: '物资不够', apply: () => { m.supplies -= 80; g.pulse.msup = now(); one(2)(); } });
   } else if (k === 'plague') {
     const cost = 40 * Math.max(1, m.heroes.length);
     o.push({ t: '治疗', sub: cost + ' 物资', react: 'magic', say: '药到病除。', dis: m.supplies < cost, why: '物资不够', apply: () => { m.supplies -= cost; g.pulse.msup = now(); g.toast('领袖的病好了', EV.plague.c); } });

@@ -60,7 +60,10 @@ M.newRun3 = function (meta, hero, worldKey) {
 };
 // enemies: the day's growth and the danger's toughness, in battle and in every power estimate alike
 const BP = M.Battle3.prototype, oInit = BP.init;
-M.runEk = (run) => (run && !run.region.tut && run.M ? M.sceneEk(run.sceneRank != null ? run.sceneRank : (run.region.diff || 1)) / (1 + (run.M.day - 1) * OLD_EK) * (run.dangerK || 1) * (run.modEk || 1) : 1);
+// each chapter's own weight, measured with the whole-game sims (2026-09-26, docs/design.md §8.2): chapters 2–3 were
+// easier than the first (the army snowballs over a long chapter), the wall came at 5–7; this flattens the curve
+M.CHAPTER_EK = { town: 1.2, forest: 1.45, park: 1.1, harbor: 1.2, foundry: 1, ward: 0.9, starship: 0.85, hell: 0.85, casino: 0.85 };
+M.runEk = (run) => (run && !run.region.tut && run.M ? M.sceneEk(run.sceneRank != null ? run.sceneRank : (run.region.diff || 1)) / (1 + (run.M.day - 1) * OLD_EK) * (run.dangerK || 1) * (run.modEk || 1) * (M.CHAPTER_EK[run.regionKey] || 1) : 1);
 BP.init = function (run) { oInit.apply(this, arguments); this.ek *= M.runEk(run); };
 const oSE = M.sideE;
 M.sideE = function (run) { const s = oSE.apply(this, arguments); const k = M.runEk(run); s.hp *= k; s.dps *= k; return s; };

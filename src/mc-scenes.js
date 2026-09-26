@@ -165,6 +165,10 @@ M.newRun3 = function (meta, hero, worldKey) {
 };
 
 // ───────── boss fights: the boss alone (user ruling 2026-09-26); small bosses often of the chapter's own peoples ─────────
+// some bodies fight harder than the power formula says (ranged reach, traits): measured one by one (.ai/sim-mini.js,
+// 2026-09-26: 灯眼 lost 6 of 9 fights shown at 1.0–1.5). Their power counts ×this, so tuning brings the real fight to the
+// target and the number on the map is honest (applied in mc-spend.js, after mc-power defines M.sideE).
+M.BOSS_TRUE = { FourEyes: 1.5, EarthDragonKingGargon: 1.35, Centaur: 1.3, Shaman: 1.25, Cerberus: 1.15, EarthDragonIron: 1.15, OgreEnemy: 1.1 };
 M.miniOf = (run, node) => { const sg = run && run.chap && node && node.type === 'boss' && !node.fb && M.segsOf(run.regionKey)[node.seg || 0]; return (sg && sg.mb && DB[sg.mb.k]) ? sg.mb : null; };
 const oCfg = M.makeBattleCfg;
 M.makeBattleCfg = function (run, node) {

@@ -38,7 +38,9 @@ G.openWorlds = function () { if (this.homeQ && !this.portalOn()) return; return 
 // answer (an event, choosing a talent, picking the raid leader) lifts the lock while it waits.
 G.baseBusy = function () {
   if (this.screen !== 'base' || this.raid || this.modal || this.raidPrep || this.lvPick || this.visit) return false;   // a visit has its own dim layer
-  return !!(this.homeQ || this.lvFx || this.tlFx || this.expand || this.coreFx || this.coreQueue || this.tear || this.rite || this.dayFx || this.cardFx || this.saveFx);
+  const busy = !!(this.homeQ || this.lvFx || this.tlFx || this.expand || this.coreFx || this.coreQueue || this.tear || this.rite || this.dayFx || this.cardFx || this.saveFx);
+  // never a trap: a show that runs on for 25 s lets go of the base
+  if (!busy) { this._busyAt = 0; return false; } const t = performance.now(); if (!this._busyAt) this._busyAt = t; return t - this._busyAt < 25000;
 };
 const oBaseClick = G.baseClick;
 if (oBaseClick) G.baseClick = function () { if (this.baseBusy()) { this.hurry && this.hurry(); return; } return oBaseClick.apply(this, arguments); };

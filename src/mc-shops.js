@@ -7,25 +7,18 @@
 const M = window.MC, G = M.Game.prototype, DB = M.DB, rnd = Math.random, pick = (a) => a[Math.floor(rnd() * a.length)];
 const VOCS = (...v) => (k) => v.includes(DB[k].voc);
 const SHOPS = {
-  bazaar:   { n: '夜市', d: '部队、战旗、道具都卖一点。', units: 6, banners: 2, items: 3, w: 3 },
+  bazaar:   { n: '夜市', d: '什么部队都卖一点。', units: 8, w: 3, unit: 1 },
   barracks: { n: '兵营', d: '只卖前排和近战：先锋、守护者、战士、圣骑士。', units: 8, pool: VOCS('先锋', '守护者', '战士', '圣骑士'), w: 3, unit: 1 },
   refugee:  { n: '难民营', d: '全是普通部队，便宜一成半。', units: 8, pool: (k) => DB[k].q === 0, price: 0.85, w: 2, unit: 1 },
   slaver:   { n: '奴隶贩子', d: '好部队打七折，但每买一支，领袖失去 8% 生命。', units: 6, pool: (k) => DB[k].q >= 1, qBoost: 2, price: 0.7, hpCost: 0.08, w: 2, unit: 1 },
   guild:    { n: '法师协会', d: '只卖法师、牧师、祭司和召唤师。', units: 8, pool: VOCS('法师', '牧师', '祭司', '召唤师'), w: 2, unit: 1 },
   hunters:  { n: '猎人营地', d: '只卖射手和刺客。', units: 8, pool: VOCS('射手', '刺客'), w: 2, unit: 1 },
   mercs:    { n: '佣兵团', d: '只卖史诗和传说部队，价格贵一成。', units: 6, pool: (k) => DB[k].q >= 2, price: 1.1, w: 1, unit: 1 },
-  flags:    { n: '旗匠铺', d: '三面战旗，任选。', banners: 3, w: 2 },
-  veterans: { n: '老兵之家', d: '只卖你部队里最多的两个职业的战旗，其中一面半价。', banners: 2, vocBanners: 1, sale: ['banners', 1], w: 1 },
-  quarter:  { n: '军需官', d: '三面战旗免费，只能拿走一面。', banners: 3, price: 0, pickOne: 1, w: 1 },
-  grocer:   { n: '杂货铺', d: '四个支援道具，一个价。', items: 4, w: 2 },
-  alchemy:  { n: '炼金坊', d: '三个支援道具，其中一个半价。', items: 3, sale: ['items', 1], w: 1 },
-  gamble:   { n: '赌坊', d: '支援道具，买一个有 35% 概率多送一个。', items: 3, bonus: 0.35, w: 1 },
-  black:    { n: '黑市', d: '战旗和道具都有，价格忽高忽低。', banners: 2, items: 2, wild: 1, w: 1 },
 };
 // discounts are rare and single (user ruling 2026-09-25): a shop may put one card on sale, a few shops say they do
 const SALE_ANY = 0.3, SALE_OFF = 0.3;
 M.SHOPS = SHOPS;
-// 13 shops: 1 of everything, 6 that sell units, 3 that sell banners, 3 that sell items, 1 that sells banners and items
+// 7 shops, all selling units (user ruling 2026-09-26: 「局内的build，集中在部队上。不要战旗和道具了」)
 const UNIT_SHOPS = Object.keys(SHOPS).filter(k => SHOPS[k].unit);
 M.shopKindFor = (n, run) => (run && (run.tut || run.region.tut) ? 'bazaar' : n && n.preBoss ? pick(UNIT_SHOPS) : M.wpick(Object.keys(SHOPS), k => SHOPS[k].w));
 // every shop on a new map gets its trade (the one before a boss sells units)
@@ -38,19 +31,14 @@ M.genMap2 = function (run) {
 // the stock
 const oRoll = M.rollShop;
 M.rollShop = function (run) {
-  const S = SHOPS[run.shopKind] || SHOPS.bazaar; if (S === SHOPS.bazaar) return oRoll.apply(this, arguments);
+  const S = SHOPS[run.shopKind] || SHOPS.bazaar;
   const qw = M.shopQW(run), pm = M.priceMul(run), base = M.SHOP_POOL.concat(['JadeBeast']).filter(k => DB[k]), units = [];
   const pool = S.pool ? base.filter(S.pool) : base;
   for (let i = 0; i < (S.units || 0); i++) {
     const q = M.wpick([0, 1, 2, 3], x => qw[x] * (S.qBoost && x >= 1 ? S.qBoost : 1)), c = pool.filter(k => DB[k].q === q && !units.some(u => u.type === k)), rest = pool.filter(k2 => !units.some(u => u.type === k2)), k = pick(c.length ? c : rest.length ? rest : pool);
     units.push({ kind: 'unit', type: k, q: DB[k].q, cost: Math.max(5, Math.round(DB[k].cost * pm * (S.price || 1))) });
   }
-  let bk = Object.keys(M.LEGION).filter(k => !run.legion[k]);
-  if (S.vocBanners) { const cnt = {}; run.roster.forEach(u => { const v = DB[u.type].voc; cnt[v] = (cnt[v] || 0) + 1; }); const top = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]).slice(0, 2); const vb = bk.filter(k => M.LEGION[k].m.voc && top.includes(M.LEGION[k].m.voc)); bk = vb.length ? vb : bk.filter(k => M.LEGION[k].m.voc); }
-  const wild = () => (S.wild ? 0.7 + rnd() * 0.8 : 1);
-  const banners = bk.sort(() => rnd() - 0.5).slice(0, S.banners || 0).map(k => ({ kind: 'legion', key: k, q: M.LEGION[k].q, cost: S.price === 0 ? 0 : Math.max(5, Math.round(M.LEGION[k].cost * pm * (S.price || 1) * wild())) }));
-  const items = []; for (let i = 0; i < (S.items || 0); i++) items.push({ kind: 'item', key: pick(Object.keys(M.ITEMS)), q: 0, cost: Math.max(5, Math.round(M.itemPrice() * pm * (S.price || 1) * wild())) });
-  run.shop = { units, banners, items };
+  run.shop = { units, banners: [], items: [] };
 };
 // leader talents may add to any stock (货郎, mc-talent.js)
 const oRoll2 = M.rollShop;

@@ -151,13 +151,19 @@ G.tick = function (dt) {
 // ───────── the events ─────────
 const rnd = Math.random, pick = (a) => a[Math.floor(rnd() * a.length)];
 const cur = { sup: ['物资', 'msup', 'supplies', 'sack'], sh: ['碎片', 'msh', 'shards', 'shard'], orb: ['经验球', 'morb', 'orbs', 'orb'] };
+// the merchant's stock: three things drawn at random from what would be of use (user ruling 2026-09-26: 「商人的物品应该是
+// 随机」) — building blueprints, relic blueprints (only with a 工坊), keepsakes that would do something now
 function goods(g, m) {
-  const out = [], bld = Object.keys(M.BUILDINGS).filter(k => !M.BUILDINGS[k].fixed && !M.BUILDINGS[k].gone && !M.BUILDINGS[k].boss), rel = M.relicPool(), gifts = Object.keys(M.GIFTS || {}).filter(k => M.GIFTS[k].w > 0);
-  const bk = pick(bld), B = M.BUILDINGS[bk]; out.push({ n: B.n + '图纸', d: B.d, cost: B.q >= 2 ? ['sh', 40 + 20 * B.q] : ['sup', 90 + 50 * B.q], give: () => M.invAdd(m, 'bbp:' + bk, 1) });
-  if (!M.forgeOn || M.forgeOn(m)) { const rk = pick(rel), Rl = M.RELICS[rk]; out.push({ n: Rl.n + '图纸', d: '打造「' + Rl.n + '」', cost: ['sh', 30], give: () => M.invAdd(m, 'rbp:' + rk, 1) }); }   // relic blueprints only with a 工坊
-  const tk = M.dropTile(), T = M.TILES[tk]; out.push({ n: '地脉结晶·' + T.n, d: '把一格岩层变成「' + T.n + '」：' + (T.anyD || T.d), cost: ['sup', 140], give: () => { const at = M.tileSpot && M.tileSpot(m, tk); if (at) { const [c, r] = at; M.cell(m, c, r).tile = tk; g.homeQueue(g.tileReveal(c, r, tk)); } } });
-  { const gk = pick(gifts), K = M.GIFTS[gk]; out.push({ n: K.n, d: K.d, cost: ['sup', 70], give: () => { const r = K.apply(g, m, null); g.toast(K.n + ' · ' + ((r && r.t) || ''), K.c); } }); }
-  return out;
+  const bld = Object.keys(M.BUILDINGS).filter(k => { const B = M.BUILDINGS[k]; return !B.fixed && !B.gone && !B.boss && (!M.bpUseful || M.bpUseful(m, 'bbp:' + k)); });
+  const gifts = Object.keys(M.GIFTS || {}).filter(k => M.GIFTS[k].w > 0 && (!M.giftUseful || M.giftUseful(m, k)));
+  const make = {
+    bld: () => { const bk = pick(bld), B = M.BUILDINGS[bk]; return bk && { id: 'b' + bk, n: B.n + '图纸', d: B.d, cost: B.q >= 2 ? ['sh', 40 + 20 * B.q] : ['sup', 90 + 50 * B.q], give: () => M.invAdd(m, 'bbp:' + bk, 1) }; },
+    rel: () => { const rk = pick(M.relicPool()), Rl = M.RELICS[rk]; return rk && { id: 'r' + rk, n: Rl.n + '图纸', d: '打造「' + Rl.n + '」', cost: ['sh', 30], give: () => M.invAdd(m, 'rbp:' + rk, 1) }; },
+    gift: () => { const gk = pick(gifts), K = M.GIFTS[gk]; return gk && { id: 'g' + gk, n: K.n, d: K.d, cost: ['sup', 70], give: () => { const r = K.apply(g, m, null); g.toast(K.n + ' · ' + ((r && r.t) || ''), K.c); } }; },
+  };
+  const kinds = { bld: bld.length ? 5 : 0, rel: M.forgeOn && M.forgeOn(m) ? 2 : 0, gift: gifts.length ? 3 : 0 }, out = [];
+  for (let n = 0; n < 12 && out.length < 3; n++) { const k = M.wpick(Object.keys(kinds), x => kinds[x]); const o = k && make[k](); if (o && !out.some(x => x.id === o.id)) out.push(o); }
+  return out.sort(() => rnd() - 0.5);
 }
 M.dayGoods = goods;   // the merchant's stock (mc-visit.js)
 function merchant(g, m, stock) {

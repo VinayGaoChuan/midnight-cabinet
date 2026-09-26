@@ -43,7 +43,6 @@ Object.assign(G, {
     items.push({ n: '物资', c: '#caa84a', img: M.spriteCanvas('sack', 12), award: { k: 'rsup', v: 30 } });
     if (run.tut || Math.random() < 0.3) { const k = M.pick(Object.keys(M.ITEMS)), q = 0; items.push({ n: M.ITEMS[k].name, sub: '支援道具', c: M.ITEM_C, img: M.spriteCanvas(M.ITEMS[k].icon, 12), award: { k: 'item', key: k, q } }); }
     if (run.tut || Math.random() < M.bpChance(run, 'chest')) { const b = M.dropBp(); const I = M.itemInfo(b); items.push({ n: I.n, sub: I.kind, c: I.c, img: M.spriteCanvas(I.icon, 12), award: { k: 'bp', key: b } }); }
-    if (!run.tut && Math.random() < 0.05) { const t = 'tile:' + M.dropTile(); const I = M.itemInfo(t); items.push({ n: I.n, sub: '地脉结晶', c: I.c, img: M.spriteCanvas('gem', 12), award: { k: 'bp', key: t } }); }
     const best = items.reduce((a, b) => (M.QUALITY.findIndex(q => q.c === b.c) > M.QUALITY.findIndex(q => q.c === a.c) ? b : a), items[0]);
     this.openChest(items, best.c === '#caa84a' ? '#ffcc33' : best.c, () => this.finishNode());
   },
@@ -141,7 +140,6 @@ Object.assign(G, {
       const pb = n.type === 'boss' ? 1 : n.type === 'elite' ? 0.45 : run.tut ? 0 : 0.06;
       if (Math.random() < pb) { const k = M.dropBp(n.type === 'boss' ? 1 : 0.3); run.loot.bp.push(k); const I = M.itemInfo(k); lines.push({ t: '掉落：' + I.n, c: I.c, icon: I.icon }); }
       if (n.type === 'boss' && !run.tut && Math.random() < 0.5) { const k = M.dropBp(1.5); run.loot.bp.push(k); const I = M.itemInfo(k); lines.push({ t: '掉落：' + I.n, c: I.c, icon: I.icon }); }
-      if (n.type === 'boss' && !run.tut && Math.random() < 0.3) { const k = 'tile:' + M.dropTile(); run.loot.bp.push(k); const I = M.itemInfo(k); lines.push({ t: '掉落：' + I.n, c: I.c, icon: 'gem' }); }
       if (run.mods.postHeal) { const v = Math.round(mx * run.mods.postHeal); h.hp = Math.min(mx, h.hp + v); lines.push({ t: '战后喘息：回复 ' + v, c: '#9ccc6a', icon: 'up' }); }
     }
     if (dead.size) lines.push({ t: dead.size + ' 名部队永久阵亡', c: '#ff6a5a', icon: 'cross' });

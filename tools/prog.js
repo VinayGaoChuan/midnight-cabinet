@@ -25,7 +25,7 @@
       lastFail = null;   // farm once, then back to the story (the bot used to farm forever after one loss)
       return farmS[Math.floor(Math.random() * farmS.length)] || list[0];
     };
-    try { const bot = await window.__bot(secs, { fast: 1, extract: 1, pickSt }); return JSON.stringify({ fights, runs, raids, days, bot: { day: bot.day, core: bot.core, errs: bot.errs, viewErrs: bot.viewErrs, screen: bot.screen, games: bot.games } }); }
+    try { const bot = await window.__bot(secs, { fast: 1, extract: 1, pickSt, useItems: 1 }); return JSON.stringify({ fights, runs, raids, days, bot: { day: bot.day, core: bot.core, errs: bot.errs, viewErrs: bot.viewErrs, screen: bot.screen, games: bot.games } }); }
     finally { P.beginBattle = oBegin; P.runWin = oWin; P.runFail = oFail; /* oF2 wraps the recorder's runFail and goes with it */ P.raidEnd = oRE; P.startSettle = oSettle; if (oPass) P.passDay = oPass; }
   };
 })();

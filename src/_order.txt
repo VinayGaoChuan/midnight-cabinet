@@ -100,6 +100,7 @@ mc-revive.js
 mc-faith.js
 mc-visit.js
 mc-prosper.js
+mc-perks.js
 mc-town.js
 mc-siege.js
 mc-knock.js
@@ -108,4 +109,6 @@ mc-titan.js
 mc-bossfight.js
 mc-vocplay.js
 mc-spend.js
+mc-tidy.js
+mc-fever.js
 mc-tele.js

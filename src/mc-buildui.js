@@ -31,7 +31,7 @@ M.buildOptions = function (m, c, r) {
 const BLINK = 'fitBlink 1s ease-in-out infinite';
 const card = (g, m, c, r, o) => ({
   thumb: M.roomThumb(o.key), n: M.qn ? M.qn(o.B.n, o.B.q) + (o.count > 1 ? ' ×' + o.count : '') : o.B.n, c: M.qc ? M.qc(o.B.q) : '#ffe8b0',
-  ci: M.tagIc('cat', o.B.cat) || { img: '', tip: '', c: '#07060f' },
+  si: M.tagIc('style', o.B.style) || { img: '', tip: '', c: '#07060f' }, ci: M.tagIc('cat', o.B.cat) || { img: '', tip: '', c: '#07060f' },
   ms: [{ img: M.spriteURL('sack', 4), t: String(o.cost) }].concat(o.sh ? [{ img: M.spriteURL('shard', 4), t: String(o.sh) }] : []).concat([{ img: M.iconURL('t_hourglass', 2), t: o.days + ' 天' }]),
   bonus: o.fit ? '★ 契合地格' : '', banim: o.fit ? BLINK : 'none', border: o.fit ? '#ffcf4a' : o.B.q ? M.qc(o.B.q) : '#8a6a3a',
   tipOn: g.tipFn(() => g.bldTip(o.key, c, r)),

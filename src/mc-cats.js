@@ -8,7 +8,7 @@
 //   工程 digging, building and the rock.
 // · Two rooms doing the same thing was a bug: 水培农场 (= 蒸汽工坊) now heals, 亚历山大灯塔 (= 自由女神像) now scouts,
 //   马拉卡纳 (= 图书馆) now toughens the army; 大本钟 and 埃菲尔铁塔 keep one job each.
-// · Styles stay only in the room art: no badge, no word, no rule (terrain fits and world drops go by category).
+// · Styles: hidden for a while, back since 繁荣度 perks strengthen them (mc-perks.js); world drops go by category.
 // Loaded after mc-solo.js (which rewrote rooms for the one leader) and before mc-save.js.
 const M = window.MC, B = M.BUILDINGS, T_ = M.TILES, IC = M.IC;
 
@@ -19,7 +19,7 @@ delete M.CAT.luck; delete M.CAT.misc;
 Object.assign(M.CAT_COL, { power: '#ffd23a', store: '#c8a060', forge: '#b8c0cc', faith: '#ffe6a0', med: '#ff6a6a', train: '#ffa060', defense: '#ff6a5a', scout: '#7fe0ff', eng: '#d0a0ff' });
 // what each is for, one sentence (the tag's tooltip)
 M.CAT_D = {
-  power: '每天产出物资。', store: '出征的补给：开局道具、积分倍率和带回的物资。', forge: '打造宝物；有了它，出征才会掉宝物图纸。',
+  power: '每天产出物资。', store: '出征的补给：FEVER、积分倍率和带回的物资。', forge: '打造宝物；有了它，出征才会掉宝物图纸。',
   faith: '每天产出信仰值；有了它，才有信仰值。', med: '让领袖回复生命。', train: '让领袖和出征部队更强。',
   defense: '守住混沌来袭。', scout: '看清出征的地图。', eng: '挖掘、建造和地格。',
 };
@@ -40,17 +40,18 @@ M.tagTip = (t) => (t && t.kind === 'cat' && M.CAT_D[t.k] ? { title: t.n, c: t.c,
 // words in rich text: races, vocations and the nine categories (styles are no longer words of the game)
 const RACE_IC = M.TAG_IC.RACE_IC, VOC_IC = M.TAG_IC.VOC_IC;
 let WORDS = null;
-const words = () => WORDS || (WORDS = Object.keys(RACE_IC).filter(n => n !== '英雄').map(n => ['race', n]).concat(Object.keys(VOC_IC).map(n => ['voc', n]), ORDER.map(k => ['cat', M.CAT[k], k])).sort((a, b) => b[1].length - a[1].length));
+const STY = Object.keys(M.TAG_IC.STYLE_IC).filter(k => k !== 'core');
+const words = () => WORDS || (WORDS = Object.keys(RACE_IC).filter(n => n !== '英雄').map(n => ['race', n]).concat(Object.keys(VOC_IC).map(n => ['voc', n]), ORDER.map(k => ['cat', M.CAT[k], k]), STY.map(k => ['style', M.STYLE[k], k])).sort((a, b) => b[1].length - a[1].length));
 M.tagWord = function (s, i, ctx) {
   const hits = words().filter(([k, w]) => s.startsWith(w, i) && !(k === 'cat' && s[i + w.length] === '值')); if (!hits.length) return null;   // 信仰值 is the resource, not the category
-  const pref = ctx === 'bld' ? ['cat', 'race', 'voc'] : ['race', 'voc', 'cat'];
+  const pref = ctx === 'bld' ? ['cat', 'style', 'race', 'voc'] : ['race', 'voc', 'cat', 'style'];
   hits.sort((a, b) => b[1].length - a[1].length || pref.indexOf(a[0]) - pref.indexOf(b[0]));
-  const h = hits[0], t = h[0] === 'race' ? M.TAG.race(h[1]) : h[0] === 'voc' ? M.TAG.voc(h[1]) : M.TAG.cat(h[2]);
+  const h = hits[0], t = h[0] === 'race' ? M.TAG.race(h[1]) : h[0] === 'voc' ? M.TAG.voc(h[1]) : (h[0] === 'style' ? M.TAG.style(h[2]) : M.TAG.cat(h[2]));
   return t ? { t, len: h[1].length } : null;
 };
 if (M.GUIDE) M.GUIDE.push({ id: 'bcat', cat: '基地', icon: 'f_eng', title: '建筑大类', line: '建筑按用途分九类：生产、仓储、工坊、信仰、医疗、训练、防御、侦察、工程。房间右下角的图标就是它的大类。', scr: 'base', sel: '[data-g="nothing"]' },
   { id: 'forgeon', cat: '房间', icon: 'f_forge', title: '工坊与宝物图纸', line: '建了工坊类建筑，出征才会掉宝物图纸。', scr: 'base', sel: '[data-g="nothing"]' });
-M.STYLE_SHOWN = false;
+M.STYLE_SHOWN = true;   // styles are back (2026-09-26): 繁荣度 perks strengthen a style (mc-perks.js)
 // 工坊 unlocks relic blueprints: without a workshop none drops, none is sold, none is given (mc-bp.js keeps the drops honest)
 M.forgeOn = (m) => !!(m && M.hasBuilt && M.hasBuilt(m, X => !!X.forge));   // 「未来有用的时候再开」: the style badges come back by turning this on (and their template slots)
 
@@ -85,33 +86,23 @@ set('generator', { d: '每天产出 15 物资。' });
 // anything left in a retired category goes where it belongs by what it does
 Object.keys(B).forEach(k => { const b = B[k]; if (b.gone || k === 'core' || ORDER.includes(b.cat)) return; b.cat = b.weapon || b.wall ? 'defense' : b.forge ? 'forge' : 'eng'; });
 
-// ───────── terrain: what fits is a category ─────────
-// Each category has two or three veins that fit it; the "any room" half of every vein is unchanged.
-const isCat = (...c) => (Bd) => !!Bd && c.includes(Bd.cat);
-const reT = (k, o) => { const T = T_[k]; if (!T) return; Object.assign(T, o); T.d = '任何房间：' + T.anyD + '。契合「' + T.fitN + '」：' + T.fitD + '。';
-  T.mod = (Bd) => { const r = Object.assign({}, T.any); if (T.fit(Bd)) { const f = T.fitFx(Bd); Object.keys(f).forEach(x => { r[x] = (r[x] || 0) + f[x]; }); } return r; }; };
-reT('geo',       { fitN: '生产', fit: isCat('power'), fitD: '这个房间自己的产出 ×2', fitFx: () => ({ prodMul: 1 }) });
-reT('ygg',       { fitN: '生产', fit: (Bd) => isCat('power')(Bd) && !!Bd.fx, fitD: '这个房间自己的产出 ×2', fitFx: () => ({ prodMul: 1 }) });
-reT('fossil',    { fitN: '仓储', fit: (Bd) => isCat('store')(Bd) && !!Bd.fx, fitD: '这个房间自己的效果 ×2', fitFx: () => ({ prodMul: 1 }) });
-reT('mint',      { fitN: '仓储', fit: isCat('store'), fitD: '物资再 +30%，每场战斗初始积分倍率 +0.2', fitFx: () => ({ lootSup: 0.3, startMult: 0.2 }) });
-reT('ore',       { fitN: '工坊 / 防御塔', fit: (Bd) => !!Bd && (Bd.cat === 'forge' || !!Bd.weapon), fitD: '工坊：60% 概率打造品质 +1；防御塔：伤害 +50%', fitFx: (Bd) => (Bd.weapon ? { dmg: 0.5 } : { forgeLuck: 0.6 }) });
-reT('star',      { fitN: '工坊', fit: isCat('forge'), fitD: '打造的宝物品质必定 +1', fitFx: () => ({ forgeQUp: 1 }) });
-reT('dream',     { fitN: '工坊', fit: isCat('forge'), fitD: '打造时 40% 概率多得一件', fitFx: () => ({ forgeTwice: 0.4 }) });
-reT('ley',       { fitN: '信仰', fit: isCat('faith'), fitD: '这个房间每天再多产 3 信仰值', fitFx: () => ({ faithDaily: 3 }) });
-reT('hourglass', { fitN: '信仰', fit: isCat('faith'), fitD: '出发前祈福只花一半信仰值', fitFx: () => ({ blessCost: -0.5 }) });
-reT('spring',    { fitN: '医疗', fit: isCat('med'), fitD: '医院回复 +30%', fitFx: () => ({ heal: 0.3 }) });
-reT('heart',     { fitN: '医疗', fit: isCat('med'), fitD: '医院回复 +30%，领袖每天再回 10%', fitFx: () => ({ heal: 0.3, healAll: 0.1 }) });
-reT('amber',     { fitN: '训练', fit: isCat('train'), fitD: '领袖出征得到的经验 +30%', fitFx: () => ({ exp: 0.3 }) });
-reT('dragon',    { fitN: '训练', fit: isCat('train'), fitD: '出征部队攻击再 +10%', fitFx: () => ({ unitAtk: 0.1 }) });
-reT('bones',     { fitN: '训练', fit: isCat('train'), fitD: '领袖攻击 +15%', fitFx: () => ({ heroAtk: 0.15 }) });
-reT('clay',      { fitN: '防御', fit: isCat('defense'), fitD: '守城时 3 名陶土守卫加入战斗', fitFx: () => ({ defArmy: 3 }) });
-reT('rift',      { fitN: '防御', fit: isCat('defense'), fitD: '防御塔：射程 +1，攻速 +50%；其它：守城时 2 名守卫加入', fitFx: (Bd) => (Bd.weapon ? { range: 1, wcd: 0.5 } : { defArmy: 2 }) });
-reT('storm',     { fitN: '防御', fit: isCat('defense'), fitD: '防御塔：伤害 +20%，每次攻击放出连锁闪电；其它：主基地耐久 +20%', fitFx: (Bd) => (Bd.weapon ? { xChain: 3, dmg: 0.2 } : { portalHp: 0.2 }) });
-reT('crown',     { fitN: '防御', fit: isCat('defense'), fitD: '防御塔：伤害 +40%，命中溅射并减速；其它：再多 3 名守卫', fitFx: (Bd) => (Bd.weapon ? { dmg: 0.4, xSplash: 130, xSlow: 1 } : { defArmy: 3 }) });
-reT('wind',      { fitN: '侦察', fit: isCat('scout'), fitD: '出征地图一开始就全亮，积分倍率再 +0.1', fitFx: () => ({ tower: 1, startMult: 0.1 }) });
-reT('crystal',   { fitN: '侦察', fit: isCat('scout'), fitD: '视野再 +1，精英和首领一开始就能看到', fitFx: () => ({ vision: 1, seeElite: 1 }) });
-reT('ruin',      { fitN: '工程', fit: isCat('eng'), fitD: '返还提高到 80%', fitFx: () => ({ refund: 0.5 }) });
-reT('mole',      { fitN: '工程', fit: isCat('eng'), fitD: '所有建造少花 1 天', fitFx: () => ({ buildDays: -1 }) });
+// ───────── no terrain (user ruling 2026-09-26: 「给建筑搬家，听着就很繁琐，把地形效果都去掉吧」) ─────────
+// The rock has no special veins any more: a new base gets none, an old save loses the ones it had (M.soloFix runs in the
+// save check), and nothing hands out 地脉结晶. Building choices come from categories and styles (mc-perks.js).
+M.TERRAIN_OFF = true;
+M.newBase = function () {
+  const cells = [], CO = M.CORE; for (let r = 0; r < M.BROWS; r++) { cells[r] = []; for (let c = 0; c < M.BCOLS; c++) cells[r][c] = { dug: false, tile: null, b: null, job: null }; }
+  cells[CO.r][CO.c] = { dug: true, tile: null, b: 'core', job: null }; return { cells };
+};
+M.rollTile = () => null;
+const oSolo = M.soloFix;
+M.soloFix = function (m) {
+  let ch = oSolo ? oSolo.apply(this, arguments) : false;
+  if (m && m.base && m.base.cells) m.base.cells.forEach(row => row.forEach(x => { if (x && x.tile) { x.tile = null; ch = true; } }));
+  return ch;
+};
+// 阿蒙森站 doubled the terrain; now it makes every building count for more prosperity
+set('amundsen', { fx: { prosMul: 0.5 }, d: '每座建筑提供的繁荣度 +50%。' });
 
 // ───────── worlds: what their blueprints lean to, by category ─────────
 M.WORLD_CATS = { town: ['defense', 'store'], forest: ['med', 'faith'], park: ['store', 'scout'], harbor: ['scout', 'power'], foundry: ['forge', 'power'],

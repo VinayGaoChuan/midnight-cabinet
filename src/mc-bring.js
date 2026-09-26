@@ -44,7 +44,7 @@ const GIFTS = {
   talent: { n: '启示卷轴', ic: 'g_scroll', c: '#ffcf4a', w: 9, d: '带着它回来的领袖获得 1 个天赋点。',
     apply(g, m, run) { const h = (run && m.heroes.includes(run.hero)) ? run.hero : M.pick(m.heroes); if (!h) return ok('没有领袖可以读它'); h.points++; return ok(M.heroN(h) + ' 天赋点 +1', { hero: h.id }); } },
   temper: { n: '淬火石', ic: 'g_anvil', c: '#ff8a3a', w: 8, d: '最差的一件宝物品质 +1。',
-    apply(g, m) { const r = m.relics.filter(x => x.q < 3).sort((a, b) => a.q - b.q)[0]; if (!r) { const k = M.forgeOn && !M.forgeOn(m) ? M.oneBldBp() : 'rbp:' + M.pick(M.relicPool()); M.invAdd(m, k, 1); return ok('没有可淬火的宝物，换成「' + M.itemInfo(k).n + '」'); } r.q++; r.lines = M.relicLines(r.key, r.q); return ok(M.qn(M.RELICS[r.key].n, r.q) + ' 升了一档', { col: M.qc(r.q) }); } },
+    apply(g, m) { const r = m.relics.filter(x => x.q < 3).sort((a, b) => a.q - b.q)[0]; if (!r) { m.supplies += 60; return ok('没有能淬火的宝物，换成 60 物资'); } r.q++; r.lines = M.relicLines(r.key, r.q); return ok(M.qn(M.RELICS[r.key].n, r.q) + ' 升了一档', { col: M.qc(r.q) }); } },
   calm:   { n: '安神香', ic: 'g_incense', c: '#c8c8ff', w: 8, d: '所有领袖回复 25% 生命。',
     apply(g, m) { m.heroes.forEach(h => { h.hp = Math.min(M.heroMaxHp(h, m), h.hp + M.heroMaxHp(h, m) * 0.25); }); return ok('全员回复 25% 生命'); } },
   decoy:  { n: '迷踪粉', ic: 'g_powder', c: '#c8b0ff', w: 8, d: '下一次混沌来袭的怪物减少 30%。',
@@ -57,7 +57,16 @@ const GIFTS = {
     apply(g, m) { m.nextKit = Math.min(3, (m.nextKit || 0) + 1); return ok('下次出征多带 ' + m.nextKit + ' 个支援道具'); } },
 };
 M.GIFTS = GIFTS;
-M.dropGift = () => 'gift:' + M.wpick(Object.keys(GIFTS), k => GIFTS[k].w);
+// a keepsake only comes along when it would do something (2026-09-26: a 淬火石 came home to a base without relics)
+const hurt = (m) => m.heroes.some(h => h.hp < M.heroMaxHp(h, m) * 0.9);
+const USEFUL = {
+  miner: (m) => { for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) if (M.canDig(m, c, r)) return true; return false; },
+  portal: (m) => m.portal && m.portal.hp < M.portalMax(m) - 50,
+  temper: (m) => (m.relics || []).some(x => x.q < 3),
+  calm: (m) => hurt(m),
+};
+M.giftUseful = (m, k) => !!GIFTS[k] && GIFTS[k].w > 0 && (!USEFUL[k] || !m || USEFUL[k](m));
+M.dropGift = (m) => { m = m || (M._g && M._g.meta); const ks = Object.keys(GIFTS).filter(k => M.giftUseful(m, k)); return 'gift:' + M.wpick(ks.length ? ks : ['cell'], k => GIFTS[k].w || 1); };
 const oInfo = M.itemInfo;
 M.itemInfo = function (key) {
   if (key && key.startsWith('gift:')) { const K = GIFTS[key.slice(5)]; if (K) return { n: K.n, icon: K.ic, c: K.c, q: 1, kind: '带回基地', d: K.d, sub: '带回基地后生效' }; }

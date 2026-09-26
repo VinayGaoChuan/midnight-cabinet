@@ -45,7 +45,6 @@ G.startSettle = function () {
     const ex = Math.round((b.kills * 3 + 10 * cfg.w) * (1 + (run.mods.exp || 0))); run.loot.exp += ex; lines.push({ t: '经验 +' + ex + '（带回基地生效）', c: '#9cff7a', icon: 'orb' });
     const pb = n.type === 'boss' ? 1 : n.type === 'elite' ? 0.45 : run.tut ? 0 : 0.06;
     if (Math.random() < pb && !run.tut) { const k = M.dropBp(n.type === 'boss' ? 1 : 0.3); run.loot.bp.push(k); const I = M.itemInfo(k); lines.push({ t: '掉落：' + I.n, c: I.c, icon: I.icon }); }
-    if (n.type === 'boss' && !run.tut && Math.random() < 0.3) { const k = 'tile:' + M.dropTile(); run.loot.bp.push(k); const I = M.itemInfo(k); lines.push({ t: '掉落：' + I.n, c: I.c, icon: 'gem' }); }
     if (run.mods.postHeal) { const v = Math.round(mx * run.mods.postHeal); h.hp = Math.min(mx, h.hp + v); lines.push({ t: '战后喘息：回复 ' + v, c: '#9ccc6a', icon: 'up' }); }
     const dn = b.deadUids.length; if (dn) lines.push({ t: dn + ' 名部队倒下，已全部复活', c: '#9cff7a', icon: 'up' });
     run.roster.forEach(u => { u.battles = (u.battles || 0) + 1; (DB[u.type].tr || []).forEach(t => { const T = M.TDB[t]; if (!T) return; const hh = M.TRAIT_H[T.cls.replace(/^Summon|Trait$/g, '')]; if (hh && hh.post) hh.post(b, null, T.v, u); }); });

@@ -35,8 +35,9 @@ M.portalMax = (m) => Math.round(M.PORTAL_BASE * (1 + (M.baseMods(m).portalHp || 
 // every standing room adds by its quality (the better, the more; the numbers are never shown). Levels open the rings of
 // the base one by one: Lv1 the ring around the lift, Lv4 the whole rock.
 M.PROS_Q = [10, 25, 45, 70];
-M.PROS_LV = [0, 40, 120, 260];
-M.PROS_MAX = M.PROS_LV.length;
+// Lv5–9 open no more rock: each level brings a 繁荣度 perk (user ruling 2026-09-26, mc-perks.js)
+M.PROS_LV = [0, 40, 120, 260, 420, 620, 860, 1150, 1500];
+M.PROS_MAX = M.PROS_LV.length; M.PROS_RINGS = 4;
 M.prosperity = function (m) {
   let p = 0; if (!m || !m.base) return 0;
   for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) { const x = m.base.cells[r][c]; if (!x.b || x.b === 'core' || (x.job && x.job.kind === 'demolish')) continue; p += M.PROS_Q[(B_[x.b] || {}).q || 0] || 0; }
