@@ -15,7 +15,7 @@ G.homeQueue = function (steps) {
 G.homeStep = function (dt) {
   const q = this.homeQ; if (!q) return;
   if (q.m !== this.meta) { this.homeQ = null; return; }                 // the game ended (core broke): nothing more to show
-  if (this.screen !== 'base' || this.raid) return;
+  if (this.screen !== 'base' || this.raid || this.lvPick) return;   // a talent page opened by a level-up holds the rest
   if (!q.cur) {
     q.cur = q.steps.shift(); if (!q.cur) { this.homeQ = null; this.bump(); return; }
     q.cur.t = 0; try { q.cur.run && q.cur.run(); } catch (e) { (window.__mcErrs = window.__mcErrs || []).push('home: ' + (e && e.message)); }
@@ -31,6 +31,59 @@ G.tick = function (dt) { const r = oTick.apply(this, arguments); this.homeStep(d
 const oOW = G.openWorlds;
 G.openWorlds = function () { if (this.homeQ && !this.portalOn()) return; return oOW.apply(this, arguments); };
 ['steleDrop', 'pickWorld', 'launch'].forEach(k => { const o = G[k]; if (!o) return; G[k] = function () { if (this.homeQ) return; return o.apply(this, arguments); }; });
+
+// ───────── while a base animation plays, the base can't be clicked (user ruling 2026-09-26) ─────────
+// 「动效播放的时候，是不能点击基地的其他地方的」: a transparent lock sits over the whole base (z 70, above the bars and the
+// calendar, under guides and tips); a click on it only speeds the show up (§11.6). Anything the show asks the player to
+// answer (an event, choosing a talent, picking the raid leader) lifts the lock while it waits.
+G.baseBusy = function () {
+  if (this.screen !== 'base' || this.raid || this.modal || this.raidPrep || this.lvPick || this.visit) return false;   // a visit has its own dim layer
+  return !!(this.homeQ || this.lvFx || this.tlFx || this.expand || this.coreFx || this.coreQueue || this.tear || this.rite || this.dayFx || this.cardFx || this.saveFx);
+};
+const oBaseClick = G.baseClick;
+if (oBaseClick) G.baseClick = function () { if (this.baseBusy()) { this.hurry && this.hurry(); return; } return oBaseClick.apply(this, arguments); };
+const oViewL = G.view;
+G.view = function () {
+  const v = oViewL.call(this); v.lockOn = this.baseBusy();
+  if (v.lockOn) { v.tipOn = false; v.lockClick = () => { if (this.hurry) this.hurry(); }; }
+  v.pickOn = this.pickShown(); if (v.pickOn) { v.pnZ = 65; v.pickCancel = () => { S.click(); this.closePanel(); }; }   // the page over the dimmed base and bars
+  return v;
+};
+
+// ───────── a level-up opens the talent page (user ruling 2026-09-26) ─────────
+// 「英雄升级后，应该直接弹出升级选择技能的页面，如果解锁新技能了，那就播放解锁新技能的效果。如果玩家不想现在就选择天赋，
+// 可以点击取消，如果选择完了，没有天赋点了，或者没有可用天赋了，那也算取消，然后继续推进其他结算效果」
+// The ceremony plays first (LEVEL UP, the power roll-up, a new talent layer lighting up node by node), then the leader's
+// talent page opens by itself over a dimmed base while there is a point to spend and a talent to take. 取消 (or ✕ / Esc)
+// closes it; the last point spent, or nothing left to take, closes it too. Whatever else the homecoming has waits for it.
+if (M.GUIDE) M.GUIDE.push({ id: 'lvpick', cat: '领袖', icon: 't_skill', title: '升级选天赋', line: '领袖升级后直接打开天赋页，可以当场学，也可以取消以后再学。', scr: 'base', sel: '[data-g="pick"]' });
+M.talAny = (h) => !!h && h.points > 0 && Array.isArray(h.tree) && h.tree.some((n, i) => M.talCan(h, i));
+G.pickShown = function () { const P = this.lvPick; return !!(P && this.panel && this.panel.kind === 'hero' && this.panel.id === P.id); };
+const oLvNext = G.lvNext;
+G.lvNext = function () {
+  const L = this.lvFx;
+  if (L && L.h && !L.asked) {
+    L.asked = 1; const m = this.meta, h = m && m.heroes.find(x => x.id === L.h.id), onPage = !!(h && this.panel && this.panel.kind === 'hero' && this.panel.id === h.id);
+    if (h && this.screen === 'base' && !this.raid && !onPage && M.talAny(h)) { this.lvFx = null; this.lvPick = { id: h.id }; this.openPanel({ kind: 'hero', id: h.id }); return; }
+  }
+  if (this.lvPick) return;   // the next leader's ceremony waits for this page
+  return oLvNext.apply(this, arguments);
+};
+const oTake = G.takeTalent;
+G.takeTalent = function (id) {
+  const r = oTake.apply(this, arguments), P = this.lvPick, h = this.meta && this.meta.heroes.find(x => x.id === id);
+  if (P && P.id === id && !M.talAny(h)) P.doneAt = performance.now() + 900;   // the node's burst plays out, then the page closes
+  return r;
+};
+const oTickP = G.tick;
+G.tick = function (dt) {
+  const r = oTickP.apply(this, arguments), P = this.lvPick;
+  if (P) {
+    if (P.doneAt && performance.now() > P.doneAt && this.pickShown()) { P.doneAt = 0; this.closePanel(); }
+    if (!this.pickShown()) { this.lvPick = null; this.lvNext(); this.bump && this.bump(); }   // closed, cancelled or replaced: go on
+  }
+  return r;
+};
 
 // ───────── back to base ─────────
 G.endBack = function () {
@@ -66,7 +119,7 @@ G.passDay = function () {
   const news = logs.filter(l => l.c == null && !/升到 Lv/.test(l.t || ''));
   if (news.length) steps.push({ run: () => news.forEach((l, i) => setTimeout(() => this.toast(l.t, '#9ccc6a'), i * 350)), wait: 0.4 + news.length * 0.35 });
   steps.push({ run: () => this.tlStart(from, m.day), until: () => !this.tlFx });
-  steps.push({ run: () => { const k = M.eventOn(m, m.day); if (k && k !== 'raid') this.dayEvent(k); }, until: () => !this.modal });
+  steps.push({ run: () => { const k = M.eventOn(m, m.day); if (k && k !== 'raid') this.dayEvent(k); }, until: () => !this.modal && !this.visit });
   steps.push({ run: () => this.checkRaid(), wait: 0 });
   this.homeQueue(steps);
   return logs;

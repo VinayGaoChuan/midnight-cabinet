@@ -132,7 +132,7 @@ M.baseMods = function (m, raw) {
 const oHM = M.heroMods;
 M.heroMods = function (h, meta) {
   const o = oHM.call(this, h, meta); if (!meta || !meta.base) return o;
-  const bm = M.baseMods(meta); ['unitAtk', 'unitHp', 'heroAtk', 'heroHp'].forEach(k => { if (bm[k]) o[k] = (o[k] || 0) + bm[k]; });
+  const bm = M.baseMods(meta); ['unitAtk', 'unitHp', 'heroAtk', 'heroHp', 'postHeal'].forEach(k => { if (bm[k]) o[k] = (o[k] || 0) + bm[k]; });
   return o;
 };
 // weapons: attack speed, chain lightning, splash, slow

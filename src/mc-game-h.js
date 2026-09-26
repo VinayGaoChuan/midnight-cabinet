@@ -147,7 +147,7 @@ M.makeBattleCfg = function (run, node) { CUR = run.region.tut ? null : run.regio
 const oDrop = M.dropBp;
 M.dropBp = function (bias, style, qUp) {
   if (!style || Math.random() < 0.4) return oDrop(bias);
-  if (Math.random() < 0.45) return 'rbp:' + M.pick(Object.keys(M.RELICS));
+  if (Math.random() < 0.45) return 'rbp:' + M.pick(M.relicPool());
   const w = M.bpWeights ? M.bpWeights(bias, qUp) : [60, 25, 11, 4].map((x, i) => i === 0 ? x : x * (1 + (bias || 0) + (qUp || 0) * 0.8));
   const ks = Object.keys(M.BUILDINGS).filter(k => !M.BUILDINGS[k].fixed && M.BUILDINGS[k].style === style); if (!ks.length) return oDrop(bias);
   const q = M.wpick([0, 1, 2, 3], i => ks.some(k => M.BUILDINGS[k].q === i) ? w[i] : 0);
@@ -176,7 +176,7 @@ G.startSettle = function () {
     const bpHold = () => this.hold('rbp', run.loot.bp.length);
     const pb = n.type === 'boss' && n.final ? 0 : M.bpChance(run, n.type);   // rare (mc-danger.js); clearing the world pays its own fixed blueprint
     const drop = (k) => { bpHold(); run.loot.bp.push(k); const I = M.itemInfo(k); tiles.push({ icon: I.icon, v: 1, c: I.c, to: 'rbp', n: I.n, key: k }); };
-    if (Math.random() < pb && !run.tut) drop(th.rbp && Math.random() < 0.6 ? 'rbp:' + M.pick(Object.keys(M.RELICS)) : M.dropBp(0, run.theme && run.theme.style, th.bpq));
+    if (Math.random() < pb && !run.tut) drop(th.rbp && Math.random() < 0.6 ? 'rbp:' + M.pick(M.relicPool()) : M.dropBp(0, run.theme && run.theme.style, th.bpq));
     if (!run.tut && Math.random() < (n.type === 'boss' ? 0.15 : 0) + (th.tile || 0)) drop('tile:' + M.dropTile());
     const heal = (run.mods.postHeal || 0) + (th.heal || 0); if (heal) { const v = Math.round(mx * heal); this.hold('hp', Math.round(h.hp)); h.hp = Math.min(mx, h.hp + v); tiles.push({ icon: 'r_heart', v: '+' + v, c: '#9cff7a', to: 'hp' }); }
     run.roster.forEach(u => { u.battles = (u.battles || 0) + 1; (DB[u.type].tr || []).forEach(t => { const T = M.TDB[t]; if (!T) return; const hh = M.TRAIT_H[T.cls.replace(/^Summon|Trait$/g, '')]; if (hh && hh.post) hh.post(b, null, T.v, u); }); });

@@ -931,19 +931,15 @@
   <div style="position:absolute;left:0;top:0;width:1920px;height:100px;background:#1a1640;box-shadow:inset 0 -6px 0 0 #07060f,inset 0 -9px 0 0 #3d3a8c,inset 0 3px 0 0 #2b2461;display:flex;align-items:center;gap:26px;padding:0 30px 9px;box-sizing:border-box;pointer-events:auto">
     <div data-tip="b-core" data-fx="core" data-pj="ink" style="--q:{{b.coreC}};display:flex;align-items:center;gap:6px;padding:6px 10px;transform:scale({{b.coreSc}})"><sc-for list="{{b.cores}}" as="bco" hint-placeholder-count="3"><m-img src="{{bco.img}}" style="width:34px;height:34px;opacity:{{bco.op}}"></m-img></sc-for></div>
     <div data-tip="b-pros" data-fx="pros" data-pj="ink" style="--q:#ffcf4a;display:flex;align-items:center;gap:8px;padding:6px 12px;transform:scale({{b.prosSc}})"><m-img src="{{b.prosImg}}" style="width:34px;height:34px"></m-img><div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:20px;color:#ffcf4a;line-height:1">繁荣 Lv{{b.prosLv}}</span><div style="width:104px;height:8px;background:#07060f;box-shadow:0 0 0 3px #07060f"><div style="height:8px;width:{{b.prosW}};background:#ffcf4a"></div></div></div></div>
-    <div style="display:flex;gap:18px;align-items:center">
-      <sc-for list="{{b.res}}" as="r" hint-placeholder-count="0">
-        <div data-fx="{{r.fx}}" sc-camel-on-mouse-enter="{{r.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" style="display:flex;align-items:center;gap:10px;padding:4px 6px;transform:scale({{r.sc}})">
-          <m-img src="{{r.img}}" style="max-width:32px;max-height:32px"></m-img><mc-num v="{{r.v}}" style="font-size:30px;color:{{r.c}}"></mc-num>
-        </div>
-      </sc-for>
-      
-    </div>
     <div data-g="timeline" style="position:absolute;left:{{tl.left}}px;top:6px;width:{{tl.w}}px;height:88px;z-index:60;transform:translate({{tl.dx}}px,{{tl.y}}px) scale({{tl.sc}});transform-origin:50% 0"><div style="position:absolute;left:-12px;top:0;width:{{tl.cw}}px;height:88px;overflow:hidden"><div style="position:absolute;left:12px;top:6px;transform:translateX({{tl.x}}px)"><sc-for list="{{tl.dots}}" as="td" hint-placeholder-count="0"><div style="position:absolute;left:{{td.x}}px;top:22px;width:8px;height:8px;border-radius:50%;background:{{td.c}};box-shadow:0 0 0 2px #07060f,0 0 {{td.glow}}px {{td.c}};opacity:{{td.op}};transform:scale({{td.sc}})"></div></sc-for><sc-for list="{{tl.cells}}" as="tc" hint-placeholder-count="10"><div sc-camel-on-mouse-enter="{{tc.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" style="position:absolute;left:{{tc.x}}px;top:0;width:52px;height:78px;display:flex;flex-direction:column;align-items:center;gap:4px;opacity:{{tc.op}};transform:translateY({{tc.dy}}px) scale({{tc.sc}})"><div style="position:relative;width:52px;height:52px;box-sizing:border-box;border-radius:50%;background:radial-gradient(circle at 50% 35%,{{tc.bg}},#07060f 130%);box-shadow:0 0 0 3px {{tc.border}},0 0 0 6px #07060f;display:flex;align-items:center;justify-content:center"><sc-if value="{{tc.hasIc}}"><m-img src="{{tc.ic}}" style="width:30px;height:30px"></m-img></sc-if><sc-if value="{{tc.noIc}}"><span style="font-family:'Silkscreen','Fusion Pixel 12px Proportional SC',monospace;font-size:20px;color:{{tc.dc}}">{{tc.num}}</span></sc-if><sc-if value="{{tc.stampOn}}"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:44px;color:#e8434f;text-shadow:3px 3px 0 #07060f;transform:scale({{tc.stampSc}}) rotate(-12deg)">✕</div></sc-if></div><div style="font-size:15px;line-height:16px;color:{{tc.dc}};white-space:nowrap;text-shadow:2px 2px 0 #07060f">{{tc.lab}}</div></div></sc-for><div style="position:absolute;left:{{tl.mx}}px;top:0;width:52px;height:52px;border-radius:50%;box-shadow:0 0 0 4px #ffcf4a,0 0 18px 6px rgba(255,207,74,0.55);opacity:{{tl.mop}};transform:scale({{tl.msc}});pointer-events:none"></div></div></div></div>
     <div style="flex:1"></div>
     <div data-tip="b-rest" data-g="rest" sc-camel-on-click="{{restDay}}" data-pj="key dark" style="--kt:#cfc6b8;padding:8px 18px 14px;font-size:26px;margin-right:14px">☾ 休整一天</div><div sc-camel-on-click="{{abandon}}" data-pj="key dark" style="--kt:#ff9aa8;padding:8px 18px 14px;font-size:26px">放弃</div>
   </div>
-  <sc-if value="{{b.hasBuffs}}" hint-placeholder-val="{{false}}"><div data-g="buffs" style="position:absolute;left:30px;top:112px;display:flex;gap:10px;flex-wrap:wrap;max-width:1000px;pointer-events:auto"><sc-for list="{{b.buffs}}" as="bf" hint-placeholder-count="0"><div sc-camel-on-mouse-enter="{{bf.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" data-pj="ink" style="--q:{{bf.c}};display:flex;align-items:center;gap:8px;padding:4px 12px 6px 8px"><m-img src="{{bf.img}}" style="width:30px;height:30px"></m-img><span style="font-size:22px;color:{{bf.c}};text-shadow:3px 3px 0 #07060f">{{bf.t}}</span></div></sc-for></div></sc-if>
+  <!-- resources sit in one row with the waiting effects, under the top bar (user ruling 2026-09-26) -->
+  <div style="position:absolute;left:30px;top:112px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;max-width:1200px;pointer-events:auto">
+    <sc-for list="{{b.res}}" as="r" hint-placeholder-count="0"><div data-fx="{{r.fx}}" sc-camel-on-mouse-enter="{{r.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" data-pj="ink" style="--q:{{r.c}};display:flex;align-items:center;gap:10px;padding:4px 12px 6px 8px;transform:scale({{r.sc}})"><m-img src="{{r.img}}" style="max-width:30px;max-height:30px"></m-img><mc-num v="{{r.v}}" style="font-size:26px;color:{{r.c}}"></mc-num></div></sc-for>
+    <sc-if value="{{b.hasBuffs}}" hint-placeholder-val="{{false}}"><div data-g="buffs" style="display:flex;gap:10px;flex-wrap:wrap;pointer-events:auto"><sc-for list="{{b.buffs}}" as="bf" hint-placeholder-count="0"><div sc-camel-on-mouse-enter="{{bf.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" data-pj="ink" style="--q:{{bf.c}};display:flex;align-items:center;gap:8px;padding:4px 12px 6px 8px"><m-img src="{{bf.img}}" style="width:30px;height:30px"></m-img><span style="font-size:22px;color:{{bf.c}};text-shadow:3px 3px 0 #07060f">{{bf.t}}</span></div></sc-for></div></sc-if>
+  </div>
   <sc-if value="{{tlShadeOn}}" hint-placeholder-val="{{false}}"><div style="position:absolute;inset:0;background:rgba(7,6,15,{{tlShade}});pointer-events:none;z-index:50"></div></sc-if>
   <sc-if value="{{tl.banner}}" hint-placeholder-val="{{false}}"><div style="position:absolute;left:0;right:0;top:{{tl.bannerY}}px;display:flex;flex-direction:column;align-items:center;gap:14px;pointer-events:none;z-index:61;opacity:{{tl.bannerOp}};transform:scale({{tl.bannerSc}})"><div style="font-size:96px;color:{{tl.bannerC}};text-shadow:6px 6px 0 #07060f,0 0 40px {{tl.bannerC}}">{{tl.bannerTxt}}</div><div style="font-size:34px;color:{{tl.bannerSubC}};text-shadow:3px 3px 0 #07060f">{{tl.bannerSub}}</div></div></sc-if>
 <sc-if value="{{isRaid}}" hint-placeholder-val="{{false}}">
@@ -964,8 +960,9 @@
       </sc-for>
     </div>
   </div>
+  <sc-if value="{{pickOn}}" hint-placeholder-val="{{false}}"><div data-g="pick" sc-camel-on-click="{{stop}}" style="position:absolute;inset:0;z-index:64;background:rgba(7,6,15,0.62)"><div sc-camel-on-click="{{pickCancel}}" data-pj="key dark" style="position:absolute;left:940px;top:984px;width:220px;height:66px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:30px;cursor:pointer">取消</div></div></sc-if>
   <sc-if value="{{pnOn}}" hint-placeholder-val="{{false}}">
-    <div sc-camel-on-click="{{stop}}" sc-camel-on-mouse-move="{{stop}}" data-pj="panel plate" data-enter="side" data-enter-rows="1" style="--rd:.08s;position:absolute;left:1190px;top:136px;width:700px;height:920px;box-sizing:border-box;padding:50px 32px 30px;display:flex;flex-direction:column;gap:16px;">
+    <div sc-camel-on-click="{{stop}}" sc-camel-on-mouse-move="{{stop}}" data-pj="panel plate" data-enter="side" data-enter-rows="1" style="--rd:.08s;position:absolute;z-index:{{pnZ}};left:1190px;top:136px;width:700px;height:920px;box-sizing:border-box;padding:50px 32px 30px;display:flex;flex-direction:column;gap:16px;">
       <div data-pj="tab" style="font-size:40px;max-width:540px"><mc-wave t="{{pn.title}}"></mc-wave></div>
       <div sc-camel-on-click="{{closePanel}}" data-pj="close" style="position:absolute;right:30px;top:24px">✕</div>
       <div style="display:flex;align-items:flex-start;gap:16px;padding-right:56px">
@@ -1037,7 +1034,7 @@
         <div data-g="bld" style="display:flex;flex-direction:column;gap:10px;overflow-y:auto;max-height:720px;padding-right:6px">
           <sc-for list="{{pn.opts}}" as="op" hint-placeholder-count="0">
             <div sc-camel-on-click="{{op.onClick}}" sc-camel-on-mouse-enter="{{op.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" data-pj="opt" style="--q:{{op.border}};display:flex;gap:14px;align-items:center;padding:12px;opacity:{{op.op}}" style-hover="transform:translateX(6px);background:#2b2461" style-active="transform:translateY(4px)">
-              <div style="position:relative;flex:none"><m-img src="{{op.thumb}}" style="width:120px;height:84px"></m-img><m-img data-tip="{{op.si.tip}}" src="{{op.si.img}}" style="position:absolute;left:-6px;top:-6px;width:30px;height:30px;background:#07060f;border:3px solid {{op.si.c}}"></m-img><m-img data-tip="{{op.ci.tip}}" src="{{op.ci.img}}" style="position:absolute;right:-6px;bottom:-6px;width:30px;height:30px;background:#07060f;border:3px solid {{op.ci.c}}"></m-img></div>
+              <div style="position:relative;flex:none"><m-img src="{{op.thumb}}" style="width:120px;height:84px"></m-img><m-img data-tip="{{op.ci.tip}}" src="{{op.ci.img}}" style="position:absolute;right:-6px;bottom:-6px;width:30px;height:30px;background:#07060f;border:3px solid {{op.ci.c}}"></m-img></div>
               <div style="flex:1;display:flex;flex-direction:column;gap:4px">
                 <div style="font-size:30px;color:{{op.c}}">{{op.n}} <span style="display:inline-block;font-size:22px;color:#ffcf4a;text-shadow:0 0 10px #ffcf4a;animation:{{op.banim}}">{{op.bonus}}</span></div>
                 <div style="display:flex;align-items:center;gap:14px;font-size:22px;color:#a9a3c9"><sc-for list="{{op.ms}}" as="om" hint-placeholder-count="0"><span style="display:inline-flex;align-items:center;gap:4px"><m-img src="{{om.img}}" style="width:26px;height:26px"></m-img>{{om.t}}</span></sc-for></div>
@@ -1054,7 +1051,7 @@
         <sc-if value="{{pn.hasDigOpts}}"><div style="font-size:22px;color:#a9a3c9">你的图纸</div><div style="display:flex;flex-direction:column;gap:8px;overflow-y:auto;max-height:430px;padding-right:6px">
           <sc-for list="{{pn.digOpts}}" as="dq" hint-placeholder-count="0">
             <div sc-camel-on-mouse-enter="{{dq.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" data-pj="opt" style="--q:{{dq.border}};display:flex;gap:14px;align-items:center;padding:10px">
-              <div style="position:relative;flex:none"><m-img src="{{dq.thumb}}" style="width:100px;height:70px"></m-img><m-img data-tip="{{dq.si.tip}}" src="{{dq.si.img}}" style="position:absolute;left:-6px;top:-6px;width:26px;height:26px;background:#07060f;border:3px solid {{dq.si.c}}"></m-img><m-img data-tip="{{dq.ci.tip}}" src="{{dq.ci.img}}" style="position:absolute;right:-6px;bottom:-6px;width:26px;height:26px;background:#07060f;border:3px solid {{dq.ci.c}}"></m-img></div>
+              <div style="position:relative;flex:none"><m-img src="{{dq.thumb}}" style="width:100px;height:70px"></m-img><m-img data-tip="{{dq.ci.tip}}" src="{{dq.ci.img}}" style="position:absolute;right:-6px;bottom:-6px;width:26px;height:26px;background:#07060f;border:3px solid {{dq.ci.c}}"></m-img></div>
               <div style="flex:1;display:flex;flex-direction:column;gap:4px">
                 <div style="font-size:26px;color:{{dq.c}}">{{dq.n}} <span style="display:inline-block;font-size:22px;color:#ffcf4a;text-shadow:0 0 10px #ffcf4a;animation:{{dq.banim}}">{{dq.bonus}}</span></div>
                 <div style="display:flex;align-items:center;gap:14px;font-size:20px;color:#a9a3c9"><sc-for list="{{dq.ms}}" as="dm" hint-placeholder-count="0"><span style="display:inline-flex;align-items:center;gap:4px"><m-img src="{{dm.img}}" style="width:24px;height:24px"></m-img>{{dm.t}}</span></sc-for></div>
@@ -1101,6 +1098,12 @@
             </div>
           </sc-for>
         </div>
+        <sc-if value="{{pn.blessOn}}" hint-placeholder-val="{{false}}">
+          <div data-g="bless" data-fx="bless" style="font-size:28px;color:#ffe6a0">祈福 <span style="font-size:22px;color:#a9a3c9">{{pn.blessTxt}}</span></div>
+          <div style="display:flex;gap:10px">
+            <sc-for list="{{pn.bless}}" as="bl" hint-placeholder-count="0"><div sc-camel-on-click="{{bl.onClick}}" sc-camel-on-mouse-enter="{{bl.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" data-pj="ring" style="--q:{{bl.border}};flex:1;box-sizing:border-box;padding:10px 6px;background:{{bl.bg}};opacity:{{bl.op}};display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer"><m-img src="{{bl.img}}"></m-img><div style="font-size:24px;color:{{bl.c}}">{{bl.n}}</div><div style="font-size:20px;color:#ffe6a0">{{bl.cost}}</div></div></sc-for>
+          </div>
+        </sc-if>
         <div sc-camel-on-click="{{launch}}" data-pj="key teal cta" style="margin-top:auto;padding:22px 0;text-align:center;font-size:40px" style-hover="translate:0 -3px;transform:translateY(-3px)">{{pn.goTxt}}</div>
       </sc-if>
 
@@ -1451,6 +1454,16 @@
 
 <canvas ref="{{fxRef}}" width="1920" height="1080" style="position:absolute;left:0;top:0;width:1920px;height:1080px;pointer-events:none;z-index:{{fxZ}}"></canvas>
 <sc-if value="{{coverOn}}" hint-placeholder-val="{{false}}"><div sc-camel-on-click="{{coverClick}}" style="position:absolute;inset:0;cursor:pointer;z-index:{{fxZ}}"></div></sc-if>
+<sc-if value="{{visitOn}}" hint-placeholder-val="{{false}}"><div data-g="visit" sc-camel-on-click="{{vs.skip}}" style="position:absolute;inset:0;z-index:66;background:rgba(7,6,15,{{vs.shade}})">
+  <sc-if value="{{vs.talk}}" hint-placeholder-val="{{false}}"><div data-pj="panel plate" sc-camel-on-click="{{stop}}" style="position:absolute;left:560px;top:646px;width:800px;box-sizing:border-box;padding:20px 28px 26px;display:flex;flex-direction:column;gap:12px;opacity:{{vs.op}};transform:translateY({{vs.dy}}px)">
+    <div style="display:flex;align-items:baseline;gap:14px"><span style="font-size:34px;color:{{vs.c}};text-shadow:3px 3px 0 #07060f">{{vs.title}}</span><span style="font-size:22px;color:#a9a3c9">{{vs.who}}</span></div>
+    <div style="font-size:26px;color:#e8dcc4;line-height:36px">{{vs.text}}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:4px">
+      <sc-for list="{{vs.opts}}" as="vo" hint-placeholder-count="0"><div sc-camel-on-click="{{vo.onClick}}" sc-camel-on-mouse-enter="{{vo.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" data-pj="{{vo.pj}}" style="flex:1 1 30%;min-width:200px;box-sizing:border-box;padding:10px 14px 18px;display:flex;flex-direction:column;align-items:center;gap:4px;opacity:{{vo.op}}"><span style="font-size:26px">{{vo.t}}</span><span style="font-size:19px">{{vo.sub}}</span></div></sc-for>
+    </div>
+  </div></sc-if>
+</div></sc-if>
+<sc-if value="{{lockOn}}" hint-placeholder-val="{{false}}"><div data-g="lock" sc-camel-on-click="{{lockClick}}" style="position:absolute;inset:0;z-index:70"></div></sc-if>
 <sc-if value="{{miniOn}}" hint-placeholder-val="{{false}}"><div style="position:absolute;z-index:60;left:0;top:828px;width:1920px;display:flex;justify-content:center;gap:22px;pointer-events:none">
   <sc-for list="{{mini.btns}}" as="mn" hint-placeholder-count="0"><div data-minibtn="1" sc-camel-on-click="{{mn.onClick}}" data-pj="key {{mn.k}}" style="pointer-events:auto;min-width:230px;max-width:420px;box-sizing:border-box;padding:12px 26px 20px;display:flex;flex-direction:column;align-items:center;gap:2px;opacity:{{mn.op}}"><span style="font-size:34px;line-height:1.1;white-space:nowrap">{{mn.t}}</span><sc-if value="{{mn.hasSub}}"><span style="font-size:20px;opacity:0.8;text-align:center">{{mn.sub}}</span></sc-if></div></sc-for>
 </div></sc-if>
@@ -1540,7 +1553,7 @@ class Component extends DCLogic {
     const on = (fn) => (e) => { if (g) fn(e); };
     const base = { scale: this.state.scale, stageRef: this.stageRef, introRef: this.introRef, roomRef: this.roomRef, isRoom: false, rm: {}, fieldRef: this.fieldRef, worldRef: this.worldRef, baseRef: this.baseRef, fxRef: this.fxRef,
       loading: !g, loadErr: !!this.loadErr, retryLoad: () => location.reload(), shx: 0, shy: 0,
-      isIntro: false, isMenu: false, isBase: false, isRaid: false, isWorld: false, isBattle: false, isShop: false, isEnd: false, isOver: false, modalOn: false, settleOn: false, coverOn: false, coachOn: false, tipOn: false, toastOn: false, pnOn: false, w: null, rulesOpen: !!this.rulesOpen || !!(g && g.rulesOpen), showMute: false,
+      isIntro: false, isMenu: false, isBase: false, isRaid: false, isWorld: false, isBattle: false, isShop: false, isEnd: false, isOver: false, modalOn: false, settleOn: false, coverOn: false, lockOn: false, lockClick: () => {}, pickOn: false, pickCancel: () => {}, pnZ: 'auto', visitOn: false, vs: { opts: [] }, coachOn: false, tipOn: false, toastOn: false, pnOn: false, w: null, rulesOpen: !!this.rulesOpen || !!(g && g.rulesOpen), showMute: false,
       stop: (e) => e.stopPropagation(), tipOff: on(() => { g.tipData = null; g.tipKey = null; g.tipPrev = null; }), fxZ: 'auto',
       onMove: on((e) => { const p = this.sp(e); g.mx = p.x; g.my = p.y; g.tiltMove(p.x, p.y); }), shr: 0,
       onPress: on((e) => { M.Sfx.init(); const p = this.sp(e); g.uiPress(e.target, p.x, p.y); }),

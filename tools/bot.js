@@ -62,6 +62,9 @@ window.__bot = async function (secs, opts = {}) {
       else if (s === 'base') {
         if (opts.stopAtBase && nodes > 2) break;
         if (g.modal && g.modal.choices && !g.modal.over) { const ch = g.modal.choices.find(c => !c.dis) || g.modal.choices[g.modal.choices.length - 1]; events++; ch.fn(); if (g.modal && g.modal.title === '流浪商人') g.modal.choices[g.modal.choices.length - 1].fn(); for (let i = 0; i < 10; i++) g.tick(1 / 30); continue; }   // calendar events: take the first thing on offer
+        // a visitor at the gate (mc-visit.js): the first thing it can afford; the talent page a level-up opens: spend and close
+        if (g.visit) { if (g.visit.ph === 'wait') { const i = g.visit.opts.findIndex(o => !o.dis); g.visitChoose(i >= 0 ? i : g.visit.opts.length - 1); events++; } else g.visit.fast = true; for (let i = 0; i < 40; i++) g.tick(1 / 30); continue; }
+        if (g.lvPick) { const h = g.meta.heroes.find(x => x.id === g.lvPick.id); for (let k = 0; h && k < 20 && M.talAny(h); k++) { const i = h.tree.findIndex((x, j) => M.talCan(h, j)); if (i < 0) break; g.takeTalent(h.id, i); talents++; } g.closePanel(); for (let i = 0; i < 10; i++) g.tick(1 / 30); continue; }
         if (g.homeQ || g.lvFx || g.dayFx || g.tlFx || g.rite || g.expand) { for (let i = 0; i < (opts.fast ? 120 : 40); i++) g.tick(1 / 30); await sleep(opts.fast ? 2 : 40); continue; }   // the return home plays in order: let it
         if (opts.base !== false && !g.panel && M.startBuild && botBase(g, M)) builds++;
         // leaders grow like a plain player grows them: level up when the orbs are there, spend every talent point

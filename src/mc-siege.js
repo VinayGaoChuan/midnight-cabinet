@@ -10,7 +10,7 @@
 const M = window.MC, G = M.Game.prototype, S = M.Sfx, U = M.UI, P = M.PJ.PAL, B_ = M.BUILDINGS, DB = M.DB, now = () => performance.now();
 const cl = (v, a, b) => Math.max(a, Math.min(b, v)), RM = () => !!M.PJ.reduced, fmt = M.fmt;
 const GEO = M.BASE_GEO, DOOR_X = GEO.DOOR_X, MB = M.MAIN_BASE;
-const GUARD_KEY = { kotoku: 'ShieldDefender', terracotta: 'Pikeman' };
+const GUARD_KEY = { kotoku: 'ShieldDefender', terracotta: 'Pikeman', bb_jailer: 'AncestorWarrior' };   // 地狱之门's jailers
 // the main base's own crossbows: they grow with the days so a new town is never helpless
 M.MB_BOW = { dmg: 50, cd: 1.1, range: 760, perDay: 0.08 };
 M.SIEGE_K = { bldAtk: 1 };   // how hard monsters hit buildings (tuned with tools / .ai sims)
@@ -33,12 +33,14 @@ M.Raid = class extends Base {
       }
     });
     // the main base's two crossbows
-    const bw = M.MB_BOW; this.mbBows = [-1, 1].map(s => ({ x: DOOR_X + s * (MB.w / 2 - 40), y: MB.top - 30, side: s, t: Math.random(), dmg: bw.dmg * (1 + d * bw.perDay), cd: bw.cd, range: bw.range }));
+    const bw = M.MB_BOW, bmS = M.baseMods(meta); this.mbBows = [-1, 1].map(s => ({ x: DOOR_X + s * (MB.w / 2 - 40), y: MB.top - 30, side: s, t: Math.random(), dmg: bw.dmg * (1 + d * bw.perDay), cd: bw.cd / (1 + (bmS.bowRate || 0)), range: bw.range }));   // 巨像残骸: bowRate
+    this.bell = bmS.raidStun || 0;   // 午夜钟楼: the first wave stands still while the bell rings
     this.edgeL = L.edge.L; this.edgeR = L.edge.R;
   }
   spawn(s) {
     super.spawn(s); const e = this.ents[this.ents.length - 1]; if (!e || e.side !== 'E') return;
     e.x = s.side < 0 ? this.edgeL - 520 - Math.random() * 80 : this.edgeR + 520 + Math.random() * 80; e.face = -s.side;
+    if (this.bell && (this.t || 0) < 12) { e.stun = Math.max(e.stun || 0, this.bell); if (!this.bellRung) { this.bellRung = 1; this.float(DOOR_X, -420, '午夜钟声', '#dfe8ff', 40); S.bell ? S.bell() : S.impact && S.impact(); } }
   }
   // the building an enemy at x walking in direction dir runs into (the nearest standing one ahead, within reach)
   blocker(e, dir, reach) {
@@ -154,7 +156,7 @@ M.Raid = class extends Base {
 };
 M.RaidTown = M.Raid;
 // a defence blueprint (wall, tower or barracks), mostly common: the raid reward leans this way so a town can arm itself
-M.defBp = function () { const ks = Object.keys(B_).filter(k => !B_[k].fixed && !B_[k].gone && ['wall', 'tower', 'guard'].includes(M.townRole(k))); return 'bbp:' + M.wpick(ks, k => [6, 2, 1, 0.4][B_[k].q || 0]); };
+M.defBp = function () { const ks = Object.keys(B_).filter(k => !B_[k].fixed && !B_[k].gone && !B_[k].boss && ['wall', 'tower', 'guard'].includes(M.townRole(k))); return 'bbp:' + M.wpick(ks, k => [6, 2, 1, 0.4][B_[k].q || 0]); };
 // the camera takes in the whole town, the ground low on the screen
 const BVP = M.BaseView.prototype;
 BVP.raidCam = function () { const span = (M.townSpan || 1400) + 1200, z = cl(1920 / span, 0.45, 0.95); this.sel = null; this.free = null; this.tx = DOOR_X; this.tz = z; this.ty = -290 / z + 60; };

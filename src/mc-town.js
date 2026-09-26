@@ -21,6 +21,7 @@ const WONDER_FOOT = { eiffel: [150, 330], bigben: [110, 300], liberty: [120, 290
   terracotta: [210, 140], kotoku: [190, 200], shaolin: [230, 190] };
 M.townFoot = function (key) {
   const B = B_[key], role = M.townRole(key), q = B.q || 0, wf = WONDER_FOOT[key];
+  if (B.statue) return { w: 210, h: 250 };   // a boss building: its statue on a plinth (mc-bossbld.js)
   if (wf) return { w: wf[0], h: wf[1] };
   if (role === 'wall') return { w: 66, h: 150 };
   if (role === 'guard') return { w: 160, h: 170 };
@@ -91,6 +92,9 @@ const CIVIL = {
   luck(k, w, h, c) { k.Bk(-16, -h + 20, 32, h - 20, c[0]); k.T([[-24, -h + 22], [0, -h - 8], [24, -h + 22]], c[1]); k.R(-6, -h + 40, 12, 16, c[2]); [-1, 1].forEach(s => { k.R(s * 44 - 2, -60, 4, 60, P.ink); k.Bk(s * 44 - 9, -76, 18, 20, P.red); k.R(s * 44 - 4, -72, 8, 10, P.gold); }); },
   misc(k, w, h, c) { k.Bk(-w / 2 + 12, -h + 46, w - 24, h - 46, c[0]); k.Dm(0, -h + 48, 34, c[1]); k.R(-2, -h - 2, 4, 20, P.steel); k.R(-8, -h - 6, 16, 4, c[2]); k.Win(-w / 2 + 28, -h + 70, 18, 18, true); k.Win(w / 2 - 46, -h + 70, 18, 18, true); k.Door(-12, -40, 24, 40); },
   recruit(k, w, h, c) { CIVIL.misc(k, w, h, c); },
+  faith(k, w, h, c) { k.Bk(-w / 2 + 14, -h + 56, w - 28, h - 56, P.cream); k.T([[-w / 2 + 6, -h + 58], [0, -h + 14], [w / 2 - 6, -h + 58]], c[1]); k.R(-3, -h - 12, 6, 28, P.gold); k.R(-10, -h - 4, 20, 5, P.gold); k.Door(-14, -44, 28, 44); },   // a chapel
+  scout(k, w, h, c) { CIVIL.luck(k, w, h, c); },
+  eng(k, w, h, c) { CIVIL.misc(k, w, h, c); },
 };
 CIVIL.core = CIVIL.misc;
 // towers by weapon: a platform at the top where the crew stands (TOWER_TOP)
@@ -158,7 +162,8 @@ function artOf(key, look, prog) {
     for (let i = 0; i < 4; i++) k.R(-w / 2 + 6 + i * (w - 16) / 3, -hh, 5, hh, P.tan); for (let j = 1; j < 4; j++) k.R(-w / 2 + 4, -hh * j / 4, w - 8, 4, P.tan);
     k.R(w / 2 - 6, -h - 30, 5, h + 30, P.amber); k.R(-w / 2 + 20, -h - 30, w - 20, 5, P.amber); k.R(-w / 2 + 30, -h - 25, 2, 40, P.ink);
   } else {
-    if (role === 'wall') wallArt(k, key, w, h);
+    if (B.statue && M.statueArt) M.statueArt(x, k, key, w, h);
+    else if (role === 'wall') wallArt(k, key, w, h);
     else if (role === 'tower') (WONDERS[key] && B.q ? WONDERS[key] : (TOWERS[B.weapon.kind] || TOWERS.bolt))(k, w, h, pl);
     else if (role === 'guard') guardArt(k, key, w, h, pl);
     else if (WONDERS[key]) { WONDERS[key](k, w, h, pl); k.Flag(w / 2 - 10, -h + 30, M.QUALITY[B.q].c); }
@@ -171,8 +176,8 @@ function artOf(key, look, prog) {
 M.townArt = artOf;
 
 // ───────── the town state (not saved: it is the picture of the rooms) ─────────
-const JOB = { power: 'gather', store: 'gather', med: 'wander', forge: 'work', train: 'work', luck: 'work', misc: 'wander', recruit: 'wander' };
-const NPCK = { power: 'Landlord', store: 'VikingPirate', med: 'DesertBeliever', forge: 'IroncladWarrior', train: 'Gladiator', luck: 'SwordDancer', misc: 'Ranger', recruit: 'Ranger' };
+const JOB = { power: 'gather', store: 'gather', med: 'wander', forge: 'work', train: 'work', luck: 'work', misc: 'wander', recruit: 'wander', faith: 'wander', scout: 'wander', eng: 'work' };
+const NPCK = { power: 'Landlord', store: 'VikingPirate', med: 'DesertBeliever', forge: 'IroncladWarrior', train: 'Gladiator', luck: 'SwordDancer', misc: 'Ranger', recruit: 'Ranger', faith: 'DesertBeliever', scout: 'Ranger', eng: 'IroncladWarrior' };
 const CREW = { bolt: 'EliteHunter', shell: 'Cannoneer', chain: 'Wizard', arcane: 'MageApprentice', colossus: 'Bishop', zeus: 'Bishop' };
 M.TOWN_CREW = CREW; M.TOWER_TOP = TOWER_TOP;
 const sigOf = (L) => L.items.map(o => o.k + ':' + o.key + (o.site ? 's' : '') + (o.ruin ? 'r' : '') + (o.demo ? 'd' : '')).sort().join('|');

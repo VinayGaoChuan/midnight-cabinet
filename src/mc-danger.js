@@ -33,7 +33,9 @@ M.tierOf = (m, k) => { const o = m && m.offers; if (!o || !o.list || !o.tiers) r
 // longer grow with the day. They are set by where you are in the story — the world's difficulty plus half a step per
 // scene before this one (M.sceneRank) — and by the stele's danger. Losing a day costs a day, not the rest of the game;
 // only 混沌来袭 (the raids) keeps growing with the day.
-M.sceneRank = (m, k) => { const W = M.WORLDS[k] || {}, sc = M.sceneOf ? M.sceneOf(m, k) : null; return (W.diff || 0) + 0.5 * (sc ? sc.i : 0); };
+// a chapter's rank is its world's difficulty (1 … 6, in chapter order) plus the difficulty level's step (噩梦 +5, 地狱 +10)
+M.sceneRank = (m, k) => { const W = M.WORLDS[k] || {}; return (W.diff || 0) + (M.diffOf ? M.diffOf(m).S : 0); };
+M.CHAPTER_REF = 24;   // the standard chapter length, in stops
 M.sceneEk = (S) => 0.88 + 0.12 * Math.max(0, (S || 1) - 1);   // the first scene eases in (×0.88), +12% per scene rank
 // the first fights of a run start closer to the end of it (2026-09-26 sims: opening fights were won at a shown 2.8, with no risk at all)
 M.lvl0For = (W, m, t, S) => 0.7 + 0.55 * (S == null ? (W.diff || 0) : S) + TIERS[t || 0].lv;
@@ -48,14 +50,17 @@ M.newRun3 = function (meta, hero, worldKey) {
   run.danger = t; run.dangerK = T.ek;
   const S = run.sceneRank = M.sceneRank(meta, worldKey);
   run.lvl0 = M.lvl0For(W, meta, t, S);
-  const endL = Math.min(14, 2.6 + 1.25 * S + cols * 0.16 + T.lv);
-  run.lvlStep = Math.max(0.12, (endL - run.lvl0) / Math.max(1, cols - 1));
+  const full = (run.len && run.len.fullCols) || cols;   // a run from a waypoint climbs on the chapter's whole length (mc-scenes.js)
+  // every chapter ends at the level its rank says, whatever its length (a long chapter climbs slower): chapter 3 is never easier than chapter 2
+  const endL = Math.min(M.diffOf ? M.diffOf(meta).cap : 14, 2.6 + 1.25 * S + M.CHAPTER_REF * 0.16 + T.lv);
+  run.lvlStep = Math.max(0.12, (endL - run.lvl0) / Math.max(1, full - 1));
   run.lootMul *= T.loot; run.mods.exp = (run.mods.exp || 0) + (T.exp - 1);
+  if (M.chapterGrant) M.chapterGrant(run);
   return run;
 };
 // enemies: the day's growth and the danger's toughness, in battle and in every power estimate alike
 const BP = M.Battle3.prototype, oInit = BP.init;
-M.runEk = (run) => (run && !run.region.tut && run.M ? M.sceneEk(run.sceneRank != null ? run.sceneRank : (run.region.diff || 1)) / (1 + (run.M.day - 1) * OLD_EK) * (run.dangerK || 1) : 1);
+M.runEk = (run) => (run && !run.region.tut && run.M ? M.sceneEk(run.sceneRank != null ? run.sceneRank : (run.region.diff || 1)) / (1 + (run.M.day - 1) * OLD_EK) * (run.dangerK || 1) * (run.modEk || 1) : 1);
 BP.init = function (run) { oInit.apply(this, arguments); this.ek *= M.runEk(run); };
 const oSE = M.sideE;
 M.sideE = function (run) { const s = oSE.apply(this, arguments); const k = M.runEk(run); s.hp *= k; s.dps *= k; return s; };
@@ -64,11 +69,15 @@ M.sideE = function (run) { const s = oSE.apply(this, arguments); const k = M.run
 const AVG = (() => { let hp = 0, dps = 0, n = 0; M.SHOP_POOL.filter(k => DB[k].q === 0 && DB[k].cost >= 15 && DB[k].cost <= 60 && DB[k].ranged !== 2).forEach(k => { hp += DB[k].hp; dps += DB[k].atk * (DB[k].as || 100) / 100; n++; }); return n ? { hp: hp / n, dps: dps / n } : { hp: 300, dps: 20 }; })();
 const wcache = new Map();
 M.worldOdds = M.worldDanger = function (m, k) {
-  const b = M.bestLeader(m), t = M.tierOf(m, k), key = [k, m.day, t, b ? b.id + ':' + b.lv + ':' + Math.round(b.hp) : '-'].join('|'); if (wcache.has(key)) return wcache.get(key);
-  const W = M.WORLDS[k], T = TIERS[t], S = M.sceneRank(m, k), sc = M.sceneOf ? M.sceneOf(m, k) : null, run = { region: W, regionKey: k, M: m, mods: {}, field: null, lvl0: M.lvl0For(W, m, t, S), lvlStep: 0.45, map: null, dangerK: T.ek, sceneRank: S, scene: sc };
-  const avg = (type, col) => { let s = 0; for (let i = 0; i < 6; i++) s += M.powerOf(M.sideE(run, M.makeBattleCfg(run, { col, type }))); return Math.round(s / 6); };
+  const b = M.bestLeader(m), t = M.tierOf(m, k), sc = M.sceneOf ? M.sceneOf(m, k) : null, key = [k, m.day, t, m.diff || 0, sc ? sc.start : 0, b ? b.id + ':' + b.lv + ':' + Math.round(b.hp) : '-'].join('|'); if (wcache.has(key)) return wcache.get(key);
+  // the run this stele starts, as newRun3 would build it: the chapter's climb, from the stele's waypoint (mc-scenes.js)
+  const W = M.WORLDS[k], T = TIERS[t], S = M.sceneRank(m, k), segs = M.segsOf ? M.segsOf(k) : null, full = segs ? segs.cols : 10, cap = M.diffOf ? M.diffOf(m).cap : 14;
+  const lvl0 = M.lvl0For(W, m, t, S), step = Math.max(0.12, (Math.min(cap, 2.6 + 1.25 * S + M.CHAPTER_REF * 0.16 + T.lv) - lvl0) / Math.max(1, full - 1)), from = sc ? sc.start : 0;
+  const run = { region: W, regionKey: k, M: m, mods: {}, field: null, lvl0, lvlStep: step, colOff: from > 0 && segs ? segs[from].col0 - 2 : 0, startSeg: from, map: null, dangerK: T.ek, sceneRank: S, scene: sc, chap: { w: k, from } };
+  const avg = (node) => { let s = 0; for (let i = 0; i < 6; i++) s += M.powerOf(M.sideE(run, M.makeBattleCfg(run, node))); return Math.round(s / 6); };
   let mine = 0; if (b) { const H = M.HEROES[b.cls]; mine = M.powerOf({ hp: 3 * AVG.hp + b.hp, dps: 3 * AVG.dps + M.heroAtk(b, m) / (H.cd || 1) }); }
-  const first = Math.round(avg('normal', 1) * (M.E_SHOW || 1)), boss = Math.round(avg('boss', 9) * (M.MB_SHOW || 1) * (M.E_SHOW || 1));
+  const seg = segs ? segs[from] : null, bn = seg ? { col: (from > 0 ? 2 : 1) + seg.mids + 1, type: 'boss', seg: from, fb: seg.fb, final: from === segs.length - 1 } : { col: 9, type: 'boss' };
+  const first = Math.round(avg({ col: from > 0 ? 2 : 1, type: 'normal' }) * (M.E_SHOW || 1)), boss = Math.round(avg(bn) * (bn.fb ? M.FB_SHOW || 1 : M.MB_SHOW || 1) * (M.E_SHOW || 1));
   const o = { lv: t, n: T.n, c: T.c, mine, first, boss, par: first };
   wcache.set(key, o); if (wcache.size > 60) wcache.delete(wcache.keys().next().value); return o;
 };
@@ -83,7 +92,7 @@ G.steleTip = function (k) {
 // ───────── blueprints: how often, and how good ─────────
 const cur = () => { const g = M._g; return g && g.run && !(g.run.region && g.run.region.tut) ? g.run : null; };
 // quality weights: the danger of the run you are on (at the base — 混沌来袭 — the middle row), shifted up by bias
-M.bpWeights = function (bias, qUp) { const run = cur(), T = TIERS[run ? run.danger || 0 : 1], k = 1 + (bias || 0) * 0.5 + (qUp || 0) * 0.8; return T.q.map((x, i) => (i === 0 ? x : x * k)); };
+M.bpWeights = function (bias, qUp) { const run = cur(), T = TIERS[run ? run.danger || 0 : 1], dq = run && run.M && M.diffOf ? M.diffOf(run.M).q : 0, k = 1 + (bias || 0) * 0.5 + ((qUp || 0) + dq) * 0.8; return T.q.map((x, i) => (i === 0 ? x : x * k * (1 + dq * i * 0.3))); };
 const BASE = { normal: 0.03, hold: 0.03, score: 0.03, holdScore: 0.03, elite: 0.08, boss: 0.12, extract: 0, chest: 0.1 };
 M.bpChance = function (run, type) {
   if (!run || (run.region && run.region.tut)) return 0; const m = run.M, th = (run.theme && run.theme.loot) || {};

@@ -31,7 +31,7 @@ M.dayEvents = function (m) {
   for (let guard = 0; (m.evGen || 0) < upto && guard < 8; guard++) {
     const d0 = (m.evGen || 0) + 1, end = E * Math.ceil(d0 / E), days = [];
     for (let d = d0; d < end; d++) if (d > m.day && d > 1 && !m.evs.some(e => e.day === d)) days.push(d);
-    const kinds = Object.keys(EV).filter(k => EV[k].w);
+    const kinds = Object.keys(EV).filter(k => EV[k].w && (!EV[k].need || EV[k].need(m)));
     days.sort(() => Math.random() - 0.5).slice(0, 2).forEach(d => { const k = M.wpick(kinds, x => EV[x].w); kinds.splice(kinds.indexOf(k), 1); m.evs.push({ day: d, k }); });
     m.evGen = end;
   }
@@ -152,13 +152,14 @@ G.tick = function (dt) {
 const rnd = Math.random, pick = (a) => a[Math.floor(rnd() * a.length)];
 const cur = { sup: ['物资', 'msup', 'supplies', 'sack'], sh: ['碎片', 'msh', 'shards', 'shard'], orb: ['经验球', 'morb', 'orbs', 'orb'] };
 function goods(g, m) {
-  const out = [], bld = Object.keys(M.BUILDINGS).filter(k => !M.BUILDINGS[k].fixed), rel = Object.keys(M.RELICS), gifts = Object.keys(M.GIFTS || {}).filter(k => M.GIFTS[k].w > 0);
+  const out = [], bld = Object.keys(M.BUILDINGS).filter(k => !M.BUILDINGS[k].fixed && !M.BUILDINGS[k].gone && !M.BUILDINGS[k].boss), rel = M.relicPool(), gifts = Object.keys(M.GIFTS || {}).filter(k => M.GIFTS[k].w > 0);
   const bk = pick(bld), B = M.BUILDINGS[bk]; out.push({ n: B.n + '图纸', d: B.d, cost: B.q >= 2 ? ['sh', 40 + 20 * B.q] : ['sup', 90 + 50 * B.q], give: () => M.invAdd(m, 'bbp:' + bk, 1) });
-  const rk = pick(rel), Rl = M.RELICS[rk]; out.push({ n: Rl.n + '图纸', d: '打造「' + Rl.n + '」', cost: ['sh', 30], give: () => M.invAdd(m, 'rbp:' + rk, 1) });
+  if (!M.forgeOn || M.forgeOn(m)) { const rk = pick(rel), Rl = M.RELICS[rk]; out.push({ n: Rl.n + '图纸', d: '打造「' + Rl.n + '」', cost: ['sh', 30], give: () => M.invAdd(m, 'rbp:' + rk, 1) }); }   // relic blueprints only with a 工坊
   const tk = M.dropTile(), T = M.TILES[tk]; out.push({ n: '地脉结晶·' + T.n, d: '把一格岩层变成「' + T.n + '」：' + (T.anyD || T.d), cost: ['sup', 140], give: () => { const at = M.tileSpot && M.tileSpot(m, tk); if (at) { const [c, r] = at; M.cell(m, c, r).tile = tk; g.homeQueue(g.tileReveal(c, r, tk)); } } });
   { const gk = pick(gifts), K = M.GIFTS[gk]; out.push({ n: K.n, d: K.d, cost: ['sup', 70], give: () => { const r = K.apply(g, m, null); g.toast(K.n + ' · ' + ((r && r.t) || ''), K.c); } }); }
   return out;
 }
+M.dayGoods = goods;   // the merchant's stock (mc-visit.js)
 function merchant(g, m, stock) {
   const choices = stock.map(o => { const [ck, v] = o.cost, C = cur[ck], can = !o.sold && m[C[2]] >= v;
     return { t: (o.sold ? '已买 · ' : '') + o.n, sub: o.d + '　' + v + ' ' + C[0], dis: !can, gold: can, fn: () => { m[C[2]] -= v; o.sold = true; o.give(); g.save(); S.buy(); merchant(g, m, stock); } }; });

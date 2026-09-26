@@ -506,8 +506,8 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
     const x = M.cell(meta, c, r), a = bv.toScreen(cellX(c), cellY(r)), b = bv.toScreen(cellX(c) + CW, cellY(r) + CH);
     if (b.x < -80 || a.x > 2000 || b.y < -80 || a.y > 1160) continue;
     const hot = bv.hoverIc && bv.hoverIc.c === c && bv.hoverIc.r === r ? bv.hoverIc.k : null;
-    if (x.b) { const B = BUILDINGS[x.b], st = M.TAG.style(B.style), ct = M.TAG.cat(B.cat);
-      badge(st.icon, a.x + pad, a.y + pad, st.c, { tag: st, key: x.b, c, r }, hot === 's'); badge(ct.icon, b.x - pad - S, b.y - pad - S, ct.c, { tag: ct, key: x.b, c, r }, hot === 'f'); }
+    if (x.b) { const B = BUILDINGS[x.b], ct = M.TAG.cat(B.cat);   // styles are hidden (user ruling 2026-09-26): only the function badge
+      if (ct) badge(ct.icon, b.x - pad - S, b.y - pad - S, ct.c, { tag: ct, key: x.b, c, r }, hot === 'f'); }
     else if (x.job) { const cx = (a.x + b.x) / 2; badge(x.job.kind === 'dig' ? 'u_pick' : 'u_hammer', cx - S - 4, b.y - pad - S, PP.gold, { job: 1, c, r }, hot === 'j');
       // 剩余天数：墨框深渊小窗 + 金色机台数码
       ctx.fillStyle = PP.ink; ctx.fillRect(cx + 1, b.y - pad - S - 3, S * 1.3 + 4, S + 6); ctx.fillStyle = PP.abyss; ctx.fillRect(cx + 4, b.y - pad - S, S * 1.3 - 2, S); M.pxNum(ctx, String(x.job.days), cx + 3 + S * 0.65, b.y - pad - S / 2, PP.gold, S / 26); }

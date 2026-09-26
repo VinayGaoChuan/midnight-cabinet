@@ -125,7 +125,7 @@ M.KITS = [
   { k: 'arms', n: '军火卡带', d: '开局多 3 张宝物图纸和 1 件「稀有」宝物', ic: 'gem' },
   { k: 'soul', n: '招魂卡带', d: '开局多 150 灵魂碎片，领袖上限 +1', ic: 't_shard' },
   { k: 'dig', n: '工兵卡带', d: '开局已挖通 3 个房间，物资 +100', ic: 'u_pick' }];
-const wonderBp = (qMin) => { const ks = Object.keys(M.BUILDINGS).filter(k => !M.BUILDINGS[k].fixed && M.BUILDINGS[k].q >= (qMin || 1)); return 'bbp:' + M.pick(ks); };
+const wonderBp = (qMin) => { const ks = Object.keys(M.BUILDINGS).filter(k => !M.BUILDINGS[k].fixed && !M.BUILDINGS[k].boss && !M.BUILDINGS[k].gone && M.BUILDINGS[k].q >= (qMin || 1)); return 'bbp:' + M.pick(ks); };
 G.newGame = function (kits) {
   const P = M.perks(), p = this.prof, keepTut = this.meta && this.meta.tutDone;
   const m = this.meta = M.defaultMeta3(); m.tutDone = !!keepTut; m.baseTut = keepTut ? 99 : 0;
@@ -143,7 +143,7 @@ G.newGame = function (kits) {
   const h = m.heroes[0]; for (let i = 0; i < (P.startHeroLv || 0); i++) { h.lv++; h.points++; } h.hp = M.heroMaxHp(h, m);
   (kits || []).forEach(k => {
     if (k === 'build') { M.invAdd(m, wonderBp(1), 1); M.invAdd(m, M.dropBp(0.5).replace(/^rbp:.*/, wonderBp(1)), 1); M.invAdd(m, wonderBp(1), 1); }
-    if (k === 'arms') { const rs = Object.keys(M.RELICS); for (let i = 0; i < 3; i++) M.invAdd(m, 'rbp:' + M.pick(rs), 1); if (M.craftRelic3) { const r = M.craftRelic3(m, M.pick(rs), { qUp: 1 }); if (r && !m.relics.includes(r)) m.relics.push(r); } }
+    if (k === 'arms') { const rs = M.relicPool(); for (let i = 0; i < 3; i++) M.invAdd(m, 'rbp:' + M.pick(rs), 1); if (M.craftRelic3) { const r = M.craftRelic3(m, M.pick(rs), { qUp: 1 }); if (r && !m.relics.includes(r)) m.relics.push(r); } }
     if (k === 'soul') { m.shards += 150; m.heroCapBonus = 1; }
     if (k === 'dig') { m.supplies += 100; let n = 0; for (const [dc, dr] of [[-1, 0], [1, 0], [0, 1], [-2, 0], [2, 0]]) { const x = M.cell(m, M.CORE.c + dc, M.CORE.r + dr); if (x && !x.dug && n < 3) { x.dug = true; n++; } } }
   });
@@ -187,7 +187,7 @@ G.startSettle = function () {
   const style = run.theme && run.theme.style, dbl = (run.blood ? 2 : 1) * (1 + (M.baseMods(m).bpLuck || 0));
   const bbp = (bias, qUp) => { let k = M.dropBp(bias, style, qUp); for (let i = 0; i < 6 && !k.startsWith('bbp:'); i++) k = M.dropBp(bias, style, qUp); return k.startsWith('bbp:') ? k : wonderBp(0); };
   // fixed: clearing the world (its final boss) pays one random building blueprint (user ruling 2026-09-25)
-  if (n.type === 'boss' && n.final) drop(M.oneBldBp(style));
+  if (n.type === 'boss' && (n.fb || n.final)) drop(M.oneBldBp(style));   // every area's final boss (mc-scenes.js)
   for (let i = 0; i < (P.bossBp || 0) && n.type === 'boss'; i++) drop(bbp(1, 1));
   this.achCheck();
 };

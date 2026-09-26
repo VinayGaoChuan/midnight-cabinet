@@ -62,9 +62,9 @@ G.view = function () {
   // rooms: quality text + two tag chips; build options show their tags too
   if (v.pn && this.panel) {
     const p = this.panel;
-    if (v.pn.isRoom) { const B = M.BUILDINGS[p.key]; v.pn.sub = (p.key === 'core' ? '核心 · ' : B.q ? '奇观 · ' : '') + M.QUALITY[B.q].n; v.pn.tags = [M.tagIc('style', B.style), M.tagIc('cat', B.cat)]; v.pn.hasTags = true; }
+    if (v.pn.isRoom) { const B = M.BUILDINGS[p.key]; v.pn.sub = (p.key === 'core' ? '核心 · ' : B.q ? '奇观 · ' : '') + M.QUALITY[B.q].n; v.pn.tags = [M.tagIc('cat', B.cat)].filter(Boolean); /* styles are hidden (2026-09-26) */ v.pn.hasTags = true; }
     else v.pn.hasTags = false;
-    if (v.pn.isBuild && v.pn.opts) { const opts = M.buildOptions(this.meta, p.c, p.r); v.pn.opts.forEach((o, i) => { const B = opts[i] && opts[i].B; o.si = B ? M.tagIc('style', B.style) : NIL; o.ci = B ? M.tagIc('cat', B.cat) : NIL; }); }
+    if (v.pn.isBuild && v.pn.opts) { const opts = M.buildOptions(this.meta, p.c, p.r); v.pn.opts.forEach((o, i) => { const B = opts[i] && opts[i].B; o.ci = B ? M.tagIc('cat', B.cat) : NIL; }); }
   }
   return v;
 };
@@ -81,8 +81,8 @@ M.unitTip = function (k, u, run) {
 // ───────── buildings: tag line with icons; the headquarters is the core, not a wonder ─────────
 const oldBT = G.bldTip;
 G.bldTip = function (key, c, r) {
-  const t = oldBT.call(this, key, c, r), B = M.BUILDINGS[key], st = TG.style(B.style), ct = TG.cat(B.cat), Q = M.QUALITY[B.q];
-  t.lines[0] = { rich: [{ t: Q.n, c: Q.c, b: 1 }, { t: '　' }, { img: M.iconURL(st.icon, 1) }, { t: st.n, c: st.c, b: 1 }, { t: '　' }, { img: M.iconURL(ct.icon, 1) }, { t: ct.n, c: ct.c, b: 1 }] };
+  const t = oldBT.call(this, key, c, r), B = M.BUILDINGS[key], ct = TG.cat(B.cat) || { icon: 'f_misc', n: '', c: '#e8dcc4' }, Q = M.QUALITY[B.q];
+  t.lines[0] = { rich: [{ t: Q.n, c: Q.c, b: 1 }, { t: '　' }, { img: M.iconURL(ct.icon, 1) }, { t: ct.n, c: ct.c, b: 1 }] };
   t.kind = key === 'core' ? '核心建筑' : B.q ? '奇观' : '建筑'; t.icon = ct.icon; t.ctx = 'bld';
   return t;
 };
@@ -112,7 +112,7 @@ M.roomThumb = function (key) {
   const B = M.BUILDINGS[key], src = oldThumb(key), c = document.createElement('canvas'); c.width = 450; c.height = 315; const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
   const im = new Image(); im.src = src; thumbC[key] = src;
   im.onload = () => { x.drawImage(im, 0, 0); const b = (ic, X, Y, col) => { x.fillStyle = 'rgba(8,6,10,0.86)'; x.fillRect(X, Y, 66, 66); x.fillStyle = col; x.fillRect(X, Y, 66, 4); x.fillRect(X, Y + 62, 66, 4); x.fillRect(X, Y, 4, 66); x.fillRect(X + 62, Y, 4, 66); x.drawImage(M.iconCanvas(ic, 3), X + 6, Y + 6, 54, 54); };
-    const st = TG.style(B.style), ct = TG.cat(B.cat); b(st.icon, 14, 14, st.c); b(ct.icon, 450 - 80, 315 - 80, ct.c); thumbC[key] = c.toDataURL(); if (M._g) M._g.bump(); };
+    const ct = TG.cat(B.cat); if (ct) b(ct.icon, 450 - 80, 315 - 80, ct.c); thumbC[key] = c.toDataURL(); if (M._g) M._g.bump(); };
   return thumbC[key];
 };
 })();

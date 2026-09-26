@@ -71,6 +71,8 @@ const RELICS = {
   vesperBell:{ n:'晚祷之钟', icon:'r_bell', d:'钟声一响，影子会停下。', lines:[{k:'skillCd',v:-0.1},{k:'unitHp',v:0.06},{k:'skillCd',v:-0.15},{k:'unitAtk',v:0.2}] },
   ghostLantern:{ n:'引魂灯', icon:'r_lantern', d:'它照亮的路，只有死人走过。', lines:[{k:'supplies',v:0.15},{k:'exp',v:0.1},{k:'chest',v:0.25},{k:'supplies',v:0.4}] },
 };
+// relics anything can roll or craft; a boss's own relic (uniq, mc-uniques.js) only drops from that boss
+M.relicPool = () => Object.keys(RELICS).filter(k => !RELICS[k].uniq);
 M.relicLines = (key, q) => RELICS[key].lines.slice(0, q + 1).map(l => ({ k: l.k, v: l.v }));
 M.relicText = (r) => r.lines.map(l => M.statText(l.k, l.v)).join('，');
 
@@ -157,7 +159,7 @@ M.invAdd = (m, key, n) => { m.inv[key] = (m.inv[key] || 0) + (n == null ? 1 : n)
 M.invHas = (m, key) => (m.inv[key] || 0) > 0;
 M.itemInfo = function (key) {
   const [kind, id] = key.split(':');
-  if (kind === 'bbp') { const B = BUILDINGS[id]; return { n: B.n + '图纸', icon: 'scroll', c: QUALITY[B.q].c, q: B.q, kind: '建筑图纸', d: B.d, sub: QUALITY[B.q].n + ' · ' + STYLE[B.style] + ' · ' + CAT[B.cat] }; }
+  if (kind === 'bbp') { const B = BUILDINGS[id]; return { n: B.n + '图纸', icon: 'scroll', c: QUALITY[B.q].c, q: B.q, kind: '建筑图纸', d: B.d, sub: QUALITY[B.q].n + ' · ' + M.CAT[B.cat] }; }
   if (kind === 'rbp') { const R = RELICS[id]; return { n: R.n + '图纸', icon: R.icon, c: '#e8d8b0', q: 0, kind: '宝物图纸', d: '在锻造建筑里打造「' + R.n + '」。打造时品质随机，消耗这张图纸。', sub: '宝物图纸', rel: id }; }
   if (kind === 'tile') { const T = TILES[id]; return { n: '地脉结晶·' + T.n, icon: 'gem', c: T.c, q: 1, kind: '地脉结晶', d: '带回基地后，改造一块没有建筑的地块（优先空房间），变成「' + T.n + '」：' + T.d }; }
   return { n: key, icon: 'question', c: '#fff', kind: '' };
@@ -320,8 +322,8 @@ M.newRun3 = function (meta, hero, worldKey, relicIds) {
 };
 M.unitPool3 = (m) => { const n = Object.keys(m.cleared).length; const tiers = ['nail','wick','hound','dice','doll','grave','lantern','rat']; if (n >= 1 || m.day >= 6) tiers.push('clock', 'mirror'); if (n >= 2 || m.day >= 12) tiers.push('priest', 'furnace'); if (n >= 3 || m.day >= 18) tiers.push('butcher', 'bride'); return tiers; };
 M.dropBp = function (bias) {
-  if (Math.random() < 0.5) return 'rbp:' + pick(Object.keys(RELICS));
-  const ks = Object.keys(BUILDINGS).filter(k => !BUILDINGS[k].fixed);
+  if (Math.random() < 0.5) return 'rbp:' + pick(M.relicPool());
+  const ks = Object.keys(BUILDINGS).filter(k => !BUILDINGS[k].fixed && !BUILDINGS[k].boss);   // a boss building drops only from its boss (mc-bossbld.js)
   const w = M.bpWeights ? M.bpWeights(bias, 0) : [60, 25, 11, 4].map((x, i) => i === 0 ? x : x * (1 + (bias || 0)));   // quality by the run's danger (mc-danger.js)
   const q = wpick([0, 1, 2, 3], i => (ks.some(k => BUILDINGS[k].q === i) ? w[i] : 0));
   return 'bbp:' + pick(ks.filter(k => BUILDINGS[k].q === q));

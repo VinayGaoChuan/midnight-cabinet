@@ -183,7 +183,9 @@ class B3 extends M.Battle2 {
     if (e.entry === 'rift') this.fxp({ k: 'rift', x: e.x, y: e.y - 40 * e.sz, life: 0.9 });
     if (e.entry === 'emerge') this.dust(e.x, e.y, 8);
     this.later(e.entry === 'bossdrop' ? 0.62 : e.entry === 'drop' ? 0.5 : 0.35, () => this.entryLand(e));
-    if (e.boss) { this.float(1500, 150, '首领 · ' + e.d.n, '#ff5a4a', 60); } else if (e.elite) this.float(e.x, 120, '精英 · ' + e.d.n, '#ffb060', 36);
+    if (s.nm) e.nm = s.nm;   // a small boss's own name (mc-scenes.js)
+    // a named small boss enters under its own nameplate (mc-omen.js)
+    if (e.boss && !e.nm) { this.float(1500, 150, '首领 · ' + e.d.n, '#ff5a4a', 60); } else if (e.elite) this.float(e.x, 120, '精英 · ' + e.d.n, '#ffb060', 36);
     return e;
   }
   summon(key, side, x, y, life, src) { if (!DB[key]) return null; if (this.ents.filter(e => e.alive && e.summon && e.side === side).length > 14) return null; Sfx.summonIn(Sfx.panX(x)); const lvl = src && src.side === 'E' ? 1 : 1; const e = this.unitStats(key, side, clamp(x, 170, 2000), clamp(y, 60, 690), { summon: 1, life, hpMul: lvl }); e.lifeEnd = this.t + (life || 999); e.readyAt = this.t + 0.3; e.entryT = this.t; e.entry = 'summon'; this.ring(e.x, e.y - 30, 10, 70, RCOL[e.d.race] || '#c890ff', 6, 0.4); this.call(e, 'start'); return e; }
@@ -332,7 +334,7 @@ class B3 extends M.Battle2 {
     if (keep === 'keep') return;
     const hgt = 70 * e.sz, col = RCOL[e.d.race] || '#ff9a6a';
     this.burst(e.x, e.y - hgt / 2, col, 14); this.ring(e.x, e.y - hgt / 2, 10, 120 * e.sz, col, 8, 0.3); this.shake = Math.max(this.shake, 3 + e.d.q * 2);
-    this.fxp({ k: 'death', x: e.x, y: e.y, hd: e.hd, sz: e.sz, flip: e.side === 'E', life: 0.6 });
+    if (M.kbDie) M.kbDie(this, e, src); else this.fxp({ k: 'death', x: e.x, y: e.y, hd: e.hd, sz: e.sz, flip: e.side === 'E', life: 0.6 });   // the body falls and fades (mc-knock.js)
     this.ents.forEach(o => { if (o !== e && this.active(o) && o.side !== e.side) this.call(o, 'near', e); });
     if (e.side === 'E') {
       this.kills++;
@@ -422,8 +424,8 @@ function drawEnt3(ctx, e, T, b) {
   const px16 = M.P16 && M.P16.entImg ? M.P16.entImg(e, T) : null;
   const img = px16 || M.hdCanvas(e.hd || { key: 'x', race: '人类', voc: '', q: 0 }, H0, e.flash > 0 ? '#ffffff' : e.raging && Math.floor(T * 8) % 2 ? '#ff4a3a' : null, pose);
   let x = e.x + o.x + (e.drawDX || 0), y = e.y + o.y + (e.drawDY || 0);   // drawDX / drawDY: a final boss is drawn away from where units fight it (mc-bossfight.js)
-  const air = e.air ? e.air.z : 0, spin = e.air ? e.air.rot : e.down ? e.down.rot : 0, dead = !e.alive;
-  if (e.lunge != null && T - e.lunge < 0.16) x += (e.side === 'A' ? 1 : -1) * 16 * Math.sin((T - e.lunge) / 0.16 * Math.PI);
+  const air = e.air ? e.air.z : 0, kp = M.kbPose ? M.kbPose(e, T, H0) : { rot: 0, py: 0 }, spin = kp.rot, dead = !e.alive, face = M.faceOf ? M.faceOf(e) : (e.side === 'E' ? -1 : 1);
+  if (e.lunge != null && T - e.lunge < 0.16) x += face * 16 * Math.sin((T - e.lunge) / 0.16 * Math.PI);
   if (e.kb != null && T - e.kb < 0.12) x += (e.kbDir || 1) * 7 * (1 - (T - e.kb) / 0.12);
   const moving = e.walk && !(e.lunge != null && T - e.lunge < 0.3), bob = px16 ? 0 : moving ? Math.abs(Math.sin(e.walk / 22)) * 6 : Math.sin(T * 2.4 + e.id) * 1.5;
   const sq = !px16 && e.kb != null && T - e.kb < 0.1 ? 0.9 : 1, sc = (o.s || 1);
@@ -435,7 +437,7 @@ function drawEnt3(ctx, e, T, b) {
   else { ctx.fillStyle = 'rgba(7,6,15,0.45)'; ctx.beginPath(); ctx.ellipse(e.x + o.x * (o.y ? 0 : 1), e.y, 34 * e.sz, 10 * e.sz, 0, 0, 7); ctx.fill(); }
   if (!px16 && (e.d.q >= 2 || e.boss)) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(e.x, e.y); ctx.scale(1, 0.35); const gc = e.boss ? PL.red : qc; ctx.fillStyle = M.UI.rg(ctx, 0, 0, 0, 60 * e.sz, [[0, gc + '66'], [1, gc + '00']], 4); ctx.beginPath(); ctx.arc(0, 0, 60 * e.sz, 0, 7); ctx.fill(); ctx.restore(); }
   if (e.trail && e.trail.length && M.drawKbTrail) M.drawKbTrail(ctx, e, img, T);
-  ctx.translate(x, y - bob - air); if (spin) { ctx.translate(0, -H0 * 0.45); ctx.rotate(spin); ctx.translate(0, H0 * 0.45); } ctx.scale(sc * (2 - sq), sc * sq); if (e.side === 'E') ctx.scale(-1, 1);
+  ctx.translate(x, y - bob - air); if (spin) { ctx.translate(0, -kp.py); ctx.rotate(spin); ctx.translate(0, kp.py); } ctx.scale(sc * (2 - sq), sc * sq); if (face < 0) ctx.scale(-1, 1);   // kbPose: in the air it turns about the waist, on the ground it lies about its feet; units face what they attack
   if (!px16 && (e.d.q >= 3 || e.boss)) { const hl = M.hdCanvas(e.hd || { key: 'x', race: '人类', voc: '', q: 0 }, H0, e.boss ? PL.red : qc, pose); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= Math.floor(T * 3) % 2 ? 0.45 : 0.3; for (const [dx, dy] of [[-4, 0], [4, 0], [0, -4], [0, 4]]) ctx.drawImage(hl, -hl.cx + dx, -hl.footY + dy); ctx.restore(); }   // 传说 / 首领：硬边色圈，不模糊
   if (e.clipY != null) { ctx.beginPath(); ctx.rect(-4000, -4000, 8000, 4000 + e.clipY); ctx.clip(); }   // a final boss rising out of (or sinking into) its arena
   ctx.drawImage(img, -img.cx, -img.footY);
@@ -445,11 +447,11 @@ function drawEnt3(ctx, e, T, b) {
   if (e.burn || (e.poisoned && T - e.poisoned < 0.3)) { const c = e.burn ? PL.amber : PL.lime; for (let i = 0; i < 3; i++) { const q = (T * 2 + i / 3 + e.id * 0.1) % 1; ctx.globalAlpha = 1 - q; ctx.fillStyle = c; ctx.fillRect(e.x - 14 + i * 12, e.y - H0 * 0.5 - q * 50, 6, 6); } ctx.globalAlpha = 1; }
 }
 function drawBars(ctx, e, T, b) {
-  if (!e.alive || e.fb) return;   // a final boss has its bar at the top of the screen   // a flung corpse (mc-knock.js)
+  if (!e.alive || e.fb || (e.boss && b.cfg && (b.cfg.fb || b.cfg.mb))) return;   // a boss fight's boss has its bar at the top of the screen (mc-bossfight.js)   // a flung corpse (mc-knock.js)
   if (e.isHero && e.bench) return;
   const o = entOff(e, T); if (o.a < 0.6) return;
   // 血条（设计稿 BARS 缩小版）：墨槽 + 2px 墨框（像素层 1 格），填充上亮下暗各一阶；护盾是顶上一道冰蓝；法力条贴在下面
-  const U = M.bUI, g2 = U.g2, H0 = 88 * e.sz, w = g2(Math.max(40, 46 * e.sz)), x = g2(e.x + o.x - w / 2), top = g2(e.y + o.y - H0 - 14), cx = x + w / 2;
+  const U = M.bUI, g2 = U.g2, H0 = 88 * e.sz, w = g2(Math.max(40, 46 * e.sz)), kp = M.kbPose ? M.kbPose(e, T) : { rot: 0 }, x = g2(e.x + o.x - w / 2), top = g2(e.y + o.y - H0 - 14 - (e.air ? e.air.z : 0) + Math.abs(Math.sin(kp.rot)) * H0 * 0.6), cx = x + w / 2;   // the bar follows a body in the air or lying down
   const [hc, hh, hl] = e.side === 'A' ? (e.isHero ? [PL.gold, PL.butter, PL.amber] : [PL.green, PL.lime, PL.greenDeep]) : [PL.red, PL.pink, PL.wine];
   U.R(ctx, x - 2, top - 2, w + 4, e.hasMana ? 16 : 10, PL.ink);
   const fw = w * clamp(e.hp / e.maxHp, 0, 1); if (fw > 0) { U.R(ctx, x, top, fw, 6, hc); U.R(ctx, x, top, fw, 2, hh); U.R(ctx, x, top + 4, fw, 2, hl); }
