@@ -1166,9 +1166,9 @@
     <sc-if value="{{w.hasBanners}}"><div data-fx="banners" style="display:flex;flex-wrap:wrap;gap:8px;max-width:620px;transform:scale({{w.banSc}});transform-origin:left center"><sc-for list="{{w.banners}}" as="wb" hint-placeholder-count="0"><div sc-camel-on-mouse-enter="{{wb.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}"><mc-flag n="{{wb.n}}" style="width:64px;height:88px"></mc-flag></div></sc-for></div></sc-if>
   </div>
   </sc-if>
-  <div data-pj="panel" style="position:absolute;z-index:30;left:24px;top:{{w.rosTop}}px;display:flex;flex-direction:column;gap:6px;padding:14px 16px 16px">
-      <div data-tip="w-roster" style="font-size:22px;color:#a9a3c9">部队 <span style="color:#f4efe0">{{w.rosterN}}</span></div>
-      <div data-fx="roster" style="display:grid;grid-auto-flow:column;grid-template-rows:repeat({{w.rosRows}},96px);grid-auto-columns:78px;gap:8px;min-height:96px;min-width:78px;transform:scale({{w.rosSc}});transform-origin:left top">
+  <div style="position:absolute;z-index:30;left:24px;top:{{w.rosTop}}px;display:flex;flex-direction:column;gap:8px">
+      <div data-tip="w-roster" style="font-size:22px;color:#a9a3c9;text-shadow:3px 3px 0 #07060f">部队 <span style="color:#f4efe0">{{w.rosterN}}</span></div>
+      <div data-fx="roster" style="display:grid;grid-template-columns:repeat(2,78px);grid-auto-rows:96px;gap:8px;min-height:96px;min-width:78px;transform:scale({{w.rosFit}});transform-origin:left top">
         <sc-for list="{{w.roster}}" as="wr" hint-placeholder-count="0">
           <div sc-camel-on-click="{{wr.onClick}}" sc-camel-on-mouse-enter="{{wr.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:0;width:78px;height:96px;box-sizing:border-box;padding:2px;border:3px solid {{wr.border}};background:{{wr.bg}};box-shadow:0 0 0 3px #07060f,{{wr.glow}};cursor:pointer" style-hover="transform:translateY(-6px)"><sc-if value="{{wr.hasR}}"><m-img data-tip="{{wr.ri.tip}}" src="{{wr.ri.img}}" style="position:absolute;left:-3px;top:-3px;width:24px;height:24px;background:#07060f"></m-img></sc-if><sc-if value="{{wr.hasV}}"><m-img data-tip="{{wr.vi.tip}}" src="{{wr.vi.img}}" style="position:absolute;right:-3px;top:-3px;width:24px;height:24px;background:#07060f"></m-img></sc-if><m-img src="{{wr.img}}" style="max-width:74px;max-height:74px"></m-img><div style="font-size:18px;color:#ffcf4a;height:17px">{{wr.stars}}</div></div>
         </sc-for>

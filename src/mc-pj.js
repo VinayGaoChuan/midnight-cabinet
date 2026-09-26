@@ -249,7 +249,9 @@ if (W.customElements && !W.customElements.get('mc-num')) {
           this.popT = now;
           if (this.animate && !PJ.reduced) this.animate([{ transform: 'scale(1.45) translateY(-2px)' }, { transform: 'scale(0.9)' }, { transform: 'scale(1.06)' }, { transform: 'scale(1)' }], { duration: 260, easing: 'cubic-bezier(.2,.9,.3,1)' });
         }
-        clearTimeout(this.fT); this.fT = setTimeout(() => drawNum(this.cv, v, hex, u, false), 70);
+        // the flash settles with the colour it has by then (a price and its colour change in one update: 'v' comes first,
+        // with the old colour — redrawing with that one left affordable prices red after a shop refresh)
+        clearTimeout(this.fT); this.fT = setTimeout(() => { this.key = null; if (this.isConnected) this.render(true); }, 70);
       }
       this.last = v;
     }
@@ -385,7 +387,7 @@ defineEl('mc-anim', class extends HTMLElement {
   disconnectedCallback() { ANIMS.delete(this); }
   attributeChangedCallback() { if (this.isConnected) this.setup(); }
   setup() {
-    const src = this.getAttribute('src') || ''; if (src === this._s) return; this._s = src; this.textContent = ''; ANIMS.delete(this);
+    const src = this.getAttribute('src') || ''; if (src === this._s) return; this._s = src; this.textContent = ''; ANIMS.delete(this); this.sc = null; this.bb = null; this._f = null;   // a new unit gets its own size (a refreshed shop kept the old one and drew into an unsized canvas)
     if (!src || src.indexOf('{{') >= 0) return;
     const k = URL2KEY.get(src), P16 = M.P16;
     if (PJ.on && k && P16 && P16.spec && P16.spec(k) && P16.frame) {

@@ -239,6 +239,11 @@ M.RaidTown = M.Raid;
 const oGO = G.gameOver;
 if (oGO) G.gameOver = function (reason) { const sum = reason === 'portal' ? this.overSum : null; this.overSum = null; const r = oGO.apply(this, arguments); if (sum && this.modal && this.modal.over) this.modal.text += '\n' + sum; return r; };
 // a defence blueprint (wall, tower or barracks), mostly common: the raid reward leans this way so a town can arm itself
+// a boss building only comes from its own boss (mc-scenes.js): the plain blueprint pools let them slip out (2026-09-27 drop count)
+const oDropB = M.dropBp;
+// …and a one-of-a-kind building is not dropped twice on the same trip (2026-09-27: two 水培农场 on one trip)
+const onTrip = (k) => { const g = M._g, bp = g && g.run && g.run.loot && g.run.loot.bp; return !!bp && bp.includes(k) && M.bUnique(k.slice(4)); };
+M.dropBp = function () { for (let i = 0; i < 12; i++) { const k = oDropB.apply(this, arguments); if (!(k && k.startsWith('bbp:') && B_[k.slice(4)] && (B_[k.slice(4)].boss || onTrip(k)))) return k; } return M.defBp(); };
 M.defBp = function () { const ks = Object.keys(B_).filter(k => !B_[k].fixed && !B_[k].gone && !B_[k].boss && ['wall', 'tower', 'guard', 'shield'].includes(M.townRole(k))); return 'bbp:' + M.wpick(ks, k => [6, 2, 1, 0.4][B_[k].q || 0]); };
 // the camera takes in the whole town, the ground low on the screen
 const BVP = M.BaseView.prototype;

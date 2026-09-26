@@ -386,7 +386,7 @@ class B3 extends M.Battle2 {
     const lm = M._bLight(), lx = lm.getContext('2d'); lx.globalCompositeOperation = 'source-over'; if (M.pixelMode) lx.clearRect(0, 0, 480, 180); lx.fillStyle = M.pixelMode ? 'rgba(4,2,10,0.34)' : 'rgba(4,2,10,0.14)'; lx.fillRect(0, 0, 480, 180); lx.globalCompositeOperation = 'destination-out';
     lights.forEach(L => { const r = L.r / 4; if (r <= 0) return; const g = lx.createRadialGradient(L.x / 4, L.y / 4, 0, L.x / 4, L.y / 4, r); g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)'); lx.fillStyle = g; lx.fillRect(L.x / 4 - r, L.y / 4 - r, r * 2, r * 2); });
     ctx.drawImage(lm, 0, 0, FW, FH);
-    lights.forEach(L => { if (L.r > 0 && L.c && L.c.length === 7) M.glow(ctx, L.x, L.y, L.r * 0.5, L.c, 0.14); });
+    if (!M.LOW_FX) lights.forEach(L => { if (L.r > 0 && L.c && L.c.length === 7) M.glow(ctx, L.x, L.y, L.r * 0.5, L.c, 0.14); });
     if (!this.amb) this.amb = new M.Ambient(R.amb || 'motes', FW, FH, 50);
     this.amb.update(1 / 60); this.amb.draw(ctx, 0, 0);
     M.hd2d(ctx, FW, FH, { focus: 0.56, band: 0.3, dofBlur: 1.6, bloom: 0.55, grade: R.grade, gradeA: 0.26, vig: 0.28 });

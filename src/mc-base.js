@@ -484,12 +484,14 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
   if (opts.raid) opts.raid.draw(ctx, lights);
   // lighting
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (!M.NO_LIGHTMAP) {   // the night: dark everywhere but round the lights (M.NO_LIGHTMAP: a test switch)
   const lm = M._blm || (M._blm = (() => { const c = document.createElement('canvas'); c.width = 480; c.height = 270; return c; })()), lx = lm.getContext('2d');
   lx.globalCompositeOperation = 'source-over'; lx.fillStyle = 'rgba(3,2,8,0.9)'; lx.fillRect(0, 0, 480, 270);
   const sur = bv.toScreen(0, 0).y; lx.fillStyle = 'rgba(0,0,0,1)'; lx.globalCompositeOperation = 'destination-out'; lx.globalAlpha = 0.85; lx.fillRect(0, 0, 480, Math.max(0, sur / 4)); lx.globalAlpha = 1;
   lights.forEach(L => { const p = bv.toScreen(L.x, L.y), r = L.r * bv.z * L.f / 4; const g = lx.createRadialGradient(p.x / 4, p.y / 4, 0, p.x / 4, p.y / 4, r); if (L.cell) { g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.62, 'rgba(0,0,0,0.92)'); g.addColorStop(1, 'rgba(0,0,0,0)'); } else { g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.6, 'rgba(0,0,0,0.5)'); g.addColorStop(1, 'rgba(0,0,0,0)'); } lx.fillStyle = g; lx.fillRect(p.x / 4 - r, p.y / 4 - r, r * 2, r * 2); });
   ctx.imageSmoothingEnabled = true; ctx.drawImage(lm, 0, 0, 1920, 1080);
-  lights.forEach(L => { const p = bv.toScreen(L.x, L.y); M.glow(ctx, p.x, p.y, (L.cell ? CW * 0.9 : L.r * 0.5) * bv.z, L.c, 0.14); });
+  }
+  if (!M.LOW_FX) lights.forEach(L => { const p = bv.toScreen(L.x, L.y); M.glow(ctx, p.x, p.y, (L.cell ? CW * 0.9 : L.r * 0.5) * bv.z, L.c, 0.14); });   // phones: no halos (mc-fx.js)
   if (M.PXR && M.PXR.motes) M.PXR.motes(ctx, bv); else bv.amb.draw(ctx, bv.x, bv.y);
   const fy = bv.sel && !bv.sel.door ? bv.toScreen(0, M.cellCenter(bv.sel.c, bv.sel.r).y).y / 1080 : 0.5;
   M.hd2d(ctx, 1920, 1080, { focus: clamp(fy, 0.2, 0.8), band: bv.z > 1.2 ? 0.14 : 0.3, dofBlur: bv.z > 1.2 ? 3 : 1.6, bloom: 0.5, grade: ['#ffb070', '#102040'], gradeA: 0.25, vig: 0.6 });

@@ -56,8 +56,11 @@ function pp(W, H) { const k = W + 'x' + H; if (!PP[k]) { const lw = Math.round(W
 // about 30 frames a second with it drops it by itself.
 const TOUCH = (() => { try { return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || !!window.Capacitor || !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches && !window.matchMedia('(pointer: fine)').matches); } catch (e) { return false; } })();
 M.HD2D_LOW = TOUCH;
+// the same goes for the other screen-wide light passes: the soft halo round every scene light (bloom-like), the map's
+// light rays, the skill-focus vignette in battle (user ruling 2026-09-27: 「手机上就把景深模糊、泛光、调色、暗角这些类似的效果关掉」)
+M.LOW_FX = TOUCH;
 const slow = { last: 0, n: 0, sum: 0 };
-function hdSlow() { const t = performance.now(), d = t - slow.last; slow.last = t; if (d > 250 || d <= 0) return false; slow.n++; slow.sum += d; if (slow.n >= 150) { const avg = slow.sum / slow.n; slow.n = 0; slow.sum = 0; if (avg > 33) { M.HD2D_LOW = true; return true; } } return false; }
+function hdSlow() { const t = performance.now(), d = t - slow.last; slow.last = t; if (d > 250 || d <= 0) return false; slow.n++; slow.sum += d; if (slow.n >= 150) { const avg = slow.sum / slow.n; slow.n = 0; slow.sum = 0; if (avg > 33) { M.HD2D_LOW = true; M.LOW_FX = true; return true; } } return false; }
 M.hd2d = function (ctx, W, H, o = {}) {
   if (M.HD2D_OFF || M.HD2D_LOW || hdSlow()) return;
   const P = pp(W, H), src = ctx.canvas;

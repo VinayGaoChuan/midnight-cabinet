@@ -226,8 +226,7 @@ M.drawWorld2 = function (ctx, run, walker, opts = {}) {
   lx.globalCompositeOperation = 'destination-out';
   lights.forEach(L => { const p = toS(L.x, L.y), r = L.r * z * L.f / 4; const g = lx.createRadialGradient(p.x / 4, p.y / 4, 0, p.x / 4, p.y / 4, r); g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.5, 'rgba(0,0,0,0.6)'); g.addColorStop(1, 'rgba(0,0,0,0)'); lx.fillStyle = g; lx.fillRect(p.x / 4 - r, p.y / 4 - r, r * 2, r * 2); });
   ctx.imageSmoothingEnabled = true; ctx.drawImage(lm, 0, 0, 1920, 1080);
-  lights.forEach(L => { const p = toS(L.x, L.y); M.glow(ctx, p.x, p.y, L.r * z * 0.55 * L.f, L.c, 0.22); });
-  M.godRays(ctx, 1920, 1080, T, R.light, 4, 0.05);
+  if (!M.LOW_FX) { lights.forEach(L => { const p = toS(L.x, L.y); M.glow(ctx, p.x, p.y, L.r * z * 0.55 * L.f, L.c, 0.22); }); M.godRays(ctx, 1920, 1080, T, R.light, 4, 0.05); }   // phones: no halos or rays (mc-fx.js)
   if (!run.amb) run.amb = new M.Ambient(R.amb || 'motes', 1920, 1080, 70);
   run.amb.update(opts.dt || 0.016); run.amb.draw(ctx, walker.camX, walker.camY);
   M.hd2d(ctx, 1920, 1080, { focus: 0.52, band: 0.2, bloom: 0.5, grade: R.grade, gradeA: 0.3, vig: 0.55 });

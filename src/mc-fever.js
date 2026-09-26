@@ -8,8 +8,8 @@
 //   More vocations fill it faster (up to +35%); an army with both a front and a back line +15%, one without −15%.
 // · Full, it goes off by itself: the fight drops to slow motion, the screen flashes, a marquee of bulbs chases round
 //   the screen, F · E · V · E · R slam down one by one, and the arcade reel rolls one of the five old item effects
-//   (闪电风暴 · 回魂烛 · 旧相框 · 招魂铃 · 骰盅), picked by the fight's state (a hurt army leans to 回魂烛, a crowd of
-//   enemies to 招魂铃, a thin army to 旧相框). Then 8 s of FEVER TIME: the army attacks 30% faster in a golden glow and
+//   (闪电风暴 · 回魂烛 · 旧相框 · 摄魂铃 · 骰盅), picked by the fight's state (a hurt army leans to 回魂烛, a crowd of
+//   enemies to 摄魂铃, a thin army to 旧相框). Then 8 s of FEVER TIME: the army attacks 30% faster in a golden glow and
 //   the score multiplier goes up 0.2. The gauge refills for the next one.
 // · Items and banners are gone: shops sell units, what gave an item gives points, what added item slots feeds FEVER.
 const M = window.MC, G = M.Game.prototype, BP = M.Battle3 && M.Battle3.prototype, S = M.Sfx, U = M.UI, P = M.PJ.PAL, DB = M.DB, now = () => performance.now();
@@ -70,7 +70,7 @@ if (BP) {
     return r;
   };
 }
-// the effect the fight needs most, weighted: a hurt army → 回魂烛, a crowd → 招魂铃, a thin army → 旧相框
+// the effect the fight needs most, weighted: a hurt army → 回魂烛, a crowd → 摄魂铃, a thin army → 旧相框
 const pickEffect = (b) => {
   const A = b.ents.filter(e => e.alive && e.side === 'A' && !e.isHero), E = b.ents.filter(e => b.active(e) && e.side === 'E');
   const hp = A.reduce((s, e) => s + e.hp, 0) / Math.max(1, A.reduce((s, e) => s + e.maxHp, 0));
@@ -93,12 +93,16 @@ G.feverRoll = function () {
   this.startReel({ title: 'FEVER · ' + I.name, iconKey: I.icon, itemMode: true, land: 0, ups: X.tier, tease: X.tier < 3, tiles: M.TIERS.map((t, k) => ({ n: t.n, sub: I.tiers[k], c: t.c })),
     onDone: () => {
       if (this.battle !== b || b.over) { this.feverFx = null; return; }
-      b.useItem(X.key, X.tier); this.toast('FEVER · ' + M.TIERS[X.tier].n + ' · ' + I.tiers[X.tier], M.TIERS[X.tier].c);
-      const F = b.fever; F.on = { until: b.t + FEVER_T, t0: b.t, sp: 0 };
-      b.ents.forEach(e => { if (e.alive && e.side === 'A' && !e._fv) { e.asB += M.FEVER.AS; e._fv = true; } });
-      b.addMult && b.addMult(M.FEVER.MULT, 960, 300, 'FEVER'); S.mult && S.mult();
-      X.timeAt = now();
+      this.fvStageStart(X.key, X.tier, b);   // the fight stays frozen; the effect plays on a darkened screen (below)
     } });
+};
+// after the show: 8 s of FEVER TIME, its +0.2 flying into the multiplier as two chips
+G.feverTimeStart = function (b) {
+  const X = this.feverFx, F = b.fever; if (!F) return;
+  F.on = { until: b.t + FEVER_T, t0: b.t, sp: 0 };
+  b.ents.forEach(e => { if (e.alive && e.side === 'A' && !e._fv) { e.asB += M.FEVER.AS; e._fv = true; } });
+  this.multChips(Math.round(M.FEVER.MULT * 10), { x: 960, y: 150 }, 0);
+  if (X) X.timeAt = now();
 };
 const oTick = G.tick;
 G.tick = function (dt) {
@@ -112,7 +116,8 @@ G.tick = function (dt) {
 };
 // the slam slows the fight right down until the reel takes over (the reel slows it by itself, mc-game-m.js)
 const oBT = G.battleTick;
-if (oBT) G.battleTick = function (dt) { const X = this.feverFx; return oBT.call(this, X && !X.rolled && !this.reel ? (dt || 0) * 0.06 : dt); };
+// the fight stops from the slam until the effect has played (user ruling 2026-09-27: 「fever触发的时候，战斗停止」)
+if (oBT) G.battleTick = function (dt) { const X = this.feverFx; return oBT.call(this, X && !X.timeAt ? 0 : dt); };
 
 // drawn on the fx layer, screen space: the marquee, the slam, the FEVER TIME bar
 M.drawFever = function (x, g) {

@@ -32,6 +32,31 @@ M.weaponReach = () => null;   // the old reach (surface columns covered from bel
 const HP_ROLE = { wall: 2400, guard: 1400, tower: 1000, shield: 1200, civil: 0 };
 M.townHp = function (key) { const B = B_[key], role = M.townRole(key); if (!role) return 0; return Math.round(HP_ROLE[role] * (1 + 0.6 * (B.q || 0))); };
 
+// ───────── one of each (user question 2026-09-27: 「很多图纸都是重复的，例如医院，我手里有3张了，难道我可以建3个医院吗，效果叠加」) ─────────
+// Only the fighting buildings of common and rare quality (walls, towers, barracks, the shield, the old tree) are built more
+// than once — a town needs several. Everything else, and every epic, legendary or boss building, is one of a kind: no second
+// blueprint of it drops, and a spare copy (old saves, a visitor's stall) turns into supplies, half its building cost.
+M.bUnique = (k) => { const B = B_[k]; if (!B || k === 'core') return false; return !((B.q || 0) <= 1 && !B.boss && M.townFights(k)); };
+M.bOwned = (m, k) => { let n = 0; if (!m || !m.base) return 0; for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) { const x = m.base.cells[r][c]; if (x.b === k || (x.job && x.job.kind === 'build' && x.job.key === k)) n++; } return n + ((m.inv && m.inv['bbp:' + k]) || 0); };
+M.uniqFix = function (m, logs) {
+  if (!m || !m.inv || !m.base) return false; let ch = false;
+  Object.keys(m.inv).forEach(id => { if (!id.startsWith('bbp:')) return; const k = id.slice(4), B = B_[k], have = m.inv[id] | 0; if (!B || !M.bUnique(k) || have <= 0) return;
+    const standing = M.bOwned(m, k) - have, extra = standing > 0 ? have : have - 1; if (extra <= 0) return;
+    const v = Math.round((B.cost || 100) * 0.5) * extra; m.inv[id] = have - extra; if (m.inv[id] <= 0) delete m.inv[id]; m.supplies = (m.supplies || 0) + v; ch = true;
+    if (logs) logs.push({ t: '多余的' + B.n + '图纸换成 ' + v + ' 物资' }); });
+  return ch;
+};
+const oSoloU = M.soloFix;
+M.soloFix = function (m) { let ch = oSoloU ? oSoloU.apply(this, arguments) : false; if (M.uniqFix(m)) ch = true; return ch; };
+// no blueprint drops for a one-of-a-kind building already standing, being built or in stock, nor for a boss building owned
+const oUse = M.bpUseful;
+if (oUse) M.bpUseful = function (m, key) {
+  if (m && key && key.startsWith('bbp:')) { const k = key.slice(4), B = B_[k]; if (B && B.boss && M.bbOwned && M.bbOwned(m, k)) return false; if (B && M.bUnique(k) && M.bOwned(m, k) > 0) return false; }
+  return oUse.apply(this, arguments);
+};
+// a one-of-a-kind building already standing (or being built) cannot be built again
+const oBO = M.buildOptions;
+M.buildOptions = function (m) { const L = oBO.apply(this, arguments); return L.map(o => (M.bUnique(o.key) && M.bOwned(m, o.key) - ((m.inv && m.inv['bbp:' + o.key]) || 0) > 0 ? Object.assign({}, o, { why: o.why || '已经建了一座' }) : o)); };
 // the main base holds out longer now that the town, not the leader, defends it (1000 → 2400; old saves keep their share)
 M.PORTAL_BASE = 2400;
 M.portalMax = (m) => Math.round(M.PORTAL_BASE * (1 + (M.baseMods(m).portalHp || 0)));
@@ -99,6 +124,7 @@ M.advanceDay = function (m) {
     if (j.kind === 'repair') { x.ruin = false; logs.push({ t: B.n + ' 修好了', c, r, repaired: j.key }); }
     else { x.b = null; x.ruin = false; M.invAdd(m, 'bbp:' + j.key, 1); logs.push({ t: B.n + ' 拆掉了 · 图纸收回', c, r, demolished: j.key }); }
   });
+  M.uniqFix(m, logs);   // spare copies of one-of-a-kind buildings (a visitor's stall, old saves)
   const l0 = M.prosLv(m), l1 = M.prosLvOf(M.prosperity(m));
   if (l1 > l0) { m.prosLv = l1; m.prosUp = { from: l0, to: l1 }; }   // mc-prosper.js opens the ring on screen
   return logs;
