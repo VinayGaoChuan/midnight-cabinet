@@ -21,28 +21,30 @@ function rockTone(x, y, v) {
   const band = Math.round(Math.sin(y * 0.16 + v * 2.1) * 0.8 + (vnoise(v, y * 0.07, v) - 0.5) * 3);
   let t = Math.max(0, 4 + band + Math.round((nz(x, y, 4, v * 7 + 1) - 0.5) * 2)); return Math.max(0, t + Math.round((nz(x, y, 1.6, v * 7 + 2) - 0.5) * 2));
 }
-// lens(seed, inset, wob): 1 inside the terrain, 0 in the rock rim; the rim is inset…inset+wob px wide and lumpy
+// lens(seed, inset, wob): 1 inside the terrain, 0 in the rock rim; the rim is inset…inset+wob px wide and lumpy (only the
+// crystal geode, whose own outline is the geode, still uses this plain lens; the other cells are blob()s)
 function lens(seed, inset, wob, cell) { const m = new Uint8Array(W * H); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const d = Math.min(x, W - 1 - x, y, H - 1 - y); const c = cell || 10; if (d > inset + wob * (vnoise(x / c, y / c, seed) * 0.7 + vnoise(x / c * 2.6, y / c * 2.6, seed + 3) * 0.3)) m[y * W + x] = 1; } return m; }
 // blob(seed, o): the ground of a special cell as an irregular clump in the rock, like the other terrain cells (never a framed
 // picture): a rim o.r0…o.r1 px thick (default 4…16) that swells and thins at two scales, a rock clump o.bite [x, y, r] gnawed
 // in at each corner, o.keep ellipses [x, y, rx, ry] the rim stays out of (never within the outer 4 px); a majority pass takes
 // out one-pixel steps so the contact reads as a clean line
 function blob(seed, o) {
-  const r0 = o.r0 == null ? 4 : o.r0, r1 = o.r1 == null ? 16 : o.r1, c = o.cell || 14, m = new Uint8Array(W * H), bite = o.bite || [], keep = o.keep || [];
+  const r0 = o.r0 == null ? 5 : o.r0, r1 = o.r1 == null ? 16 : o.r1, c = o.cell || 11, m = new Uint8Array(W * H), bite = o.bite || [], keep = o.keep || [];
   for (let y = 4; y < H - 4; y++) for (let x = 4; x < W - 4; x++) {
-    const d = Math.min(x, W - 1 - x, y, H - 1 - y), n = clamp((vnoise(x / c, y / c, seed) * 0.7 + vnoise(x / c * 2.7, y / c * 2.7, seed + 3) * 0.3 - 0.5) * 2.6 + 0.5, 0, 1);
+    const d = Math.min(x, W - 1 - x, y, H - 1 - y), n = clamp((vnoise(x / c, y / c, seed) * 0.7 + vnoise(x / c * 2.7, y / c * 2.7, seed + 3) * 0.3 - 0.5) * 1.9 + 0.5, 0, 1);
     let v = d > r0 + (r1 - r0) * n;
     if (v) for (const [bx, by, br] of bite) if (Math.hypot(x + 0.5 - bx, (y + 0.5 - by) * 1.1) < br * (1 + (vnoise(x / 4, y / 4, seed + 11) - 0.5) * 0.45)) { v = false; break; }
     if (!v) for (const [kx, ky, rx, ry] of keep) { const u = (x + 0.5 - kx) / rx, w = (y + 0.5 - ky) / ry; if (u * u + w * w < 1) { v = true; break; } }
     if (v) m[y * W + x] = 1;
   }
   for (let it = 0; it < 2; it++) { const c2 = m.slice(); for (let y = 4; y < H - 4; y++) for (let x = 4; x < W - 4; x++) { let s = 0; for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) s += c2[(y + j) * W + x + i]; m[y * W + x] = s >= 5 ? 1 : 0; } }
-  m.bite = bite; return m;
+  m.bite = bite; m.keep = keep; return m;
 }
 const inM = (m, x, y) => { x = Math.round(x); y = Math.round(y); return x >= 0 && y >= 0 && x < W && y < H && m[y * W + x] === 1; };
 const clear = (m, x, y, k) => { for (let j = Math.floor(y - k); j <= Math.ceil(y + k); j++) for (let i = Math.floor(x - k); i <= Math.ceil(x + k); i++) if (inM(m, i, j)) return false; return true; };
 const deep = (m, x, y, k) => { for (let j = -k; j <= k; j++) for (let i = -k; i <= k; i++) if (!inM(m, x + i, y + j)) return false; return true; };
-// rim(S, m, v, o): rock (variant v) wherever m is 0, cobbles where the rim is thick, a few glints; then the contact line:
+// rim(S, m, v, o): rock (variant v) wherever m is 0, a big boulder in each corner clump of a blob, cobbles where the rim is
+// thick, a few glints; then the contact line:
 // o.hollow → the terrain is a cavity (a dark overhang under the rim, a lit lip where the rim is below), else a plain dark seam;
 // o.noSeam → neither (the lens is host rock round a body of its own)
 function rim(S, m, v, o) {
@@ -61,7 +63,8 @@ function rim(S, m, v, o) {
     if (o.hollow) { const k = !inM(m, x, y - 1) ? 2 : !inM(m, x, y - 2) || !inM(m, x - 1, y) || !inM(m, x + 1, y) ? 1 : 0; if (k) S.tone(x, y, -k); }
     else if (!inM(m, x, y - 1) || !inM(m, x, y + 1) || !inM(m, x - 1, y) || !inM(m, x + 1, y)) S.tone(x, y, -1); }
   // boulders sitting across the contact, so the lens reads as ground, not a framed picture
-  const edge = []; for (let y = 4; y < H - 4; y++) for (let x = 4; x < W - 4; x++) if (!m[y * W + x] && (inM(m, x + 1, y) || inM(m, x, y + 1))) edge.push([x, y]);
+  const kept = (x, y) => (m.keep || []).some(([kx, ky, rx, ry]) => Math.pow((x - kx) / (rx + 4), 2) + Math.pow((y - ky) / (ry + 4), 2) < 1);   // never over the things the rim was kept off
+  const edge = []; for (let y = 4; y < H - 4; y++) for (let x = 4; x < W - 4; x++) if (!m[y * W + x] && (inM(m, x + 1, y) || inM(m, x, y + 1)) && !kept(x, y)) edge.push([x, y]);
   for (let i = 0; i < (o.boulders || 0) && edge.length; i++) { const q = edge[Math.floor(r() * edge.length)], rr = 2.2 + r() * 2.6; S.beg(); S.ell(q[0], q[1], rr, rr * 0.72, 'rock', 5 + Math.round(r() * 2), { dome: 1 }); S.px(q[0] - Math.round(rr / 2), q[1] - Math.round(rr * 0.4), 'rock', 9); S.end(); }
 }
 // erase what this layer has outside the terrain lens (things on the back / mid layers must not cover the rock rim)
@@ -217,29 +220,28 @@ function ammoniteGeo(cx, cy, U, a0) {
     if (l && l[0] === q[0] && l[1] === q[1]) continue; sut.push(q); const n = sut.length; if (n >= 3 && Math.abs(sut[n - 3][0] - q[0]) === 1 && Math.abs(sut[n - 3][1] - q[1]) === 1) sut.splice(n - 2, 1); }
   return { px: out, sut };
 }
-// a fern frond pressed into the rock as a carbon film: a stem curving from base b through c to tip e, leaflets alternating
-// left and right along it, each a slim pointed leaf angled toward the tip, longest a little above the base, small at the tip
+// a fern frond pressed into the rock as a carbon film: a stem curving from base b through c to tip e, slim leaflets
+// alternating left and right along it, each angled toward the tip with rock showing between them (a feather of strokes, so
+// it reads as a frond), longest a little above the base, small at the tip
 function fernGeo(b, c, e) {
   const at = (s) => [(1 - s) * (1 - s) * b[0] + 2 * (1 - s) * s * c[0] + s * s * e[0], (1 - s) * (1 - s) * b[1] + 2 * (1 - s) * s * c[1] + s * s * e[1]];
   const tan = (s) => { const dx = 2 * (1 - s) * (c[0] - b[0]) + 2 * s * (e[0] - c[0]), dy = 2 * (1 - s) * (c[1] - b[1]) + 2 * s * (e[1] - c[1]), l = Math.hypot(dx, dy); return [dx / l, dy / l]; };
   const stem = []; for (let i = 0; i <= 60; i++) stem.push(at(i / 60)); const rachis = rast(stem);
-  const leaf = new Map(), n = 22;
-  for (let k = 0; k < n; k++) { const s = 0.05 + k / n * 0.9, P = at(s), T = tan(s), side = k % 2 ? 1 : -1, a = side * 0.95, D = [T[0] * Math.cos(a) - T[1] * Math.sin(a), T[0] * Math.sin(a) + T[1] * Math.cos(a)];
-    const L = 1.6 + 8.4 * Math.pow(1 - s, 0.9) * Math.min(1, s * 5), hw = 0.55 + L * 0.13;
-    for (let y = Math.floor(P[1] - L - 2); y <= Math.ceil(P[1] + L + 2); y++) for (let x = Math.floor(P[0] - L - 2); x <= Math.ceil(P[0] + L + 2); x++) {
-      const rx = x + 0.5 - P[0], ry = y + 0.5 - P[1], v = rx * D[0] + ry * D[1], u = rx * -D[1] + ry * D[0]; if (v < 0.4 || v > L) continue;
-      const lim = hw * Math.pow(Math.sin(Math.PI * Math.min(1, v / L * 0.92 + 0.08)), 0.6); if (Math.abs(u) > lim + 0.15) continue;
-      const q = y * W + x; if (!leaf.has(q)) leaf.set(q, { x, y, mid: Math.abs(u) < 0.45 && v > 1.2 && v < L - 1, lo: u * side > 0 }); } }
-  return { rachis, leaf: [...leaf.values()], pyr: rachis.filter((_, i) => i % 5 === 2 && i < rachis.length - 6) };
+  const leaf = new Map(), n = 26;
+  for (let k = 0; k < n; k++) { const s = 0.05 + k / (n - 1) * 0.88, P = at(s), T = tan(s), side = k % 2 ? 1 : -1, a = side * 0.85, D = [T[0] * Math.cos(a) - T[1] * Math.sin(a), T[0] * Math.sin(a) + T[1] * Math.cos(a)];
+    const L = 1.5 + 8.5 * Math.pow(1 - s, 0.85) * Math.min(1, 0.35 + s * 5), px = rast([[P[0] + D[0] * 1.2, P[1] + D[1] * 1.2], [P[0] + D[0] * L, P[1] + D[1] * L]]);
+    px.forEach(([x, y], i) => { const q = y * W + x; if (!leaf.has(q)) leaf.set(q, { x, y, tip: i > px.length * 0.6 }); if (i < px.length * 0.55 && L > 4) { const x2 = Math.round(x + T[0]), y2 = Math.round(y + T[1]), q2 = y2 * W + x2; if (!leaf.has(q2)) leaf.set(q2, { x: x2, y: y2, lo: 1 }); } }); }
+  return { rachis, leaf: [...leaf.values()], pyr: rachis.filter((_, i) => i % 7 === 3 && i < rachis.length - 6) };
 }
 const FOS = (() => {
   // the shells along the bottom bed [x, y] and the tower shell [base, apex]; the rim stays off them and off the crinoid stem
-  const shells = [[24, 85], [49, 87], [75, 85], [97, 86]], tower = [[109, 87], [124, 81]];
-  const m = blob(501, { bite: [[12, 10, 13], [138, 11, 14], [11, 94, 13], [139, 95, 12]], keep: [[70, 20, 15, 6], ...shells.map(([x, y]) => [x, y, 7, 5]), [116, 84, 11, 6]] });
+  const shells = [[24, 85, 4], [49, 87, 4], [75, 85, 4], [97, 86, 4], [111, 86, 5], [122, 83, 3]];
+  const m = blob(501, { bite: [[12, 10, 13], [138, 11, 14], [11, 94, 13], [139, 95, 12]], keep: [[70, 15, 15, 6], ...shells.map(([x, y, r]) => [x, y, r + 3, r + 1])] });
   // beds kept a step or two down: the cell's light is the ammonite's and the fern's pools, not a bright slab
   const beds = [[0, 'paper', 3], [12, 'earth', 3], [15, 'sand', 4], [27, 'bone', 4], [30, 'paper', 3], [64, 'earth', 3], [67, 'bone', 3], [79, 'sand', 2], [82, 'sand', 3]];
   const fx = (y) => 121 + y * 0.16;
-  const bedAt = (x, y) => { const yy = y + Math.round(Math.sin(x * 0.045 + 1.3) * 1.4 + (vnoise(x / 13, 0.5, 503) - 0.5) * 3) - (x > fx(y) ? 5 : 0); let k = 0; for (let i = 0; i < beds.length; i++) if (yy >= beds[i][0]) k = i; return { k, yy }; };
+  const fold = (x) => Math.sin(x * 0.035 - 1) * 6 + Math.sin(x * 0.07 + 1.3) * 1.2 + (vnoise(x / 13, 0.5, 503) - 0.5) * 3;   // the beds arch into a low fold: no bed line runs straight across
+  const bedAt = (x, y) => { const yy = y + Math.round(fold(x)) - (x > fx(y) ? 5 : 0); let k = 0; for (let i = 0; i < beds.length; i++) if (yy >= beds[i][0]) k = i; return { k, yy }; };
   // the ammonite: three turns, the aperture to the lower right. Each pixel's shade: the tube lit from the upper left, so every
   // whorl has its bright ridge on the side that faces up-left and steps out from the one inside it
   const AM = ammoniteGeo(40, 47, 3, 0.45), amm = AM.px, LX = -0.6, LY = -0.62, LZ = 0.5;
@@ -252,13 +254,13 @@ const FOS = (() => {
   const pearl = []; [[0.95, 'teal', 5], [1.9, 'gold', 5], [2.9, 'lav', 6], [3.8, 'teal', 5], [4.75, 'gold', 5], [5.7, 'lav', 6]].forEach(([a, m, tn]) => {
     const c = nacre.filter(p => adist(p.ph, a) * p.d < 1.3 && p.f > 0.35 && p.f < 0.72).sort((q, r) => r.sh - q.sh).slice(0, 4);
     c.forEach((p, i) => pearl.push({ x: p.x, y: p.y, ph: p.ph, m: i === 1 ? m : 'bone', tn: i === 1 ? tn : i === 0 ? 7 : 6 })); });
-  const fern = fernGeo([61, 61], [74, 46], [101, 35]);
+  const fern = fernGeo([60, 56], [80, 44], [105, 37]);
   const glints = [[36, 36], [30, 54], [70, 52], [88, 41], [112, 47], [97, 85], [24, 84]];
   // the flake that drops in the moment: a notch in the siltstone above the trilobite
   const notch = [[115, 36], [116, 36], [117, 36], [114, 37], [115, 37], [116, 37], [117, 37], [118, 37], [115, 38], [116, 38], [117, 38]];
   const ring = [0, 1, 2, 3, 4, 5, 6].map(i => { const a = i / 7 * Math.PI * 2 - 1.2; return [Math.round(40 + Math.cos(a) * 18), Math.round(47 + Math.sin(a) * 17)]; });
   const seam = seamPath(5020, 6, 144, 97);
-  return { m, beds, fx, bedAt, amm, sut: AM.sut, nacre, pearl, fern, shells, tower, glints, notch, ring, seam };
+  return { m, beds, fx, fold, bedAt, amm, sut: AM.sut, nacre, pearl, fern, shells, glints, notch, ring, seam };
 })();
 // trilobite, head up, a dark fossil in the pale siltstone: a half-round head shield with a raised glabella and two eyes,
 // genal spines sweeping back, a bright one-pixel axis between dark furrows, seven thoracic segments in alternating tones,
@@ -270,7 +272,7 @@ X.def('_tile_fossil', {
   paint(S, sc) {
     const F = FOS, m = F.m, r = S.r;
     sc.light({ x: 40, y: 47, z: 14, r: 52, i: 1.1, c: '#ffe2a8', fl: 'pulse', amp: 0.35, sp: 0.9, tint: 0.3 });              // 0 the ammonite's nacre: a warm pool round it
-    sc.light({ x: 86, y: 46, z: 14, r: 42, i: 1, c: '#ffd9a0', fl: 'pulse', amp: 0.4, sp: 0.6, ph: 2, tint: 0.25 });      // 1 the fern's pyrite (and its e:2 specks)
+    sc.light({ x: 84, y: 44, z: 18, r: 34, i: 0.6, c: '#ffd9a0', fl: 'pulse', amp: 0.4, sp: 0.6, ph: 2, tint: 0.25 });    // 1 the fern's pyrite (and its e:2 specks): a soft pool that leaves the film dark
     sc.light({ x: 80, y: 50, z: 30, r: 90, i: 0.12, c: '#fff0d0', tint: 0.1 });                                        // 2 a faint fill
     sc.light({ x: 116, y: 41, z: 10, r: 28, i: 1, c: '#ffe8c0', bake: false, tint: 0.3 });                             // 3 the moment: light on the falling flake (off otherwise)
     S.lay('wall');
@@ -278,7 +280,7 @@ X.def('_tile_fossil', {
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const { k, yy } = F.bedAt(x, y), b = F.beds[k], top = yy - b[0], bot = (k + 1 < F.beds.length ? F.beds[k + 1][0] : 999) - 1 - yy;
       S.px(x, y, b[1], b[2] + (top === 0 ? 1 : bot === 0 ? -1 : 0) + Math.round((nz(x, y, 5, 504 + k) - 0.5) * 2.2)); }
     // cross-bedding in the sandstone, pebbles in the conglomerate, shell hash in the lowest bed
-    for (let i = 0; i < 9; i++) { const x0 = 10 + i * 15 + r() * 4; for (let k = 0; k < 12; k++) { const x = x0 + k, y = 17 + Math.round(k * 0.7), b = F.bedAt(x, y); if (b.k === 2) S.px(x, y, 'sand', 4); } }
+    for (let i = 0; i < 9; i++) { const x0 = 10 + i * 15 + r() * 4; for (let k = 0; k < 12; k++) { const x = x0 + k, y = 17 + Math.round(k * 0.7 - F.fold(x)), b = F.bedAt(x, y); if (b.k === 2) S.px(x, y, 'sand', 4); } }
     for (let i = 0; i < 26; i++) { const x = 8 + r() * 134, y = 68 + r() * 11; if (F.bedAt(x, y).k !== 6) continue; S.beg(); S.ell(x, y, 1.2 + r() * 1.4, 1 + r() * 0.8, r() < 0.5 ? 'rock' : 'mstone', 6 + Math.round(r() * 2), { dome: 1 }); S.end(); }
     for (let i = 0; i < 18; i++) { const x = 8 + r() * 134, y = 85 + r() * 12; if (F.bedAt(x, y).k !== 8) continue; S.px(x, y, 'bone', 7); S.px(x + 1, y - 1, 'bone', 6); S.px(x + 2, y, 'bone', 5); }
     // fine lamination in the thick beds: broken wavy lines a step darker
@@ -301,21 +303,16 @@ X.def('_tile_fossil', {
     S.end();
     // the fern frond: a carbon film pressed into the siltstone — dark leaflets with a faint vein, a stem with a lit lip under
     // it where the rock was pressed in, pyrite specks along the stem glowing with the fern's light
-    S.beg(); F.fern.leaf.forEach(q => S.px(q.x, q.y, 'earth', q.mid ? 3 : 2)); S.end({ none: 1 });
-    F.fern.rachis.forEach(([x, y], i, a) => { S.px(x, y, 'earth', 1); if (i < a.length * 0.55) S.px(x, y + 1, 'earth', 2); S.px(x + 1, y + (i < a.length * 0.55 ? 2 : 1), 'paper', 5); });
+    // (the film is the dark 'hair' ramp: its short top end keeps it dark however much the fern's light lifts it)
+    F.fern.leaf.forEach(q => S.px(q.x, q.y, 'hair', q.tip ? 2 : q.lo ? 0 : 1));
+    F.fern.rachis.forEach(([x, y], i, a) => { const thick = i < a.length * 0.55; S.px(x, y, 'hair', 0); if (thick) S.px(x, y + 1, 'hair', 1); if (S.at(x, y + (thick ? 2 : 1)) !== MI.hair) S.px(x, y + (thick ? 2 : 1), 'paper', 5); });
     F.fern.pyr.forEach(([x, y]) => S.px(x, y, 'gold', 6, { e: 2 }));
     // trilobite in the siltstone beside the fern's tip
     S.beg(); S.spr(106, 44, TRILO, TRILP); S.end();
-    // scallops along the shell bed, a crinoid stem up in the sandstone
-    F.shells.forEach(([x, y]) => { S.beg(); S.poly([[x - 4, y + 1], [x - 3, y - 2], [x - 1, y - 3], [x + 2, y - 3], [x + 4, y - 1], [x + 4, y + 1], [x + 1, y + 2], [x - 1, y + 2]], 'bone', 7, { n: [-0.3, -0.5] });
-      for (let k = -3; k <= 3; k += 2) S.line(x, y + 2, x + k, y - 2, 'bone', 5); S.hl(x - 2, y - 3, 4, 'bone', 9); S.hl(x - 1, y + 2, 3, 'bone', 4); S.end(); });
-    S.beg(); for (let k = 0; k < 9; k++) { const x = 58 + k * 2.6, y = 16 + k * 0.9; S.rect(x, y, 2, 3, 'bone', 7 + (k % 2)); S.px(x + 1, y + 2, 'bone', 5); } S.end();
-    // a tower shell lying in the shell bed: a slim cone of whorls, lit along its upper side, dark sutures, the dark aperture
-    { const [A, B] = F.tower, L = Math.hypot(B[0] - A[0], B[1] - A[1]), dx = (B[0] - A[0]) / L, dy = (B[1] - A[1]) / L; S.beg();
-      for (let y = Math.min(A[1], B[1]) - 4; y <= Math.max(A[1], B[1]) + 4; y++) for (let x = A[0] - 4; x <= B[0] + 4; x++) { const rx = x + 0.5 - A[0], ry = y + 0.5 - A[1], v = rx * dx + ry * dy, u = rx * dy - ry * dx; if (v < 0 || v > L) continue;
-        const hw = 2.6 * (1 - v / L) + 0.5; if (Math.abs(u) > hw) continue; const sut = (v + u * 0.9) % 3.2 < 0.9 && v > 1.5;
-        S.px(x, y, 'bone', sut ? 4 : u < -hw * 0.3 ? 8 : u > hw * 0.35 ? 5 : 7, { n: [0, u < 0 ? -0.5 : 0.3] }); }
-      S.ell(A[0] + 1, A[1], 1.4, 1.8, 'bone', 2); S.end(); }
+    // scallops along the shell bed (ribbed fans, a lit rim along the top, the hinge dark), a crinoid stem up in the sandstone
+    F.shells.forEach(([x, y, a]) => { const b = Math.round(a * 0.75); S.beg(); S.poly([[x - a, y + 1], [x - a + 1, y - b + 1], [x - 1, y - b], [x + 2, y - b], [x + a, y - b + 2], [x + a, y + 1], [x + 1, y + 2], [x - 1, y + 2]], 'bone', 7, { n: [-0.3, -0.5] });
+      for (let k = -a + 1; k <= a - 1; k += 2) S.line(x, y + 2, x + k, y - b + 1, 'bone', 5); S.hl(x - a + 2, y - b, a * 2 - 3, 'bone', 9); S.hl(x - 1, y + 2, 3, 'bone', 4); S.end(); });
+    S.beg(); for (let k = 0; k < 9; k++) { const x = 58 + k * 2.6, y = 11 + k * 0.9; S.rect(x, y, 2, 3, 'bone', 7 + (k % 2)); S.px(x + 1, y + 2, 'bone', 5); } S.end();
     rim(S, m, 5, { boulders: 12 });
     sc.emit({ k: 'dust', x: 80, y: 50, w: 110, h: 70, rate: 1.1, sp: 2, life: 3.5 });
   },
@@ -351,11 +348,11 @@ X.def('_tile_fossil', {
   },
 });
 X.TILEF.fossil = (D, t, rs) => {
-  // a pale bed line with bits of shell and bone in it; a glint hops from bit to bit
+  // a pale bed line with bits of shell and crinoid stem in it; a glint hops from bit to bit
   const P = FOS.seam, hop = Math.floor(t / 1.3);
   for (let i = 0; i < P.length; i++) { const [x, y] = P[i]; if ((x * 7) % 23 < 15) D.px(x, y, 'paper', 6 + ((x * 3) % 4 === 0 ? 1 : 0)); }
   for (let k = 0; k < 9; k++) { const x = 12 + k * 16 + (k * 5) % 7, y = 97; if (k % 3 === 0) { D.px(x, y - 1, 'bone', 8); D.px(x + 1, y - 1, 'bone', 9); D.px(x + 2, y, 'bone', 7); D.px(x + 1, y, 'bone', 3); D.px(x, y, 'bone', 7); }
-    else if (k % 3 === 1) { D.hl(x, y, 4, 'bone', 8); D.px(x - 1, y - 1, 'bone', 7); D.px(x + 4, y - 1, 'bone', 7); } else { D.px(x, y - 1, 'bone', 9); D.hl(x - 1, y, 3, 'bone', 7); }
+    else if (k % 3 === 1) { for (let i = 0; i < 5; i++) D.px(x + i, y, 'bone', i % 2 ? 6 : 8); D.hl(x, y + 1, 5, 'bone', 4); } else { D.px(x, y - 1, 'bone', 9); D.hl(x - 1, y, 3, 'bone', 7); }
     if (hop % 9 === k && (t % 1.3) < 0.5) D.px(x + 1, y - 1, 'linen', 11, { e: 255 }); }
 };
 
@@ -365,7 +362,8 @@ X.TILEF.fossil = (D, t, rs) => {
 // a wet sheen slides along it, the spearhead glints; every 10 s the big guard's eyes flare and glance, and clay crumbles
 // off its shoulder
 const CLAY = (() => {
-  const m = lens(601, 3, 8, 15);
+  // the rim stays off the side-turned guard, the spearhead, the small guard's head and the amphora
+  const m = blob(601, { bite: [[9, 12, 12], [140, 10, 13], [10, 96, 13], [141, 97, 12]], keep: [[34, 22, 12, 12], [117, 16, 5, 9], [32, 78, 10, 9], [126, 83, 10, 12]] });
   const beds = [[0, 'brick', 5], [12, 'sand', 5], [16, 'brick', 7], [29, 'stone', 4], [34, 'brick', 7], [55, 'brick', 5], [59, 'leather', 6], [76, 'stone', 3], [80, 'brick', 6]];
   const sag = (x) => Math.round(6 * (1 - Math.pow((x - 75) / 75, 2)));
   const bedAt = (x, y) => { const yy = y - sag(x) + Math.round((vnoise(x / 16, 0.5, 603) - 0.5) * 3); let k = 0; for (let i = 0; i < beds.length; i++) if (yy >= beds[i][0]) k = i; return { k, yy }; };
@@ -412,7 +410,7 @@ X.def('_tile_clay', {
     sc.light({ x: 96, y: 43, z: 14, r: 42, i: 1.1, c: '#ffa050', fl: 'pulse', amp: 0.4, sp: 0.8, tint: 0.3 });         // 0 the big guard's eyes: the warm pool at the heart of the cell
     sc.light({ x: 32, y: 82, z: 8, r: 22, i: 1, c: '#ffa050', fl: 'pulse', amp: 0.4, sp: 0.8, ph: 2.5, tint: 0.35 });  // 1 the small guard's eyes
     sc.light({ x: 75, y: 45, z: 30, r: 95, i: 0.12, c: '#ffd8b0', tint: 0.12 });                                      // 2 a faint warm fill
-    sc.light({ x: 34, y: 18, z: 6, r: 18, i: 1, c: '#ffa050', fl: 'pulse', amp: 0.4, sp: 0.8, ph: 4.4, tint: 0.3 });     // 3 the third guard's eye
+    sc.light({ x: 39, y: 21, z: 6, r: 18, i: 1, c: '#ffa050', fl: 'pulse', amp: 0.4, sp: 0.8, ph: 4.4, tint: 0.3 });     // 3 the third guard's eye
     S.lay('wall');
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const { k, yy } = C.bedAt(x, y), b = C.beds[k], top = yy - b[0], bot = (k + 1 < C.beds.length ? C.beds[k + 1][0] : 999) - 1 - yy;
       S.px(x, y, b[1], b[2] + (top === 0 ? 1 : bot === 0 ? -1 : 0) + Math.round((nz(x, y, 8, 604 + k) - 0.5) * 2)); }
@@ -426,27 +424,27 @@ X.def('_tile_clay', {
     S.lay('back'); S.beg(); S.vl(116, 22, 44, 'wood', 5); S.vl(117, 22, 44, 'wood', 3); S.poly([[116, 11], [119, 16], [118, 21], [115, 21], [114, 16]], 'brass', 7); S.vl(116, 12, 9, 'brass', 10); S.hl(114, 21, 5, 'brass', 5);
     S.rect(115, 22, 3, 3, 'crimson', 6); S.px(114, 25, 'crimson', 5); S.px(116, 26, 'crimson', 5); S.px(118, 25, 'crimson', 4); S.end();
     // a third guard, turned aside, buried to the chin in the upper beds
-    guardSide(S, 19, 9, 4); bury(S, 16, 42, 28, 34, 611, 27);   // the clay covers the neck, the jaw line stays clear
+    guardSide(S, 24, 12, 4); bury(S, 21, 47, 31, 37, 611, 30);   // the clay covers the neck, the jaw line stays clear
     // the big guard, buried to the chest; the small one to the nose
     guard(S, 96, 40, 1); bury(S, 76, 116, 64, 74, 612);
     guard(S, 32, 80, 2); bury(S, 12, 52, 84, 104, 613);
-    unmask(S, m, 0, 0, W - 1, H - 1);
     // an amphora standing half in the clay: round belly, a neck with a rolled lip, two handles, a painted band, a crack
-    S.beg(); S.ell(127, 84, 7.5, 8.5, 'brick', 8, { dome: 1 }); S.rect(125, 71, 5, 6, 'brick', 7); S.rect(124, 70, 7, 2, 'brick', 9); S.hl(124, 72, 7, 'brick', 5);
-    S.line(124, 73, 120, 75, 'brick', 6); S.line(120, 75, 121, 79, 'brick', 6); S.line(130, 73, 134, 75, 'brick', 5); S.line(134, 75, 133, 79, 'brick', 5);
-    for (let x = 121; x < 134; x++) { S.px(x, 81 + ((x >> 1) % 2), 'ink', 2); S.px(x, 79, 'brick', 5); } S.line(130, 77, 128, 86, 'brick', 4); S.px(123, 78, 'brick', 10); S.px(124, 77, 'brick', 9); S.end();
-    bury(S, 116, 140, 89, 99, 614);
+    const ax = 126; S.beg(); S.ell(ax, 84, 7.5, 8.5, 'brick', 8, { dome: 1 }); S.rect(ax - 2, 71, 5, 6, 'brick', 7); S.rect(ax - 3, 70, 7, 2, 'brick', 9); S.hl(ax - 3, 72, 7, 'brick', 5);
+    S.line(ax - 3, 73, ax - 7, 75, 'brick', 6); S.line(ax - 7, 75, ax - 6, 79, 'brick', 6); S.line(ax + 3, 73, ax + 7, 75, 'brick', 5); S.line(ax + 7, 75, ax + 6, 79, 'brick', 5);
+    for (let x = ax - 6; x < ax + 7; x++) { S.px(x, 81 + ((x >> 1) % 2), 'ink', 2); S.px(x, 79, 'brick', 5); } S.line(ax + 3, 77, ax + 1, 86, 'brick', 4); S.px(ax - 4, 78, 'brick', 10); S.px(ax - 3, 77, 'brick', 9); S.end();
+    bury(S, ax - 11, ax + 13, 89, 99, 614);
+    unmask(S, m, 0, 0, W - 1, H - 1);
     lensAO(S, m, 9, 2.2, 1);   // the buried things fall off into the rock with the beds
-    rim(S, m, 6, { boulders: 6 });
+    rim(S, m, 6, { boulders: 12 });
   },
   anim(D, t, rs) {
     const st = rs.st, C = CLAY;
     // the wet sheen slides along the gley band
-    D.lay('wall'); const sx = 14 + ((t * 7) % 122), sy = C.gley(Math.round(sx)); D.px(sx, sy, 'stone', 9); D.px(sx - 1, sy, 'stone', 7); D.px(sx + 1, sy, 'stone', 7);
+    D.lay('wall'); const sx = Math.round(14 + ((t * 7) % 122)), sy = C.gley(sx); [[0, 9], [-1, 7], [1, 7]].forEach(([i, tn]) => { if (deep(C.m, sx + i, sy, 1)) D.px(sx + i, sy, 'stone', tn); });
     // water seeps from the gley band and drips down to the next bed
     // water seeps out under the gley band and creeps down the clay, leaving a dark wet trail behind a bright bead
-    [[20, 4.2, 0], [58, 5.1, 1.7], [138, 4.6, 3.1]].forEach(([x, p, o]) => { const q = steps(t + o, p), y0 = C.gley(x) + 5, len = Math.floor(q * 18); if (q > 0.92) return;
-      for (let k = 0; k < len; k++) { const { k: bk } = C.bedAt(x, y0 + k), b = C.beds[bk]; D.px(x, y0 + k, b[1], b[2] - 2); } D.px(x, y0 + len, 'water', 9, { e: 255 }); D.px(x, y0 + len - 1, 'water', 7, { e: 255 }); });
+    [[24, 4.2, 0], [58, 5.1, 1.7], [131, 4.6, 3.1]].forEach(([x, p, o]) => { const q = steps(t + o, p), y0 = C.gley(x) + 5, len = Math.floor(q * 18); if (q > 0.92) return;
+      for (let k = 0; k < len; k++) { if (!deep(C.m, x, y0 + k, 1)) return; const { k: bk } = C.bedAt(x, y0 + k), b = C.beds[bk]; D.px(x, y0 + k, b[1], b[2] - 2); } D.px(x, y0 + len, 'water', 9, { e: 255 }); D.px(x, y0 + len - 1, 'water', 7, { e: 255 }); });
     // the spearhead glints
     if (steps(t, 4.1) < 0.03 && !st.g) { st.g = 1; rs.burst('glint', 116, 14, 1, { sp: 0, life: 0.7 }); } if (steps(t, 4.1) > 0.2) st.g = 0;
     // the moment: the big guard's eyes flare, glance left and right; clay crumbles off its shoulder
@@ -473,7 +471,7 @@ X.TILEF.clay = (D, t, rs) => {
 // under an arch with a sun sigil and light leaking round its seams, a broken column and its fallen capital, a toppled drum,
 // dust hanging in the glow; every 9 s the sun sigil kindles ray by ray and flashes, and every glyph answers
 const RUIN = (() => {
-  const m = lens(701, 3, 8, 15), cx = 75, ay = 48, ri = 14, ro = 21;
+  const m = blob(701, { bite: [[12, 9, 13], [139, 10, 12], [11, 96, 12], [140, 95, 14]], keep: [[75, 60, 26, 34]] }), cx = 75, ay = 48, ri = 14, ro = 21;
   const seam = []; for (let y = 88; y > ay; y--) seam.push([cx - ri - 1, y]); for (let k = 0; k <= 44; k++) { const a = Math.PI + k / 44 * Math.PI, q = [Math.round(cx + Math.cos(a) * (ri + 0.5)), Math.round(ay + Math.sin(a) * (ri + 0.5))], l = seam[seam.length - 1]; if (!l || l[0] !== q[0] || l[1] !== q[1]) seam.push(q); } for (let y = ay + 1; y <= 88; y++) seam.push([cx + ri + 1, y]);
   const G = ['1110110101', '0111010111', '1011101101', '1101011011', '0110111110', '1111001011', '1010111101', '0101110111', '1110101110'];
   const glyphs = []; for (let x = 17, i = 0; x < 132; x += 13, i++) glyphs.push({ x, bits: G[i % G.length] });
@@ -481,10 +479,10 @@ const RUIN = (() => {
   // rock and rubble the temple is buried in: lumpy masses over the corners and down the left side
   const fillB = [[4, 4, 30, 22], [0, 62, 24, 30], [150, 0, 22, 16], [146, 56, 12, 26], [36, 104, 30, 10], [104, 104, 24, 8]];
   const fill = (x, y) => fillB.some(([bx, by, a, b]) => { const u = (x - bx) / a, v = (y - by) / b; return u * u + v * v + (vnoise(x / 6, y / 6, 703) - 0.5) * 0.9 < 1; });
-  const lit = glyphs.filter(g => !fill(g.x + 2, 16));   // the glyphs the rock has not buried: only these light up
+  const lit = glyphs.filter(g => !fill(g.x + 2, 18) && deep(m, g.x + 2, 18, 3));   // the glyphs the rock has not buried: only these light up
   return { m, cx, ay, ri, ro, seam, glyphs, lit, seamF, fill };
 })();
-const glyphPx = (g, f) => { for (let k = 0; k < 10; k++) if (g.bits[k] === '1') f(g.x + (k % 5), 14 + Math.floor(k / 5) * 2 + (k % 2)); };
+const glyphPx = (g, f) => { for (let k = 0; k < 10; k++) if (g.bits[k] === '1') f(g.x + (k % 5), 16 + Math.floor(k / 5) * 2 + (k % 2)); };
 X.def('_tile_ruin', {
   noFrame: 1, noFloor: 1, amb: AMB,
   paint(S, sc) {
@@ -520,10 +518,10 @@ X.def('_tile_ruin', {
     [cx - U.ro, cx + U.ri + 2].forEach(x => { for (let y = ay; y < 88; y += 7) S.box(x, y, 7 - (x > cx ? 0 : 0), Math.min(7, 88 - y), 'sand', 6 + ((y / 7) % 2)); });
     S.end();
     // the frieze: a moulded band, glyph cartouches with gold inlay (glowing with light 1)
-    S.beg(); S.box(9, 11, 132, 11, 'sand', 6); S.hl(9, 10, 132, 'sand', 8, { n: [0, -0.8] }); S.hl(9, 22, 132, 'sand', 3);
-    U.glyphs.forEach(g => { S.rect(g.x - 1, 13, 7, 7, 'sand', 3); glyphPx(g, (x, y) => S.px(x, y, 'gold', 6, { e: 2 })); });
+    S.beg(); S.box(9, 13, 132, 11, 'sand', 6); S.hl(9, 12, 132, 'sand', 8, { n: [0, -0.8] }); S.hl(9, 24, 132, 'sand', 3);
+    U.glyphs.forEach(g => { S.rect(g.x - 1, 15, 7, 7, 'sand', 3); glyphPx(g, (x, y) => S.px(x, y, 'gold', 6, { e: 2 })); });
     S.end();
-    for (let x = 9; x < 141; x++) if (x < 14 || x > 136) for (let y = 10; y < 23; y++) if (vnoise(x / 3, y / 3, 705) > 0.45) S.px(x, y, 'rock', 4);   // broken ends
+    for (let x = 9; x < 141; x++) if (x < 14 || x > 136) for (let y = 12; y < 25; y++) if (vnoise(x / 3, y / 3, 705) > 0.45) S.px(x, y, 'rock', 4);   // broken ends
     // steps before the door
     S.lay('mid'); S.beg(); S.box(cx - 22, 88, 45, 3, 'sand', 7, { top: 1 }); S.box(cx - 26, 91, 53, 4, 'sand', 6, { top: 1 }); S.end();
     // the broken column on the right, its capital fallen at its foot; a toppled drum and rubble on the left
@@ -536,17 +534,17 @@ X.def('_tile_ruin', {
     for (let i = 0; i < 9; i++) { const x = 46 + r() * 8 + (i > 4 ? 60 : 0), s2 = 1.2 + r() * 2; S.beg(); S.ell(x, 93 - s2 * 0.4, s2, s2 * 0.7, i % 3 ? 'sand' : 'rock', 6 + Math.round(r()), { dome: 1 }); S.end(); }
     // the fill: rock over the masonry wherever the temple is still buried, a lit lip where it overhangs, shadow under it
     const inF = (x, y) => x >= 0 && y >= 0 && x < W && y < H && U.fill(x, y);
-    ['back', 'mid'].forEach(k => { S.lay(k); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (inF(x, y)) S.px(x, y, 0, 0); });
+    ['back', 'mid'].forEach(k => { S.lay(k); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (inF(x, y) || !m[y * W + x]) S.px(x, y, 0, 0); });
     S.lay('wall'); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { if (inF(x, y)) S.px(x, y, 'rock', rockTone(x, y, 7) + 1 + (!inF(x, y - 1) ? 3 : !inF(x, y + 1) ? -2 : 0)); else if (inF(x, y - 1) || inF(x, y - 2)) S.tone(x, y, -2); else if (inF(x - 1, y)) S.tone(x, y, -1); }
     for (let i = 0; i < 40; i++) { const x = r() * W, y = r() * H, rr = 1.5 + r() * 2.5; if (!inF(Math.round(x - rr), Math.round(y)) || !inF(Math.round(x + rr), Math.round(y)) || !inF(Math.round(x), Math.round(y + rr))) continue; S.beg(); S.ell(x, y, rr, rr * 0.7, r() < 0.3 ? 'sand' : 'rock', r() < 0.3 ? 5 : 6 + Math.round(r() * 2), { dome: 1 }); S.end(); }
-    rim(S, m, 7, { boulders: 7 });
+    rim(S, m, 7, { boulders: 11 });
     sc.emit({ k: 'dust', x: cx, y: 60, w: 36, h: 44, rate: 1.4, sp: 2, life: 3.2 });
   },
   anim(D, t, rs) {
     const st = rs.st, U = RUIN, cx = U.cx;
     // glyphs light one after another along the frieze
     D.lay('back'); const n = U.lit.length, k = Math.floor(t * 2.4) % (n + 3), mp = steps(t, 9), all = mp > 0.12 && mp < 0.2;
-    U.lit.forEach((g, i) => { const tn = all ? 10 : i === k ? 10 : i === k - 1 ? 8 : 0; if (tn) glyphPx(g, (x, y) => { if (!U.fill(x, y)) D.px(x, y, 'gold', tn, { e: 255 }); }); });
+    U.lit.forEach((g, i) => { const tn = all ? 10 : i === k ? 10 : i === k - 1 ? 8 : 0; if (tn) glyphPx(g, (x, y) => { if (!U.fill(x, y) && inM(U.m, x, y)) D.px(x, y, 'gold', tn, { e: 255 }); }); });
     // a bright bead runs round the door seam
     D.lay('wall'); const L = U.seam.length, hd = (t * 18) % (L + 20); for (let j = 0; j < 5; j++) { const i = Math.floor(hd) - j; if (i >= 0 && i < L) D.px(U.seam[i][0], U.seam[i][1], 'gold', 11 - j * 0.6, { e: 255 }); }
     // the moment: the sun sigil kindles ray by ray, then flashes; every glyph answers
@@ -570,15 +568,18 @@ X.TILEF.ruin = (D, t, rs) => {
 // fissure in the wall, drops fall from the stalactite tips and ring the surface, bubbles rise, light wanders on the rock;
 // every 8.5 s the spring surges up through the middle of the pool and throws a splash
 const SPR = (() => {
-  const m = lens(801, 3, 8, 15), S0 = 72;
+  const m = blob(801, { bite: [[11, 10, 12], [139, 9, 13], [10, 95, 13], [140, 96, 12]], keep: [[28, 40, 5, 20]] }), S0 = 72;
   const top = (x) => { for (let y = 0; y < H; y++) if (inM(m, x, y)) return y; return 10; };
   const tites = [[20, 5, 3], [25, 10, 3], [66, 7, 3], [71, 14, 4], [77, 22, 5], [82, 9, 3], [88, 16, 4], [93, 6, 3], [128, 9, 3], [132, 5, 3], [45, 4, 2], [58, 6, 3]].map(([x, l, w]) => ({ x, y: top(x) - 1, l, w }));
   const drops = [1, 4, 6, 8].map((i, k) => ({ i, p: 3.1 + k * 0.9, o: k * 1.3 }));
-  // the banks slope down into the pool from both walls and on under the water; their line is lumpy, never a ruled wedge
+  // the basin: the banks slope down into the pool from both walls, on under the water, and meet a rocky bed, so the water is
+  // held in stone on every side (its skin ends against the banks, never at the cell's edge); the line is lumpy, never ruled
   const bump = (x) => (vnoise(x / 5, 0.5, 812) - 0.5) * 7 + (vnoise(x / 2, 0.5, 813) - 0.5) * 2;
-  const edge = (x) => Math.min(50 + (x - 2) * 0.95 + Math.max(0, x - 24) * 1.2, 48 + (148 - x) * 0.9 + Math.max(0, 122 - x) * 1.2) + bump(x);
+  const edge = (x) => Math.min(50 + (x - 2) * 0.95 + Math.max(0, x - 24) * 1.2, 48 + (148 - x) * 0.9 + Math.max(0, 122 - x) * 1.2, 93 - Math.pow((x - 78) / 50, 2) * 14) + bump(x);
   const bank = (x, y) => y >= edge(x) + Math.round((vnoise(x / 3, y / 5, 809) - 0.5) * 2);
-  const water = (x, y) => y >= S0 && inM(m, x, y) && !bank(x, y);
+  const round3 = (x, y) => { for (let j = -3; j <= 3; j++) for (let i = -3; i <= 3; i++) if (i * i + j * j <= 10 && !inM(m, x + i, y + j)) return false; return true; };
+  const WM = new Uint8Array(W * H); for (let y = S0; y < H; y++) for (let x = 0; x < W; x++) if (round3(x, y) && !bank(x, y)) WM[y * W + x] = 1;   // never within 3 px of the rock
+  const water = (x, y) => { x = Math.round(x); y = Math.round(y); return x >= 0 && y >= 0 && x < W && y < H && WM[y * W + x] === 1; };
   // flowstone curtains: round folds 3–5 px wide (a lit ridge on the left, a dark seam to the next fold), each its own tone,
   // hanging to its own rounded drip — neighbouring hems 2–4 px apart — with a bead of water under it; a fold may carry a
   // short growth ripple or two, each fold at its own heights
@@ -594,7 +595,7 @@ const SPR = (() => {
   tites.filter(q => q.l > 12).forEach(q => { for (let y = S0 + 2; y <= S0 + 2 + Math.round(q.l * 0.4); y += 2) refl.push([q.x, y, 1, 9]); });
   // rocks standing out of the water at both ends: x, radius, height above the waterline
   const rocks = [[33, 4.6, 4.4], [43, 2.6, 2.2], [107, 2.8, 2.4], [117, 5, 4.6]];
-  return { m, S0, tites, drops, bank, water, curtains, refl, rocks };
+  return { m, S0, tites, drops, edge, bank, water, curtains, refl, rocks };
 })();
 X.def('_tile_spring', {
   noFrame: 1, noFloor: 1, amb: AMB,
@@ -623,19 +624,21 @@ X.def('_tile_spring', {
     // the fissure the spring comes out of
     for (let y = 22; y < 58; y++) { const x = 28 + Math.round(Math.sin(y * 0.3) * 1.2); S.px(x - 1, y, 'ink', 1); S.px(x, y, 'water', 9, { e: 2 }); S.px(x + 1, y, 'ink', 0); S.px(x + 2, y, 'stone', 5); }
     // the pool: glowing water with a dark line under its skin, darker as it deepens, a dark caustic net on the bottom,
-    // boulders under it, pale shafts of light going down
+    // boulders under it, pale shafts of light going down (its tones are fixed: the pool is the light, lights never dither it);
+    // round it the basin's wet stone, lit where the water touches it
     for (let y = S0; y < H; y++) for (let x = 0; x < W; x++) { if (!inM(m, x, y)) continue; const k = y - S0;
       if (P.water(x, y)) { let tn = k === 0 ? 10 : k === 1 ? 5 : k < 5 ? 7 : k < 11 ? 6 : k < 17 ? 5 : 4; if (k > 11 && Math.min(Math.abs(Math.sin(x * 0.33 + Math.sin(y * 0.45) * 1.6)), Math.abs(Math.sin(y * 0.55 + Math.sin(x * 0.21) * 1.4))) < 0.2) tn -= 1;
         const gu = (x + 0.5 - 82) / 26, gv = (y + 0.5 - 88) / 13, g = gu * gu + gv * gv + (vnoise(x / 4, y / 4, 814) - 0.5) * 0.25; if (k > 1) tn += g < 0.3 ? 2 : g < 1 ? 1 : 0;   // the spring wells up bright from the bottom
-        S.px(x, y, 'water', tn, { e: 1 }); }
-      else if (P.bank(x, y) && !P.bank(x, y - 3)) S.px(x, y, 'water', 4 + (k < 6 ? 1 : 0), { e: 1 }); else if (P.bank(x, y)) S.px(x, y, 'water', 3, { e: 1 }); }
-    [[40, 96, 7, 4], [66, 99, 9, 4], [104, 97, 8, 5], [124, 95, 5, 4]].forEach(([x, y, a, b]) => { for (let yy = y - b; yy <= y + b; yy++) for (let xx = x - a; xx <= x + a; xx++) { const u = (xx - x) / a, v = (yy - y) / b; if (u * u + v * v <= 1 && P.water(xx, yy)) S.px(xx, yy, 'water', 3 + (v < -0.5 ? 1 : 0), { e: 1 }); } });
-    // boulders along the drowned banks break their line
-    [[27, 79, 4, 3], [32, 88, 5, 3.5], [36, 98, 4, 3], [121, 78, 4, 3], [116, 88, 5, 3.5], [112, 98, 4, 3]].forEach(([x, y, a, b]) => { for (let yy = Math.floor(y - b); yy <= y + b; yy++) for (let xx = Math.floor(x - a); xx <= x + a; xx++) { const u = (xx + 0.5 - x) / a, v = (yy + 0.5 - y) / b; if (u * u + v * v <= 1 && yy > S0 + 1 && inM(m, xx, yy)) S.px(xx, yy, 'water', v < -0.55 ? 5 : u > 0.4 ? 3 : 4, { e: 1 }); } });
-    for (let k = 0; k < 5; k++) for (let y = S0 + 3; y < S0 + 20; y++) { const x = 34 + k * 20 + Math.round((y - S0) * 0.35); if (P.water(x, y) && (y + k) % 5 !== 0) S.px(x, y, 'water', 8 - Math.floor((y - S0) / 7), { e: 1 }); }
+        S.px(x, y, 'water', tn, { e: 255 }); }
+      else { const lip = P.water(x, y - 1) || P.water(x - 1, y) || P.water(x + 1, y), lip2 = P.water(x, y - 2) || P.water(x - 2, y) || P.water(x + 2, y), n = nz(x, y, 3, 816);
+        S.px(x, y, 'stone', lip ? 6 : lip2 ? 4 : 3 + (n > 0.64 ? 1 : n < 0.34 ? -1 : 0), lip ? { n: [0, -0.6] } : NO); if (lip && (x * 5 + y) % 7 === 0) S.px(x, y, 'glass', 8); } }
+    [[50, 90, 6, 3], [71, 93, 8, 3], [98, 91, 7, 3]].forEach(([x, y, a, b]) => { for (let yy = y - b; yy <= y + b; yy++) for (let xx = x - a; xx <= x + a; xx++) { const u = (xx - x) / a, v = (yy - y) / b; if (u * u + v * v <= 1 && P.water(xx, yy)) S.px(xx, yy, 'water', 3 + (v < -0.5 ? 1 : 0), { e: 255 }); } });
+    // boulders along the drowned banks break their line: wet stone, lit on top, half in the water
+    [[29, 80, 4, 3], [35, 88, 4.5, 3.2], [120, 79, 4, 3], [114, 88, 4.5, 3.2]].forEach(([x, y, a, b]) => { for (let yy = Math.floor(y - b); yy <= y + b; yy++) for (let xx = Math.floor(x - a); xx <= x + a; xx++) { const u = (xx + 0.5 - x) / a, v = (yy + 0.5 - y) / b; if (u * u + v * v <= 1 && yy > S0 + 1 && inM(m, xx, yy)) S.px(xx, yy, 'stone', v < -0.55 ? 6 : u > 0.4 ? 3 : 5, { n: [u * 0.7, v * 0.7] }); } });
+    for (let k = 0; k < 5; k++) for (let y = S0 + 3; y < S0 + 20; y++) { const x = 34 + k * 20 + Math.round((y - S0) * 0.35); if (P.water(x, y) && (y + k) % 5 !== 0) S.px(x, y, 'water', 8 - Math.floor((y - S0) / 7), { e: 255 }); }
     // banks: wet rock sloping into the pool from both walls (textured, a wet sheen along the top), a few stones on them
     for (let y = 40; y < S0; y++) for (let x = 0; x < W; x++) { if (!P.bank(x, y) || !inM(m, x, y)) continue; const top = !P.bank(x, y - 1), n = nz(x, y, 3, 808); S.px(x, y, 'stone', top ? 7 : 4 + (n > 0.62 ? 1 : n < 0.36 ? -1 : 0) + (P.bank(x, y - 3) ? 0 : 1), top ? { n: [0, -0.8] } : NO); if (top && (x * 5) % 7 === 0) S.px(x, y, 'glass', 8); }
-    S.lay('back'); [[10, 56, 2.6], [17, 63, 2.2], [139, 55, 2.8], [131, 62, 2.2]].forEach(([x, y, a]) => { S.beg(); S.ell(x, y, a, a * 0.7, 'stone', 5, { dome: 1 }); S.px(x - 1, y - 1, 'glass', 7); S.end(); });
+    S.lay('back'); [[14, 2.6], [20, 2.2], [136, 2.8], [129, 2.2]].forEach(([x, a]) => { const y = Math.round(P.edge(x) - a * 0.5); S.beg(); S.ell(x, y, a, a * 0.7, 'stone', 5, { dome: 1 }); S.px(x - 1, y - 1, 'glass', 7); S.end(); });
     // rocks standing out of the water: wet tops, a dark shape under the surface
     P.rocks.forEach(([x, a, b]) => {
       S.beg(); for (let y = S0 - Math.round(b); y < S0; y++) for (let xx = Math.floor(x - a); xx <= Math.ceil(x + a); xx++) { const v = (S0 - 0.5 - y) / b, u = (xx + 0.5 - x) / a; if (u * u + v * v > 1) continue; const topRow = y === S0 - Math.round(b) || (S.at(xx, y - 1) !== MI.stone && S.at(xx, y - 1) !== MI.glass);
@@ -644,7 +647,7 @@ X.def('_tile_spring', {
     // stalactites in clusters, thick and thin, a wet bead at each tip
     P.tites.forEach(q => { S.beg(); for (let k = 0; k < q.l; k++) { const hw = Math.max(0, Math.round((q.w / 2) * (1 - k / q.l))), kx = q.x + (k > q.l * 0.6 && q.l > 10 ? 1 : 0); for (let i = -hw; i <= hw; i++) S.px(kx + i, q.y + k, 'bone', i < 0 ? 7 : i === 0 ? 6 : 4, { n: [i / (hw + 1) * 0.8, 0] }); } S.px(q.x + (q.l > 10 ? 1 : 0), q.y + q.l, 'linen', 9, { e: 255 }); S.end(); });
     unmask(S, m, 0, 0, W - 1, H - 1);
-    S.lay('wall'); rim(S, m, 8, { hollow: 1, boulders: 5 });
+    S.lay('wall'); rim(S, m, 8, { hollow: 1, boulders: 11 });
     sc.emit({ k: 'bubble', x: 73, y: 94, w: 62, rate: 1, sp: 3, ang: 0, spread: 0.3, life: 3, floor: S0 + 1 });   // from the pool bed (the anim pops them at the skin)
   },
   anim(D, t, rs) {
@@ -670,7 +673,7 @@ X.def('_tile_spring', {
       if (st['d' + j] !== k) { st['d' + j] = k; rs.burst('drip', q.x, q.y + q.l + 1, 1, { sp: 0, life: 3, floor: S0 - 1 }); }
       const a = ph - fall; if (a > 0 && a < 1.1) { const rr = Math.round(1 + a * 8), tn = a < 0.5 ? 11 : 9; if (P.water(q.x - rr, S0)) D.px(q.x - rr, S0, 'water', tn, { e: 255 }); if (P.water(q.x + rr, S0)) D.px(q.x + rr, S0, 'water', tn, { e: 255 }); } });
     // the moment: the spring surges, throws a splash, rings spread
-    if (mp > 0.08 && mp < 0.3 && !st.m) { st.m = 1; rs.burst('drip', 82, S0 - 4, 12, { sp: 34, ang: 0, spread: 1.3, life: 1, floor: S0 - 1 }); st.tw = t; rs.flash(2, 2.2); rs.flash(0, 0.3); }
+    if (mp > 0.08 && mp < 0.3 && !st.m) { st.m = 1; rs.burst('drip', 82, S0 - 4, 12, { sp: 34, ang: 0, spread: 1.3, life: 1, floor: S0 - 1 }); st.tw = t; rs.flash(2, 2.2); }
     if (mp > 0.5) st.m = 0;
     if (st.tw != null && t - st.tw < 0.7) { const k = (t - st.tw) / 0.7; [[78, -7, 0], [88, -10, 0.15], [83, -14, 0.3]].forEach(([x, dy, o]) => twinkle(D, x, S0 + dy, k > o ? Math.sin((k - o) / (1 - o) * Math.PI) : 0, 'water')); }
     if (mp > 0.1 && mp < 0.3) { const rr = Math.round((mp - 0.1) / 0.2 * 26); [82 - rr, 82 + rr, 82 - Math.round(rr * 0.6), 82 + Math.round(rr * 0.6)].forEach((x, i) => { if (P.water(x, S0)) D.px(x, S0, 'water', i < 2 ? 11 : 10, { e: 255 }); }); }
@@ -689,7 +692,7 @@ X.TILEF.spring = (D, t, rs) => {
 // a nest chamber lit by glowing mushrooms, glow-worms hang in an old side tunnel; the mole trundles along the tunnel,
 // a worm wriggles, crumbs trickle from the tunnel roof; every ~11 s the mole digs at the tunnel's end in a spray of soil
 const MOLE = (() => {
-  const m = lens(901, 3, 8, 15), r = X.rng(9031);
+  const m = blob(901, { bite: [[11, 10, 12], [139, 9, 13], [10, 95, 13], [141, 97, 12]], keep: [[137, 56, 8, 8]] }), r = X.rng(9031);   // the rim stays off the face the mole digs at
   const main = [[12, 52], [22, 55], [34, 61], [46, 64], [62, 64], [76, 61], [90, 58], [104, 60], [118, 57], [128, 55]];
   const side = [[34, 61], [30, 50], [32, 40], [42, 32], [54, 28], [64, 30]];
   const low = [[90, 58], [94, 70], [104, 80], [118, 84]];
@@ -699,7 +702,7 @@ const MOLE = (() => {
   for (let y = 55; y < 76; y++) for (let x = 36; x < 75; x++) { const u = (x + 0.5 - 55) / 18, v = (y + 0.5 - 65) / 9; if (u * u + v * v <= 1 && inM(m, x, y)) tun[y * W + x] = 1; }   // the nest chamber
   const mainPx = rast(main), floorY = (x) => { let best = null; mainPx.forEach(q => { if (q[0] === Math.round(x)) best = best == null ? q[1] : Math.max(best, q[1]); }); let y = best == null ? 60 : best; while (tun[(y + 1) * W + Math.round(x)]) y++; return y; };
   const roots = [0, 1, 2, 3, 4].map(i => walk(r, 20 + i * 26 + r() * 8, 6, 14, Math.PI / 2, 0.8, 2, Math.PI / 2, 0.2));
-  const worms = [[40, 88], [124, 26]];
+  const worms = [[42, 85], [118, 27]];
   const seam = seamPath(9020, 6, 144, 97);
   // the pocket the mole digs at the tunnel's end, k = 1…5 px on: a round cap pushed on past the end of the tunnel
   const cap = (k) => { const o = []; for (let y = 49; y <= 62; y++) for (let x = 126; x <= 144; x++) { const u = (x + 0.5 - (131 + k)) / 5, v = (y + 0.5 - 55.5) / 4.6; if (u * u + v * v <= 1 && !tun[y * W + x] && deep(m, x, y, 2)) o.push(y * W + x); } return o; };
@@ -729,8 +732,8 @@ X.def('_tile_mole', {
   noFrame: 1, noFloor: 1, amb: AMB,
   paint(S, sc) {
     const O = MOLE, m = O.m, r = S.r;
-    sc.light({ x: 50, y: 64, z: 10, r: 44, i: 1.3, c: '#ffc870', fl: 'pulse', amp: 0.35, sp: 1.1, tint: 0.3 });       // 0 mushrooms in the nest: the cell's warm pool
-    sc.light({ x: 44, y: 32, z: 6, r: 18, i: 1, c: '#8affd8', fl: 'pulse', amp: 0.45, sp: 0.7, ph: 1, tint: 0.08 });  // 1 glow-worms, in the side tunnel
+    sc.light({ x: 52, y: 68, z: 6, r: 25, i: 1.3, c: '#ffc870', fl: 'pulse', amp: 0.25, sp: 1.1, tint: 0.3 });       // 0 mushrooms in the nest: a warm pool kept inside the chamber
+    sc.light({ x: 44, y: 32, z: 6, r: 18, i: 1, c: '#8affd8', fl: 'pulse', amp: 0.45, sp: 0.7, ph: 1, tint: 0.2 });   // 1 glow-worms, in the side tunnel
     sc.light({ x: 80, y: 50, z: 30, r: 90, i: 0.12, c: '#ffe8c0', tint: 0.1 });                                    // 2 a faint warm fill
     sc.light({ x: 133, y: 56, z: 8, r: 34, i: 1.6, c: '#ffb860', bake: false, tint: 0.1 });                       // 3 the tunnel's end: a dim glow, bright while the mole digs
     S.lay('wall');
@@ -749,6 +752,9 @@ X.def('_tile_mole', {
     // the tunnels: dark inside, a lit floor, an overhang shadow under their roof
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { if (!inT(x, y)) continue; const roof = !inT(x, y - 1), floor = !inT(x, y + 1); S.px(x, y, 'earth', floor ? 5 : !inT(x, y + 2) ? 4 : roof || !inT(x, y - 2) ? 1 : 2); }
     for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) { if (inT(x, y)) continue; if (inT(x, y + 1)) S.tone(x, y, -3); else if (inT(x, y - 1)) S.tone(x, y, 1); }
+    // the chamber floor catches the mushrooms' glow (e:1, so it breathes with them): warm sand right under the caps, lit
+    // earth further out; the light itself stays small, so the solid soil over the tunnel keeps its own dark
+    for (let x = 38; x <= 72; x++) { const fy = O.floorY(x), d = Math.abs(x - 50); if (d > 12 || !inT(x, fy)) continue; S.px(x, fy, d < 7 ? 'sand' : 'earth', d < 4 ? 5 : d < 7 ? 4 : d < 10 ? 6 : 5, { e: 1 }); }
     // the nest: a bowl of dry grass on the chamber floor (every column stands on the floor under it), seeds stored beside it
     for (let x = 57; x <= 69; x++) { const u = (x - 63) / 6.5, h = Math.round(3 * Math.sqrt(Math.max(0, 1 - u * u))) + 1, fy = O.floorY(x); for (let k = 0; k < h; k++) S.px(x, fy - k, 'sand', k === h - 1 ? 9 : (x + k) % 3 ? 7 : 5); }
     for (let i = 0; i < 12; i++) { const x = 58 + r() * 10, y = O.floorY(Math.round(x)) - 2 - r() * 2; S.line(x, y, x + (r() - 0.5) * 6, y - r() * 2.5, 'sand', 8 + Math.round(r())); }
@@ -757,8 +763,14 @@ X.def('_tile_mole', {
     S.lay('back'); [[49, 4, 6], [54, 3, 4], [45, 2, 3]].forEach(([x, w, h]) => { const y = Math.max(O.floorY(x - 1), O.floorY(x)) + 1; S.beg(); S.rect(x - 1, y - h, 2, h, 'linen', 7); S.px(x - 1, y - h, 'linen', 5);
       for (let j = 0; j < Math.ceil(w * 0.8) + 1; j++) { const hw = Math.round(w * Math.sqrt(1 - Math.pow(j / (w * 0.8 + 1), 2))); S.hl(x - hw, y - h - 1 - j, hw * 2, 'lamp', j === 0 ? 6 : 8 + (j > 1 ? 1 : 0), { e: 1 }); }
       S.px(x - Math.round(w / 2), y - h - 2, 'lamp', 10, { e: 1 }); if (w > 2) S.px(x + 1, y - h - 1 - Math.round(w * 0.5), 'lamp', 10, { e: 1 }); S.end({ lit: 2 }); });
-    S.lay('wall'); [[30, 44], [33, 38], [38, 34], [44, 31], [50, 29], [57, 28]].forEach(([x, y], i) => { let yy = y; while (inT(x, yy - 1)) yy--; const l = 2 + (i % 3); S.vl(x, yy, l, 'linen', 5); S.px(x, yy + l, 'teal', 11, { e: 255 }); S.px(x, yy + l + 1, 'teal', 10, { e: 255 }); });
-    rim(S, m, 3, { boulders: 5 });
+    // a warm rim on the chamber wall round the caps (e:1, breathing with them): a step of glow the small light leaves out
+    { const B = S.L.back, rim = new Map(); for (let p = 0; p < W * H; p++) { if (B.m[p] !== MI.lamp || B.e[p] !== 1) continue; const cx = p % W, cy = (p / W) | 0;   // the caps (their outline is not e)
+        for (let j = -3; j <= 0; j++) for (let i = -3; i <= 3; i++) { const x = cx + i, y = cy + j, q = y * W + x, d = Math.max(Math.abs(i), Math.abs(j)); if (d && !B.m[q] && inT(x, y)) rim.set(q, Math.min(rim.get(q) || 9, d)); } }
+      S.lay('wall'); rim.forEach((d, q) => { const x = q % W, y = (q / W) | 0; if (d <= 2 || hh(x * 3.7 + y * 9.1) < 0.35) S.px(x, y, 'lamp', d <= 2 ? 1.4 : 0.6, { e: 1 }); }); }
+    // glow-worms on the side tunnel's roof: a dark silk thread (never lit up past the bead), a 2 px bead of light, a teal halo
+    S.lay('wall'); [[30, 44], [33, 38], [38, 34], [44, 31], [50, 29], [57, 28]].forEach(([x, y], i) => { let yy = y; while (inT(x, yy - 1)) yy--; let fl = yy; while (inT(x, fl + 1)) fl++;
+      const l = Math.max(1, Math.min([2, 4, 3, 5, 2, 3][i], fl - yy - 2)), E = { e: 255 }; S.vl(x, yy, l, 'stone', 3); S.px(x, yy + l, 'teal', 11, E); S.px(x, yy + l + 1, 'teal', 10, E); S.px(x + (i % 2 ? 1 : -1), yy + l + 1, 'teal', 8, E); });
+    rim(S, m, 3, { boulders: 11 });
     // the pocket the mole digs, k px on: drawn the tunnels' way (dark inside, a lit floor row), with the soil's own tones round
     // it for the overhang shadow over its roof and the lit ledge under its floor
     const L = S.c; O.pk = [[]]; O.face = [[]]; for (let k = 1; k <= 5; k++) { const ex = new Set(O.cap(k)), inU = (x, y) => inT(x, y) || ex.has(y * W + x), o = [];
@@ -794,7 +806,7 @@ X.def('_tile_mole', {
       if (c.y >= fy - 1) { st.cl.splice(i, 1); st.heap = Math.min(5.5, st.heap + 0.45); continue; }
       D.px(c.x, c.y, c.m, c.tn + 1); D.px(c.x + 1, c.y, c.m, c.tn); D.px(c.x, c.y + 1, c.m, c.tn - 1); D.px(c.x + 1, c.y + 1, c.m, c.tn - 2); }
     // a worm wriggles in its burrow; crumbs trickle from the tunnel roof
-    D.lay('wall'); O.worms.forEach(([x0, y0], i) => { const s = Math.sin(t * 0.7 + i * 2) * 4; for (let k = 0; k < 7; k++) D.px(x0 + s + k, y0 + Math.round(Math.sin(t * 3 + k * 0.9 + i) * 0.8), 'candy', k === 6 ? 8 : 6 + (k % 2)); });
+    D.lay('wall'); O.worms.forEach(([x0, y0], i) => { const s = Math.sin(t * 0.7 + i * 2) * 4; for (let k = 0; k < 7; k++) { const x = Math.round(x0 + s + k), y = y0 + Math.round(Math.sin(t * 3 + k * 0.9 + i) * 0.8); if (deep(O.m, x, y, 1)) D.px(x, y, 'candy', k === 6 ? 8 : 6 + (k % 2)); } });
     if (steps(t + 1, 3.3) < 0.02 && !st.c) { st.c = 1; const x = 60 + Math.floor(R() * 60), yy = O.floorY(x); let top = yy; while (inT(x, top - 1)) top--; spill(st, x, top, 2, 'earth', 8, { sp: 2, floor: yy, life: 1.2 }); } if (steps(t + 1, 3.3) > 0.3) st.c = 0;
     D.lay('mid'); bits(D, st, t);
   },

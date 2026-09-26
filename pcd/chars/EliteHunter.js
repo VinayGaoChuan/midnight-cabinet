@@ -13,7 +13,7 @@ PCD.define('EliteHunter', (E) => {
   // ───── 材质（全部取自共享色板）─────
   const M = parts.mats(E, {
     cloak: { r: 'green', band: 2 }, hood: 'green', sleeve: 'green', leather: 'leather', strap: 'boot', pants: 'stone', boot: 'boot',
-    skin: 'skin', brow: 'wood', ink: { r: 'ink', flat: 1 }, wood: 'wood', bone: 'bone', string: 'white', steel: 'steel',
+    skin: 'skin', brow: 'wood', ink: { r: 'ink', flat: 1 }, wood: 'wood', bone: 'bone', string: [8, 18, 17, 21], steel: 'steel',
     fletch: [35, 37, 38, 21], tip: { r: [36, 37, 38, 21], flat: 1 },
   });
   const BODY = { body: 'slim', leg: 10, torso: 8, head: 6, headW: 5, sw: 3, lw: 2, stride: 4, lift: 2, fall: 'back' };
@@ -30,31 +30,31 @@ PCD.define('EliteHunter', (E) => {
   // 关键帧用「站姿坐标」写：跪 / 蹲时身体下沉多少，poseAt 末尾统一给手加上多少
   const K = (hx, hy, a, bhx, bhy, lean, head, crouch) => ({ hx, hy, a, bhx, bhy, lean: lean || 0, head: head || 0, crouch: crouch || 0 });
   const QA = Math.PI / 4;
-  const K_IDLE = K(7, -14, 0, -2, -9, 1);                        // 长弓竖在身前，上梢高过兜帽、下梢点地
-  const K_REACH = K(9, -15, 0, -4, -20, 0);                      // 攻击预兆 1：后手伸到肩后箭袋口，弓举到肩高
+  const K_IDLE = K(9, -14, 0, -2, -9, 1);                        // 长弓竖在身前，上梢高过兜帽、下梢点地
+  const K_REACH = K(9, -15, 0, -6, -19, 0);                      // 攻击预兆 1：后手伸到肩后箭袋口，弓举到肩高
   const K_DRAW = K(10, -16, 0, 2, -17, 0);                       // 预兆 2：满弓，弦拉到下巴
   const K_LOOSE = K(10, -16, 0, -3, -18, 0);                     // 出手：松弦，后手向后甩开
   const K_HURT = K(5, -13, -0.2, -4, -11, -1, -1);
   const K_STAG = K(4, -15, -0.35, -5, -14, -1, -1);              // 踉跄后仰
-  const K_KNEEL = K(11, -17, QA, 3, -18, 1, 0, 4);               // 技能：单膝半跪、弓向前斜放 45°
-  const K_KREACH = K(11, -17, QA, -3, -21, 1, 0, 4);             // 跪姿抽箭
-  const K_KLOOSE = K(11, -17, QA, -3, -19, 1, 0, 4);             // 跪姿松弦
+  const K_KNEEL = K(13, -16, QA, 3, -18, 1, 0, 4);               // 技能：单膝半跪、弓向前斜放 45°
+  const K_KREACH = K(13, -16, QA, -6, -19, 1, 0, 4);             // 跪姿抽箭
+  const K_KLOOSE = K(13, -16, QA, -3, -19, 1, 0, 4);             // 跪姿松弦
   const FIELDS = ['hx', 'hy', 'a', 'bhx', 'bhy', 'lean', 'head', 'crouch'];
   const setK = (A, B, q) => E.mix(P, A, B, q, FIELDS);
   const KEY = keyer([['hx', -16, 31], ['hy', -40, 4], ['ai', -16, 16], ['bhx', -20, 31], ['bhy', -40, 4], ['lean', -1, 2], ['head', -1, 1], ['crouch', 0, 7], ['bob', 0, 1],
     ['bx', -8, 8], ['step', -1, 1], ['wup', 0, 2], ['walk', 0, 1], ['beard', -3, 3], ['sway', -2, 2], ['bend', 0, 3], ['gem', 0, 4], ['glint', 0, 1], ['rim', 0, 3],
-    ['eyes', 0, 1], ['sq', 0, 1], ['flash', 0, 1], ['lying', 0, 1], ['lift', 0, 3], ['pull', 0, 3], ['nArr', 0, 3], ['fan', 0, 3], ['hold', 0, 2], ['vib', -1, 1],
+    ['eyes', 0, 1], ['sq', 0, 1], ['flash', 0, 1], ['lying', 0, 1], ['lift', 0, 3], ['pull', 0, 3], ['nArr', 0, 3], ['fan', 0, 4], ['hold', 0, 2], ['vib', -1, 1],
     ['bowOff', 0, 1], ['bowX', -30, 40], ['bowY', -46, 4], ['bowR', 0, 3], ['spill', 0, 2], ['dqi', 0, 48], ['st', 0, 8]]);
   const BEARD_IDLE = [0, 1, 0, -1], SWAY_IDLE = [0, 1, 0, -1], NOCK = [0, 5, 7, 8], OFF = [0, -1, 1];
   const T_REL = 3 / 12, T_LAND = INCOMING + 0.66;
   const DROP = (cr) => (cr >= 4 ? 4 : Math.min(3, cr));
   // 待机个性「验箭」（1.4–2.0 s，每帧一格）：后手位置、手里的箭（1 斜拿 · 2 横在眼前）、眯眼
-  const CHECK = [[-4, -20, 0, 0], [-2, -23, 1, 0], [7, -22, 2, 1], [7, -22, 2, 1], [5, -22, 2, 1], [-2, -23, 1, 0], [-4, -20, 0, 0]];
+  const CHECK = [[-6, -19, 0, 0], [-3, -23, 1, 0], [8, -22, 2, 1], [8, -22, 2, 1], [5, -22, 2, 1], [-3, -23, 1, 0], [-6, -19, 0, 0]];
 
   function poseAt(st, t, T) {
     const tq = q12(t), f12 = f12of(T), TT = f12 / 12;
     P.st = st; P.bx = 0; P.step = 0; P.wup = 0; P.walk = 0; P.beard = 0; P.sway = 0; P.bend = 1; P.gem = 0; P.glint = 0; P.rim = 0; P.eyes = 0; P.sq = 0; P.flash = 0;
-    P.lying = 0; P.lift = 0; P.pull = 0; P.nArr = 0; P.fan = 2; P.hold = 0; P.vib = 0; P.bowOff = 0; P.bowX = 0; P.bowY = 0; P.bowR = 0; P.spill = 0; P.dq = 0; P.bob = 0; P.flip = 0; P.mx = 0;
+    P.lying = 0; P.lift = 0; P.pull = 0; P.nArr = 0; P.fan = 3; P.hold = 0; P.vib = 0; P.bowOff = 0; P.bowX = 0; P.bowY = 0; P.bowR = 0; P.spill = 0; P.dq = 0; P.bob = 0; P.flip = 0; P.mx = 0;
     const idle = () => {
       setK(K_IDLE, K_IDLE, 0); const b = Math.floor(TT * 2.5 + 1e-6); P.bob = b & 1; P.beard = BEARD_IDLE[(b + 1) & 3]; P.sway = SWAY_IDLE[Math.floor(TT * 1.25 + 1e-6) & 3];
       const lp = tq % DUR[IDLE];
@@ -75,7 +75,7 @@ PCD.define('EliteHunter', (E) => {
       else if (f === 5) { setK(K_LOOSE, K_LOOSE, 0); P.bend = 2; }
       else { const q = ease.inOut(clamp01((tq - 6 / 12) / 0.25)); setK(K_LOOSE, K_IDLE, q); P.bend = q < 0.5 ? 2 : 1; }
     } else if (st === CHARGE) {                                      // 跪下斜弓 → 三拍抽箭搭弦 → 拉满
-      P.fan = 3;
+      P.fan = 4;
       if (tq < 0.3) { const q = ease.inOut(tq / 0.3); setK(K_IDLE, K_KNEEL, q); P.bend = 1 + RD(q); }
       else if (tq < 0.9) {
         const k = CL(Math.floor((tq - 0.3) / 0.2 + 1e-6), 0, 2), ph = tq - 0.3 - k * 0.2;
@@ -85,7 +85,7 @@ PCD.define('EliteHunter', (E) => {
       } else if (tq < 1.0) { setK(K_KNEEL, K_KNEEL, 0); P.nArr = 3; P.pull = 2; P.gem = 1; P.bend = 2; P.beard = -1; }
       else { setK(K_KNEEL, K_KNEEL, 0); P.nArr = 3; P.pull = 3; P.gem = (f12 & 1) ? 2 : 1; P.bend = 3; P.rim = 1; P.beard = (f12 & 1) ? -2 : -1; P.sway = (f12 & 1) ? -2 : -1; }
     } else if (st === CAST) {                                        // 松弦：三支箭并成一道光飞出，弦抖 2 帧
-      setK(K_KLOOSE, K_KLOOSE, 0); P.fan = 3; P.bend = 3; P.beard = -2; P.sway = -1;
+      setK(K_KLOOSE, K_KLOOSE, 0); P.fan = 4; P.bend = 3; P.beard = -2; P.sway = -1;
       if (tq < 2 / 12 - 1e-6) { P.vib = f12of(tq) === 0 ? 1 : -1; P.rim = 2; }
     } else if (st === RECOVER) {                                     // 起身，弓收回竖握
       const q = ease.inOut(clamp01(tq / 0.55)); setK(K_KLOOSE, K_IDLE, q); P.bend = RD(3 - q * 2); P.beard = -RD(1 - q); P.sway = q < 0.5 ? -1 : 0;
@@ -132,26 +132,25 @@ PCD.define('EliteHunter', (E) => {
 
   // ───── 画 ─────
   const BOWM = { wood: M.wood, tip: M.bone, grip: M.leather, string: M.string };
-  // 候选部件：longbow 长弓（parts.bow 只能竖放、弯度小）：任意倾角 + 骨白包梢 + 握把缠皮加厚 1 格 + 按拉弦档弯成 D 形 + 松弦后弦抖。
+  // 候选部件：longbow 长弓（parts.bow 只能竖放、弯度小）：任意倾角 + 骨白包梢 + 握把缠皮加厚 + 按拉弦档弯成 D 形 + 松弦后弦抖。
   // o = { T 落笔变换（rig 或 parts.FREE）, at: [x, y] 握点, a 倾角（0 竖直，正 = 上梢朝前）, len 半弓长, pull 0–3, nock: [x, y] 拉弦点, vib -1..1 弦抖, wood, tip, grip, string }
-  // 两个部件：弓臂 → 弦。弓臂按抛物线 u = -弯度 × (r / len)² 画，梢头回勾 1 格（反曲）；弦挂在离梢 1 格处。
+  // 一个部件（弓臂和弦之间不压分界线）：弓臂按抛物线 u = -弯度 × (r / len)² 画，中段 2 格粗，梢头回勾 1 格（反曲）；弦挂在离梢 1 格处，先画弦、再画弓臂。
   function longbow(o) {
-    const T = o.T, L = o.len, pull = o.pull || 0, ca = Math.cos(o.a || 0), sa = Math.sin(o.a || 0), gx = o.at[0], gy = o.at[1], bend = 2.4 + pull * 0.9;
+    const T = o.T, L = o.len, pull = o.pull || 0, ca = Math.cos(o.a || 0), sa = Math.sin(o.a || 0), gx = o.at[0], gy = o.at[1], bend = 3.4 + pull * 1.0;
     const W = (u, v) => [gx + u * ca - v * sa, gy + u * sa + v * ca], U = (r) => -bend * (r / L) * (r / L) + (Math.abs(r) === L ? 1 : 0);
     E.part();
+    const tA = W(U(L - 1), -(L - 1)), tB = W(U(L - 1), L - 1), s = o.string;
+    if (pull && o.nock) { parts.line(E, T, tA[0], tA[1], o.nock[0], o.nock[1], s, 2); parts.line(E, T, o.nock[0], o.nock[1], tB[0], tB[1], s, 2); }
+    else if (o.vib) { const m = W(U(L - 1) - 1.4 * o.vib, 0); parts.line(E, T, tA[0], tA[1], m[0], m[1], s, 2); parts.line(E, T, m[0], m[1], tB[0], tB[1], s, 2); }
+    else parts.line(E, T, tA[0], tA[1], tB[0], tB[1], s, 2);
     let pv = null;
     for (let r = -L; r <= L; r++) {
       const p = W(U(r), r), ar = Math.abs(r), tip = ar >= L - 1, grip = ar <= 1;
-      const m = tip ? o.tip : grip ? o.grip : o.wood, t = tip ? (ar === L ? 4 : 3) : grip ? 3 : (r < 0 ? 4 : 0);
+      const m = tip ? o.tip : grip ? o.grip : o.wood, t = tip ? (ar === L ? 4 : 3) : grip ? 3 : (r < 0 ? 4 : 3);
       if (pv) parts.line(E, T, pv[0], pv[1], p[0], p[1], m, t); else parts.px(E, T, p[0], p[1], m, t);
       pv = p;
     }
-    for (let r = -2; r <= 2; r++) { const p = W(U(r) + 1, r); parts.px(E, T, p[0], p[1], Math.abs(r) <= 1 ? o.grip : o.wood, 2); }   // 握把加厚
-    E.part();
-    const tA = W(U(L - 1), -(L - 1)), tB = W(U(L - 1), L - 1), s = o.string;
-    if (pull && o.nock) { parts.line(E, T, tA[0], tA[1], o.nock[0], o.nock[1], s, 3); parts.line(E, T, o.nock[0], o.nock[1], tB[0], tB[1], s, 3); }
-    else if (o.vib) { const m = W(U(L - 1) - 1.4 * o.vib, 0); parts.line(E, T, tA[0], tA[1], m[0], m[1], s, 3); parts.line(E, T, m[0], m[1], tB[0], tB[1], s, 3); }
-    else parts.line(E, T, tA[0], tA[1], tB[0], tB[1], s, 3);
+    for (let r = -6; r <= 6; r++) { const p = W(U(r) + 1, r), ar = Math.abs(r); parts.px(E, T, p[0], p[1], ar <= 1 ? o.grip : o.wood, ar <= 1 ? 2 : ar <= 4 ? 2 : 1); }   // 中段加厚（握把缠皮）
     return { top: tA, bot: tB };
   }
   // 箭头的发光档（0 待机 · 1 蓄力 · 2 蓄满 · 3 施放 · 4 熄灭）→ [箭头, 箭头后一格] 的色调
@@ -160,14 +159,14 @@ PCD.define('EliteHunter', (E) => {
   function nocked(R, n, nx, ny, fan, lv) {
     E.part();
     for (let i = 0; i < n; i++) {
-      const hy = ny + OFF[i] * fan;
+      const y0 = ny + OFF[i] * 2, hy = ny + OFF[i] * fan;
       for (let k = 1; k <= ARROW; k++) {
-        const x = nx + k, y = RD(ny + (hy - ny) * k / ARROW);
+        const x = nx + k, y = RD(y0 + (hy - y0) * k / ARROW);
         if (k <= 2) parts.px(E, R, x, y, M.fletch, k === 1 ? 4 : 3);
         else if (k >= ARROW - 1) parts.px(E, R, x, y, M.tip, TIP[lv][k === ARROW ? 0 : 1]);
-        else parts.px(E, R, x, y, M.wood, 4);
+        else parts.px(E, R, x, y, M.bone, i ? 3 : 4);
       }
-      parts.px(E, R, nx + 2, RD(ny + (hy - ny) * 2 / ARROW) - (OFF[i] > 0 ? -1 : 1), M.fletch, 2);   // 羽片（朝扇形外侧）
+      if (!i) { parts.px(E, R, nx + 2, ny - 1, M.fletch, 2); parts.px(E, R, nx + 3, ny - 1, M.fletch, 3); }   // 中间那支的羽片
     }
   }
   // 手里的一支箭：1 = 顺着箭袋斜拿（抽出 / 插回）· 2 = 横在眼前（箭尾靠眼、箭头朝前）
@@ -175,10 +174,10 @@ PCD.define('EliteHunter', (E) => {
     E.part();
     if (mode === 2) {
       const y = -22 + P.bob;
-      for (let x = 4; x <= 4 + ARROW; x++) { const k = x - 4; parts.px(E, R, x, y, k <= 1 ? M.fletch : k >= ARROW - 1 ? M.tip : M.wood, k === 0 ? 4 : k === 1 ? 3 : k >= ARROW - 1 ? (k === ARROW ? 3 : 2) : 4); }
+      for (let x = 4; x <= 4 + ARROW; x++) { const k = x - 4; parts.px(E, R, x, y, k <= 1 ? M.fletch : k >= ARROW - 1 ? M.tip : M.bone, k === 0 ? 4 : k === 1 ? 3 : k >= ARROW - 1 ? (k === ARROW ? 3 : 2) : 4); }
       parts.px(E, R, 5, y - 1, M.fletch, 2);
     } else {
-      for (let k = -1; k <= 9; k++) { const p = parts.cell(7, P.bhx, P.bhy, k); parts.px(E, R, p[0], p[1], k <= 0 ? M.fletch : k >= 8 ? M.tip : M.wood, k === -1 ? 4 : k === 0 ? 3 : k >= 8 ? 2 : 4); }
+      for (let k = -1; k <= 9; k++) { const p = parts.cell(7, P.bhx, P.bhy, k); parts.px(E, R, p[0], p[1], k <= 0 ? M.fletch : k >= 8 ? M.tip : M.bone, k === -1 ? 4 : k === 0 ? 3 : k >= 8 ? 2 : 3); }
     }
   }
   // 候选部件：sawCape 锯齿下摆的及腰短斗篷（猎人自己裁的布：下摆每 3 格一个 2 格长尖 + 一个 1 格短尖）。
@@ -208,17 +207,17 @@ PCD.define('EliteHunter', (E) => {
     }
     for (let k = 1; k <= (o.hang || 0); k++) parts.px(E, R, x + (flat ? -k : 0), y + (flat ? 0 : k) + b, m, k === o.hang ? 4 : 0);
   }
-  // 候选部件：quiver5 斜背箭袋（多箭）：3 格宽斜筒从腰后斜向左上，筒口高出肩线，露出 n 支高低错落的绿羽箭尾（parts.pack 的箭袋只露 3 支）。
-  // o = { mat, trim 筒口包边, shaft, fletch, n（≤ 5）, top 筒口高出肩线几行 }。两个部件：筒 → 箭；倒地时跟着身体转（压在身下）
+  // 候选部件：quiver5 斜背箭袋（多箭）：3 格宽的斜筒从腰后斜向左上（45°），筒口在肩后，露出 n 支高低交错（梳齿状）的绿羽箭尾（parts.pack 的箭袋只露 3 支、贴着后背）。
+  // o = { mat, trim 筒口包边, shaft, fletch, n（≤ 5）, len 筒长, dx 筒底相对后背的横移 }。两个部件：筒 → 箭；倒地时跟着身体转（压在身下）
   function quiver5(R, o) {
-    const e = parts.edges(R, R.yS + 3), x0 = e[0] + 2, y0 = R.yWaist + 2, len = y0 - (R.yS - (o.top || 0)), n = o.n || 5, H = [2, 3, 4, 3, 2];
+    const e = parts.edges(R, R.yWaist), x0 = e[0] + (o.dx || 2), y0 = R.yWaist + 3, len = o.len || 7, n = o.n || 5, H = [3, 1, 4, 2, 3], D = 14;
     E.part();
-    parts.bar(15, x0, y0, 0, len, 3, (k, j, X, Y) => { const rim = k >= len - 1; parts.px(E, R, X, Y, rim ? o.trim : o.mat, rim ? (j === 0 ? 4 : 2) : j === 0 ? 4 : j === 2 ? 2 : (k % 4 === 2 ? 2 : 0)); });
-    const c = parts.cell(15, x0, y0, len + 1);
+    parts.bar(D, x0, y0, 0, len, 3, (k, j, X, Y) => { const rim = k >= len - 1; parts.px(E, R, X, Y, rim ? o.trim : o.mat, rim ? (j === 0 ? 4 : 2) : j === 0 ? 4 : j === 2 ? 2 : (k % 3 === 1 ? 2 : 0)); });
+    const c = parts.cell(D, x0, y0, len + 1);
     E.part();
     for (let i = 0; i < n; i++) {
       const h = H[i];
-      for (let k = 0; k <= h; k++) { const p = parts.cell(15, c[0] + i - 2, c[1], k), fl = k >= h - 1; parts.px(E, R, p[0], p[1], fl ? o.fletch : o.shaft, k === h ? 4 : fl ? ((i & 1) ? 2 : 3) : 3); }
+      for (let k = 0; k <= h; k++) { const p = parts.cell(D, c[0] + i - 2, c[1], k), fl = k >= h - 1; parts.px(E, R, p[0], p[1], fl ? o.fletch : o.shaft, k === h ? (i === 2 ? 4 : (i & 1) ? 2 : 3) : fl ? ((i & 1) ? 3 : 2) : 3); }
     }
   }
   // 腰后横挂的猎刀：刀鞘贴着后腰，刀柄和柄头从后腰伸出
@@ -229,13 +228,13 @@ PCD.define('EliteHunter', (E) => {
     parts.px(E, R, bx - 1, y, M.wood, 4); parts.px(E, R, bx - 2, y, M.wood, 3); parts.px(E, R, bx - 3, y, M.steel, 4);
   }
   // 倒地时洒在头边地上的 4 支箭（精灵本地坐标，不跟身体转）
-  const SPILL = [[-33, 0, 4, 0], [-30, -3, 5, 1], [-26, 0, 6, 2], [-8, -9, 5, 3]];
+  const SPILL = [[-33, 0, 0], [-30, -1, 1], [-25, 0, 0], [-18, -1, 3]];
   function spilled(stage) {
     E.part();
     const T = parts.FREE, sh = stage === 1 ? 3 : 0;
-    for (const [x0, y0, di, kind] of SPILL) {
+    for (const [x0, y0, kind] of SPILL) {
       const dir = kind === 1 ? 3 : kind === 3 ? 13 : 4, sx = x0 + sh - P.bx;
-      for (let k = 0; k <= 8; k++) { const p = parts.cell(dir, sx, y0, k); parts.px(E, T, p[0], p[1], k <= 1 ? M.fletch : k >= 7 ? M.tip : M.wood, k === 0 ? 4 : k === 1 ? 2 : k >= 7 ? (k === 8 ? 2 : 1) : 3); }
+      for (let k = 0; k <= 8; k++) { const p = parts.cell(dir, sx, y0, k); parts.px(E, T, p[0], p[1], k <= 1 ? M.fletch : k >= 7 ? M.tip : M.bone, k === 0 ? 4 : k === 1 ? 2 : k >= 7 ? (k === 8 ? 2 : 1) : 3); }
     }
   }
   function drawHero() {
@@ -244,16 +243,16 @@ PCD.define('EliteHunter', (E) => {
     if (P.bowOff) longbow(Object.assign({ T: parts.FREE, at: [P.bowX, P.bowY], a: P.bowR * HALF, len: BOW_L }, BOWM));   // 脱手的弓（在身体后面）
     if (P.spill) spilled(P.spill);
     sawCape(R, { mat: M.cloak, len: 1 });
-    quiver5(R, { mat: M.leather, trim: M.strap, shaft: M.wood, fletch: M.fletch, top: -1 });
+    quiver5(R, { mat: M.leather, trim: M.strap, shaft: M.bone, fletch: M.fletch, len: 9, dx: 3 });
     parts.arm(E, R, P, { side: 'B', sleeve: 'tight', mat: M.sleeveD, cuff: M.leatherD, cuffStyle: 'bracer', grip: 'none' });
     parts.legs(E, R, P, { style: 'boot', mat: M.pants, matD: M.pantsD, boot: M.boot, bootD: M.bootD });
     parts.torso(E, R, P, { style: 'leather', mat: M.leather, belt: M.strap, buckle: M.steel, strap: M.strap });
     knife(R);
+    if (!P.bowOff) longbow(Object.assign({ T: R, at: [P.hx, P.hy], a: P.a, len: BOW_L, pull: P.pull, nock: [P.bhx, P.bhy], vib: P.vib }, BOWM));   // 弓在头之前画：弦贴着脸也不把脸压黑
     parts.hood(E, R, P, { style: 'hood', mat: M.hood, layer: 'back' }); hoodPeak(R, { mat: M.hood, len: 3 });
     parts.head(E, R, P, { mat: M.skin, face: 'gaunt', age: 'young', eye: M.ink, eyeStyle: P.sq ? 'narrow' : 'dot', brow: M.brow, nose: 'small', mouth: 'line', ear: 'none' });
     parts.hood(E, R, P, { style: 'hood', mat: M.hood, layer: 'front' });
     if (lie) { parts.run(E, R, R.htop + 1, R.hx0 + 1, R.hx1 + 1, M.hood, 0); parts.run(E, R, R.ey, R.hx0 + 2, R.hx1 + 1, M.hood, 2); }   // 兜帽滑下来盖住眼睛
-    if (!P.bowOff) longbow(Object.assign({ T: R, at: [P.hx, P.hy], a: P.a, len: BOW_L, pull: P.pull, nock: [P.bhx, P.bhy], vib: P.vib }, BOWM));
     parts.arm(E, R, P, { sleeve: 'tight', mat: M.sleeve, cuff: M.leather, cuffStyle: 'bracer', hand: M.skin });
     if (P.nArr && !lie) nocked(R, P.nArr, P.nx, P.ny, P.fan, P.gem);
     if (P.hold) heldArrow(R, P.hold);
@@ -283,7 +282,7 @@ PCD.define('EliteHunter', (E) => {
       return;
     }
     if (ground) { stick(x, aVX[i] / v, aVY[i] / v); for (let j = 0; j < (k ? 7 : 4); j++) spawn(K_DUST, x + (Math.random() - 0.5) * 4, y - 1, (Math.random() - 0.5) * 30, -6 - Math.random() * 12, 0.3 + Math.random() * 0.3, FXI.dust); }
-    if (k === 0) { burst(x, y - (ground ? 1 : 0), 8, 30, 80, 0.15, 0.35, R_EL, 8); if (aT[i] === 1) { hitDummy(0); sfx('hit', { mat: 'wood', w: 0.3 }); } }
+    if (k === 0) { burst(x, y - (ground ? 1 : 0), 8, 30, 80, 0.15, 0.35, R_EL, 8); if (!ground) fx.cross(x, y, 2, R_EL, 0.15); if (aT[i] === 1) { hitDummy(0); sfx('hit', { mat: 'wood', w: 0.3 }); } }
     else { fx.cross(x, y - (ground ? 1 : 0), 5, R_EL, 0.3); burst(x, y - (ground ? 1 : 0), 12, 40, 120, 0.25, 0.5, R_EL, 10); hitDummy(1); shake(0.12, 1); sfx('impact', { pal: 'nature', w: 0.6 }); }
   }
   function onEnter(s) {
@@ -300,7 +299,7 @@ PCD.define('EliteHunter', (E) => {
     if (s === ATTACK && Math.abs(t - T_REL) < 1e-9) {                // 松弦：三支箭扇形飞向头、胸、脚边
       mzT = 0; mzX = wx(P.hx + P.bx + 1); mzY = wy(P.hy - 1);
       const nx = wx(K_DRAW.hx - NOCK[3] + ARROW + P.bx), ny = wy(K_DRAW.hy - 1);
-      for (let j = 0; j < 3; j++) fire(0, j, nx, ny + OFF[j] * 2, TGT_A[j][0], TGT_A[j][1], 0.22);
+      for (let j = 0; j < 3; j++) fire(0, j, nx, ny + OFF[j] * 3, TGT_A[j][0], TGT_A[j][1], 0.22);
       burst(mzX, mzY, 6, 30, 60, 0.15, 0.3, R_EL, 0);
       sfx('swing', { kind: 'bow', w: 0.35 }); sfx('shoot', { proj: 'arrow' });
     }

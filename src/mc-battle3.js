@@ -451,7 +451,8 @@ function drawBars(ctx, e, T, b) {
   if (e.isHero && e.bench) return;
   const o = entOff(e, T); if (o.a < 0.6) return;
   // 血条（设计稿 BARS 缩小版）：墨槽 + 2px 墨框（像素层 1 格），填充上亮下暗各一阶；护盾是顶上一道冰蓝；法力条贴在下面
-  const U = M.bUI, g2 = U.g2, H0 = 88 * e.sz, w = g2(Math.max(40, 46 * e.sz)), kp = M.kbPose ? M.kbPose(e, T) : { rot: 0 }, x = g2(e.x + o.x - w / 2), top = g2(e.y + o.y - H0 - 14 - (e.air ? e.air.z : 0) + Math.abs(Math.sin(kp.rot)) * H0 * 0.6), cx = x + w / 2;   // the bar follows a body in the air or lying down
+  // e._pH: the real height of a redrawn pixel character (mc-pcd-game.js); others keep 88·sz
+  const U = M.bUI, g2 = U.g2, H0 = e._pH || 88 * e.sz, w = g2(Math.max(40, 46 * e.sz)), kp = M.kbPose ? M.kbPose(e, T) : { rot: 0 }, x = g2(e.x + o.x - w / 2), top = g2(e.y + o.y - H0 - 14 - (e.air ? e.air.z : 0) + Math.abs(Math.sin(kp.rot)) * H0 * 0.6), cx = x + w / 2;   // the bar follows a body in the air or lying down
   const [hc, hh, hl] = e.side === 'A' ? (e.isHero ? [PL.gold, PL.butter, PL.amber] : [PL.green, PL.lime, PL.greenDeep]) : [PL.red, PL.pink, PL.wine];
   U.R(ctx, x - 2, top - 2, w + 4, e.hasMana ? 16 : 10, PL.ink);
   const fw = w * clamp(e.hp / e.maxHp, 0, 1); if (fw > 0) { U.R(ctx, x, top, fw, 6, hc); U.R(ctx, x, top, fw, 2, hh); U.R(ctx, x, top + 4, fw, 2, hl); }

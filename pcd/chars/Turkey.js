@@ -17,17 +17,17 @@ PCD.define('Turkey', (E) => {
   const C_SN = near('#b83a44'), C_SL = near('#e0707a');
   const R_EL = fxRamp('roastCopper', [21, C_AP, C_OR, C_RC, C_BR]), EL = FXR[R_EL];          // 美味 · 烤铜：21 白 → 淡杏 → 铜橙 → 赤铜 → 焦褐
   const COP = [C_BR, C_RC, C_OR, C_AP];
-  const m = B.mats(E, { main: [B0, B1, B2, B3], feather: [B0, B1, B2, C_EDGE], bone: 'bone', skin: 'pale', snood: [55, 56, C_SN, C_SL],
+  const m = B.mats(E, { main: [B0, B1, B2, B3], feather: [B0, B1, B2, B3], vane: [B0, B1, B2, C_EDGE], bone: 'bone', skin: 'pale', snood: [55, 56, C_SN, C_SL],
     paper: 'white', string: 'crimson', coin: COP, twine: 'sand', wood: 'wood', beak: 'sand', edge: [B0, C_RC, C_EDGE, C_OR],
     eye: COP, spot: COP, glow: [C_AP, C_AP, 21, 21] });                                      // eye / spot 平涂：tone 1 熄 · 2 赤铜 · 3 铜橙 · 4 淡杏
   m.spot = E.defMat(COP, 1, 1);                                                             // 眼斑平涂（不压分界线）
   const o = F.shape({ alt: 5, rx: 8, ry: 6, head: 'bird', hr: 2.5, tail: 'none', wing: { span: 9, chord: 4, type: 'feather', fingers: 3 }, m });
-  const LIFT0 = 2;                                                                           // alt 5 + 2 = 离地 7
-  const FAN = [[25, 100, 9], [0, 140, 10], [-10, 150, 11], [-15, 155, 12]];                   // 扇尾开合：[起角, 止角, 半径]（角度从正后方量，90 = 竖直向上）
+  const LIFT0 = 4;                                                                           // alt 5 + 4 = 身体离地 9、纸花腿离地 2–3 格（悬停，读得出在飞）
+  const FAN = [[25, 100, 9], [-5, 140, 12], [-12, 150, 13], [-18, 158, 14]];                  // 扇尾开合：[起角, 止角, 半径]（角度从正后方量，90 = 竖直向上）；待机半径 12 ≈ 直径 18 格的半圆扇
 
   const HX = 34, DUR = DEFAULT_DUR.slice(), hero = new Sprite(76, 56, 38, 50);
   const RIM = { rim: 0, rx: 0, ry: 0, rimR: [0, 6, 16, 20], rimRamp: EL, flash: 0, dq: 0, rimAll: 1, skip: new Uint8Array(256) };
-  for (const k of ['body', 'limb', 'far', 'feather', 'featherFar', 'skin', 'snood', 'paper', 'string', 'coin', 'twine', 'wood', 'beak', 'edge', 'eye', 'spot', 'glow', 'ink']) RIM.skip[m[k]] = 1;
+  for (const k of ['body', 'limb', 'far', 'feather', 'featherFar', 'vane', 'skin', 'snood', 'paper', 'string', 'coin', 'twine', 'wood', 'beak', 'edge', 'eye', 'spot', 'glow', 'ink']) RIM.skip[m[k]] = 1;
   const SPEC = F.KEYS.concat(B.COMMON, [['fan', 0, 3], ['ftilt', -1, 1], ['fshake', 0, 1], ['lit', 0, 12], ['miss', 0, 1], ['snood', -1, 1], ['slen', 0, 2], ['hdx', -1, 2], ['eyeLv', 0, 4]]);
   const P = {};
   function reset() { F.reset(P); P.fan = 1; P.ftilt = 0; P.fshake = 0; P.lit = 0; P.miss = 0; P.snood = 0; P.slen = 0; P.hdx = 0; P.eyeLv = 1; P.lift = LIFT0; P.legs = 1; }
@@ -38,8 +38,9 @@ PCD.define('Turkey', (E) => {
   build();
   const HIT_POINT = [0, R(rig.C.y)];
   const eyeAt = () => [R(hd.x + 0.5), R(hd.y - 0.5)];
-  const fanC = () => { const C = rig.C; return [C.x - 5, C.y - 3 - (P.fshake ? 1 : 0)]; };    // 扇尾根
-  function fanTip(k, n) { const f = FAN[P.fan], c = fanC(), a = (f[0] + (f[1] - f[0]) * k / (n - 1) + P.ftilt * 15) * D2R; return [c[0] - Math.cos(a) * f[2], c[1] - Math.sin(a) * f[2]]; }
+  const fanC = () => { const C = rig.C; return [C.x - 3, C.y - 4 - (P.fshake ? 1 : 0)]; };    // 扇尾根（藏在身体后上方，羽轴汇聚处被身体挡住）
+  const qLen = (r, k) => r - (k & 1 ? 2 : 0);                                              // 长短羽轴交替：剪影上是一圈锯齿
+  function fanTip(k, n) { const f = FAN[P.fan], c = fanC(), a = (f[0] + (f[1] - f[0]) * k / (n - 1) + P.ftilt * 15) * D2R, r = qLen(f[2], k); return [c[0] - Math.cos(a) * r, c[1] - Math.sin(a) * r]; }
 
   // ───── 姿势 ─────
   const F_ALL = ['lift', 'pitch', 'head', 'hdx', 'jaw', 'bx', 'ftilt', 'snood'];
@@ -111,20 +112,22 @@ PCD.define('Turkey', (E) => {
   }
 
   // ───── 画：部件 ─────
-  // 候选部件：fanTail 开屏扇尾——以 (cx, cy) 为根的一面半圆扇：n 根 1 格骨质羽轴从根放射到半径 r，外圈 3 格挂破羽片（按根号错开、缺口随机），
-  //   羽尖一颗眼斑（lit 根亮成淡杏）；根部一块半圆覆羽。a0 / a1 角度从正后方量（90 = 向上）；skip 第几根不画（射出去了）。一个部件。
+  // 候选部件：fanTail 开屏扇尾——以 (cx, cy) 为根的一面半圆扇：n 根 1 格骨质羽轴从根放射，长短交替（短的少 2 格，剪影外沿成锯齿），
+  //   羽轴末端 3 格挂破羽片（按根号错开、缺口随机，铜色羽缘），羽尖一颗眼斑（平时铜橙，lit 根亮成淡杏）；根部一块半圆覆羽。
+  //   a0 / a1 角度从正后方量（90 = 向上）；skip 第几根不画（射出去了）。一个部件。
   function fanTail(cx, cy, a0, a1, r, n, lit, skip) {
     part();
     for (let k = 0; k < n; k++) {
       if (k === skip) continue;
-      const a = (a0 + (a1 - a0) * k / (n - 1)) * D2R, dx = -Math.cos(a), dy = -Math.sin(a), px = -dy, py = dx;
-      U.seg(E, cx + dx * 3, cy + dy * 3, cx + dx * (r - 1), cy + dy * (r - 1), 1, m.bone, 0);
-      for (let s = r - 4; s <= r - 1; s++) {                                                // 破羽片：羽轴一侧 1–2 格，有缺口
+      const a = (a0 + (a1 - a0) * k / (n - 1)) * D2R, dx = -Math.cos(a), dy = -Math.sin(a), px = -dy, py = dx, rk = qLen(r, k);
+      const mid = (rk + 4) / 2;
+      U.seg(E, cx + dx * 4, cy + dy * 4, cx + dx * mid, cy + dy * mid, 1, m.bone, 2); U.seg(E, cx + dx * mid, cy + dy * mid, cx + dx * (rk - 1), cy + dy * (rk - 1), 1, m.bone, 0);   // 羽轴：根部暗一级，往外变亮
+      for (let s = rk - 4; s <= rk - 2; s++) {                                              // 破羽片：羽轴一侧 1–2 格，有缺口
         if (U.hash(k, s) < 0.28) continue; const w = U.hash(s, k + 7) < 0.5 ? 1 : 2;
-        for (let j = 1; j <= w; j++) U.dot(E, cx + dx * s + px * j * (k & 1 ? 1 : -1), cy + dy * s + py * j * (k & 1 ? 1 : -1), m.feather, j === w ? 2 : 0);
+        for (let j = 1; j <= w; j++) U.dot(E, cx + dx * s + px * j * (k & 1 ? 1 : -1), cy + dy * s + py * j * (k & 1 ? 1 : -1), m.vane, j === w ? 2 : 0);
       }
-      U.dot(E, cx + dx * r, cy + dy * r, m.spot, k < lit ? 4 : 2);                           // 眼斑
-      if (k < lit) U.dot(E, cx + dx * (r - 1), cy + dy * (r - 1), m.spot, 3);
+      U.dot(E, cx + dx * rk, cy + dy * rk, m.spot, k < lit ? 4 : 3);                        // 眼斑：铜橙 → 点亮成淡杏
+      U.dot(E, cx + dx * (rk - 1), cy + dy * (rk - 1), m.spot, k < lit ? 3 : 2);
     }
     for (let a = a0 - 10; a <= a1 + 10; a += 12) { const q = a * D2R; U.disc(E, cx - Math.cos(q) * 2, cy - Math.sin(q) * 2, 1.6, m.body, 0); }   // 根部覆羽
   }
@@ -145,15 +148,15 @@ PCD.define('Turkey', (E) => {
   }
   function belly() {                                                                        // 粗十字麻绳缝线 + 插着的木签（紧跟身体画）
     const C = rig.C, v = rig.ry * 0.62;
-    for (let u = -3; u <= 3; u++) { const p = U.toW(C.x, C.y, C.a, u, v); U.dot(E, p[0], p[1], m.body, 1); }
-    for (const u of [-3, 0, 3]) { for (const [du, dv] of [[-1, -1], [1, 1], [1, -1], [-1, 1]]) { const p = U.toW(C.x, C.y, C.a, u + du, v + dv); U.dot(E, p[0], p[1], m.twine, dv < 0 ? 3 : 2); } }
+    for (let u = -5; u <= 5; u++) { const p = U.toW(C.x, C.y, C.a, u, v); U.dot(E, p[0], p[1], m.body, 1); }
+    for (const u of [-4, 0, 4]) { for (const [du, dv] of [[-1, -1], [1, 1], [1, -1], [-1, 1]]) { const p = U.toW(C.x, C.y, C.a, u + du, v + dv); U.dot(E, p[0], p[1], m.twine, dv < 0 ? 3 : 2); } }
     const s0 = U.toW(C.x, C.y, C.a, 2, v - 1.5), s1 = U.toW(C.x, C.y, C.a, 7, v + 3.5); U.seg(E, s0[0], s0[1], s1[0], s1[1], 1, m.wood, 3); U.dot(E, s1[0], s1[1], m.wood, 4);   // 木签斜着戳出肚皮
   }
-  const BEADS = [[0, 0], [0.5, 2], [1.5, 4], [3, 5], [4.5, 4], [5.5, 2]];                  // 红绳兜成 U 形，5 枚铜钱串在上面
-  function coinString() {                                                                   // 颈下一串 5 枚铜钱
-    part(); const C = rig.C, x0 = C.x + 5 + P.hdx * 0.3, y0 = C.y - 4, sw = P.snood * 0.5;
-    for (let i = 0; i < 5; i++) U.seg(E, x0 + BEADS[i][0] + sw * i / 5, y0 + BEADS[i][1], x0 + BEADS[i + 1][0] + sw * (i + 1) / 5, y0 + BEADS[i + 1][1], 1, m.string, 3);
-    for (let i = 1; i <= 5; i++) U.dot(E, x0 + BEADS[i][0] + sw * i / 5, y0 + BEADS[i][1], m.coin, i === 3 ? 4 : 3);
+  const BEADS = [[4, -4.5], [4, -1.5], [5, 1.5], [7.5, 3], [10, 2], [11, -1], [9.5, -3.5]];   // 红绳从颈后兜过胸前回到颈前，5 枚铜钱串在上面（相对身体中心）
+  function coinString() {                                                                   // 颈下一串 5 枚铜钱：每枚 2×2（左上亮、右下暗），红绳从中间穿过
+    part(); const C = rig.C, sw = P.snood * 0.5, bx = (i) => C.x + BEADS[i][0] + P.hdx * 0.3 + sw * Math.min(i, 5) / 5, by = (i) => C.y + BEADS[i][1];
+    for (let i = 0; i < BEADS.length - 1; i++) U.seg(E, bx(i), by(i), bx(i + 1), by(i + 1), 1, m.string, 2);
+    for (let i = 1; i <= 5; i++) { const x = R(bx(i) - 0.5), y = R(by(i) - 0.5); U.dot(E, x, y, m.coin, i === 3 ? 4 : 3); U.dot(E, x + 1, y, m.coin, 3); U.dot(E, x, y + 1, m.coin, 2); U.dot(E, x + 1, y + 1, m.coin, 2); }
   }
   function headNeck() {
     part(); const C = rig.C, nb = U.toW(C.x, C.y, C.a, rig.rx * 0.72, -rig.ry * 0.45);
@@ -172,6 +175,11 @@ PCD.define('Turkey', (E) => {
     for (let k = 0; k < L; k++) U.dot(E, x0 + 3 + (k >= L - 2 ? sw : 0), y0 + 2 + k, m.snood, k === L - 1 ? 2 : 3);
     const wx = R(hd.x), wy = R(hd.y + hd.r); U.dot(E, wx, wy, m.snood, 3); U.dot(E, wx - 1, wy, m.snood, 2); U.dot(E, wx, wy + 1, m.snood, 2); U.dot(E, wx - 1 - sw * 0, wy + 1, m.snood, 1); U.dot(E, wx + (sw < 0 ? -1 : 0), wy + 2, m.snood, 2);
   }
+  function wingEdge(x, y, pose) {                                                          // 近翼的铜色羽缘：初级飞羽尖 + 前缘中点各 1 格（紧跟 B.wing 画，并进翼的部件）
+    const W = B.WINGS[pose | 0] || B.WINGS[0], w = o.wing, a0 = W[0], aT = W[1], fold = W[2], arm = w.span * (0.42 - 0.14 * fold), wx = x - Math.cos(a0) * arm, wy = y - Math.sin(a0) * arm;
+    for (let k = 0; k < w.fingers; k++) { const q = k / (w.fingers - 1), fa = a0 + (aT - a0) * (0.25 + 0.75 * q), fl = w.span * (0.62 - 0.12 * q) * (1 - 0.55 * fold); U.dot(E, wx - Math.cos(fa) * fl, wy - Math.sin(fa) * fl, m.edge, k === 0 ? 3 : 2); }
+    U.dot(E, (x + wx) / 2, (y + wy) / 2 - 1, m.edge, 3);
+  }
   function drawStanding() {
     const C = rig.C, f = FAN[P.fan], c = fanC(), wp = P.gf >= 0 ? B.FLAP[P.gf] : P.wing, wr = rig.wing;
     fanTail(c[0], c[1], f[0] + P.ftilt * 15, f[1] + P.ftilt * 15, f[2], 12, P.lit, P.miss ? 7 : -1);
@@ -180,7 +188,7 @@ PCD.define('Turkey', (E) => {
     else { const h = U.toW(C.x, C.y, C.a, 0, rig.ry * 0.85); frillLeg(h[0] + 1, h[1], 2, -2, 1, 0); frillLeg(h[0] - 2, h[1] + 0.5, 2, -2, 0, 0); }   // 滑翔时腿往后收
     F.body(E, rig, P, o); speckle(); belly();
     coinString();
-    B.wing(E, wr.x, wr.y, wp, o.wing, o.m, 0);
+    B.wing(E, wr.x, wr.y, wp, o.wing, o.m, 0); wingEdge(wr.x, wr.y, wp);
     headNeck(); snoodWattle();
   }
   function drawLying() {                                                                    // 烤火鸡摆盘：扇尾摊在身后地上，肚皮朝天，两条纸花腿直直朝天，头颈瘫在地上

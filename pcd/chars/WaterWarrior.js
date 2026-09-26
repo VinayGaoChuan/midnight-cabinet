@@ -116,23 +116,28 @@ PCD.define('WaterWarrior', (E) => {
   // ───── 画（部件从后往前）─────
   // 候选部件：wetHair 湿长发（后层）——从后脑垂到腰后，再往身后拖出三绺，发梢下坠（湿、沉）。o = { mat, len 往后拖的格数 }
   //   读 P.beard：< 0 往后飘直、拖得更长；> 0 甩起（发梢上翘）。头顶那一层用 parts.hair 'short' 另画（压在头上）
+  //   发束分三绺（外绺最长、到腰后；中绺到背中；内绺最短），往后拖的那段各自 1 格细、相位错开：飘直时一绺往下弯、一绺往上挑，不会并成一块板
   function wetHair(R, o) {
-    const T = R, m = o.mat, b = P.beard, x0 = R.hx0, hy = R.hy, yW = R.yWaist;
+    const T = R, m = o.mat, b = P.beard, x0 = R.hx0, hy = R.hy, yW = R.yWaist, ph = (P.sway || 0) + (P.step || 0);
     E.part();
-    for (let y = R.htop + 1; y <= hy; y++) parts.px(E, T, x0 - 1, y, m, ((y - R.htop) % 3) === 2 ? 2 : 0);   // 后脑：贴着头皮垂下
-    const END = [yW + 1, R.yS + 3], LEN = [o.len, 2], W2 = [1, 0], SPREAD = [0, 2];                     // 主绺（2 格粗）垂到腰后再往后拖；细绺在背中间甩出
-    for (let s = 0; s < 2; s++) {
-      const y1 = END[s], n = Math.max(1, y1 - hy); let x = x0 - 1;
-      for (let k = 1; k <= n; k++) {
+    for (let y = R.htop + 1; y <= hy; y++) { parts.px(E, T, x0 - 1, y, m, ((y - R.htop) % 3) === 2 ? 2 : 0); if (y > R.htop + 2) parts.px(E, T, x0 - 2, y, m, y & 1 ? 2 : 3); }   // 后脑：贴着头皮垂下的一片
+    const END = [yW + 1, yW - 2, R.yS + 3], LEN = [o.len, o.len - 1, 2], OUT = [0, 1, 2], BEND = [1, -1, 0];
+    for (let s = 0; s < 3; s++) {
+      const y1 = END[s], n = Math.max(1, y1 - hy); let x = x0 - 2;
+      for (let k = 1; k <= n; k++) {                                                                     // 顺着背垂下来（外绺贴得最远）
         const y = hy + k, q = k / n, e = parts.edges(R, y)[0];
-        x = Math.min(x0 - 1, e - 1) - RD(SPREAD[s] * q + q * q * (1 + Math.max(0, -b) * 0.6)) + (b > 0 ? RD(b * q * 0.6) : 0);
-        parts.px(E, T, x, y, m, (k % 3) === 1 ? 2 : s ? 2 : 3); if (W2[s] && k > 1) parts.px(E, T, x + 1, y, m, 2);
+        x = Math.min(x0 - 2, e - 1) - RD(OUT[s] * q + q * q * (0.6 + Math.max(0, -b) * 0.5)) + (b > 0 ? RD(b * q * 0.6) : 0);
+        parts.px(E, T, x, y, m, (k % 3) === 1 ? 2 : s === 0 ? 3 : 2); if (s === 0 && k > 1) parts.px(E, T, x + 1, y, m, 2);
       }
-      const L = LEN[s] + Math.max(0, -b);                                                                  // 往身后拖，发梢下坠（甩起时上翘），梢头亮一格 = 湿光
+      const L = LEN[s] + Math.max(0, -b);                                                                // 往身后拖：垂着时发梢下坠，飘直时波浪错相，甩起时上翘；梢头亮一格 = 湿光
+      let lx = x, ly = y1;
       for (let i = 1; i <= L; i++) {
-        const qi = i / L, y = y1 + RD(qi * qi * (b > 0 ? -b * 1.2 : b < -1 ? 0.4 : 1.6));
-        parts.px(E, T, x - i, y, m, i === L ? 4 : 3); if (W2[s] && i < L - 1) parts.px(E, T, x - i + 1, y + 1, m, 2);
+        const qi = i / L;
+        const dy = b > 0 ? -RD(b * qi * 1.3) : b < 0 ? RD(BEND[s] * qi * (1 + qi) + Math.sin(qi * 3.4 + ph * 1.3 + s * 2.1) * 0.8 * qi) : RD(qi * qi * (1.6 + s * 0.4));
+        const X = x - i, Y = y1 + dy; parts.line(E, T, lx, ly, X, Y, m, 3); if (s === 0 && i <= 2) parts.px(E, T, X + 1, Y + 1, m, 2);
+        lx = X; ly = Y;
       }
+      parts.px(E, T, lx, ly, m, 4);
     }
   }
   // 候选部件：dorsalFin 背鳍——沿背脊（后颈 → 胯）竖起 n 根鳍棘，往后上方斜，棘间是隔点镂空的鳍膜（透出后面的发 / 勾线色 = 半透明），膜的外沿比棘低 = 锯齿。

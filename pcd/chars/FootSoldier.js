@@ -48,19 +48,20 @@ PCD.define('FootSoldier', (E) => {
     for (let v = -2; v <= 0; v++) { const k = (v + 3) / 4; px(E, T, RD(0.5 - 3.4 * k), v, m, 2); px(E, T, RD(0.5 + 3.6 * k), v, m, 2); }   // 竹篾辐条
     px(E, T, 0, -3, m, 4); px(E, T, -2, 0, m, 4);
   }
-  // 候选部件：龟壳 turtleShell —— 椭圆龟壳：中间一列脊盾（上下两道横缝）、两侧肋盾（竖缝），外圈缘盾每 3 格一道缝；随 rig 转（倒地时压在背上）。
-  //   (cx, cy) 壳心（rig 本地坐标），rx / ry 半轴；o = { mat }。一个部件。
-  function turtleShell(E, R, cx, cy, rx, ry, o) {
-    const m = o.mat, X = Math.ceil(rx), Y = Math.ceil(ry), sy = Math.max(1, RD(ry * 0.4));
+  // 候选部件：龟壳 turtleShell —— 竖立的椭圆龟壳（w × h 格，偶数宽高也居中：在半格网格上算椭圆）：外圈一圈缘盾（深一级，每 3 格一道墨色缝，
+  //   剪影边上读成一个个缺口）；中间一列 2 格宽的脊盾（两道横缝分成上中下三块）；脊盾两侧各一道竖缝分出肋盾；左上两格高光。随 rig 转（倒地时压在背上）。
+  //   (x0, y0) 外接框左上角（rig 本地坐标），o = { mat, w（默认 8）, h（默认 10）}。画在披肩之后：壳自己压一圈分界线，背后鼓出一个半圆。一个部件。
+  function turtleShell(E, R, x0, y0, o) {
+    const m = o.mat, W = o.w || 8, H = o.h || 10, rx = W / 2, ry = H / 2, sy = Math.max(0.5, Math.floor(ry * 0.3) + 0.5);
     E.part();
-    for (let j = -Y; j <= Y; j++) for (let i = -X; i <= X; i++) {
-      const e = (i * i) / (rx * rx + 0.3) + (j * j) / (ry * ry + 0.3); if (e > 1) continue;
-      let t = 0;
-      if (e > 0.6) t = ((i * 2 + j + 40) % 3 === 0) ? 2 : 0;                     // 缘盾缝
-      else if (Math.abs(i) <= 1 && (j === -sy || j === sy)) t = 2;                // 脊盾横缝
-      else if (Math.abs(i) === 2 && Math.abs(j) <= sy + 1) t = 2;                 // 肋盾竖缝
-      else if (i === -1 && j === -sy - 1) t = 4;                                  // 顶上一块脊盾的高光
-      px(E, R, cx + i, cy + j, m, t);
+    for (let v = 0; v < H; v++) for (let u = 0; u < W; u++) {
+      const i = u - rx + 0.5, j = v - ry + 0.5, e = (i * i) / (rx * rx + 0.3) + (j * j) / (ry * ry + 0.3); if (e > 1) continue;
+      let t = i + j < -1.5 ? 4 : 3;                                                    // 甲片：左上半受光（圆顶感），其余基色
+      if (e > 0.6) t = ((u * 2 + v) % 3 === 0) ? 1 : (u + v <= 3 ? 3 : 2);             // 缘盾：左上一段基色，其余深一级；每 3 格一道墨色缝
+      else if (Math.abs(i) < 1 && Math.abs(Math.abs(j) - sy) < 0.1) t = 2;             // 脊盾两道横缝
+      else if (Math.abs(Math.abs(i) - 1.5) < 0.1 && Math.abs(j) <= sy + 0.1) t = 2;    // 肋盾竖缝
+      else if ((i === -0.5 && j === -sy - 2) || (i === -1.5 && j === -sy - 1)) t = 4;         // 左上两格高光（斜着一对）
+      px(E, R, x0 + u, y0 + v, m, t);
     }
   }
   // 候选部件：鱼篓 creel —— 竹编鱼篓：口沿一行、2×2 编纹亮暗交错、篓底收窄 1 格；篓口伸出一截发光魂鱼尾（fish 发光体，单独一个部件，wag 摆尾）。
@@ -120,7 +121,7 @@ PCD.define('FootSoldier', (E) => {
   const K_HOLD = K(5, -13, 0.5, 0, 0, 0, 0);
   const K_BACK = K(3, -15, -0.55, -3, -9, -1, -1);       // 抛竿：先后引
   const K_FLING = K(8, -14, 0.95, -3, -9, 1, 1);         // 再前甩
-  const K_WAIT = K(6, -14, 0.4, -2, -10, 0, 1);          // 盯着假人头上的浮漂
+  const K_WAIT = K(4, -16, 0.15, -2, -10, -1, 1);        // 后仰、竿竖高，盯着假人头上的浮漂（钩尖离浮漂 11 格，鱼线的虚线和下垂看得见）
   const K_RAISE = K(5, -18, -0.05, 0, 0, -1, -1);        // 扬竿（竿竖起）
   const K_HOLD2 = K(6, -15, 0.25, 0, 0, 0, 0);
   const K_HURT = K(4, -11, 0.1, -4, -9, -1, -1);
@@ -133,7 +134,7 @@ PCD.define('FootSoldier', (E) => {
     ['flt', -4, 3], ['line', 0, 2], ['two', 0, 1], ['fish', 0, 2], ['pole', 0, 1]]);
   const SWAY_IDLE = [0, 1, 0, -1];
   const LIFT = [[-0.05, -1, -2, 0], [-0.15, -2, -4, 1], [-0.15, -2, -4, 1], [-0.05, -1, -1, 0], [0, 0, 1, 0]];   // 待机个性：轻轻提一次竿（角度、手高、浮漂、眼亮）
-  const T_REACH = 2 / 12, T_YANK = 3 / 12, T_ARRIVE = 0.32, FLY = 0.32, T_LAND = INCOMING + 0.66, T_FISH = INCOMING + 0.9;
+  const T_REACH = 2 / 12, T_YANK = 3 / 12, T_JERK = 4 / 12, T_ARRIVE = 0.32, FLY = 0.32, T_LAND = INCOMING + 0.66, T_FISH = INCOMING + 0.9;
 
   function poseAt(st, t, T) {
     const tq = q12(t), f12 = f12of(T), TT = f12 / 12;
@@ -205,13 +206,14 @@ PCD.define('FootSoldier', (E) => {
     E.begin(hero, P.bx, 0); const R = parts.rig(P, BODY), sk = M.skin, skD = M.skinD;
     const eye = P.gem >= 4 ? 0 : (P.gem >= 2 || P.glint) ? M.eyeB : M.eyeA;
     if (P.pole) hookPole(E, R, P, Object.assign({}, POLE, { free: 1, at: [-6, -1], a: -HALF }));    // 掉在身后地上的钩竿
-    turtleShell(E, R, R.sBx - 2, R.sBy + 5, 3.5, 4.5, { mat: M.shell });                          // 后臂挎的龟壳（伸出背后 3 格）
     parts.arm(E, R, P, { side: 'B', sleeve: 'tight', mat: skD, hand: skD, grip: P.two ? 'none' : 'fist' });   // 灰青尸肤的细胳膊
     parts.legs(E, R, P, { style: 'sandal', mat: sk, matD: skD, boot: M.rope, bootD: M.ropeD });
     strawCoat(E, R, P, { mat: M.straw, hem: -5, flare: 1.5, strap2: M.rope });
-    creel(E, R, -3, R.yWaist + 1, 5, 5, { mat: M.basket, fish: P.fish === 2 ? M.fishHot : M.fish, wag: P.fish === 1 });
+    creel(E, R, -3, R.yWaist + 1, 5, 5, { mat: M.basket, fish: P.gem >= 4 ? 0 : P.fish === 2 ? M.fishHot : M.fish, wag: P.fish === 1 });   // 死后魂鱼游走，篓口的鱼尾熄灭
     parts.mantle(E, R, P, { style: 'fur', mat: M.strawM, len: 4 });                                 // 蓑衣披肩（压在脸后面，不盖住下巴）
+    turtleShell(E, R, R.sBx - (P.lying ? 8 : 10), R.sBy - 2, { mat: M.shell, w: P.lying ? 6 : 8 });   // 后臂挎的龟壳盾：8×10 竖椭圆，画在披肩之后，背后鼓出一个半圆（伸出披肩 4 格）；扑倒后翻过来压在背上，侧看是 10 长 6 高的圆顶
     parts.head(E, R, P, { mat: sk, face: 'gaunt', eye: eye || sk, eyeStyle: eye ? 'glow' : 'dot', nose: 'small', mouth: 'line', ear: 'none', shade: 3 });
+    if (eye && !P.eyes) px(E, R, R.hx1 - 4, R.ey, eye, 2);                                           // 远侧那只魂火眼：1 格、暗一档（檐下两点青光）
     if (P.hatF) { const hp = parts.toSprite(R, R.hx, R.htop); bambooHat(E, R, P, { mat: M.hat, at: [hp[0] + P.hatX, -P.hatY - [0, 5, 2, 4][P.hatR]], rot: P.hatR }); }   // 翻滚时帽子整只留在地面以上
     else bambooHat(E, R, P, { mat: M.hat, off: P.hatO });
     if (!P.pole) {
@@ -239,9 +241,12 @@ PCD.define('FootSoldier', (E) => {
     return [FLOAT_X, FLOAT_Y + dip];
   }
   function drawFloat(x, y) { put(x, y, 12); put(x + 1, y, 11); put(x, y + 1, 21); put(x + 1, y + 1, 17); put(x, y + 2, 17); put(x + 1, y + 2, 18); put(x - 1, y + 1, 0); put(x + 2, y + 1, 0); }
-  function dashLine(x0, y0, x1, y1, sag, f12, c1, c2) {                // 鱼线：虚线（和 fx.link 同一种断法），中段下垂 sag 格
-    const n = Math.max(1, Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0))));
-    for (let k = 0; k <= n; k++) { if (((k + f12) % 3) === 0) continue; const q = k / n; put(RD(x0 + (x1 - x0) * q), RD(y0 + (y1 - y0) * q + sag * 4 * q * (1 - q)), (k + f12) % 3 === 1 ? c1 : c2); }
+  function dashLine(x0, y0, x1, y1, sag, f12, c1, c2) {                // 鱼线：连续取样的虚线（亮 3 格断 1 格，逐帧往前走），中段下垂 sag 格
+    const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) * 1.5)); let lx = 1e9, ly = 1e9, k = 0;
+    for (let s = 0; s <= n; s++) {
+      const q = s / n, x = RD(x0 + (x1 - x0) * q), y = RD(y0 + (y1 - y0) * q + sag * 4 * q * (1 - q)); if (x === lx && y === ly) continue;
+      lx = x; ly = y; const m = (k++ + f12) % 4; if (m) put(x, y, m === 2 ? c2 : c1);
+    }
   }
   // 魂鱼（特效外形）：身长 6，横着朝运动方向；头白、身青、腹一排暗一级、背鳍 1 格、尾分叉，斜着飞时尾巴抬 / 压 1 格；外面一圈墨色勾线（夜空里看得清）。fade 0–1 抖动消失
   const FISH = [[0, 0, 0], [1, 0, 1], [2, 0, 1], [3, 0, 1], [4, 0, 2], [1, 1, 2], [2, 1, 2], [3, 1, 3], [2, -1, 1], [5, -1, 3], [5, 1, 3]];
@@ -261,9 +266,10 @@ PCD.define('FootSoldier', (E) => {
     if (s === ATTACK && t === T_REACH) { thrT = 0; sfx('swing', { kind: 'thrust', w: 0.35 }); }
     if (s === ATTACK && t === T_YANK) {                                // 钩中回拽：从前往后的拖影弧 + 火花，假人被往回拽
       fx.slash(wx(K_YANK.hx + 1), wy(K_YANK.hy), 16, K_REACH.a + 0.05, K_YANK.a - 0.1, R_ST, 0.17, 2, 2);
-      burst(DUMMY_X - 1, HY - 16, 10, 40, 100, 0.15, 0.35, R_IMP, 10); fx.cross(DUMMY_X - 1, HY - 16, 4, R_IMP, 0.2); hitDummy(0, -1);
+      burst(DUMMY_X - 1, HY - 16, 10, 40, 100, 0.15, 0.35, R_IMP, 10); fx.cross(DUMMY_X - 1, HY - 16, 4, R_IMP, 0.2);
       sfx('hit', { mat: 'flesh', w: 0.35 });
     }
+    if (s === ATTACK && t === T_JERK) hitDummy(0, -1);                 // 假人晚 1 帧闪白、往回摇：回拽那一帧的拖影弧落在没闪白的假人身上，看得清
     if (s === CHARGE && Math.abs(t - 0.25) < 1e-9) { lineT = 0; sfx('shoot', { proj: 'water' }); }   // 抛出浮漂
     if (s === CAST && t === T_ARRIVE) {                                // 魂鱼钻进鱼篓：鱼篓爆亮、冲击环、脚下魂光上飘（成长）
       const cx = wx(P.cx), cy = wy(P.cy);
@@ -274,7 +280,7 @@ PCD.define('FootSoldier', (E) => {
     if (s === DEATH && Math.abs(t - T_LAND) < 1e-9) { for (let i = 0; i < 14; i++) spawn(K_DUST, HX - 8 + Math.random() * 26, HY - 1, (Math.random() - 0.5) * 30, -8 - Math.random() * 12, 0.4 + Math.random() * 0.4, FXI.dust); shake(0.1, 1); sfx('fall', { w: 0.45 }); }
     if (s === DEATH && Math.abs(t - T_FISH) < 1e-9) dfT = 0;
   }
-  const EVENTS = [[], [], [T_REACH, T_YANK], [0.25], [T_ARRIVE], [], [], [T_LAND, T_FISH], []];
+  const EVENTS = [[], [], [T_REACH, T_YANK, T_JERK], [0.25], [T_ARRIVE], [], [], [T_LAND, T_FISH], []];
   function hurtFx(s) {                                                 // 亡灵：骨灰火花 + 少量魂光
     const hx = HX + 1, hy = HY - 13; burst(hx, hy, s === DEATH ? 20 : 12, 40, 110, 0.25, 0.5, FXI.dust, 16); burst(hx, hy, s === DEATH ? 8 : 4, 20, 60, 0.3, 0.6, R_EL, 8);
     shake(0.16, s === DEATH ? 2 : 1); if (s === DEATH) flash(0.04); return true;
@@ -311,7 +317,7 @@ PCD.define('FootSoldier', (E) => {
       const kx = wx(P.kx), ky = wy(P.ky), d = P.flip ? 1 : -1; for (let k = 3; k <= 9; k++) { put(kx + d * k, ky - 2, k < 6 ? 31 : 30); if (k > 4) put(kx + d * k, ky + 6, 30); }
     }
     if (st === CHARGE && stT >= 0.25) {                                // 抛出的鱼线 + 浮漂
-      const fp = floatPos(q12(stT)); if (fp) { dashLine(wx(P.kx), wy(P.ky), fp[0], fp[1], stT < 0.45 ? 0 : 3, f12, EL[0], 18); drawFloat(fp[0], fp[1]); }
+      const fp = floatPos(q12(stT)); if (fp) { dashLine(wx(P.kx), wy(P.ky), fp[0], fp[1], stT < 0.45 ? 0 : 2, f12, EL[0], 21); drawFloat(fp[0], fp[1]); }   // 魂青虚线（每段中间一格白），中段垂 2 格，整条在假人头顶上方的夜空里
     }
     if (snapT < 2 / 12) { const c = snapT < 1 / 12 ? EL[0] : EL[1]; dashLine(wx(P.kx), wy(P.ky), FLOAT_X, FLOAT_Y + 6, 0, 0, c, c); }   // 鱼线绷紧「嗖—啪」
     if (st === CAST && fishT < FLY) { const p = fishAt(fishT); drawFish(RD(p[0]), RD(p[1]), p[2], p[3], EL, 0); }

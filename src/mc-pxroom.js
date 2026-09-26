@@ -188,7 +188,7 @@ class Pn {
       const up = nb(x, y + 1), dn = nb(x, y - 1), lf = nb(x + 1, y), rt = nb(x - 1, y), q = up >= 0 ? up : lf >= 0 ? lf : dn >= 0 ? dn : rt;
       if (q < 0) continue; const lit = up >= 0 || lf >= 0; add.push([p, L.m[q], lit ? (o.lit != null ? o.lit : 1) : 0, L.d[q]]);
     }
-    add.forEach(([p, m, t, d]) => { if (o.ink) m = MI.ink; L.m[p] = m; L.t[p] = t; L.nx[p] = 0; L.ny[p] = 0; L.e[p] = 0; L.d[p] = d; L.o[p] = id; L.f[p] = 0; });
+    add.forEach(([p, m, t, d]) => { if (o.ink) m = MI.ink; L.m[p] = m; L.t[p] = t; L.nx[p] = 0; L.ny[p] = 0; L.e[p] = 0; L.d[p] = d; L.o[p] = id; L.f[p] = 0; if (L.pl && L.st[p] !== L.stamp) { L.st[p] = L.stamp; L.pl.push(p); } });
     return this;
   }
   // mark painted floor rows: they lie flat (normal up) and recede FZ art px per row
@@ -279,7 +279,7 @@ function limb(S, x, y, a1, l1, a2, l2, dir, m, t, w) {
   S.line(x, y, ex, ey, m, t, { w }); S.line(ex, ey, hx, hy, m, t, { w }); return [Math.round(hx), Math.round(hy)];
 }
 function worker(S, x, y, look, p, dir) {
-  if (M.PXR.noWorkers) return;   // a room still being built shows its things, not its people
+  if (M.PXR.noWorkers) return { hand: [x, y - 12], head: [x, y - 24], shoulder: [x, y - 19] };   // a room still being built shows its things, not its people
   const L = typeof look === 'string' ? LOOK[look] : look; p = p || {}; dir = dir || 1; const bob = Math.round(p.bob || 0), lean = p.lean || 0;
   const hipY = y - 12 + bob, shY = y - 21 + bob, sx = x + Math.round(lean * 3 * dir), hx = sx + Math.round((p.hx || 0) * dir), fl = dir < 0;
   const boot = (f, dk) => S.rect(dir > 0 ? f[0] - 1 : f[0] - 2, f[1] - 1, 4, 2, L.boot[0], L.boot[1] - dk);
@@ -304,7 +304,7 @@ function worker(S, x, y, look, p, dir) {
   // front arm, hand
   const hand = limb(S, sx + dir, shY + 2, p.aF || 0, 5, p.eF || 0, 5, dir, L.top[0], L.top[1] + 0.6, 2);
   S.rect(hand[0], hand[1], 2, 2, L.skin[0], L.skin[1]);
-  S.end({ lit: 1 });
+  S.end({ lit: 1 }); const ret = { hand, head: [hx, shY - 3], shoulder: [sx + dir, shY + 2] };
   if (p.tool) { const a = (p.aF || 0) + (p.eF || 0) + (p.ta || 0), dx = Math.sin(a) * dir, dy = Math.cos(a), hx0 = hand[0] + 0.5, hy0 = hand[1] + 0.5;
     S.beg(); const tx = Math.round(hx0 + dx * 8), ty = Math.round(hy0 + dy * 8);
     if (p.tool === 'hammer') { S.line(hx0, hy0, tx, ty, 'wood', 6); const px = -dy, py = dx; for (let k = -3; k <= 3; k++) for (let q = 0; q < 3; q++) S.px(tx + px * k + dx * (q - 1), ty + py * k + dy * (q - 1), 'iron', q === 0 ? 9 : 6); }
@@ -315,6 +315,7 @@ function worker(S, x, y, look, p, dir) {
     else if (p.tool === 'box') { const bx = hand[0] - (dir > 0 ? 1 : 6); S.box(bx, hand[1] - 7, 8, 7, 'wood', 6); S.hl(bx, hand[1] - 4, 8, 'wood', 4); S.px(bx + 3, hand[1] - 6, 'crimson', 7); }
     else if (p.tool === 'mop') { S.line(hx0, hy0 - 8, hx0 + dx * 6, hy0 + 10, 'wood', 6); S.rect(Math.round(hx0 + dx * 6) - 2, Math.round(hy0) + 10, 5, 2, 'linen', 7); }
     S.end({ lit: 1 }); }
+  return ret;
 }
 // walk cycle poses for a worker moving at `speed` art px / s: returns x, dir and pose, pausing at the ends
 function stroll(t, x0, x1, speed, seed, pause) {
@@ -370,8 +371,10 @@ function bake(key) {
       for (let j = 0; j < n; j++) { if (gl[j]) continue; const p = pi[j], r = pixW(Y, p, xs[j], ys[j], l); if (r > 0.002) { js.push(j); ws.push(r); if (l.tint && r * l.tint > tw[j]) { tw[j] = r * l.tint; td[j] = l.idx + 1; } } }
       if (js.length && l.bake !== false) for (let q = 0; q < js.length; q++) s0[js[q]] += GAIN * ws[q] * (l.i || 1);   // each light's resting value is baked in; frames add only the change (bake: false → frames add all of it)
       return js.length ? { j: new Int32Array(js), w: new Float32Array(ws) } : null; });
-    B.L[k] = { Y, n, pi, xs, ys, base, len1, s0, gl, WL, tw, td, jx, par: Y.par, s: new Float32Array(n) };
+    const SH = sc.shafts.map(sh => { const js = [], ws = []; for (let j = 0; j < n; j++) { const v = beamAt(sh, xs[j], ys[j]); if (v > 0.002) { js.push(j); ws.push(v); } } return { j: new Int32Array(js), w: new Float32Array(ws) }; });
+    B.L[k] = { Y, n, pi, xs, ys, base, len1, s0, gl, WL, tw, td, jx, SH, par: Y.par, s: new Float32Array(n) };
   });
+  B.HZ = sc.shafts.map(sh => { const ps = [], ws = []; for (let y = Math.max(0, sh.y0 | 0); y < Math.min(H, Math.ceil(sh.y1)); y++) for (let x = 0; x < W; x++) { const v = beamAt(sh, x, y); if (v > 0.002) { ps.push(y * W + x); ws.push(v); } } return { p: new Int32Array(ps), w: new Float32Array(ws) }; });
   return (BAKED[key] = B);
 }
 // how much of light l reaches pixel p of layer Y (0…~1.6), in light units (×GAIN later)
@@ -471,8 +474,8 @@ function render(s, t, o) {
       const jx = Lb.jx;
       moving.forEach(l => { const x0 = Math.max(0, Math.floor(l.x - l.r)), x1 = Math.min(W - 1, Math.ceil(l.x + l.r)), y0 = Math.max(0, Math.floor(l.y - l.r)), y1 = Math.min(H - 1, Math.ceil(l.y + l.r));
         for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const j = jx[y * W + x]; if (j < 0 || Lb.gl[j]) continue; const v = pixW(Lb.Y, y * W + x, x, y, l); if (v) sb[j] += GAIN * v * l.i; } });
-      shafts.forEach(sh => { const a = sh.f ? sh.f(t + s.seed * 13) : 1; if (a <= 0) return; const hw = Math.max(sh.w0, sh.w1) + Math.abs(sh.dx || 0) + 1;
-        for (let y = Math.max(0, sh.y0 | 0); y < Math.min(H, Math.ceil(sh.y1)); y++) for (let x = Math.max(0, Math.floor(sh.x - hw)); x <= Math.min(W - 1, Math.ceil(sh.x + hw)); x++) { const j = jx[y * W + x]; if (j < 0) continue; const v = inShaft(sh, x, y, t); if (v) sb[j] += GAIN * v * a * (sh.i || 0.4); } });
+      shafts.forEach((sh, si) => { const a = sh.f ? sh.f(t + s.seed * 13) : 1; if (a <= 0) return; const P = Lb.SH[si], g = GAIN * a * (sh.i || 0.4), xs = Lb.xs, ys = Lb.ys;
+        for (let q = 0; q < P.j.length; q++) { const j = P.j[q]; sb[j] += g * P.w[q] * mote(xs[j], ys[j], t); } });
       sc.fields.forEach(fd => { if (fd.lay && fd.lay !== k) return; const tt = t + s.seed * 13; for (let y = Math.max(0, fd.y0); y < Math.min(H, fd.y1); y++) for (let x = Math.max(0, fd.x0); x < Math.min(W, fd.x1); x++) { const j = jx[y * W + x]; if (j < 0 || Lb.gl[j]) continue; const v = fd.fn(x, y, tt, s); if (v) sb[j] += GAIN * v; } });
       resolve(Lb, sb, out, off, I, B.lights, t, k === 'wall' ? par : 0);
     }
@@ -480,11 +483,15 @@ function render(s, t, o) {
     if (k === 'mid') drawParts(s, out, B, I);
   }
   // shaft haze on top: a dithered wash of the beam colour over dark pixels
-  shafts.forEach(sh => { const a = sh.f ? sh.f(t + s.seed * 13) : 1; if (a <= 0) return; const c = rgbOf(sh.c || '#fff0c0'), hw = Math.max(sh.w0, sh.w1) + Math.abs(sh.dx || 0) + 1; for (let y = Math.max(0, sh.y0 | 0); y < Math.min(H, sh.y1); y++) for (let x = Math.max(0, Math.floor(sh.x - hw)); x <= Math.min(W - 1, Math.ceil(sh.x + hw)); x++) { const v = inShaft(sh, x, y, t) * a * (sh.haze || 0.5), aq = Math.min(0.45, Math.floor(v * 8) / 8); if (aq > 0) blendPx(out, y * W + x, c, aq); } });
+  shafts.forEach((sh, si) => { const a = sh.f ? sh.f(t + s.seed * 13) : 1; if (a <= 0) return; const c = sh.rgb || (sh.rgb = rgbOf(sh.c || '#fff0c0')), Z = B.HZ[si], k = a * (sh.haze || 0.5);
+    for (let q = 0; q < Z.p.length; q++) { const p = Z.p[q], v = Z.w[q] * k * mote(p % W, (p / W) | 0, t), aq = Math.min(0.45, Math.floor(v * 8) / 8); if (aq > 0) blendPx(out, p, c, aq); } });
   if (D.post) D.post(out, t + s.seed * 13, s, o, I);
   if (!D.noFrame) frame(out, s, t, o, hovK);
 }
-function inShaft(sh, x, y, t) { if (y < sh.y0 || y >= sh.y1) return 0; const k = (y - sh.y0) / (sh.y1 - sh.y0), hw = sh.w0 + (sh.w1 - sh.w0) * k, cx = sh.x + (sh.dx || 0) * k, u = Math.abs(x + 0.5 - cx) / hw; if (u >= 1) return 0; const mote = 0.75 + 0.25 * vnoise(x * 0.25, y * 0.12 - t * 0.6, 3); return (1 - u * u) * (sh.fade ? 1 - k * sh.fade : 1) * mote; }
+// a beam's static shape (0…1) at a pixel; the drifting dust in it is a cheap per-frame term (mote)
+function beamAt(sh, x, y) { if (y < sh.y0 || y >= sh.y1) return 0; const k = (y - sh.y0) / (sh.y1 - sh.y0), hw = sh.w0 + (sh.w1 - sh.w0) * k, cx = sh.x + (sh.dx || 0) * k, u = Math.abs(x + 0.5 - cx) / hw; if (u >= 1) return 0; return (1 - u * u) * (sh.fade ? 1 - k * sh.fade : 1); }
+const mote = (x, y, t) => 0.78 + 0.22 * Math.sin(x * 0.61 + y * 0.23 - t * 1.3) * Math.sin(y * 0.17 - x * 0.11 + t * 0.7);
+function inShaft(sh, x, y, t) { const b = beamAt(sh, x, y); return b ? b * mote(x, y, t) : 0; }
 function blendPx(out, p, c, a) { const v = out[p], r = v & 255, g = (v >> 8) & 255, b = (v >> 16) & 255; out[p] = (0xff000000 | (Math.round(b + (c[2] - b) * a) << 16) | (Math.round(g + (c[1] - g) * a) << 8) | Math.round(r + (c[0] - r) * a)) >>> 0; }
 function addPx(out, p, c, a) { const v = out[p], r = Math.min(255, (v & 255) + c[0] * a), g = Math.min(255, ((v >> 8) & 255) + c[1] * a), b = Math.min(255, ((v >> 16) & 255) + c[2] * a); out[p] = (0xff000000 | (b << 16) | (g << 8) | r) >>> 0; }
 PXR.blendPx = blendPx; PXR.addPx = addPx;
@@ -513,6 +520,7 @@ function resolveDyn(Y, out, B, I, moving, sc, ambK, off, t) {
       const nx = Y.nx[p] / 127, ny = Y.ny[p] / 127, nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny)), pz = Y.d[p], px = x + 0.5, py = y + 0.5, sp = R.sp;
       let lum = a0 + a1 * Math.max(0, nx * KEY[0] + ny * KEY[1] + nz * KEY[2]);
       for (let i = 0, o = 0; i < nl; i++, o += 6) {
+        if (I[i] < 0.001) continue;
         const dx = LP[o] - px, dy = LP[o + 1] - py, dz = LP[o + 2] - pz, d2 = dx * dx + dy * dy + dz * dz, r = LP[o + 3]; if (d2 >= r * r) continue;
         const d = Math.sqrt(d2) || 1, f = 1 - d / r, att = f * f, ndl = (nx * dx + ny * dy + nz * dz) / d; let w = att * Math.max(0, (ndl + WRAP) / (1 + WRAP));
         if (sp) { const hx = dx / d, hy = dy / d, hz = dz / d + 1, hl = Math.sqrt(hx * hx + hy * hy + hz * hz) || 1, nh = (nx * hx + ny * hy + nz * hz) / hl; if (nh > 0) w += att * sp * Math.pow(nh, 18) * 1.6; }

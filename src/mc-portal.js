@@ -83,7 +83,9 @@ G.steleDrop = function (k, x, y) {
 const RN = (i) => { const s = Math.sin(i * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
 const DOOR = (X) => [X - 70, -240, 140, 230];
 // inside the arch, revealed as a widening circle
-function inner(ctx, X, q, fn) { ctx.save(); ctx.beginPath(); ctx.rect(...DOOR(X)); ctx.clip(); ctx.beginPath(); ctx.arc(X, -125, 8 + 200 * q, 0, 7); ctx.clip(); fn(); ctx.restore(); }
+// (in front of the pixel main base the door is its pointed arch: CLIP holds the arch's rows in the theme's own coordinates)
+let CLIP = null;
+function inner(ctx, X, q, fn) { ctx.save(); ctx.beginPath(); if (CLIP) CLIP.forEach(r => ctx.rect(r[0], r[1], r[2], r[3])); else ctx.rect(...DOOR(X)); ctx.clip(); ctx.beginPath(); ctx.arc(X, -125, 8 + 200 * q, 0, 7); ctx.clip(); fn(); ctx.restore(); }
 function radial(ctx, X, stops) { const g = ctx.createRadialGradient(X, -125, 6, X, -125, 150); stops.forEach(([o, c]) => g.addColorStop(o, c)); ctx.fillStyle = g; ctx.fillRect(...DOOR(X)); }
 function gearD(ctx, x, y, r, a, col) { if (r < 2) return; ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.fillStyle = col; for (let i = 0; i < 10; i++) { ctx.rotate(Math.PI / 5); ctx.fillRect(-r * 0.14, -r * 1.2, r * 0.28, r * 0.4); } ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.beginPath(); ctx.arc(0, 0, r * 0.35, 0, 7); ctx.fill(); ctx.restore(); }
 function swirl(ctx, X, t, col, w, dir) { ctx.save(); ctx.translate(X, -125); for (let k = 0; k < 3; k++) { ctx.rotate(t * (0.7 + k * 0.35) * (dir || 1)); ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.arc(0, 0, 32 + k * 30, 0, Math.PI * 1.2); ctx.stroke(); } ctx.restore(); }
@@ -185,6 +187,24 @@ function stele(ctx, x, y, W, t, i, hov, sel) {
   // 顶上的宝石：墨框方块 + 世界色 + 左上白高光
   ctx.fillStyle = P.ink; ctx.fillRect(x - 14, y + 8, 28, 28); ctx.fillStyle = wl; ctx.fillRect(x - 10, y + 12, 20, 20); ctx.fillStyle = P.white; ctx.fillRect(x - 8, y + 14, 6, 6);
 }
+// in front of the pixel main base: the look was drawn for the old flat door (140 × 230, pillars at ±85), so it is squeezed
+// into the pointed arch, clipped to the arch row by row, and painted on the art grid (1 art px = 2 world units) like the
+// rest of the gate — never a flat rectangle over the stone
+let OFF = null;
+const OW = 200, OH = 190;                                   // art px: world x X ± 200, y −380…0
+function archTheme(ctx, bv, k, t, q, X, lights) {
+  const rows = M.PXR && M.PXR.has && M.PXR.has('_mainbase') && M.PXR.archRows && M.PXR.archRows(); if (!rows || !rows.length) return false;
+  const hw = Math.max(...rows.map(r => r.x1)), top = rows[0].y, bot = rows[rows.length - 1].y + 2, sx = hw / 70, sy = (bot - top) / 230;
+  if (!OFF) { OFF = document.createElement('canvas'); OFF.width = OW; OFF.height = OH; }
+  const o = OFF.getContext('2d'); o.setTransform(1, 0, 0, 1, 0, 0); o.clearRect(0, 0, OW, OH);
+  // world → art grid, then the old door → the arch: x' = X + (x − X)·sx, y' = top + (y + 240)·sy
+  o.setTransform(0.5, 0, 0, 0.5, OW / 2 - X * 0.5, OH); o.translate(X, top); o.scale(sx, sy); o.translate(-X, 240);
+  CLIP = rows.map(r => [X + r.x0 / sx, (r.y - top) / sy - 240, (r.x1 - r.x0) / sx, 2 / sy]);
+  o.globalAlpha = Math.min(1, q * 1.6);
+  try { THEME[k](o, t, eo(q), X, lights || []); } finally { CLIP = null; }
+  ctx.save(); ctx.imageSmoothingEnabled = (bv.z || 1) < 0.9; ctx.drawImage(OFF, X - OW, -OH * 2, OW * 2, OH * 2); ctx.restore();
+  return true;
+}
 M.drawSteles = function (ctx, meta, bv, lights, layer) {
   const t = bv.t, on = !!bv.portalOpen, dtf = layer === 'body' ? Math.max(0, Math.min(0.05, t - (bv._dtp || t))) : 0;
   if (layer === 'body') { bv._dtp = t; bv.po = (bv.po || 0) + ((on ? 1 : 0) - (bv.po || 0)) * Math.min(1, dtf * 5); const sv = on && !bv.pickW ? 1 : 0; bv.sv = (bv.sv || 0) + (sv - (bv.sv || 0)) * Math.min(1, dtf * (sv ? 5 : 7)); bv.steles = []; }
@@ -193,7 +213,7 @@ M.drawSteles = function (ctx, meta, bv, lights, layer) {
   const th = bv.theme;
   if (th && layer === 'body') {
     const qi = cl((t - th.t0) / 0.8, 0, 1), q = th.out != null ? qi * (1 - cl((t - th.out) / 0.45, 0, 1)) : qi;
-    if (th.out != null && q <= 0) bv.theme = null; else if (THEME[th.k]) { ctx.save(); ctx.globalAlpha = Math.min(1, q * 1.6); THEME[th.k](ctx, t, eo(q), X, lights || []); ctx.restore(); }
+    if (th.out != null && q <= 0) bv.theme = null; else if (THEME[th.k] && !archTheme(ctx, bv, th.k, t, q, X, lights)) { ctx.save(); ctx.globalAlpha = Math.min(1, q * 1.6); THEME[th.k](ctx, t, eo(q), X, lights || []); ctx.restore(); }
   }
   // the chosen stele: lift, fall into the arch, shatter
   const D = bv.drop;

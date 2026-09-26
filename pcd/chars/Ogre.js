@@ -18,7 +18,7 @@ PCD.define('Ogre', (E) => {
   const SKIN = ['#1e1622', '#3e3046', '#62526a', '#8c7c92'], FUR = ['#1e1814', '#423830', '#6a5c4c', '#94846c'];
   const M = parts.mats(E, {
     skin: SKIN, fur: FUR, cape: { r: FUR, band: 2 }, iron: 'iron', pan: 'steel', wood: 'wood', apron: [0, 20, 19, 32], stain: 'boot', tusk: 'bone',
-    rope: [20, 19, 61, 62], rock: [0, 19, 61, 62], meat: [20, 44, 32, 33], soup: [20, 19, 61, 62], steam: 'white',
+    rope: [20, 19, 61, 62], rock: [0, 20, 61, 7], meat: [20, 44, 32, 33], soup: [0, 20, 32, 33], steam: 'white',
     ink: { r: 'ink', flat: 1 }, eye: { r: [20, 61, 62, 5], flat: 1 },
   });
   // 体型：矮壮改——肩厚 sw 6、四肢粗 1.5、驼背 2、没有脖子、头只有 5 行高；臂长 10（垂到膝上）、腿粗 4；收腰让肩到胯成倒三角；仰面倒下
@@ -34,7 +34,7 @@ PCD.define('Ogre', (E) => {
     gem: 0, rim: 0, eyes: 0, flash: 0, lying: 0, lift: 0, hatX: 0, hatY: 0, dq: 0, st: 0, shell: 0, jaw: 0, meat: 0, panB: 0, potY: 0, ear: 0, soup: 0,
     panX: 0, panY: 0, panR: 0, panF: 0, gx: 0, gy: 0, flip: 0, mx: 0, k1: 0, k2: 0 };
   const K = (hx, hy, a, bhx, bhy, lean, head, crouch) => ({ hx, hy, a, bhx, bhy, lean: lean || 0, head: head || 0, crouch: crouch || 0 });
-  const K_IDLE = K(8, -6, 2.4, -3, -6);                          // 平底锅垂在身前，锅面贴着地面上方
+  const K_IDLE = K(8, -9, 2.05, -3, -6);                         // 平底锅斜提在身前：锅面伸出前轮廓、离地 5 格
   const K_WIND = K(-3, -11, -1.6, -5, -7, -1, 0);                // 反手：锅拉到身后
   const K_SLAP = K(12, -11, HALF, -6, -8, 1, 1);                  // 横拍出去（出手定格）
   const K_FOLLOW = K(11, -8, 2.0, -5, -7, 1, 1);
@@ -48,7 +48,7 @@ PCD.define('Ogre', (E) => {
   const setK = (A, B, q) => E.mix(P, A, B, q, FIELDS);
   const KEY1 = parts.keyer([['hx', -32, 31], ['hy', -40, 15], ['a', -32, 32, 1 / ASTEP], ['bhx', -32, 31], ['bhy', -40, 15], ['lean', -1, 2], ['head', -1, 1], ['crouch', 0, 7], ['bob', 0, 1], ['bx', -16, 15], ['st', 0, 8], ['hatX', -16, 15]]);
   const KEY2 = parts.keyer([['step', -1, 1], ['wup', 0, 2], ['walk', 0, 1], ['sway', -2, 2], ['beard', -3, 3], ['gem', 0, 4], ['rim', 0, 3], ['eyes', 0, 1], ['flash', 0, 1],
-    ['lying', 0, 1], ['lift', 0, 3], ['hatY', 0, 7], ['dq', 0, 48, 48], ['shell', 0, 5], ['jaw', 0, 1], ['meat', 0, 1], ['panB', 0, 1], ['potY', -1, 1], ['ear', 0, 1],
+    ['lying', 0, 1], ['lift', 0, 7], ['hatY', 0, 7], ['dq', 0, 48, 48], ['shell', 0, 5], ['jaw', 0, 1], ['meat', 0, 1], ['panB', 0, 1], ['potY', -1, 1], ['ear', 0, 1],
     ['soup', 0, 3], ['panX', -8, 31], ['panY', 0, 20], ['panR', 0, 3], ['panF', 0, 2]]);
   const SWAY_IDLE = [0, 1, 0, -1], WALK_LEAN = [0, 1, 0, -1], WALK_POT = [0, -1, 0, -1];
   const T_STRIKE = 2 / 12, THUMPS = [5 / 12, 9 / 12, 13 / 12], T_QUAKE = 2 / 12, T_LAND = INCOMING + 0.66, T_PAN = INCOMING + 0.3 + 8 / 12;
@@ -105,8 +105,8 @@ PCD.define('Ogre', (E) => {
       else if (d < 0.3) { setK(K_HURT, K_HURT, 0); P.bx = -2; P.eyes = 1; P.beard = 3; P.sway = 1; P.ear = 1; P.flash = d < 1 / 12 ? 1 : 0; P.crouch = d < 0.15 ? 0 : 1; P.gem = (f12 & 1) ? 1 : 0; }
       else if (d < 0.5) { setK(K_STAG, K_STAG, 0); P.bx = -2; P.eyes = 1; P.beard = 2; P.gem = 1; P.potY = -1; }
       else {
-        setK(K_STAG, K_STAG, 0); P.lying = 1; P.bx = -2; P.eyes = 1; P.lift = d < 0.58 ? 3 : d < 0.66 ? 1 : 0; P.crouch = 0; P.lean = 0; P.head = 0;
-        P.hx = 2; P.hy = -6; P.bhx = -2; P.bhy = -6; P.a = HALF;                                // 两臂顺着身体放下
+        setK(K_STAG, K_STAG, 0); P.lying = 1; P.bx = -2; P.eyes = 1; P.lift = d < 0.58 ? 5 : d < 0.66 ? 3 : 2; P.crouch = 0; P.lean = 0; P.head = 0;   // 最后架在背锅上，离地 2 格
+        P.hx = 5; P.hy = -10; P.bhx = -6; P.bhy = -27; P.a = HALF;                               // 近侧手搭在肚子上，远侧手甩到头后的地上
         const hq = clamp01((d - 0.66) / 0.25); P.hatX = RD(6 * hq); P.hatY = RD(Math.sin(hq * Math.PI) * 3);   // 熊皮兜帽从头上滑落
         P.soup = d < 0.66 ? 0 : d < 0.75 ? 1 : d < 0.92 ? 2 : 3;                                       // 背锅压在身下挤出一滩汤
         P.gem = d < 0.9 ? ((f12 & 1) ? 1 : 4) : d < 1.3 ? ((f12 % 3) === 0 ? 1 : 4) : 4;
@@ -130,18 +130,20 @@ PCD.define('Ogre', (E) => {
   }
 
   // ───── 本角色的部件（库里没有的；通用的标「候选部件」）─────
-  // 候选部件：平底锅 pan —— 铸铁锅面 6×5 朝镜头 + 3 格木柄；锅心暗、右下一圈焦黑、左上一点冷光。T 落笔变换，(x, y) 握点，a 柄朝向（0 朝上、顺时针为正）
-  const PAN = ['.XXXX.', 'XXXXXX', 'XXXXXX', 'XXXXXX', '.XXXX.'];
+  // 候选部件：平底锅 pan —— 铸铁锅面 6×5 朝镜头：亮色锅沿一圈（左上沿冷光）、暗色锅底、右下一片焦黑（读成「盘」而不是「球」）；
+  //   木柄 4 格 + 柄根铁箍，柄尾露在手后 1 格（挂孔）。T 落笔变换，(x, y) 握点，a 柄朝向（0 朝上、顺时针为正）
+  const PAN = ['.RRRR.', 'RIIIIR', 'RIIIBR', 'RIIBBR', '.RRRR.'];
   function drawPan(T, x, y, a) {
     E.part();
-    const dx = Math.sin(a), dy = -Math.cos(a), rr = 1 / Math.sqrt((dx / 3) ** 2 + (dy / 2.5) ** 2);
-    for (let k = 1; k <= 3; k++) px(E, T, x + dx * k, y + dy * k, M.wood, k === 3 ? 2 : 0);
-    const cx = x + dx * (3.2 + rr), cy = y + dy * (3.2 + rr), X0 = RD(cx - 2.5), Y0 = RD(cy - 2);
+    const dx = Math.sin(a), dy = -Math.cos(a), rr = 1 / Math.sqrt((dx / 3) ** 2 + (dy / 2.5) ** 2), L = 4.6 + rr;
+    for (let k = -2; k <= 4; k++) px(E, T, x + dx * k, y + dy * k, k === 4 ? M.iron : M.wood, k === -2 ? 2 : k === 4 ? 4 : k === 3 ? 4 : 0);   // 柄尾挂孔 · 木柄 · 柄根铁箍
+    const cx = x + dx * L, cy = y + dy * L, X0 = RD(cx - 2.5), Y0 = RD(cy - 2);
     for (let j = 0; j < 5; j++) for (let i = 0; i < 6; i++) {
-      if (PAN[j][i] !== 'X') continue; const inner = i >= 1 && i <= 4 && j >= 1 && j <= 3;
-      let t = 0; if (inner) t = (i >= 3 && j >= 2) || (i === 4 && j === 1) || (i === 1 && j === 3) ? 1 : 2; if (i === 1 && j === 1) t = 4;
+      const c = PAN[j][i]; if (c === '.') continue;
+      const t = c === 'B' ? 1 : c === 'I' ? 2 : (i + j <= 2 ? 4 : 3);
       px(E, T, X0 + i, Y0 + j, M.pan, t);
     }
+    px(E, T, X0 + 2, Y0 + 1, M.pan, 3);                                                                     // 锅底一点反光
     return [RD(cx), RD(cy)];
   }
   // 候选部件：背锅 backPot —— 绑在背上的大铁锅：锅沿外翻、鼓腹、两只锅耳、一道麻绳；汤汽一缕（随 sway 摆）。(cx, top) 锅沿中心
@@ -158,17 +160,21 @@ PCD.define('Ogre', (E) => {
   }
   // 候选部件：熊头兜帽 bearHood —— 熊头皮压在头顶：3 行帽身、两只圆耳高出 2 格、熊吻向前伸出 3 格当帽檐（熊鼻、熊眼、一颗白牙）、后沿垂下一片熊皮。
   //   (x0, x1) 头的左右列、top 头顶行；pin 1 = 前耳往后一抖；free 时 T 是地上的变换
+  //   侧面看是一整颗熊头：圆顶 + 两只 2×2 圆耳（中间空 3 格，剪影里看得出两只）+ 向前伸出 3 格的熊吻（黑鼻头）+ 空洞熊眼；
+  //   熊的上颚压在食人魔额头上，两颗白牙垂下来。
   function bearHood(T, x0, x1, top, pin, flap) {
     E.part();
-    const f = M.fur;
-    px(E, T, x0, top - 5, f, 0); px(E, T, x0 - 1, top - 4, f, 0); px(E, T, x0, top - 4, f, 2);                              // 后耳（圆，缺一角）
-    const fe = x0 + 3 - pin; px(E, T, fe, top - 5 + pin, f, 4); px(E, T, fe, top - 4, f, 0); px(E, T, fe + 1, top - 4, f, 2);   // 前耳（一抖往后贴）
-    run(E, T, top - 3, x0 - 1, x1 - 1, f, 0); run(E, T, top - 2, x0 - 1, x1 + 1, f, 0); run(E, T, top - 1, x0 - 1, x1 + 3, f, 0); run(E, T, top, x0 - 1, x1 + 2, f, 0);
-    px(E, T, x1, top - 2, M.ink, 1); px(E, T, x1 - 1, top - 3, f, 4);                                                    // 熊眼（空洞）+ 眉
-    px(E, T, x1 + 1, top - 1, f, 4); px(E, T, x1 + 2, top - 1, f, 4); px(E, T, x1 + 3, top - 1, M.ink, 1);               // 熊吻背亮、熊鼻
-    px(E, T, x1 + 1, top + 1, M.tusk, 3);                                                                              // 上颚一颗白牙垂在额前
-    px(E, T, x0 + 1, top - 3, f, 4); px(E, T, x0 + 3, top - 3, f, 4); px(E, T, x0, top - 1, f, 2); px(E, T, x0 + 2, top, f, 2);   // 毛尖、毛纹
-    if (flap) for (let y = top + 1; y <= top + flap; y++) { px(E, T, x0 - 1, y, f, 0); if (y < top + flap) px(E, T, x0 - 2, y, f, y & 1 ? 2 : 0); }   // 后沿垂下的熊皮
+    const f = M.fur, bx = x0 - 2, fx = x0 + 3 - pin;
+    px(E, T, bx, top - 6, f, 2); px(E, T, bx + 1, top - 6, f, 0); px(E, T, bx, top - 5, f, 2); px(E, T, bx + 1, top - 5, f, 2);   // 后耳（远侧，暗一级）
+    px(E, T, fx, top - 6 + pin, f, 4); px(E, T, fx + 1, top - 6 + pin, f, 3); px(E, T, fx, top - 5, f, 3); px(E, T, fx + 1, top - 5, f, 1);   // 前耳（耳窝暗；一抖往后贴）
+    run(E, T, top - 4, x0 - 2, x1 - 1, f, 0); run(E, T, top - 3, x0 - 2, x1, f, 0);                                     // 圆顶
+    run(E, T, top - 2, x0 - 2, x1 + 3, f, 0); run(E, T, top - 1, x0 - 2, x1 + 3, f, 0); run(E, T, top, x0 - 2, x1 + 1, f, 0);   // 头 + 熊吻
+    px(E, T, x1 + 3, top - 2, M.ink, 1); px(E, T, x1 + 3, top - 1, f, 2);                                                // 黑鼻头
+    px(E, T, x1 + 1, top - 2, f, 4); px(E, T, x1 + 2, top - 2, f, 4);                                                    // 吻背亮
+    px(E, T, x1 - 1, top - 3, M.ink, 1); px(E, T, x1 - 2, top - 4, f, 4);                                                // 空洞熊眼 + 眉
+    px(E, T, x0, top - 4, f, 4); px(E, T, x0 + 2, top - 4, f, 4); px(E, T, x0 - 1, top - 2, f, 2); px(E, T, x0 + 1, top - 1, f, 2); px(E, T, x0 + 3, top, f, 2);   // 毛尖、毛纹
+    px(E, T, x1 + 2, top, M.tusk, 4); px(E, T, x1 + 1, top + 1, M.tusk, 3);                                            // 熊上颚两颗白牙垂在额前（不压到眼睛）
+    if (flap) for (let y = top + 1; y <= top + flap; y++) { px(E, T, x0 - 2, y, f, 0); px(E, T, x0 - 3, y, f, y & 1 ? 2 : 0); }   // 后沿垂下的熊皮
   }
   // 候选部件：半截围裙 waistApron —— 系在腰上、盖住前半身的油渍围裙（腰带 + 背后绳结 + 口袋 + 油渍 + 锯齿下摆）
   function waistApron(R) {
@@ -231,19 +237,43 @@ PCD.define('Ogre', (E) => {
     if (tj) px(E, R, hd.x1, hd.bot, M.skin, 1);
     return hd;
   }
-  function drawLying(R) {                                                                                 // 仰面倒地：锅压在身下（地面裁掉）、汤挤出来、兜帽滑落、锅飞走
-    if (P.soup) { E.part(); const w = [0, 4, 7, 10][P.soup], c = -7; for (let x = c - w; x <= c + w; x++) { px(E, parts.FREE, x, 0, M.soup, (x & 3) === 0 ? 4 : 0); if (Math.abs(x - c) < w - 2) px(E, parts.FREE, x, -1, M.soup, (x & 1) ? 3 : 4); } }   // 汤从背锅那里（上背下面）往两边淌开
-    parts.arm(E, R, P, { side: 'B', sleeve: 'bare', mat: M.skinD, hand: M.skinD, grip: 'big' });
-    parts.legs(E, R, P, { style: 'bare', mat: M.fur, matD: M.furD, boot: M.skin, bootD: M.skinD });
+  function drawLying(R) {                                                                                 // 仰面倒在背锅上：锅侧翻压在上背下面、汤从锅口挤出来，近侧膝盖支起，兜帽滑落，锅飞走
+    const F = parts.FREE, sh = parts.toSprite(R, -4, R.yS + 3);                                           // 上背（锅压在这里）
+    if (P.soup) { E.part(); const w = [0, 4, 7, 10][P.soup], c = sh[0] - 8; for (let x = c - w; x <= c + w; x++) { px(E, F, x, 0, M.soup, (x & 3) === 0 ? 3 : 2); if (Math.abs(x - c) < w - 2) px(E, F, x, -1, M.soup, (x % 5) === 0 ? 4 : 3); } }   // 汤从锅口往两边淌开（油花亮点稀疏）
+    lyingPot(sh[0], R);
+    parts.arm(E, R, P, { side: 'B', sleeve: 'bare', mat: M.skinD, hand: M.skinD, grip: 'big' });         // 远侧手甩过头顶
+    lyingLegs(R);
     drawTorso(R);
     waistApron(R);
     drawHead(R);
     parts.hair(E, R, P, { style: 'fringe', mat: M.skinD });                                               // 兜帽滑掉：露出光秃的头顶一圈
     const af = parts.arm(E, R, P, { sleeve: 'bare', mat: M.skin, hand: M.skin, grip: 'big' });
-    const hx = -19 - P.hatX, T = { r0: 0, tx: hx, ty: -P.hatY, rot: 0, ox: 0, oy: 0 };                   // 兜帽落在头边的地上
-    bearHood(T, -3, 2, -1, 1, 0);
+    const hx = -21 - P.hatX, T = { r0: 0, tx: hx, ty: -P.hatY, rot: 0, ox: 0, oy: 0 };                   // 兜帽落在头边的地上
+    bearHood(T, -3, 2, 0, 1, 0);
     if (P.panF) panFree();
     return af;
+  }
+  // 侧翻的背锅：锅底朝脚、锅口朝头（左），压在上背下面露出下半圈；锅沿亮边竖着一条、锅口里黑
+  function lyingPot(cx, R) {
+    E.part(); const F = parts.FREE, c = cx - 1;
+    for (let y = -6; y <= 0; y++) { const h = Math.abs(y + 3) / 3.6, w = Math.round(5.4 * Math.sqrt(Math.max(0, 1 - h * h))); if (w > 0) run(E, F, y, c - 4, c + w, M.iron, 0); }
+    for (let y = -6; y <= 0; y++) px(E, F, c - 5, y, M.iron, y === -6 || y === 0 ? 2 : 4);                  // 锅沿（竖着的亮边）
+    for (let y = -5; y <= -1; y++) px(E, F, c - 4, y, M.ink, 1);                                           // 锅口里黑
+    px(E, F, c - 3, -4, M.soup, 4); px(E, F, c - 3, -2, M.soup, 3);                                         // 锅口挂着汤
+    px(E, F, c + 2, 0, M.rope, 3); px(E, F, c + 2, -1, M.rope, 2);                                          // 松开的麻绳
+  }
+  // 倒地的两条腿（自己画，不用 rig 旋转的直腿）：远侧腿平伸、脚掌朝上；近侧膝盖支起、脚踩地
+  function lyingLegs(R) {
+    const F = parts.FREE, hF = parts.toSprite(R, R.hipFx, R.yHip + 1), hB = parts.toSprite(R, R.hipBx + 1, R.yHip + 1);
+    E.part();                                                                                             // 远侧腿（暗一级）
+    parts.sweep(E, F, hB[0], hB[1], hB[0] + 7, -2, 1.7, 1.5, M.furD, 0);
+    parts.rect(E, F, hB[0] + 8, -5, 2, 4, M.skinD, 0); px(E, F, hB[0] + 9, -6, M.skinD, 3);               // 脚掌朝上
+    E.part();                                                                                             // 近侧腿：大腿往上支起，小腿斜下踩地
+    const kx = hF[0] + 4, ky = hF[1] - 4;
+    parts.sweep(E, F, hF[0], hF[1], kx, ky, 1.8, 1.7, M.fur, 0);
+    parts.sweep(E, F, kx, ky, kx + 3, -3, 1.6, 1.4, M.fur, 0);
+    px(E, F, kx - 1, ky - 1, M.fur, 4); px(E, F, kx, ky - 2, M.fur, 4);                                   // 膝头亮
+    E.part(); parts.rect(E, F, kx + 2, -1, 4, 2, M.skin, 0); px(E, F, kx + 2, -1, M.skin, 4);              // 赤脚踩地
   }
   function panFree() {                                                                                   // 脱手的平底锅：绕锅心按 90° 翻转，落地平躺
     const T = { r0: P.panR, tx: P.panX, ty: -3 - P.panY, rot: 0, ox: 0, oy: 0 };

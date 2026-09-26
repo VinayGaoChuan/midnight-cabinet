@@ -288,7 +288,7 @@ G.gameOver = function (reason) {
   p.active = false; this.saveProfile();
   // the next coin starts a fresh game (tutorial stays done)
   const tut = m.tutDone; this.meta = M.resetMeta3(); this.meta.tutDone = tut; this.meta.baseTut = tut ? 99 : 0; this.save();
-  this.run = null; this.battle = null; this.raid = null; this.modal = null; this.panel = null; this.tear = null; this.dayFx = null; this.coreFx = null;
+  this.run = null; this.battle = null; this.raid = null; this.modal = null; this.panel = null; this.tear = null; this.coreFx = null;
   setTimeout(() => { this._over = false; }, 500);
   if (M.META_ROOM && this.toRoom) { this.toRoom({ settle: true }); return; }
   // no room: back to the title menu with the game's summary

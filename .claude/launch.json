@@ -54,6 +54,16 @@
         "8051"
       ],
       "port": 8051
+    },
+    {
+      "name": "game-reel",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8061"
+      ],
+      "port": 8061
     }
   ]
 }

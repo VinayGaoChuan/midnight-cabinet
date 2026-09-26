@@ -12,10 +12,10 @@ PCD.define('Lizard', (E) => {
   // ───── 颜色、材质 ─────
   const R_EL = fxRamp('corpseBolt', [21, 38, 50, 49, 48]), EL = FXR[R_EL];                 // 尸电：白 → 淡黄绿 → 酸绿 → 橄榄 → 墨绿
   const m = B.mats(E, {
-    main: [0, 9, 10, 18], belly: 'bone', claw: 'bone', copper: 'leather', tongue: 'blood',          // 死灰石板鳞（stone 提亮一级，夜景里读得出）、骨白腹线、铜件
+    main: [0, 9, 10, 18], belly: 'bone', claw: 'bone', copper: 'leather', tongue: 'blood',          // 死灰石板鳞（stone 提亮一级：原色阶在夜景和远山前是一团暗块，见 design.md）、骨白腹线、铜件
     eye: [0, 0, 50, 50], glow: [38, 38, 38, 38], cloud: [8, 7, 6, 6], spark: [50, 50, 21, 21],
   });
-  const o = Q.shape({ len: 12, chest: 3.8, rump: 3.4, waist: 0.15, hump: 0, leg: 3, lw: 2, thigh: 2.2, farDx: -2, stride: 2, lift: 2, foot: 'claw',
+  const o = Q.shape({ len: 12, chest: 3.8, rump: 3.4, waist: 0.15, hump: 0, leg: 3, lw: 2, thigh: 2.2, farDx: -2, stride: 3, lift: 2, foot: 'claw',
     neck: 3, neckA: 0.3, neckW: 2.3, head: { type: 'lizard', w: 7, h: 5.5, snout: 4.5, snH: 3.5, tip: 0.8 }, headA: 0.08,
     tail: 'long', tailLen: 14, tailA: -0.15, tailW: 3.2, tailCurl: 0.12, mane: 'none', fur: 0, pattern: 'scales', lieLegs: 1, m });
   const ROD_H = 8, ROD_DX = -3;                                                              // 避雷杆：肩后 3 格竖起 8 格
@@ -23,7 +23,7 @@ PCD.define('Lizard', (E) => {
   const HX = 34, DUR = DEFAULT_DUR.slice(), hero = new Sprite(92, 46, 52, 40);
   const RIM = { rim: 0, rx: 0, ry: 0, rimR: [0, 7, 13, 18], rimRamp: EL, flash: 0, dq: 0, skip: new Uint8Array(256) };
   for (const k of ['eye', 'glow', 'ink', 'spec', 'spark', 'cloud', 'tongue']) RIM.skip[m[k]] = 1;
-  const SPEC = Q.KEYS.concat(B.COMMON, [['tongue', 0, 2], ['plug', 0, 1], ['arc', 0, 1]]);
+  const SPEC = Q.KEYS.concat(B.COMMON, [['tongue', 0, 2], ['plug', 0, 1], ['arc', 0, 1]]);   // 移动里「抬起的爪多伸 1 格」只读 gf，已在 Q.KEYS 里
   const P = {}; Q.reset(P); P.tongue = 0; P.plug = 0; P.arc = 0;
   let rig = Q.rig(P, o);
   const HIT_POINT = rig.hit;
@@ -34,8 +34,9 @@ PCD.define('Lizard', (E) => {
   const pose = (p) => Object.assign({}, REST, p);
   const A_WIND = pose({ bx: -2, crouch: 1, head: -2, pitch: 1, tail: 1, glow: 1 });          // 头一缩（往后上缩、嘴里亮）
   const A_HIT = pose({ bx: 3, pitch: 1, head: 0, reach: 1, jaw: 3, tail: -2, glow: 2 });      // 猛地前伸吐出
-  const A_HOLD = pose({ bx: 2, pitch: 1, reach: 1, jaw: 1, tail: -1, glow: 1 });
-  const ATK = [[0, REST], [0.12, A_WIND, 'out'], [2 / 12, A_HIT, 'snap'], [0.25, A_HIT, 'lin'], [0.45, A_HOLD, 'out'], [0.75, REST, 'inOut']];
+  const A_REC = pose({ bx: 2, pitch: 1, head: -1, reach: 1, jaw: 2, tail: -1, glow: 1 });     // 吐完颈往回一缩，嘴里余光减一档
+  const A_SET = pose({ bx: 1, jaw: 1 });                                                        // 落回，舔一下嘴（信子）
+  const ATK = [[0, REST], [0.12, A_WIND, 'out'], [2 / 12, A_HIT, 'snap'], [0.25, A_HIT, 'lin'], [4 / 12, A_REC, 'snap'], [0.5, A_SET, 'out'], [0.75, REST, 'inOut']];
   const C_GRIP = pose({ crouch: 2, pitch: -1, head: 1, tail: -2, gem: 1 });                  // 四爪抓地压低、尾插头扎地
   // 施放 6 帧：吐（前伸）· 定 · 缩 · 吐 · 缩 · 吐（最大）
   const S_SPIT = pose({ bx: 2, pitch: 1, reach: 1, jaw: 3, tail: -2, gem: 3, glow: 2 }), S_HOLD = pose({ bx: 2, pitch: 1, reach: 1, jaw: 2, tail: -2, gem: 3, glow: 1 });
@@ -63,7 +64,10 @@ PCD.define('Lizard', (E) => {
     else if (st === MOVE) {                                                                    // 低伏爬行：对角步 + 头尾反向摆
       const f = Q.anim.walk(P, tq); P.tail = [-1, 0, 1, 0][f]; P.head = [1, 0, 0, 0][f];
       const w = walkDemo(tq, 14, 1); P.mx = w.mx; P.flip = w.flip;
-    } else if (st === ATTACK) { keys(tq, ATK, tmp, F_ALL); apply(tmp); P.rim = tq >= 0.12 && tq < 0.3 ? 1 : 0; }
+    } else if (st === ATTACK) {
+      keys(tq, ATK, tmp, F_ALL); apply(tmp); P.rim = tq >= 0.12 && tq < 0.3 ? 1 : 0;
+      const f = f12of(tq); if (f === 6) P.tongue = 1; else if (f === 7) P.tongue = 2;              // 吐完舔一下嘴
+    }
     else if (st === CHARGE) {
       const q = ease.inOut(clamp01(tq / 0.6)); E.mix(tmp, REST, C_GRIP, q, F_ALL); apply(tmp);
       P.plug = tq >= 0.3 ? 1 : 0; P.rim = tq < 0.5 ? 1 : 2;
@@ -85,6 +89,7 @@ PCD.define('Lizard', (E) => {
       }
     } else if (st === REVIVE) { idle(tq, f12); P.ddir = 1; P.dq = tq < 0.4 ? 1 : tq < 0.85 ? 1 - (tq - 0.4) / 0.45 : 0; P.gem = tq > 0.85 ? 2 : 0; }
     rig = Q.rig(P, o);
+    if (st === MOVE) for (const L of rig.legs) if (L.up) L.F[0] += 1;                              // 经过帧：抬起的爪再往前伸 1 格（短腿也看得出换脚）
     const g = rodTip(); P.gx = R(g[0]) + P.bx; P.gy = R(g[1]);
     B.key(P, SPEC);
   }
@@ -150,7 +155,7 @@ PCD.define('Lizard', (E) => {
       const s = Q.span(rig, o, x); if (!s || s[1] - s[0] < 4) continue;
       const y = R(s[0] + (s[1] - s[0]) * (lie ? 0.35 : 0.5) + Math.sin((x - x0) * 0.5) * 0.4);
       U.dot(E, x, y, m.body, 1);
-      if (((x - x0) % 3) === 1) { U.dot(E, x - 1, y - 1, m.body, 4); U.dot(E, x + 1, y + 1, m.body, 1); U.dot(E, x + 1, y - 1, m.body, 1); U.dot(E, x - 1, y + 1, m.body, 4); }
+      if (((x - x0) % 3) === 1) { U.dot(E, x - 1, y - 1, m.belly, 2); U.dot(E, x + 1, y + 1, m.body, 1); U.dot(E, x + 1, y - 1, m.body, 1); U.dot(E, x - 1, y + 1, m.belly, 2); }
     }
   }
   function faceExtras() {                                                                     // 与头同一个部件：远侧浑浊的眼（鼓在头顶）+ 信子

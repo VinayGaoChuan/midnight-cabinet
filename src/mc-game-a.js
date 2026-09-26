@@ -153,6 +153,8 @@ class Game {
     M.reelEv(r).forEach((E, i) => [M.REEL_CHG, M.REEL_CHG / 2].forEach((d, k) => { const at = E - d; if (r.t >= at && r.t - dt < at) { S.mini && S.mini('_', 'heart', Math.min(1, 0.45 + i * 0.2 + k * 0.1)); this.fx.kick(1.5 + i); } }));
     // 每升一格都比上一格更响：炸得更大、闪得更亮、字更大，第二格起加光芒
     if (ups > r.upsDone) { r.upsDone = ups; S.reelUp(ups); S.shatter(); const tl = r.tiles[(r.land + ups) % r.tiles.length]; this.fx.explode(960, 520, tl.c, 1 + ups * 0.5); this.fx.flash(tl.c, 0.1 + ups * 0.08); this.fx.pop(960, 250, tl.n + '！'.repeat(ups), tl.c, 70 + ups * 18, { slam: 1, life: 0.8, rise: 0 }); if (ups >= 2) this.fx.rays(960, 520, tl.c, 0.9, { r: 500 + ups * 150, n: 12 + ups * 2 }); this.fx.spark(660, 520, tl.c, 14, { dir: Math.PI, spread: 1.2, v: 1100 }); this.fx.spark(1260, 520, tl.c, 14, { dir: 0, spread: 1.2, v: 1100 }); }
+    // 停轮：猛地一顿（升档 / 「再上一格？」之前先停在起点那一格）
+    if (r.t >= M.REEL_STOP && r.t - dt < M.REEL_STOP && M.reelLock(r) > M.REEL_STOP) { S.reelStop(); this.fx.kick(5); }
     const lk = M.reelLock(r); if (!r.locked && r.t > lk - 0.9 && Math.floor((r.t - (lk - 0.9)) / 0.3) !== r.hb) { r.hb = Math.floor((r.t - (lk - 0.9)) / 0.3); S.heart(); this.fx.kick(2); }
     if (!r.locked && r.t >= M.reelLock(r)) {
       r.locked = true; S.reelStop(); const tl = r.tiles[(r.land + r.ups) % r.tiles.length];

@@ -13,7 +13,8 @@ PCD.define('GemLizard', (E) => {
   // ───── 颜色、材质 ─────
   const R_EL = fxRamp('corpseBolt', [21, 38, 50, 49, 48]), EL = FXR[R_EL];                 // 尸电（同蜥蜴）：白 → 淡黄绿 → 酸绿 → 橄榄 → 墨绿
   const m = B.mats(E, {
-    main: [0, 28, 29, 30], belly: 'bone', claw: 'bone', copper: 'leather',                   // 冷钢蓝灰鳞（iron 提亮一级）、骨白腹线、铜件
+    main: 'iron', belly: 'bone', claw: 'bone', copper: 'leather',                              // 冷钢蓝灰鳞 iron（按分配）、骨白腹线、铜件
+    hi: [0, 28, 29, 30],                                                                       // 背上鳞点的冷光：30 只用在这几格亮点上，大面积仍是 iron
     gem: [48, 49, 50, 38], gemLit: [48, 50, 38, 21], eye: [0, 0, 50, 50], glow: [38, 38, 38, 38],
   });
   const o = Q.shape({ len: 14, chest: 4.4, rump: 3.9, waist: 0.2, hump: 0, leg: 5, lw: 2, thigh: 2.4, farDx: -2, stride: 3, lift: 3, foot: 'claw',
@@ -36,8 +37,10 @@ PCD.define('GemLizard', (E) => {
   const pose = (p) => Object.assign({}, REST, p);
   const A_WIND = pose({ bx: -2, crouch: 1, pitch: 1, head: -1, frill: 1, gem: 1 });           // 后腿蹬地、前身微抬、颈褶半开
   const A_HIT = pose({ bx: 1, pitch: 3, head: -1, jaw: 1, reach: 1, frill: 2, gem: 3, tail: 1 });   // 棱柱射出电弧
-  const A_HOLD = pose({ bx: 0, pitch: 2, head: -1, reach: 1, frill: 2, gem: 2 });
-  const ATK = [[0, REST], [0.12, A_WIND, 'out'], [2 / 12, A_HIT, 'snap'], [0.25, A_HIT, 'lin'], [0.45, A_HOLD, 'out'], [0.75, REST, 'inOut']];
+  const A_REC = pose({ bx: -1, pitch: 2, head: -1, reach: 1, frill: 2, gem: 2, tail: 1 });   // 后坐：棱柱放完电往后一顿
+  const A_SET = pose({ pitch: 1, frill: 1, gem: 1 });                                          // 前身落下、颈褶收一半
+  const A_SET2 = pose({ frill: 1, gem: 1, jaw: 1, tail: -1 });                                 // 张嘴示威、尾巴一甩
+  const ATK = [[0, REST], [0.12, A_WIND, 'out'], [2 / 12, A_HIT, 'snap'], [0.25, A_HIT, 'lin'], [4 / 12, A_REC, 'snap'], [5 / 12, A_SET, 'snap'], [6 / 12, A_SET2, 'snap'], [0.75, REST, 'inOut']];
   const C_POSE = pose({ pitch: 2, head: -1, crouch: 0, reach: 1, frill: 2, gem: 1 });         // 蓄力：颈褶完全张开、前身抬起
   const S_POSE = pose({ bx: -1, pitch: 3, head: -1, jaw: 2, reach: 2, frill: 2, gem: 3, tail: 1 });
   const S_RECOIL = pose({ bx: -2, pitch: 2, head: -1, jaw: 1, reach: 1, frill: 2, gem: 3, tail: 1 });
@@ -114,10 +117,27 @@ PCD.define('GemLizard', (E) => {
     for (let k = 1; k <= 5; k++) { const top = k === 5; U.dot(E, x - 1, yb - k, mt, lv === 3 ? 4 : lv === 4 ? 2 : top ? 3 : 4); U.dot(E, x, yb - k, mt, lv === 4 ? 2 : lv >= 2 && lv <= 3 ? 4 : 3); U.dot(E, x + 1, yb - k, mt, lv === 4 ? 1 : lv === 3 ? 3 : 2); }
     U.dot(E, x, yb - 6, mt, lv === 4 ? 2 : 4);
   }
-  // 候选部件：frill（颈后褶伞：几片铜板从颈顶扇开，肋骨亮、板面暗、边缘扇贝；open 0 收 · 1 半开 · 2 全开）
+  // 候选部件：frill（颈后褶伞：4 片铜板从颈顶扇开；每片中间一根亮铜肋 + 肋尖 1 格高光，板面基色，板与板之间 1 格暗缝，外缘按片鼓成扇贝；
+  //   open 0 收 · 1 半开 · 2 全开）
   function drawFrill(open) {
     part(); const F = Q.headFrame(rig, o), c = F.at(-F.W * 0.75, F.top(-F.W * 0.75) + 1.2), n = 4;
     const r = [2.5, 4, 5.5][open], a0 = [2.7, 1.9, 1.45][open], a1 = [3.3, 3.6, 3.95][open], tips = [];
+    if (open) {
+      const step = (a1 - a0) / (n - 1), half = step / 2, SQ = 0.95, cx = c[0], cy = c[1];
+      for (let y = Math.floor(cy - r - 1); y <= Math.ceil(cy + r + 1); y++) for (let x = Math.floor(cx - r - 1); x <= Math.ceil(cx + r + 1); x++) {
+        const dx = x - cx, dy = (cy - y) / SQ, d = Math.hypot(dx, dy); if (d < 0.8 || d > r + 0.5) continue;
+        let a = Math.atan2(dy, dx); if (a < 0) a += Math.PI * 2;
+        const k = Math.max(0, Math.min(n - 1, Math.round((a - a0) / step))), diff = Math.abs(a - (a0 + step * k));
+        if (diff > half + 0.12) continue;                                                              // 扇面两端之外
+        const edge = r + 0.35 - (diff / half) * (r > 4 ? 1.4 : 1);                                     // 扇贝：每片外缘中间鼓、两边收
+        if (d > edge) continue;
+        const seam = d > 1.6 && diff > half * (r > 4 ? 0.62 : 0.55);                                 // 板与板之间的暗缝
+        const rib = diff * d < 0.55;                                                                   // 沿板中线的亮铜肋
+        U.dot(E, x, y, m.copper, seam ? 1 : rib ? 4 : 3);
+      }
+      const t0 = [cx + Math.cos(a0) * (r - 0.6), cy - Math.sin(a0) * (r - 0.6) * SQ]; U.dot(E, t0[0], t0[1], m.spec, 3);   // 最上面那根肋的肋尖 1 格高光
+      return;
+    }
     for (let k = 0; k < n; k++) { const a = a0 + (a1 - a0) * k / (n - 1); tips.push([c[0] + Math.cos(a) * r, c[1] - Math.sin(a) * r * 0.95]); }
     const poly = [c[0], c[1]];
     for (let k = 0; k < n; k++) { poly.push(tips[k][0], tips[k][1]); if (k < n - 1) { const a = a0 + (a1 - a0) * (k + 0.5) / (n - 1); poly.push(c[0] + Math.cos(a) * (r - 1.3), c[1] - Math.sin(a) * (r - 1.3) * 0.95); } }
@@ -141,7 +161,7 @@ PCD.define('GemLizard', (E) => {
   }
   function bodyMarks() {                                                                      // 与躯干同一个部件：背上亮鳞点 + 身侧缝合线（墨线 + 十字针脚），线上嵌晶粒
     const x0 = R(rig.C2.x + 1), x1 = R(rig.C1.x - 1);
-    for (let x = R(rig.C2.x - 2); x <= R(rig.C1.x + 1); x++) { const s = Q.span(rig, o, x); if (s && ((x + 40) % 3) === 0) U.dot(E, x, s[0] + 1 + ((x + 40) % 2), m.body, 4); }
+    for (let x = R(rig.C2.x - 2); x <= R(rig.C1.x + 1); x++) { const s = Q.span(rig, o, x); if (s && ((x + 40) % 3) === 0) U.dot(E, x, s[0] + 1 + ((x + 40) % 2), m.hi, 4); }
     for (let x = x0; x <= x1; x++) {
       const s = Q.span(rig, o, x); if (!s || s[1] - s[0] < 4) continue;
       const y = R(s[0] + (s[1] - s[0]) * 0.5 + Math.sin((x - x0) * 0.5) * 0.4);
@@ -208,7 +228,8 @@ PCD.define('GemLizard', (E) => {
     if (s === CAST && T_ARC.includes(t)) {                                                    // 6 道锯齿电弧从棱柱连射，越来越密；最后一道最重
       const i = T_ARC.indexOf(t), last = i === T_ARC.length - 1, [gx, gy] = tipScr(), hx = DUMMY_X - 2 + R((hash(i, 3) - 0.5) * 6), hy = HY - 12 - R(hash(i, 9) * 12);
       fx.bolt(gx + 1, gy, hx, hy, R_EL, last ? 0.16 : 0.1, 2, 20 + i); fx.cross(hx, hy, last ? 6 : 3, R_EL, last ? 0.3 : 0.16);
-      burst(hx, hy, last ? 20 : 7, 30, last ? 120 : 80, 0.12, last ? 0.5 : 0.3, R_EL, 8); hitDummy(last ? 1 : 0, 1);
+      burst(hx, hy, last ? 20 : 7, 30, last ? 120 : 80, 0.12, last ? 0.5 : 0.3, R_EL, 8);
+      if (i === 0 || i === 2 || last) hitDummy(last ? 1 : 0, 1);                               // 只在第 1、3、6 道闪白，其余几道只留描边 + 小十字，读得出「被电弧缠住」
       if (i === 0) dummyFx({ dur: 1.5, outline: R_EL });
       if (last) { ring(hx, hy, 1, R_EL); shake(0.12, 1); }
       sfx('impact', { pal: 'bolt', w: last ? 0.6 : 0.2 + i * 0.04 });

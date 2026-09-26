@@ -140,7 +140,7 @@ Object.keys(M.HEROES).forEach(k => { const H = M.HEROES[k]; if (!H._s) { H._s = 
 // ───────── meta v4 ─────────
 const KEY = 'midnight-cabinet-meta-v4';
 M.defaultMeta3 = function () {
-  const m = { v: 4, day: 1, supplies: 200, shards: 30, orbs: 0, inv: {}, relics: [], heroes: [], graveyard: [], cleared: {}, seenWorlds: {}, runs: 0, tutDone: false, baseTut: 0, portal: { hp: 1000 }, raids: 0, log: [], seenB: {} };
+  const m = { v: 4, day: 1, supplies: 200, shards: 30, orbs: 0, inv: {}, relics: [], heroes: [], graveyard: [], cleared: {}, seenWorlds: {}, runs: 0, tutDone: false, baseTut: 0, portal: { hp: 1000 }, raids: 0, log: [] };
   m.base = M.newBase(); m.base.cells[M.CORE.r][M.CORE.c - 1].dug = true; m.base.cells[M.CORE.r][M.CORE.c + 1].dug = true;
   m.base.cells[M.CORE.r][M.CORE.c - 1].tile = null; m.base.cells[M.CORE.r][M.CORE.c + 1].tile = null;
   m.heroes.push(M.newHero(m, 'watchman', 1));

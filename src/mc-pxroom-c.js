@@ -44,7 +44,7 @@ function bakeSpr(fn) {
   const l = mk(), S = new M.PXR_Painter({ wall: l, back: l, mid: l, front: l }, 5); S.lay('mid'); fn(S);
   const out = []; for (let p = 0; p < N; p++) if (l.m[p]) out.push(p % W, (p / W) | 0, l.m[p], l.t[p], l.nx[p] / 127, l.ny[p] / 127, l.e[p]); return out;
 }
-function stamp(D, spr, dx, dy) { for (let i = 0; i < spr.length; i += 7) D.put(spr[i] + dx, spr[i + 1] + dy, spr[i + 2], spr[i + 3], spr[i + 4], spr[i + 5], spr[i + 6]); }
+function stamp(D, spr, dx, dy, add) { add = add || 0; for (let i = 0; i < spr.length; i += 7) D.put(spr[i] + dx, spr[i + 1] + dy, spr[i + 2], spr[i + 6] === 255 ? spr[i + 3] + add : spr[i + 3], spr[i + 4], spr[i + 5], spr[i + 6]); }
 // outlines on the animated layers: Pn.end() writes its outline straight into the layer without adding it to the frame's
 // painted list, so on the (shared) dyn layers the outline never shows and lingers. ol() clears stale pixels in a box, runs
 // fn (which paints and outlines, all in the current layer), then registers what it left so the outline is lit and cleared
@@ -211,10 +211,12 @@ X.def('ballista', {
 });
 
 // ───────── 蒸汽加农炮 steam cannon (steam · defence, shell) ─────────
-// a long iron barrel with brass bands on a riveted carriage, aimed up through a brass-rimmed port; a copper boiler with a
-// glowing firebox, a pressure gauge and a whistle feeds its breech through a hose; shells in a rack, a hoist hook. The gunner
-// loads a shell now and then; a shot: muzzle flash in the port, the barrel kicks back, steam bursts from the breech.
-const CU = [2 / Math.sqrt(5), -1 / Math.sqrt(5)], CV = [-CU[1], CU[0]], C0 = [82, 60];   // barrel axis, across it, trunnion
+// a long iron barrel with brass bands on a riveted carriage, aimed up through a brass-rimmed port. On the left the shell
+// room: black round shells on an iron rack, powder kegs, and a chain hoist whose bucket rides up out of a hatch in the floor
+// (the magazine's lamplight comes up through it), its steam motor puffing and its amber lamp turning while it runs. The
+// moment: the gunner turns to the hoist, lifts the shell out of the bucket and pushes it into the breech; the seal hisses.
+// A shot: muzzle flash in the port, the barrel kicks back, steam bursts from the breech, the hook swings.
+const CU = [2 / Math.sqrt(5), -1 / Math.sqrt(5)], CV = [-CU[1], CU[0]], C0 = [82, 60];
 const cp_ = (s, p) => [C0[0] + CU[0] * s + CV[0] * p, C0[1] + CU[1] * s + CV[1] * p];
 const crad = (s) => (s < -14 ? 8 : s >= 45 ? 5.5 : 6.5 - (s + 14) / 59 * 2);
 let CSPR = null;
@@ -222,36 +224,35 @@ function cannonSpr() {
   return CSPR || (CSPR = bakeSpr((S) => {
     S.beg();
     rot(C0, CU, -22, 52, -10, 10, (x, y, s, p) => {
-      let r = crad(s), m = s < -14 ? 'copper' : s >= 45 ? 'brass' : 'iron', t0 = s < -14 ? 6 : s >= 45 ? 6.5 : 5.6;
+      let r = crad(s), m = s < -14 ? 'iron' : s >= 45 ? 'brass' : 'iron', t0 = s < -14 ? 4.4 : s >= 45 ? 6.5 : 5.6;
       if ([-13, -1, 15, 31].some(b => s >= b && s < b + 2.3)) { r += 1; m = 'brass'; t0 = 6.5; }
       if (Math.abs(p) > r) return; const q = p / r;
       let tn = t0 + (q < -0.6 ? 2.3 : q < -0.15 ? 1 : q < 0.45 ? 0 : -1.5);
       if (s < -21 || s > 50.5) tn -= 1.6;
       S.px(x, y, m, tn, { n: [CV[0] * q * 0.85, CV[1] * q * 0.85] });
     });
-    // rivets on the chamber, a brass steam line along the top of the barrel
-    for (let s = -20; s < -14; s += 3) [-5, 5].forEach(p => { const a = cp_(s, p); S.px(a[0], a[1], 'copper', 9); });
+    for (let s = -20; s < -14; s += 3) [-5, 5].forEach(p => { const a = cp_(s, p); S.px(a[0], a[1], 'brass', 8); });
     for (let s = -12; s < 34; s += 0.5) { const a = cp_(s, -crad(s) - 1.6); S.px(a[0], a[1], 'brass', 7.5, { n: [0, -0.6] }); }
     [2, 20].forEach(s => { const a = cp_(s, -crad(s) - 0.8); S.px(a[0], a[1], 'iron', 3); });
-    // the handwheel on the breech cap
     const hw = cp_(-23, 0); S.ell(hw[0], hw[1], 3.5, 3.5, 'crimson', 6, { ring: 1 }); S.line(hw[0] - 3, hw[1], hw[0] + 3, hw[1], 'crimson', 5); S.line(hw[0], hw[1] - 3, hw[0], hw[1] + 3, 'crimson', 5); S.px(hw[0], hw[1], 'brass', 8);
     S.end();
   }));
 }
-function shellSpr(D, s, p, clipS) {   // a brass shell lying along the barrel's axis, nose forward
-  rot(C0, CU, s, s + 12, p - 2.6, p + 2.6, (x, y, ss, pp) => { if (clipS != null && ss > clipS) return; const q = (pp - p) / 2.6, nose = ss > s + 8; if (nose && Math.abs(pp - p) > (s + 12 - ss) * 0.7) return;
-    D.px(x, y, nose ? 'iron' : 'brass', (nose ? 6 : 6.5) + (q < -0.3 ? 2 : q > 0.4 ? -1.5 : 0)); });
-}
+// a round black shell: dark iron, a lit crown, a brass fuse plug on top
+function ball(S, cx, cy, tn) { S.beg(); S.ell(cx, cy, 3, 3, 'iron', tn == null ? 2.6 : tn, { dome: 1 }); S.px(cx - 1.5, cy - 1.5, 'iron', 7.5); S.px(cx - 0.5, cy - 1.5, 'iron', 5); S.px(cx - 1.5, cy - 0.5, 'iron', 5); S.px(cx - 0.5, cy - 3.5, 'brass', 7); S.end(); }
+const HX0 = 27, HX1 = 50, HB = 39;   // hoist frame posts, bucket centre
+function hoistY(q) { return q < 0.22 ? 99 - 33 * ease(q / 0.22) : q < 0.66 ? 66 : q < 0.9 ? 66 + 33 * ease((q - 0.66) / 0.24) : 99; }
 X.def('cannon', {
   amb: [0.3, 0.3],
   paint(S, sc) {
     X.shell(S, sc, 'steam');
-    sc.light({ x: 21, y: 70, z: 18, r: 72, i: 1.1, c: '#ff7a30', fl: 'fire', tint: 0.5 });                  // 0 firebox
+    sc.light({ x: 39, y: 96, z: 10, r: 44, i: 0.55, c: '#ffa850', fl: 'fire', ph: 1.4, tint: 0.55 });           // 0 the magazine lamps below, up through the hatch
     sc.light({ x: 72, y: 17, z: 16, r: 96, i: 0.8, c: '#ffd8a0', fl: 'candle', ph: 2, tint: 0.25 });         // 1 caged bulb
     sc.light({ x: 104, y: 22, z: 6, r: 34, i: 0.6, c: '#ff3a30', fl: 'pulse', amp: 0.5, sp: 2.2, tint: 0.6 }); // 2 warning lamp
     sc.light({ x: 124, y: 38, z: 12, r: 112, i: 1, c: '#ffc070', tint: 0.5, bake: false });                   // 3 muzzle flash (dark until a shot)
     sc.light({ x: 129, y: 34, z: 3, r: 46, i: 0.45, c: '#a8b8ff', tint: 0.4 });                              // 4 night through the port
-    // the port: a brass ring with bolts, iris blades drawn back, the sky beyond
+    sc.light({ x: 24, y: 13, z: 8, r: 34, i: 0.7, c: '#ffb030', tint: 0.6, bake: false });                    // 5 hoist lamp (turns while the hoist runs)
+    // the port: a brass ring with bolts, the sky beyond
     S.lay('wall');
     for (let y = 22; y < 51; y++) for (let x = 115; x < 144; x++) { const d = Math.hypot(x + 0.5 - 129, y + 0.5 - 36), a = Math.atan2(y + 0.5 - 36, x + 0.5 - 129);
       if (d < 10) S.px(x, y, 'night', 1.3 + (y - 26) / 20 * 2.2, { e: 255 });
@@ -259,20 +260,24 @@ X.def('cannon', {
       else if (d < 14) S.px(x, y, 'brass', 6 + (d < 12.2 ? -1.5 : 0) - Math.sin(a) * 0.8 + Math.cos(a) * 0.3, { n: [Math.cos(a) * 0.5, Math.sin(a) * 0.5] }); }
     for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2 + 0.2; TX.rivet(S, 129 + Math.cos(a) * 12.5 - 0.5, 36 + Math.sin(a) * 12.5 - 0.5, 'brass', 6); }
     [[124, 30], [134, 29], [131, 42], [122, 39]].forEach(([x, y], i) => S.px(x, y, 'linen', i % 2 ? 8 : 6, { e: 255 }));
+    // the hatch in the floor: an iron coaming, the magazine's lamplight coming up out of the pit
+    for (let y = 90; y < 97; y++) for (let x = HX0 + 1; x < HX1 + 1; x++) { const rim = x < HX0 + 3 || x > HX1 - 2 || y === 90 || y >= 95;
+      if (rim) S.px(x, y, 'iron', y >= 95 ? (y === 95 ? 8 : 4) : x < HX0 + 3 ? 6.5 : 4.5, { n: [0, -0.8] });
+      else S.px(x, y, 'lamp', y === 91 ? 1.5 : y === 92 ? 2.6 : 3.4 - (Math.abs(x - HB) > 7 ? 0.8 : 0), { e: 1 }); }
+    for (let x = HX0 + 4; x < HX1 - 2; x += 3) S.px(x, 93, 'iron', 3);   // a ladder rung on the far side of the pit
+    for (let x = HX0 + 2; x < HX1; x += 5) TX.rivet(S, x, 95, 'iron', 6);
     S.lay('back');
-    // boiler: dome, body, brass bands with rivets, whistle, firebox door that glows, gauge face (needle animated)
-    S.beg(); S.cyl(19, 19, 4, 10, 'brass', 6, { rim: 1.5 }); S.box(17, 17, 8, 3, 'brass', 7); S.end();
-    S.beg(); S.ell(21, 34, 13, 6, 'copper', 6, { dome: 1 }); S.cyl(8, 34, 26, 50, 'copper', 5, { rim: 2.5 });
-    [40, 57, 80].forEach(y => { S.hcyl(7, y, 28, 3, 'brass', 6, { rim: 1.5 }); for (let x = 10; x < 33; x += 4) S.px(x, y + 1, 'brass', 9); });
-    for (let y = 45; y < 56; y += 5) for (let x = 11; x < 32; x += 6) S.px(x + (y % 10 ? 3 : 0), y, 'copper', 8);
-    S.box(5, 84, 32, 6, 'iron', 5, { top: 2 }); S.end();
-    S.beg(); S.box(12, 62, 18, 16, 'iron', 4); for (let k = 0; k < 3; k++) { S.rect(14, 65 + k * 4, 14, 2, 'fire', 6 - k * 0.5, { e: 1 }); S.hl(14, 65 + k * 4, 14, 'fire', 8, { e: 1 }); } S.rect(28, 67, 2, 5, 'brass', 7); S.end();
-    S.beg(); S.ell(21, 48, 6.5, 6.5, 'brass', 6, { ring: 1.4 }); S.ell(21, 48, 5, 5, 'linen', 9); for (let k = 0; k < 7; k++) { const a = Math.PI * (0.8 + k * 0.233); S.px(21 + Math.cos(a) * 4, 48 + Math.sin(a) * 4, 'ink', 1); } S.px(24, 46, 'red', 7); S.px(25, 47, 'red', 7); S.end();
-    // steam main from the boiler, down to where the hose takes over
-    S.beg(); S.hcyl(34, 44, 26, 4, 'brass', 5, { rim: 1.5 }); S.cyl(56, 44, 4, 9, 'brass', 5, { rim: 1.5 }); S.box(55, 52, 6, 2, 'iron', 6); S.hcyl(40, 43, 3, 6, 'brass', 7); S.ell(47, 40, 3, 3, 'crimson', 6, { ring: 1 }); S.vl(47, 41, 3, 'brass', 6); S.end();
-    // shell rack behind the gunner
-    S.beg(); S.box(36, 76, 10, 14, 'wood', 4, { top: 1 }); S.hl(36, 82, 10, 'wood', 6); S.end();
-    [37, 41].forEach((x, i) => { S.beg(); S.cyl(x, 67 - i, 4, 9 + i, 'brass', 6.5, { rim: 1.5 }); S.poly([[x, 67 - i], [x + 2, 62 - i], [x + 4, 67 - i]], 'iron', 6); S.hl(x, 72, 4, 'brass', 4.5); S.end(); });
+    // shell rack against the wall: two shelves of black round shells
+    S.beg(); S.box(3, 34, 3, 56, 'iron', 5.5); S.box(22, 34, 3, 56, 'iron', 4.5); [48, 66].forEach(y => { S.box(3, y, 22, 3, 'iron', 6.5, { top: 1 }); S.hl(5, y - 2, 18, 'iron', 4); }); S.box(2, 32, 24, 3, 'iron', 6); S.end();
+    [48, 66].forEach(y => [9, 14.5, 20].forEach((x, i) => ball(S, x, y - 3.5, 2.4 + (i % 2) * 0.4)));
+    // the hoist: two posts, a head beam, cross braces, the catches the bucket rests on at the top, the steam motor, the hoist lamp
+    S.beg(); S.box(HX0, 12, 3, 78, 'iron', 5.5); S.box(HX1 - 2, 12, 3, 78, 'iron', 4.5); S.box(HX0 - 2, 9, HX1 - HX0 + 5, 4, 'iron', 6.5, { top: 1 });
+    S.line(HX0 + 3, 26, HX1 - 3, 40, 'iron', 4); S.line(HX1 - 3, 26, HX0 + 3, 40, 'iron', 3.5); S.hl(HX0 + 3, 40, HX1 - HX0 - 5, 'iron', 6);
+    [20, 50].forEach(y => { TX.rivet(S, HX0 + 1, y, 'iron', 6); TX.rivet(S, HX1 - 1, y, 'iron', 5); }); S.box(HX0 + 3, 75, 4, 2, 'iron', 7); S.box(HX1 - 6, 75, 4, 2, 'iron', 5.5); S.end();
+    S.beg(); S.box(40, 12, 9, 9, 'iron', 6, { top: 1 }); S.hl(40, 15, 9, 'brass', 7); S.rect(42, 17, 5, 2, 'ink', 1.5); S.cyl(45, 4, 2, 8, 'brass', 6); S.px(45, 4, 'brass', 8); S.end();
+    S.beg(); S.box(21, 11, 6, 3, 'iron', 5); S.end();
+    // the steam line: down from the ceiling run to where the hose takes over; a stop valve
+    S.beg(); S.cyl(56, 10, 4, 43, 'brass', 5, { rim: 1.5 }); S.box(55, 52, 6, 2, 'iron', 6); S.hcyl(55, 30, 6, 2, 'brass', 7); S.ell(58, 38, 3, 3, 'crimson', 6, { ring: 1 }); S.px(58, 38, 'brass', 8); S.end();
     // warning lamp housing, the caged bulb on its drop
     S.beg(); S.box(100, 18, 9, 3, 'iron', 5); S.end();
     S.beg(); S.vl(72, 9, 5, 'iron', 4); S.rect(69, 14, 7, 2, 'iron', 6); S.end();
@@ -284,24 +289,60 @@ X.def('cannon', {
     [[70, 76], [71, 70], [74, 62], [79, 57], [86, 56], [93, 60], [96, 68], [98, 76]].forEach(([x, y]) => TX.rivet(S, x, y, 'iron', 6.5)); S.end();
     S.beg(); for (let a = 1.75; a < 2.9; a += 0.035) { const x = 82 + Math.cos(a) * 15, y = 60 + Math.sin(a) * 15; S.px(x, y, 'brass', 6); S.px(82 + Math.cos(a) * 14, 60 + Math.sin(a) * 14, 'brass', 4); if (Math.floor(a / 0.14) % 2) S.px(82 + Math.cos(a) * 16, 60 + Math.sin(a) * 16, 'brass', 7.5); } S.end();
     S.beg(); S.ell(82, 60, 3.5, 3.5, 'brass', 7, { dome: 1 }); S.px(82, 60, 'iron', 3); S.end();
-    // traverse handwheel on the cheek
     S.beg(); S.ell(94, 71, 4.5, 4.5, 'brass', 7, { ring: 1 }); S.line(90, 71, 98, 71, 'brass', 5); S.line(94, 67, 94, 75, 'brass', 5); S.px(94, 71, 'iron', 8); S.px(98, 68, 'crimson', 7); S.end();
-    // a crate of shells near the eye, noses up
+    // near the eye: powder kegs on the left, a pyramid of shells in a tray on the right
     S.lay('front');
-    [127, 132, 137, 142].forEach((x, i) => { const y = 68 + (i % 2); S.beg(); S.cyl(x, y, 4, 9, 'brass', 7, { rim: 1.5 }); S.poly([[x, y], [x + 2, y - 5], [x + 4, y]], 'copper', 6.5); S.px(x + 1, y - 3, 'copper', 9); S.hl(x, y + 2, 4, 'brass', 4.5); S.vl(x + 1, y + 3, 4, 'brass', 9); S.end(); });
-    S.beg(); S.box(125, 77, 21, 13, 'wood', 5, { top: 2 }); S.hl(125, 83, 21, 'wood', 3); S.rect(129, 79, 13, 3, 'ink', 2); for (let k = 0; k < 3; k++) S.px(131 + k * 4, 80, 'gold', 7); S.vl(127, 77, 13, 'iron', 5); S.vl(143, 77, 13, 'iron', 5); S.end();
-    foot(S, 5, 37); foot(S, 36, 46, 1); foot(S, 56, 114); foot(S, 125, 146);
-    sc.emit({ k: 'steam', x: 40, y: 8, rate: 0.5, sp: 4, ang: 0.3, spread: 0.6, life: 1.5 });
+    const keg = (x, y, w, h, tn) => { S.beg(); const cx = x + w / 2, hw = (k) => { const v = (k + 0.5) / h * 2 - 1; return w / 2 * (0.74 + 0.26 * (1 - v * v)); };
+      for (let k = 0; k < h; k++) { const r = hw(k); for (let i = Math.round(cx - r); i < Math.round(cx + r); i++) { const u = (i + 0.5 - cx) / r, stave = ((i - x) % 3) === 2; S.px(i, y + k, 'wood', tn + (u < -0.55 ? 1.5 : u < -0.1 ? 0.7 : u > 0.55 ? -1.5 : 0) - (stave ? 0.9 : 0), { n: [u * 0.9, 0] }); } }
+      [2, h - 3].forEach(k => { const r = hw(k); S.hl(Math.round(cx - r), y + k, Math.round(r * 2), 'iron', 3.5); S.px(Math.round(cx - r) + 1, y + k, 'iron', 7.5); S.px(Math.round(cx - r) + 2, y + k, 'iron', 6); });
+      S.ell(cx - 0.5, y, hw(0) - 0.4, 1.2, 'wood', tn + 2.4, { n: [0, -0.9] }); S.px(Math.round(cx) + 1, y, 'wood', tn - 1); S.rect(Math.round(cx) - 2, y + Math.round(h / 2) - 1, 3, 3, 'crimson', 6); S.px(Math.round(cx) - 1, y + Math.round(h / 2) - 2, 'crimson', 7.5); S.end(); };
+    keg(3, 76, 12, 14, 5);
+    // a keg on its side: round end with two hoops and a bung, its belly running back
+    S.beg(); S.hcyl(18, 82, 8, 8, 'wood', 4.4, { rim: 2 }); S.vl(21, 82, 8, 'iron', 3.5); S.ell(17.5, 85.5, 4.6, 4.6, 'wood', 5.6); S.ell(17.5, 85.5, 4.6, 4.6, 'iron', 4.2, { ring: 0.9 }); S.ell(17.5, 85.5, 3, 3, 'wood', 6.4, { ring: 0.8 }); S.px(17, 85, 'ink', 1.5); S.px(15, 83, 'wood', 8); S.end();
+    S.beg(); S.line(13, 75, 18, 68, 'brass', 7); S.rect(11, 75, 3, 2, 'brass', 5); S.px(11, 75, 'brass', 8); S.end();   // a powder scoop stuck in the keg
+    S.beg(); S.box(122, 86, 24, 4, 'wood', 5, { top: 1 }); S.hl(123, 88, 22, 'wood', 3); S.end();
+    [[126, 82], [132.5, 82], [139, 82], [129.3, 76.5], [135.8, 76.5], [132.5, 71]].forEach(([x, y], i) => ball(S, x, y, 2.3 + (i % 3) * 0.3));
+    foot(S, 2, 25); foot(S, HX0, HX1 + 2, 0.8); foot(S, 56, 114); foot(S, 122, 146);
+    sc.emit({ k: 'steam', x: 61, y: 30, rate: 0.4, sp: 4, ang: 1, spread: 0.6, life: 1.2 });   // the steam line's joint weeps a little
   },
   anim(D, t, rs) {
     const st = rs.st, fa = fage(rs), q = steps(t, 12); rs.mul[3] = 0;
-    if (fired(rs, t)) { const m = cp_(55, 0), b = cp_(-17, -8); rs.flash(3, 2.4); rs.flash(0, 0.4); rs.flash(2, 0.6); st.swing = 1;
+    if (fired(rs, t)) { const m = cp_(55, 0), b = cp_(-17, -8); rs.flash(3, 2.4); rs.flash(0, 0.3); rs.flash(2, 0.6); st.swing = 1;
       rs.burst('steam', m[0], m[1], 12, { sp: 20, ang: 1.1, spread: 1, life: 1.5 }); rs.burst('spark', m[0], m[1], 12, { sp: 55, ang: 1.1, spread: 1, life: 0.6 }); rs.burst('ember', m[0], m[1], 5, { sp: 18, ang: 1.1, spread: 1.4, life: 1.2 });
       rs.burst('steam', b[0], b[1], 6, { sp: 14, ang: -0.5, spread: 0.7, life: 1.1 }); const c = cp_(-17, 8); rs.burst('steam', c[0], c[1], 5, { sp: 12, ang: 3.6, spread: 0.7, life: 1 }); }
-    // recoil: back along the axis, easing home
     const kick = fa < 0.05 ? fa / 0.05 * 5 : fa < 0.9 ? 5 * Math.pow(1 - (fa - 0.05) / 0.85, 2) : 0, kx = -Math.round(CU[0] * kick), ky = -Math.round(CU[1] * kick);
+    // the hoist: the bucket rides up out of the hatch with a shell, waits, goes down empty; the chain runs over the sprocket
+    const by = Math.round(hoistY(q)), moving = (q < 0.22) || (q > 0.66 && q < 0.9), full = q < 0.63;
     D.lay('back');
-    // corrugated hose from the steam main to the breech, sagging
+    ol(D, HX0 - 1, 9, HX1 + 1, 99, () => {
+      D.beg();
+      // sprocket on the head beam (it turns as the chain runs), two chain strands: the load side down to the bucket, the return side into the pit
+      const ca = -by / 4.5; for (let y = -5; y <= 5; y++) for (let x = -5; x <= 5; x++) { const d = Math.hypot(x, y); if (d > 5.2) continue; const th = Math.atan2(y, x) - ca, tooth = d > 4 && Math.cos(th * 8) > 0.2;
+        if (d > 4 && !tooth) continue; if (d < 1.5) { D.px(34 + x, 17 + y, 'iron', 8); continue; } const spoke = d < 3.6 && Math.abs(Math.sin(th * 2)) > 0.4; if (spoke) continue; D.px(34 + x, 17 + y, 'iron', 6.2 - (x + y) * 0.25); }
+      const link = (x, y0, y1, ph) => { for (let y = y0; y < y1; y++) { const k = ((y + ph) % 5 + 5) % 5; D.px(x, y, 'iron', k === 4 ? 3 : k === 0 ? 8.5 : 6.5); if (k === 4) D.px(x + 1, y, 'iron', 6); } };
+      link(HB, 18, by - 5, -by); link(29, 18, 97, by);
+      if (by < 97) {
+        // bail, hook, bucket (tapered, banded), the shell in it
+        D.line(HB, by - 5, HB - 5, by, 'iron', 6); D.line(HB, by - 5, HB + 5, by, 'iron', 4.5); D.px(HB, by - 5, 'iron', 8);
+        if (full) { D.ell(HB, by - 2, 3, 3, 'iron', 2.6, { dome: 1 }); D.px(HB - 1.5, by - 3.5, 'iron', 7.5); D.px(HB - 0.5, by - 3.5, 'iron', 5); D.px(HB - 0.5, by - 5, 'brass', 7.5); }
+        D.poly([[HB - 7, by], [HB + 7, by], [HB + 6, by + 9], [HB - 6, by + 9]], 'iron', 5); D.hl(HB - 7, by, 14, 'iron', 8.4); D.hl(HB - 7, by + 1, 14, 'iron', 3.4); D.hl(HB - 6, by + 5, 12, 'brass', 5.6); D.hl(HB - 6, by + 6, 12, 'brass', 3.6); D.vl(HB - 6, by + 2, 6, 'iron', 7); D.vl(HB + 5, by + 2, 6, 'iron', 3.4);
+      }
+      D.end();
+    });
+    // the pit swallows what goes below the floor: darker inside the coaming, gone past its near edge
+    { const L = D.c; for (let y = 90; y < 104; y++) for (let x = HX0 - 1; x <= HX1 + 1; x++) { const p = y * W + x; if (!L.m[p] || L.st[p] !== L.stamp) continue; if (y > 94 || x <= HX0 + 2 || x >= HX1 - 1) L.m[p] = 0; else L.t[p] = Math.max(0, L.t[p] - (y - 89) * 0.6); } }
+    // the motor puffs while the hoist runs; its lamp turns
+    if (moving && steps(t, 0.45) < 0.12 && st.pf !== Math.floor(t / 0.45)) { st.pf = Math.floor(t / 0.45); rs.burst('steam', 45.5, 4, 2, { sp: 7, ang: 0.3, spread: 0.6, life: 1.1 }); }
+    const la = moving ? t * 9 : 0; rs.mul[5] = moving ? 0.55 + 0.45 * Math.max(0, Math.cos(la)) : 0.15;
+    D.rect(22, 14, 4, 3, 'lamp', moving ? 7 + 3 * Math.max(0, Math.cos(la)) : 4, { e: 255 }); D.px(moving && Math.cos(la) < 0 ? 25 : 22, 14, 'lamp', moving ? 11 : 5, { e: 255 });
+    // the shell the gunner carries: in the back layer, so the breech swallows it
+    let pose, dir = 1, gx = 51, carry = -1;
+    if (fa < 0.45) pose = { aF: 2.4, eF: 0.3, aB: 0.5, lean: -0.35, lF: 0.25, lB: -0.3 };
+    else if (q < 0.55) pose = { aF: 1.35, eF: -0.2, aB: 0.2, eB: -0.2, lF: 0.15, lB: -0.15, bob: Math.round(Math.sin(t * 1.4) * 0.5) };
+    else if (q < 0.65) { const k = ease(clamp((q - 0.55) / 0.06, 0, 1)); dir = -1; pose = { aF: 1 + k, eF: -0.2 - k * 0.2, aB: 0.9 + k * 0.9, eB: -0.3, lean: 0.2 + k * 0.3, lF: 0.1, lB: -0.2, kB: 0.3 }; }
+    else if (q < 0.82) { const k = (q - 0.65) / 0.17; pose = { aF: 1.25 + k * 0.3, eF: -0.9 + k * 0.6, aB: 1.15 + k * 0.2, eB: -0.9 + k * 0.6, lF: 0.2, lB: -0.2, lean: 0.2 + k * 0.1 }; carry = k; }
+    else pose = { aF: 1.5, eF: -0.1, aB: 1.3, eB: -0.1, lean: 0.3, lF: 0.35, lB: -0.3 };
+    // corrugated hose from the steam line to the breech, sagging
     const hb = cp_(-17, -9); ol(D, 50, 50, 72, 68, () => { D.beg(); for (let k = 0; k <= 10; k++) { const f = k / 10, x = 58 + (hb[0] + kx - 58) * f - Math.sin(f * Math.PI) * 3, y = 54 + (hb[1] + ky - 1 - 54) * f; D.rect(x - 1, y - 1, 3, 3, 'leather', k % 2 ? 3 : 5); D.px(x - 1, y - 1, 'leather', 7); } D.end(); });
     stamp(D, cannonSpr(), kx, ky);
     // muzzle flash
@@ -309,24 +350,16 @@ X.def('cannon', {
       const ray = (ux, uy, L) => { for (let i = 0; i < L; i++) { const tn = clamp(11 - i / L * 6, 5, 11); D.px(m[0] + ux * i, m[1] + uy * i, 'fire', tn, { e: 255 }); if (i < L * 0.5) D.px(m[0] + ux * i + 1, m[1] + uy * i, 'fire', tn - 1, { e: 255 }); } };
       D.ell(m[0], m[1], 4 + k * 5, 3 + k * 4, 'fire', 7, { e: 255 }); D.ell(m[0], m[1], 2.5 + k * 3.5, 2 + k * 3, 'fire', 9, { e: 255 }); D.ell(m[0], m[1], 1.5 + k * 2, 1.5 + k * 1.5, 'fire', 11, { e: 255 });
       ray(CU[0], CU[1], 10 + 12 * k + wob * 3); ray(CV[0], CV[1], 5 + 5 * k); ray(-CV[0], -CV[1], 5 + 5 * k); ray((CU[0] + CV[0]) * 0.7, (CU[1] + CV[1]) * 0.7, 6 + 5 * k * wob); ray((CU[0] - CV[0]) * 0.7, (CU[1] - CV[1]) * 0.7, 6 + 5 * k * (1 - wob)); }
-    // gauge: trembles; falls at the shot and climbs back
-    const pr = fa < 1.6 ? 0.25 + fa / 1.6 * 0.5 : 0.75 + Math.sin(t * 0.7) * 0.06, na = Math.PI * (0.8 + 1.4 * pr) + n1(t * 18) * 0.05;
-    D.line(21, 48, 21 + Math.cos(na) * 4, 48 + Math.sin(na) * 4, 'red', 6); D.px(21, 48, 'iron', 3);
-    // whistle: a thin plume, a bigger one when the pressure is let off after loading
-    if (R() < 0.08) rs.burst('steam', 21, 16, 1, { sp: 6, ang: 0.2, spread: 0.5, life: 1 });
     // caged bulb, warning lamp glass
     D.rect(71, 16, 3, 3, 'lamp', 9, { e: 255 }); D.px(72, 17, 'lamp', 11, { e: 255 }); D.px(70, 17, 'iron', 3); D.px(74, 17, 'iron', 3);
     D.rect(101, 21, 7, 3, 'red', 7, { e: 3 }); D.hl(102, 21, 5, 'red', 9, { e: 3 });
-    // the moment: the gunner turns to the rack, lifts a shell and pushes it into the breech; the seal hisses
+    // the gunner: minds the breech; the moment: turns to the hoist, lifts the shell out of the bucket and loads it; the seal hisses
     D.lay('mid');
-    let pose, dir = 1, gx = 51, carry = null;
-    if (fa < 0.45) pose = { aF: 2.4, eF: 0.3, aB: 0.5, lean: -0.35, lF: 0.25, lB: -0.3 };
-    else if (q < 0.55) pose = { aF: 1.35, eF: -0.2, aB: 0.2, eB: -0.2, lF: 0.15, lB: -0.15, bob: Math.round(Math.sin(t * 1.4) * 0.5) };
-    else if (q < 0.66) { dir = -1; pose = { aF: 0.8, eF: -0.2, aB: 0.6, lean: 0.55, lF: 0.1, lB: -0.2, kB: 0.4 }; }
-    else if (q < 0.82) { const k = (q - 0.66) / 0.16; pose = { aF: 1.35, eF: -0.9, aB: 1.2, eB: -0.9, lF: 0.2, lB: -0.2, lean: 0.2 }; carry = k; }
-    else pose = { aF: 1.5, eF: -0.1, aB: 1.3, eB: -0.1, lean: 0.3, lF: 0.35, lB: -0.3 };
     man(D, gx, FY, { skin: ['skin', 6], hair: ['hair', 4], top: ['leather', 5], bot: ['denim', 3], boot: ['hair', 2], apron: ['leather', 3], cap: ['brass', 7] }, pose, dir);
-    if (!X.noWorkers) { D.px(gx + 1, FY - 25 + (pose.bob || 0), 'teal', 9); D.px(gx + 2, FY - 25 + (pose.bob || 0), 'brass', 8); if (carry != null) shellSpr(D, -44 + carry * 20, 0, -22); }   // goggles, the shell in his hands
+    if (!X.noWorkers) { D.px(gx + dir, FY - 25 + (pose.bob || 0), 'teal', 9); D.px(gx + 2 * dir, FY - 25 + (pose.bob || 0), 'brass', 8);
+      // the shell in his hands: lifted out of the bucket, carried round, pushed into the breech (hidden once past its face)
+      let b = null; if (q > 0.63 && q < 0.65) { const h = handAt(gx, FY, pose, -1); b = [h[0] - 1, h[1] - 3]; } else if (carry >= 0) b = cp_(-32 + ease(carry) * 14, 1);
+      if (b) ol(D, b[0] - 5, b[1] - 6, b[0] + 5, b[1] + 5, () => { ball(D, b[0], b[1]); const L = D.c; for (let y = Math.floor(b[1]) - 5; y <= b[1] + 4; y++) for (let x = Math.floor(b[0]) - 4; x <= b[0] + 4; x++) { if (x < 0 || y < 0 || x >= W || y >= H) continue; const p = y * W + x; if (L.m[p] && L.st[p] === L.stamp && (x + 0.5 - C0[0]) * CU[0] + (y + 0.5 - C0[1]) * CU[1] > -22.3 && Math.abs((x + 0.5 - C0[0]) * CV[0] + (y + 0.5 - C0[1]) * CV[1]) < 8.5) L.m[p] = 0; } }); }
     if (q > 0.82 && !st.ld) { st.ld = 1; const b = cp_(-22, -6); rs.burst('steam', b[0], b[1], 6, { sp: 10, ang: -0.4, spread: 1, life: 1.2 }); rs.flash(2, 0.8); rs.flash(1, 0.3); } if (q < 0.5) st.ld = 0;
     // hoist hook on a chain from the pipe run, set swinging by each shot
     D.lay('front'); const sw = 0.05 * Math.sin(t * 1.2) + (fa < 4 ? 0.28 * Math.exp(-fa * 1.2) * Math.sin(fa * 5.5) : 0), hx = 68 + Math.sin(sw) * 24, hy = 10 + Math.cos(sw) * 24;
@@ -460,117 +493,158 @@ X.def('tesla', {
 });
 
 // ───────── 奥术尖塔 arcane spire (magic · defence, arcane) ─────────
-// a carved stone column on a stepped plinth, gold claws reaching up to a floating amethyst; two rune rings turn round it,
-// small shards orbit, a clock-sigil's hand crawls round the floor. Violet braziers either side, a bookshelf with books
-// drifting off it, a mage at a lectern, candles on the floor. The moment: the mage lifts his hands, runes stream from the
-// book to the crystal, the rings race. A shot: a beam up through the oculus, the crystal flares, a ring of force runs out.
-const SC_ = [75, 36];
-function crystal(D, cx, cy, fl, t) {   // a hexagonal amethyst: lit left face, front face, dark right face, pointed ends
-  const hl = ((t * 0.3) % 1.8) - 0.4;
-  for (let y = -21; y <= 14; y++) { const w = y < -10 ? Math.round((y + 21) / 11 * 6.4) : y <= 6 ? 6 : Math.round((14 - y) / 8 * 6.4); if (w <= 0) { if (y === -21) D.px(cx, cy + y, 'arcane', 11, { e: 255 }); continue; }
-    for (let x = -w; x <= w; x++) { const face = x < -2 ? 0 : x <= 2 ? 1 : 2, top = y < -10, bot = y > 6, u = (x + 6) / 12, lit = Math.abs(u - hl) < 0.1 && !bot;
-      let tn = top ? [10, 8.5, 6][face] : bot ? [7, 5, 3.5][face] : [8.5, 6.5, 4.2][face];
-      if (x === -2 || (x === -3 && y < -10)) tn += 1.5; if (x === 3) tn -= 0.8; if (y === -10 && face < 2) tn += 1; if (lit) tn += 2;
-      if (!top && !bot && face === 1 && ((y + 40) % 7 === 0)) tn += 0.8;
-      D.px(cx + x, cy + y, 'arcane', clamp(Math.round(tn + fl), 2, 11), { e: 255 }); } }
-  D.px(cx - 4, cy - 7, 'arcane', 11, { e: 255 }); D.px(cx - 4, cy - 6, 'arcane', 11, { e: 255 }); D.px(cx - 4, cy - 5, 'arcane', 10, { e: 255 });
+// an arcane gun: a long amethyst barrel in brass collars on a swivel yoke, aimed up through a splayed gun port in the corner
+// of the vault (night and the moon's edge beyond; the sill furred with frost, icicles hanging off it). Rune rings turn round
+// the barrel and one floats in front of the muzzle. On the left a charge coil — a violet core in a glass tube wound with
+// brass, two rune rings riding up and down it — feeds the turret through a conduit. A technician stands to the side with the
+// rite book; spare crystals are racked on the wall, talismans hang from the vault. The moment: he reads the rite aloud,
+// runes stream to the breech, the rings draw tight and the crystal hums, cold mist breathes out of the muzzle. A shot: the
+// rings snap in and race up the barrel, a violet-blue beam goes out through the port, frost shards shake off the sill.
+const SU = [Math.cos(-0.63), Math.sin(-0.63)], SV = [-SU[1], SU[0]], SP = [62, 60];   // barrel axis (up to the right), across it, the trunnion
+const spp = (s, p) => [SP[0] + SU[0] * s + SV[0] * p, SP[1] + SU[1] * s + SV[1] * p];
+const sAt = (x, y) => { const dx = x + 0.5 - SP[0], dy = y + 0.5 - SP[1]; return [dx * SU[0] + dy * SU[1], dx * SV[0] + dy * SV[1]]; };
+const PO = 50, PW = 13, SW = 4.6;   // the port: its frame starts this far up the axis, this wide either side; the slit of sky
+const pfun = (s) => (s < PO + 2 ? 0 : s < PO + 12 ? 11 - (s - PO - 2) * (11 - SW) / 10 : SW);   // the splay: the reveals narrow to the slit
+// a ring of runes round the barrel, edge-on to it: its near half in front of the crystal, its far half behind
+function barRing(D, s, R, spin, front, bright) {
+  const c = spp(s, 0), n = Math.ceil(R * 8.5);
+  for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, z = Math.sin(a); if ((z >= 0) !== front) continue; const cc = Math.cos(a), rune = (((a + spin) / (Math.PI * 2) * 6) % 1 + 1) % 1 < 0.17;
+    const x = c[0] + R * cc * SV[0] + R * z * 0.36 * SU[0], y = c[1] + R * cc * SV[1] + R * z * 0.36 * SU[1], tn = (rune ? 11 : 8.4 + bright) - (front ? 0 : 3.2);
+    D.px(x, y, 'arcane', tn, { e: 255 }); D.px(x + SU[0] * 1.1, y + SU[1] * 1.1, 'arcane', tn - 2.2, { e: 255 }); }
 }
-// is (x, y) on the crystal drawn at (cx, cy)? (the same silhouette as crystal())
-function inCrys(x, y, cx, cy) { const dy = Math.round(y) - cy; if (dy < -21 || dy > 14) return false; const w = dy < -10 ? Math.round((dy + 21) / 11 * 6.4) : dy <= 6 ? 6 : Math.round((14 - dy) / 8 * 6.4); return Math.abs(Math.round(x) - cx) <= w; }
-function ringV(D, cx, cy, Rr, phi, tilt, spin, front, tn, ccy) {   // a circle turned phi about the vertical axis, tilted in the picture
-  const n = Math.ceil(Rr * 7), ct = Math.cos(tilt), stl = Math.sin(tilt), ec = Math.abs(Math.cos(phi)), edge = front && ec < 0.6, dk = ec < 0.35 ? 2 : 1;
-  for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, c = Math.cos(a), x = Rr * c * Math.cos(phi), y = Rr * Math.sin(a), z = c * Math.sin(phi); if ((z >= 0) !== front) continue;
-    const rune = (((a + spin) / (Math.PI * 2) * 9) % 1 + 1) % 1 < 0.13, X0 = cx + x * ct - y * stl, Y0 = cy + x * stl + y * ct;
-    // nearly edge-on, the near half runs down the crystal's face: there it is a thin darker line, no rune ticks
-    if (edge && inCrys(X0, Y0, cx, ccy)) { D.px(X0, Y0, 'arcane', tn - dk, { e: 255 }); continue; }
-    D.px(X0, Y0, 'arcane', (rune ? 11 : tn) - (front ? 0 : 3), { e: 255 }); D.px(X0 + 1, Y0, 'arcane', (rune ? 10 : tn - 2) - (front ? 0 : 3), { e: 255 }); }
-}
-function ringH(D, cx, cy, rx, ry, spin, front, tn) {   // a flat ring seen from a little above: a bright outer band, a darker inner one
+function ringH(D, cx, cy, rx, ry, spin, front, tn) {   // a flat ring seen from a little above
   const n = Math.ceil(rx * 7);
-  for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; if ((Math.sin(a) >= 0) !== front) continue; const rune = (((a + spin) / (Math.PI * 2) * 12) % 1 + 1) % 1 < 0.14, dk = front ? 0 : 3;
+  for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; if ((Math.sin(a) >= 0) !== front) continue; const rune = (((a + spin) / (Math.PI * 2) * 10) % 1 + 1) % 1 < 0.15, dk = front ? 0 : 3;
     D.px(cx + Math.cos(a) * rx, cy + Math.sin(a) * ry, 'arcane', (rune ? 11 : tn) - dk, { e: 255 }); D.px(cx + Math.cos(a) * (rx - 1.3), cy + Math.sin(a) * (ry - 0.9), 'arcane', (rune ? 9 : tn - 3) - dk, { e: 255 }); }
 }
-const BOOKS = [];
-{ const r = X.rng(311); for (let s = 0; s < 5; s++) { let x = 6; while (x < 17) { const w = 1 + (r() < 0.3 ? 1 : 0), h = 6 + Math.floor(r() * 4); BOOKS.push([x, 38 + s * 11 - h, w, h, ['crimson', 'leaf', 'tile', 'gold', 'magic', 'leather'][Math.floor(r() * 6)], 5 + r() * 2]); x += w + (r() < 0.2 ? 1 : 0); } } }
-const FCAND = [[35, 83, 1.1], [39, 81, 2.3], [44, 84, 0.4]];   // on open floor between the left brazier and the plinth
+const SSTAR = [[121, 16], [127, 6], [133, 13], [117, 22]], SRING = [2.5, 17];
+const SBEAM = beam({ x: 140.6, y0: 3, y1: 38, w0: 7, w1: 7, dx: -47.4, fade: 0.3, c: '#b0a4ff', a: 0.55 });
+const LIP = []; for (let s = PO + 2; s < 110; s += 1) { const a = spp(s, PW + 0.5); if (a[0] < W - 4 && a[1] > 4) LIP.push(a); }   // the port's lower outer edge
 X.def('spire', {
   amb: [0.24, 0.26],
   paint(S, sc) {
     X.shell(S, sc, 'magic');                                                                                        // 0 carved runes
-    sc.light({ x: 75, y: 34, z: 14, r: 106, i: 1.1, c: '#9a7cff', fl: 'pulse', amp: 0.12, sp: 1.7, tint: 0.62 });   // 1 crystal
-    sc.light({ x: 25, y: 42, z: 10, r: 54, i: 0.7, c: '#c090ff', fl: 'fire', tint: 0.55 });                        // 2 brazier left
-    sc.light({ x: 125, y: 42, z: 10, r: 54, i: 0.7, c: '#c090ff', fl: 'fire', ph: 2.5, tint: 0.55 });              // 3 brazier right
-    sc.light({ x: 106, y: 55, z: 21, r: 40, i: 0.65, c: '#ffb060', fl: 'candle', tint: 0.34 });                   // 4 lectern candle (on the flame)
-    sc.light({ x: 39, y: 76, z: 22, r: 38, i: 0.6, c: '#ffb060', fl: 'candle', ph: 3, tint: 0.45 });              // 5 floor candles
+    sc.light({ x: 74, y: 52, z: 16, r: 100, i: 1.05, c: '#9a7cff', fl: 'pulse', amp: 0.1, sp: 1.7, tint: 0.6 });   // 1 the crystal barrel
+    sc.light({ x: 20, y: 50, z: 12, r: 58, i: 0.85, c: '#8a86ff', fl: 'pulse', amp: 0.25, sp: 2.6, tint: 0.55 });  // 2 the charge coil
+    sc.light({ x: 124, y: 18, z: 4, r: 80, i: 0.6, c: '#a8c0ff', tint: 0.45 });                                    // 3 the night through the port
+    sc.light({ x: 96, y: 36, z: 14, r: 110, i: 1, c: '#b8a8ff', tint: 0.6, bake: false });                         // 4 the shot (dark until it fires)
+    sc.light({ x: 112, y: 45, z: 14, r: 50, i: 0.7, c: '#ffb060', fl: 'candle', ph: 1.7, tint: 0.4 });            // 5 the candle sconce
+    // the gun port: dressed voussoirs with a gold edge round a splayed opening, the lit upper reveal, the frosted lower one,
+    // a slit of night with the moon's edge in it
     S.lay('wall');
-    // oculus in the ceiling, a violet night beyond
-    S.beg(); for (let y = 3; y < 10; y++) for (let x = 62; x < 89; x++) { const d = Math.abs(x + 0.5 - 75.5) / 13; if (d > 1) continue; S.px(x, y, d > 0.8 ? 'gold' : 'night', d > 0.8 ? 6 + (x < 75 ? 1 : -1) : 2 + (y - 3) * 0.3, d > 0.8 ? {} : { e: 255 }); } S.end();
-    S.px(70, 5, 'linen', 9, { e: 255 }); S.px(80, 6, 'linen', 7, { e: 255 });
-    // floor clock-sigil: rim, twelve marks (glows with the crystal; its hand turns in anim)
-    for (let k = 0; k < 220; k++) { const a = k / 220 * Math.PI * 2; S.px(75 + Math.cos(a) * 52, 97 + Math.sin(a) * 5.2, 'arcane', 5, { e: 2 }); }
-    for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; S.px(75 + Math.cos(a) * 47, 97 + Math.sin(a) * 4.6, 'arcane', 7, { e: 2 }); S.px(75 + Math.cos(a) * 45, 97 + Math.sin(a) * 4.4, 'arcane', 6, { e: 2 }); }
+    for (let y = 3; y < 48; y++) for (let x = 88; x < W - 3; x++) { const [s, p] = sAt(x, y), ap = Math.abs(p); if (s < PO || ap > PW) continue; const fw = pfun(s);
+      if (ap > fw || s < PO + 2) {   // the stone frame
+        const joint = ((s - PO) % 6.5) < 0.9 || ap > PW - 1, lo = p > 0;
+        if (ap > PW - 1) S.px(x, y, lo ? 'ice' : 'gold', lo ? 8.6 : 7.2, lo ? {} : { n: [-0.4, -0.6] });
+        else S.px(x, y, 'magic', joint ? 3 : (lo ? 5.4 : 6.6) + (ap > PW - 2.2 ? 0.8 : 0), { n: [SV[0] * Math.sign(p) * 0.4, SV[1] * Math.sign(p) * 0.4] }); continue; }
+      if (ap > SW) { if (p < 0) S.px(x, y, 'magic', 8.6 - (s - PO) * 0.12, { n: [0.3, 0.5] }); else S.px(x, y, 'ice', p > fw - 1.1 ? 9.6 : 6.4 + (((s * 1.7) | 0) % 3 === 0 ? 1 : 0), { n: [-0.3, -0.5] }); continue; }
+      S.px(x, y, 'night', 1.3 + (y - 3) / 36 * 2.4, { e: 255 }); }
+    for (let y = 3; y < 16; y++) for (let x = 128; x < W - 3; x++) { const [s, p] = sAt(x, y); if (s < PO + 12 || Math.abs(p) >= SW) continue; const d = Math.hypot(x + 0.5 - 138, y + 0.5 - 9.5); if (d < 3.6) S.px(x, y, 'bone', d < 2.4 ? (x < 138 && y < 9 ? 10 : 9) : 7.5, { e: 255 }); }
+    // icicles off the port's lower edge
+    for (let s = PO + 3.5; s < 108; s += 3.7) { const a = spp(s, PW + 0.8); if (a[0] > W - 5 || a[1] < 4) continue; const L = 2 + Math.floor(hh(Math.round(s * 3), 5) * 5);
+      S.beg(); for (let k = 0; k < L; k++) S.px(a[0], a[1] + k, 'ice', 9.4 - k * 0.8); if (L > 3) S.px(a[0] + 1, a[1], 'ice', 7); S.end({ none: 1 }); }
     S.lay('back');
-    // bookshelf in the left corner
-    S.beg(); S.box(4, 22, 16, 68, 'wood', 3.5); S.rect(6, 24, 12, 64, 'wood', 1.5); for (let s = 0; s < 6; s++) S.box(5, 38 + s * 11, 14, 2, 'wood', 5); S.end();
-    BOOKS.forEach(([x, y, w, h, m, tn]) => { S.rect(x, y, w, h, m, tn); S.px(x, y, m, tn + 1.5); S.px(x, y + 2, 'gold', 7); });
-    // braziers on stone pillars (violet flames are animated)
-    [25, 125].forEach(x => { S.beg(); S.box(x - 5, 56, 11, 34, 'magic', 6); S.hl(x - 5, 70, 11, 'magic', 4); S.box(x - 7, 54, 15, 3, 'magic', 8, { top: 1 }); S.box(x - 6, 86, 13, 4, 'magic', 7); S.vl(x, 60, 8, 'arcane', 6, { e: 2 }); S.end();
-      S.beg(); S.poly([[x - 7, 46], [x + 8, 46], [x + 5, 53], [x - 4, 53]], 'gold', 5); S.hl(x - 7, 46, 15, 'gold', 8); S.hl(x - 6, 47, 13, 'gold', 3); S.vl(x, 53, 1, 'gold', 4); S.end();
-      for (let i = -5; i <= 5; i++) S.px(x + i, 45, 'arcane', 7 + (i % 2), { e: x < 75 ? 3 : 4 }); });
-    // the plinth, the column with a capital, a glowing rune channel, gold claws reaching up
-    S.lay('mid');
-    S.beg(); S.box(48, 85, 54, 5, 'magic', 7, { top: 2 }); S.box(56, 80, 38, 5, 'magic', 8, { top: 2 }); S.hl(56, 80, 38, 'gold', 7); S.hl(48, 85, 54, 'gold', 6); S.end();
-    S.beg(); S.poly([[65, 80], [85, 80], [83, 57], [67, 57]], 'magic', 6.5); S.poly([[65, 80], [68, 80], [69, 57], [67, 57]], 'magic', 9); S.poly([[82, 80], [85, 80], [83, 57], [81, 57]], 'magic', 4.2);
-    [70, 79].forEach(x => S.vl(x, 60, 18, 'magic', 4.5)); for (let y = 60; y < 78; y += 3) { S.px(75, y, 'arcane', 8, { e: 2 }); S.px(75, y + 1, 'arcane', 6, { e: 2 }); if ((y / 3) % 2) S.px(74, y + 1, 'arcane', 7, { e: 2 }); else S.px(76, y + 2, 'arcane', 7, { e: 2 }); }
-    S.box(63, 54, 24, 4, 'magic', 8, { top: 1 }); S.hl(63, 57, 24, 'gold', 6.5); S.box(65, 51, 20, 3, 'gold', 6); S.end();
-    [[-1, 66], [1, 84]].forEach(([sg, x]) => { S.beg(); S.line(x, 51, x - sg * 3, 45, 'gold', 7, { w: 2 }); S.line(x - sg * 3, 45, x - sg * 3, 40, 'gold', 6.5, { w: 2 }); S.line(x - sg * 3, 40, x - sg * 5, 37, 'gold', 8); S.px(x - sg * 5, 36, 'gold', 10); S.end(); });
-    S.beg(); S.line(75, 51, 75, 48, 'gold', 5, { w: 2 }); S.end();
-    // lectern with an open book and a candle
-    S.beg(); S.box(99, 71, 4, 17, 'wood', 5); S.box(95, 87, 12, 3, 'wood', 4); S.poly([[92, 68], [108, 64], [109, 67], [93, 71]], 'wood', 6); S.hl(93, 71, 15, 'wood', 3); S.end();
-    S.beg(); S.poly([[93, 67], [100, 64.5], [100, 66.5], [94, 69]], 'paper', 9); S.poly([[100, 64.5], [107, 62.5], [107, 64.5], [100, 66.5]], 'paper', 8); for (let k = 0; k < 3; k++) { S.px(95 + k * 2, 67 - k * 0.8, 'paper', 5); S.px(102 + k * 2, 64.5 - k * 0.6, 'paper', 5); } S.vl(100, 64, 3, 'paper', 4); S.end();
-    S.beg(); S.rect(106, 58, 2, 5, 'linen', 9); S.px(106, 62, 'linen', 7); S.hl(105, 63, 4, 'gold', 6); S.end();
-    // near the eye: candles on the floor, wax pooled round them
+    // the charge coil: a stone foot, a brass frame, a violet core in a glass tube wound with brass
+    S.beg(); S.box(7, 85, 26, 5, 'magic', 7, { top: 2 }); S.hl(7, 85, 26, 'gold', 6.5); S.box(10, 79, 20, 6, 'magic', 8, { top: 1 }); S.end();
+    S.beg(); S.box(10, 31, 3, 48, 'brass', 6); S.box(27, 31, 3, 48, 'brass', 4.5); S.box(8, 27, 24, 4, 'brass', 6.5, { top: 1 }); S.box(8, 75, 24, 4, 'brass', 5.5); S.hl(9, 29, 22, 'arcane', 6, { e: 3 }); S.end();
+    S.beg(); for (let y = 31; y < 75; y++) { S.px(13, y, 'glass', 5); S.px(14, y, 'glass', 3); for (let x = 15; x < 25; x++) { const u = (x - 19.5) / 5; S.px(x, y, 'arcane', Math.abs(u) < 0.45 ? 8.6 : u < 0 ? 7.4 : 5.4, { e: 3 }); } S.px(25, y, 'glass', 2.5); S.px(26, y, 'glass', 4); }
+      for (let y = 33; y < 74; y += 5) { S.line(13, y + 2, 26, y - 1, 'brass', 7.6); S.line(13, y + 3, 26, y, 'brass', 4.2); } S.end();
+    // the turret's far yoke arm (behind the barrel)
+    S.beg(); S.poly([[59, 79], [72, 79], [69, 57], [64, 57]], 'brass', 3.2); S.ell(66.5, 56, 3.4, 3.4, 'brass', 4, { dome: 1 }); S.end();
+    // spare crystals racked in brass cups on the right wall (they glow with the barrel), a candle sconce
+    S.beg(); S.box(118, 68, 27, 3, 'wood', 5.5, { top: 1 }); S.box(120, 71, 2, 5, 'wood', 4); S.box(141, 71, 2, 5, 'wood', 4); S.end();
+    [124, 131.5, 139].forEach((x, i) => { S.beg(); const h = 13 - (i % 2) * 2; for (let y = 0; y < h; y++) { const w = y < 3 ? y + 1 : 3; for (let k = -w + 1; k < w; k++) S.px(x + k, 66 - h + y, 'arcane', (k < 0 ? 8.4 : k > 0 ? 5.2 : 7) + (y < 3 ? 1 : 0), { e: 2 }); } S.rect(x - 3, 64, 6, 4, 'brass', 6); S.hl(x - 3, 64, 6, 'brass', 8); S.end(); });
+    S.beg(); S.box(109, 49, 7, 2, 'iron', 6); S.vl(112, 51, 4, 'iron', 5); S.rect(111, 46, 3, 3, 'linen', 9); S.px(113, 47, 'linen', 6); S.hl(110, 49, 5, 'brass', 7); S.end();
+    // the conduit from the coil's foot to the turret, a glass window where the charge runs; the turret's drum and turntable
+    S.lay('mid'); S.beg(); S.hcyl(30, 85, 12, 4, 'brass', 5, { rim: 1.5 }); S.rect(32, 86, 8, 2, 'arcane', 2.5, { e: 255 }); S.end();
+    S.beg(); S.box(40, 84, 46, 6, 'magic', 7, { top: 2 }); S.hl(40, 84, 46, 'gold', 6.5); for (let x = 44; x < 84; x += 8) TX.rivet(S, x, 87, 'gold', 5); S.end();
+    S.beg(); S.box(45, 79, 36, 3, 'brass', 5.5, { top: 1 }); for (let x = 46; x < 80; x += 2) S.px(x, 81, 'brass', 3); S.end();
+    // the barrel: a brass breech drum wound with a glowing coil, then the amethyst in three brass collars, claws at the muzzle
+    const shade = (p, r, t0) => { const q = p / r; return t0 + (q < -0.55 ? 2 : q < -0.1 ? 1 : q < 0.45 ? 0 : -1.5); };
+    S.beg();
+    rot(SP, SU, -21, 39, -8, 8, (x, y, s, p) => {
+      const ap = Math.abs(p), o = { n: [SV[0] * p / 8, SV[1] * p / 8] };
+      if (s < -18.5) { if (ap <= 6) S.px(x, y, 'brass', shade(p, 6, 3.6), o); return; }
+      if (s < -8) { if (ap > 7) return; const coil = ((s + 18.5) % 3) < 1.3 && s > -17 && s < -9.5; if (coil) S.px(x, y, 'arcane', shade(p, 7, 5.5), { e: 2 }); else S.px(x, y, 'brass', shade(p, 7, 5), o); return; }
+      if (s < -5 || (s >= 9 && s < 12) || (s >= 24 && s < 27.5)) { if (ap <= 6) S.px(x, y, 'brass', shade(p, 6, 5.5) + (s >= 24 ? 0.5 : 0), o); return; }
+      if (s >= 27.5 && s < 32 && ap > 3 && ap <= 6 - (s - 27.5) * 0.7) { S.px(x, y, 'brass', shade(p, 6, 6), o); return; }   // the muzzle claws
+      const r = s < 28 ? 4.5 : 4.5 * (38 - s) / 10; if (ap > r) return;
+      const face = p < -1.6 ? 0 : p < 1.6 ? 1 : 2; let tn = [9, 7, 4.8][face]; if (p >= -2.4 && p < -1.4) tn = 10.4; if (s >= 28) tn += 0.8;
+      if (face === 1 && ((Math.floor(s) + 40) % 7 === 0)) tn += 0.9;
+      S.px(x, y, 'arcane', tn, { e: 2 });
+    });
+    { const tp = spp(37.4, -0.3); S.px(tp[0], tp[1], 'arcane', 11, { e: 255 }); const r0 = spp(-15, -8.6); S.ell(r0[0], r0[1], 1.7, 1.7, 'brass', 7, { ring: 0.9 }); const r1 = spp(-15, -7.2); S.px(r1[0], r1[1], 'brass', 5); }
+    S.end();
+    // near the eye: the yoke's near arm over the barrel, a heap of fallen frost under the port
     S.lay('front');
-    FCAND.forEach(([x, y]) => { S.beg(); S.rect(x - 1, y, 3, 90 - y, 'linen', 8); S.px(x - 1, y, 'linen', 10); S.px(x + 1, y + 2, 'linen', 6); S.end(); });
-    S.beg(); S.rect(32, 88, 15, 2, 'linen', 6); S.hl(33, 88, 13, 'linen', 8); S.end();
-    foot(S, 48, 102, 1.1); foot(S, 4, 20); foot(S, 18, 32); foot(S, 118, 132); foot(S, 95, 107, 1); foot(S, 32, 47, 0.8);
-    sc.emit({ k: 'rune', x: 75, y: 80, w: 40, rate: 1, sp: 3, ang: 0, spread: 0.5, life: 2.4 });
-    sc.emit({ k: 'soul', x: 75, y: 50, w: 8, rate: 0.8, sp: 5, ang: 0, spread: 0.3, life: 2.4 });
+    S.beg(); S.line(54, 79, 59, 63, 'brass', 6.2, { w: 3 }); S.line(55, 79, 60, 63, 'brass', 7.8); S.line(68, 79, 63, 63, 'brass', 4.4, { w: 3 }); S.line(70, 79, 65, 63, 'brass', 3);
+    S.box(57, 71, 11, 3, 'brass', 5.6); TX.rivet(S, 58, 72, 'brass', 6); TX.rivet(S, 65, 72, 'brass', 5); S.box(52, 78, 20, 2, 'brass', 6);
+    S.ell(62, 60, 4.4, 4.4, 'brass', 6.4, { dome: 1 }); S.ell(62, 60, 1.8, 1.8, 'iron', 4); S.px(60, 58, 'brass', 10); S.px(62, 60, 'iron', 7); S.end();
+    S.beg(); S.ell(134, 89.5, 13, 2.6, 'ice', 6.6, { n: [0, -0.8] }); S.hl(123, 88, 22, 'ice', 8.4); S.end();
+    [[124, 5, 0.25], [128, 9, -0.35], [132, 12, 0.12], [136.5, 8, 0.4], [141, 6, -0.2]].forEach(([x, h, l]) => { S.beg();
+      for (let k = 0; k < h; k++) { const cx = x + l * k, w = k > h - 3 ? 0.6 : 1.6; for (let i = Math.round(-w); i <= Math.round(w); i++) S.px(cx + i, 88 - k, 'ice', i < 0 ? 9.6 : i > 0 ? 5.4 : 7.6); }
+      S.px(x + l * h, 88 - h, 'ice', 10.8); S.end(); });
+    foot(S, 7, 33); foot(S, 40, 86, 1.1); foot(S, 118, 146, 0.9);
+    sc.emit({ k: 'rune', x: 20, y: 24, w: 8, rate: 0.7, sp: 3, ang: 0, spread: 0.4, life: 2.2 });
+    sc.emit({ k: 'mist', x: 124, y: 26, w: 20, rate: 0.6, sp: 3, ang: 3.4, spread: 0.6, life: 2.4 });
   },
+  post(out, t, s) { const fa = s.fireAge; if (fa >= 0 && fa < 0.45) drawBeam(out, SBEAM, fa < 0.1 ? 1 : 1 - (fa - 0.1) / 0.35); },
   anim(D, t, rs) {
-    const st = rs.st, fa = fage(rs), q = steps(t, 10), cast = q > 0.62 && q < 0.86;
-    const dt = st.lt == null ? 0 : clamp(t - st.lt, 0, 0.1); st.lt = t;
-    const boost = (fa < 1.5 ? 5 * (1 - fa / 1.5) : 0) + (cast ? 2.5 : 0); st.sa = (st.sa || 0) + dt * (0.8 + boost); st.sb = (st.sb || 0) + dt * (0.55 + boost * 0.7);
-    const bob = Math.sin(t * 1.4) * 1.6, cx = SC_[0], cy = Math.round(SC_[1] + bob), flare = fa < 0.3 ? 3 * (1 - fa / 0.3) : cast ? 0.8 : 0;
-    if (fired(rs, t)) { rs.flash(1, 2.2); rs.flash(2, 0.4); rs.flash(3, 0.4); rs.burst('rune', cx, cy, 16, { sp: 30, life: 1.3 }); rs.burst('glint', cx, cy - 21, 4, { sp: 18, life: 0.5 }); }
-    D.lay('mid');
-    // back halves of the rings, shards behind, the crystal, then the front halves
-    const phi = st.sb, orb = (front) => { for (let i = 0; i < 3; i++) { const a = st.sa * 0.8 + i * 2.094, z = Math.sin(a); if ((z >= 0) !== front) continue; const x = Math.round(cx + Math.cos(a) * 29), y = Math.round(cy + 4 + Math.sin(a) * 6), dk = front ? 0 : 2;
-      D.px(x, y - 3, 'arcane', 10 - dk, { e: 255 }); D.rect(x - 1, y - 2, 3, 3, 'arcane', 7 - dk, { e: 255 }); D.px(x - 1, y - 2, 'arcane', 10 - dk, { e: 255 }); D.px(x + 1, y, 'arcane', 4 - dk, { e: 255 }); D.px(x, y + 1, 'arcane', 5 - dk, { e: 255 }); } };
-    ringH(D, cx, cy + 4, 25, 5.5, st.sa, false, 8); ringV(D, cx, cy - 3, 19, phi, 0.35, -st.sa * 1.3, false, 8); orb(false);
-    ol(D, cx - 9, cy - 24, cx + 9, cy + 17, () => { D.beg(); crystal(D, cx, cy, flare, t); D.end(); });
-    ringH(D, cx, cy + 4, 25, 5.5, st.sa, true, 8); ringV(D, cx, cy - 3, 19, phi, 0.35, -st.sa * 1.3, true, 8, cy); orb(true);
-    // a shot: a beam up through the oculus, a ring of force out across the floor
-    if (fa < 0.35) { const w = Math.round(3 * (1 - fa / 0.35)) + 1; for (let y = 4; y < cy - 20; y++) for (let x = -w; x <= w; x++) { if (hh(Math.floor(t * 30), y * 7 + x) < 0.15 && Math.abs(x) === w) continue; D.px(cx + x, y, 'arcane', Math.abs(x) < w - 1 ? 11 : 9, { e: 255 }); } }
-    if (fa < 0.7) { const rx = 14 + fa / 0.7 * 50, ry = rx * 0.1; D.lay('wall'); for (let k = 0; k < 140; k++) { const a = k / 140 * Math.PI * 2; if (hh(k, 3) < fa) continue; D.px(cx + Math.cos(a) * rx, 97 + Math.sin(a) * ry, 'arcane', 10, { e: 255 }); } D.lay('mid'); }
-    // the floor clock's hand crawls round
-    D.lay('wall'); const ha = t * 0.25; D.line(75, 97, 75 + Math.cos(ha) * 40, 97 + Math.sin(ha) * 4, 'arcane', 7, { e: 255 }); D.px(75, 97, 'arcane', 10, { e: 255 });
-    // violet brazier flames, candles
-    D.lay('back'); [[25, 'fL'], [125, 'fR']].forEach(([x, k]) => { const f = fireSim(st[k] || (st[k] = {}), 13, 13, t, 0.82, 0.42);
-      for (let y = 0; y < 13; y++) for (let i = 0; i < 13; i++) { const v = f[y * 13 + i]; if (v < 5 || Math.abs(i - 6) > 1.2 + y * 0.55) continue; D.px(x - 6 + i, 33 + y, 'arcane', clamp(2.5 + v / 36 * 9, 4, 11), { e: 255 }); } });
-    D.lay('mid'); flame(D, 106, 57, 3, t, 1.1);
-    D.lay('front'); FCAND.forEach(([x, y, ph]) => flame(D, x, y - 1, 4, t, ph));
-    // two open books drifting off the shelf, pages flapping
-    D.lay('back');
-    [[33, 22, 0, 'crimson'], [44, 31, 2.2, 'tile']].forEach(([x, y, ph, m]) => { const by = Math.round(y + Math.sin(t * 0.9 + ph) * 2.5), bx = Math.round(x + Math.sin(t * 0.5 + ph) * 2), fp = Math.round(Math.sin(t * 4 + ph) * 1.6);
-      ol(D, bx - 8, by - 7, bx + 8, by + 5, () => { D.beg(); D.line(bx - 5, by - 1, bx, by + 1, m, 6, { w: 2 }); D.line(bx, by + 1, bx + 5, by - 1, m, 4, { w: 2 }); D.poly([[bx - 5, by - 2], [bx, by], [bx, by - 1], [bx - 4, by - 3]], 'paper', 9); D.poly([[bx, by - 1], [bx, by], [bx + 5, by - 2], [bx + 4, by - 3]], 'paper', 7);
-        D.line(bx, by - 1, bx + 3, by - 3 - fp, 'paper', 10); D.px(bx - 2, by - 2, 'paper', 5); D.px(bx + 2, by - 2, 'paper', 4); D.end(); });
-      if (hh(Math.floor(t * 3 + ph), 9) < 0.25) D.px(bx + Math.round(Math.sin(t * 5 + ph) * 3), by + 4, 'arcane', 9, { e: 255 }); });
-    // the mage reads; at the moment lifts both hands and runes stream from the book to the crystal
-    D.lay('mid');
-    const pose = cast || fa < 0.4 ? { aF: 2.6, eF: 0.2, aB: 2.3, eB: 0.3, lean: 0.1 } : { aF: 2.0, eF: -0.4, aB: 1.5, eB: -0.5, lean: 0.25, bob: Math.round(Math.sin(t * 1.2) * 0.5) };
-    man(D, 115, FY, { skin: ['skin', 6], hair: ['linen', 9], top: ['tile', 5], bot: ['tile', 3], boot: ['tile', 2], robe: 1, hood: ['tile', 6], beard: ['linen', 9] }, pose, -1);
-    if (cast) { if (R() < 0.5) rs.burst('rune', 100 + R() * 5, 63, 1, { sp: 20, ang: -1.1, spread: 0.4, life: 1.2 }); if (!st.c && q > 0.8) { st.c = 1; rs.flash(1, 0.9); rs.burst('glint', cx, cy, 5, { sp: 20, life: 0.6 }); } } if (q < 0.5) st.c = 0;
+    const st = rs.st, fa = fage(rs), q = steps(t, 10), cast = q > 0.58 && q < 0.86, dt = st.lt == null ? 0 : clamp(t - st.lt, 0, 0.1); st.lt = t;
+    // charge: it builds while the technician reads the rite; a shot drives it to the top at once
+    const ch = fa < 1.4 ? (fa < 0.08 ? 1 : Math.max(0, 1 - (fa - 0.08) / 1.1)) : cast ? ease(clamp((q - 0.58) / 0.22, 0, 1)) * 0.7 * (q > 0.8 ? 1 - (q - 0.8) / 0.06 : 1) : 0;
+    st.sa = (st.sa || 0) + dt * (1.1 + ch * 7); st.sb = (st.sb || 0) + dt * 0.9;
+    rs.mul[1] = 1 + ch * 0.7; rs.mul[2] = 0.9 + ch * 0.8;
+    if (fired(rs, t)) { const m = spp(39, 0); rs.flash(4, 2.6); rs.flash(1, 1.6); rs.flash(3, 1.2); rs.flash(2, 0.5); rs.burst('glint', m[0], m[1], 4, { sp: 20, life: 0.5 }); rs.burst('rune', m[0], m[1], 8, { sp: 26, ang: 0.95, spread: 1.4, life: 1 });
+      st.fs = st.fs || []; for (let i = 0; i < 18 && st.fs.length < 30; i++) { const a = LIP[Math.floor(R() * LIP.length)]; st.fs.push({ x: a[0], y: a[1] + 1, vx: (R() - 0.5) * 16, vy: R() * 8, fl: 87 + Math.floor(R() * 4), age: -R() * 0.2, o: R() < 0.5 ? 1 : -1 }); }
+      for (let i = 0; i < 4; i++) { const a = LIP[Math.floor(R() * LIP.length)]; rs.burst('mist', a[0], a[1] + 2, 1, { sp: 6, ang: Math.PI, spread: 1, life: 1.8 }); } }
+    // the rings round the barrel turn; charging draws them tight; a shot snaps them in and throws them up the barrel, and
+    // throws the floating muzzle ring out through the port (it grows back)
+    const Rr = 8.4 - ch * 2.8, slide = fa < 0.9 ? 7 * Math.sin(Math.min(1, fa / 0.9) * Math.PI) * (fa < 0.08 ? fa / 0.08 : 1) : 0, br = ch * 1.5;
+    const fs = fa < 0.35 ? 45 + fa / 0.35 * 34 : 45 + Math.sin(t * 1.3) * 0.8, fr = fa < 0.35 ? 5.8 * (1 - fa / 0.35 * 0.5) : fa < 1.4 ? 5.8 * clamp((fa - 0.35) / 1, 0.05, 1) : 5.8 - ch * 1.5;
+    D.lay('back'); SRING.forEach((s, i) => barRing(D, s + slide * (0.6 + i * 0.3), Rr, st.sa * (i % 2 ? -1 : 1) + i, false, br)); if (fr > 0.6) barRing(D, fs, fr, st.sa * 1.4, false, br);
+    D.lay('mid'); SRING.forEach((s, i) => barRing(D, s + slide * (0.6 + i * 0.3), Rr, st.sa * (i % 2 ? -1 : 1) + i, true, br)); if (fr > 0.6) barRing(D, fs, fr, st.sa * 1.4, true, br);
+    // a glint runs up the crystal
+    const gs = -4 + ((t * 10) % 70); if (gs < 30 && !(gs > 8 && gs < 12.5) && !(gs > 23 && gs < 28)) rot(SP, SU, gs, gs + 1.6, -4.4, -1.3, (x, y) => D.px(x, y, 'arcane', 11, { e: 255 }));
+    // the turntable's teeth creep round as the mount holds its aim
+    for (let x = 46; x < 80; x += 4) { const xx = 46 + ((x - 46 + Math.floor(t * 1.5)) % 34 + 34) % 34; D.px(xx, 79, 'brass', 8.5); }
+    // the shot: a violet-blue beam out of the muzzle and up through the port, a spiral of frost light round it
+    if (fa < 0.42) { const k = fa < 0.06 ? 1 : 1 - (fa - 0.06) / 0.36, wc = 0.6 + 2.2 * k, m = spp(38, 0);
+      rot(SP, SU, 36, 125, -wc - 2.4, wc + 2.4, (x, y, s, p) => { const ap = Math.abs(p); if (ap < wc) D.px(x, y, 'arcane', 11, { e: 255 }); else if (ap < wc + 1.2) D.px(x, y, 'arcane', 9, { e: 255 }); else if (hh(Math.floor(s / 3), Math.floor(fa * 40)) > 0.25) D.px(x, y, 'ice', 9, { e: 255 }); });
+      for (let s = 38; s < 125; s += 0.7) { const p = (wc + 3) * Math.sin(s * 0.42 - fa * 50), a = spp(s, p); D.px(a[0], a[1], 'ice', 10.5, { e: 255 }); }
+      D.ell(m[0], m[1], 2 + k * 4, 2 + k * 4, 'arcane', 9, { e: 255 }); D.ell(m[0], m[1], 1 + k * 2.5, 1 + k * 2.5, 'arcane', 11, { e: 255 }); }
+    // the frost the shot knocks off the sill: blue-white slivers tumble down and lie glinting on the heap, then melt
+    if (st.fs && st.fs.length) { D.lay('front'); for (let i = st.fs.length - 1; i >= 0; i--) { const f = st.fs[i]; f.age += dt; if (f.age < 0) continue; if (f.age > 2.4) { st.fs.splice(i, 1); continue; }
+        if (f.y < f.fl) { f.vy += 150 * dt; f.x += f.vx * dt; f.y += f.vy * dt; if (f.y >= f.fl) { f.y = f.fl; if (R() < 0.3) rs.burst('glint', f.x, f.y - 1, 1, { sp: 2, life: 0.4 }); } }
+        const land = f.y >= f.fl, tn = land ? 10.5 - Math.max(0, f.age - 1.2) * 4 : 11, fl2 = Math.floor(f.age * 12 + i) % 2 ? f.o : -f.o; if (tn < 5) continue;
+        D.px(f.x, f.y, 'ice', tn, { e: 255 }); D.px(f.x + (land ? 1 : fl2), f.y - (land ? 0 : 1), 'ice', tn - 1.5, { e: 255 }); if (!land) D.px(f.x - fl2, f.y + 1, 'ice', tn - 3, { e: 255 }); } }
+    // the port: stars; now and then a drop off an icicle
+    D.lay('wall'); stars(D, SSTAR, t);
+    if (steps(t, 3.7) < 0.02 && st.dr !== Math.floor(t / 3.7)) { st.dr = Math.floor(t / 3.7); const a = spp(PO + 8 + hh(st.dr, 3) * 36, PW + 5); rs.burst('drip', a[0], a[1], 1, { sp: 0, life: 1.2, floor: FY + 1 }); }
+    // the charge coil: a bright band climbs its core; two rune rings ride up and down round it; a shard floats over it
+    D.lay('back'); const cy = 74 - ((t * (14 + ch * 30)) % 44); for (let x = 15; x < 25; x++) for (let y = Math.floor(cy); y < cy + 2; y++) { const w = (((y - 33) % 5) + 5) % 5, wl = 2 - (x - 13) * 3 / 13; if (Math.abs(w - wl) < 1.2 || Math.abs(w - wl - 1) < 0.6) continue; D.px(x, y, 'arcane', 11, { e: 255 }); }
+    const fy = 20 + Math.round(Math.sin(t * 1.6) * 1.2); D.poly([[20, fy - 5], [23, fy], [20, fy + 5], [17, fy]], 'arcane', 8, { e: 255 }); D.poly([[20, fy - 5], [20, fy + 5], [17, fy]], 'arcane', 10, { e: 255 }); D.px(20, fy - 4, 'arcane', 11, { e: 255 });
+    const ya = 47 + Math.round(Math.sin(st.sb) * 12), yb = 60 - Math.round(Math.sin(st.sb) * 12);
+    D.lay('wall'); ringH(D, 20, ya, 13, 3.2, st.sa * 0.8, false, 8); ringH(D, 20, yb, 12, 3, -st.sa * 0.7, false, 8);
+    D.lay('back'); ringH(D, 20, ya, 13, 3.2, st.sa * 0.8, true, 8); ringH(D, 20, yb, 12, 3, -st.sa * 0.7, true, 8);
+    // charge running along the conduit into the turret
+    D.lay('mid'); for (let x = 32; x < 40; x++) { const v = ((x - t * (10 + ch * 30)) % 5 + 5) % 5; if (v < 1.5) D.px(x, 86, 'arcane', 10, { e: 255 }); if (v < 0.8) D.px(x, 87, 'arcane', 8, { e: 255 }); }
+    // the candle
+    D.lay('back'); flame(D, 112, 45, 4, t, 0.6);
+    // the technician: reads the aiming rite from his book; the moment: he lifts it and runes stream to the breech coil
+    D.lay('mid'); const gx = 104, rd = cast && q < 0.84, brace = fa < 0.45;
+    const pose = brace ? { aF: 1.5, eF: -1, aB: 2.5, eB: 0.4, lean: -0.3, lF: 0.25, lB: -0.3 } : rd ? { aF: 1.95, eF: -0.9, aB: 1.8, eB: -0.8, lean: 0.1 } : { aF: 1.2, eF: -1.15, aB: 1.05, eB: -1.05, bob: Math.round(Math.sin(t * 1.2) * 0.5), hx: 0.4 };
+    man(D, gx, FY, { skin: ['skin', 6], hair: ['hair', 5], top: ['lav', 7], bot: ['iron', 4], boot: ['leather', 3], cap: ['brass', 7] }, pose, -1);
+    if (!X.noWorkers) { D.px(gx - 1, FY - 25 + (pose.bob || 0), 'arcane', 10, { e: 255 });   // a lens over one eye
+      const h = handAt(gx, FY, pose, -1), bx = h[0] - 4, by = h[1] - 3, flip = Math.floor(t / 3.1) % 2 && steps(t, 3.1) < 0.12;
+      ol(D, bx - 2, by - 3, bx + 9, by + 5, () => { D.beg(); D.rect(bx, by + 2, 9, 2, 'crimson', 4.5); D.hl(bx, by + 2, 9, 'crimson', 6); D.rect(bx, by, 4, 3, 'paper', 9); D.rect(bx + 5, by, 4, 3, 'paper', 8); D.vl(bx + 4, by, 3, 'paper', 5);
+        D.hl(bx + 1, by + 1, 2, rd ? 'arcane' : 'paper', rd ? 11 : 5, rd ? { e: 255 } : undefined); D.hl(bx + 6, by + 1, 2, 'paper', 5); if (flip) { D.px(bx + 5, by - 1, 'paper', 10); D.px(bx + 4, by - 2, 'paper', 10); } D.end(); });
+      if (rd && q > 0.62 && R() < 0.45) { const b = spp(-14, -2); rs.burst('rune', bx + 4, by - 1, 1, { sp: 34, ang: Math.atan2(b[0] - bx, -(b[1] - by)), spread: 0.35, life: 1.3 }); } }
+    if (cast && q > 0.8 && !st.c) { st.c = 1; const m = spp(38, 0), v = spp(29, 0); rs.flash(1, 0.9); rs.flash(2, 0.6); rs.burst('glint', m[0], m[1], 3, { sp: 12, life: 0.5 }); rs.burst('mist', v[0], v[1], 3, { sp: 8, life: 1.4 }); } if (q < 0.5) st.c = 0;
+    // paper talismans hanging from the vault, stirred by each shot
+    D.lay('front'); const push = fa < 3 ? 0.5 * Math.exp(-fa * 1.6) * Math.sin(fa * 7) : 0;
+    [[36, 15, 0], [41, 21, 1.3], [46, 12, 2.6]].forEach(([x, L, ph]) => { const a = 0.06 * Math.sin(t * 1.3 + ph) + push * (0.8 + ph * 0.1), ex = x + Math.sin(a) * L, ey = 9 + Math.cos(a) * L;
+      ol(D, x - 6, 9, x + 8, ey + 11, () => { D.beg(); D.line(x, 9, ex, ey, 'hair', 3); D.rect(ex - 1, ey, 4, 9, 'paper', 8.6); D.vl(ex + 2, ey, 9, 'paper', 6.2); D.hl(ex - 1, ey, 4, 'paper', 10); D.px(ex, ey + 2, 'crimson', 7); D.px(ex + 1, ey + 3, 'crimson', 7); D.px(ex, ey + 4, 'crimson', 6); D.px(ex + 1, ey + 6, 'arcane', 9, { e: 1 }); D.end(); }); });
   },
 });
 
@@ -838,9 +912,9 @@ X.def('wall', {
 // what each pixel room shows, in words (docs/effects.md §R is generated from M.ROOM_D)
 const D_ = {
   ballista: '巨型弩炮架在木架上，弦已上好、大箭已搭上，斜指墙上的射口，射口外是月夜和地面的草；墙上的架子挂着一排大箭，桶里插着箭，吊灯在弩臂上方轻轻晃，火盆火苗翻动，月光从射口斜照进来、灰尘在光里飘；守卫扶着绞盘，不时使劲再绞几圈，弩臂吱呀往后一弯，梁上落下细灰；开火时弩臂猛地弹回，大箭拖着白光从射口飞出，木架一震、火花和尘土四起、吊灯被震得直晃，守卫再把弦绞回去',
-  cannon: '长炮管架在铆钉炮架上，从铜圈炮口伸出去指着夜空；铜锅炉的炉门透着火光，压力表指针抖动，汽管和软管接到炮尾；炮手戴着护目镜，不时转身从弹架取一发炮弹塞进炮膛，炮膛嘶地冒汽；开火时炮口喷出一团火光、满屋一亮，炮管往后一坐，炮尾两侧喷出白汽，吊钩被震得来回摆',
+  cannon: '长炮管架在铆钉炮架上，从铜圈炮口伸出去指着夜空；左边铁架上排着两层黑色圆弹，链条吊斗从地板口把炮弹一发发吊上来，地板口下透出弹药库的灯光，吊机顶上的汽机一边拉链一边冒汽、琥珀灯跟着转；炮手守着炮尾，不时转身从吊斗里抱出一发炮弹塞进炮膛，炮膛嘶地冒汽；前面摆着火药桶和一堆码成金字塔的炮弹；开火时炮口喷出一团火光、满屋一亮，炮管往后一坐，炮尾两侧喷出白汽，吊钩被震得来回摆',
   tesla: '线圈立在黑黄警示条的机柜上，底座上平盘着三圈铜管，中间的铜线绕得密密的，顶上是金属圆环和放电球，细小的电弧不停从球上窜出、在圆环上爬，不时一道电弧跳到两边的避雷杆上；左边闸刀开关偶尔冒火花，电容管里的电一格格涨，工程师拿着夹板看屏幕，地上盘着一卷黄色电缆；电容充满时两道大电弧同时打到避雷杆、满屋一白，工程师抬手挡脸；开火时电弧穿过天花板的导电口冲上地面，火花往下落，红色警示灯一闪',
-  spire: '台阶上的石柱托着一块悬浮的紫水晶，金爪向上托着它，两道符环绕着它转、三块碎晶绕着飞，地上一圈钟面法阵的指针慢慢走；两边石柱的金盆里燃着满满的紫色火焰，书架边两本书飘在空中翻页，石台前的地上点着几支蜡烛，蓝袍法师在讲台前读书；法师举手时符文从书上流向水晶、符环转快；开火时一道光束从水晶冲出屋顶的圆孔，一圈力场沿地面扩散',
+  spire: '黄铜转台上架着一根紫水晶炮管，斜指墙角的射击口，口外是月夜和半个月亮，口沿结着冰凌、不时滴水；两道符环套在炮管上转，炮口前还悬着一道，一道亮光不停沿水晶往上跑；左边的充能线圈里紫光一路往上涌，两道符环绕着它上下转，能量顺着地上的导管流进炮座；技师戴着镜片、捧着书站在一旁，墙上架着备用水晶，烛台摇曳，头顶挂着几张符纸；技师举书念咒时符文飞向炮尾、符环收紧、水晶一亮、炮口冒出冷雾；开火时符环猛地收紧往前冲，一道紫蓝光束从射击口射出，口沿震落一片蓝白冰晶，冷雾涌进来',
   armory: '一整套板甲立在石台上，双手按着插在身前的长剑，身后挂着绣交叉双剑的红旗，头顶铁格窗漏下一道淡白的光柱照在头盔上，在石台和地板上照出一块亮斑，灰尘在光里飘，白色羽饰轻轻摆；左边架子上立着长戟、长矛和三把尖头长剑，右墙挂着两面纹章盾，一面圆盾压在两把交叉的斧头上，刀刃不时闪一下；两边火把摇曳，木柱上的油灯跳着小火苗，水槽上两根木柱架着一块圆磨石，铠甲匠踩着踏板，磨石上的四道深槽跟着转，他把剑压在磨石左上边、火花飞溅；磨好后他把剑举到光下，光柱猛地大亮、地上的亮斑跟着变亮，一道亮光从头盔顺着胸甲滑到剑上，光里的灰尘打着旋，旗边轻轻一抖',
   wall: '城墙底下的石料间：左边码着一堆方石，石匠在木架上的石块旁抡锤凿打，每一下石屑飞出、扬起一小团石粉；右边天花板开着吊口，月光漏下来，绳子把方石一块块吊上地面的城墙，空钩再放下来，下一块石头从石堆拖到钩下；墙上的火把摇曳，吊灯挂在木架上方',
 };

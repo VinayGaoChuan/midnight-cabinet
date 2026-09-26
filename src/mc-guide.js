@@ -108,7 +108,7 @@ G.guideRect = function (c) {
 };
 // anything else on screen that a card must not cover or interrupt
 G.guideBusy = function () {
-  return !!((this.banners && this.banners.length) || this.coachData || this.modal || this.reel || this.chest || this.mini || this.settle || this.tear || this.coreFx || this.saveFx || this.lvFx || this.dayFx || this.settingsOpen || this.rulesOpen || this.rebind || this._goingRoom || (this.battle && this.battle.introBanner) || (this.raid && this.screen !== 'raid'));
+  return !!((this.banners && this.banners.length) || this.coachData || this.modal || this.reel || this.chest || this.mini || this.settle || this.tear || this.coreFx || this.saveFx || this.lvFx || this.settingsOpen || this.rulesOpen || this.rebind || this._goingRoom || (this.battle && this.battle.introBanner) || (this.raid && this.screen !== 'raid'));
 };
 G.guideClose = function () { const gd = this.guide; if (!gd) return; markSeen(gd.c.id); this.guide = null; this.guideNext = now() + 900; M._guideFreeze = false; this.bump(); };
 G.guideScan = function () {

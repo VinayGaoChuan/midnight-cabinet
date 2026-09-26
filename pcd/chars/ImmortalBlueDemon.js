@@ -4,7 +4,7 @@
 // 攻击 = 踮脚前突 6 格，双刃一前一后连续直刺两次（第二刺刃口闪白），命中后借力后跳回原位。
 // 技能 = 魔化后的「伏击」：身体从边缘往里逐像素化成暗影剪影（只剩眼光和刃口亮点）→ 原位残影炸散、三个残影依次逼近假人、
 //        假人头顶撕开一道横向暗影裂口 → 他头下脚上从裂口落下，双月刃向下插进假人 → 翻身落地，化影解除。
-// 死亡 = 化烟：全身变成暗影剪影，两把月刃「锵」地掉在地上，身体从脚往上化成暗影烟雾飘散，月刃最后才消散。
+// 死亡 = 化烟：单膝跪下、全身变成暗影剪影，两把月刃「锵」地掉在地上，身体从脚往上化成暗影烟雾飘散，月刃最后才消散。
 PCD.define('ImmortalBlueDemon', (E) => {
   const { parts, Sprite, bake, ease, clamp01, q12, f12of, walkDemo, FXI, FXR, HY, DUMMY_X, INCOMING, ASTEP, color, B8, copySprite, blitShape, outlineSprite,
     IDLE, MOVE, ATTACK, CHARGE, CAST, RECOVER, HURT, DEATH, REVIVE, DEFAULT_DUR, K_RISE, K_BURST, K_SPIRAL, K_DUST,
@@ -20,7 +20,7 @@ PCD.define('ImmortalBlueDemon', (E) => {
     glow: { r: [EL[3], GILL, GILL, 21], flat: 1 },                   // 腮纹 / 眼光（发光体）
     edge: { r: [EL[3], EL[1], EL[0], 21], flat: 1 },                 // 月刃刃口附着的暗影（发光体）：2 紫 · 3 淡紫 · 4 白
   });
-  const BODY = { body: 'slim', leg: 11, torso: 9, head: 7, headW: 6, sw: 4, arm: 12, lw: 2, stride: 3, lift: 1, waist: 1.6, fall: 'front' }, BODY_FLIP = { ...BODY, fall: 'back' };
+  const BODY = { body: 'slim', leg: 11, torso: 9, head: 7, headW: 6, sw: 3, arm: 12, lw: 2, stride: 3, lift: 1, waist: 1.6, fall: 'front' }, BODY_FLIP = { ...BODY, fall: 'back' };
   const HX = 78, DUR = DEFAULT_DUR.slice();
   const hero = new Sprite(80, 78, 38, 72);
   const RIM = { rim: 0, rx: 0, ry: 0, rimR: [0, 6, 12, 16], rimRamp: EL, flash: 0, dq: 0, skip: new Uint8Array(256) };
@@ -41,7 +41,7 @@ PCD.define('ImmortalBlueDemon', (E) => {
   const K_BRACE = K(7, -12, Q8 * 3, 3, -13, Q8 * 3, 2, 1, 3);       // 蓄力：伏低，双刃交叉在身前、刃尖朝下
   const K_DIVE = K(3, -29, 0, 1, -29, 0, 0, 0, 0);                  // 倒立下插（正着画，再上下翻转）：双手举过头顶，刃尖朝上
   const K_HURT = K(4, -16, HALF, -2, -16, 0, -1, -1, 0);
-  const K_SAG = K(6, -9, Q8 * 3, 0, -10, PI, 2, 1, 3);              // 死亡：佝下去，刃尖垂地
+  const K_SAG = K(7, -10, Q8 * 3, 1, -12, Q8 * 3, 2, 1, 5);          // 死亡：单膝跪下去、头垂，双刃刃尖往前下垂
   const FIELDS = ['hx', 'hy', 'a', 'bhx', 'bhy', 'ba', 'lean', 'head', 'crouch'];
   const setK = (A, B, q) => E.mix(P, A, B, q, FIELDS);
   const KEY1 = parts.keyer([['hx', -32, 31], ['hy', -64, 15], ['a', -4, 4, 1 / Q8], ['bhx', -32, 31], ['bhy', -64, 15], ['ba', -4, 4, 1 / Q8], ['lean', -1, 2], ['head', -1, 2], ['crouch', 0, 7], ['bob', 0, 1], ['step', -1, 1], ['wup', 0, 2]]);
@@ -116,19 +116,24 @@ PCD.define('ImmortalBlueDemon', (E) => {
 
   // ───── 画（部件从后往前）─────
   const rect2 = (R, x0, y0, x1, y1, m) => { const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) * 1.5)); for (let s = 0; s <= n; s++) { const q = s / n; parts.rect(E, R, RD(x0 + (x1 - x0) * q - 0.5), RD(y0 + (y1 - y0) * q - 0.5), 2, 2, m, 0); } };
-  // 候选部件：flowingMane 飘鬃——从后脑往身后飘出一大把长鬃（len 格），上沿随 P.sway 起伏、下沿参差成几绺，后三成隔点化烟。读 P.beard（< 0 往后拉平、> 0 甩起）P.sway（波浪相位）
+  // 候选部件：flowingMane 飘鬃——从后脑往身后上方飘出一大把长鬃（len 格，根部 6 行厚、往后收细），上沿随 P.sway 起伏、下沿参差成几绺；
+  //   后四成化成烟：换成 smoke 材质、隔点断开，最后几格只剩零星烟丝。o = { mat, smoke, len }；读 P.beard（< 0 往后拉平、> 0 甩起）P.sway（波浪相位）
   function flowingMane(R, o) {
-    const T = R, m = o.mat, b = P.beard, x0 = R.hx0, top = R.htop, L = o.len + Math.max(0, -b), ph = P.sway * 0.9;
+    const T = R, m = o.mat, sm = o.smoke || m, b = P.beard, x0 = R.hx0, top = R.htop, L = o.len + Math.max(0, -b), ph = P.sway * 0.9;
+    const rise = b > 0 ? 0.8 + b * 0.3 : b < 0 ? 0.3 : 0.6;
     E.part();
+    for (let y = top; y <= R.hy + 1; y++) parts.px(E, T, x0 - 1, y, m, y & 1 ? 2 : 3);                 // 后脑
     for (let i = 0; i <= L; i++) {
-      const q = i / L, x = x0 - 1 - i, wave = RD(Math.sin(q * 4.2 + ph) * 1.3 * q), yT = top - 1 + RD(q * (1.2 + b * 0.9)) + wave, th = Math.max(1, RD(5 - q * 3));
+      const q = i / L, x = x0 - 2 - i, wave = RD(Math.sin(q * 4.2 + ph) * 1.3 * q), yT = top - RD(q * 2 * rise) + wave, th = Math.max(2, RD(6 - q * 4.5));
+      const smoke = q > 0.6;
       for (let j = 0; j < th; j++) {
-        const y = yT + j; if (q > 0.66 && (j > 0 || (i & 1))) continue;                               // 末端化成烟：只剩一缕断续的细丝
-        parts.px(E, T, x, y, m, j === 0 ? 4 : j === th - 1 ? 2 : ((i + j * 2) % 4) === 0 ? 4 : 3);      // 上沿亮、隔几格一道亮发丝
+        const y = yT + j;
+        if (smoke) { if (((x + y) & 1) || (q > 0.85 && j > 0)) continue; parts.px(E, T, x, y, sm, j === 0 ? 3 : 2); continue; }   // 末端化成烟：隔点断开的烟丝
+        parts.px(E, T, x, y, m, j === 0 ? 4 : j === th - 1 ? 2 : ((i + j * 2) % 3) === 0 ? 4 : 3);      // 上沿亮、隔几格一道亮发丝
       }
-      if (i > 1 && (i % 3) === 0 && q < 0.66) parts.px(E, T, x, yT + th + ((i / 3) & 1), m, 3);        // 下沿参差的几绺
+      if (!smoke && i > 0 && (i % 2) === 0) parts.px(E, T, x, yT + th + ((i >> 1) & 1), m, 2);          // 下沿参差的几绺
+      if (smoke && ((i + P.sway) & 1)) parts.px(E, T, x, yT - 1 - (i & 2 ? 1 : 0), sm, 3);             // 烟丝往上飘散
     }
-    for (let y = top; y <= R.hy; y++) parts.px(E, T, x0 - 1, y, m, 2);                                 // 后脑
   }
   // 候选部件：demonTail 魔尾——从后腰伸出，先往后下垂再往后上甩，1 格细，尾尖一片鳍（3 × 3 三角）。读 P.sway（摆动，和长鬃错开相位）
   function demonTail(R, o) {
@@ -138,25 +143,31 @@ PCD.define('ImmortalBlueDemon', (E) => {
     for (let k = 1; k <= L; k++) { const q = k / L, x = x0 - k, y = y0 + RD(Math.sin(q * PI) * 4 - q * q * 7 - sw * q * q * 2); parts.line(E, T, lx, ly, x, y, m, k > L - 3 ? 3 : 2); lx = x; ly = y; }
     parts.px(E, T, lx - 1, ly, o.fin, 4); parts.px(E, T, lx - 1, ly - 1, o.fin, 3); parts.px(E, T, lx - 2, ly - 1, o.fin, 3); parts.px(E, T, lx - 2, ly - 2, o.fin, 4); parts.px(E, T, lx - 1, ly + 1, o.fin, 2); parts.px(E, T, lx - 2, ly + 1, o.fin, 2);
   }
-  // 背鳍（和水战士同一个候选部件 dorsalFin，魔化后更高、棘尖带骨刺）
+  // 背鳍（和水战士同一个候选部件 dorsalFin，魔化后的画法：实心鳍膜（不再半透明）、更高、棘往后上 45° 斜出肩线、棘尖带骨刺）
+  //   鳍膜外沿在两根棘之间凹下 2 格 = 一排独立的鳍片；第一根棘从肩后起，尖端高出肩线 h − 1 格
   function dorsalFin(R, o) {
     const T = R, m = o.mat, y0 = o.y0 != null ? o.y0 : R.yS, y1 = o.y1 != null ? o.y1 : R.yHip - 1, n = o.n || 3, back = P.beard < -1 ? 1 : 0;
     E.part();
     const tip = [];
-    for (let i = 0; i < n; i++) { const yr = RD(y0 + (y1 - y0) * (i + 0.3) / n), L = o.h + (i === 0 ? 1 : 0) - (i === n - 1 ? 1 : 0) + back; tip.push([yr, L]); }
-    for (let y = y0; y <= y1; y++) {
-      let w = 1; for (const [yr, L] of tip) w = Math.max(w, L - 1 - Math.abs(y - yr));
-      const e = parts.edges(R, y)[0];
-      for (let i = 1; i <= w; i++) { const x = e - i; if (i < w && ((x + y) & 1)) continue; parts.px(E, T, x, y, m, i === w ? 4 : 3); }
-    }
-    for (const [yr, L] of tip) {
-      const e = parts.edges(R, yr)[0];
-      for (let k = 1; k <= L; k++) parts.px(E, T, e - k, yr - k + 1, m, k === L ? 4 : 2);
-      if (o.spike) { parts.px(E, T, e - L - 1, yr - L, o.spike, 4); parts.px(E, T, e - L, yr - L, o.spike, 3); }
+    for (let i = 0; i < n; i++) { const yr = RD(y0 + (y1 - y0) * i / Math.max(1, n - 1) * 0.85), L = o.h + (i === 0 ? 1 : 0) - i + back; tip.push([yr, L]); }
+    for (const [yr, L] of tip) {                                                                    // 每片鳍：棘（后上 45°）和背之间的三角鳍膜
+      const e0 = parts.edges(R, yr)[0];
+      for (let k = 1; k <= L; k++) {
+        const x = e0 - k, yTop = yr - k + 1;
+        for (let y = yTop; y <= yr + 2 - (k >> 1); y++) { const e = parts.edges(R, Math.max(y, R.yS))[0]; if (x >= e) continue; parts.px(E, T, x, y, m, y === yTop ? 4 : ((x + y) & 3) === 0 ? 3 : 2); }
+      }
+      if (o.spike) { parts.px(E, T, e0 - L - 1, yr - L, o.spike, 4); parts.px(E, T, e0 - L, yr - L, o.spike, 3); }
     }
   }
   // 候选部件：tiptoeLegs 踮脚爪足——大腿 → 前顶的膝 → 小腿斜向后下到抬起的脚跟（离地 heel 格）→ 脚掌斜向前下到趾尖，趾尖一格骨爪；远侧腿暗一级。落点读 rig 的步态
+  //   跪（rig kneel，crouch ≥ 4）：远侧膝盖着地、小腿贴地往后、趾爪朝后；近侧大腿前伸、小腿竖直、踮着脚尖
   function tiptoeLegs(R, o) {
+    if (R.kneel) {
+      const yh = R.yHip + 1, kb = R.hipBx - 1, kf = R.hipFx + 4;
+      E.part(); rect2(R, R.hipBx, yh, kb, -1, o.matD); rect2(R, kb, -1, kb - 4, -1, o.matD); parts.px(E, R, kb - 5, 0, o.clawD, 4);
+      E.part(); rect2(R, R.hipFx, yh, kf, yh, o.mat); rect2(R, kf, yh, kf, -3, o.mat); parts.line(E, R, kf, -2, kf + 2, 0, o.mat, 0); parts.px(E, R, kf + 3, 0, o.claw, 4);
+      return;
+    }
     const leg = (hipX, footX, up, m, claw) => {
       E.part();
       const yh = R.yHip + 1, ty = -up, ax = footX - 1, ay = ty - o.heel, kx = (hipX + ax) / 2 + 2 + R.cr * 0.6, ky = (yh + ay) / 2 - 1;
@@ -199,9 +210,9 @@ PCD.define('ImmortalBlueDemon', (E) => {
   function drawHero() {
     E.begin(hero, P.bx, -P.lift);
     const R = parts.rig(P, P.lying ? BODY_FLIP : BODY), sk = M.skin, skD = M.skinD, lv = P.gem;
-    flowingMane(R, { mat: M.mane, len: 6 });
+    flowingMane(R, { mat: M.mane, smoke: M.rag, len: 8 });
     demonTail(R, { mat: M.skinD, fin: M.fin, len: 10 });
-    dorsalFin(R, { mat: M.fin, h: 4, n: 3, spike: M.bone, y0: R.yS + 2, y1: R.yWaist + 2 });
+    dorsalFin(R, { mat: M.fin, h: 5, n: 3, spike: M.bone, y0: R.yS + 1, y1: R.yWaist + 1 });
     parts.arm(E, R, P, { side: 'B', sleeve: 'tight', mat: skD, cuff: M.ragD, grip: 'none' });
     if (!P.dropB) crescent(R, P.bhx, P.bhy, P.ba, 1, lv, M.boneD, M.edge, 0);
     parts.hand(E, R, P, { side: 'B', hand: skD });

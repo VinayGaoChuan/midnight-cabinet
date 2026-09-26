@@ -4,7 +4,7 @@
 PCD.define('EvilEyeKingNixon', (E) => {
   const { defMat, Sprite, begin, part, sp, bake, clamp01, q12, f12of, gait, FXI, FXR, HY, FLOOR, DUMMY_X, INCOMING,
     IDLE, MOVE, ATTACK, CHARGE, CAST, RECOVER, HURT, DEATH, REVIVE, DEFAULT_DUR, K_SPIRAL_PT, K_ORBIT, K_BURST, K_TRAIL, K_EMBER, K_RISE, K_DUST, DT,
-    spawn, burst, releaseOrbit, ring, shake, flash, hitDummy, put, scrX, shotFloorGlow } = E;
+    spawn, burst, releaseOrbit, ring, shake, flash, hitDummy, put, scrX, shotFloorGlow, sfx } = E;
   const fl = (x) => Math.floor(x + 1e-6);                        // 姿势 / 画法里的取整都带容差（同 q12）
   const easeInOut = E.ease.inOut;
 
@@ -307,10 +307,12 @@ PCD.define('EvilEyeKingNixon', (E) => {
     if (s === ATTACK && t === T_FLICK) {                        // 出手帧：瞳孔口光 + 凝视光束 + 命中
       const x0 = pupX(), y0 = pupY(), tx = DUMMY_X - 4, ty = HY - 15;
       beam(x0, y0, tx, ty, 0); mzT = 0; mzX = x0; mzY = y0; burst(tx, ty, 10, 40, 90, 0.15, 0.35, R_EL, 10); hitDummy(0);
+      sfx('swing', { kind: 'staff', w: 0.6 }); sfx('shoot', { proj: 'orb' }); sfx('hit', { mat: 'magic', w: 0.5 });   // 凝视光束瞬间到达：发射与命中同一帧
     }
     if (s === CAST) for (let b = 0; b < 3; b++) if (t === B_T[b]) {   // 三连射：一发比一发快，第 3 道最大
       const x0 = pupX(), y0 = pupY(), tx = DUMMY_X - 4, ty = HY - B_Y[b];
       beam(x0, y0, tx, ty, b === 2 ? 2 : 1); mzT = 0; mzX = x0; mzY = y0;
+      sfx('shoot', { proj: 'orb' }); sfx('impact', { pal: 'poison', w: b === 2 ? 0.9 : 0.5 + b * 0.1 });   // 每道光束命中一次 impact
       if (b < 2) { burst(tx, ty, 14 + b * 6, 50, 110, 0.2, 0.45, R_EL, 12); hitDummy(0); }
       else { burst(tx, ty, 36, 60, 150, 0.3, 0.7, R_EL, 16); ring(tx, ty, 1, R_EL); hitDummy(1); shake(0.12, 1); }
     }
@@ -318,8 +320,8 @@ PCD.define('EvilEyeKingNixon', (E) => {
       if (s === HURT) wardHitT = 0;
       else { const ex = eyeX(), ey = eyeY(); for (let i = 0; i < WN; i += 2) { const a = i / WN * 6.2832; spawn(K_BURST, ex + Math.cos(a) * WRX, ey + Math.sin(a) * WRY, Math.cos(a) * (15 + Math.random() * 25), Math.sin(a) * 18 - 8, 0.3 + Math.random() * 0.35, R_GOLD); } }   // 护壁碎裂
     }
-    if (s === DEATH && t === INCOMING + 0.46) { for (let i = 0; i < 16; i++) spawn(K_DUST, HX - 16 + Math.random() * 30, HY - 1, (Math.random() - 0.5) * 34, -8 - Math.random() * 14, 0.4 + Math.random() * 0.4, R_DUST); shake(0.1, 1); }   // 坠地
-    if (s === DEATH && t === INCOMING + 0.78) { for (let i = 0; i < 8; i++) spawn(K_DUST, HX - 14 + Math.random() * 26, HY - 1, (Math.random() - 0.5) * 24, -5 - Math.random() * 8, 0.3 + Math.random() * 0.3, R_DUST); }   // 回弹后再落地
+    if (s === DEATH && t === INCOMING + 0.46) { for (let i = 0; i < 16; i++) spawn(K_DUST, HX - 16 + Math.random() * 30, HY - 1, (Math.random() - 0.5) * 34, -8 - Math.random() * 14, 0.4 + Math.random() * 0.4, R_DUST); shake(0.1, 1); sfx('fall', { w: 0.9 }); }   // 坠地
+    if (s === DEATH && t === INCOMING + 0.78) { for (let i = 0; i < 8; i++) spawn(K_DUST, HX - 14 + Math.random() * 26, HY - 1, (Math.random() - 0.5) * 24, -5 - Math.random() * 8, 0.3 + Math.random() * 0.3, R_DUST); sfx('fall', { w: 0.5 }); }   // 回弹后再落地
     if (s === DEATH && t === INCOMING + 0.86) {                 // 眼球破裂：酸绿溅液（重力大，落地贴住）
       const ex = HX - 2 + 3; for (let i = 0; i < 40; i++) { const a = -Math.PI * (0.06 + 0.88 * Math.random()), v = 45 + Math.random() * 95; splat(ex + (Math.random() - 0.5) * 10, HY - 6 - Math.random() * 4, Math.cos(a) * v, Math.sin(a) * v, 0.7 + Math.random() * 0.6); }
       shake(0.12, 1);
@@ -388,5 +390,6 @@ PCD.define('EvilEyeKingNixon', (E) => {
   return {
     name: '邪眼王尼克松', HX, R_EL, DUR, hero, P, GLOW_MATS, HIT_POINT, EVENTS,
     poseAt, drawHero, bakeHero, onEnter, onTime, stepFX, fxReset, fxBack, fxFront,
+    SFX: { body: 'flesh', how: 'explode', pal: 'poison', style: 'beam', w: 0.85, hover: 1 },   // 腐肉巨眼、坠地爆裂、胆汁酸绿、凝视光束；悬浮不落脚
   };
 });

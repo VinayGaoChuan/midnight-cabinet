@@ -47,7 +47,7 @@ PCD.define('AngelArcher', (E) => {
   const FEATHER_IDLE = [0, 1, 0, -1], SWAY_IDLE = [0, 1, 0, -1];
   const WING_IDLE = [6, 1, 1, 6, 6];                                  // 待机个性：双翼慢慢半张再收拢（1.6–2.0 s）
   const HOP_WP = [6, 2, 3, 1], HOP_LIFT = [0, 1, 3, 2];              // 跳翔：落地微张 → 上扬起跳 → 下扇到最高 → 半张滑翔落下
-  const T_REL = 2 / 12, T_KNEE = INCOMING + 0.62, T_ASH = INCOMING + 1.3;
+  const T_REL = 2 / 12, T_KNEE = INCOMING + 0.53, T_ASH = INCOMING + 1.3;
   const ATK = [[0, K_NOCK], [1 / 12, K_DRAW, 'snap'], [T_REL, K_REL, 'snap'], [0.45, K_FOL, 'out'], [0.75, K_IDLE, 'inOut']];
 
   function poseAt(st, t, T) {
@@ -90,8 +90,8 @@ PCD.define('AngelArcher', (E) => {
       else {
         P.eyes = 1; P.gem = 4; P.burn = d < 0.08 ? 0 : d < 0.45 ? 1 : d < 0.9 ? 2 : 3; P.flk = f12 & 1;
         if (d < 0.3) { setK(K_HURT, K_HURT, 0); P.bx = -2; P.beard = 2; P.sway = 1; P.wp = 6; P.flash = d < 1 / 12 ? 1 : 0; P.crouch = d < 0.15 ? 0 : 1; }
-        else { const q = ease.out(clamp01((d - 0.3) / 0.32)); setK(K_HURT, K_KNEEL, q); P.bx = -2; P.crouch = RD(1 + 3 * q); P.wp = 5; P.beard = 1; }
-        if (d >= 0.3) { const hq = clamp01((d - 0.3) / 0.32); P.haloF = 1; P.haloX = RD(-1 + 11 * hq); P.haloY = RD(-34 + 32 * hq * hq); P.hl = hq < 1 ? ((f12 & 1) ? 1 : 0) : 4; }   // 光环掉到身前地上熄灭
+        else { const q = ease.out(clamp01((d - 0.3) / 0.4)); setK(K_HURT, K_KNEEL, q); P.bx = -2; P.crouch = RD(1 + 3 * q); P.wp = 5; P.beard = 1; }
+        if (d >= 0.3) { const hq = clamp01((d - 0.3) / 0.32); P.haloF = 1; P.haloX = RD(-2 + 12 * hq); P.haloY = RD(-36 + 34 * hq * hq); P.hl = hq < 1 ? ((f12 & 1) ? 1 : 0) : 4; }   // 光环掉到身前地上熄灭
         if (d >= T_ASH - INCOMING) P.dq = 1;                          // 之后由死亡套件（化灰）接管
       }
     } else if (st === REVIVE) {
@@ -111,7 +111,7 @@ PCD.define('AngelArcher', (E) => {
     if (P.haloF) return [P.haloX, P.haloY];
     const R = parts.rig(P, BODY); return haloAt(R);
   }
-  const haloAt = (R) => [R.hx - 1, R.htop - 10];
+  const haloAt = (R) => [R.hx - 1, R.htop - 11];                  // 颅顶正上方悬空（下沿离羽冠 3 行空），不跟翅膀走
 
   // ───── 画 ─────
   const px = (T, x, y, m, t) => parts.px(E, T, x, y, m, t);
@@ -129,10 +129,10 @@ PCD.define('AngelArcher', (E) => {
     }
     px(T, -1, -1, m, 4); px(T, -2, 0, m, 2); px(T, 5, 2, m, 2);
   }
-  function crest(T, cs) {                                              // 白羽冠：3 根长羽贴着颅顶往后掠，羽尖随 cs 摆
+  function crest(T, cs) {                                              // 白羽冠：3 根长羽贴着颅顶往后掠；cs 1 羽尖下垂，cs -1 被风吹得往后拉长 1 格（不往上翘，给光环留空）
     E.part();
     const F = [[[1, -3], [0, -3], [-1, -4], [-2, -4], [-3, -4]], [[-1, -3], [-2, -3], [-3, -3], [-4, -3], [-5, -3]], [[-2, -2], [-3, -2], [-4, -2], [-5, -2], [-6, -1]]];
-    F.forEach((f, j) => f.forEach(([u, v], k) => px(T, u, v + (k >= f.length - 1 ? cs : 0), M.crest, k === f.length - 1 ? 4 : j === 0 ? 4 : 3)));
+    F.forEach((f, j) => f.forEach(([u, v], k) => { const tip = k === f.length - 1; px(T, u, v + (tip && cs > 0 ? cs : 0), M.crest, tip ? 4 : j === 0 ? 4 : 3); if (tip && cs < 0) px(T, u - 1, v, M.crest, 4); }));
   }
   function drawHead(R) {
     parts.head(E, R, P, { mat: M.skin, face: 'gaunt', nose: 'none', mouth: 'none', ear: 'none' });
@@ -150,41 +150,52 @@ PCD.define('AngelArcher', (E) => {
     if (hl >= 3) { E.sp(cx - 5, cy, m, 3); E.sp(cx + 5, cy, m, 3); }
     if (!dead) { const H = hl >= 2 ? 2 : 1; for (const x of [-2, 0, 2]) { const on = ((x >> 1) + flk) & 1; for (let k = 1; k <= H + (on ? 1 : 0) - (x === 0 ? 0 : 1); k++) E.sp(cx + x + (k > 1 && on ? 1 : 0), cy - 1 - k, m, k === 1 ? 3 : 4); } }
   }
-  // 候选部件：angelWing（残破天使翼：翼骨前缘露出白骨段、初级飞羽带缺口、次级飞羽成片；翼姿表带「收拢下垂」——腕部高过头顶、飞羽沿背垂到小腿，
+  // 候选部件：angelWing（残破天使翼：翼骨前缘露出白骨段、初级飞羽带缺口、次级飞羽成片；翼姿表带「收拢下垂」——腕部在头后上方、飞羽沿背垂到小腿，
   //   B.wing 的翼姿表摆不出这种收法；其余翼姿照 B.wing 的上扬 / 下压 / 张开）。画笔用 parts.beast.util（poly / dot），精灵本地坐标
-  // WP = [腕 dx, dy, 内侧飞羽角, 外侧飞羽角, 内长, 外长, 后缘 dx, dy]（角度按屏幕 atan2：0 朝右、π/2 朝下、π 朝后、3π/2 朝上）；远侧翼整扇再往上 / 往前转 FAR_DA
+  // WP = [腕 dx, dy, 内侧飞羽角, 外侧飞羽角, 内长, 外长, 后缘 dx, dy, 错开, 覆羽比例, 远侧腕 ddx, ddy]
+  //   角度按屏幕 atan2：0 朝右、π/2 朝下、π 朝后、3π/2 朝上；错开 = 初级飞羽的根沿翼臂逐根往里挪几格（上扬时 5 根羽沿弧线排开，不再是一把竖棍）；
+  //   覆羽比例 = 暗一级的覆羽从根部盖住飞羽的几成。远侧翼整扇再往上 / 往前转 FAR_DA。
+  //   头顶光环的让位规则：翼上高过颅顶的像素一律在 x ≤ -9（光环在 x -6~4），光环下沿往下 3 行里只有空白（剪影里光环自成一块）。
   const WP = [
-    [-2, -15, 1.55, 2.25, 17, 22, -1, 8],     // 0 收拢下垂：腕高过头顶，飞羽沿背垂到小腿
-    [-6, -13, 2.0, 3.0, 15, 19, -2, 7],       // 1 半张
-    [-5, -13, 3.3, 4.5, 12, 15, -4, 4],       // 2 上扬
-    [-8, -4, 1.7, 2.8, 11, 15, -3, 4],        // 3 下压
-    [-8, -12, 3.0, 4.6, 15, 19, -4, 4],       // 4 完全张开上扬（技能）
-    [-4, -8, 1.5, 2.2, 13, 16, -1, 6],        // 5 垂落（跪倒）
-    [-3, -15, 1.7, 2.5, 17, 21, -1, 8],       // 6 微张
+    [-9, -15, 1.45, 1.95, 19, 23, -1, 8, 0, 0.45, -1, 1],     // 0 收拢下垂：腕在头后上方（x ≈ -11，比颅顶高 4 格），飞羽沿背垂到小腿
+    [-9, -12, 2.0, 3.0, 15, 19, -2, 7, 0.5, 0.5, -1, 1],      // 1 半张
+    [-8, -12, 3.3, 4.15, 11, 16, -4, 4, 1, 0.64, -1, 0],      // 2 上扬：飞羽沿弧线逐根错开 1 格、往后倾，覆羽盖到 6 成
+    [-8, -4, 1.7, 2.8, 11, 15, -3, 4, 0.5, 0.5, 0, 0],        // 3 下压
+    [-9, -11, 3.1, 4.25, 14, 19, -4, 4, 1, 0.62, -1, 0],      // 4 完全张开上扬（技能）
+    [-4, -8, 1.5, 2.2, 13, 16, -1, 6, 0, 0.5, 0, 0],          // 5 垂落（跪倒）
+    [-9, -14, 1.65, 2.35, 18, 22, -1, 8, 0, 0.45, -1, 1],     // 6 微张
   ];
-  const FAR_DA = [-0.12, 0.3, 0.25, 0.3, 0.35, -0.1, 0.1];
-  function wingTips(x, y, pose, far) {
-    const W = WP[pose], da = far ? FAR_DA[pose] : 0, wx = x + W[0], wy = y + W[1], out = [];
-    for (let k = 0; k < 5; k++) { const q = k / 4, a = W[3] + (W[2] - W[3]) * q + da, l = W[5] + (W[4] - W[5]) * q; out.push([wx + Math.cos(a) * l, wy + Math.sin(a) * l]); }   // 外 → 内
-    return { wx, wy, tips: out };
+  const FAR_DA = [-0.12, 0.3, 0.12, 0.3, 0.15, -0.1, 0.1];
+  function wingGeo(x, y, pose, far) {
+    const W = WP[pose], da = far ? FAR_DA[pose] : 0, wx = x + W[0] + (far ? W[10] : 0), wy = y + W[1] + (far ? W[11] : 0);
+    const al = Math.max(1, Math.hypot(x - wx, y - wy)), ux = (x - wx) / al, uy = (y - wy) / al, roots = [], tips = [];
+    for (let k = 0; k < 5; k++) {                                        // 外 → 内：根沿翼臂往里错开，羽尖沿弧线排开
+      const q = k / 4, a = W[3] + (W[2] - W[3]) * q + da, l = W[5] + (W[4] - W[5]) * q, rx = wx + ux * W[8] * k, ry = wy + uy * W[8] * k;
+      roots.push([rx, ry]); tips.push([rx + Math.cos(a) * l, ry + Math.sin(a) * l]);
+    }
+    return { wx, wy, roots, tips };
   }
   function angelWing(x, y, pose, far, burn) {
-    const W = WP[pose], G = wingTips(x, y, pose, far), wx = G.wx, wy = G.wy, cov = far ? M.wingfar : M.featherD, fm = far ? M.featherD : M.feather, bm = far ? M.boneD : M.bone;
+    const W = WP[pose], G = wingGeo(x, y, pose, far), wx = G.wx, wy = G.wy, cov = far ? M.wingfar : M.featherD, fm = far ? M.featherD : M.feather, bm = far ? M.boneD : M.bone;
+    const at = (k, q) => [G.roots[k][0] + (G.tips[k][0] - G.roots[k][0]) * q, G.roots[k][1] + (G.tips[k][1] - G.roots[k][1]) * q], tx = x + W[6], ty = y + W[7];
     E.part();
-    const poly = [x, y, wx, wy]; for (const t of [G.tips[0], G.tips[2], G.tips[4]]) poly.push(wx + (t[0] - wx) * 0.5, wy + (t[1] - wy) * 0.5); poly.push(x + W[6], y + W[7]);
-    U.poly(E, poly, cov, 0);                                            // 覆羽：只盖住飞羽根部那一半（暗一级）
-    for (let k = 1; k <= 3; k++) {                                     // 次级飞羽：沿翼臂往后缘垂下的 3 根短羽，后缘一片一片的
-      const q = k / 4, bx0 = x + (wx - x) * q, by0 = y + (wy - y) * q, t = G.tips[4], ex = bx0 + (t[0] - wx) * 0.55 + W[6] * 0.3, ey = by0 + (t[1] - wy) * 0.55 + W[7] * 0.3;
-      U.seg(E, bx0, by0, ex, ey, 1, cov, k === 2 ? 3 : 2);
+    const pan = [x, y, wx, wy]; for (const [k, q] of [[0, 0.3], [2, 0.42], [4, 0.72]]) pan.push(...at(k, q)); pan.push(tx, ty);
+    U.poly(E, pan, fm, 0);                                              // 翼面（次级飞羽成片）：整块不留缝，翼面上只剩初级飞羽之间的分羽线
+    const e4 = at(4, 0.72), d4 = at(4, 1), dl = Math.max(1, Math.hypot(d4[0] - e4[0], d4[1] - e4[1])), sdx = (d4[0] - e4[0]) / dl, sdy = (d4[1] - e4[1]) / dl;
+    for (let k = 1; k <= 3; k++) {                                      // 次级飞羽羽尖：沿后缘露出 3 个短羽尖（锯齿后缘）
+      const q = k / 4, bx0 = tx + (e4[0] - tx) * q, by0 = ty + (e4[1] - ty) * q;
+      U.seg(E, bx0, by0, bx0 + sdx * 2, by0 + sdy * 2, 1, fm, 0);
     }
-    G.tips.forEach((t, k) => {                                          // 初级飞羽：5 根长羽从腕部扇开（2 格宽），1、3 号带缺口；着火时从羽尖往里烧
-      const dx = t[0] - wx, dy = t[1] - wy, m = Math.ceil(Math.hypot(dx, dy) * 1.5), vert = Math.abs(dy) >= Math.abs(dx);
+    G.tips.forEach((t, k) => {                                          // 初级飞羽：5 根长羽（近侧 2 格宽），1、3 号带缺口；着火时从羽尖往里烧
+      const r = G.roots[k], dx = t[0] - r[0], dy = t[1] - r[1], m = Math.ceil(Math.hypot(dx, dy) * 1.5), vert = Math.abs(dy) >= Math.abs(dx);
       for (let s = 0; s <= m; s++) {
-        const q = s / m; if ((k === 1 || k === 3) && q > 0.66 && q < 0.8) continue;
-        const X = wx + dx * q, Y = wy + dy * q, hot = burn && q > 1 - 0.34 * burn, mat = hot ? M.fire : fm, tone = hot ? (((s + k + P.flk) & 1) ? 4 : 3) : q > 0.9 ? 4 : 0;
+        const q = s / m; if ((k === 1 || k === 3) && q > 0.7 && q < 0.82) continue;
+        const X = r[0] + dx * q, Y = r[1] + dy * q, hot = burn && q > 1 - 0.34 * burn, mat = hot ? M.fire : fm, tone = hot ? (((s + k + P.flk) & 1) ? 4 : 3) : q > 0.9 ? 4 : 0;
         U.dot(E, X, Y, mat, tone); if (!far && q > 0.2 && q < 0.9) U.dot(E, vert ? X + 1 : X, vert ? Y : Y + 1, mat, hot ? 3 : 2);
       }
     });
+    const cp = [x, y, wx, wy]; for (const k of [0, 2, 4]) cp.push(...at(k, W[9] * (k === 4 ? 0.85 : 1))); cp.push(x + W[6] * 0.5, y + W[7] * 0.5);
+    U.poly(E, cp, cov, 0);                                              // 覆羽：暗一级，从根部盖住飞羽（盖多少按翼姿）
     const m2 = Math.ceil(Math.hypot(wx - x, wy - y) * 1.5);            // 前缘翼骨：根 → 腕，中段露出白骨
     for (let s = 0; s <= m2; s++) { const q = s / m2, X = x + (wx - x) * q, Y = y + (wy - y) * q, b = q > 0.3 && q < 0.78; U.dot(E, X, Y, b ? bm : fm, b ? ((s & 2) ? 4 : 3) : 4); if (!far) U.dot(E, X - 1, Y, b ? bm : cov, 2); }
     U.dot(E, wx, wy - 1, bm, 4); U.dot(E, wx - 1, wy - 1, bm, 3);
@@ -236,8 +247,15 @@ PCD.define('AngelArcher', (E) => {
     parts.arm(E, R, P, { side: 'B', sleeve: 'loose', mat: M.sleeveD, at: [P.bhx, P.bhy], grip: 'none' });
     parts.legs(E, R, P, { style: 'bare', mat: M.skin, matD: M.skinD });
     const tor = parts.torso(E, R, P, { style: 'robe', mat: M.robe, belt: M.belt, buckle: M.bone, collar: M.robe });
-    { const s = P.sway, hem = tor.hem;                                                            // 腰以下破成布条：隔 3 列剪开、布条长短参差、随 sway 飘；着火时布条尖先烧（同一部件）
-      for (let y = R.yHip + 1; y <= hem; y++) { const t = y - R.yHip - 1, sh = RD(s * t / 5); for (let x = -10; x <= 10; x++) { const c = x - sh, j = Math.floor(c / 3), cut = ((c % 3) + 3) % 3 === 0 || y > hem - [0, 2, 1, 3][((j % 4) + 4) % 4]; if (cut && t > 0) px(R, x, y, 0, 0); else if (P.burn >= 3 && y >= hem - 3 - (j & 1)) { const e = parts.edges(R, Math.min(y, R.yHip)); if (x >= e[0] - 5 && x <= e[1] + 5) px(R, x, y, M.fire, ((x + y + P.flk) & 1) ? 4 : 3); } } } }
+    { const s = P.sway, hem = tor.hem, LL = tor.rows[0], RR = tor.rows[1];                       // 腰以下破成布条：每 3 列剪 1 道缝、布条长短参差、随 sway 飘；着火时布条尖先烧（同一部件）
+      for (let y = R.yHip + 1; y <= hem; y++) {
+        const t = y - R.yHip - 1, sh = RD(s * t / 5), L = LL[y - R.yS], Rr = RR[y - R.yS];
+        for (let x = -10; x <= 10; x++) {
+          const c = x - sh, j = Math.floor(c / 3), col = ((c % 3) + 3) % 3, cut = col === 0 || y > hem - [0, 2, 1, 3][((j % 4) + 4) % 4], inR = x >= L && x <= Rr;
+          if (P.burn >= 3 && !cut && y >= hem - 3 - (j & 1)) { const e = parts.edges(R, Math.min(y, R.yHip)); if (x >= e[0] - 5 && x <= e[1] + 5) px(R, x, y, M.fire, ((x + y + P.flk) & 1) ? 4 : 3); }
+          else if (inR && t > 0) px(R, x, y, cut ? 0 : M.robe, cut ? 0 : x === Rr ? 2 : col === 1 ? 4 : 3);   // 布条：左列受光、右列基色，缝里只有 1 条暗线（不再每条布条自带一条暗边）
+        }
+      } }
     for (let y = R.yS + 2; y < R.yWaist; y++) { const e = parts.edges(R, y); px(R, e[1] - 1, y, (y & 1) ? M.ink : M.fire, (y & 1) ? 1 : glowT(P.gem === 4 ? 4 : Math.max(1, P.gem), 1)); }   // 胸口缝合线里透出火光
     angelWing(wx, wy, P.wp, 0, P.burn);                                                         // 近侧翼（由乱羽肩披长成）
     drawHead(R);
@@ -262,7 +280,7 @@ PCD.define('AngelArcher', (E) => {
     else { fx.pillar(x, HY - 24, HY - 1, 1, R_EL, 0.5, 2); burst(x, HY - 3, 14, 30, 80, 0.3, 0.6, R_EL, 18); ring(x, HY - 3, 0, R_EL); sfx('impact', { pal: 'fire', w: 0.35 }); }
   }
   let mzT = 9, mzX = 0, mzY = 0, burnT = 9, chargeAcc = 0, soulAcc = 0, fireAcc = 0, lastStep = 0, lastG = -1;
-  const wingTipScreen = (pose, far) => { const R = parts.rig(P, BODY), G = wingTips(R.sBx - 1 + (far ? 3 : 0), R.yS + 3 - (far ? 2 : 0), pose, far), t = G.tips[0]; return [scrX(t[0] + P.bx), HY + t[1] - P.lift]; };
+  const wingTipScreen = (pose, far) => { const R = parts.rig(P, BODY), G = wingGeo(R.sBx - 1 + (far ? 3 : 0), R.yS + 3 - (far ? 2 : 0), pose, far), t = G.tips[0]; return [scrX(t[0] + P.bx), HY + t[1] - P.lift]; };
   function onEnter(s) {
     if (s !== CAST) return;
     poseAt(CHARGE, DUR[CHARGE] - 1 / 12, DUR[CHARGE] - 1 / 12); const ax = scrX(P.gx), ay = HY + P.gy; poseAt(CAST, 0, 0);

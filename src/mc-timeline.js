@@ -48,12 +48,18 @@ function cells(g, m, first, n) {
     const d = first + i, k = shownOn(m, d), E = k && EV[k], past = d < m.day || (d === m.day && k === 'raid' && m.lastRaid === d), today = d === m.day && !past, tom = d === m.day + 1;
     out.push({ d, k, E, past, x: i * PITCH, num: String(d), lab: today ? '今天' : tom ? '明天' : '', c: E ? E.c : '#3d3a8c', dc: today ? '#ffcf4a' : E ? E.c : '#a9a3c9', hasIc: !!E, noIc: !E, ic: E ? IC(E.ic) : '',
       tipOn: g.tipFn(() => (E ? { title: E.n, c: E.c, icon: E.ic, d: E.d, lines: [{ t: past ? '已经过去' : today ? '今天' : '第 ' + d + ' 天（' + (d - m.day) + ' 天后）', c: '#a9a3c9' }].concat(k === 'raid' && !past && d === M.nextRaid(m) && M.raidOddsLine ? [M.raidOddsLine(m)] : []) } : { title: today ? '今天 · 第 ' + d + ' 天' : '第 ' + d + ' 天', c: '#ffcf4a', d: past ? '已经过去。' : today ? '' : '这一天没有事件。' })),
-      op: past ? 0.45 : 1, dy: 0, sc: 1, stamp: past, stampSc: 1 });
+      op: past ? 0.45 : 1, dy: 0, sc: 1, stamp: past, stampSc: 1, fl: 0 });
   }
   return out;
 }
 const eback = (t) => { t = cl(t, 0, 1); const c = 1.9; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
 const eio = (t) => { t = cl(t, 0, 1); return t * t * (3 - 2 * t); };
+const eoq = (t) => { t = cl(t, 0, 1); return 1 - (1 - t) * (1 - t); };
+// 卡皮「下一天」的节拍：按下去白光一闪（0.25 秒）；格子跳一下 1.2 倍（0.15 秒）再落回（0.05 秒）；底光 0.8 ↔ 1 呼吸
+const PRESS = [[0, 0, 0, 0], [0.067, 1, 0, 0], [0.117, 1, 0, 0], [0.25, 0, 0, 0]];
+const GLOW = [[0, 0, 0, 0], [0.08, 1, 0, 0], [0.26, 0.8, 0, 0], [0.42, 1, 0, 0], [0.6, 0.8, 0, 0], [0.78, 1, 0, 0], [0.96, 0.8, 0, 0], [1.14, 1, 0, 0], [1.32, 0.8, 0, 0]];
+const bump = (u) => (u <= 0 || u >= 0.2 ? 1 : u < 0.15 ? 1 + 0.2 * eoq(u / 0.15) : 1.2 - 0.2 * ((u - 0.15) / 0.05));
+const TOK_FLY = 0.5, TOK_LAND = TOK_FLY - 0.2, BANNER_CY = 505;
 const pop = (t) => { t = cl(t, 0, 1); return t < 0.55 ? 1.3 * eio(t / 0.55) : 1.3 - 0.3 * eio((t - 0.55) / 0.45); };
 const W = DAYS * PITCH - GAP;
 // where a cell of the strip is on screen (the strip scales about its top centre)
@@ -65,14 +71,22 @@ function stripState(g, m) {
   let today = m.day;
   if (F && F.kind === 'day') {
     const t = F.t; today = t < 0.9 ? F.from : F.to;
-    const lift = eio(t / 0.2) * (1 - eio((t - (F.dur - 0.3)) / 0.3)); tl.sc = 1 + 0.06 * lift;
-    const c0 = tl.cells[F.from - ws]; if (c0) { c0.stamp = t > 0.2; c0.stampSc = t > 0.2 ? 1 + 1.4 * (1 - eio((t - 0.2) / 0.18)) : 1; c0.op = 1 - 0.55 * eio((t - 0.2) / 0.3); c0.lab = t < 0.9 ? '今天' : ''; c0.dc = t < 0.9 ? '#ffcf4a' : '#a9a3c9'; }
-    const c1 = tl.cells[F.to - ws]; if (c1) { c1.sc = t > 1.05 ? 1 + 0.28 * Math.sin(cl((t - 1.05) / 0.45, 0, 1) * Math.PI) : 1; c1.op = 1; c1.stamp = false; c1.lab = t < 0.9 ? '明天' : '今天'; c1.dc = t < 0.9 ? (c1.E ? c1.E.c : '#a9a3c9') : '#ffcf4a'; }
+    const i0 = F.from - ws, i1 = F.to - ws, lift = eio(t / 0.2) * (1 - eio((t - (F.dur - 0.3)) / 0.3)); tl.sc = 1 + 0.06 * lift;
+    const c0 = tl.cells[F.from - ws]; if (c0) { c0.fl = M.curve(PRESS, t).toFixed(2); c0.stamp = t > 0.2; c0.stampSc = t > 0.2 ? 1 + 1.4 * (1 - eio((t - 0.2) / 0.18)) : 1; c0.op = 1 - 0.55 * eio((t - 0.2) / 0.3); c0.lab = t < 0.9 ? '今天' : ''; c0.dc = t < 0.9 ? '#ffcf4a' : '#a9a3c9'; }
+    const c1 = tl.cells[F.to - ws]; if (c1) { c1.sc = bump(t - 1.05) * (F.ev ? bump(t - (F.dur - TOK_LAND)) : 1); c1.fl = Math.max(M.curve(PRESS, t - 1.0), F.ev ? M.curve(PRESS, t - (F.dur - TOK_LAND) + 0.05) : 0).toFixed(2); c1.op = 1; c1.stamp = false; c1.lab = t < 0.9 ? '明天' : '今天'; c1.dc = t < 0.9 ? (c1.E ? c1.E.c : '#a9a3c9') : '#ffcf4a'; }
     const c2 = tl.cells[F.to - ws + 1]; if (c2 && t < 0.9) c2.lab = '';
-    const i0 = F.from - ws, i1 = F.to - ws; tl.mx = (i0 + (i1 - i0) * eback((t - 0.75) / 0.45)) * PITCH; tl.mop = i1 >= 0 && i1 < DAYS ? 1 : 1 - eio((t - 0.3) / 0.4);
+    tl.mx = (i0 + (i1 - i0) * eback((t - 0.75) / 0.45)) * PITCH; tl.mop = i1 >= 0 && i1 < DAYS ? 1 : 1 - eio((t - 0.3) / 0.4);
     if (F.ev) {
-      const bt = t - 1.2; tl.banner = bt > 0 && t < F.dur - 0.25; tl.shade = 0.45 * eio(bt / 0.25) * (1 - eio((t - (F.dur - 0.45)) / 0.3));
-      tl.bannerTxt = EV[F.ev].n; tl.bannerC = EV[F.ev].c; tl.bannerSub = EV[F.ev].d; tl.bannerSc = 1 + 0.6 * (1 - eio(bt / 0.22)); tl.bannerOp = eio(bt / 0.18) * (1 - eio((t - (F.dur - 0.5)) / 0.25));
+      // 照卡皮的「下一天」：事件名弹出（弹出 1.1 → 0.96 → 1.02 → 1）、底下一条事件色的底光呼吸；混沌来袭是从上面砸下来、歪着站住。
+      // 最后缩到一半，0.2 秒飞回时间轴那一格，那一格跳一下
+      const bt = t - 1.2, ft = t - (F.dur - TOK_FLY), fq = eoq(ft / 0.2), bad = F.ev === 'raid';
+      tl.banner = bt > 0 && ft < 0.2; tl.shade = 0.45 * eio(bt / 0.25) * (1 - eio(ft / 0.2));
+      tl.bannerTxt = EV[F.ev].n; tl.bannerC = EV[F.ev].c; tl.bannerSub = EV[F.ev].d;
+      const shrink = 1 - 0.5 * eio((ft + 0.06) / 0.06), p = cellAt(tl, i1);
+      tl.bannerSc = ((bad ? 1 : M.curve(M.CURVE.pop, bt * 1.69)) * shrink * (1 - 0.8 * fq)).toFixed(3);
+      tl.bannerDY = Math.round((bad ? M.curve(M.CURVE.drop, bt) - 218 : 0) + (p.y - BANNER_CY) * fq); tl.bannerX = Math.round((p.x - 960) * fq);
+      tl.bannerRot = bad ? (-4 * eio((bt - 0.13) / 0.12)).toFixed(2) : 0; tl.bannerOp = eio(bt / 0.05); tl.bannerSubOp = (1 - eio((ft + 0.06) / 0.06)).toFixed(2);
+      tl.glowOn = true; tl.glowSc = eio((bt - 0.13) / 0.08).toFixed(2); tl.glowOp = (M.curve(GLOW, bt) * (1 - eio((ft + 0.06) / 0.06))).toFixed(2);
     }
   } else if (F && F.kind === 'big') {
     const t = F.t, n5 = F.to - F.from, grow = eio(t / 0.55) * (1 - eio((t - (BIG_D - 0.7)) / 0.6));
@@ -96,6 +110,7 @@ function stripState(g, m) {
     tl.dots.push({ x: Math.round(x), c: lit ? '#ffcf4a' : '#3d3a8c', glow: lit ? 8 : 0, sc: sc.toFixed(2), op: Math.min(a.op, b2.op).toFixed(2) }); } }
   tl.msc = F && F.kind === 'day' ? 1 + 0.15 * Math.sin(cl((F.t - 0.75) / 0.45, 0, 1) * Math.PI) : 1;
   if (!tl.bannerSubC) tl.bannerSubC = '#f4efe0';
+  if (!tl.glowOn) { tl.bannerX = 0; tl.bannerDY = 0; tl.bannerRot = 0; tl.bannerSubOp = 1; tl.glowSc = 0; tl.glowOp = 0; }
   tl.bannerY = F && F.kind === 'big' ? 560 : 420;
   return tl;
 }
@@ -126,6 +141,8 @@ G.tlTick = function (dt) {
     if (x(0.75)) S.tlSlide();
     if (x(1.05)) { const p = cellAt(tl, F.to - (this.meta.tlWin || F.to)); this.fx.rays && this.fx.rays(p.x, p.y, F.ev ? EV[F.ev].c : '#ffcf4a', 0.8, { r: 140 }); S.tlLand(); }
     if (F.ev && x(1.2)) { S.tlEvent(F.ev); this.fx.kick && this.fx.kick(F.ev === 'raid' ? 26 : 12); this.fx.rays && this.fx.rays(960, 470, EV[F.ev].c, 1.3, { r: 320 }); this.fx.flash && this.fx.flash(F.ev === 'raid' ? '#e8434f' : '#ffffff', F.ev === 'raid' ? 0.35 : 0.16); }
+    if (F.ev && x(F.dur - TOK_FLY - 0.06)) S.whoosh && S.whoosh(0.25);
+    if (F.ev && x(F.dur - TOK_LAND)) { const p = cellAt(tl, F.to - (this.meta.tlWin || F.to)); S.tlLand(); this.fx.spark && this.fx.spark(p.x, p.y, EV[F.ev].c, 14, { v: 500 }); this.fx.kick && this.fx.kick(4); }
     if (F.ev === 'raid' && F.t > 1.3 && Math.floor(F.t * 3) !== Math.floor(t0 * 3)) S.heart && S.heart();
     if (F.t >= F.dur) this.tlFx = null;
   } else {

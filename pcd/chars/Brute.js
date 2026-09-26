@@ -4,7 +4,7 @@
 PCD.define('Brute', (E) => {
   const { defMat, Sprite, begin, part, sp, run, rect, brush, bake, ease, clamp01, q12, f12of, gait, FXI, FXR, HY, FLOOR, DUMMY_X, INCOMING, ASTEP, B8,
     IDLE, MOVE, ATTACK, CHARGE, CAST, RECOVER, HURT, DEATH, REVIVE, DEFAULT_DUR, K_SPIRAL, K_BURST, K_TRAIL, K_RISE, K_DUST,
-    spawn, burst, releaseOrbit, shake, flash, hitDummy, dummyFx, put, scrX, shotFloorGlow } = E;
+    spawn, burst, releaseOrbit, shake, flash, hitDummy, dummyFx, put, scrX, shotFloorGlow, sfx } = E;
   const fl = (x) => Math.floor(x + 1e-6);                        // 姿势 / 画法里的取整都带容差（同 q12）
 
   // ───── 颜色：原版第 1 节末尾追加的 27–43 号，精确同色 ─────
@@ -290,6 +290,7 @@ PCD.define('Brute', (E) => {
       for (let i = 0; i < 12; i++) spawn(K_DUST, gx - 9 + Math.random() * 18, FLOOR - 1, (Math.random() - 0.5) * 50, -10 - Math.random() * 22, 0.4 + Math.random() * 0.4, R_DUST);
       sgT = 0; sgX = Math.round(gx);
       setSmear(K_CHARGE, 0, K_CAST, 3, 8, -13); shake(0.28, 2); flash(0.05);
+      sfx('impact', { pal: 'curse', w: 0.9 });
     }
   }
   function onTime(s, t) {
@@ -297,6 +298,7 @@ PCD.define('Brute', (E) => {
     if (s === ATTACK && t === T_FLICK) {                         // 竖向下砸命中：竖弧拖影 + impact 火花 + 假人小摇
       setSmear(K_WIND, 0, K_SMASH, 4, 5, -16);
       burst(DUMMY_X - 3, HY - 18, 8, 40, 90, 0.15, 0.35, R_IMPACT, 10); hitDummy(0, 1);
+      sfx('swing', { kind: 'smash', w: 0.7 }); sfx('hit', { mat: 'wood', w: 0.7 });
     }
     if (s === ATTACK && t === 0.25) {                            // 棒头砸到地上：尘土 + 2 颗灰紫小符点
       const x = scrX(P.hx + P.bx + Math.sin(P.a) * 11);
@@ -307,13 +309,14 @@ PCD.define('Brute', (E) => {
     if (s === CAST && t === 0.12) {                              // 命中：假人缠上两圈锁链并下沉 1 格，摇晃放慢一半；20 impact + 10 灰紫外爆；震屏 1
       chT = 0; hitDummy(1, 1); dummyFx({ dur: CH_LIFE, slow: 0.5, sink: 1 });
       burst(DUMMY_X - 2, HY - 14, 20, 50, 130, 0.25, 0.55, R_IMPACT, 20); burst(DUMMY_X, HY - 14, 10, 40, 90, 0.35, 0.7, R_EL, 0); shake(0.12, 1);
+      sfx('impact', { pal: 'curse', w: 0.6 });
     }
     if (s === RECOVER) puff(3, 0, 1);                            // 收招喘气
     if ((s === HURT || s === DEATH) && t === INCOMING) {         // 引擎已放 impact 火花 + 震屏（死亡加闪白）；这里加毛屑
       const hx = HX + HIT_POINT[0] - 1, hy = HY + HIT_POINT[1]; burst(hx, hy, s === DEATH ? 8 : 5, 30, 70, 0.3, 0.6, R_FUR, 10);
     }
     if (s === DEATH && t === INCOMING + 0.2) scrape(3);          // 骨棒脱手
-    if (s === DEATH && t === INCOMING + 0.66) { for (let i = 0; i < 16; i++) { const x = HX - 16 + Math.random() * 30; spawn(K_DUST, x, HY - 1, (Math.random() - 0.5) * 30, -8 - Math.random() * 14, 0.4 + Math.random() * 0.4, R_DUST); } shake(0.1, 1); }
+    if (s === DEATH && t === INCOMING + 0.66) { for (let i = 0; i < 16; i++) { const x = HX - 16 + Math.random() * 30; spawn(K_DUST, x, HY - 1, (Math.random() - 0.5) * 30, -8 - Math.random() * 14, 0.4 + Math.random() * 0.4, R_DUST); } shake(0.1, 1); sfx('fall', { w: 0.8 }); }
     if (s === DEATH && t === INCOMING + 1.04) { const x = HX - 19; for (let i = 0; i < 5; i++) spawn(K_DUST, x + (Math.random() - 0.5) * 4, HY, (Math.random() - 0.5) * 22, -5 - Math.random() * 8, 0.3 + Math.random() * 0.3, R_DUST); }   // 尾巴拍地
   }
   const EVENTS = [[0.4, 1.2, 1.67, 1.83, 2.0], [], [T_FLICK, 0.25], [0.5, 1.05], [0.12], [0.2, 0.45], [INCOMING], [INCOMING, INCOMING + 0.2, INCOMING + 0.66, INCOMING + 1.04], []];
@@ -327,7 +330,7 @@ PCD.define('Brute', (E) => {
     if (state === RECOVER && stT < 0.45) { dripAcc += dt * 10; while (dripAcc >= 1) { dripAcc -= 1; drip(gx + Math.round(Math.random() * 2 - 1), gy + 1, 0, 3, 0.8, 0.45); } }
     if (chT < 0.8) { chDripAcc += dt * 22; while (chDripAcc >= 1) { chDripAcc -= 1; const lx = Math.round(Math.random() * 12 - 6), ly = Math.random() < 0.5 ? -15 : -9; drip(DUMMY_X + lx, HY + 1 + ly, 0, 5 + Math.random() * 6, 0.7 + Math.random() * 0.4, 0.3); } }
     if (state === MOVE && P.step !== lastStep) {
-      if (P.step !== 0) { const fx = P.step > 0 ? 0 : -6; for (let i = 0; i < 2; i++) spawn(K_DUST, scrX(fx) + (Math.random() - 0.5) * 3, HY, (Math.random() - 0.5) * 16, -4 - Math.random() * 6, 0.3 + Math.random() * 0.2, R_DUST); scrape(2); }
+      if (P.step !== 0) { const fx = P.step > 0 ? 0 : -6; for (let i = 0; i < 2; i++) spawn(K_DUST, scrX(fx) + (Math.random() - 0.5) * 3, HY, (Math.random() - 0.5) * 16, -4 - Math.random() * 6, 0.3 + Math.random() * 0.2, R_DUST); scrape(2); sfx('step', { w: 0.7 }); }
       lastStep = P.step;
     }
     if (state === DEATH && stT > INCOMING + 1.6 && stT < INCOMING + 2.4) { soulAcc += dt * 30; while (soulAcc >= 1) { soulAcc -= 1; spawn(K_RISE, HX - 18 + Math.random() * 30, HY - 1 - Math.random() * 7, (Math.random() - 0.5) * 6, -14 - Math.random() * 16, 0.8 + Math.random() * 0.8, R_SOUL); } }
@@ -379,6 +382,7 @@ PCD.define('Brute', (E) => {
 
   return {
     name: '蛮兵', HX, R_EL, DUR, hero, P, GLOW_MATS, HIT_POINT, EVENTS,
+    SFX: { body: 'beast', how: 'topple', pal: 'curse', style: 'spiral', w: 0.9 },   // 野兽皮毛身体、侧倒；诅咒灰紫、蓄力螺旋汇聚到棒头、双手猛砸很重
     poseAt, drawHero, bakeHero, onEnter, onTime, stepFX, fxReset, fxBack, fxMid, fxFront,
   };
 });

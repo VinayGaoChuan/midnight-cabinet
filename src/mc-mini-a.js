@@ -290,7 +290,8 @@ MINI.fruit = { title: '水果机', img: 'e_fruit', col: C.magenta, text: '一台
       let js = STRIP.map((s, j) => s === res[i] ? j : -1).filter(j => j >= 0);
       // 差一格：第三轮停下时，想要的图案正好在中线下面一格——再挪一格就中
       if (i === 2 && mg.nearMiss) { const nj = js.filter(j => STRIP[(j + 1) % 12] === res[0]); if (nj.length) js = nj; else mg.nearMiss = false; }
-      const j = M.pick(js); r.j = j; r.s0 = r.pos; let f = Math.floor(r.pos) + 24 + i * 8; while (((f % 12) + 12) % 12 !== j) f++; r.f = f; r.d = 1.0 + i * 0.45; r.mode = 'ease'; r.done = false; r.bt = 9;
+      // 照卡皮：三个轮错开 0.12 秒起转，全速转（约 13 格/秒），到点正好转到结果那格猛地停住
+      const j = M.pick(js); r.j = j; r.s0 = r.pos; r.go = i * 0.12; r.d = 0.9 + i * 0.45; let f = Math.ceil(r.pos + 13 * (r.d - r.go - 0.06) - 6); while (((f % 12) + 12) % 12 !== j) f++; r.f = f; r.mode = 'ease'; r.done = false; r.bt = 9;
     });
     this.miniSet('spin'); S.mini('fruit', 'lever'); S.mini('fruit', 'spin'); mg.stopped = 0; this.fx.kick(2);
   },
@@ -311,8 +312,8 @@ MINI.fruit = { title: '水果机', img: 'e_fruit', col: C.magenta, text: '一台
     if (mg.phase !== 'spin') return;
     mg.reels.forEach((r, i) => {
       if (r.done) return;
-      if (r.mode === 'ease') { const p = cl(mg.pt / r.d, 0, 1); r.pos = r.s0 + (r.f - r.s0) * (p < 1 ? eo(p) + Math.sin(p * Math.PI) * 0.02 : 1);
-        if (p >= 1) { r.done = true; r.bt = 0; mg.stopped++; S.mini('fruit', 'stop', i); this.fx.kick(3); if (i === 1 && mg.reachLv) MINI.fruit.reach.call(this, mg); } }
+      if (r.mode === 'ease') { const u = cl(mg.pt - r.go, 0, r.d - r.go), R = 0.12, v = (r.f - r.s0) / (r.d - r.go - R / 2); r.pos = r.s0 + (u < R ? v * u * u / (2 * R) : v * (u - R / 2));
+        if (mg.pt >= r.d) { r.pos = r.f; r.done = true; r.bt = 0; mg.stopped++; S.mini('fruit', 'stop', i); this.fx.kick(3); if (i === 1 && mg.reachLv) MINI.fruit.reach.call(this, mg); } }
       else if (r.mode === 'reach') { const tt = mg.pt - r.t0;
         if (tt < r.Tc) r.pos = r.s0 + (r.f - r.n - r.s0) * (tt / r.Tc);
         else { let k = 0; while (k + 1 < r.n && tt >= r.Tc + r.starts[k + 1]) k++;
@@ -344,18 +345,19 @@ MINI.fruit = { title: '水果机', img: 'e_fruit', col: C.magenta, text: '一台
     // pay table：机箱面板，倍数品红、伤身红；中了的那一行亮起来
     const PT = [['seven', '×25', 4], ['bar', '×10', 3], ['bell', '×6', 2], ['lemon', '×4', 1], ['cherry', '2个 ×2', 0], ['skull', '伤身', 5]], hit = mg.winT >= 0 && t - mg.winT < 3 ? mg.res : null;
     U.plate(x, SX + 40, SY + 110, 190, 440, { shadow: 9 }); PT.forEach(([k, s], i) => { const on = hit && ((hit[0] === hit[1] && hit[1] === hit[2] && (hit[0] === PT[i][2] || (PT[i][2] === 1 && hit[0] < 2))) || (PT[i][2] === 0 && hit.filter(v => v === 0).length === 2)); if (on && Math.floor(t * 8) % 2) K.R(x, SX + 50, SY + 132 + i * 70, 170, 56, C.gold); K.sym(x, k, SX + 90, SY + 160 + i * 70, 44); U.text(x, s, SX + 170, SY + 160 + i * 70, T.cap, on ? C.ink : k === 'skull' ? C.red : C.magenta); });
-    // cabinet
+    // cabinet：拉杆那一下机箱往上跳两下
+    x.save(); x.translate(0, mg.phase === 'spin' ? -Math.round(M.curve(M.CURVE.jolt, mg.pt) * 0.7) : 0);
     U.box(x, bx - 20, by - 60, bw + 40, bh + 80, C.wine); K.R(x, bx - 10, by - 50, bw + 20, bh + 60, K.LG(x, 0, by - 50, 0, by + bh, [[0, C.red], [1, C.wine]])); K.bulbs(x, bx, by - 40, bw, bh + 20, t + (mg.flash ? t * 3 : 0), C.gold, 30);
     K.sign(x, 'LUCKY 777', CX - 50, by, { kind: 'dark', size: T.title, num: true, minW: bw - 120, h: 60, ring: C.gold, col: mg.flash && Math.floor(t * 12) % 2 ? C.white : C.gold });
     // 先告灯 GOGO：拉杆后亮起就一定有铃铛以上的奖
     { const gx = bx + bw - 40, gy = by - 30, on = mg.gogo >= 1, bl = on && Math.floor(t * 10) % 2; U.box(x, gx - 44, gy - 26, 88, 52, C.ink); K.R(x, gx - 38, gy - 20, 76, 40, on ? (bl ? C.gold : C.red) : '#2a1020'); U.text(x, 'GOGO', gx, gy + 1, T.cap, on ? C.ink : '#4a2030', { num: true, shadow: false }); if (on) K.GL(x, gx, gy, 110, C.gold, 0.5 + 0.3 * Math.sin(t * 20)); }
     const wy = by + 110, ww = 150, wh = 250; for (let i = 0; i < 3; i++) { const wx = bx + 40 + i * (ww + 20), r = mg.reels[i]; K.R(x, wx - 6, wy - 6, ww + 12, wh + 12, C.ink); K.R(x, wx, wy, ww, wh, K.LG(x, 0, wy, 0, wy + wh, [[0, C.steel], [0.2, C.cream], [0.8, C.cream], [1, C.steel]]));
       const reachSpin = r.mode === 'reach' && !r.done && mg.pt - r.t0 < r.Tc;
-      x.save(); x.beginPath(); x.rect(wx, wy, ww, wh); x.clip(); const fast = mg.phase === 'spin' && !r.done && (r.mode === 'reach' ? reachSpin : mg.pt < r.d - 0.2); const base = Math.floor(r.pos), fr = r.pos - base;
-      // 停下的一瞬间整条往下顿一下
-      const bounce = r.bt < 0.18 ? Math.sin(r.bt / 0.18 * Math.PI) * 10 : 0, won = mg.winK.includes(i) && mg.winT >= 0 && t - mg.winT < 3;
+      x.save(); x.beginPath(); x.rect(wx, wy, ww, wh); x.clip(); const fast = mg.phase === 'spin' && !r.done && (r.mode === 'reach' ? reachSpin : mg.pt >= r.go + 0.06); const base = Math.floor(r.pos), fr = r.pos - base;
+      // 停下的一瞬间整条往回弹一点（卡皮的停轮曲线）
+      const bounce = -M.curve(M.CURVE.stop, r.bt) * 660, won = mg.winK.includes(i) && mg.winT >= 0 && t - mg.winT < 3;
       for (let k = -2; k <= 2; k++) { const s = STRIP[(((base + k) % 12) + 12) % 12], yy = wy + wh / 2 + (k - fr) * 110 + bounce;
-        if (fast) { const n = reachSpin ? 4 : 2; x.globalAlpha = reachSpin ? 0.35 : 0.55; for (let g2 = 0; g2 < n; g2++) K.sym(x, SYM[s], wx + ww / 2, yy - g2 * (reachSpin ? 30 : 24), 84); x.globalAlpha = 1; }
+        if (fast) { const n = reachSpin ? 4 : 3; for (let g2 = n - 1; g2 >= 0; g2--) { x.globalAlpha = g2 ? (reachSpin ? 0.3 : 0.4) / g2 : 0.85; x.save(); x.translate(wx + ww / 2, yy + g2 * (reachSpin ? 30 : 22)); x.scale(1, 1.17); K.sym(x, SYM[s], 0, 0, 84); x.restore(); } x.globalAlpha = 1; }   // 拖影：本体拉长，残影拖在身后（下方）
         else { const pulse = won && k === 0 ? 1 + 0.14 * Math.abs(Math.sin((t - mg.winT) * 7)) : 1; if (won && k === 0) K.GL(x, wx + ww / 2, yy, 90, C.gold, 0.6); K.sym(x, SYM[s], wx + ww / 2, yy, 90 * pulse); } }
       x.fillStyle = K.LG(x, 0, wy, 0, wy + wh, [[0, 'rgba(7,6,15,0.5)'], [0.25, 'rgba(7,6,15,0)'], [0.75, 'rgba(7,6,15,0)'], [1, 'rgba(7,6,15,0.5)']]); x.fillRect(wx, wy, ww, wh);
       if (reachSpin) { x.globalAlpha = 0.25 + 0.15 * Math.sin(t * 40); K.R(x, wx, wy, ww, wh, mg.reachLv >= 2 ? C.red : C.gold); x.globalAlpha = 1; }
@@ -366,6 +368,7 @@ MINI.fruit = { title: '水果机', img: 'e_fruit', col: C.magenta, text: '一台
     // lever
     const lx = bx + bw + 60, ly = by + 260, la = -1.1 + (mg.lever > 0 ? 2.0 * mg.lever : 0); U.box(x, lx - 18, ly - 20, 36, 90, C.steel); x.save(); x.translate(lx, ly); x.rotate(la * 0.6 + (mg.phase === 'spin' ? 1.2 * Math.max(0, 1 - mg.pt * 2) : 0)); K.R(x, -6, -170, 12, 170, C.silver); K.CI(x, 0, -176, 28, C.red); K.CI(x, -8, -184, 9, C.pink); x.restore();
     if (mg.flash) K.GL(x, CX - 50, wy + wh / 2, 380, C.gold, Math.min(1, mg.flash) * 0.5);
+    x.restore();
   } };
 
 // ═════════════════════ 抓娃娃 · claw machine ═════════════════════

@@ -110,7 +110,7 @@ X.def('pyramids', {
     S.rect(64, 44, 3, 3, 'ink', 1); S.hl(63, 43, 5, 'sand', 2.6);   // the entrance, high on the face
     // the pyramid's shadow falls toward the eye, over the sand in front
     S.lay('wall'); S.shadow([[16, FY], [136, FY], [118, H], [34, H]], 1.3);
-    // the sphinx, facing the sun: lion body, paws stretched forward, a gold-and-blue nemes
+    // the sphinx: lion body, paws stretched forward, a gold-and-blue nemes
     S.lay('back'); const B = 88; S.beg();
     S.ell(131, B - 7, 8, 7, 'sand', 5.6, { dome: 1 }); S.rect(110, B - 13, 22, 13, 'sand', 5.6, { n: [0, -0.1] }); S.hl(111, B - 14, 19, 'sand', 7.2, { n: [0, -0.8] });
     S.rect(88, B - 5, 22, 5, 'sand', 6.2); S.hl(88, B - 6, 20, 'sand', 7.6, { n: [0, -0.8] }); S.vl(88, B - 5, 5, 'sand', 7.8, { n: [-0.8, 0] }); [89, 91, 93].forEach(x => S.px(x, B - 1, 'sand', 3));
@@ -506,7 +506,9 @@ X.def('artemis', {
     const amph = (x, h, m) => { S.beg(); S.ell(x, FY - h * 0.45, 3.6, h * 0.35, m, 5.5, { dome: 1 }); S.rect(x - 1, FY - h, 3, h * 0.3, m, 5); S.hl(x - 2, FY - h, 5, m, 6.5); S.px(x - 3, FY - h * 0.8, m, 4); S.px(x + 3, FY - h * 0.8, m, 4); S.rect(x - 1, FY - 2, 3, 2, m, 4); S.hl(x - 3, FY - h * 0.5, 7, 'ink', 1); S.end(); };
     amph(34, 13, 'copper'); amph(41, 11, 'copper');
     S.beg(); S.ell(98, FY - 4, 6, 4, 'sand', 6, { dome: 1 }); S.px(98, FY - 9, 'leather', 4); S.end();
-    S.beg(); S.box(104, FY - 6, 10, 6, 'wood', 6, { top: 2 }); [[106, 'red'], [108, 'gold'], [110, 'leaf'], [112, 'red'], [107, 'pink'], [111, 'gold']].forEach(([x, m], i) => S.px(x, FY - 8 - (i > 3 ? 1 : 0), m, 8)); S.end();
+    S.beg(); S.box(104, FY - 6, 8, 6, 'wood', 6, { top: 2 }); [[105, 'red'], [107, 'gold'], [109, 'leaf'], [110, 'red'], [106, 'pink'], [108, 'gold']].forEach(([x, m], i) => S.px(x, FY - 8 - (i > 3 ? 1 : 0), m, 8)); S.end();
+    // the stack the acolyte takes his crates from (marked like the one he carries)
+    S.beg(); S.box(112, FY - 4, 6, 4, 'wood', 5.4); S.px(114, FY - 3, 'crimson', 6); S.box(113, FY - 8, 5, 4, 'wood', 6, { top: 1 }); S.px(115, FY - 7, 'crimson', 7); S.end();
     S.beg(); for (let k = 0; k < 7; k++) S.line(91 + k, FY - 1, 89 + k * 1.5, FY - 14, 'sand', 7 + (k % 2)); S.hl(90, FY - 7, 7, 'wood', 4); S.end();   // a sheaf of wheat
     // the stag's body (neck and head move in anim)
     S.beg(); S.ell(133, FY - 13, 7, 3.4, 'leather', 5.6, { dome: 1 }); S.hl(129, FY - 10, 9, 'bone', 6.4); S.rect(139, FY - 15, 2, 3, 'bone', 8); S.px(141, FY - 15, 'leather', 4);
@@ -546,9 +548,13 @@ X.def('artemis', {
       rs.burst('ember', 66, 58, 5, { sp: 14, ang: -0.7, spread: 0.6, life: 1.8 }); rs.burst('ember', 84, 58, 5, { sp: 14, ang: 0.7, spread: 0.6, life: 1.8 }); rs.burst('glint', 75, 16, 4, { sp: 16, life: 0.6 }); rs.burst('glint', 124, 14, 3, { sp: 14, life: 0.6 }); }
     // the incense smokes from the two braziers and drifts outward, clear of the goddess
     if (roar > 0.3) { if (R() < 0.3) rs.burst('steam', 47, 58, 1, { sp: 7, ang: -0.45, spread: 0.3, life: 1.3 }); if (R() < 0.3) rs.burst('steam', 104, 58, 1, { sp: 7, ang: 0.45, spread: 0.3, life: 1.3 }); }
-    // the acolyte brings a crate to the offerings, walks back for the next
-    const w = stroll(t, 96, 120, 7, 0.7, 1.6), carry = w.dir < 0, AL = { skin: ['skin', 5], hair: ['hair', 4], top: ['sand', 5], bot: ['skin', 5], boot: ['leather', 3] };
-    worker(D, w.x, FY, AL, Object.assign(w.pose, carry ? { aF: 1.2, eF: -1.2, aB: 1, eB: -1, tool: 'box' } : {}), w.dir);
+    // the acolyte takes a crate off the stack, brings it to the offerings, walks back for the next (he stays left of the
+    // stack, clear of the stag); his arms come up to the carry pose over the last 0.4 s at the stack and go back down
+    // over the first 0.4 s after he sets the crate down
+    const A0 = 96, A1 = 110, ASP = 7, APZ = 1.6, w = stroll(t, A0, A1, ASP, 0.7, APZ), aper = (A1 - A0) / ASP, acyc = 2 * (aper + APZ), aq = ((t + 0.7 * 7.3) % acyc + acyc) % acyc,
+      carry = w.dir < 0, lift = carry ? 1 : aq < aper ? 1 - clamp(aq / 0.4, 0, 1) : clamp((aq - aper - APZ + 0.4) / 0.4, 0, 1), mix = (a, b) => a + (b - a) * lift,
+      AL = { skin: ['skin', 5], hair: ['hair', 4], top: ['sand', 5], bot: ['skin', 5], boot: ['leather', 3] };
+    worker(D, w.x, FY, AL, Object.assign(w.pose, { aF: mix(w.pose.aF, 1.2), eF: mix(w.pose.eF, -1.2), aB: mix(w.pose.aB, 1), eB: mix(w.pose.eB, -1) }, carry ? { tool: 'box' } : {}), w.dir);
     // the stag: mostly grazes, now and then looks about; head down just before the moment, then it snaps up at the flare
     const up = roar > 0.1 || (Math.sin(t * 0.45 + 1) > 0.35 && (q < 0.4 || q > 0.6)), chew = Math.round(Math.sin(t * 4) * 0.5);
     D.beg(); if (up) { D.rect(127, FY - 21, 2, 7, 'leather', 5.4); D.px(126, FY - 21, 'leather', 6); D.rect(123, FY - 24, 5, 3, 'leather', 5.8); D.px(122, FY - 23, 'leather', 4.4); D.px(124, FY - 24, 'ink', 1); D.px(128, FY - 25, 'leather', 4); D.px(129, FY - 26, 'leather', 5);
@@ -564,11 +570,47 @@ X.def('artemis', {
 });
 
 // ───────── 罗德岛巨像 colossus (water · defense · 史诗 · weapon: slam) ─────────
-// a moonlit harbour mouth: the bronze giant straddles it from two stone pedestals, a radiant crown on his head, a torch
-// held high whose fire dances on the water, a great hammer resting on the left pedestal. A ship with a lantern sails in
-// between his legs; on the quay near the eye a hoplite keeps watch by a brazier. Every 10 s a swell breaks on the
-// pedestals. When the weapon fires (rs.fireAge < 0.5): the hammer swings up and smashes down on the pedestal — sparks,
-// a burst of stone dust, water leaping on both sides, rings running over the harbour, the torch and the eyes flare.
+// sunrise over the harbour mouth — the giant is Helios, and his sun comes up behind him: it rises out of the sea on the
+// right, rays fanning over a sky that goes from night blue to rose and gold, thin clouds rimmed with gold, a road of
+// gold light glittering across the water toward the eye. The bronze giant straddles the harbour from two stone
+// pedestals, back-lit into a dark silhouette with a gold rim down every edge that faces the sun, a radiant crown on his
+// head, a torch still burning in his raised hand, a great hammer resting on the left pedestal. A ship with a lantern
+// sails in between his legs; on the quay near the eye a hoplite keeps watch by a brazier. Every 10 s a swell breaks on
+// the pedestals. When the weapon fires (rs.fireAge < 0.5): the hammer swings up and smashes down on the pedestal —
+// sparks, a burst of stone dust, water leaping on both sides, rings running over the harbour, the torch and the eyes flare.
+const CSUN = [128, 66, 9], CHZ = 66;   // the rising sun: its centre on the sea line, only the upper half is up
+// the dawn sky: night blue bands overhead, the sun's glow in hard rose-to-gold rings round it, rays, clouds, the disc;
+// the sea under it with the road of gold light baked in as broken dashes (anim makes them glitter)
+function sunriseSky(S, sc) {
+  S.lay('wall'); const [SX, SY, SR] = CSUN, r = X.rng(77);
+  const glow = (x, y) => Math.round(11 - Math.hypot((x + 0.5 - SX) / 2.1, y + 0.5 - SY) / 4.4);
+  for (let y = 0; y < CHZ; y++) for (let x = 0; x < W; x++) { const g = glow(x, y);
+    if (g >= 6) S.px(x, y, 'dusk', g, { e: 255 });
+    else { const c = y < 18 ? ['night', 2] : y < 32 ? ['night', 3] : y < 44 ? ['night', 4] : y < 55 ? ['lav', 6] : ['lav', 7]; S.px(x, y, c[0], c[1] + (g >= 5 && c[0] === 'lav' ? 1 : 0), { e: 255 }); } }
+  for (let i = 0; i < 16; i++) S.px(4 + r() * 80, 4 + r() * 24, 'linen', 6 + r() * 2, { e: 255 });   // the last stars, over the dark side
+  // rays: every other wedge a step brighter, each its own length
+  { let a = -Math.PI; const RS = []; for (let i = 0; a < 0; i++) { const w = 0.08 + r() * 0.12; if (i % 2) RS.push([a, a + w, 40 + r() * 90]); a += w; }
+    for (let y = 3; y < CHZ - 1; y++) for (let x = 3; x < W - 3; x++) { const d = Math.hypot(x + 0.5 - SX, (y + 0.5 - SY) * 1.4), an = Math.atan2(y + 0.5 - SY, x + 0.5 - SX); if (d < SR + 12) continue; if (RS.some(([a0, a1, l]) => an >= a0 && an < a1 && d < l)) S.tone(x, y, 1); } }
+  // clouds: long thin bars, plum bodies, their undersides lit — gold near the sun, rose farther off
+  [[92, 50, 46], [112, 41, 28], [8, 28, 30], [22, 36, 20], [60, 45, 22]].forEach(([x0, y0, L], ci) => { for (let i = 0; i < L; i++) { const q = i / (L - 1), x = x0 + i, th = Math.max(1, Math.round(Math.sin(q * Math.PI) * 2.2 + Math.sin(i * 0.6 + ci) * 0.7)), near = Math.abs(x - SX) < 30;
+    for (let k = 0; k < th; k++) S.px(x, y0 - k, 'dusk', k === th - 1 ? 3 : 4, { e: 255 }); S.px(x, y0 + 1, near ? 'lamp' : 'dusk', near ? (q > 0.2 && q < 0.8 ? 9 : 8) : 7, { e: 255 }); } });
+  // the sun: a tight ring, the white-gold disc, clipped by the sea line
+  const disc = (rr, m, t, cx, cy) => { for (let y = Math.floor(cy - rr); y < CHZ; y++) for (let x = Math.floor(cx - rr); x <= Math.ceil(cx + rr); x++) if ((x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2 < rr * rr) S.px(x, y, m, t, { e: 255 }); };
+  disc(SR + 4, 'dusk', 10, SX, SY); disc(SR + 2, 'lamp', 9, SX, SY); disc(SR, 'lamp', 10, SX, SY); disc(SR * 0.62, 'lamp', 11, SX - 1, SY - 1);
+  // the far headland on the left, a few town lamps still lit
+  for (let x = 3; x < 46; x++) { const h = Math.round(3 + (46 - x) * 0.17 + Math.sin(x * 0.45) * 0.8); for (let y = CHZ - h; y < CHZ; y++) S.px(x, y, 'night', 1, { e: 255 }); S.px(x, CHZ - h, 'lav', 4, { e: 255 }); if (x % 4 === 1 && r() < 0.6) S.px(x, CHZ - h + 2 + Math.floor(r() * Math.max(1, h - 3)), 'lamp', 8, { e: 255 }); }
+  // the sea: a pale line at the horizon (burning under the sun), rose-lilac rows reflecting the sky, then deep blue
+  for (let x = 0; x < W; x++) { const u = Math.abs(x - SX); S.px(x, CHZ, u < SR + 4 ? 'lamp' : u < 34 ? 'dusk' : 'lav', u < SR + 4 ? 10 : u < 34 ? 8 : 7, { e: 255 });
+    for (let y = CHZ + 1; y < FY; y++) S.px(x, y, y < CHZ + 4 ? 'lav' : 'water', y < CHZ + 4 ? 5 : y < CHZ + 10 ? 3 : 2, { e: 255 }); }
+  // the road of light on the water: broken dashes, gold in the middle, rose at the edges, widening toward the eye
+  for (let y = CHZ + 1; y < FY; y++) { const k = (y - CHZ) / (FY - CHZ), hw = 3 + k * 15, odd = (y - CHZ) % 2 === 0; let x = Math.round(SX - hw + r() * 3);
+    while (x < SX + hw) { const u0 = Math.abs(x - SX) / hw, len = Math.round(2 + r() * (3 + k * 5) * (1 - u0 * 0.5)), u = Math.abs(x + len / 2 - SX) / hw;
+      if (!odd || u < 0.3) for (let i = 0; i < len && x + i < SX + hw; i++) S.px(x + i, y, u < 0.3 ? 'lamp' : 'dusk', u < 0.3 ? 9 : u < 0.65 ? 9 : 7, { e: 255 });
+      x += len + 2 + Math.floor(r() * (1 + u * 5)); } }
+  // the floor rows: the harbour water near the eye (lit)
+  S.vgrad(0, FY, W, H - FY, 'water', 4, 2.4);
+  sc.light({ x: SX, y: SY - 4, z: -10, r: 300, i: 0.9, c: '#ffb060', tint: 0.45 });   // 0 sun, behind everything: it rims, it does not light faces
+}
 // a thick tapered limb with cylinder shading across its width
 function seg(P, x0, y0, x1, y1, w0, w1, m, t0, st) {
   const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L, px = -uy, py = ux, ds = st || 0.5;
@@ -595,13 +637,11 @@ const CRK = []; { const r = X.rng(31); [[37, 7], [41, 10], [45, 8]].forEach(([x0
 X.def('colossus', {
   amb: [0.3, 0.28],
   paint(S, sc) {
-    X.sky(S, sc, { moon: [24, 17, 6], far: 'sea', floor: 'water', horizon: 60 });                                 // 0 moon
+    sunriseSky(S, sc);                                                                                               // 0 sun
     const torch = sc.light({ x: CO.torch[0], y: CO.torch[1], z: 18, r: 96, i: 1.1, c: '#ff9a40', fl: 'fire', tint: 0.5 });   // 1 torch
     sc.light({ x: 141, y: 78, z: 30, r: 40, i: 0.85, c: '#ff9040', fl: 'fire', ph: 2.3, tint: 0.5 });                  // 2 quay brazier
     const eye = sc.light({ x: 75, y: 22, z: 12, r: 22, i: 0.25, c: '#8fe0ff', fl: 'pulse', amp: 0.3, sp: 1.1, tint: 0.6 });   // 3 eyes
-    const r = S.r;
-    // the far shore on the right: a headland with the town's lights
-    S.lay('wall'); for (let x = 108; x < W; x++) { const h = Math.round(4 + (x - 108) * 0.12 + Math.sin(x * 0.4) * 0.8); for (let y = 66 - h; y < 66; y++) S.px(x, y, 'night', 1.4, { e: 255 }); if (x % 5 === 0 && r() < 0.7) S.px(x, 66 - h + 2 + Math.floor(r() * (h - 2)), 'lamp', 8, { e: 255 }); }
+    sc.light({ x: 20, y: 0, z: 60, r: 200, i: 0.32, c: '#8a98ff', tint: 0.2 });                                     // 4 the cool dawn sky on the dark side
     // pedestals rising from the water
     S.lay('back');
     [[30, 32], [88, 31]].forEach(([x, w]) => { S.beg(); TX.ashlar(S, x, 80, w, 12, 'stone', 5.6, { bh: 4, bw: 9, crack: 0.2 }); S.box(x - 1, 78, w + 2, 3, 'stone', 7, { top: 1 }); S.hl(x, 82, w, 'brass', 5.4); S.end(); });
@@ -623,14 +663,19 @@ X.def('colossus', {
     // neck, head, the radiant crown
     S.rect(72, 28, 6, 6, 'copper', 5.4); S.ell(75, 23, 5, 6, 'copper', 6, { dome: 1 }); S.hl(71, 21, 9, 'copper', 4.4); S.px(74, 24, 'copper', 7.6); S.px(75, 25, 'copper', 4.4); S.hl(73, 27, 4, 'copper', 4.2);
     S.end();
+    // back-lit: the whole figure a step and a half darker (the torch still warms his head and arm)
+    for (let y = 8; y < 82; y++) for (let x = 40; x < 112; x++) if (S.at(x, y)) S.tone(x, y, -2.2);
+    // the rim: the sun low behind him on the right catches every edge that faces it — the outermost pixel turns gold,
+    // two pixels deep on the lower body nearest the sun
+    { const rim = []; for (let y = 8; y < 82; y++) for (let x = 40; x < 112; x++) if (S.at(x, y) && !S.at(x + 1, y)) rim.push([x, y]);
+      rim.forEach(([x, y]) => { const near = y > 44 && x > 80; S.px(x, y, near ? 'lamp' : 'gold', near ? 9.4 : 8.4, { e: 255 }); if (near || (y > 60 && x > 50)) S.px(x - 1, y, 'gold', 6.6, { e: 255 }); }); }
     for (let k = 0; k < 9; k++) { const an = -Math.PI + 0.25 + k / 8 * (Math.PI - 0.5); S.beg(); for (let d = 6; d < 12 - Math.abs(k - 4) * 0.4; d++) S.px(75 + Math.cos(an) * d, 22 + Math.sin(an) * d * 1.05, 'gold', 8 - (d - 6) * 0.4, { e: torch + 1 }); S.end({ none: 1 }); }
     S.hl(70, 17, 11, 'gold', 7, { e: torch + 1 });
     S.px(72, 22, 'ice', 6, { e: eye + 1 }); S.px(77, 22, 'ice', 6, { e: eye + 1 });
     // verdigris running down from the joints
     [[66, 36, 6], [84, 38, 5], [62, 58, 7], [88, 58, 6], [57, 70, 5], [93, 70, 6], [74, 29, 4], [70, 44, 3], [96, 22, 4]].forEach(([x, y, l]) => { for (let k = 0; k < l; k++) if (S.at(x, y + k)) S.px(x, y + k, 'teal', 3.4 - k * 0.2); });
-    // front right: the quay near the eye — flagstones, a bollard with a coil of rope, the brazier on its stand
+    // front right: the quay near the eye — flagstones, the brazier on its stand
     S.lay('front'); S.beg(); TX.ashlar(S, 110, FY, 40, H - FY, 'stone', 5, { bh: 4, bw: 12, crack: 0.1 }); S.hl(110, FY, 40, 'stone', 7.6, { n: [0, -0.8] }); S.vl(110, FY, H - FY, 'stone', 6.6, { n: [-0.8, 0] }); S.end();
-    S.beg(); S.cyl(113, FY - 6, 5, 6, 'iron', 5, { rim: 2 }); S.ell(115.5, FY - 6, 3.5, 1.3, 'iron', 7); S.ell(115.5, FY - 3, 4.4, 1.5, 'sand', 5.6, { ring: 1 }); S.end();
     S.beg(); S.line(137, FY, 141, 80, 'iron', 4); S.line(145, FY, 141, 80, 'iron', 3.4); S.poly([[135, 76], [147, 76], [145, 80], [137, 80]], 'brass', 5); S.hl(135, 76, 12, 'brass', 8); S.end();
     S.lay('mid'); S.beg(); S.rect(93, 25, 3, 2, 'linen', 8); S.px(96, 25, 'linen', 6); S.px(92, 24, 'linen', 8); S.px(91, 24, 'brass', 7); S.end();   // a gull asleep on the torch arm
     sc.emit({ k: 'ember', x: 101, y: 6, w: 6, rate: 3, sp: 6, ang: 0.3, spread: 0.8, life: 1.8 });
@@ -638,10 +683,14 @@ X.def('colossus', {
   },
   anim(D, t, rs, o) {
     const st = rs.st, fa = rs.fireAge, firing = fa < 0.5;
-    // the sea: moonlit ripples, the torch's fire broken on the water
-    D.lay('wall'); X.sea(D, t, 62, 89, 24); X.twinkle(D, t, 8, 44, 9);
-    for (let y = 62; y < H; y += (y < FY ? 2 : 1)) { const k = (y - 62) / 40, x = 101 + Math.round(Math.sin(y * 1.7 + t * 5) * (1 + k * 4)); if (Math.sin(y * 2.3 + t * 7) > -0.2) { D.px(x, y, 'fire', y < FY ? 7 : 8, { e: 255 }); if (k > 0.4) D.px(x + 1, y, 'fire', 6, { e: 255 }); } }
-    for (let y = FY + 1; y < H - 3; y++) for (let x = 4; x < 110; x += 1) { const w = Math.sin(x * 0.35 - t * 1.4 + y * 1.9) + Math.sin(x * 0.11 + t * 0.8 - y * 0.6); if (w > 1.45) D.px(x, y, 'water', 7 + (Math.abs(x - 24) < 8 + (y - FY) ? 2 : 0), { e: 255 }); }
+    // the sea: lilac ripples rolling in, and the road of sunlight glittering — gold sparks running over the baked dashes
+    const [SX] = CSUN; D.lay('wall');
+    for (let y = CHZ + 1; y < H - 3; y++) { const fl = y >= FY, k = (y - CHZ) / (H - CHZ), hw = 3 + Math.min(1, (y - CHZ) / (FY - CHZ)) * 15 + (fl ? (y - FY) * 1.2 : 0), x1 = fl ? 110 : W - 3;
+      for (let x = 3; x < x1; x++) { const u = Math.abs(x + 0.5 - SX);
+        if (u < hw) { const v = Math.sin(x * 0.7 - t * 2.6 + y * 2.3) + Math.sin(x * 0.23 + t * 1.3 - y * 1.1); if (v > 1.62) { D.px(x, y, 'lamp', u < hw * 0.5 ? 11 : 10, { e: 255 }); if (v > 1.8) D.px(x + 1, y, 'lamp', 10, { e: 255 }); } else if (fl && v > 0.9 && (y & 1)) D.px(x, y, 'dusk', u < hw * 0.5 ? 9 : 7, { e: 255 }); }
+        else { const w = Math.sin(x * 0.45 - t * 1.6 + y * 1.3) + Math.sin(x * 0.17 + t * 0.9 - y * 0.7); if (w > 1.4) D.px(x, y, fl ? 'water' : 'lav', fl ? 6 : 5 + Math.round(k * 2), { e: 255 }); } } }
+    // the last stars fade over the dark side
+    for (let i = 0; i < 4; i++) { const x = 10 + i * 17, y = 6 + (i * 7) % 15, a = Math.sin(t * (1.1 + i * 0.4) + i * 2); if (a > 0.5) { D.px(x, y, 'linen', 9, { e: 255 }); if (a > 0.9) { D.px(x - 1, y, 'linen', 6, { e: 255 }); D.px(x + 1, y, 'linen', 6, { e: 255 }); } } }
     // the ship: sails in between the legs, a lantern at the stern (a moving light)
     const sx = Math.round(((t * 5 + 40) % 250) - 45), sy = 85 + Math.round(Math.sin(t * 1.4) * 0.6);
     if (sx > -30 && sx < W + 30) { D.beg(); D.poly([[sx - 12, sy - 3], [sx + 12, sy - 3], [sx + 9, sy + 2], [sx - 9, sy + 2]], 'wood', 4.6); D.hl(sx - 12, sy - 3, 24, 'wood', 6.4); for (let k = -8; k < 9; k += 3) D.px(sx + k, sy, 'wood', 3);
@@ -654,7 +703,7 @@ X.def('colossus', {
     const [aa, bb] = hammerPose(firing ? fa : 99), sh = CO.sh, hx = sh[0] - Math.sin(aa) * 18, hy = sh[1] + Math.cos(aa) * 18, ex = hx - Math.sin(bb) * 28, ey = hy + Math.cos(bb) * 28;
     // at rest (and in the little bounce after a strike) the head lies flat on the pedestal, hand-drawn; only mid-swing is it rotated
     const rest = Math.abs(aa - 0.35) < 0.14 && Math.abs(bb - 0.62) < 0.14;
-    D.beg(); seg(D, sh[0], sh[1], hx, hy, 6, 5, 'copper', 5.8, 0.7); D.ell(hx, hy, 3, 3, 'copper', 6.2, { dome: 1 });
+    D.beg(); seg(D, sh[0], sh[1], hx, hy, 6, 5, 'copper', 3.6, 0.7); D.ell(hx, hy, 3, 3, 'copper', 4, { dome: 1 });   // back-lit like the rest of him
     if (rest) { const ox = Math.round(ex - 41.5), oy = Math.round(ey - 73.7); D.line(hx, hy, 41 + ox, 70 + oy, 'wood', 5, { w: 2 }); hammerHead(D, 36 + ox, 71 + oy); }
     else { D.line(hx, hy, ex, ey, 'wood', 5, { w: 2 }); const px = Math.cos(bb), py = Math.sin(bb), dx = -Math.sin(bb), dy = Math.cos(bb);
       D.poly([[ex + px * 5 - dx, ey + py * 5 - dy], [ex - px * 5 - dx, ey - py * 5 - dy], [ex - px * 5 + dx * 6, ey - py * 5 + dy * 6], [ex + px * 5 + dx * 6, ey + py * 5 + dy * 6]], 'iron', 5.6);
@@ -663,7 +712,7 @@ X.def('colossus', {
     // foam where the sea meets the pedestals
     D.lay('back'); [[29, 63], [87, 120]].forEach(([a, b]) => { for (let x = a; x < b; x++) if (Math.sin(x * 0.9 + t * 3) > 0.2) D.px(x, 89 + (Math.sin(x * 1.3 + t * 2) > 0.6 ? -1 : 0), 'water', 10, { e: 255 }); });
     // the watchman on the quay: spear and round shield; braces when the giant strikes
-    D.lay('front'); const gd = { skin: ['skin', 5], hair: ['hair', 2], top: ['crimson', 5.4], bot: ['skin', 4.6], boot: ['leather', 3], cap: ['brass', 6.4] }, look = Math.sin(t * 0.4) > 0.5, d0 = look ? 1 : -1, gx = 127;
+    D.lay('front'); const gd = { skin: ['skin', 5], hair: ['hair', 2], top: ['crimson', 5.4], bot: ['skin', 4.6], boot: ['leather', 3], cap: ['brass', 6.4] }, look = Math.sin(t * 0.4) > -0.3, d0 = look ? 1 : -1, gx = 115;
     worker(D, gx, FY, gd, firing ? { aF: 1.6, eF: -0.6, aB: 1.2, eB: -0.8, lean: -0.4, lB: -0.3, lF: 0.3 } : { aF: 0.9, eF: -0.8, aB: 0.4, eB: -0.3, hx: look ? 0.5 : 0, bob: Math.round(Math.sin(t * 1.1) * 0.5) }, d0);
     const spx = gx + d0 * 4; D.beg(); D.vl(spx, FY - 33, 32, 'wood', 5.4); D.rect(spx - 1, FY - 36, 3, 3, 'iron', 8); D.px(spx, FY - 37, 'iron', 9); D.end();
     D.beg(); D.ell(gx - d0 * 3, FY - 14, 4.5, 5, 'brass', 6, { dome: 1 }); D.ell(gx - d0 * 3, FY - 14, 1.6, 1.8, 'crimson', 6); D.end();
@@ -687,11 +736,11 @@ X.def('colossus', {
 });
 
 const D_ = {
-  pyramids: '夕阳下的金色沙漠，天上放出一道道霞光：大金字塔顶着金顶，旁边是戴蓝金头巾的狮身人面像和刻满符号的红色方尖碑；石匠抡锤凿石、石粉飞溅，建筑师拿着图纸来回踱步，两只鹰绕着塔顶盘旋，风吹着沙粒贴地流动；每隔一阵最后一缕阳光爬上塔脊，金顶一闪、一道光柱冲天，方尖碑上的符号从上到下亮起',
+  pyramids: '黄昏的金色沙漠，夕阳正落在大金字塔尖的后面：金字塔背着光成了暗色剪影，两条塔边描着一道金边，霞光从塔尖向整片天空放射；旁边是戴蓝金头巾的狮身人面像和刻满符号的红色方尖碑，塔影朝近处铺在沙地上；石匠抡锤凿石、石粉飞溅，建筑师拿着图纸来回踱步，两只鹰绕着塔顶盘旋，风吹着沙粒贴地流动；每隔一阵两个光点沿塔边爬上塔尖，金顶一闪，光芒向四周射出，一道光柱冲天，一片金光顺着塔面往下扫，方尖碑上的符号从上到下亮起',
   stonehenge: '月夜草原上的巨石阵：月亮悬在中央石门正上方，门里立着一道淡蓝的光，光丝和光点不停往上飘，石头上的刻纹跟着一明一暗；白袍祭司拄杖守着祭石，两只羊低头吃草，篝火摇曳，萤火点点，地上漫着薄雾，偶尔划过一颗流星；每隔一阵月光直落进石门，门光大亮，刻纹从中间往外一块块亮起，一圈光在草地上散开，祭司举起法杖',
-  gardens: '夕阳下的巴比伦：三层蓝色琉璃砖的阶梯花园，金边拱门里亮着灯，每层都长满花丛、柏树和棕榈，藤蔓顺墙垂下随风摆动；顶上金顶亭子里挂着两盏吊灯，一只倾倒的陶瓮往外流水，水沿中间一层层往下淌、在每层台沿卷起白色水花，流进发光的水池，园丁提壶浇花，燕子飞过，近处一枝开花的树枝轻摇、花瓣飘落；每隔一阵一股大水冲下，水池溅起水花，水雾里挂出一道彩虹，绿色十字从水里升起',
+  gardens: '天快亮时蓝色天光下的巴比伦：天空从深蓝淡到淡紫，几朵云的底边染成粉色，晨星一闪一闪，远处的城站在雾里；三层蓝色琉璃砖的阶梯花园，金边拱门里亮着灯，檐下挂的小灯笼轻轻摇晃，每层都长满花丛、柏树和棕榈，藤蔓顺墙垂下随风摆动；顶上金顶亭子里挂着两盏吊灯，一只倾倒的陶瓮往外流水，水沿中间一层层往下淌、在每层台沿卷起白色水花，流进发光的水池；一缕缕薄雾从花园前飘过，地上的雾慢慢翻滚，水池上水汽升腾；园丁提壶浇花，燕子飞过，近处一枝开花的树枝轻摇、花瓣飘落；每隔一阵一股大水冲下，水池溅起水花，水雾变浓，雾里挂出一道彩虹，绿色十字从水里升起',
   artemis: '月牙下林边的白色希腊神庙：带凹槽的石柱、山墙上的金色月牙，中间敞开的神殿门里站着头戴月牙、手持金弓的女神像，台阶上两只铜火盆；左边一棵银绿叶子的橄榄树，庙前祭坛燃着像素火焰，旁边堆着陶罐、麦束和果子箱，女祭司照看火焰，侍从来回搬箱子，一头雄鹿在旁边低头吃草、偶尔抬头，飞蛾绕火，橄榄叶轻轻抖动；每隔一阵祭司举起双手撒香，火焰猛地窜高、火星四溅，两只火盆冒出香烟，女神像周身亮起金边、月牙冠放光，鹿猛地抬起头',
-  colossus: '月夜的港口：铜色巨人跨立在两座石台上，头戴光芒王冠，一手高举火炬、火光碎在海面上，一手握着的大锤平放在左边石台上；帆船挂着灯从他两腿间驶过，近处码头上持矛执盾的卫兵守在火盆旁，每隔一阵浪头拍上石台；开火时巨人抡起大锤砸向石台，锤下迸出一团星形闪光，石台正面裂开几道发红的裂纹，火星和石粉飞溅，两边海水冲起，水面一圈圈荡开，火炬和眼睛一亮',
+  colossus: '日出时的港口：太阳从右边海面升起，霞光一道道射满天空，几条细云镶着金边，海面上一条金色光带闪闪发亮、一直铺到眼前；铜色巨人跨立在两座石台上，背着光成了暗色剪影，朝着太阳的一侧描着一圈金边，头戴光芒王冠，一手高举还在燃烧的火炬，一手握着的大锤平放在左边石台上；帆船挂着灯从他两腿间驶过，近处码头上持矛执盾的卫兵守在火盆旁，左边远岸的小城还亮着几盏灯，每隔一阵浪头拍上石台；开火时巨人抡起大锤砸向石台，锤下迸出一团星形闪光，石台正面裂开几道发红的裂纹，火星和石粉飞溅，两边海水冲起，水面一圈圈荡开，火炬和眼睛一亮',
 };
 if (M.ROOM_D) Object.assign(M.ROOM_D, D_);
 })();

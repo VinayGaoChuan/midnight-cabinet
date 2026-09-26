@@ -75,7 +75,9 @@ const oOP = G.openPanel;
 G.openPanel = function (p) { if (this.raidPrep && (!p || p.kind !== 'raidPrep')) { this.deny('混沌来袭：先选好守城的领袖', '#ff6a5a'); return; } return oOP.apply(this, arguments); };
 const oCP = G.closePanel;
 G.closePanel = function () { if (this.raidPrep && this.panel && this.panel.kind === 'raidPrep') { this.deny('混沌来袭躲不掉：选好领袖，点「开始守城」', '#ff6a5a'); return; } return oCP.apply(this, arguments); };
-['passDay', 'restDay', 'toRoom'].forEach(k => { const o = G[k]; if (!o) return; G[k] = function () { if (this.raidPrep) { this.deny('混沌来袭：先选好守城的领袖', '#ff6a5a'); return; } return o.apply(this, arguments); }; });
+// (passing the day checks raidPrep itself: mc-home.js)
+const oTR = G.toRoom;
+if (oTR) G.toRoom = function () { if (this.raidPrep) { this.deny('混沌来袭：先选好守城的领袖', '#ff6a5a'); return; } return oTR.apply(this, arguments); };
 // whatever cleared the base (a reset, a new game, a screen change) must not strand the choice: reopen it, or drop it once the raid is no longer today's
 const oTick = G.tick;
 G.tick = function () { const r = oTick.apply(this, arguments), m = this.meta; if (this.raidPrep && this.screen === 'base' && !this.raid && !this.panel && m) { if (m.raidPending !== m.day || !m.heroes.length) { this.raidPrep = null; this.raidGo = false; } else oOP.call(this, { kind: 'raidPrep' }); } return r; };

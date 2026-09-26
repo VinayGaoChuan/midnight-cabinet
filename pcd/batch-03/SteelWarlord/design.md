@@ -33,7 +33,7 @@
   - 武器 + 握法 + 攻击类型：**双手竖持 + 凿地**（奴隶主是双手大斧过顶斜劈，蛮兵是单手砸，焚尸人是双手横扫）。
   - 动作个性：待机 = 两扇门像呼吸一样开合 1 格（门缝冒一小团尸气）、偶尔把镐柄提起再往地上一顿（柄尾扬尘）；步态 = 摇晃重踏（接触帧身体往落脚那边摇 1 格 + 下沉 1 格、4 颗尘，经过帧门板被颠开 1 格）；死亡 = 后仰封柜（门被打开 → 战镐飞出 → 仰倒 → 两扇门哐地合上 → 锈成铁屑）。
   - 主色：冷光钢 + 黄铜 + 暗红内衬 + 灰绿皮肉（上一级是锈褐铁 + 木色；奴隶主是钢 + 靛蓝罩袍 + 灰狼皮）。
-  - 自动查重：`compare.mjs` 退出码 0（和上一级铁甲战士：待机 IoU 0.511）。
+  - 自动查重：`compare.mjs` 退出码 0（和上一级铁甲战士：待机 IoU 0.507）。
 
 ## 特效设定卡
 
@@ -52,4 +52,5 @@
 
 ## 自检
 
-`shots/`：shoot 退出码 0（audit 无问题，音效时间线 move.step 5 · attack.swing / hit · skill.charge / release / impact · hurt · death · death.fall · death.hit）；compare 对范式和 accepted 退出码 0（最近：奴隶主，待机 IoU 0.644、施放 IoU 0.575、配色 0.871）；frames 的 MOVE gaitEvery2 前 4 个编号 0,2,4,6 各不相同，剪影行接触帧两脚分开、经过帧收拢抬脚。
+`shots/`（本轮重跑，模块没有改动）：shoot 退出码 0（audit 无问题、log 无异常；待机 30×40 格、专属色 4 个；音效时间线 move.step 5 · attack.swing / hit · skill.charge / release / impact · hurt · death · death.fall · death.hit）；compare 对范式和 accepted 退出码 0（`accepted/SteelWarlord` 是本角色上一轮通过的存档，不和自己比；最近：时间法师，待机 IoU 0.657、施放 0.5、配色 0.387；奴隶主 0.644 / 施放 0.575 / 配色 0.871；屠宰场主 0.633），结果存 `shots/compare.json`；和上一级铁甲战士待机 IoU 0.507、施放 0.494；frames 的 MOVE gaitEvery2 前 4 个编号 0,2,4,6 各不相同，剪影行接触帧两脚前后分开、经过帧收拢抬脚；攻击帧序 0,1,2,3,4,4,5,6,7。
+`compare.mjs --prev review-1/sprite.json shots/sprite.json` 退出码 0：各状态重合度 1.0，没有东西消失。

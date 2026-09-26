@@ -418,77 +418,82 @@ X.def('_tile_ore', {
   },
 });
 
-// ───────── 风穴 wind: blue-grey wind-scoured stone round a cave throat; pale light at its far end, wind pouring out ─────────
-const WND = (() => { const r = X.rng(6161), C = [50, 52], F = [61, 45], rings = [0, 1, 2, 3, 4, 5].map(k => { const s = 1 - k * 0.15; return { i: k, x: C[0] + (F[0] - C[0]) * k / 6, y: C[1] + (F[1] - C[1]) * k / 6, rx: 26 * s, ry: 20 * s }; });
-  // each ring its own ragged outline, so the steps into the dark read as rock, not as the rings of an eye
-  const lumpR = (x, y, g) => { const a = Math.atan2(y - g.y, x - g.x), k = 1 + 0.07 * Math.sin(a * 4 + 1 + g.i) + 0.05 * Math.sin(a * 7 + 2 + g.i * 2) + (g.i ? (vnoise(a * 2.2 + 4, g.i * 1.7, 95) - 0.5) * 0.22 : 0); return Math.hypot((x + 0.5 - g.x) / (g.rx * k), (y + 0.5 - g.y) / (g.ry * k)); };
-  const lipY = (x, top) => { let t = -1, b = -1; for (let y = 0; y < H; y++) if (lumpR(x, y, rings[0]) < 1) { if (t < 0) t = y; b = y; } return top ? t : b; };
-  // wind lines: a fan of gentle S-curves out of the throat, and two long ones across the whole face
-  // (some curl once round a little loop on the way, the way wind is drawn)
-  const curve = (x0, y0, x1, sl, A, ph, lx) => { const px = []; let pp = null; const to = (x, y) => { if (pp) bres(pp[0], pp[1], x, y, px); pp = [x, y]; };
-    for (let x = x0; x <= x1; x++) { const y = y0 + (x - x0) * sl + A * Math.sin((x - x0) * 0.085 + ph); to(x, y); if (lx && x === lx) for (let a = 0.3; a < Math.PI * 2; a += 0.3) to(x + Math.sin(a) * 4, y - 4 + Math.cos(a) * 4); } return px.filter(([x, y]) => inside(x, y)); };
-  const lines = [[72, 38, -0.24, 2.5, 0, 104], [76, 45, -0.1, 3, 1.4], [78, 52, 0.02, 3, 2.6, 118], [76, 59, 0.12, 2.6, 0.7], [70, 66, 0.26, 2.4, 2, 96]].map(([x0, y0, sl, A, ph, lx]) => curve(x0, y0, 152, sl, A, ph, lx));
-  lines.push(curve(-2, 16, 152, 0.03, 2.2, 0.5), curve(-2, 92, 152, -0.02, 2, 2.2));
-  const pits = []; for (let i = 0; i < 16; i++) { const x = 8 + r() * 134, y = 8 + r() * 88; if (lumpR(x, y, rings[0]) > 1.25) pits.push([x, y, 1.4 + r() * 2.6, 0.9 + r() * 1.5]); }
-  // the far opening: a ragged hole, three nested outlines (rim, body, core)
-  const far = [1, 0.7, 0.4].map((s, k) => { const pts = []; for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2 + (r() - 0.5) * 0.5, q = 0.7 + r() * 0.45; pts.push([F[0] + 0.4 + Math.cos(a) * 6 * s * q, F[1] + Math.sin(a) * 4.6 * s * q]); } return pts; });
-  // stone teeth hanging off the upper lip: [x, length]
-  const teeth = [[33, 4], [42, 6], [52, 5], [60, 3], [67, 4]].map(([x, l]) => [x, lipY(x, 1), l]);
-  // dry grass on the lip, one tuft up top and one below: two or three thin blades out of a root in a dark crack,
-  // already laid over toward the right by the wind that never stops; [root x, upper lip?, blades [x off, length, bend]]
-  const tufts = [[37, 1, [[-1, 5, 0.5], [0, 7, 1], [1, 5, 1.4]]], [66, 0, [[0, 6, 0.9], [1, 4, 1.5]]]].map(([x, up, bl], i) => ({ rx: x, ry: (up ? lipY(x, 1) : lipY(x, 0)) - 1, bl, i }));
-  return { C, F, rings, lumpR, lipY, lines, pits, far, teeth, tufts }; })();
+// ───────── 风穴 wind: a tunnel the wind has scoured clean through pale blue stone; fluted walls, air pouring through it ─────────
+// Seen side-on: the tunnel runs across the block and both ends go off into the dark. The stone above and below is cut into
+// ribs that follow the tunnel (lit top, shadowed underside, hard edges), with honeycomb pits. Arcs of air stream through,
+// dust and leaves ride them, a tuft of grass on the floor lies down in it. Every 8 s a gust tears through: the air lines
+// run faster and longer and a sheet of dust rolls down the tunnel.
+const WND = (() => {
+  const top = new Float32Array(W), bot = new Float32Array(W), mid = new Float32Array(W);
+  for (let x = 0; x < W; x++) { top[x] = 38 + 5 * Math.sin(x * 0.04 + 0.6) + 1.5 * Math.sin(x * 0.11); bot[x] = 67 + 4 * Math.sin(x * 0.043 + 1.2) + 1.2 * Math.sin(x * 0.15 + 1); mid[x] = (top[x] + bot[x]) / 2; }
+  // the ribs: where each ends, counted out from the tunnel's lip (they widen away from it)
+  const FL = [0]; for (let i = 0; FL[FL.length - 1] < 80; i++) FL.push(FL[FL.length - 1] + 2 + Math.floor(i * 0.7) + [0, 2, 1, 0, 3, 1][i % 6]);
+  const band = (d) => { let i = 0; while (i + 2 < FL.length && d >= FL[i + 1]) i++; return i; };
+  // the air: arcs through the tunnel [x0, x1, place across it (−1 roof … 1 floor), bow], two curl over at their far end
+  const lines = [[4, 90, -0.45, -6, 1], [28, 134, -0.1, -4, 0], [10, 100, 0.25, 4, -1], [50, 148, 0.55, 3, 0]].map(([x0, x1, o, bow, curl]) => { const px = []; let pp = null;
+    for (let x = x0; x <= x1; x++) { const u = (x - x0) / (x1 - x0), y = Math.round(mid[x] + o * (bot[x] - top[x]) / 2 + bow * Math.sin(u * Math.PI)); if (pp) bres(pp[0], pp[1], x, y, px); else px.push([x, y]); pp = [x, y]; }
+    if (curl) { const [ex, ey] = pp; for (let a = 0.15; a < Math.PI * 1.8; a += 0.12) { const q = [Math.round(ex + Math.sin(a) * 5), Math.round(ey + curl * (5 - Math.cos(a) * 5))]; bres(pp[0], pp[1], q[0], q[1], px); pp = q; } }
+    return px.filter(([x, y]) => inside(x, y)); });
+  const r = X.rng(6161), pits = [];
+  for (let i = 0; i < 40 && pits.length < 11; i++) { const x = 16 + r() * 118, up = r() < 0.55, y = up ? 12 + r() * (top[Math.round(x)] - 20) : bot[Math.round(x)] + 6 + r() * 18; if (pits.some(([a, b]) => Math.hypot(a - x, b - y) < 10)) continue; pits.push([x, y, 1.6 + r() * 2.4, 1 + r() * 1.2]); }
+  // pebbles on the tunnel floor, and the grass tuft: [root x, blades [x off, length, bend]]
+  const peb = [[34, 2.4], [41, 1.6], [88, 3], [95, 1.8], [118, 2.2]].map(([x, s]) => [x, Math.round(bot[x]) - 1, s]);
+  const tuft = { rx: 63, ry: Math.round(bot[63]) - 1, bl: [[-1, 7, 0.6], [0, 10, 1], [1, 8, 1.3], [2, 6, 1.5]] };
+  // the gust's sheet of dust: specks spread across the tunnel height, each with its own lag and roll
+  const sheet = []; for (let i = 0; i < 46; i++) sheet.push([r(), r() * 0.9, r() * 6.3, r()]);
+  return { top, bot, mid, FL, band, lines, pits, peb, tuft, sheet };
+})();
 X.def('_tile_wind', {
   noFrame: 1, noFloor: 1, amb: [0.5, 0.42],
   paint(S, sc) {
-    const Wd = WND; sc.light({ x: Wd.F[0], y: Wd.F[1], z: 6, r: 64, i: 0.9, c: '#bfefff', fl: 'pulse', amp: 0.08, sp: 0.9, tint: 0.4 });
-    sc.light({ x: 108, y: 50, z: 16, r: 66, i: 0.35, c: '#bfefff', tint: 0.1 });
-    rockBase(S, 12); const sn = snap(S), r = S.r, Rg = Wd.rings;
-    // blue-grey scoured stone: long soft bands, cross-bedding, grooves the wind cut (their lower lips catch a cold light)
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const yy = y + Math.sin(x * 0.03 + 0.4) * 4, b = vnoise(0.2, yy * 0.11, 91), cb = Math.sin((x * 0.25 - yy * 1.1) * 0.5), cl = Math.round((vnoise(x / 6, y / 4, 92) - 0.5) * 1.4);
-      S.px(x, y, 'scifi', 5.8 + (b > 0.64 ? 0.9 : b < 0.34 ? -0.8 : 0) + cl + (cb > 0.93 && b > 0.5 ? -0.9 : 0)); }
-    for (let i = 0; i < 12; i++) { const x = r() * W, y = 6 + r() * 92, l = 10 + r() * 24; if (Wd.lumpR(x + l / 2, y, Rg[0]) < 1.15) continue; S.hl(x, y, l, 'scifi', 3.6); S.hl(x + 2, y + 1, l - 4, 'ice', 5); }
-    soften(S, sn, 15, 9);
-    // honeycomb pits
-    Wd.pits.forEach(([x, y, rx, ry]) => { S.ell(x, y, rx, ry, 'scifi', 2.6); S.hl(x - rx * 0.6, y + ry, rx * 1.2 + 1, 'ice', 5); S.hl(x - rx * 0.6, y - ry - 0.5, rx * 1.2, 'scifi', 3.6); });
-    // the throat: ragged steps down into the dark (darker every step); a lip lit from above-left; only the very edge of
-    // each step, where it faces the far opening, catches a thread of its light, so the eye runs down the rings to the exit
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const d0 = Wd.lumpR(x, y, Rg[0]); if (d0 > 1) continue; let k = 0; while (k < 5 && Wd.lumpR(x, y, Rg[k + 1]) < 1) k++;
-      const g = Rg[k], u = (x + 0.5 - g.x) / g.rx, v = (y + 0.5 - g.y) / g.ry, below = v > 0, lip = k === 0 && d0 > 0.9 - vnoise(x / 3, y / 3, 93) * 0.07;
-      if (lip) { const lit = (x - Rg[0].x) + (y - Rg[0].y) * 1.3 < 0; S.px(x, y, lit ? 'scifi' : 'scifi', lit ? 8.4 : 3, { n: [-(x - Rg[0].x) / 30, -(y - Rg[0].y) / 24] }); continue; }
-      const face = -u * 0.75 + v * 0.66;   // > 0: this bit of wall faces up-right, toward the far opening
-      if (k >= 2 && Wd.lumpR(x, y, g) > 0.87 && face > 0.24 + vnoise(x / 2, y / 2, 96) * 0.16) S.px(x, y, 'ice', k >= 4 ? 2 : 1, { e: 1 });
-      else S.px(x, y, 'scifi', Math.max(0, [4.8, 3.2, 1.4, 1.1, 0.8, 0.5][k] + (k < 2 ? (below ? 0.5 : -0.4) : below ? 0 : -0.3) + (vnoise(x / 3, y / 2, 97) > 0.68 ? -0.6 : 0)), { n: [u * 0.6, v * 0.6] }); }
-    // the upper lip overhangs: its shadow darkens the first rows inside it
-    const sh = [], L0 = 26, L1 = 75; for (let x = L0; x <= L1; x++) sh.push([x, Wd.lipY(x, 1) + 1.5]); for (let x = L1; x >= L0; x--) sh.push([x, Wd.lipY(x, 1) + 4.5 + Math.round(vnoise(x / 4, 1, 98) * 1.4)]); S.shadow(sh, 1.5);
-    // stone teeth hang off it: lit left face, dark right face
-    Wd.teeth.forEach(([x, y, l]) => { S.beg(); for (let k = 0; k < l; k++) { const w = k < l * 0.4 ? 3 : k < l - 1 ? 2 : 1; for (let j = 0; j < w; j++) S.px(x + j, y + 1 + k, 'scifi', j === 0 ? 7 : j === w - 1 && w > 1 ? 3.6 : 5, { n: [j === 0 ? -0.6 : 0.5, 0.2] }); } S.end(); });
-    // the far opening: a ragged hole of cold light
-    const [f0, f1, f2] = Wd.far; S.poly(f0, 'ice', 6, { e: 1 }); S.poly(f1, 'ice', 9, { e: 1 }); S.poly(f2, 'ice', 10, { e: 255 }); S.px(Wd.F[0] - 1, Wd.F[1] - 1, 'ice', 11, { e: 255 }); S.px(Wd.F[0], Wd.F[1] - 1, 'ice', 11, { e: 255 });
-    // the grass roots sit in dark cracks of the lip
-    Wd.tufts.forEach(({ rx: x, ry: y }) => { S.rect(x - 1, y + 1, 3, 1, 'earth', 2); S.px(x, y + 2, 'earth', 1.6); S.px(x - 2, y + 1, 'scifi', 2); });
+    const Wd = WND, r = S.r;
+    sc.light({ x: 76, y: 53, z: 34, r: 96, i: 0.6, c: '#bfefff', fl: 'pulse', amp: 0.07, sp: 0.9, tint: 0.1 });   // 0 the pale light the wind carries (a gust swells it)
+    sc.light({ x: 70, y: 16, z: 22, r: 70, i: 0.35, c: '#bfefff', tint: 0.1 });                                     // 1 a cold wash over the upper ribs
+    rockBase(S, 12); const sn = snap(S);
+    // the ribs: each a lit top row, a body in clumped tone, a shadowed underside; they follow the tunnel near it and
+    // wander more the further out they lie
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const t0 = Wd.top[x], b0 = Wd.bot[x]; if (y >= t0 - 0.5 && y <= b0 + 0.5) continue;
+      const up = y < t0, d0 = up ? t0 - y : y - b0, d = d0 * (1 + 0.28 * Math.sin(x * 0.034 + (up ? 0.5 : 2.2))) + 2.6 * Math.sin(x * 0.05 + d0 * 0.1 + (up ? 0 : 2)) * Math.min(1, d0 / 10), i = Wd.band(d), o = d - Wd.FL[i], th = Wd.FL[i + 1] - Wd.FL[i];
+      const cl = vnoise(x / 6, y / 3, 92), pin = (j) => vnoise(x * 0.045, j * 1.9, 94) < 0.3, hi = (up ? o > th - 1 : o < 1) && !pin(up ? i + 1 : i), lo = (up ? o < 1 : o > th - 1) && !pin(up ? i : i + 1);
+      const end = Math.min(x - 6, 143 - x) + d0 * 0.8 + (vnoise(x / 3, y / 3, 98) - 0.5) * 8, sh = end < 14 ? 2 : end < 24 ? 1 : 0;
+      if (hi) S.px(x, y, 'ice', Math.max(1, 6 - (i > 5 ? 1 : 0) - sh), { n: [0, -0.7] }); else S.px(x, y, 'scifi', Math.max(0, (lo ? 2.4 : 6 + (cl > 0.62 ? 1 : cl < 0.32 ? -1 : 0) - (i > 7 ? 1 : 0)) - sh), { n: [0, lo ? 0.6 : 0] }); }
+    // honeycomb pits in the ribs: a dark hollow, a shadowed rim above, a lit lip below
+    Wd.pits.forEach(([x, y, rx, ry]) => { S.ell(x, y, rx, ry, 'scifi', 1.4); S.hl(x - rx * 0.6, y - ry - 0.5, rx * 1.2, 'scifi', 2.4); S.hl(x - rx * 0.7, y + ry, rx * 1.4 + 1, 'scifi', 7); });
+    soften(S, sn, 15, 14);
+    // the tunnel: the roof's underside in shadow, the far wall fluted like the rest, the floor lip catching the light;
+    // toward both ends it all sinks into black (the tunnel goes on in the dark)
+    for (let x = 0; x < W; x++) { const t0 = Math.round(Wd.top[x]), b0 = Math.round(Wd.bot[x]);
+      for (let y = t0; y <= b0; y++) { const v = (y - t0) / (b0 - t0), fl = (y - t0 + Math.round(Math.sin(x * 0.07) * 1.2)) % 6, end = Math.min(x - 6, 143 - x) + (vnoise(x / 3, y / 2.5, 99) - 0.5) * 9, fade = end < 9 ? 9 : end < 15 ? 3 : end < 22 ? 2 : end < 31 ? 1 : 0;
+        let tn = y === t0 ? 0.6 : y === b0 ? 7.4 : y === b0 - 1 ? 5.4 : v < 0.14 ? 1 : fl === 0 ? 1.6 : fl === 1 ? 3.6 : 2.6 + (v > 0.6 ? 0.4 : 0);
+        S.px(x, y, 'scifi', Math.max(0, Math.round(tn) - fade), { n: [0, y === b0 ? -0.8 : 0] }); } }
+    // pebbles on the floor, the grass's roots in a crack
+    Wd.peb.forEach(([x, y, s]) => { S.beg(); S.ell(x, y - s * 0.4, s, s * 0.7, 'scifi', 6, { dome: 1 }); S.px(x - s * 0.4, y - s * 0.8, 'scifi', 9); S.end(); });
+    const { rx, ry } = Wd.tuft; S.rect(rx - 2, ry + 1, 5, 1, 'earth', 2); S.px(rx, ry + 1, 'earth', 1);
     rimCut(S, sn, 15);
-    sc.emit({ k: 'mist', x: 72, y: 50, w: 4, h: 14, rate: 0.5, sp: 14, ang: Math.PI / 2, spread: 0.7, life: 1.8 });
+    sc.emit({ k: 'dust', x: 18, y: 52, w: 4, h: 22, rate: 1.5, sp: 30, ang: Math.PI / 2, spread: 0.4, life: 3.4 });
+    sc.emit({ k: 'leaf', x: 16, y: 50, w: 4, h: 16, rate: 0.28, sp: 26, ang: Math.PI / 2, spread: 0.5, life: 4.2 });
   },
   anim(D, t, rs) {
-    const Wd = WND, st = rs.st; D.lay('wall');
-    // gusts every 6.5 s: the wind runs faster and thicker, a pale ring blows out of the throat
-    const gp = steps(t, 6.5) * 6.5, gust = gp < 1.4 ? Math.sin(gp / 1.4 * Math.PI) : 0, sp = 30 + gust * 60;
-    st.ph = (st.ph || 0) + sp * clamp(t - (st.lt || t), 0, 0.1); st.lt = t;
-    D.lay('front'); Wd.lines.forEach((ln, i) => { const n = ln.length, amb = i >= 5, gap = amb ? 90 : gust > 0.3 ? 44 : 72, len = amb ? 14 : 20; for (let h = (st.ph * (amb ? 0.8 : 1) + i * 23) % gap; h < n + len; h += gap) for (let q = 0; q < len; q++) { const j = Math.floor(h) - q; if (j < 0 || j >= n) continue; const [x, y] = ln[j]; if (inK(x, y, 15, 8) < 0.3) continue; D.px(x, y, 'ice', Math.max(5, (amb ? 8.6 : 11) - q * (amb ? 0.3 : 0.3)), { e: 255 }); } });
-    // dry grass on the lip: thin blades, dark at the foot, dull straw at the tips, laid over to the right by the wind and
-    // flattened further in a gust
-    D.lay('back'); Wd.tufts.forEach(tf => { const lean = 1 + gust * 0.7 + 0.12 * Math.sin(t * 4.6 + tf.i * 2.1);
-      tf.bl.forEach(([dx, len, bend]) => { const pts = []; let px = null;
-        for (let j = 0; j < len; j++) { const u = j / (len - 1), x = tf.rx + dx + Math.round(lean * bend * 3.6 * Math.pow(u, 1.6)), y = tf.ry - Math.round(j * (1 - 0.1 * lean * bend * u)); if (px) bres(px[0], px[1], x, y, pts); else pts.push([x, y]); px = [x, y]; }
-        const top = len >= 6 ? 5 : 4; pts.forEach(([x, y], q) => { const u = q / Math.max(1, pts.length - 1); D.px(x, y, 'sand', Math.min(top, 2 + Math.floor(u * 3.99))); }); }); });
-    // the ring of the gust, and chaff torn off the grass riding it
-    D.lay('front'); if (gp < 0.8) { const g = gp / 0.8, rx = 27 + g * 26, ry = rx * 0.75, [cx, cy] = Wd.C; for (let k = 0; k < 90; k++) { const a = -1.3 + k / 90 * 2.6; if (k % 4 === 3) continue; D.px(cx + Math.cos(a) * rx, cy + Math.sin(a) * ry, 'ice', 9.6 - g * 3.5, { e: 255 }); } }
-    if (gp < 2.6) for (let i = 0; i < 6; i++) { const u = gp - i * 0.12; if (u < 0) continue; const x = 64 + i * 3 + u * (28 + ((i * 5) % 6) * 7), y = 38 + ((i * 7) % 6) * 4.4 + Math.sin(u * 6 + i) * 2 + u * u * 2.5; if (x > 140 || u > 2.2) continue; D.px(x, y, 'sand', 5); D.px(x - 1, y + (i & 1 ? 1 : 0), 'sand', 3); }
-    if (gp < 0.05 && !st.g) { st.g = 1; rs.flash(0, 0.9); rs.burst('mist', 74, 50, 4, { sp: 40, ang: Math.PI / 2, spread: 0.8, life: 1.6, h: 10 }); rs.burst('dust', 72, 50, 4, { sp: 44, ang: Math.PI / 2, spread: 0.8, life: 2, h: 12 }); } if (gp > 1) st.g = 0;
-    if (R() < 0.012) rs.burst('dust', 70, 46 + R() * 10, 1, { sp: 34, ang: Math.PI / 2, spread: 0.6, life: 2 });
-    // the far light shivers
-    D.lay('wall'); const [fx, fy] = Wd.F; if (Math.sin(t * 7) > 0.4) D.px(fx + 1, fy - 1, 'ice', 11, { e: 255 });
+    const Wd = WND, st = rs.st, dt = clamp(t - (st.lt == null ? t : st.lt), 0, 0.1); st.lt = t;
+    const gp = steps(t, 8) * 8, gust = gp < 2.2 ? Math.sin(gp / 2.2 * Math.PI) : 0, sp = 26 + gust * 74;
+    st.ph = (st.ph || 0) + sp * dt; rs.mul[0] = 1 + gust * 0.55;
+    // the air lines: dashes run down each arc (a bright head, a fading tail), longer and faster in a gust
+    D.lay('mid'); Wd.lines.forEach((ln, i) => { const n = ln.length, gap = 28 + i * 3, len = Math.round(12 + gust * 12);
+      for (let h = (st.ph * (1 + i * 0.07) + i * 19) % gap; h < n + len; h += gap) for (let q = 0; q < len; q++) { const j = Math.floor(h) - q; if (j < 0 || j >= n) continue; const [x, y] = ln[j], end = Math.min(x - 6, 143 - x), k = inK(x, y, 15, 10); if (k < 0.3 || end < 8) continue;
+        D.px(x, y, 'ice', Math.max(4, 10.6 - q * (5.6 / len) - (end < 22 ? (22 - end) * 0.3 : 0)), { e: 255 }); } });
+    // the wind carries what it picked up: dust and leaves go its speed, held off the roof and the floor, leaves tumble
+    const Pa = rs.P.a; for (let i = 0; i < Pa.length; i++) { const q = Pa[i]; if (q.k !== 'dust' && q.k !== 'leaf') continue; const xx = clamp(Math.round(q.x), 0, W - 1), lf = q.k === 'leaf';
+      q.vx += (sp * (lf ? 0.85 : 1.05) - q.vx) * (1 - Math.exp(-(lf ? 1.8 : 2.6) * dt));
+      if (q.y < Wd.top[xx] + 3) q.vy += 40 * dt; if (q.y > Wd.bot[xx] - 3) q.vy -= (lf ? 60 : 40) * dt; if (lf) q.vy += Math.sin(t * 7 + q.ph) * 70 * dt; if (q.x > 140) q.t = q.life; }
+    // the grass on the floor lip: thin blades laid over by the wind, flat in a gust
+    D.lay('back'); const tf = Wd.tuft, lean = 0.8 + gust * 0.9 + 0.14 * Math.sin(t * 5.3);
+    tf.bl.forEach(([dx, len, bend], b) => { const pts = []; let pp = null;
+      for (let j = 0; j < len; j++) { const u = j / (len - 1), x = tf.rx + dx + Math.round(lean * bend * 3.4 * Math.pow(u, 1.5) + Math.sin(t * 9 + b) * gust * u), y = tf.ry - Math.round(j * (1 - 0.13 * lean * bend * u)); if (pp) bres(pp[0], pp[1], x, y, pts); else pts.push([x, y]); pp = [x, y]; }
+      pts.forEach(([x, y], q) => D.px(x, y, 'sand', Math.min(len >= 8 ? 8 : 7, 3 + Math.floor(q / Math.max(1, pts.length - 1) * 5.99)))); });
+    // the gust: a sheet of dust rolls down the tunnel, each speck turning over as it goes
+    if (gp < 2.4) { D.lay('mid'); Wd.sheet.forEach(([lag, v, ph, s]) => { const x = -6 + (gp - lag * 0.5) * (96 + s * 30); if (x < 10 || x > 140) return; const xx = Math.round(x), y = Wd.top[xx] + 3 + v * (Wd.bot[xx] - Wd.top[xx] - 5) + Math.sin(gp * 8 + ph) * 2.2;
+      D.px(x, y, 'sand', s > 0.6 ? 9 : 7, { e: 255 }); if (s > 0.35) D.px(x - 1, y + (s > 0.7 ? 1 : 0), 'sand', 5, { e: 255 }); }); }
+    if (gp < 0.05 && !st.g) { st.g = 1; rs.flash(0, 0.7); rs.burst('dust', 16, 52, 14, { sp: 70, ang: Math.PI / 2, spread: 0.5, life: 2.4, h: 24 }); rs.burst('leaf', 16, 50, 4, { sp: 60, ang: Math.PI / 2, spread: 0.6, life: 2.6, h: 16 }); } if (gp > 1) st.g = 0;
   },
 });
 
@@ -569,8 +574,13 @@ X.def('_tile_dragon', {
 // ───────── seams: what a room dug out of this ground keeps along its floor (rows 90–101, into the wall layer) ─────────
 const FZ2 = (y) => ({ z: (y - 90) * 2, n: [0, -0.9] });
 const seamY = (x, s, a) => 95 + Math.round(Math.sin(x * 0.09 + s) * a + Math.sin(x * 0.23 + s * 2) * a * 0.5);
-X.TILEF.ley = (D, t) => { const hx = 3 + ((t * 26) % 190); for (let x = 3; x < 147; x++) { const y = seamY(x, 1, 1.2), d = x - hx; D.px(x, y, 'arcane', d <= 0 && d > -4 ? 11 + d * 0.8 : 7.6 + (Math.sin(x * 0.5 + t * 2) > 0.8 ? 1.4 : 0), { e: 255 }); if ((x * 7) % 5 === 0) D.px(x, y + 1, 'magic', 4, FZ2(y + 1)); }
-  [22, 61, 99, 131].forEach((x, i) => { const y = seamY(x, 1, 1.2), a = 0.5 + 0.5 * Math.sin(t * 2 + i * 1.7); D.px(x, y - 1, 'arcane', 8 + a * 2.6, { e: 255 }); D.px(x + 1, y - 2, 'arcane', 6 + a * 3, { e: 255 }); D.px(x - 1, y - 1, 'arcane', 6, { e: 255 }); }); };
+// a thin river of light along the floor, packets drifting down it; three rune pebbles sit in it and wake in turn
+X.TILEF.ley = (D, t) => { const P = 54, lit = Math.floor(t / 1.1) % 5;
+  for (let x = 3; x < 147; x++) { const y = seamY(x, 1, 1.2), u = (((x - t * 10) % P) + P) % P, pk = u < 12 ? u / 12 : -1;
+    D.px(x, y, 'arcane', pk >= 0 ? 9.4 + pk * 1.6 : 8.4, { e: 255 }); D.px(x, y + 1, 'arcane', pk >= 0 ? 7 + pk * 1.4 : 5.6, { e: 255 }); if ((x * 7) % 5 === 0) D.px(x, y + 2, 'magic', 4, FZ2(y + 2)); }
+  [30, 75, 120].forEach((x, i) => { const y = seamY(x, 1, 1.2), on = i === lit;
+    D.hl(x - 1, y - 2, 3, 'lav', 8, FZ2(y - 2)); D.hl(x - 2, y - 1, 5, 'lav', 6, FZ2(y - 1)); D.hl(x - 2, y, 5, 'lav', 5, FZ2(y)); D.hl(x - 1, y + 1, 3, 'lav', 3, FZ2(y + 1));
+    D.px(x, y - 1, 'arcane', on ? 11 : 8, { e: 255 }); D.px(x, y, 'arcane', on ? 9.6 : 7, { e: 255 }); if (on) { D.px(x - 3, y - 1, 'arcane', 8, { e: 255 }); D.px(x + 3, y - 1, 'arcane', 8, { e: 255 }); } }); };
 X.TILEF.amber = (D, t) => { const B = [[8, 2], [26, 3], [41, 1.5], [60, 2.5], [79, 2], [99, 3], [117, 1.5], [134, 2.5]], lit = Math.floor(t * 1.4) % B.length;
   for (let x = 3; x < 147; x++) D.px(x, seamY(x, 3, 0.8) + 1, 'hair', 2, FZ2(97));
   B.forEach(([bx, rx], i) => { const y = seamY(bx, 3, 0.8); for (let yy = -1; yy <= 1; yy++) for (let xx = -Math.ceil(rx); xx <= Math.ceil(rx); xx++) if ((xx / (rx + 0.3)) ** 2 + (yy / 1.4) ** 2 < 1) D.px(bx + xx, y + yy, 'lamp', yy < 0 ? 5.4 : 6.8, { e: 255 }); D.px(bx - Math.floor(rx / 2), y - 1, 'lamp', i === lit ? 11 : 9, { e: 255 }); }); };

@@ -70,7 +70,7 @@ window.__bot = async function (secs, opts = {}) {
         // the 发展方向 pick (mc-dirs.js): the first card, like a plain player who takes what looks good
         if (g.dirPick) { g.dirPick.at -= 1000; g.dirTake(opts.dirPick ? opts.dirPick(g, g.dirPick.ks) : g.dirPick.ks[0]); events++; for (let i = 0; i < 20; i++) g.tick(1 / 30); continue; }
         if (g.lvPick) { const h = g.meta.heroes.find(x => x.id === g.lvPick.id); for (let k = 0; h && k < 20 && M.talAny(h); k++) { const i = h.tree.findIndex((x, j) => M.talCan(h, j)); if (i < 0) break; g.takeTalent(h.id, i); talents++; } g.closePanel(); for (let i = 0; i < 10; i++) g.tick(1 / 30); continue; }
-        if (g.homeQ || g.lvFx || g.dayFx || g.tlFx || g.rite || g.expand || g.dirFx) { for (let i = 0; i < (opts.fast ? 120 : 40); i++) g.tick(1 / 30); await sleep(opts.fast ? 2 : 40); continue; }   // the return home plays in order: let it
+        if (g.homeQ || g.lvFx || g.tlFx || g.rite || g.expand || g.dirFx) { for (let i = 0; i < (opts.fast ? 120 : 40); i++) g.tick(1 / 30); await sleep(opts.fast ? 2 : 40); continue; }   // the return home plays in order: let it
         if (opts.base !== false && !g.panel && M.startBuild && botBase(g, M)) builds++;
         // leaders grow like a plain player grows them: level up when the orbs are there, spend every talent point
         if (opts.grow !== false && !g.panel) { let lv = false; g.meta.heroes.forEach(h => { if (!lv && h.lv < 10 && M.lvOrbs(h, g.meta) <= g.meta.orbs) { g.heroLvUp(h.id); lv = true; } for (let k = 0; k < 20 && h.points > 0; k++) { const c = (h.tree || []).map((_, i) => i).filter(i => M.talCan(h, i)); if (!c.length) break; g.takeTalent(h.id, c[Math.floor(Math.random() * c.length)]); talents++; } }); if (lv) continue; }

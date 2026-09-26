@@ -4,7 +4,7 @@
 PCD.define('butcherlord', (E) => {
   const { defMat, Sprite, begin, part, sp, run, rect, line, brush, bake, ease, clamp01, q12, f12of, gait, walkDemo, color, fxRamp, FXR, FXI, HY, FLOOR, DUMMY_X, INCOMING, ASTEP,
     IDLE, MOVE, ATTACK, CHARGE, CAST, RECOVER, HURT, DEATH, REVIVE, DEFAULT_DUR, K_BURST, K_EMBER, K_RISE, K_DUST, K_SPIRAL_PT,
-    spawn, burst, ring, shake, flash, hitDummy, put, scrX, shotFloorGlow } = E;
+    spawn, burst, ring, shake, flash, hitDummy, put, scrX, shotFloorGlow, sfx } = E;
   const fl = (x) => Math.floor(x + 1e-6);                       // 带容差取整（同 q12）：原版画法里的 Math.floor 一律换成它，整格边界不会因浮点误差少一格
   const easeInOut = ease.inOut, easeOut = ease.out;
 
@@ -380,14 +380,15 @@ PCD.define('butcherlord', (E) => {
     if (s === ATTACK && t === T_FLICK) {                          // 竖劈落下（出手帧判定命中）：120° 大弧拖影、刀口命中火花 + 血滴
       smT = 0; smCX = scrX(7); smCY = HY - 18;                  // 圆心 = 出手帧的前肩（本地 4 + 前冲 3），弧的末端正好落在握刀的手上
       const x = DUMMY_X - 3, y = HY - 11; burst(x, y, 8, 40, 90, 0.15, 0.35, R_IMPACT, 10); drops(x, y, 6, 40, 90, 25, 1);
+      sfx('swing', { kind: 'slash', w: 0.85 }); sfx('hit', { mat: 'flesh', w: 0.85 });
     }
     if (s === ATTACK && t === T_DHIT) hitDummy(0, 1);             // 假人晚 1 帧闪白 + 小摇（拖影最亮那一帧不和白色假人叠在一起）
-    if (s === CAST && (t === T_HIT1 || t === T_HIT2)) hitSpin(t === T_HIT1 ? 3 : 2);
+    if (s === CAST && (t === T_HIT1 || t === T_HIT2)) { hitSpin(t === T_HIT1 ? 3 : 2); sfx('impact', { pal: 'blood', w: 0.75 }); }
     if (s === RECOVER) burst(bellyX(), bellyY(), 3, 10, 25, 0.35, 0.6, R_EL, 18);   // 血雾吸回肚子：冒淡粉光点（回血）
     if ((s === HURT || s === DEATH) && t === INCOMING) drops(HX + HIT_POINT[0] - 1, HY + HIT_POINT[1], s === DEATH ? 6 : 4, 30, 70, 20, -1);   // 命中火花、震屏、闪白由引擎出；这里补血滴
     if (s === DEATH && t === INCOMING + 0.3) { for (let i = 0; i < 5; i++) spawn(K_DUST, HX + CV_X + 2 + (Math.random() - 0.5) * 6, HY - 1, (Math.random() - 0.5) * 24, -6 - Math.random() * 8, 0.3 + Math.random() * 0.2, R_DUST); }   // 刀插地
-    if (s === DEATH && t === INCOMING + 0.66) { for (let i = 0; i < 16; i++) { const x = HX - 20 + Math.random() * 30; spawn(K_DUST, x, HY - 1, (Math.random() - 0.5) * 30, -8 - Math.random() * 14, 0.4 + Math.random() * 0.4, R_DUST); } shake(0.1, 1); }
-    if (s === DEATH && t === INCOMING + 0.83) { for (let i = 0; i < 6; i++) spawn(K_DUST, HX - 8 + Math.random() * 14, HY - 1, (Math.random() - 0.5) * 20, -5 - Math.random() * 6, 0.3 + Math.random() * 0.2, R_DUST); }   // 肚子回弹再落地
+    if (s === DEATH && t === INCOMING + 0.66) { for (let i = 0; i < 16; i++) { const x = HX - 20 + Math.random() * 30; spawn(K_DUST, x, HY - 1, (Math.random() - 0.5) * 30, -8 - Math.random() * 14, 0.4 + Math.random() * 0.4, R_DUST); } shake(0.1, 1); sfx('fall', { w: 1 }); }
+    if (s === DEATH && t === INCOMING + 0.83) { for (let i = 0; i < 6; i++) spawn(K_DUST, HX - 8 + Math.random() * 14, HY - 1, (Math.random() - 0.5) * 20, -5 - Math.random() * 6, 0.3 + Math.random() * 0.2, R_DUST); sfx('fall', { w: 0.45 }); }   // 肚子回弹再落地
   }
   const EVENTS = [[T_SPARK], [], [T_FLICK, T_DHIT], [], [T_HIT1, T_HIT2], [0.17, 0.375], [INCOMING], [INCOMING, INCOMING + 0.3, INCOMING + 0.66, INCOMING + 0.83], []];
   function stepFX(dt, state, stT) {
@@ -397,7 +398,7 @@ PCD.define('butcherlord', (E) => {
       while (chargeAcc >= 1) { chargeAcc -= 1; const a = Math.random() * 6.2832; pull(HX + Math.cos(a) * 17, FLOOR + 1 + Math.sin(a) * 3, gx, gy, 0.4 + Math.random() * 0.3, R_GORE, (Math.random() - 0.5) * 1.6, 1); }
     }
     if (state === CHARGE && P.mouth) { breathAcc += dt * 9; while (breathAcc >= 1) { breathAcc -= 1; spawn(K_EMBER, scrX(headX() + 6), HY + topY() - 1, 10 + Math.random() * 8, -4 - Math.random() * 5, 0.4 + Math.random() * 0.3, R_DUST); } }   // 呼白气
-    if ((state === MOVE || (state === RECOVER && P.walk)) && P.step !== lastStep) { if (P.step !== 0) { const n = 3 + (Math.random() < 0.5 ? 1 : 0); for (let i = 0; i < n; i++) spawn(K_DUST, scrX(P.step > 0 ? 4 : 3) + (Math.random() - 0.5) * 5, HY, (Math.random() - 0.5) * 22, -4 - Math.random() * 7, 0.3 + Math.random() * 0.25, R_DUST); } lastStep = P.step; }   // 重步落脚 3–4 颗尘土
+    if ((state === MOVE || (state === RECOVER && P.walk)) && P.step !== lastStep) { if (P.step !== 0) { sfx('step', { w: 0.9 }); const n = 3 + (Math.random() < 0.5 ? 1 : 0); for (let i = 0; i < n; i++) spawn(K_DUST, scrX(P.step > 0 ? 4 : 3) + (Math.random() - 0.5) * 5, HY, (Math.random() - 0.5) * 22, -4 - Math.random() * 7, 0.3 + Math.random() * 0.25, R_DUST); } lastStep = P.step; }   // 重步落脚 3–4 颗尘土
     if (state === IDLE || (state === RECOVER && stT < 0.55)) {    // 刀口滴血
       dripAcc += dt * (state === IDLE ? 0.8 : 7); while (dripAcc >= 1) { dripAcc -= 1; gSpawn(G_DROP, gx + Math.round(Math.random() * 4 - 2), gy + 3, 0, 4, 0.6, R_GORE); }
     }
@@ -450,6 +451,8 @@ PCD.define('butcherlord', (E) => {
 
   return {
     name: '屠宰场主', HX, R_EL, DUR, hero, P, GLOW_MATS, HIT_POINT, EVENTS,
+    // 音效声明：肉身、前扑倒下、血祭元素（fxRamp 自建色阶，必须写 pal）、剁骨旋风花样、施放重量（charge / release / hurt / death 由引擎自动发）
+    SFX: { body: 'flesh', how: 'topple', pal: 'blood', style: 'blade', w: 0.9 },
     poseAt, drawHero, bakeHero, onEnter, onTime, stepFX, fxReset, fxBack, fxMid, fxFront,
   };
 });

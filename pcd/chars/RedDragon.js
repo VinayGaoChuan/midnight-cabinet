@@ -32,10 +32,10 @@ PCD.define('RedDragon', (E) => {
     neck: 3.5, neckA: 0.5, neckW: 3.4, head: { type: 'dragon', w: 7, h: 6, snout: 5, snH: 3.6, tip: 0.85, teeth: 2, horn: null }, headA: 0.22,
     tail: 'long', tailLen: 15, tailA: -0.72, tailW: 4.6, tailCurl: 0.22, mane: 'ridge', maneLen: 2, fur: 0, pattern: null, lieLegs: 1 };
   const o = Q.shape(Object.assign({ m }, SHAPE)), os = Q.shape(Object.assign({ m: ms }, SHAPE));
-  const WING = { span: 18, chord: 8, fingers: 3 };
+  const WING = { span: 20, chord: 9, fingers: 3 };
   // 翼姿 [臂角 a0, 翼尖扇到的角 aT, 收拢 fold]（角度从正后方量，+ 向上）：破翼飞不起来，只在背上收着、抬一抬
   const WP = [
-    [0.75, -0.55, 0.25],  // 0 收在背上（翼尖高出背约 6 格）
+    [0.75, -0.55, 0.2],   // 0 收在背上（翼尖高出背约 6 格）
     [0.95, -0.4, 0.2],    // 1 半抬（攻击、蹬地）
     [0.5, -0.7, 0.35],    // 2 压低贴背（伏地蓄力）
     [1.15, -0.45, 0.05],  // 3 怒张（吼叫，三个破洞最清楚）
@@ -218,14 +218,18 @@ PCD.define('RedDragon', (E) => {
         const cx = POLY[4 + k * 4 + 2], cy = POLY[4 + k * 4 + 3], tx = g.tx[k], ty = g.ty[k];
         U.dot(E, lerp(cx, tx, 0.45), lerp(cy, ty, 0.45), 0); if (k === nf - 1) U.dot(E, lerp(cx, g.bx, 0.5), lerp(cy, g.by, 0.5), 0);
       }
-      const hs = [[lerp(g.wx, (g.tx[0] + g.tx[1]) / 2, 0.58), lerp(g.wy, (g.ty[0] + g.ty[1]) / 2, 0.58)],   // 三个破洞
-        [lerp(g.wx, (g.tx[1] + g.tx[2]) / 2, 0.55), lerp(g.wy, (g.ty[1] + g.ty[2]) / 2, 0.55)],
-        [lerp((g.x + g.bx) / 2, (g.wx + g.tx[2]) / 2, 0.5), lerp((g.y + g.by) / 2, (g.wy + g.ty[2]) / 2, 0.5)]];
-      for (const [hx, hy] of hs) { const x = R(hx), y = R(hy); U.dot(E, x, y, 0); U.dot(E, x + 1, y, 0); U.dot(E, x, y + 1, 0); }
+      holesOf(g, HOLES);                                                                      // 三个破洞（黑龙的晶片补在同样的位置）
+      for (let h = 0; h < 3; h++) { const x = R(HOLES[h * 2]), y = R(HOLES[h * 2 + 1]); U.dot(E, x, y, 0); U.dot(E, x - 1, y, 0); U.dot(E, x, y + 1, 0); U.dot(E, x - 1, y + 1, 0); }
+      for (let k = 0; k < nf; k++) U.seg(E, g.wx, g.wy, lerp(g.wx, g.tx[k], k === 0 ? 1.14 : 0.9), lerp(g.wy, g.ty[k], k === 0 ? 1.14 : 0.9), 1, bone, k === 0 ? 4 : 2);   // 翼指：领头那根骨尖戳出膜外（外露的骨），其余压暗
     }
-    U.seg(E, g.x, g.y, g.wx, g.wy, 2, bone, 0);                                               // 臂骨
-    for (let k = 0; k < nf; k++) U.seg(E, g.wx, g.wy, lerp(g.wx, g.tx[k], k === 0 ? 1.12 : 1), lerp(g.wy, g.ty[k], k === 0 ? 1.12 : 1), 1, bone, k === 0 ? 4 : 0);   // 翼指：膜边凹进去，骨尖露在外面
+    U.seg(E, g.x, g.y, g.wx, g.wy, 2, bone, 0);                                               // 臂骨（远翼只画膜和臂骨，少一层线）
     U.dot(E, g.wx + 1, g.wy - 1, mm.claw, 3);                                                 // 拇指爪
+  }
+  const HOLES = [0, 0, 0, 0, 0, 0];
+  function holesOf(g, out) {                                                                   // 破洞位置：两指之间靠外、翼根后缘（黑龙用同一个公式补晶片）
+    out[0] = lerp(g.wx, (g.tx[0] + g.tx[1]) / 2, 0.58); out[1] = lerp(g.wy, (g.ty[0] + g.ty[1]) / 2, 0.58);
+    out[2] = lerp(g.wx, (g.tx[1] + g.tx[2]) / 2, 0.55); out[3] = lerp(g.wy, (g.ty[1] + g.ty[2]) / 2, 0.55);
+    out[4] = lerp((g.x + g.bx) / 2, (g.wx + g.tx[2]) / 2, 0.5); out[5] = lerp((g.y + g.by) / 2, (g.wy + g.ty[2]) / 2, 0.5); return out;
   }
   // 不对称双角（候选部件：hornPair——远侧完整后掠长角 / 近侧齐根断茬）
   function farHorn(oo) {

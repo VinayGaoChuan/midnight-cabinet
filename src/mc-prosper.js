@@ -99,7 +99,7 @@ G.tick = function (dt) {
     if (this.expand === E && (E.t > E.tEnd + 1 || now() - E.t0 > (E.tEnd + 8) * 1000)) { if (!E.fired.banner) { E.fired.banner = 1; this.pulse.pros = now(); this.toast('繁荣度 Lv' + E.up.to, '#ffcf4a'); } this.expand = null; if (this.bv) this.bv.home(); this.bump(); } }
   // a level reached some other way (a keepsake finishing a room, an old save) opens its ring once the base is quiet
   const m = this.meta;
-  if (m && this.screen === 'base' && !this.expand && !this.homeQ && !this.raid && !this.rite && !this.modal && !this.tlFx && !this.dayFx) {
+  if (m && this.screen === 'base' && !this.expand && !this.homeQ && !this.raid && !this.rite && !this.modal && !this.tlFx) {
     if (m.prosUp) { const up = m.prosUp; delete m.prosUp; this.save(); this.expandStart(up); }
     else { const l1 = M.prosLvOf(M.prosperity(m)), l0 = M.prosLv(m); if (l1 > l0) { m.prosLv = l1; this.save(); this.expandStart({ from: l0, to: l1 }); } }
   }
