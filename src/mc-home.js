@@ -96,7 +96,7 @@ G.endBack = function () {
   this.toBase();
   const steps = [], gifts = info.gifts || [], tiles = info.newTiles || [];
   // 1. the haul: resources and blueprints fly in, crystals land in the rock, keepsakes take effect
-  steps.push({ run: () => this.lootFly(gain, { x: 960, y: 560 }), wait: (gain.msup || gain.msh || gain.morb || (gain.bp || []).length || gain.exp) ? 2.2 : 0.3 });
+  steps.push({ run: () => this.lootFly(gain, { x: 960, y: 560 }), wait: (gain.msup || gain.msh || gain.morb || (gain.bp || []).length || gain.exp) ? 1.6 : 0.3 });
   tiles.forEach(t => steps.push(...this.tileReveal(t.c, t.r, t.t)));
   gifts.forEach((r, i) => steps.push({ run: () => { const p = r.cc != null ? this.cellPos(r.cc, r.cr) : r.door ? { x: 960, y: 250 } : { x: 960, y: 420 + (i % 3) * 60 }; this.fx.rays && this.fx.rays(p.x, p.y, r.col, 1.2, { r: 220 }); this.fx.pop(p.x, p.y - 40, r.n + ' · ' + r.t, r.col, 36); S.up && S.gain('relic'); }, wait: 0.8 }));
   if (info.coreHeal) steps.push({ run: () => { const p = this.fxPos('core') || this.corePos(); this.fx.rays(p.x, p.y, '#9cff7a', 1.4, { r: 200 }); this.fx.pop(p.x, p.y + 60, '基地核心 +1', '#9cff7a', 44); S.heal(); this.pulse.core = performance.now(); }, wait: 1.0 });
@@ -117,7 +117,9 @@ G.passDay = function () {
   m.portal.hp = Math.min(M.portalMax(m), m.portal.hp + M.portalMax(m) * 0.15); this.save();
   const ups = m._lvUps || []; m._lvUps = null; const steps = [];
   ups.forEach(u => steps.push({ run: () => { const h = m.heroes.find(x => x.id === u.id); if (!h) return; try { M.T && M.T.ev('lvup', { src: 'daily', lv: h.lv }); } catch (e) {} this.lvUpFx(h, u.lv0, h.lv, u.p0, M.heroPower(h, m)); }, until: () => !this.lvFx }));
-  logs.filter(l => l.c != null).forEach(l => steps.push({ run: () => { const p = this.cellPos(l.c, l.r); if (M.PXR) M.PXR.poke(l.c + ',' + l.r, 'built'); this.fx.rays(p.x, p.y, '#ffd060', 1.4, { r: 300 }); this.fx.pop(p.x, p.y - 40, l.t, '#ffe08a', 50, { slam: 1 }); this.fx.explode(p.x, p.y, '#ffd060', 1.6); if (/挖掘/.test(l.t)) S.digDone(); else S.buildDone(); }, wait: 1.0 }));
+  // finished rooms pop one after another in a single beat (was a full second each: 2026-09-27 playtest)
+  const built = logs.filter(l => l.c != null);
+  if (built.length) steps.push({ run: () => built.forEach((l, i) => setTimeout(() => { if (this.meta !== m) return; const p = this.cellPos(l.c, l.r); if (M.PXR) M.PXR.poke(l.c + ',' + l.r, 'built'); this.fx.rays(p.x, p.y, '#ffd060', 1.4, { r: 300 }); this.fx.pop(p.x, p.y - 40, l.t, '#ffe08a', 50, { slam: 1 }); this.fx.explode(p.x, p.y, '#ffd060', 1.6); if (/挖掘/.test(l.t)) S.digDone(); else S.buildDone(); }, i * 260)), wait: Math.min(1.9, 0.8 + 0.26 * (built.length - 1)) });
   const news = logs.filter(l => l.c == null && !/升到 Lv/.test(l.t || ''));
   if (news.length) steps.push({ run: () => news.forEach((l, i) => setTimeout(() => this.toast(l.t, '#9ccc6a'), i * 350)), wait: 0.4 + news.length * 0.35 });
   steps.push({ run: () => this.tlStart(from, m.day), until: () => !this.tlFx });

@@ -27,8 +27,8 @@ G.expandStart = function (up) {
   const m = this.meta, cells = [];
   for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) { const R = M.ringOf(c, r); if (R > up.from && R <= up.to) cells.push({ c, r, d: Math.abs(c - M.CORE.c) + r * 1.05 + (c < M.CORE.c ? 0 : 0.01) }); }
   cells.sort((a, b) => a.d - b.d);
-  const at = {}, W0 = 1.0, STEP = RM() ? 0.05 : 0.17; cells.forEach((o, i) => { o.at = W0 + 0.45 + i * STEP; at[o.c + ',' + o.r] = o.at; o.seed = (o.c * 7 + o.r * 13) % 11; });
-  const tEnd = (cells.length ? cells[cells.length - 1].at : W0) + 2.4;
+  const at = {}, W0 = 0.8, STEP = RM() ? 0.05 : 0.11; cells.forEach((o, i) => { o.at = W0 + 0.45 + i * STEP; at[o.c + ',' + o.r] = o.at; o.seed = (o.c * 7 + o.r * 13) % 11; });
+  const tEnd = (cells.length ? cells[cells.length - 1].at : W0) + 1.7;
   this.expand = { m, t: 0, up, cells, at, shards: [], W0, tEnd, fired: {}, t0: now() };
   if (this.bv) { this.bv.sel = null; this.bv.free = null; this.bv.tx = 1050; this.bv.ty = 470; this.bv.tz = 0.58; }
   S.creak && S.creak(); this.fx.kick(4); this.bump();

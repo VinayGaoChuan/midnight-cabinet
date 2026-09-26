@@ -169,7 +169,7 @@ G.startSettle = function () {
   if (!good) { title = '领袖倒下'; col = '#ff4a4a'; }
   if (good) {
     const sc = Math.round(score * (th.wallet || 1)); this.hold('wallet', run.wallet); run.wallet += sc; tiles.push({ icon: 'coin', v: M.fmt(sc), c: '#ffcc33', to: 'wallet' });
-    const sup = Math.round((8 + 4 * cfg.w) * run.lootMul * (1 + (run.mods.supplies || 0)) * (th.sup || 1)); this.hold('rsup', run.loot.supplies); run.loot.supplies += sup; tiles.push({ icon: 'sack', v: sup, c: '#e8c86a', to: 'rsup' });
+    const sup = Math.round((10 + 2.5 * cfg.w) * run.lootMul * (1 + (run.mods.supplies || 0)) * (th.sup || 1)); this.hold('rsup', run.loot.supplies); run.loot.supplies += sup; tiles.push({ icon: 'sack', v: sup, c: '#e8c86a', to: 'rsup' });
     const ex = Math.round((b.kills * 3 + 10 * cfg.w) * (1 + (run.mods.exp || 0)) * (th.exp || 1)); this.hold('rexp', run.loot.exp); run.loot.exp += ex; tiles.push({ icon: 'orb', v: ex, c: '#9cff7a', to: 'rexp' });
     if (th.shards) { const sh = Math.round((2 + cfg.w * 1.5) * (n.type === 'boss' ? 4 : n.type === 'elite' ? 2 : 1)); this.hold('rshard', run.loot.shards); run.loot.shards += sh; tiles.push({ icon: 'shard', v: sh, c: '#d8a0ff', to: 'rshard' }); }
     const bpHold = () => this.hold('rbp', run.loot.bp.length);

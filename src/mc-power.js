@@ -38,7 +38,8 @@ function tuneBoss(run, node, cfg) {
   // the first segment's boss meets an army of ~5 bought at one shop: it is only as strong as an elite there
   const first = (node.seg || 0) === (run.startSeg || 0), target = el * (node.fb || (node.final && !run.chap) ? M.BOSS_TF : first ? M.BOSS_T0 : M.BOSS_TM); let lo = 0.02, hi = 40;   /* the first boss of a run meets an army of one shop */   // a boss fights alone (2026-09-26): its scale can run far from its table values
   for (let k = 0; k < 18; k++) { const f = (lo + hi) / 2; bs.forEach(s => { s.hpMul = f; s.atkMul = f; }); if (M.powerOf(M.sideE(run, cfg)) > target) hi = f; else lo = f; }
-  const f = +((lo + hi) / 2).toFixed(3); bs.forEach(s => { s.hpMul = f; s.atkMul = f; }); return cfg;
+  const f = +((lo + hi) / 2).toFixed(3), fb = !!(node.fb || (node.final && !run.chap)), k = fb ? M.FB_SKEW : 1;
+  bs.forEach(s => { s.hpMul = +(f * k).toFixed(3); s.atkMul = +(f / k).toFixed(3); }); return cfg;
 }
 const rollCfg = (run, node) => { const cfg = oCfg.call(M, run, node); return node && node.type === 'boss' ? tuneBoss(run, node, cfg) : cfg; };
 // a fight on the map is rolled once, the first time anything looks at it: the number shown is the fight you get
@@ -57,7 +58,10 @@ M.BOSS_SHOW = 1.05;
 M.MB_SHOW = 1.26; M.FB_SHOW = 0.92;
 // how strong a boss is, against the elite fight at the same stop (2026-09-26 growth sims, tools/prog.js): the first small
 // boss 0.75× (the army has seen one shop), later small bosses 1.0×, the final boss 1.15×
-M.BOSS_T0 = 0.75; M.BOSS_TM = 1.0; M.BOSS_TF = 1.15;
+M.BOSS_T0 = 0.75; M.BOSS_TM = 1.0; M.BOSS_TF = 1.25;
+// a final boss had too much life for what it hits (2026-09-27 playtest: median 62 s, a third over 90 s, up to 4 minutes,
+// and still won almost every time): the same power, less life and harder blows (power = √(life × damage) is kept)
+M.FB_SKEW = 0.45;
 // every fight shows 15% stronger since the leader lost its field skill and units throw each other (2026-09-26,
 // .ai/sim-kb.js: a shown 1.0–1.15 had dropped to ~40% wins; ×1.15 brings the colours back to their promise)
 M.E_SHOW = 1.15;

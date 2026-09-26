@@ -452,6 +452,7 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
   // the main base (user ruling 2026-09-25): on the surface, a storehouse hall whose gate is the portal. The wings are
   // the warehouse (click: the stock), the gate is the portal (click: the worlds); monsters of a 混沌来袭 attack it
   // the pixel main base (mc-pxroom-base.js) is the building, the portal gate and the shaft head in one lit piece
+  (M.BASE_HOOKS || []).forEach(h => h(ctx, meta, bv, lights, 'behind', opts));   // the city behind the main base (mc-town.js)
   const pH = meta.portal.hp / M.portalMax(meta), U = M.UI, po = bv.po || 0;
   if (M.PXR && M.PXR.has('_mainbase')) { M.PXR.mainBase(ctx, bv, t, meta); if (bv.hover && bv.hover.wing) frameIn(ctx, DOOR_X - MB.w / 2 - 10, MB.top - 80, MB.w + 20, -MB.top + 88, 3 / bv.z, PP.butter); }
   else {
@@ -506,7 +507,7 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
     const x = M.cell(meta, c, r), a = bv.toScreen(cellX(c), cellY(r)), b = bv.toScreen(cellX(c) + CW, cellY(r) + CH);
     if (b.x < -80 || a.x > 2000 || b.y < -80 || a.y > 1160) continue;
     const hot = bv.hoverIc && bv.hoverIc.c === c && bv.hoverIc.r === r ? bv.hoverIc.k : null;
-    if (x.b) { const B = BUILDINGS[x.b], st = M.TAG.style(B.style), ct = M.TAG.cat(B.cat);   // style top-left (繁荣度 perks build on it), category bottom-right
+    if (x.b) { const B = BUILDINGS[x.b], st = M.TAG.style(B.style), ct = M.TAG.cat(B.cat);   // style top-left (发展方向 build on it), category bottom-right
       if (st && x.b !== 'core') badge(st.icon, a.x + pad, a.y + pad, st.c, { tag: st, key: x.b, c, r }, hot === 's'); if (ct) badge(ct.icon, b.x - pad - S, b.y - pad - S, ct.c, { tag: ct, key: x.b, c, r }, hot === 'f'); }
     else if (x.job) { const cx = (a.x + b.x) / 2; badge(x.job.kind === 'dig' ? 'u_pick' : 'u_hammer', cx - S - 4, b.y - pad - S, PP.gold, { job: 1, c, r }, hot === 'j');
       // 剩余天数：墨框深渊小窗 + 金色机台数码

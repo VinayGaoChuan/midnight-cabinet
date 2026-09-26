@@ -100,8 +100,9 @@ mc-revive.js
 mc-faith.js
 mc-visit.js
 mc-prosper.js
-mc-perks.js
+mc-dirs.js
 mc-town.js
+mc-townlook.js
 mc-siege.js
 mc-knock.js
 mc-omen.js

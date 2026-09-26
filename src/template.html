@@ -983,6 +983,7 @@
         </div>
         <sc-if value="{{pn.isWeapon}}"><div style="font-size:24px;color:#ff9aa8;line-height:1.4">{{pn.reachTxt}}</div></sc-if>
         <sc-if value="{{pn.ruinOn}}" hint-placeholder-val="{{false}}"><div style="font-size:24px;color:#ff8a6a;line-height:1.4">{{pn.ruinTxt}}</div><div sc-camel-on-click="{{pn.onRepair}}" data-pj="key teal cta" style="padding:14px 0 20px;text-align:center;font-size:30px;opacity:{{pn.repairOp}}">{{pn.repairBtn}}</div></sc-if>
+        <sc-if value="{{pn.fortOn}}" hint-placeholder-val="{{false}}"><div data-tip="p-fort" style="font-size:22px;color:#a9a3c9;line-height:1.4">{{pn.fortTxt}}</div><sc-if value="{{pn.fortCan}}"><div sc-camel-on-click="{{pn.onFort}}" data-pj="key gold" style="padding:12px 0 18px;text-align:center;font-size:28px;opacity:{{pn.fortOp}}">{{pn.fortBtn}}</div></sc-if></sc-if>
         <sc-if value="{{pn.demoOn}}" hint-placeholder-val="{{false}}"><div sc-camel-on-click="{{pn.onDemo}}" data-pj="ring" style="--q:{{pn.demoC}};padding:10px 0;text-align:center;font-size:24px;color:{{pn.demoC}}" style-hover="translate:0 -3px" style-active="transform:translateY(4px)">{{pn.demoBtn}}</div></sc-if>
         <sc-if value="{{pn.isCore}}">
           <div style="font-size:30px;color:#ffcf4a">仓库 · {{pn.invN}}</div>
@@ -1452,6 +1453,23 @@
     </div>
   </div></sc-if>
 </div></sc-if>
+<sc-if value="{{dirOn}}" hint-placeholder-val="{{false}}"><div data-g="dirs" sc-camel-on-click="{{stop}}" style="position:absolute;inset:0;z-index:67;background:rgba(7,6,15,0.8)">
+  <div data-pj="dither" data-enter="fade" style="position:absolute;inset:0;opacity:0.4;pointer-events:none"></div>
+  <div data-enter="drop" style="position:absolute;left:0;right:0;top:110px;display:flex;flex-direction:column;align-items:center;gap:14px">
+    <div style="font-size:56px;color:#ffcf4a;text-shadow:4px 0 0 #07060f,-4px 0 0 #07060f,0 4px 0 #07060f,0 -4px 0 #07060f,4px 4px 0 #07060f,0 8px 0 #07060f"><mc-wave t="{{dp.title}}"></mc-wave></div>
+    <div style="font-size:32px;color:#e8dcc4;text-shadow:3px 3px 0 #07060f">{{dp.line}}</div>
+  </div>
+  <div data-enter-rows="1" style="--rd:.14s;position:absolute;left:0;right:0;top:290px;display:flex;justify-content:center;gap:90px">
+    <sc-for list="{{dp.cards}}" as="dc" hint-placeholder-count="2">
+      <div data-pj="opt" data-fx="{{dc.fx}}" sc-camel-on-click="{{dc.onPick}}" style="width:660px;box-sizing:border-box;padding:30px 30px 34px;display:flex;flex-direction:column;align-items:center;gap:14px;--q:{{dc.c}};opacity:{{dc.op}}">
+        <m-img src="{{dc.img}}" style="width:600px;height:300px"></m-img>
+        <div style="font-size:54px;color:{{dc.c}};text-shadow:4px 4px 0 #07060f"><span data-pj="cur" style="font-size:36px;margin-right:12px">▶</span>{{dc.n}}</div>
+        <div style="font-size:30px;line-height:42px;color:#f4efe0;text-align:center;min-height:84px;text-wrap:balance">{{dc.t}}</div>
+        <sc-if value="{{dc.hasSub}}"><div style="font-size:22px;color:#a9a3c9">{{dc.sub}}</div></sc-if>
+      </div>
+    </sc-for>
+  </div>
+</div></sc-if>
 <sc-if value="{{lockOn}}" hint-placeholder-val="{{false}}"><div data-g="lock" sc-camel-on-click="{{lockClick}}" style="position:absolute;inset:0;z-index:70"></div></sc-if>
 <sc-if value="{{miniOn}}" hint-placeholder-val="{{false}}"><div style="position:absolute;z-index:60;left:0;top:828px;width:1920px;display:flex;justify-content:center;gap:22px;pointer-events:none">
   <sc-for list="{{mini.btns}}" as="mn" hint-placeholder-count="0"><div data-minibtn="1" sc-camel-on-click="{{mn.onClick}}" data-pj="key {{mn.k}}" style="pointer-events:auto;min-width:230px;max-width:420px;box-sizing:border-box;padding:12px 26px 20px;display:flex;flex-direction:column;align-items:center;gap:2px;opacity:{{mn.op}}"><span style="font-size:34px;line-height:1.1;white-space:nowrap">{{mn.t}}</span><sc-if value="{{mn.hasSub}}"><span style="font-size:20px;opacity:0.8;text-align:center">{{mn.sub}}</span></sc-if></div></sc-for>
@@ -1542,7 +1560,7 @@ class Component extends DCLogic {
     const on = (fn) => (e) => { if (g) fn(e); };
     const base = { scale: this.state.scale, stageRef: this.stageRef, introRef: this.introRef, roomRef: this.roomRef, isRoom: false, rm: {}, fieldRef: this.fieldRef, worldRef: this.worldRef, baseRef: this.baseRef, fxRef: this.fxRef,
       loading: !g, loadErr: !!this.loadErr, retryLoad: () => location.reload(), shx: 0, shy: 0,
-      isIntro: false, isMenu: false, isBase: false, isRaid: false, isWorld: false, isBattle: false, isShop: false, isEnd: false, isOver: false, modalOn: false, settleOn: false, coverOn: false, lockOn: false, lockClick: () => {}, pickOn: false, pickCancel: () => {}, pnZ: 'auto', visitOn: false, vs: { opts: [] }, coachOn: false, tipOn: false, toastOn: false, pnOn: false, w: null, rulesOpen: !!this.rulesOpen || !!(g && g.rulesOpen), showMute: false,
+      isIntro: false, isMenu: false, isBase: false, isRaid: false, isWorld: false, isBattle: false, isShop: false, isEnd: false, isOver: false, modalOn: false, settleOn: false, coverOn: false, lockOn: false, lockClick: () => {}, pickOn: false, pickCancel: () => {}, pnZ: 'auto', visitOn: false, vs: { opts: [] }, dirOn: false, dp: { cards: [] }, coachOn: false, tipOn: false, toastOn: false, pnOn: false, w: null, rulesOpen: !!this.rulesOpen || !!(g && g.rulesOpen), showMute: false,
       stop: (e) => e.stopPropagation(), tipOff: on(() => { g.tipData = null; g.tipKey = null; g.tipPrev = null; }), fxZ: 'auto',
       onMove: on((e) => { const p = this.sp(e); g.mx = p.x; g.my = p.y; g.tiltMove(p.x, p.y); }), shr: 0,
       onPress: on((e) => { M.Sfx.init(); const p = this.sp(e); g.uiPress(e.target, p.x, p.y); }),

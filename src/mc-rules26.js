@@ -17,14 +17,19 @@ if (B_.michel) Object.assign(B_.michel, { wall: 1, d: '地面上的要塞城墙�
 // the other defences now stand on the surface (mc-siege.js): their words say so
 const D26 = { ballista: '地面上的弩塔，守城时射箭。', cannon: '地面上的炮台，炮弹落地溅射。', tesla: '地面上的线圈塔，电弧在敌人之间跳跃。', spire: '地面上的法师塔，命中的敌人减速。', colossus: '地面上的巨像，拳头砸向来犯的怪物。', zeus: '地面上的神像，召唤落雷连锁 4 个敌人。', kotoku: '守城时 2 名武僧出城迎敌。', terracotta: '守城时 4 名陶俑士兵出城迎敌。', eiffel: '每天产出 4 灵魂碎片，所有防御塔伤害 +30%。' };
 Object.keys(D26).forEach(k => { if (B_[k]) B_[k].d = D26[k]; });
+// two more fighting buildings (user ruling 2026-09-27: 「战斗类建筑会被攻击，城墙，防御罩，古树」)
+B_.dome = { n: '防御罩', q: 1, cat: 'defense', style: 'scifi', pw: 0, cost: 220, days: 2, shield: 1, d: '守城时罩住附近的建筑和主基地，先由护罩挨打。' };
+B_.elder = { n: '守望古树', q: 1, cat: 'defense', style: 'nature', pw: 0, cost: 180, days: 2, wall: 1, elder: 1, d: '地面上的古树，挡住怪物；一阵没人打它，伤口就慢慢长好。' };
 // what a room is in the town on the surface: wall (outermost, blocks), guard (sends soldiers out), tower (shoots),
-// civil (everything else: works, lives, needs protecting)
-M.townRole = function (key) { const B = B_[key]; if (!B || key === 'core') return null; if (B.wall) return 'wall'; if (B.fx && B.fx.defArmy) return 'guard'; if (B.weapon) return 'tower'; return 'civil'; };
+// shield (a dome over the middle of the town); everything else is civil: the city behind the fighting line, which
+// monsters walk past (user ruling 2026-09-27: 非战斗类建筑都是背景，不会被攻击，无法被点击)
+M.townRole = function (key) { const B = B_[key]; if (!B || key === 'core') return null; if (B.wall) return 'wall'; if (B.shield) return 'shield'; if (B.fx && B.fx.defArmy) return 'guard'; if (B.weapon) return 'tower'; return 'civil'; };
+M.townFights = (key) => { const r = M.townRole(key); return !!r && r !== 'civil'; };
 // a weapon's reach on the surface, measured from its tower (the old "range" in rows becomes distance)
 M.towerRange = (w) => 240 + (w.range || 2) * 110;
 M.weaponReach = () => null;   // the old reach (surface columns covered from below) is gone
 // life of the surface building: by role, then quality
-const HP_ROLE = { wall: 2400, guard: 1400, tower: 1000, civil: 600 };
+const HP_ROLE = { wall: 2400, guard: 1400, tower: 1000, shield: 1200, civil: 0 };
 M.townHp = function (key) { const B = B_[key], role = M.townRole(key); if (!role) return 0; return Math.round(HP_ROLE[role] * (1 + 0.6 * (B.q || 0))); };
 
 // the main base holds out longer now that the town, not the leader, defends it (1000 → 2400; old saves keep their share)
@@ -35,7 +40,7 @@ M.portalMax = (m) => Math.round(M.PORTAL_BASE * (1 + (M.baseMods(m).portalHp || 
 // every standing room adds by its quality (the better, the more; the numbers are never shown). Levels open the rings of
 // the base one by one: Lv1 the ring around the lift, Lv4 the whole rock.
 M.PROS_Q = [10, 25, 45, 70];
-// Lv5–9 open no more rock: each level brings a 繁荣度 perk (user ruling 2026-09-26, mc-perks.js)
+// Lv5–9 open no more rock: each level brings a 发展方向 (user ruling 2026-09-27, mc-dirs.js)
 M.PROS_LV = [0, 40, 120, 260, 420, 620, 860, 1150, 1500];
 M.PROS_MAX = M.PROS_LV.length; M.PROS_RINGS = 4;
 M.prosperity = function (m) {
@@ -102,7 +107,7 @@ M.advanceDay = function (m) {
 // ───────── old saves: a core, a prosperity level that keeps everything already dug in the light ─────────
 M.prosFix = function (m) {
   let ch = false, ring = 1;
-  for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) { const x = m.base.cells[r][c]; if (x.dug || x.b || x.job) ring = Math.max(ring, M.ringOf(c, r)); if (x.ruin != null && typeof x.ruin !== 'boolean') { x.ruin = !!x.ruin; ch = true; } }
+  for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) { const x = m.base.cells[r][c]; if (x.dug || x.b || x.job) ring = Math.max(ring, M.ringOf(c, r)); if (x.ruin != null && typeof x.ruin !== 'boolean') { x.ruin = !!x.ruin; ch = true; } if (x.ruin && x.b && !M.townFights(x.b)) { x.ruin = false; ch = true; } }   // only fighting buildings fall now
   const want = Math.min(M.PROS_MAX, Math.max(ring, M.prosLvOf(M.prosperity(m))));
   if (typeof m.prosLv !== 'number' || m.prosLv < want || m.prosLv > M.PROS_MAX) { m.prosLv = want; ch = true; }
   if (m.prosUp && typeof m.prosUp !== 'object') { delete m.prosUp; ch = true; }

@@ -15,7 +15,7 @@ M.FAIL_EXP = 0.5;
 G.runFail = function () {
   const m = this.meta, run = this.run, h = run.hero, tut = !!(run.region && run.region.tut);
   // half of what the leader learned on the way stays with it (2026-09-26: a lost run still moves you on)
-  const ex = tut ? 0 : Math.round(((run.loot && run.loot.exp) || 0) * Math.min(1, M.FAIL_EXP + (M.baseMods(m).failExp || 0)));   // 守墓人的墓园 keeps it all if (ex > 0) M.addExp(h, ex);
+  const ex = tut ? 0 : Math.round(((run.loot && run.loot.exp) || 0) * Math.min(1, M.FAIL_EXP + (M.baseMods(m).failExp || 0)));   /* 守墓人的墓园 keeps it all */ if (ex > 0) M.addExp(h, ex);
   const mx = M.heroMaxHp(h, m);
   // 信仰值 (mc-faith.js): with enough of it, faith pays for the leader instead of a heart of the core
   const before = m.core == null ? M.CORE_MAX : m.core, fc = M.RITE_FAITH || 30, byFaith = !tut && before > 0 && M.faithOn && M.faithOn(m) && (m.faith || 0) >= fc, after = tut || byFaith ? before : Math.max(0, before - 1);

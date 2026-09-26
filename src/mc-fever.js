@@ -163,7 +163,7 @@ G.view = function () {
 if (M.ITEMS) G.useSlot = function () {};   // Q W E no longer do anything
 const oAward = G.award;
 G.award = function (list, from) {
-  const run = this.run; (list || []).forEach(g => { if (g && (g.k === 'item' || g.k === 'legion') && run) { g.v = Math.round(45 * (1 + (g.q || 0)) * (M.priceMul ? M.priceMul(run) : 1)); g.k = 'wallet'; }   // a better roll pays more });
+  const run = this.run; (list || []).forEach(g => { if (g && (g.k === 'item' || g.k === 'legion') && run) { g.v = Math.round(45 * (1 + (g.q || 0)) * (M.priceMul ? M.priceMul(run) : 1)); g.k = 'wallet'; } });   // a better roll pays more
   return oAward.call(this, list, from);
 };
 const oChest = G.openChest;

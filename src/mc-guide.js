@@ -36,8 +36,8 @@ const bvIcon = (g, pred) => { const i = (g.bv && g.bv.icons || []).find(o => o.t
 const nextNode = (g) => { const run = g.run, w = g.walker; if (!run || !w || w.edge) return null; const outs = M.nodeAhead(run.map, w.node); if (!outs.length) return null; const n = run.map.nodes[outs[0].b]; if (!n) return null; const x = 960 + (n.x - w.camX), y = 560 + (n.y - 60 - w.camY); return { x: x - 60, y: y - 70, w: 120, h: 120 }; };
 // the surface town and the dark rock: rectangles on the stage (mc-town.js / mc-prosper.js)
 const townRect = (g, pred) => { const T = g.town, bv = g.bv; if (!T || !bv || g.panel) return null; const vs = Object.values(T.vis).filter(pred); if (!vs.length) return null;
-  const x0 = Math.min(...vs.map(v => v.x - v.w * (v.sc || 1) / 2)), x1 = Math.max(...vs.map(v => v.x + v.w * (v.sc || 1) / 2)), y0 = -Math.max(...vs.map(v => v.h * (v.sc || 1))) - 10;
-  const a = bv.toScreen(x0, y0), b = bv.toScreen(x1, 0); const r = { x: Math.max(20, a.x), y: Math.max(110, a.y), w: 0, h: 0 }; r.w = Math.min(1900, b.x) - r.x; r.h = b.y - r.y; return r.w > 20 && r.h > 20 ? r : null; };
+  const x0 = Math.min(...vs.map(v => v.x - v.w * (v.sc || 1) / 2)), x1 = Math.max(...vs.map(v => v.x + v.w * (v.sc || 1) / 2)), y0 = Math.min(...vs.map(v => (v.y || 0) - v.h * (v.sc || 1))) - 10, y1 = Math.max(...vs.map(v => v.y || 0));
+  const a = bv.toScreen(x0, y0), b = bv.toScreen(x1, y1); const r = { x: Math.max(20, a.x), y: Math.max(110, a.y), w: 0, h: 0 }; r.w = Math.min(1900, b.x) - r.x; r.h = b.y - r.y; return r.w > 20 && r.h > 20 ? r : null; };
 const lockedRect = (g) => { const m = g.meta, bv = g.bv; if (!m || !bv || g.panel || !M.lockedCell) return null; const G_ = M.BASE_GEO;
   for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) if (M.lockedCell(m, c, r)) { const a = bv.toScreen(c * G_.CW, G_.TOP + r * G_.CH), b = bv.toScreen((c + 1) * G_.CW, G_.TOP + (r + 1) * G_.CH); if (a.x > 0 && b.x < 1920 && b.y < 1080 && a.y > 100) return { x: a.x, y: a.y, w: b.x - a.x, h: b.y - a.y }; }
   return null; };
@@ -54,8 +54,8 @@ const CONCEPTS = [
   { id: 'shard', cat: '基地', img: () => sprite('shard'), title: '灵魂碎片', line: '高端材料：建史诗 / 传说建筑、精铸宝物时要用。主要在守城时击杀怪物得到。', scr: 'base', sel: '[data-fx="msh"]' },
   { id: 'core', cat: '基地', icon: 't_heart', title: '基地核心', line: '三颗心：探索失败时献出一颗救回领袖，通关一个场景补回一颗；心用完这一局就结束。', scr: 'base', sel: '[data-tip="b-core"]' },
   { id: 'pros', cat: '基地', icon: 't_pros', title: '繁荣度', line: '造的建筑品质越高，繁荣度涨得越多；升一级，地块向外扩一圈。', scr: 'base', sel: '[data-tip="b-pros"]' },
-  { id: 'town', cat: '基地', icon: 'f_defense', title: '地面城镇', line: '地下每建一座建筑，地面就升起一座；它们自己排好：城墙在最外，塔在中间，民房在里面。', scr: 'base', at: (g) => townRect(g, () => true), when: (g) => !!(g.town && Object.keys(g.town.vis).length) },
-  { id: 'ruin', cat: '基地', icon: 'u_hammer', title: '损毁', line: '守城时被打塌的建筑，修好之前不起作用；点它的房间修复。', scr: 'base', at: (g) => townRect(g, v => v.ruin), when: (g) => !!(g.town && Object.values(g.town.vis).some(v => v.ruin)) },
+  { id: 'town', cat: '基地', icon: 'f_defense', title: '地面城镇', line: '地下每建一座建筑，地面就升起一座：前排是会挨打的战斗建筑，后面是城市。', scr: 'base', at: (g) => townRect(g, () => true), when: (g) => !!(g.town && Object.keys(g.town.vis).length) },
+  { id: 'ruin', cat: '基地', icon: 'u_hammer', title: '损毁', line: '守城时被打塌的战斗建筑，修好之前不起作用；点它的房间修复。', scr: 'base', at: (g) => townRect(g, v => v.ruin), when: (g) => !!(g.town && Object.values(g.town.vis).some(v => v.ruin)) },
   { id: 'locked', cat: '基地', icon: 't_pros', title: '未解锁的地块', line: '黑色的地块还没解锁，繁荣度升级后才能挖。', scr: 'base', at: (g) => lockedRect(g) },
   { id: 'heroes', cat: '领袖', icon: 't_command', title: '领袖', line: '你的化身：出征带队，守城时站在主基地屋顶指挥。点卡片看天赋；卡片上的黄点 = 有没用的天赋点。', scr: 'base', sel: '[data-fx="heroes"]' },
   { id: 'rock', cat: '基地', icon: 'u_pick', title: '挖掘', line: '点和房间相邻的岩层，花物资和天数挖开，挖通才能建房间。', scr: 'base', sel: '[data-g="dig"]' },
@@ -92,6 +92,7 @@ const CONCEPTS = [
   { id: 'shop', cat: '夜市', icon: 'e_market', title: '商店', line: '每家店卖的部队不一样，招牌旁边写着它的特点和代价。点自己的部队可以半价卖掉。', scr: 'shop', sel: '[data-g="shop-units"]' },
   // ── 守城 ──
   { id: 'raidfield', cat: '守城', icon: 'f_defense', title: '防御塔', line: '地下每建一座防御建筑，地面就升起一座，守城时它自己开火。', scr: 'raid', at: (g) => townRect(g, v => v.role === 'tower') },
+  { id: 'dome', cat: '守城', icon: 'f_defense', title: '防御罩', line: '罩住的建筑和主基地先由护罩挨打；护罩破了，过一会儿会恢复。', scr: 'raid', at: (g) => townRect(g, v => v.role === 'shield'), when: (g) => !!(g.raid && g.raid.domes && g.raid.domes.length) },
 ];
 M.GUIDE = CONCEPTS;
 const seen = (() => { try { return JSON.parse(localStorage.getItem(K_SEEN) || '{}') || {}; } catch (e) { return {}; } })();

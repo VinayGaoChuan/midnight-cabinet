@@ -13,7 +13,7 @@ const M = window.MC, G = M.Game.prototype, S = M.Sfx, U = M.UI, P = M.PJ.PAL, no
 const cl = (v, a, b) => Math.max(a, Math.min(b, v)), eo = (q) => 1 - Math.pow(1 - q, 3), eback = (q) => { const c = 1.7; return 1 + (c + 1) * Math.pow(q - 1, 3) + c * Math.pow(q - 1, 2); };
 const RM = () => !!(M.PJ && M.PJ.reduced);
 const WX = 600, WY = 150, WW = 720, WH = 440, GY = WY + 356, GATE = WX + 160, STAND = WX + 400;   // window; ground line; gate; where the visitor stands
-const T_OPEN = 0.4, T_IN = 1.7, T_REACT = 1.35, T_OUT = 1.5, T_CLOSE = 0.35;
+const T_OPEN = 0.4, T_IN = 1.3, T_REACT = 1.2, T_OUT = 1.1, T_CLOSE = 0.3;   // 2026-09-27: a little quicker (the homecoming ran long)
 const EV = M.DAYEV;
 
 // ───────── the calendar's events become visitors ─────────
@@ -214,7 +214,7 @@ M.drawVisit = function (x, g) {
     if (react > 0.15 && react < T_REACT - 0.1 && o.say) bubble(x, o.say, nx, head - (o.react === 'sad' ? 60 : 10));
   } else if (V.ph === 'wait') { const b = Math.floor(T * 2) % 2; U.R(x, nx - 3, head + (b ? 0 : 3), 6, 6, P.gold); }   // waiting for you
   // particles: coins, sparks
-  V.parts.forEach(p => { const u = T - p.t0, px = p.x + p.vx * u, py = p.y + p.vy * u + (p.k === 'coin' ? 700 : -40) * u * u;   // coins fall, sparks drift up if (py > WY + WH) return; x.save(); x.globalAlpha *= cl(1 - u / 1.2, 0, 1);
+  V.parts.forEach(p => { const u = T - p.t0, px = p.x + p.vx * u, py = p.y + p.vy * u + (p.k === 'coin' ? 700 : -40) * u * u;   /* coins fall, sparks drift up */ if (py > WY + WH) return; x.save(); x.globalAlpha *= cl(1 - u / 1.2, 0, 1);
     if (p.k === 'coin') { U.R(x, px - 6, py - 6, 12, 12, P.gold); U.R(x, px - 3, py - 6, 6, 3, P.butter); } else U.R(x, px - 4, py - 4, 8, 8, u < 0.4 ? P.butter : P.violet); x.restore(); });
   x.restore();
   // the window's name plate

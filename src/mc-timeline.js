@@ -7,7 +7,7 @@
 // land one by one and the next 混沌来袭 is called out. An event on the new day happens right after the frame moves.
 const M = window.MC, G = M.Game.prototype, S = M.Sfx, cl = (v, a, b) => Math.max(a, Math.min(b, v));
 // round day nodes with three small dots between (user ruling 2026-09-25): a passing day lights the dots one by one
-const DAYS = 10, CW = 52, GAP = 50, PITCH = CW + GAP, NDOT = 3, TLX = 560, TLY = 6, STEP_D = 1.5, EV_D = 2.9, BIG_D = 4.8;
+const DAYS = 10, CW = 52, GAP = 50, PITCH = CW + GAP, NDOT = 3, TLX = 560, TLY = 6, STEP_D = 1.5, EV_D = 2.3, BIG_D = 4.4;
 const EV = {
   raid:     { n: '混沌来袭', ic: 'e_skull', c: '#e8434f', d: '怪物攻打主基地，领袖出来守城。' },
   merchant: { n: '流浪商人', ic: 't_coin', c: '#ffcf4a', d: '用物资或碎片，换随机的好东西。', w: 5 },
@@ -47,7 +47,7 @@ function cells(g, m, first, n) {
   const out = []; for (let i = 0; i < n; i++) {
     const d = first + i, k = shownOn(m, d), E = k && EV[k], past = d < m.day || (d === m.day && k === 'raid' && m.lastRaid === d), today = d === m.day && !past, tom = d === m.day + 1;
     out.push({ d, k, E, past, x: i * PITCH, num: String(d), lab: today ? '今天' : tom ? '明天' : '', c: E ? E.c : '#3d3a8c', dc: today ? '#ffcf4a' : E ? E.c : '#a9a3c9', hasIc: !!E, noIc: !E, ic: E ? IC(E.ic) : '',
-      tipOn: g.tipFn(() => (E ? { title: E.n, c: E.c, icon: E.ic, d: E.d, lines: [{ t: past ? '已经过去' : today ? '今天' : '第 ' + d + ' 天（' + (d - m.day) + ' 天后）', c: '#a9a3c9' }] } : { title: today ? '今天 · 第 ' + d + ' 天' : '第 ' + d + ' 天', c: '#ffcf4a', d: past ? '已经过去。' : today ? '' : '这一天没有事件。' })),
+      tipOn: g.tipFn(() => (E ? { title: E.n, c: E.c, icon: E.ic, d: E.d, lines: [{ t: past ? '已经过去' : today ? '今天' : '第 ' + d + ' 天（' + (d - m.day) + ' 天后）', c: '#a9a3c9' }].concat(k === 'raid' && !past && d === M.nextRaid(m) && M.raidOddsLine ? [M.raidOddsLine(m)] : []) } : { title: today ? '今天 · 第 ' + d + ' 天' : '第 ' + d + ' 天', c: '#ffcf4a', d: past ? '已经过去。' : today ? '' : '这一天没有事件。' })),
       op: past ? 0.45 : 1, dy: 0, sc: 1, stamp: past, stampSc: 1 });
   }
   return out;

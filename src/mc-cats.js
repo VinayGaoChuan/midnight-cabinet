@@ -8,7 +8,7 @@
 //   工程 digging, building and the rock.
 // · Two rooms doing the same thing was a bug: 水培农场 (= 蒸汽工坊) now heals, 亚历山大灯塔 (= 自由女神像) now scouts,
 //   马拉卡纳 (= 图书馆) now toughens the army; 大本钟 and 埃菲尔铁塔 keep one job each.
-// · Styles: hidden for a while, back since 繁荣度 perks strengthen them (mc-perks.js); world drops go by category.
+// · Styles: hidden for a while, back since 发展方向 strengthen them (mc-dirs.js); world drops go by category.
 // Loaded after mc-solo.js (which rewrote rooms for the one leader) and before mc-save.js.
 const M = window.MC, B = M.BUILDINGS, T_ = M.TILES, IC = M.IC;
 
@@ -51,7 +51,7 @@ M.tagWord = function (s, i, ctx) {
 };
 if (M.GUIDE) M.GUIDE.push({ id: 'bcat', cat: '基地', icon: 'f_eng', title: '建筑大类', line: '建筑按用途分九类：生产、仓储、工坊、信仰、医疗、训练、防御、侦察、工程。房间右下角的图标就是它的大类。', scr: 'base', sel: '[data-g="nothing"]' },
   { id: 'forgeon', cat: '房间', icon: 'f_forge', title: '工坊与宝物图纸', line: '建了工坊类建筑，出征才会掉宝物图纸。', scr: 'base', sel: '[data-g="nothing"]' });
-M.STYLE_SHOWN = true;   // styles are back (2026-09-26): 繁荣度 perks strengthen a style (mc-perks.js)
+M.STYLE_SHOWN = true;   // styles are back (2026-09-26): 发展方向 strengthen a style (mc-dirs.js)
 // 工坊 unlocks relic blueprints: without a workshop none drops, none is sold, none is given (mc-bp.js keeps the drops honest)
 M.forgeOn = (m) => !!(m && M.hasBuilt && M.hasBuilt(m, X => !!X.forge));   // 「未来有用的时候再开」: the style badges come back by turning this on (and their template slots)
 
@@ -88,7 +88,7 @@ Object.keys(B).forEach(k => { const b = B[k]; if (b.gone || k === 'core' || ORDE
 
 // ───────── no terrain (user ruling 2026-09-26: 「给建筑搬家，听着就很繁琐，把地形效果都去掉吧」) ─────────
 // The rock has no special veins any more: a new base gets none, an old save loses the ones it had (M.soloFix runs in the
-// save check), and nothing hands out 地脉结晶. Building choices come from categories and styles (mc-perks.js).
+// save check), and nothing hands out 地脉结晶. Building choices come from categories and styles (mc-dirs.js).
 M.TERRAIN_OFF = true;
 M.newBase = function () {
   const cells = [], CO = M.CORE; for (let r = 0; r < M.BROWS; r++) { cells[r] = []; for (let c = 0; c < M.BCOLS; c++) cells[r][c] = { dug: false, tile: null, b: null, job: null }; }

@@ -135,7 +135,7 @@ Object.assign(G, {
     if (!good) { title = '领袖倒下'; col = '#ff4a4a'; }
     if (good) {
       run.wallet += score; lines.push({ t: '积分 +' + M.fmt(score), c: '#ffcc33', icon: 'coin' });
-      const sup = Math.round((8 + 4 * cfg.w) * run.lootMul * (1 + (run.mods.supplies || 0))); run.loot.supplies += sup; lines.push({ t: '物资 +' + sup, c: '#caa84a', icon: 'sack' });
+      const sup = Math.round((10 + 2.5 * cfg.w) * run.lootMul * (1 + (run.mods.supplies || 0))); run.loot.supplies += sup; lines.push({ t: '物资 +' + sup, c: '#caa84a', icon: 'sack' });
       const ex = Math.round((b.kills * 3 + 10 * cfg.w) * (1 + (run.mods.exp || 0))); run.loot.exp += ex; lines.push({ t: '经验 +' + ex + '（带回基地生效）', c: '#9cff7a', icon: 'orb' });
       const pb = n.type === 'boss' ? 1 : n.type === 'elite' ? 0.45 : run.tut ? 0 : 0.06;
       if (Math.random() < pb) { const k = M.dropBp(n.type === 'boss' ? 1 : 0.3); run.loot.bp.push(k); const I = M.itemInfo(k); lines.push({ t: '掉落：' + I.n, c: I.c, icon: I.icon }); }

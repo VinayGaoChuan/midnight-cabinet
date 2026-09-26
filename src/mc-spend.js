@@ -4,7 +4,7 @@
 // 局外……建筑不舍得建，因为要找合适的地形」 — the rules made holding back the right play).
 // · The leader's skill is ready at the start of every fight, once per fight (no cooldown carried across the map), so a
 //   normal fight never costs you the boss's skill. What shortened the cooldown now makes the skill stronger.
-// (items and banners are gone since, and terrain with them: mc-fever.js, mc-perks.js — user ruling 2026-09-26)
+// (items and banners are gone since, and terrain with them: mc-fever.js, mc-dirs.js — user ruling 2026-09-26)
 const M = window.MC, G = M.Game.prototype, S = M.Sfx, P = M.PJ.PAL, B_ = M.BUILDINGS, now = () => performance.now();
 const B2P = M.Battle2 && M.Battle2.prototype;
 
@@ -14,7 +14,7 @@ if (B2P) { const oCast = B2P.castSkill; B2P.castSkill = function () { const r = 
 M.skillPow = function (h, m) {
   m = m || (M._g && M._g.meta); if (!h || !m) return 0;
   const hm = M.heroMods(h, m), bm = M.baseMods(m);
-  return Math.max(0, 0.2 * (-(bm.skillNodeCd || 0) - (hm.skillNode || 0)) + Math.max(0, -(hm.skillCd || 0)) + (bm.skillPow || 0));   // + 魔法风格 perk (mc-perks.js)
+  return Math.max(0, 0.2 * (-(bm.skillNodeCd || 0) - (hm.skillNode || 0)) + Math.max(0, -(hm.skillCd || 0)) + (bm.skillPow || 0));   // + 秘法化 (mc-dirs.js)
 };
 const oSV = M.skillVal; M.skillVal = (h) => oSV(h) * (1 + M.skillPow(h));
 M.heroSkillD = (h) => M.skillDesc(h) + '，每场战斗一开始就能用。';

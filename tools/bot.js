@@ -2,7 +2,7 @@
 // shopping like a plain player: keep a third of the army on the front line, otherwise the most power per coin;
 // a banner that fits when money is left over (opts.buy === false: never buys, the old behaviour)
 // the base like a plain player (2026-09-26): repair what fell, fill empty rooms (walls first, then towers, then the
-// best blueprint), dig one more room when nothing is empty and supplies allow
+// best blueprint), dig one more room when nothing is empty and supplies allow, reinforce (加固) with what is left over
 function botBase(g, M) {
   const m = g.meta, B = M.BUILDINGS; let did = 0;
   const cells = []; for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) cells.push([c, r, m.base.cells[r][c]]);
@@ -16,6 +16,9 @@ function botBase(g, M) {
   });
   const empty = cells.some(([, , x]) => x.dug && !x.b && !x.job), anyBp = Object.keys(m.inv).some(k => k.startsWith('bbp:'));
   if (!empty && anyBp) { const dig = cells.filter(([c, r]) => M.canDig(m, c, r)).sort((a, b2) => M.digCost(m, a[0], a[1]) - M.digCost(m, b2[0], b2[1]))[0]; if (dig && m.supplies >= M.digCost(m, dig[0], dig[1]) + 60) { if (M.startDig(m, dig[0], dig[1])) did++; } }
+  // 加固: supplies beyond a reserve for building go into the fighting line, the least reinforced first (walls and towers)
+  if (M.fortUp) { const fights = cells.filter(([c, r, x]) => M.canFort(m, c, r)).sort((a, b2) => (a[2].fort | 0) - (b2[2].fort | 0) || (M.townRole(b2[2].b) === 'tower') - (M.townRole(a[2].b) === 'tower'));
+    for (const [c, r, x] of fights) { const cost = M.fortCost(x.b, x.fort | 0); if (m.supplies - cost < 350) break; if (M.fortUp(m, c, r)) did++; } }
   if (did) g.save();
   return did;
 }
@@ -64,8 +67,10 @@ window.__bot = async function (secs, opts = {}) {
         if (g.modal && g.modal.choices && !g.modal.over) { const ch = g.modal.choices.find(c => !c.dis) || g.modal.choices[g.modal.choices.length - 1]; events++; ch.fn(); if (g.modal && g.modal.title === '流浪商人') g.modal.choices[g.modal.choices.length - 1].fn(); for (let i = 0; i < 10; i++) g.tick(1 / 30); continue; }   // calendar events: take the first thing on offer
         // a visitor at the gate (mc-visit.js): the first thing it can afford; the talent page a level-up opens: spend and close
         if (g.visit) { if (g.visit.ph === 'wait') { const i = g.visit.opts.findIndex(o => !o.dis); g.visitChoose(i >= 0 ? i : g.visit.opts.length - 1); events++; } else g.visit.fast = true; for (let i = 0; i < 40; i++) g.tick(1 / 30); continue; }
+        // the 发展方向 pick (mc-dirs.js): the first card, like a plain player who takes what looks good
+        if (g.dirPick) { g.dirPick.at -= 1000; g.dirTake(opts.dirPick ? opts.dirPick(g, g.dirPick.ks) : g.dirPick.ks[0]); events++; for (let i = 0; i < 20; i++) g.tick(1 / 30); continue; }
         if (g.lvPick) { const h = g.meta.heroes.find(x => x.id === g.lvPick.id); for (let k = 0; h && k < 20 && M.talAny(h); k++) { const i = h.tree.findIndex((x, j) => M.talCan(h, j)); if (i < 0) break; g.takeTalent(h.id, i); talents++; } g.closePanel(); for (let i = 0; i < 10; i++) g.tick(1 / 30); continue; }
-        if (g.homeQ || g.lvFx || g.dayFx || g.tlFx || g.rite || g.expand) { for (let i = 0; i < (opts.fast ? 120 : 40); i++) g.tick(1 / 30); await sleep(opts.fast ? 2 : 40); continue; }   // the return home plays in order: let it
+        if (g.homeQ || g.lvFx || g.dayFx || g.tlFx || g.rite || g.expand || g.dirFx) { for (let i = 0; i < (opts.fast ? 120 : 40); i++) g.tick(1 / 30); await sleep(opts.fast ? 2 : 40); continue; }   // the return home plays in order: let it
         if (opts.base !== false && !g.panel && M.startBuild && botBase(g, M)) builds++;
         // leaders grow like a plain player grows them: level up when the orbs are there, spend every talent point
         if (opts.grow !== false && !g.panel) { let lv = false; g.meta.heroes.forEach(h => { if (!lv && h.lv < 10 && M.lvOrbs(h, g.meta) <= g.meta.orbs) { g.heroLvUp(h.id); lv = true; } for (let k = 0; k < 20 && h.points > 0; k++) { const c = (h.tree || []).map((_, i) => i).filter(i => M.talCan(h, i)); if (!c.length) break; g.takeTalent(h.id, c[Math.floor(Math.random() * c.length)]); talents++; } }); if (lv) continue; }

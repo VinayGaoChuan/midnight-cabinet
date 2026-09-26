@@ -35,7 +35,7 @@ G.lvUpFx = function (h, lv0, lv1, p0, p1) {
   const H = M.HEROES[h.cls], item = { h, lv0, lv1, p0, p1, name: M.heroN(h), col: M.qc(h.rarity), img: M.spriteCanvas(H.sprite, 16), dur: DUR };
   // the talent layers this level reveals (layer k at Lv k+1) land at the end of the ceremony, and pop on the hero page
   const a = M.talShownAt ? M.talShownAt(h, lv0) : Math.max(0, lv0 - 1), b = M.talShownAt ? M.talShownAt(h, lv1) : Math.max(0, lv1 - 1);
-  if (b > a) { item.newNodes = h.tree.map((n, i) => i).filter(i => h.tree[i].L > a && h.tree[i].L <= b).slice(0, 9); item.newL = b > a + 1 ? (a + 1) + '–' + b : String(b); item.dur = DUR + 2.1; this.talNew = this.talNew || {}; const o = this.talNew[h.id]; this.talNew[h.id] = { from: o ? Math.min(o.from, a) : a }; }
+  if (b > a) { item.newNodes = h.tree.map((n, i) => i).filter(i => h.tree[i].L > a && h.tree[i].L <= b).slice(0, 9); item.newL = b > a + 1 ? (a + 1) + '–' + b : String(b); item.dur = DUR + 1.6; this.talNew = this.talNew || {}; const o = this.talNew[h.id]; this.talNew[h.id] = { from: o ? Math.min(o.from, a) : a }; }
   this.lvQ = this.lvQ || []; this.lvQ.push(item); if (!this.lvFx) this.lvNext();
 };
 G.lvNext = function () {
@@ -43,7 +43,7 @@ G.lvNext = function () {
   this.lvFx = Object.assign(it, { t0: now(), sounds: {}, parts: [] });
   S.lv('in', it.lv1);   // 升级的声音逐拍跟着 drawLv 的 t 走（mc-audio.js 的 LV：闪光、落定、等级、滚动、变金、天赋）
 };
-const DUR = 3.6;
+const DUR = 3.0;   // was 3.6 (2026-09-27 playtest: the homecoming locked the base too long)
 // Pixel Juice（docs/design.md §11.5）：墨色压暗、硬边光芒、Silkscreen 绿色色带大字、机箱面板里的战斗力
 const U = M.UI, P = M.PJ.PAL, RM = () => !!M.PJ.reduced, stepT = (t) => t, st4 = (v) => cl(v, 0, 1);
 const seq = (A, d, dt) => { if (RM() || d >= (A.length - 1) * dt) return A[A.length - 1]; if (d <= 0) return A[0]; const f = d / dt, i = Math.floor(f), k = f - i, e = k * k * (3 - 2 * k); return A[i] + (A[i + 1] - A[i]) * e; }, POP = [1.45, 0.9, 1.06, 1];
