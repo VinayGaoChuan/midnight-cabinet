@@ -238,6 +238,14 @@ X.def('_mainbase', {
   },
 });
 
+// the opening in world units, relative to the door's centre: one row per art pixel { y, x0, x1 } (y top edge, 2 high).
+// mc-portal.js fits a chosen world's look into it
+let ARCH = null;
+M.PXR.archRows = function () {
+  if (ARCH) return ARCH; ARCH = [];
+  for (let y = AAP; y <= ATH; y++) { let a = null, b = null; for (let x = AX0; x <= AX1; x++) if (inArch(x, y)) { if (a == null) a = x; b = x; } if (a != null) ARCH.push({ y: -340 + y * 2, x0: (a - CX) * 2, x1: (b + 1 - CX) * 2 }); }
+  return ARCH;
+};
 // drawn by drawBase in place of the old flat main base and portal door
 M.PXR.mainBase = function (ctx, bv, t, meta) {
   const G = M.BASE_GEO, po = bv.po || 0, hp = meta && meta.portal ? meta.portal.hp / (M.portalMax ? M.portalMax(meta) : 1) : 1, h = bv.hover || {};

@@ -111,9 +111,6 @@ const oldBuild = G.doBuild;
 G.doBuild = function (c, r, key) { oldBuild.call(this, c, r, key); const m = this.meta; if (m.baseTut === 3 && M.cell(m, c, r).job) { m.baseTut = 4; this.save(); setTimeout(() => { this.closePanel(); setTimeout(() => this.baseTutStep(), 750); }, 900); } };
 const oldDig = G.doDig;
 G.doDig = function (c, r) { const m = this.meta, before = m.baseTut; oldDig.call(this, c, r); if (before === 4 && M.cell(m, c, r).job) { m.baseTut = 5; this.save(); setTimeout(() => { this.closePanel(); setTimeout(() => this.baseTutStep(), 750); }, 900); } };
-const GUIDE = { recruit: '酒馆建好了！点击它，花物资招募新领袖。每个领袖的天赋树都不一样。', forge: '锻造建筑建好了！点击它，用宝物图纸打造宝物。品质随机，越高能力越多。', train: '训练建筑建好了！点击它，把经验球灌给领袖。', med: '医疗建筑建好了！受伤的领袖每天会自动回血，也可以花物资急救。', defense: '防御建筑建好了！地面上升起了对应的塔，守城时它自己开火。', power: '电力建筑建好了！顶部的电力数字变多了，可以建更多耗电的房间。', store: '后勤建筑建好了！它会每天产出物资或提供出征补给。', luck: '这座建筑会在出征时给你好运。', misc: '特殊建筑建好了！悬浮在它上面看看效果。' };
-const oldPass = G.passDay;
-G.passDay = function () { const logs = oldPass.call(this), m = this.meta; m.seenB = m.seenB || {}; const nb = logs.filter(l => l.key && !m.seenB[M.BUILDINGS[l.key].cat]); if (nb.length) { const l = nb[0], cat = M.BUILDINGS[l.key].cat; m.seenB[cat] = 1; this.save(); setTimeout(() => { const p = this.cellPos(l.c, l.r); this.coach(GUIDE[cat] || GUIDE.misc, p.x, p.y + 230, p.x, p.y); }, 2200); } return logs; };
 // ───────── raid uses the new enemies ─────────
 // raid strength for a single leader (2026-09-25): every monster ×RAID_K, the day-10+ boss ~RAID_BOSS × the day's budget
 M.RAID_K = 1.15; M.RAID_BOSS = 0.8; M.RAID_WAVE = 0.58;   // 2026-09-26: the town defends now (mc-siege.js), not the leader
