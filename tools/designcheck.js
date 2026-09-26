@@ -16,9 +16,9 @@
       'FEVER 效果': vals(M.ITEMS).map(i => i.name),
       宝物: vals(M.RELICS).map(r => r.n),
       纪念品: vals(M.GIFTS).map(g => g.n),
-      家具: vals(M.FURN).map(f => (f.names || [])[0]),
-      成就: vals(M.ACH).map(a => a.n),
-      卡带: vals(M.KITS).map(k => k.n || k.name),
+      // the cabinet layer (mc-legacy.js, 2026-09-26): its achievements and cartridges; the old furniture stays switched off
+      成就: vals(M.ACH2 || M.ACH).map(a => a.n),
+      卡带: vals(M.KITS2 || M.KITS).map(k => (k.n || k.name || '').replace(/卡带$/, '')),
       天赋: Object.values(M.TALENTS || {}).map(t => (typeof t.n === 'function' ? t.n('') : t.n)),
       职业: Object.keys(M.VOC || {}),
       说明卡: (M.GUIDE || []).map(c => c.title),

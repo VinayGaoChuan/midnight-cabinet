@@ -12,7 +12,7 @@
 const M = window.MC, G = M.Game.prototype, S = M.Sfx, BP = M.Battle3 && M.Battle3.prototype;
 const FC = '#ffe6a0', now = () => performance.now();
 M.RITE_FAITH = 30;
-if (M.GUIDE) M.GUIDE.push({ id: 'faith', cat: '基地', icon: 'f_faith', title: '信仰值', line: '建了信仰类建筑才会出现；用来出发前祈福，也能在复活仪式上代替基地核心的一颗心。', scr: 'base', sel: '[data-fx="mfa"]' },
+if (M.GUIDE) M.GUIDE.push({ id: 'faith', cat: '基地', icon: 'f_faith', title: '信仰值', line: '建了信仰类建筑才会出现；用来出发前祈福，复活仪式上 ' + M.RITE_FAITH + ' 信仰值可以代替基地核心的一颗心。', scr: 'base', sel: '[data-fx="mfa"]' },
   { id: 'shrine', cat: '出征', icon: 'f_faith', title: '神龛', line: '有了信仰值以后，地图上会出现神龛，在那里祈祷能收集信仰值。', scr: 'world', sel: '[data-g="nothing"]' },
   { id: 'bless', cat: '出征', icon: 'f_faith', title: '祈福', line: '出发前花信仰值，给这一趟出征加一个祝福。', scr: 'base', sel: '[data-g="bless"]' });
 M.faithOn = (m) => !!(m && m.faithOn);
@@ -33,7 +33,7 @@ const oView = G.view;
 G.view = function () {
   const v = oView.call(this), m = this.meta;
   if (m && (!this._faithChk || now() - this._faithChk > 1000)) { this._faithChk = now(); if (unlock(m)) { this.save(); this.toast('新的资源：信仰值', FC); } }
-  if (v.b && v.b.res && M.faithOn(m)) v.b.res.push({ img: M.spriteURL('f_faith', 4), v: this.tv('mfa', m.faith || 0), c: FC, fx: 'mfa', sc: this.ps('mfa'), tipOn: this.tipFn({ title: '信仰值', c: FC, d: '出发前祈福；复活仪式上代替基地核心的一颗心。' }) });
+  if (v.b && v.b.res && M.faithOn(m)) v.b.res.push({ img: M.spriteURL('f_faith', 4), v: this.tv('mfa', m.faith || 0), c: FC, fx: 'mfa', sc: this.ps('mfa'), tipOn: this.tipFn({ title: '信仰值', c: FC, d: '出发前祈福；复活仪式上 ' + M.RITE_FAITH + ' 信仰值代替基地核心的一颗心。' }) });
   const p = this.panel, pn = v.pn;
   if (pn && pn.isLoadout && p && p.kind === 'loadout') {
     pn.blessOn = M.faithOn(m);

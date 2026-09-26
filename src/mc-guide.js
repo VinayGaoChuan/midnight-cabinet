@@ -73,7 +73,7 @@ const CONCEPTS = [
   { id: 'whp', cat: '出征', icon: 't_heart', title: '领袖生命', line: '不会自动回复：靠营火、奇遇，或者回基地后的医疗建筑。归零就探索失败，基地核心献出一颗心救回领袖。', scr: 'world', sel: '[data-tip="w-hp"]' },
   { id: 'wallet', cat: '出征', img: () => sprite('coin', 4), title: '积分', line: '这一局的钱：打赢战斗得到，在夜市和奇遇里花。回基地就清零。', scr: 'world', sel: '[data-tip="w-wallet"]' },
   { id: 'haul', cat: '出征', img: () => sprite('sack'), title: '本次收获', line: '物资、经验、图纸要撤离或通关才带得回基地；出征失败只留下一半经验。', scr: 'world', sel: '[data-tip="w-rsup"]' },
-  { id: 'roster', cat: '出征', icon: 'v_warrior', title: '部队', line: '战斗里自动作战。在夜市买、招募旗领，最多 10 支。', scr: 'world', sel: '[data-tip="w-roster"]' },
+  { id: 'roster', cat: '出征', icon: 'v_warrior', title: '部队', line: '战斗里自动作战。在夜市买、招募旗领；三支相同的会进化。', scr: 'world', sel: '[data-tip="w-roster"]' },
   { id: 'items', cat: '出征', icon: 't_chest', title: '支援道具', line: '战斗中按 Q W E 由领袖放出。用的时候转一下，转出这次的效果；图片下面写着它是哪一类。', scr: ['world', 'battle'], sel: '[data-tip="b-items"]' },
   { id: 'banners', cat: '出征', img: () => sprite('flag'), title: '战旗', line: '整支部队的常驻加成，比如「射手战旗」让所有射手更强。', scr: ['world', 'shop'], sel: '[data-fx="banners"],[data-g="shop-banners"]' },
   { id: 'minimap', cat: '出征', icon: 'e_path', title: '小地图', line: '整条路线的缩略图。越往右越深，最右边是首领。', scr: 'world', at: () => Object.assign({}, M.MMAP || { x: 1320, y: 48 }, { w: 560, h: 250 }), when: (g) => g.run && !g.run.tut },

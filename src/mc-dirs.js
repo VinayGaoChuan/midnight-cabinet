@@ -103,8 +103,17 @@ G.view = function () {
   const v = oView.call(this), P = this.dirPick, m = this.meta; v.dirOn = !!P && this.screen === 'base';
   if (v.dirOn) {
     const T = now(), ready = T - P.at > 500;
-    v.dp = { title: '繁荣度 Lv' + P.lv, line: '城市朝哪个方向长？', cards: P.ks.map((k, i) => { const D = DIRS[k], lv = M.dirLv(m, k) + 1, n = D.cats || D.styles ? count(m, D) : 0;
-      return { n: M.dirName(k, lv), c: D.c, t: D.t, sub: lv > 1 ? '已经是 ' + M.dirName(k, lv - 1) + '，效果叠加' : n ? '现在有 ' + n + ' 座合适的建筑' : '', hasSub: lv > 1 || n > 0, img: M.dirPreview ? M.dirPreview(k, lv) : '', op: ready ? 1 : 0.6, onPick: () => this.dirTake(k), fx: 'dir' + i }; }) };
+    // every card says what it strengthens (the category and style, icon + word) and which of your buildings those are, by
+    // name in their quality colour (user ruling 2026-09-26: 「要显示出来，当前基地，对应风格或者类型的建筑的数量和具体名字
+    // （带品质色），这样能给我一个指导性的参考……二选一中的风格和类型，要带icon和文字描述」)
+    const QC = (q) => ((M.QUALITY[q] || M.QUALITY[0]).c);
+    v.dp = { title: '繁荣度 Lv' + P.lv, line: '城市朝哪个方向长？', cards: P.ks.map((k, i) => { const D = DIRS[k], lv = M.dirLv(m, k) + 1;
+      const tags = [].concat((D.cats || []).map(c => { const t = M.tagIc('cat', c); return t && { img: t.img, n: t.n + '类', c: t.c, tip: t.tip }; }), (D.styles || []).map(st => { const t = M.tagIc('style', st); return t && { img: t.img, n: t.n + '风格', c: t.c, tip: t.tip }; })).filter(Boolean);
+      const own = {}; let all = 0; each(m, (Bd, bk) => { all++; if (fits(D, Bd)) own[bk] = (own[bk] || 0) + 1; });
+      const blds = Object.keys(own).sort((a, c) => B[c].q - B[a].q || own[c] - own[a]).map(bk => ({ n: B[bk].n + (own[bk] > 1 ? ' ×' + own[bk] : ''), c: QC(B[bk].q) }));
+      const nOwn = Object.keys(own).reduce((a, bk) => a + own[bk], 0), city = !D.cats && !D.styles;
+      const have = city ? '你的基地有 ' + all + ' 座建筑，每天多产 ' + Math.floor(all / 5) * 6 * lv + ' 物资' : nOwn ? '你的基地里有 ' + nOwn + ' 座：' : '你的基地里还没有这类建筑';
+      return { n: M.dirName(k, lv), c: D.c, t: D.t, tags, hasTags: tags.length > 0, have, blds, sub: lv > 1 ? '已经是 ' + M.dirName(k, lv - 1) + '，效果叠加' : '', hasSub: lv > 1, img: M.dirPreview ? M.dirPreview(k, lv) : '', op: ready ? 1 : 0.6, onPick: () => this.dirTake(k), fx: 'dir' + i }; }) };
   }
   return v;
 };

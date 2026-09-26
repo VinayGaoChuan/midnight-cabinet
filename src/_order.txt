@@ -113,6 +113,8 @@ mc-spend.js
 mc-tidy.js
 mc-fever.js
 mc-feverstage.js
+mc-evo.js
+mc-legacy.js
 mc-tele.js
 mc-pcd.js
 mc-pcd-game.js

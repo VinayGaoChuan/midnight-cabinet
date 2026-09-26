@@ -59,6 +59,7 @@ window.__bot = async function (secs, opts = {}) {
       if (s === 'intro') g.toMenu();
       else if (s === 'menu') g.startGame();
       else if (s === 'room') { if (g.prof.pending) { games++; log.push('settle+' + g.prof.pending.total); g.collectSettle(); } else if (!g.roomTr) g.roomEnter(); for (let i = 0; i < 20; i++) g.tick(1 / 30); }
+      else if (g.evoFx) { g.evoFx.t = Math.max(g.evoFx.t, 2.7); for (let i = 0; i < 90 && g.evoFx; i++) g.tick(1 / 30); }   // an evolution plays (mc-evo.js): let it land
       else if (g.coreFx || g.tear || g.rite || g.expand) { for (let i = 0; i < 20; i++) g.tick(1 / 30); }
       else if (s === 'end') { g.endBack(); log.push('end'); }
       else if (s === 'over') { log.push('over'); break; }

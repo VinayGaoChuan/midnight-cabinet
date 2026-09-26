@@ -7,7 +7,7 @@
 // The map shows every visible fight's power over it, coloured by that ratio, and ours over the leader.
 const M = window.MC, G = M.Game.prototype, DB = M.DB, sq = Math.sqrt;
 const PK = () => M.POWER_K || 1;   // power is counted in price units (mc-voc.js)
-M.unitPower = (k, u) => { const d = DB[k]; if (!d) return 0; return Math.round(sq((d.hp + (u ? u.bHp || 0 : 0)) * (d.atk + (u ? u.bAtk || 0 : 0)) * (d.as || 100) / 100) / PK()); };
+M.unitPower = (k, u) => { const d = DB[k]; if (!d) return 0; return Math.round(sq((d.hp + (u ? u.bHp || 0 : 0)) * (d.atk + (u ? u.bAtk || 0 : 0)) * (d.as || 100) / 100) / PK() * ((u && u.ek) || 1)); };   // u.ek: an evolved unit's life and attack (mc-evo.js)
 M.heroPower = (h, m) => h && M.HEROES[h.cls] ? Math.round(sq(M.heroMaxHp(h, m) * M.heroAtk(h, m) / (M.HEROES[h.cls].cd || 1)) / PK()) : 0;
 // every unit's power is its price, including the few units tuned after mc-voc.js (玉石兽 …)
 Object.keys(DB).forEach(k => { const d = DB[k]; if (d.type !== 'Summon' || !(d.cost > 0) || !(d.atk > 0) || !d.hp) return; const p = sq(d.hp * d.atk * (d.as || 100) / 100) / PK(); if (Math.abs(p - d.cost) > 0.5) d.atk = Math.round(d.atk * Math.pow(d.cost / p, 2) * 100) / 100; });
@@ -15,9 +15,9 @@ M.powerOf = (s) => Math.round(sq(Math.max(0, s.hp) * Math.max(0, s.dps)) / PK())
 // our side: every unit as the battle will build it, and the leader with the life it has now
 M.sideA = function (run) {
   let hp = 0, dps = 0; const md = run.mods || {}, rb = run.runBuff || {};
-  (run.roster || []).forEach(u => { const d = DB[u.type]; if (!d) return; const L = M.legionMods(run, d), V = M.vocMods(md, d);
-    hp += (d.hp + (u.bHp || 0)) * (1 + L.hp + V.hp + (md.unitHp || 0)) * (1 + (L.shield || 0) + (md.shield || 0));
-    dps += (d.atk + (u.bAtk || 0)) * (1 + L.atk + V.atk + (md.unitAtk || 0) + (rb.unitAtk || 0)) * (d.as || 100) / 100 * (1 + (L.as || 0) + V.as); });
+  (run.roster || []).forEach(u => { const d = DB[u.type]; if (!d) return; const L = M.legionMods(run, d), V = M.vocMods(md, d), ek = u.ek || 1;
+    hp += (d.hp + (u.bHp || 0)) * ek * (1 + L.hp + V.hp + (md.unitHp || 0)) * (1 + (L.shield || 0) + (md.shield || 0));
+    dps += (d.atk + (u.bAtk || 0)) * ek * (1 + L.atk + V.atk + (md.unitAtk || 0) + (rb.unitAtk || 0)) * (d.as || 100) / 100 * (1 + (L.as || 0) + V.as); });
   const h = run.hero; if (h && M.HEROES[h.cls]) { hp += Math.max(1, h.hp); dps += M.heroAtk(h, run.M) * (1 + (rb.heroAtk || 0)) / (M.HEROES[h.cls].cd || 1); }
   return { hp, dps };
 };

@@ -171,7 +171,7 @@ M.newRun3 = function (meta, hero) {
 M.talShopExtra = function (run) {
   const n = run && run.mods && run.mods.shopUnits, sh = run && run.shop;
   if (n && sh && sh.units && sh.units.length) {
-    const S = (M.SHOPS && M.SHOPS[run.shopKind]) || {}, pool = M.SHOP_POOL.filter(k => M.DB[k] && (!S.pool || S.pool(k)) && !sh.units.some(u => u.type === k)), pm = M.priceMul(run);
+    const S = (M.SHOPS && M.SHOPS[run.shopKind]) || {}, pool = (M.unitPool ? M.unitPool(run) : M.SHOP_POOL).filter(k => M.DB[k] && (!S.pool || S.pool(k))), pm = M.priceMul(run);
     for (let i = 0; i < n && pool.length; i++) { const k = pool.splice(Math.floor(rnd() * pool.length), 1)[0]; sh.units.push({ kind: 'unit', type: k, q: M.DB[k].q, cost: Math.max(5, Math.round(M.DB[k].cost * pm * (S.price == null ? 1 : S.price))) }); }
   }
 };
