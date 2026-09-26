@@ -21,7 +21,7 @@ M.bpUseful = function (m, key) {
 // a useful replacement of similar standing (same kind first, then any building)
 M.usefulBp = function (m, like, style) {
   const B0 = like && like.startsWith('bbp:') ? M.BUILDINGS[like.slice(4)] : null, q0 = B0 ? B0.q : 0;
-  const ks = Object.keys(M.BUILDINGS).filter(k => !M.BUILDINGS[k].fixed && M.bpUseful(m, 'bbp:' + k));
+  const ks = Object.keys(M.BUILDINGS).filter(k => !M.BUILDINGS[k].fixed && !M.BUILDINGS[k].boss && M.bpUseful(m, 'bbp:' + k));
   const pool = ks.filter(k => M.BUILDINGS[k].q === q0 && (!style || M.BUILDINGS[k].style === style));
   const pool2 = pool.length ? pool : ks.filter(k => M.BUILDINGS[k].q === q0);
   return 'bbp:' + M.pick(pool2.length ? pool2 : ks);

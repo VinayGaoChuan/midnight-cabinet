@@ -87,7 +87,7 @@ G.toBase = function () { const r = oTB.apply(this, arguments), m = this.meta; if
 
 const GRADE = [{ g: 'S', c: '#ffcf4a', m: 1.6 }, { g: 'A', c: '#b86bff', m: 1.3 }, { g: 'B', c: '#47d6c1', m: 1 }, { g: 'C', c: '#c4ccd9', m: 0.7 }];
 const bldBp = (m, bias, style) => { for (let i = 0; i < 10; i++) { const k = M.dropBp(bias, style); if (k.startsWith('bbp:')) return k; } return M.usefulBp ? M.usefulBp(m, null, style) : M.dropBp(bias); };
-const relicBp = (m) => { const k = 'rbp:' + M.pick(Object.keys(M.RELICS)); return !M.bpUseful || M.bpUseful(m, k) ? k : bldBp(m, 0.5); };
+const relicBp = (m) => { const k = 'rbp:' + M.pick(M.relicPool()); return !M.bpUseful || M.bpUseful(m, k) ? k : bldBp(m, 0.5); };
 G.raidEnd = function () {
   const r = this.raid, m = this.meta; r.done = true; m.st = m.st || {};
   const fallenH = [];

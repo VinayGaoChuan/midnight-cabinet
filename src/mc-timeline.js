@@ -7,7 +7,7 @@
 // land one by one and the next 混沌来袭 is called out. An event on the new day happens right after the frame moves.
 const M = window.MC, G = M.Game.prototype, S = M.Sfx, cl = (v, a, b) => Math.max(a, Math.min(b, v));
 // round day nodes with three small dots between (user ruling 2026-09-25): a passing day lights the dots one by one
-const DAYS = 10, CW = 52, GAP = 50, PITCH = CW + GAP, NDOT = 3, TLX = 560, TLY = 6, STEP_D = 1.5, EV_D = 2.9, BIG_D = 4.8;
+const DAYS = 10, CW = 52, GAP = 50, PITCH = CW + GAP, NDOT = 3, TLX = 560, TLY = 6, STEP_D = 1.5, EV_D = 2.3, BIG_D = 4.4;
 const EV = {
   raid:     { n: '混沌来袭', ic: 'e_skull', c: '#e8434f', d: '怪物攻打主基地，领袖出来守城。' },
   merchant: { n: '流浪商人', ic: 't_coin', c: '#ffcf4a', d: '用物资或碎片，换随机的好东西。', w: 5 },
@@ -31,7 +31,7 @@ M.dayEvents = function (m) {
   for (let guard = 0; (m.evGen || 0) < upto && guard < 8; guard++) {
     const d0 = (m.evGen || 0) + 1, end = E * Math.ceil(d0 / E), days = [];
     for (let d = d0; d < end; d++) if (d > m.day && d > 1 && !m.evs.some(e => e.day === d)) days.push(d);
-    const kinds = Object.keys(EV).filter(k => EV[k].w);
+    const kinds = Object.keys(EV).filter(k => EV[k].w && (!EV[k].need || EV[k].need(m)));
     days.sort(() => Math.random() - 0.5).slice(0, 2).forEach(d => { const k = M.wpick(kinds, x => EV[x].w); kinds.splice(kinds.indexOf(k), 1); m.evs.push({ day: d, k }); });
     m.evGen = end;
   }
@@ -47,7 +47,7 @@ function cells(g, m, first, n) {
   const out = []; for (let i = 0; i < n; i++) {
     const d = first + i, k = shownOn(m, d), E = k && EV[k], past = d < m.day || (d === m.day && k === 'raid' && m.lastRaid === d), today = d === m.day && !past, tom = d === m.day + 1;
     out.push({ d, k, E, past, x: i * PITCH, num: String(d), lab: today ? '今天' : tom ? '明天' : '', c: E ? E.c : '#3d3a8c', dc: today ? '#ffcf4a' : E ? E.c : '#a9a3c9', hasIc: !!E, noIc: !E, ic: E ? IC(E.ic) : '',
-      tipOn: g.tipFn(() => (E ? { title: E.n, c: E.c, icon: E.ic, d: E.d, lines: [{ t: past ? '已经过去' : today ? '今天' : '第 ' + d + ' 天（' + (d - m.day) + ' 天后）', c: '#a9a3c9' }] } : { title: today ? '今天 · 第 ' + d + ' 天' : '第 ' + d + ' 天', c: '#ffcf4a', d: past ? '已经过去。' : today ? '' : '这一天没有事件。' })),
+      tipOn: g.tipFn(() => (E ? { title: E.n, c: E.c, icon: E.ic, d: E.d, lines: [{ t: past ? '已经过去' : today ? '今天' : '第 ' + d + ' 天（' + (d - m.day) + ' 天后）', c: '#a9a3c9' }].concat(k === 'raid' && !past && d === M.nextRaid(m) && M.raidOddsLine ? [M.raidOddsLine(m)] : []) } : { title: today ? '今天 · 第 ' + d + ' 天' : '第 ' + d + ' 天', c: '#ffcf4a', d: past ? '已经过去。' : today ? '' : '这一天没有事件。' })),
       op: past ? 0.45 : 1, dy: 0, sc: 1, stamp: past, stampSc: 1, fl: 0 });
   }
   return out;
@@ -168,14 +168,21 @@ G.tick = function (dt) {
 // ───────── the events ─────────
 const rnd = Math.random, pick = (a) => a[Math.floor(rnd() * a.length)];
 const cur = { sup: ['物资', 'msup', 'supplies', 'sack'], sh: ['碎片', 'msh', 'shards', 'shard'], orb: ['经验球', 'morb', 'orbs', 'orb'] };
+// the merchant's stock: three things drawn at random from what would be of use (user ruling 2026-09-26: 「商人的物品应该是
+// 随机」) — building blueprints, relic blueprints (only with a 工坊), keepsakes that would do something now
 function goods(g, m) {
-  const out = [], bld = Object.keys(M.BUILDINGS).filter(k => !M.BUILDINGS[k].fixed), rel = Object.keys(M.RELICS), gifts = Object.keys(M.GIFTS || {}).filter(k => M.GIFTS[k].w > 0);
-  const bk = pick(bld), B = M.BUILDINGS[bk]; out.push({ n: B.n + '图纸', d: B.d, cost: B.q >= 2 ? ['sh', 40 + 20 * B.q] : ['sup', 90 + 50 * B.q], give: () => M.invAdd(m, 'bbp:' + bk, 1) });
-  const rk = pick(rel), Rl = M.RELICS[rk]; out.push({ n: Rl.n + '图纸', d: '打造「' + Rl.n + '」', cost: ['sh', 30], give: () => M.invAdd(m, 'rbp:' + rk, 1) });
-  const tk = M.dropTile(), T = M.TILES[tk]; out.push({ n: '地脉结晶·' + T.n, d: '把一格岩层变成「' + T.n + '」：' + (T.anyD || T.d), cost: ['sup', 140], give: () => { const at = M.tileSpot && M.tileSpot(m, tk); if (at) { const [c, r] = at; M.cell(m, c, r).tile = tk; g.homeQueue(g.tileReveal(c, r, tk)); } } });
-  { const gk = pick(gifts), K = M.GIFTS[gk]; out.push({ n: K.n, d: K.d, cost: ['sup', 70], give: () => { const r = K.apply(g, m, null); g.toast(K.n + ' · ' + ((r && r.t) || ''), K.c); } }); }
-  return out;
+  const bld = Object.keys(M.BUILDINGS).filter(k => { const B = M.BUILDINGS[k]; return !B.fixed && !B.gone && !B.boss && (!M.bpUseful || M.bpUseful(m, 'bbp:' + k)); });
+  const gifts = Object.keys(M.GIFTS || {}).filter(k => M.GIFTS[k].w > 0 && (!M.giftUseful || M.giftUseful(m, k)));
+  const make = {
+    bld: () => { const bk = pick(bld), B = M.BUILDINGS[bk]; return bk && { id: 'b' + bk, n: B.n + '图纸', d: B.d, cost: B.q >= 2 ? ['sh', 40 + 20 * B.q] : ['sup', 90 + 50 * B.q], give: () => M.invAdd(m, 'bbp:' + bk, 1) }; },
+    rel: () => { const rk = pick(M.relicPool()), Rl = M.RELICS[rk]; return rk && { id: 'r' + rk, n: Rl.n + '图纸', d: '打造「' + Rl.n + '」', cost: ['sh', 30], give: () => M.invAdd(m, 'rbp:' + rk, 1) }; },
+    gift: () => { const gk = pick(gifts), K = M.GIFTS[gk]; return gk && { id: 'g' + gk, n: K.n, d: K.d, cost: ['sup', 70], give: () => { const r = K.apply(g, m, null); g.toast(K.n + ' · ' + ((r && r.t) || ''), K.c); } }; },
+  };
+  const kinds = { bld: bld.length ? 5 : 0, rel: M.forgeOn && M.forgeOn(m) ? 2 : 0, gift: gifts.length ? 3 : 0 }, out = [];
+  for (let n = 0; n < 12 && out.length < 3; n++) { const k = M.wpick(Object.keys(kinds), x => kinds[x]); const o = k && make[k](); if (o && !out.some(x => x.id === o.id)) out.push(o); }
+  return out.sort(() => rnd() - 0.5);
 }
+M.dayGoods = goods;   // the merchant's stock (mc-visit.js)
 function merchant(g, m, stock) {
   const choices = stock.map(o => { const [ck, v] = o.cost, C = cur[ck], can = !o.sold && m[C[2]] >= v;
     return { t: (o.sold ? '已买 · ' : '') + o.n, sub: o.d + '　' + v + ' ' + C[0], dis: !can, gold: can, fn: () => { m[C[2]] -= v; o.sold = true; o.give(); g.save(); S.buy(); merchant(g, m, stock); } }; });

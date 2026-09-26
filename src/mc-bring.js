@@ -41,10 +41,10 @@ const GIFTS = {
       if (!n) { m.buildBoost = (m.buildBoost || 0) + 2; return ok('下一项工程少 2 天'); } return ok(n + ' 项工程各推进 2 天' + (done ? '，' + done + ' 项当场完工' : ''), at); } },
   portal: { n: '修门石', ic: 'g_gate', c: '#5fd0c0', w: 9, d: '主基地耐久 +300（不超过上限）。',
     apply(g, m) { const mx = M.portalMax(m), v = Math.min(300, mx - m.portal.hp); m.portal.hp += Math.max(0, v); return ok(v > 0 ? '主基地耐久 +' + Math.round(v) : '传送门本来就是满的', { door: 1 }); } },
-  talent: { n: '启示卷轴', ic: 'g_scroll', c: '#ffcf4a', w: 9, d: '带着它回来的领袖获得 1 个天赋点。',
+  talent: { n: '启示卷轴', ic: 'g_scroll', c: '#e8dcc4', w: 3, d: '带着它回来的领袖获得 1 个天赋点。',
     apply(g, m, run) { const h = (run && m.heroes.includes(run.hero)) ? run.hero : M.pick(m.heroes); if (!h) return ok('没有领袖可以读它'); h.points++; return ok(M.heroN(h) + ' 天赋点 +1', { hero: h.id }); } },
   temper: { n: '淬火石', ic: 'g_anvil', c: '#ff8a3a', w: 8, d: '最差的一件宝物品质 +1。',
-    apply(g, m) { const r = m.relics.filter(x => x.q < 3).sort((a, b) => a.q - b.q)[0]; if (!r) { const k = 'rbp:' + M.pick(Object.keys(M.RELICS)); M.invAdd(m, k, 1); return ok('没有可淬火的宝物，换成「' + M.itemInfo(k).n + '」'); } r.q++; r.lines = M.relicLines(r.key, r.q); return ok(M.qn(M.RELICS[r.key].n, r.q) + ' 升了一档', { col: M.qc(r.q) }); } },
+    apply(g, m) { const r = m.relics.filter(x => x.q < 3).sort((a, b) => a.q - b.q)[0]; if (!r) { m.supplies += 60; return ok('没有能淬火的宝物，换成 60 物资'); } r.q++; r.lines = M.relicLines(r.key, r.q); return ok(M.qn(M.RELICS[r.key].n, r.q) + ' 升了一档', { col: M.qc(r.q) }); } },
   calm:   { n: '安神香', ic: 'g_incense', c: '#c8c8ff', w: 8, d: '所有领袖回复 25% 生命。',
     apply(g, m) { m.heroes.forEach(h => { h.hp = Math.min(M.heroMaxHp(h, m), h.hp + M.heroMaxHp(h, m) * 0.25); }); return ok('全员回复 25% 生命'); } },
   decoy:  { n: '迷踪粉', ic: 'g_powder', c: '#c8b0ff', w: 8, d: '下一次混沌来袭的怪物减少 30%。',
@@ -57,7 +57,16 @@ const GIFTS = {
     apply(g, m) { m.nextKit = Math.min(3, (m.nextKit || 0) + 1); return ok('下次出征多带 ' + m.nextKit + ' 个支援道具'); } },
 };
 M.GIFTS = GIFTS;
-M.dropGift = () => 'gift:' + M.wpick(Object.keys(GIFTS), k => GIFTS[k].w);
+// a keepsake only comes along when it would do something (2026-09-26: a 淬火石 came home to a base without relics)
+const hurt = (m) => m.heroes.some(h => h.hp < M.heroMaxHp(h, m) * 0.9);
+const USEFUL = {
+  miner: (m) => { for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) if (M.canDig(m, c, r)) return true; return false; },
+  portal: (m) => m.portal && m.portal.hp < M.portalMax(m) - 50,
+  temper: (m) => (m.relics || []).some(x => x.q < 3),
+  calm: (m) => hurt(m),
+};
+M.giftUseful = (m, k) => !!GIFTS[k] && GIFTS[k].w > 0 && (!USEFUL[k] || !m || USEFUL[k](m));
+M.dropGift = (m) => { m = m || (M._g && M._g.meta); const ks = Object.keys(GIFTS).filter(k => M.giftUseful(m, k)); return 'gift:' + M.wpick(ks.length ? ks : ['cell'], k => GIFTS[k].w || 1); };
 const oInfo = M.itemInfo;
 M.itemInfo = function (key) {
   if (key && key.startsWith('gift:')) { const K = GIFTS[key.slice(5)]; if (K) return { n: K.n, icon: K.ic, c: K.c, q: 1, kind: '带回基地', d: K.d, sub: '带回基地后生效' }; }
@@ -68,12 +77,13 @@ M.itemInfo = function (key) {
 const oSettle = G.startSettle;
 G.startSettle = function () {
   oSettle.apply(this, arguments); const st = this.settle, run = this.run, n = this.node; if (!st || !st.good || !run || run.tut || !n) return;
-  const ch = n.type === 'boss' ? 1 : n.type === 'extract' ? 0.5 : n.type === 'elite' ? 0.35 : 0.06; if (Math.random() >= ch) return;
+  // about one a trip (2026-09-27 drop count: every boss gave one, 37 keepsakes to 20 blueprints in 13 trips)
+  const ch = n.type === 'boss' ? 0.4 : n.type === 'extract' ? 0.35 : n.type === 'elite' ? 0.15 : 0.02; if (Math.random() >= ch) return;
   const k = M.dropGift(), I = M.itemInfo(k); this.hold('rbp', run.loot.bp.length); run.loot.bp.push(k); st.tiles.push({ icon: I.icon, v: 1, c: I.c, to: 'rbp', n: I.n, key: k });
 };
 const oChest = G.openChest;
 G.openChest = function (items, col, done) {
-  const run = this.run; if (run && !run.tut && Math.random() < 0.18) { const k = M.dropGift(), I = M.itemInfo(k); items.push({ n: I.n, sub: '带回基地', c: I.c, img: M.spriteCanvas(I.icon, 12), award: { k: 'bp', key: k } }); }
+  const run = this.run; if (run && !run.tut && Math.random() < 0.12) { const k = M.dropGift(), I = M.itemInfo(k); items.push({ n: I.n, sub: '带回基地', c: I.c, img: M.spriteCanvas(I.icon, 12), award: { k: 'bp', key: k } }); }
   return oChest.call(this, items, col, done);
 };
 

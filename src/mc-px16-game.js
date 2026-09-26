@@ -40,12 +40,12 @@ const BP = M.Battle3.prototype;
 P16.battleS = (e, spec) => Math.max(10, Math.round((spec.S0 || 22) * (spec.big || 1) * (e.sz || 1)));
 P16.entImg = function (e, T) {
   const key = e.hd && e.hd.key, spec = key && P16.spec(key); if (!spec) return null;
-  const a = P16.animOf(e, T), tint = e.flash > 0 ? '#ffffff' : e.raging && Math.floor(T * 8) % 2 ? '#ff4a4a' : '';
+  const a = P16.animOf(e, T), tint = !e.alive && e.dieT != null && T - e.dieT < 0.15 ? '#ff4a4a' : e.flash > 0 && e.alive ? '#ffffff' : e.raging && Math.floor(T * 8) % 2 ? '#ff4a4a' : '';
   const fr = P16.frame(key, a.st, a.f, { rim: a.rim, tint, S: P16.battleS(e, spec) }); if (fr) { e._fr = fr; e._magic = spec.magic; }
   return fr;
 };
 // world position of what the unit casts from (staff gem, maw, eye…)
-P16.focusOf = function (e) { const fr = e._fr; if (!fr) return [e.x, e.y - 44 * (e.sz || 1)]; const fl = e.side === 'E' ? -1 : 1; return [e.x + fr.focus[0] * fl, e.y + fr.focus[1]]; };
+P16.focusOf = function (e) { const fr = e._fr; if (!fr) return [e.x, e.y - 44 * (e.sz || 1)]; const fl = M.faceOf ? M.faceOf(e) : (e.side === 'E' ? -1 : 1); return [e.x + fr.focus[0] * fl, e.y + fr.focus[1]]; };
 const rampOf = (e, col) => (col ? P16.rampFor(col) : null) || e._magic || 'arcane';
 const poolOf = (b) => b.p16 || (b.p16 = new P16.Pool());
 // charging: sparks spiral in to the focus; casting: a burst out of it, a few motes rising

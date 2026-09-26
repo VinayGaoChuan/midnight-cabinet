@@ -43,7 +43,6 @@ Object.assign(G, {
     items.push({ n: '物资', c: '#caa84a', img: M.spriteCanvas('sack', 12), award: { k: 'rsup', v: 30 } });
     if (run.tut || Math.random() < 0.3) { const k = M.pick(Object.keys(M.ITEMS)), q = 0; items.push({ n: M.ITEMS[k].name, sub: '支援道具', c: M.ITEM_C, img: M.spriteCanvas(M.ITEMS[k].icon, 12), award: { k: 'item', key: k, q } }); }
     if (run.tut || Math.random() < M.bpChance(run, 'chest')) { const b = M.dropBp(); const I = M.itemInfo(b); items.push({ n: I.n, sub: I.kind, c: I.c, img: M.spriteCanvas(I.icon, 12), award: { k: 'bp', key: b } }); }
-    if (!run.tut && Math.random() < 0.05) { const t = 'tile:' + M.dropTile(); const I = M.itemInfo(t); items.push({ n: I.n, sub: '地脉结晶', c: I.c, img: M.spriteCanvas('gem', 12), award: { k: 'bp', key: t } }); }
     const best = items.reduce((a, b) => (M.QUALITY.findIndex(q => q.c === b.c) > M.QUALITY.findIndex(q => q.c === a.c) ? b : a), items[0]);
     this.openChest(items, best.c === '#caa84a' ? '#ffcc33' : best.c, () => this.finishNode());
   },
@@ -114,7 +113,7 @@ Object.assign(G, {
     const b = this.battle; if (!b) return;
     if (!this.paused && !this.settle) b.step(dt * this.speed * (this.reel ? 0.03 : 1));
     if (b.cutin && b.cutin !== this.lastCut) { this.lastCut = b.cutin; M.Sfx.cutin(); this.banner({ kind: 'skill', text: b.cutin.text, sub: b.cutin.sub, col: b.cutin.col, img: M.spriteCanvas(b.cutin.sprite, 22), life: 1.25, y: 470 }); }
-    if (this.run.tut && b.canCast() && !this.settle) this.coachOnce('skill', '领袖技能就绪！点击下方「技能」按钮释放。技能冷却按节点计算，每场最多用一次。', 640, 800, 615, 990);
+    if (this.run.tut && b.canCast() && !this.settle) this.coachOnce('skill', '领袖技能就绪！点击下方「技能」按钮释放。每场战斗都能用一次。', 640, 800, 615, 990);
     if (this.settle) this.settleTick(dt); else if (b.over && b.overT > 1.0) this.startSettle();
     const c = this.ui.cv('field'); if (c) b.render(c.getContext('2d'), { slow: this.reel ? 1 : 0 });
   },
@@ -136,12 +135,11 @@ Object.assign(G, {
     if (!good) { title = '领袖倒下'; col = '#ff4a4a'; }
     if (good) {
       run.wallet += score; lines.push({ t: '积分 +' + M.fmt(score), c: '#ffcc33', icon: 'coin' });
-      const sup = Math.round((8 + 4 * cfg.w) * run.lootMul * (1 + (run.mods.supplies || 0))); run.loot.supplies += sup; lines.push({ t: '物资 +' + sup, c: '#caa84a', icon: 'sack' });
+      const sup = Math.round((10 + 2.5 * cfg.w) * run.lootMul * (1 + (run.mods.supplies || 0))); run.loot.supplies += sup; lines.push({ t: '物资 +' + sup, c: '#caa84a', icon: 'sack' });
       const ex = Math.round((b.kills * 3 + 10 * cfg.w) * (1 + (run.mods.exp || 0))); run.loot.exp += ex; lines.push({ t: '经验 +' + ex + '（带回基地生效）', c: '#9cff7a', icon: 'orb' });
       const pb = n.type === 'boss' ? 1 : n.type === 'elite' ? 0.45 : run.tut ? 0 : 0.06;
       if (Math.random() < pb) { const k = M.dropBp(n.type === 'boss' ? 1 : 0.3); run.loot.bp.push(k); const I = M.itemInfo(k); lines.push({ t: '掉落：' + I.n, c: I.c, icon: I.icon }); }
       if (n.type === 'boss' && !run.tut && Math.random() < 0.5) { const k = M.dropBp(1.5); run.loot.bp.push(k); const I = M.itemInfo(k); lines.push({ t: '掉落：' + I.n, c: I.c, icon: I.icon }); }
-      if (n.type === 'boss' && !run.tut && Math.random() < 0.3) { const k = 'tile:' + M.dropTile(); run.loot.bp.push(k); const I = M.itemInfo(k); lines.push({ t: '掉落：' + I.n, c: I.c, icon: 'gem' }); }
       if (run.mods.postHeal) { const v = Math.round(mx * run.mods.postHeal); h.hp = Math.min(mx, h.hp + v); lines.push({ t: '战后喘息：回复 ' + v, c: '#9ccc6a', icon: 'up' }); }
     }
     if (dead.size) lines.push({ t: dead.size + ' 名部队永久阵亡', c: '#ff6a5a', icon: 'cross' });

@@ -133,15 +133,29 @@ const oFloor = M.drawKbFloor;
 M.drawKbFloor = function (ctx, b, T) { if (oFloor) oFloor.apply(this, arguments); M.drawOmens(ctx, b, T); };
 
 // ───────── 精英: two words over every elite, so it is clear which one it is (user ruling 2026-09-26) ─────────
+// The field is drawn in two passes (mc-game-m.js battleTick): the world pass (zoomed with the battle camera) and the
+// screen pass (fixed on the screen). M.drawBattleHudPx runs in both. Anything that sits on a unit belongs to the world
+// pass only (M.uiWorld()), anything pinned to the screen to the screen pass only (M.uiScreen()) — drawing in both is
+// what made every new battle label show twice, the second one small and out of place.
+M.uiWorld = () => M._camPass !== 'hud';
+M.uiScreen = () => M._camPass !== 'world';
 const oHud = M.drawBattleHudPx;
 M.drawBattleHudPx = function (ctx, b, T) {
   if (oHud) oHud.apply(this, arguments);
-  const U = M.bUI; if (!U) return;
+  const U = M.bUI; if (!U || !M.uiWorld()) return;
   b.ents.forEach(e => {
     if (!e.alive || !e.elite || e.boss || T < (e.entryT || 0) + 0.5) return;
     const H0 = 88 * e.sz, y = U.g2(Math.max(4, e.y - H0 - 66 - (e.air ? e.air.z : 0))), x = e.x;
     const c = M.pxTextCanvas('精英', 24, PL.butter, { ink: PL.ink }), w = U.g2(c.width + 16), h = 30, X = U.g2(x - w / 2);
     U.R(ctx, X - 2, y - 2, w + 4, h + 4, PL.ink); U.R(ctx, X, y, w, h, PL.amber); U.R(ctx, X, y, w, 4, PL.gold); U.R(ctx, X, y + h - 4, w, 4, PL.wine);
+    ctx.drawImage(c, U.g2(x - c.width / 2), U.g2(y + h / 2 - c.height / 2));
+  });
+  // a small boss wears its own name over its head (user ruling 2026-09-26), so players can say which one they reached
+  b.ents.forEach(e => {
+    if (!e.alive || !e.boss || !e.nm || e.fb || T < (e.entryT || 0) + 0.5) return;
+    const H0 = 88 * e.sz, kp = M.kbPose ? M.kbPose(e, T) : { rot: 0 }, y = U.g2(Math.max(4, e.y - H0 - 58 - (e.air ? e.air.z : 0) + Math.abs(Math.sin(kp.rot)) * H0 * 0.6)), x = e.x;
+    const c = M.pxTextCanvas(e.nm, 32, PL.butter, { ink: PL.ink }), w = U.g2(c.width + 20), h = 40, X = U.g2(x - w / 2);
+    U.R(ctx, X - 2, y - 2, w + 4, h + 4, PL.ink); U.R(ctx, X, y, w, h, PL.wine); U.R(ctx, X, y, w, 4, PL.red); U.R(ctx, X, y + h - 4, w, 4, PL.abyss || PL.ink);
     ctx.drawImage(c, U.g2(x - c.width / 2), U.g2(y + h / 2 - c.height / 2));
   });
 };

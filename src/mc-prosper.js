@@ -27,9 +27,9 @@ G.expandStart = function (up) {
   const m = this.meta, cells = [];
   for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) { const R = M.ringOf(c, r); if (R > up.from && R <= up.to) cells.push({ c, r, d: Math.abs(c - M.CORE.c) + r * 1.05 + (c < M.CORE.c ? 0 : 0.01) }); }
   cells.sort((a, b) => a.d - b.d);
-  const at = {}, W0 = 1.0, STEP = RM() ? 0.05 : 0.17; cells.forEach((o, i) => { o.at = W0 + 0.45 + i * STEP; at[o.c + ',' + o.r] = o.at; o.seed = (o.c * 7 + o.r * 13) % 11; });
-  const tEnd = (cells.length ? cells[cells.length - 1].at : W0) + 2.4;
-  this.expand = { m, t: 0, up, cells, at, shards: [], W0, tEnd, fired: {} };
+  const at = {}, W0 = 0.8, STEP = RM() ? 0.05 : 0.11; cells.forEach((o, i) => { o.at = W0 + 0.45 + i * STEP; at[o.c + ',' + o.r] = o.at; o.seed = (o.c * 7 + o.r * 13) % 11; });
+  const tEnd = (cells.length ? cells[cells.length - 1].at : W0) + 1.7;
+  this.expand = { m, t: 0, up, cells, at, shards: [], W0, tEnd, fired: {}, t0: now() };
   if (this.bv) { this.bv.sel = null; this.bv.free = null; this.bv.tx = 1050; this.bv.ty = 470; this.bv.tz = 0.58; }
   S.creak && S.creak(); this.fx.kick(4); this.bump();
 };
@@ -51,7 +51,7 @@ G.expandTick = function (dt) {
   const last = E.cells.length ? E.cells[E.cells.length - 1].at : E.W0;
   if (t >= last + 0.6) once(E, 'banner', () => {
     S.fanfare(); this.fx.flash(P.butter, 0.25); const p = this.cellPos(M.CORE.c, M.CORE.r); this.fx.rays(p.x, p.y - 60, P.gold, 1.8, { r: 460 });
-    this.banner({ kind: 'win', text: '繁荣度 Lv' + E.up.to, col: '#ffcf4a', col2: '#5a3a08', sub: E.up.to >= M.PROS_MAX ? '所有地块都解锁了' : '地块向外扩了一圈', life: 2.2, y: 440 }); this.pulse.pros = now();
+    this.banner({ kind: 'win', text: '繁荣度 Lv' + E.up.to, col: '#ffcf4a', col2: '#5a3a08', sub: E.up.to > (M.PROS_RINGS || 4) ? '选一项强化' : E.up.to === (M.PROS_RINGS || 4) ? '所有地块都解锁了' : '地块向外扩了一圈', life: 2.2, y: 440 }); this.pulse.pros = now();
   });
   E.shards = E.shards.filter(s => t - s.t0 < 1.6);
   if (t >= E.tEnd) { this.expand = null; if (this.bv) this.bv.home(); }
@@ -92,7 +92,11 @@ M.BASE_HOOKS.push(function (ctx, meta, bv, lights, phase) {
 const oTick = G.tick;
 G.tick = function (dt) {
   oTick.call(this, dt);
-  if (this.expand && !this.fx.frozen) this.expandTick(Math.min(dt || 0, 0.05));
+  // the opening never hangs (2026-09-26: a stuck one kept the bar at the old level, and a shown lock would never lift):
+  // an error or a show running far past its length finishes it at once, banner and all
+  const E = this.expand;
+  if (E) { try { if (!this.fx.frozen) this.expandTick(Math.min(dt || 0, 0.05)); } catch (e) { (window.__mcErrs = window.__mcErrs || []).push('expand: ' + (e && e.message)); E.t = E.tEnd + 1; }
+    if (this.expand === E && (E.t > E.tEnd + 1 || now() - E.t0 > (E.tEnd + 8) * 1000)) { if (!E.fired.banner) { E.fired.banner = 1; this.pulse.pros = now(); this.toast('繁荣度 Lv' + E.up.to, '#ffcf4a'); } this.expand = null; if (this.bv) this.bv.home(); this.bump(); } }
   // a level reached some other way (a keepsake finishing a room, an old save) opens its ring once the base is quiet
   const m = this.meta;
   if (m && this.screen === 'base' && !this.expand && !this.homeQ && !this.raid && !this.rite && !this.modal && !this.tlFx) {
@@ -121,7 +125,7 @@ G.view = function () {
 // words: the level and what it does, nothing about points
 const oTip = G.tipFor;
 G.tipFor = function (key) {
-  if (key === 'b-pros') { const m = this.meta, lv = M.prosLv(m); return { title: '繁荣度 Lv' + lv, c: '#ffcf4a', icon: 't_pros', d: lv >= M.PROS_MAX ? '地块已经全部解锁。' : '造的建筑品质越高，繁荣度涨得越多；升一级，地块向外扩一圈。' }; }
+  if (key === 'b-pros') { const m = this.meta, lv = M.prosLv(m); return { title: '繁荣度 Lv' + lv, c: '#ffcf4a', icon: 't_pros', d: '造的建筑品质越高，繁荣度涨得越多；每升一级选一项强化' + (lv < (M.PROS_RINGS || 4) ? '，地块向外扩一圈。' : '。') }; }
   return oTip.apply(this, arguments);
 };
 const oCT = G.cellTip;

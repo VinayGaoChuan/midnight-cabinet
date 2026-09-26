@@ -15,7 +15,7 @@ G.homeQueue = function (steps) {
 G.homeStep = function (dt) {
   const q = this.homeQ; if (!q) return;
   if (q.m !== this.meta) { this.homeQ = null; return; }                 // the game ended (core broke): nothing more to show
-  if (this.screen !== 'base' || this.raid) return;
+  if (this.screen !== 'base' || this.raid || this.lvPick) return;   // a talent page opened by a level-up holds the rest
   if (!q.cur) {
     q.cur = q.steps.shift(); if (!q.cur) { this.homeQ = null; this.bump(); return; }
     q.cur.t = 0; try { q.cur.run && q.cur.run(); } catch (e) { (window.__mcErrs = window.__mcErrs || []).push('home: ' + (e && e.message)); }
@@ -32,6 +32,61 @@ const oOW = G.openWorlds;
 G.openWorlds = function () { if (this.homeQ && !this.portalOn()) return; return oOW.apply(this, arguments); };
 ['steleDrop', 'pickWorld', 'launch'].forEach(k => { const o = G[k]; if (!o) return; G[k] = function () { if (this.homeQ) return; return o.apply(this, arguments); }; });
 
+// ───────── while a base animation plays, the base can't be clicked (user ruling 2026-09-26) ─────────
+// 「动效播放的时候，是不能点击基地的其他地方的」: a transparent lock sits over the whole base (z 70, above the bars and the
+// calendar, under guides and tips); a click on it only speeds the show up (§11.6). Anything the show asks the player to
+// answer (an event, choosing a talent, picking the raid leader) lifts the lock while it waits.
+G.baseBusy = function () {
+  if (this.screen !== 'base' || this.raid || this.modal || this.raidPrep || this.lvPick || this.visit) return false;   // a visit has its own dim layer
+  const busy = !!(this.homeQ || this.lvFx || this.tlFx || this.expand || this.coreFx || this.coreQueue || this.tear || this.rite || this.dayFx || this.cardFx || this.saveFx);
+  // never a trap: a show that runs on for 25 s lets go of the base
+  if (!busy) { this._busyAt = 0; return false; } const t = performance.now(); if (!this._busyAt) this._busyAt = t; return t - this._busyAt < 25000;
+};
+const oBaseClick = G.baseClick;
+if (oBaseClick) G.baseClick = function () { if (this.baseBusy()) { this.hurry && this.hurry(); return; } return oBaseClick.apply(this, arguments); };
+const oViewL = G.view;
+G.view = function () {
+  const v = oViewL.call(this); v.lockOn = this.baseBusy();
+  if (v.lockOn) { v.tipOn = false; v.lockClick = () => { if (this.hurry) this.hurry(); }; }
+  v.pickOn = this.pickShown(); if (v.pickOn) { v.pnZ = 65; v.pickCancel = () => { S.click(); this.closePanel(); }; }   // the page over the dimmed base and bars
+  return v;
+};
+
+// ───────── a level-up opens the talent page (user ruling 2026-09-26) ─────────
+// 「英雄升级后，应该直接弹出升级选择技能的页面，如果解锁新技能了，那就播放解锁新技能的效果。如果玩家不想现在就选择天赋，
+// 可以点击取消，如果选择完了，没有天赋点了，或者没有可用天赋了，那也算取消，然后继续推进其他结算效果」
+// The ceremony plays first (LEVEL UP, the power roll-up, a new talent layer lighting up node by node), then the leader's
+// talent page opens by itself over a dimmed base while there is a point to spend and a talent to take. 取消 (or ✕ / Esc)
+// closes it; the last point spent, or nothing left to take, closes it too. Whatever else the homecoming has waits for it.
+if (M.GUIDE) M.GUIDE.push({ id: 'lvpick', cat: '领袖', icon: 't_skill', title: '升级选天赋', line: '领袖升级后直接打开天赋页，可以当场学，也可以取消以后再学。', scr: 'base', sel: '[data-g="pick"]' });
+M.talAny = (h) => !!h && h.points > 0 && Array.isArray(h.tree) && h.tree.some((n, i) => M.talCan(h, i));
+G.pickShown = function () { const P = this.lvPick; return !!(P && this.panel && this.panel.kind === 'hero' && this.panel.id === P.id); };
+const oLvNext = G.lvNext;
+G.lvNext = function () {
+  const L = this.lvFx;
+  if (L && L.h && !L.asked) {
+    L.asked = 1; const m = this.meta, h = m && m.heroes.find(x => x.id === L.h.id), onPage = !!(h && this.panel && this.panel.kind === 'hero' && this.panel.id === h.id);
+    if (h && this.screen === 'base' && !this.raid && !onPage && M.talAny(h)) { this.lvFx = null; this.lvPick = { id: h.id }; this.openPanel({ kind: 'hero', id: h.id }); return; }
+  }
+  if (this.lvPick) return;   // the next leader's ceremony waits for this page
+  return oLvNext.apply(this, arguments);
+};
+const oTake = G.takeTalent;
+G.takeTalent = function (id) {
+  const r = oTake.apply(this, arguments), P = this.lvPick, h = this.meta && this.meta.heroes.find(x => x.id === id);
+  if (P && P.id === id && !M.talAny(h)) P.doneAt = performance.now() + 900;   // the node's burst plays out, then the page closes
+  return r;
+};
+const oTickP = G.tick;
+G.tick = function (dt) {
+  const r = oTickP.apply(this, arguments), P = this.lvPick;
+  if (P) {
+    if (P.doneAt && performance.now() > P.doneAt && this.pickShown()) { P.doneAt = 0; this.closePanel(); }
+    if (!this.pickShown()) { this.lvPick = null; this.lvNext(); this.bump && this.bump(); }   // closed, cancelled or replaced: go on
+  }
+  return r;
+};
+
 // ───────── back to base ─────────
 G.endBack = function () {
   const info = this.endInfo || {}, m = this.meta, gain = info.gain || {}; S.click();
@@ -41,7 +96,7 @@ G.endBack = function () {
   this.toBase();
   const steps = [], gifts = info.gifts || [], tiles = info.newTiles || [];
   // 1. the haul: resources and blueprints fly in, crystals land in the rock, keepsakes take effect
-  steps.push({ run: () => this.lootFly(gain, { x: 960, y: 560 }), wait: (gain.msup || gain.msh || gain.morb || (gain.bp || []).length || gain.exp) ? 2.2 : 0.3 });
+  steps.push({ run: () => this.lootFly(gain, { x: 960, y: 560 }), wait: (gain.msup || gain.msh || gain.morb || (gain.bp || []).length || gain.exp) ? 1.6 : 0.3 });
   tiles.forEach(t => steps.push(...this.tileReveal(t.c, t.r, t.t)));
   gifts.forEach((r, i) => steps.push({ run: () => { const p = r.cc != null ? this.cellPos(r.cc, r.cr) : r.door ? { x: 960, y: 250 } : { x: 960, y: 420 + (i % 3) * 60 }; this.fx.rays && this.fx.rays(p.x, p.y, r.col, 1.2, { r: 220 }); this.fx.pop(p.x, p.y - 40, r.n + ' · ' + r.t, r.col, 36); S.up && S.gain('relic'); }, wait: 0.8 }));
   if (info.coreHeal) steps.push({ run: () => { const p = this.fxPos('core') || this.corePos(); this.fx.rays(p.x, p.y, '#9cff7a', 1.4, { r: 200 }); this.fx.pop(p.x, p.y + 60, '基地核心 +1', '#9cff7a', 44); S.heal(); this.pulse.core = performance.now(); }, wait: 1.0 });
@@ -62,11 +117,13 @@ G.passDay = function () {
   m.portal.hp = Math.min(M.portalMax(m), m.portal.hp + M.portalMax(m) * 0.15); this.save();
   const ups = m._lvUps || []; m._lvUps = null; const steps = [];
   ups.forEach(u => steps.push({ run: () => { const h = m.heroes.find(x => x.id === u.id); if (!h) return; try { M.T && M.T.ev('lvup', { src: 'daily', lv: h.lv }); } catch (e) {} this.lvUpFx(h, u.lv0, h.lv, u.p0, M.heroPower(h, m)); }, until: () => !this.lvFx }));
-  logs.filter(l => l.c != null).forEach(l => steps.push({ run: () => { const p = this.cellPos(l.c, l.r); if (M.PXR) M.PXR.poke(l.c + ',' + l.r, 'built'); this.fx.rays(p.x, p.y, '#ffd060', 1.4, { r: 300 }); this.fx.pop(p.x, p.y - 40, l.t, '#ffe08a', 50, { slam: 1 }); this.fx.explode(p.x, p.y, '#ffd060', 1.6); if (/挖掘/.test(l.t)) S.digDone(); else S.buildDone(); }, wait: 1.0 }));
+  // finished rooms pop one after another in a single beat (was a full second each: 2026-09-27 playtest)
+  const built = logs.filter(l => l.c != null);
+  if (built.length) steps.push({ run: () => built.forEach((l, i) => setTimeout(() => { if (this.meta !== m) return; const p = this.cellPos(l.c, l.r); if (M.PXR) M.PXR.poke(l.c + ',' + l.r, 'built'); this.fx.rays(p.x, p.y, '#ffd060', 1.4, { r: 300 }); this.fx.pop(p.x, p.y - 40, l.t, '#ffe08a', 50, { slam: 1 }); this.fx.explode(p.x, p.y, '#ffd060', 1.6); if (/挖掘/.test(l.t)) S.digDone(); else S.buildDone(); }, i * 260)), wait: Math.min(1.9, 0.8 + 0.26 * (built.length - 1)) });
   const news = logs.filter(l => l.c == null && !/升到 Lv/.test(l.t || ''));
   if (news.length) steps.push({ run: () => news.forEach((l, i) => setTimeout(() => this.toast(l.t, '#9ccc6a'), i * 350)), wait: 0.4 + news.length * 0.35 });
   steps.push({ run: () => this.tlStart(from, m.day), until: () => !this.tlFx });
-  steps.push({ run: () => { const k = M.eventOn(m, m.day); if (k && k !== 'raid') this.dayEvent(k); }, until: () => !this.modal });
+  steps.push({ run: () => { const k = M.eventOn(m, m.day); if (k && k !== 'raid') this.dayEvent(k); }, until: () => !this.modal && !this.visit });
   steps.push({ run: () => this.checkRaid(), wait: 0 });
   this.homeQueue(steps);
   return logs;

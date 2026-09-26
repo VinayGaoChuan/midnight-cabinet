@@ -45,13 +45,15 @@ M.genMap2 = function (run, meta) {
   const nodes = [], byCol = [], plan = [];
   if (tut) { for (let c = 0; c < L.cols; c++) plan.push({ k: c === 0 ? 'start' : c === L.cols - 1 ? 'boss' : 'tut', seg: 0, final: c === L.cols - 1 }); }
   else {
-    plan.push({ k: 'start', seg: 0 });
-    for (let s = 0; s < L.boss; s++) {
-      if (s > 0) plan.push({ k: 'after', seg: s });
+    // a chapter can be entered at a waypoint (mc-scenes.js): the run starts at segment L.from, with a shop straight away
+    const from = L.from || 0; plan.push({ k: 'start', seg: from });
+    if (L.wpShop) plan.push({ k: 'shop', seg: from, wp: 1 });
+    for (let s = from; s < L.boss; s++) {
+      if (s > from) plan.push({ k: 'after', seg: s });
       const mids = L.mids ? L.mids[s] : L.mid[0] + Math.floor(Math.random() * (L.mid[1] - L.mid[0] + 1));   // a scene fixes each segment's length (mc-scenes.js)
-      for (let i = 0; i < mids; i++) plan.push({ k: 'mid', seg: s, first: s === 0 && i === 0 });
+      for (let i = 0; i < mids; i++) plan.push({ k: 'mid', seg: s, first: s === from && i === 0 });
       plan.push({ k: 'shop', seg: s });
-      plan.push({ k: 'boss', seg: s, final: s === L.boss - 1 });
+      plan.push({ k: 'boss', seg: s, final: s === L.boss - 1, fb: L.fbs ? L.fbs[s] : null });
     }
     L = run.len = Object.assign({}, L, { cols: plan.length });
   }
@@ -77,7 +79,7 @@ M.genMap2 = function (run, meta) {
   nodes.forEach(n => {
     const P = plan[n.col];
     if (P.k === 'start') { n.type = 'start'; n.done = true; return; }
-    if (P.k === 'boss') { n.type = 'boss'; if (P.final) n.final = true; return; }
+    if (P.k === 'boss') { n.type = 'boss'; if (P.final) n.final = true; if (P.fb) n.fb = P.fb; return; }
     if (P.k === 'shop') { n.type = 'shop'; return; }
     if (tut) { n.type = ['start', 'normal', 'event', 'normal', 'shop', 'normal', 'elite', 'camp', 'shop', 'boss'][n.col] || 'normal'; if (n.col === 3) n.type = n.row < 0 ? 'normal' : 'chest'; if (n.col === 2) n.ev = 'musician'; return; }
     if (n.type === 'extract') return;
@@ -86,8 +88,8 @@ M.genMap2 = function (run, meta) {
   });
   if (!tut) {
     // elites: 0–2 per segment, never on the first fight of the run, at most one per column
-    for (let s = 0; s < L.boss; s++) {
-      const k = s === 0 ? 0 : wpick([0, 1, 2], x => (L.elite || [1, 1, 1])[x]); const used = new Set();   // the first segment is a warm-up: the army is still 3 units and the only shop is before the boss
+    for (let s = L.from || 0; s < L.boss; s++) {
+      const k = s === (L.from || 0) ? 0 : wpick([0, 1, 2], x => (L.elite || [1, 1, 1])[x]); const used = new Set();   // the first segment is a warm-up: the army is still 3 units and the only shop is before the boss
       nodes.filter(n => n.seg === s && plan[n.col].k !== 'boss' && plan[n.col].k !== 'shop' && plan[n.col].k !== 'start' && !plan[n.col].first && n.type !== 'extract').sort(() => Math.random() - 0.5)
         .forEach(n => { if (used.size < k && !used.has(n.col)) { n.type = 'elite'; used.add(n.col); } });
     }
@@ -224,8 +226,7 @@ M.drawWorld2 = function (ctx, run, walker, opts = {}) {
   lx.globalCompositeOperation = 'destination-out';
   lights.forEach(L => { const p = toS(L.x, L.y), r = L.r * z * L.f / 4; const g = lx.createRadialGradient(p.x / 4, p.y / 4, 0, p.x / 4, p.y / 4, r); g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.5, 'rgba(0,0,0,0.6)'); g.addColorStop(1, 'rgba(0,0,0,0)'); lx.fillStyle = g; lx.fillRect(p.x / 4 - r, p.y / 4 - r, r * 2, r * 2); });
   ctx.imageSmoothingEnabled = true; ctx.drawImage(lm, 0, 0, 1920, 1080);
-  lights.forEach(L => { const p = toS(L.x, L.y); M.glow(ctx, p.x, p.y, L.r * z * 0.55 * L.f, L.c, 0.22); });
-  M.godRays(ctx, 1920, 1080, T, R.light, 4, 0.05);
+  if (!M.LOW_FX) { lights.forEach(L => { const p = toS(L.x, L.y); M.glow(ctx, p.x, p.y, L.r * z * 0.55 * L.f, L.c, 0.22); }); M.godRays(ctx, 1920, 1080, T, R.light, 4, 0.05); }   // phones: no halos or rays (mc-fx.js)
   if (!run.amb) run.amb = new M.Ambient(R.amb || 'motes', 1920, 1080, 70);
   run.amb.update(opts.dt || 0.016); run.amb.draw(ctx, walker.camX, walker.camY);
   M.hd2d(ctx, 1920, 1080, { focus: 0.52, band: 0.2, bloom: 0.5, grade: R.grade, gradeA: 0.3, vig: 0.55 });

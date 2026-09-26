@@ -113,8 +113,7 @@ const FRUITS = [
   { n: '智慧果', c: C.lime, ic: 't_orb', q: 0, rv: () => 70, d: '经验 +70', f(g, mg) { return g.giveExp(70, mg.from); } },
   { n: '灵魂果', c: C.violet, ic: 't_shard', q: 1, rv: () => 25, d: '灵魂碎片 +25', f(g, mg) { return g.giveShards(25, mg.from); } },
   { n: '黄金果', c: C.gold, ic: 't_coin', q: 2, rv: (mg) => M.nice(mg.P * 10), d: '积分 +', f(g, mg) { g.award([{ k: 'wallet', v: M.nice(mg.P * 10) }], mg.from); return '积分 +' + M.nice(mg.P * 10); } },
-  { n: '幸运果', c: C.green, ic: 't_clover', q: 2, d: '本局事件好运 +10%，道具好效果 +5%', f(g) { g.run.mods.tier = (g.run.mods.tier || 0) + 0.05; return g.buffRun('eventLuck', 0.1, '好运 +10%', C.green); } },
-  { n: '地脉种子', c: C.ice, ic: 'l_ley', q: 3, d: '一颗特殊地格的种子', f(g, mg) { g.award([{ k: 'bp', key: 'tile:' + M.dropTile() }], mg.from); return '地格种子'; } }];
+  { n: '幸运果', c: C.green, ic: 't_clover', q: 2, d: '本局事件好运 +10%，FEVER 好效果 +5%', f(g) { g.run.mods.tier = (g.run.mods.tier || 0) + 0.05; return g.buffRun('eventLuck', 0.1, '好运 +10%', C.green); } }];
 MINI.tree = { title: '世界树', img: 'e_tree', col: C.green, text: '树根扎进每一个世界。它结的果子，只允许你摘一个。',
   init(mg) { const pool = FRUITS.slice().sort(() => rnd() - 0.5); mg.fr = pool.slice(0, 3).map((f, i) => ({ f, x: CX - 220 + i * 220, y: SY + 250 + (i === 1 ? -60 : 0), gone: false, vy: 0, fy: 0 })); mg.spare = pool[3]; mg.picks = 0; mg.allow = 1; mg.got = []; mg.watered = false; mg.bugs = [...Array(24)].map(() => ({ x: SX + rnd() * SW, y: SY + 100 + rnd() * 500, p: rnd() * 6 })); },
   // 摘下之前先熟透：果子鼓起来、亮预兆色，可能裂开升一档（只往上、停在真实品质），然后才掉
@@ -236,7 +235,7 @@ MINI.tarot = { title: '占卜摊', img: 'e_card', col: C.violet, text: '蒙着�
   } };
 const EGGS = [
   { n: '满满的积分', c: C.gold, ic: 'e_coin', q: 2, rv: (mg) => M.nice(mg.P * 12), f(g, mg) { const v = M.nice(mg.P * 12); g.award([{ k: 'wallet', v }], mg.from); return '积分 +' + v; } },
-  { n: '一个道具', c: C.violet, ic: 'gem', q: 1, f(g, mg) { return g.award([K.item(g.run, mg.P)], mg.from).join(''); } },
+  { n: 'FEVER 预热', c: C.violet, ic: 'gem', q: 1, f(g) { g.run.mods.feverStart = (g.run.mods.feverStart || 0) + 0.15; return '本局每场战斗开局 FEVER 槽 +15%'; } },
   { n: '一张图纸', c: C.butter, ic: 'scroll', q: 3, f(g, mg) { return g.award([K.bp()], mg.from).join(''); } },
   { n: '一只雏鸟', c: C.green, ic: 'r_beast', q: 1, f(g, mg) { const t = M.pickUnitQ(g.run); if (!M.canAdd(g.run, t)) return '它飞走了'; g.award([{ k: 'unit', type: t }], mg.from); return M.DB[t].n + ' 认你做了主人'; } },
   { n: '空的', c: C.lavender, ic: 'u_mask', q: -1, f() { return '什么也没有'; } },
@@ -353,7 +352,7 @@ MINI.dice = { title: '骰子对决', img: 't_dice', col: C.cream, text: '一个�
 // ═════════════════════ 命运之轮 · pay in blood, spin the reel ═════════════════════
 // the wheel is a wheel (user ruling 2026-09-25): the stone disc itself spins, slows down and stops with a sector under
 // the pointer — no slot reel. Each sector says what it gives.
-const FATE = [{ n: '空', c: C.haze, w: 16 }, { n: '积分倍率 +0.4', c: C.magenta, w: 16 }, { n: '部队', c: C.blue, w: 16 }, { n: '道具', c: C.violet, w: 14 }, { n: '图纸', c: C.tan, w: 12 }, { n: '积分', c: C.gold, w: 16 }, { n: '诅咒', c: C.red, w: 10 }];
+const FATE = [{ n: '空', c: C.haze, w: 16 }, { n: '积分倍率 +0.4', c: C.magenta, w: 16 }, { n: '部队', c: C.blue, w: 16 }, { n: 'FEVER', c: C.violet, w: 14 }, { n: '图纸', c: C.tan, w: 12 }, { n: '积分', c: C.gold, w: 16 }, { n: '诅咒', c: C.red, w: 10 }];
 const SEG = Math.PI * 2 / FATE.length, FTA = 2.6;
 // 每格的中奖档（0 = 没中）；倍率和图纸是「金格」
 const FT = [0, 3, 2, 2, 3, 2, 0], TOPF = (k) => FT[k] >= 3;
@@ -386,7 +385,7 @@ MINI.fate = { title: '命运之轮', img: 'e_fate', col: C.red, text: '石头做
     if (idx === 0) tx = '石轮停在空白处。血白流了。';
     if (idx === 1) { run.runBuff.mult = (run.runBuff.mult || 0) + 0.4; tx = '本局初始积分倍率 +0.4。'; }
     if (idx === 2) { const t = M.pickUnitQ(run); if (M.canAdd(run, t)) { g.push({ k: 'unit', type: t }); tx = '石轮上走下来一个 ' + M.DB[t].n + '。'; } else { g.push({ k: 'wallet', v: M.nice(P * 6) }); tx = '队伍满了，名字化成了积分。'; } }
-    if (idx === 3) { g.push(K.item(run, P)); tx = '石缝里滚出一个瓶子。'; }
+    if (idx === 3) { run.mods.feverStart = (run.mods.feverStart || 0) + 0.2; tx = '石轮发烫。本局每场战斗开局 FEVER 槽 +20%。'; }
     if (idx === 4) { g.push(K.bp(null, 1)); tx = '一张刻在石片上的图纸。'; }
     if (idx === 5) { g.push({ k: 'wallet', v: M.nice(P * 16) }); tx = '血变成了金子。'; }
     if (idx === 6) { tx = '石轮记住了你的名字。生命 -' + this.heroHurt(0.15) + '。'; }

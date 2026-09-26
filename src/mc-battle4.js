@@ -112,18 +112,21 @@ function drawTitle(ctx, f, T, p) {
     const glyph = (ch, sz) => (foe ? M.pxTextCanvas(ch, sz, PL.butter, { ink: PL.ink }) : rampChar(ch, sz));
     const tw = chars.reduce((w, ch) => w + glyph(ch, S).width, 0), pw = g2((tw + S) * pop), ph = g2(S + 28), X = g2(960 - pw / 2), Y = g2(y - ph / 2);
     const [bg, hi, lo, rule] = foe ? [PL.red, PL.pink, PL.wine, PL.red] : [PL.wine, PL.red, PL.umber, PL.gold], sk = U.hx(f.col);
-    M.pxGlow(ctx, 960, y, pw * 0.7, sk, 0.35 * a);
+    M.pxGlow(ctx, 960, y, Math.max(64, Math.round((tw + S) * 0.7 / 64) * 64), sk, 0.35 * a);   // a few cached sizes, not one per pop frame
     const lw = 120 + f.tier * 30, gx = pw / 2 + 12;
     [-1, 1].forEach(sd => { const x0 = sd < 0 ? 960 - gx - lw : 960 + gx; U.box(ctx, x0, y - 3, lw, 6, rule); U.R(ctx, sd < 0 ? 960 - gx - lw * 0.4 : 960 + gx, y - 3, lw * 0.4, 6, sk); });
     U.box(ctx, X, Y, pw, ph, bg, 4); U.R(ctx, X, Y, pw, 6, hi); U.R(ctx, X, Y + ph - 6, pw, 6, lo);
     M.UI.chase(ctx, X + 8, Y - 16, pw - 16, Tq); M.UI.chase(ctx, X + 8, Y + ph + 10, pw - 16, Tq, true);
-    let px = 960 - chars.reduce((w, ch) => w + glyph(ch, size).width, 0) / 2;
-    chars.forEach((ch, i) => { const c = glyph(ch, size), ink = M.pxTextCanvas(ch, size, PL.ink, { ink: PL.ink }), ph2 = (Tq * 1.25 + (chars.length - i) * 0.12) % 1, dy = still ? 0 : [0, -0.14, 0, 0.05][Math.floor(ph2 * 4)] * size, cy = g2(y + dy - c.height / 2); ctx.drawImage(ink, g2(px), cy + 4, c.width, c.height); ctx.drawImage(c, g2(px), cy, c.width, c.height); px += c.width; });
+    // the glyphs are made once at the title's own size (cached) and scaled for the pop: making them at every in-between size
+    // meant new text canvases and pixel reads every frame of every title (2026-09-27: 60 units in battle stuttered on PCs)
+    let px = 960 - tw * pop / 2;
+    chars.forEach((ch, i) => { const c = glyph(ch, S), ink = M.pxTextCanvas(ch, S, PL.ink, { ink: PL.ink }), w = c.width * pop, h = c.height * pop, ph2 = (Tq * 1.25 + (chars.length - i) * 0.12) % 1, dy = still ? 0 : [0, -0.14, 0, 0.05][Math.floor(ph2 * 4)] * size, cy = g2(y + dy - h / 2); ctx.drawImage(ink, g2(px), cy + 4, w, h); ctx.drawImage(c, g2(px), cy, w, h); px += w; });
     for (let i = 0; i < 6; i++) { const q = (Tq * 1.4 + i / 6) % 1, sx = 960 + (i % 2 ? 1 : -1) * (gx + lw * q), sy = y - 18 + Math.sin(i * 2 + Tq * 6) * 14; U.R(ctx, sx - 3, sy - 3, 6, 6, i % 2 ? PL.butter : sk); }
   } else if (e) {
     // 头顶小字：像素字 + 墨描边，调色板色
     const y = e.y - 88 * e.sz - 40 - p * 20;
-    U.text(ctx, f.text, e.x, y, g2((f.tier >= 1 ? 30 : 26) * pop), lighten(f.col, 0.25));
+    if (pop !== 1) { ctx.translate(e.x, y); ctx.scale(pop, pop); ctx.translate(-e.x, -y); }   // the pop scales a text made at one size
+    U.text(ctx, f.text, e.x, y, g2(f.tier >= 1 ? 30 : 26), lighten(f.col, 0.25));
   }
   ctx.restore();
 }
@@ -249,7 +252,7 @@ M.drawBattleHudPx = function (ctx, b, T) {
   if (!M.pixelMode) return;
   const U = M.bUI, PL = U.P;
   // 技能聚焦：墨色硬边色带暗角，按 3 阶渐入渐出
-  const fo = b.focus; if (fo && T < fo.until && fo.ent.alive) { const e = fo.ent, k = Math.ceil(clamp(Math.min(T - fo.t0, fo.until - T) / 0.15, 0, 1) * 3) / 3; if (k > 0) { ctx.fillStyle = M.UI.rg(ctx, e.x, e.y - 50, 80, 900, [[0, 'rgba(7,6,15,0)'], [1, 'rgba(7,6,15,' + (0.55 * k).toFixed(2) + ')']], 5); ctx.fillRect(0, 0, FW, FH); } }
+  const fo = b.focus; if (fo && !M.LOW_FX && T < fo.until && fo.ent.alive) { const e = fo.ent, k = Math.ceil(clamp(Math.min(T - fo.t0, fo.until - T) / 0.15, 0, 1) * 3) / 3; if (k > 0) { ctx.fillStyle = M.UI.rg(ctx, e.x, e.y - 50, 80, 900, [[0, 'rgba(7,6,15,0)'], [1, 'rgba(7,6,15,' + (0.55 * k).toFixed(2) + ')']], 5); ctx.fillRect(0, 0, FW, FH); } }
   // 技能伤害计：夜蓝机箱小面板（4px 墨框、斜面、8px 硬投影），红字机台数码，按阶淡出（不加文字标签，数字自己说明）
   const m = b.meter; if (m && m.total > 0 && T - m.last < 1.6) {
     const a = Math.ceil(clamp((1.6 - (T - m.last)) / 0.4, 0, 1) * 4) / 4, pop = T - m.last < 0.1 && !(M.PJ && M.PJ.reduced) ? 1 : 0, str = '+' + fmt(m.total);

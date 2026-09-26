@@ -50,8 +50,19 @@ M.fxDim = function (x, al) {
 const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
 const PP = {};
 function pp(W, H) { const k = W + 'x' + H; if (!PP[k]) { const lw = Math.round(W / 4), lh = Math.round(H / 4); PP[k] = { lw, lh, low: mk(lw, lh), bl: mk(lw, lh), dof: mk(lw, lh), grain: null }; } return PP[k]; }
+// The post-processing (depth-of-field blur, bloom blur with brightness / contrast, soft-light grade, vignette: two blurs and
+// four full-screen blends every frame) is what made the game slow on Android (2026-09-27, measured on the emulator: the
+// base 53 ms → 20 ms a frame with it off, battles 30 → 22 ms). Touch devices go without it; any device that cannot hold
+// about 30 frames a second with it drops it by itself.
+const TOUCH = (() => { try { return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || !!window.Capacitor || !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches && !window.matchMedia('(pointer: fine)').matches); } catch (e) { return false; } })();
+M.HD2D_LOW = TOUCH;
+// the same goes for the other screen-wide light passes: the soft halo round every scene light (bloom-like), the map's
+// light rays, the skill-focus vignette in battle (user ruling 2026-09-27: 「手机上就把景深模糊、泛光、调色、暗角这些类似的效果关掉」)
+M.LOW_FX = TOUCH;
+const slow = { last: 0, n: 0, sum: 0 };
+function hdSlow() { const t = performance.now(), d = t - slow.last; slow.last = t; if (d > 250 || d <= 0) return false; slow.n++; slow.sum += d; if (slow.n >= 150) { const avg = slow.sum / slow.n; slow.n = 0; slow.sum = 0; if (avg > 33) { M.HD2D_LOW = true; M.LOW_FX = true; return true; } } return false; }
 M.hd2d = function (ctx, W, H, o = {}) {
-  if (M.HD2D_OFF) return;
+  if (M.HD2D_OFF || M.HD2D_LOW || hdSlow()) return;
   const P = pp(W, H), src = ctx.canvas;
   const lx = P.low.getContext('2d'), bx = P.bl.getContext('2d'), dx = P.dof.getContext('2d');
   lx.imageSmoothingEnabled = true; lx.setTransform(1, 0, 0, 1, 0, 0); lx.filter = 'none'; lx.clearRect(0, 0, P.lw, P.lh); lx.drawImage(src, 0, 0, W * (ctx._R || 1), H * (ctx._R || 1), 0, 0, P.lw, P.lh);

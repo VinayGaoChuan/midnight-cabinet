@@ -84,7 +84,7 @@ G.tipFor = function (key) {
   const p = this.panel, m = this.meta, h = p && p.kind === 'hero' && m.heroes.find(x => x.id === p.id);
   if (h && /^(tal|talq|hs)-/.test(key || '')) {
     const Hc = M.HEROES[h.cls], R = M.RARITY[h.rarity], mx = M.heroMaxHp(h, m);
-    if (key === 'tal-root') return { title: '「' + Hc.skill.n + '」', c: '#ffe08a', kind: '主动技能 · 已点亮', d: M.skillDesc(h), icon: SKILL_IC[h.cls] || 't_skill', lines: [{ t: '冷却 ' + M.skillNodeCd(h, m) + ' 个节点 · 每场战斗最多 1 次', c: '#a89ca8' }, { t: '效果随等级提升。天赋从这里长出来。', c: '#a89ca8' }] };
+    if (key === 'tal-root') return { title: '「' + Hc.skill.n + '」', c: '#ffe08a', kind: '主动技能 · 已点亮', d: M.skillDesc(h), icon: SKILL_IC[h.cls] || 't_skill', lines: [{ t: '每场战斗 1 次，一开战就能用', c: '#a89ca8' }, { t: '效果随等级提升。天赋从这里长出来。', c: '#a89ca8' }] };
     let mm = /^tal-(\d+)$/.exec(key);
     if (mm) { const i = +mm[1], T = h.tree[i]; if (!T) return null; const Sc = M.talScope(T), taken = M.talTaken(h, i), open = M.talOpen(h, i);
       const st = taken ? '已学会' : open && h.points > 0 ? '按住学习' : open ? '升级获得天赋点' : '先学会下面连着的天赋';

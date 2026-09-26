@@ -842,7 +842,7 @@
 </style>
 <script src="c6426465-2029-48c4-b4b6-48f1694ed343"></script>
 <script src="a41355fa-4761-4b6d-911e-fe1fa4cb8db2"></script>
-<style>html,body{margin:0;height:100%;background:#07060f;overflow:hidden}@keyframes fitBlink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(1.08)}}@keyframes endSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes talNew{0%{transform:scale(0);opacity:0}60%{transform:scale(1.25);opacity:1}100%{transform:scale(1);opacity:1}}@keyframes talPulse{0%,100%{box-shadow:0 0 0 3px #fff3b0,0 0 0 6px #07060f}50%{box-shadow:0 0 0 9px #ffcf4a,0 0 0 12px #07060f}}@keyframes pjBlink{0%,100%{opacity:1}50%{opacity:.25}}@keyframes talBob{0%,100%{translate:0 0}50%{translate:0 -7px}}*::-webkit-scrollbar{width:14px;height:14px}*::-webkit-scrollbar-track{background:#0d0b1e;border-left:2px solid #3d3a8c;box-shadow:inset 3px 0 0 #07060f}*::-webkit-scrollbar-thumb{background:linear-gradient(90deg,#ffcf4a 0 3px,#3d3a8c 3px 11px,#3d3a8c 11px);border:2px solid #07060f;min-height:40px}*::-webkit-scrollbar-thumb:hover{background:linear-gradient(90deg,#ffcf4a 0 3px,#ffcf4a 3px 11px,#3d3a8c 11px)}*::-webkit-scrollbar-thumb:active{background:linear-gradient(90deg,#fff3b0 0 3px,#ffcf4a 3px 11px,#3d3a8c 11px)}*::-webkit-scrollbar-button{display:none}*::-webkit-scrollbar-corner{background:#0d0b1e}a{color:#ffcf4a}a:hover{color:#ffcf4a}img{image-rendering:auto;display:block}canvas{image-rendering:auto}</style>
+<style>html,body{margin:0;height:100%;background:#07060f;overflow:hidden}*{-webkit-tap-highlight-color:transparent}@keyframes fitBlink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(1.08)}}@keyframes endSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes talNew{0%{transform:scale(0);opacity:0}60%{transform:scale(1.25);opacity:1}100%{transform:scale(1);opacity:1}}@keyframes talPulse{0%,100%{box-shadow:0 0 0 3px #fff3b0,0 0 0 6px #07060f}50%{box-shadow:0 0 0 9px #ffcf4a,0 0 0 12px #07060f}}@keyframes pjBlink{0%,100%{opacity:1}50%{opacity:.25}}@keyframes talBob{0%,100%{translate:0 0}50%{translate:0 -7px}}*::-webkit-scrollbar{width:14px;height:14px}*::-webkit-scrollbar-track{background:#0d0b1e;border-left:2px solid #3d3a8c;box-shadow:inset 3px 0 0 #07060f}*::-webkit-scrollbar-thumb{background:linear-gradient(90deg,#ffcf4a 0 3px,#3d3a8c 3px 11px,#3d3a8c 11px);border:2px solid #07060f;min-height:40px}*::-webkit-scrollbar-thumb:hover{background:linear-gradient(90deg,#ffcf4a 0 3px,#ffcf4a 3px 11px,#3d3a8c 11px)}*::-webkit-scrollbar-thumb:active{background:linear-gradient(90deg,#fff3b0 0 3px,#ffcf4a 3px 11px,#3d3a8c 11px)}*::-webkit-scrollbar-button{display:none}*::-webkit-scrollbar-corner{background:#0d0b1e}a{color:#ffcf4a}a:hover{color:#ffcf4a}img{image-rendering:auto;display:block}canvas{image-rendering:auto}</style>
 </helmet>
 <div style="position:fixed;inset:0;background:#07060f;overflow:hidden;font-family:'Fusion Pixel 12px Proportional SC','Fusion Pixel 12px Proportional SC','Noto Serif SC',serif;font-weight:400;user-select:none;-webkit-user-select:none">
 <div data-pj-stage="1" ref="{{stageRef}}" sc-camel-on-mouse-move="{{onMove}}" sc-camel-on-mouse-down="{{onPress}}" sc-camel-on-mouse-over="{{onOver}}" style="position:absolute;left:50%;top:50%;width:1920px;height:1080px;margin-left:-960px;margin-top:-540px;transform:translate({{shx}}px,{{shy}}px) rotate({{shr}}deg) scale({{scale}});background:#0d0b1e;overflow:hidden;color:#f4efe0">
@@ -931,19 +931,15 @@
   <div style="position:absolute;left:0;top:0;width:1920px;height:100px;background:#1a1640;box-shadow:inset 0 -6px 0 0 #07060f,inset 0 -9px 0 0 #3d3a8c,inset 0 3px 0 0 #2b2461;display:flex;align-items:center;gap:26px;padding:0 30px 9px;box-sizing:border-box;pointer-events:auto">
     <div data-tip="b-core" data-fx="core" data-pj="ink" style="--q:{{b.coreC}};display:flex;align-items:center;gap:6px;padding:6px 10px;transform:scale({{b.coreSc}})"><sc-for list="{{b.cores}}" as="bco" hint-placeholder-count="3"><m-img src="{{bco.img}}" style="width:34px;height:34px;opacity:{{bco.op}}"></m-img></sc-for></div>
     <div data-tip="b-pros" data-fx="pros" data-pj="ink" style="--q:#ffcf4a;display:flex;align-items:center;gap:8px;padding:6px 12px;transform:scale({{b.prosSc}})"><m-img src="{{b.prosImg}}" style="width:34px;height:34px"></m-img><div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:20px;color:#ffcf4a;line-height:1">繁荣 Lv{{b.prosLv}}</span><div style="width:104px;height:8px;background:#07060f;box-shadow:0 0 0 3px #07060f"><div style="height:8px;width:{{b.prosW}};background:#ffcf4a"></div></div></div></div>
-    <div style="display:flex;gap:18px;align-items:center">
-      <sc-for list="{{b.res}}" as="r" hint-placeholder-count="0">
-        <div data-fx="{{r.fx}}" sc-camel-on-mouse-enter="{{r.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" style="display:flex;align-items:center;gap:10px;padding:4px 6px;transform:scale({{r.sc}})">
-          <m-img src="{{r.img}}" style="max-width:32px;max-height:32px"></m-img><mc-num v="{{r.v}}" style="font-size:30px;color:{{r.c}}"></mc-num>
-        </div>
-      </sc-for>
-      
-    </div>
     <div data-g="timeline" style="position:absolute;left:{{tl.left}}px;top:6px;width:{{tl.w}}px;height:88px;z-index:60;transform:translate({{tl.dx}}px,{{tl.y}}px) scale({{tl.sc}});transform-origin:50% 0"><div style="position:absolute;left:-12px;top:0;width:{{tl.cw}}px;height:88px;overflow:hidden"><div style="position:absolute;left:12px;top:6px;transform:translateX({{tl.x}}px)"><sc-for list="{{tl.dots}}" as="td" hint-placeholder-count="0"><div style="position:absolute;left:{{td.x}}px;top:22px;width:8px;height:8px;border-radius:50%;background:{{td.c}};box-shadow:0 0 0 2px #07060f,0 0 {{td.glow}}px {{td.c}};opacity:{{td.op}};transform:scale({{td.sc}})"></div></sc-for><sc-for list="{{tl.cells}}" as="tc" hint-placeholder-count="10"><div sc-camel-on-mouse-enter="{{tc.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" style="position:absolute;left:{{tc.x}}px;top:0;width:52px;height:78px;display:flex;flex-direction:column;align-items:center;gap:4px;opacity:{{tc.op}};transform:translateY({{tc.dy}}px) scale({{tc.sc}})"><div style="position:relative;width:52px;height:52px;box-sizing:border-box;border-radius:50%;background:radial-gradient(circle at 50% 35%,{{tc.bg}},#07060f 130%);box-shadow:0 0 0 3px {{tc.border}},0 0 0 6px #07060f;display:flex;align-items:center;justify-content:center"><sc-if value="{{tc.hasIc}}"><m-img src="{{tc.ic}}" style="width:30px;height:30px"></m-img></sc-if><sc-if value="{{tc.noIc}}"><span style="font-family:'Silkscreen','Fusion Pixel 12px Proportional SC',monospace;font-size:20px;color:{{tc.dc}}">{{tc.num}}</span></sc-if><div style="position:absolute;inset:0;border-radius:50%;background:#fff;opacity:{{tc.fl}};pointer-events:none"></div><sc-if value="{{tc.stampOn}}"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:44px;color:#e8434f;text-shadow:3px 3px 0 #07060f;transform:scale({{tc.stampSc}}) rotate(-12deg)">✕</div></sc-if></div><div style="font-size:15px;line-height:16px;color:{{tc.dc}};white-space:nowrap;text-shadow:2px 2px 0 #07060f">{{tc.lab}}</div></div></sc-for><div style="position:absolute;left:{{tl.mx}}px;top:0;width:52px;height:52px;border-radius:50%;box-shadow:0 0 0 4px #ffcf4a,0 0 18px 6px rgba(255,207,74,0.55);opacity:{{tl.mop}};transform:scale({{tl.msc}});pointer-events:none"></div></div></div></div>
     <div style="flex:1"></div>
     <div data-tip="b-rest" data-g="rest" sc-camel-on-click="{{restDay}}" data-pj="key dark" style="--kt:#cfc6b8;padding:8px 18px 14px;font-size:26px;margin-right:14px">☾ 休整一天</div><div sc-camel-on-click="{{abandon}}" data-pj="key dark" style="--kt:#ff9aa8;padding:8px 18px 14px;font-size:26px">放弃</div>
   </div>
-  <sc-if value="{{b.hasBuffs}}" hint-placeholder-val="{{false}}"><div data-g="buffs" style="position:absolute;left:30px;top:112px;display:flex;gap:10px;flex-wrap:wrap;max-width:1000px;pointer-events:auto"><sc-for list="{{b.buffs}}" as="bf" hint-placeholder-count="0"><div sc-camel-on-mouse-enter="{{bf.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" data-pj="ink" style="--q:{{bf.c}};display:flex;align-items:center;gap:8px;padding:4px 12px 6px 8px"><m-img src="{{bf.img}}" style="width:30px;height:30px"></m-img><span style="font-size:22px;color:{{bf.c}};text-shadow:3px 3px 0 #07060f">{{bf.t}}</span></div></sc-for></div></sc-if>
+  <!-- resources sit in one row with the waiting effects, under the top bar (user ruling 2026-09-26) -->
+  <div style="position:absolute;left:30px;top:112px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;max-width:1200px;pointer-events:auto">
+    <sc-for list="{{b.res}}" as="r" hint-placeholder-count="0"><div data-fx="{{r.fx}}" sc-camel-on-mouse-enter="{{r.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" data-pj="ink" style="--q:{{r.c}};display:flex;align-items:center;gap:10px;padding:4px 12px 6px 8px;transform:scale({{r.sc}})"><m-img src="{{r.img}}" style="max-width:30px;max-height:30px"></m-img><mc-num v="{{r.v}}" style="font-size:26px;color:{{r.c}}"></mc-num></div></sc-for>
+    <sc-if value="{{b.hasBuffs}}" hint-placeholder-val="{{false}}"><div data-g="buffs" style="display:flex;gap:10px;flex-wrap:wrap;pointer-events:auto"><sc-for list="{{b.buffs}}" as="bf" hint-placeholder-count="0"><div sc-camel-on-mouse-enter="{{bf.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" data-pj="ink" style="--q:{{bf.c}};display:flex;align-items:center;gap:8px;padding:4px 12px 6px 8px"><m-img src="{{bf.img}}" style="width:30px;height:30px"></m-img><span style="font-size:22px;color:{{bf.c}};text-shadow:3px 3px 0 #07060f">{{bf.t}}</span></div></sc-for></div></sc-if>
+  </div>
   <sc-if value="{{tlShadeOn}}" hint-placeholder-val="{{false}}"><div style="position:absolute;inset:0;background:rgba(7,6,15,{{tlShade}});pointer-events:none;z-index:50"></div></sc-if>
   <sc-if value="{{tl.banner}}" hint-placeholder-val="{{false}}"><div style="position:absolute;left:0;right:0;top:{{tl.bannerY}}px;display:flex;flex-direction:column;align-items:center;gap:14px;pointer-events:none;z-index:61;opacity:{{tl.bannerOp}};transform:translate({{tl.bannerX}}px,{{tl.bannerDY}}px) rotate({{tl.bannerRot}}deg) scale({{tl.bannerSc}})"><div style="position:absolute;left:50%;top:0;width:1100px;height:170px;margin-left:-550px;background:radial-gradient(ellipse 50% 50% at 50% 50%,{{tl.bannerC}},transparent 72%);opacity:{{tl.glowOp}};transform:scale({{tl.glowSc}},{{tl.glowSc}});z-index:-1"></div><div style="font-size:96px;color:{{tl.bannerC}};text-shadow:6px 6px 0 #07060f,0 0 40px {{tl.bannerC}}">{{tl.bannerTxt}}</div><div style="font-size:34px;color:{{tl.bannerSubC}};text-shadow:3px 3px 0 #07060f;opacity:{{tl.bannerSubOp}}">{{tl.bannerSub}}</div></div></sc-if>
 <sc-if value="{{isRaid}}" hint-placeholder-val="{{false}}">
@@ -964,8 +960,9 @@
       </sc-for>
     </div>
   </div>
+  <sc-if value="{{pickOn}}" hint-placeholder-val="{{false}}"><div data-g="pick" sc-camel-on-click="{{stop}}" style="position:absolute;inset:0;z-index:64;background:rgba(7,6,15,0.62)"><div sc-camel-on-click="{{pickCancel}}" data-pj="key dark" style="position:absolute;left:940px;top:984px;width:220px;height:66px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:30px;cursor:pointer">取消</div></div></sc-if>
   <sc-if value="{{pnOn}}" hint-placeholder-val="{{false}}">
-    <div sc-camel-on-click="{{stop}}" sc-camel-on-mouse-move="{{stop}}" data-pj="panel plate" data-enter="side" data-enter-rows="1" style="--rd:.08s;position:absolute;left:1190px;top:136px;width:700px;height:920px;box-sizing:border-box;padding:50px 32px 30px;display:flex;flex-direction:column;gap:16px;">
+    <div sc-camel-on-click="{{stop}}" sc-camel-on-mouse-move="{{stop}}" data-pj="panel plate" data-enter="side" data-enter-rows="1" style="--rd:.08s;position:absolute;z-index:{{pnZ}};left:1190px;top:136px;width:700px;height:920px;box-sizing:border-box;padding:50px 32px 30px;display:flex;flex-direction:column;gap:16px;">
       <div data-pj="tab" style="font-size:40px;max-width:540px"><mc-wave t="{{pn.title}}"></mc-wave></div>
       <div sc-camel-on-click="{{closePanel}}" data-pj="close" style="position:absolute;right:30px;top:24px">✕</div>
       <div style="display:flex;align-items:flex-start;gap:16px;padding-right:56px">
@@ -986,6 +983,7 @@
         </div>
         <sc-if value="{{pn.isWeapon}}"><div style="font-size:24px;color:#ff9aa8;line-height:1.4">{{pn.reachTxt}}</div></sc-if>
         <sc-if value="{{pn.ruinOn}}" hint-placeholder-val="{{false}}"><div style="font-size:24px;color:#ff8a6a;line-height:1.4">{{pn.ruinTxt}}</div><div sc-camel-on-click="{{pn.onRepair}}" data-pj="key teal cta" style="padding:14px 0 20px;text-align:center;font-size:30px;opacity:{{pn.repairOp}}">{{pn.repairBtn}}</div></sc-if>
+        <sc-if value="{{pn.fortOn}}" hint-placeholder-val="{{false}}"><div data-tip="p-fort" style="font-size:22px;color:#a9a3c9;line-height:1.4">{{pn.fortTxt}}</div><sc-if value="{{pn.fortCan}}"><div sc-camel-on-click="{{pn.onFort}}" data-pj="key gold" style="padding:12px 0 18px;text-align:center;font-size:28px;opacity:{{pn.fortOp}}">{{pn.fortBtn}}</div></sc-if></sc-if>
         <sc-if value="{{pn.demoOn}}" hint-placeholder-val="{{false}}"><div sc-camel-on-click="{{pn.onDemo}}" data-pj="ring" style="--q:{{pn.demoC}};padding:10px 0;text-align:center;font-size:24px;color:{{pn.demoC}}" style-hover="translate:0 -3px" style-active="transform:translateY(4px)">{{pn.demoBtn}}</div></sc-if>
         <sc-if value="{{pn.isCore}}">
           <div style="font-size:30px;color:#ffcf4a">仓库 · {{pn.invN}}</div>
@@ -1101,6 +1099,12 @@
             </div>
           </sc-for>
         </div>
+        <sc-if value="{{pn.blessOn}}" hint-placeholder-val="{{false}}">
+          <div data-g="bless" data-fx="bless" style="font-size:28px;color:#ffe6a0">祈福 <span style="font-size:22px;color:#a9a3c9">{{pn.blessTxt}}</span></div>
+          <div style="display:flex;gap:10px">
+            <sc-for list="{{pn.bless}}" as="bl" hint-placeholder-count="0"><div sc-camel-on-click="{{bl.onClick}}" sc-camel-on-mouse-enter="{{bl.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" data-pj="ring" style="--q:{{bl.border}};flex:1;box-sizing:border-box;padding:10px 6px;background:{{bl.bg}};opacity:{{bl.op}};display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer"><m-img src="{{bl.img}}"></m-img><div style="font-size:24px;color:{{bl.c}}">{{bl.n}}</div><div style="font-size:20px;color:#ffe6a0">{{bl.cost}}</div></div></sc-for>
+          </div>
+        </sc-if>
         <div sc-camel-on-click="{{launch}}" data-pj="key teal cta" style="margin-top:auto;padding:22px 0;text-align:center;font-size:40px" style-hover="translate:0 -3px;transform:translateY(-3px)">{{pn.goTxt}}</div>
       </sc-if>
 
@@ -1162,24 +1166,13 @@
     <sc-if value="{{w.hasBanners}}"><div data-fx="banners" style="display:flex;flex-wrap:wrap;gap:8px;max-width:620px;transform:scale({{w.banSc}});transform-origin:left center"><sc-for list="{{w.banners}}" as="wb" hint-placeholder-count="0"><div sc-camel-on-mouse-enter="{{wb.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}"><mc-flag n="{{wb.n}}" style="width:64px;height:88px"></mc-flag></div></sc-for></div></sc-if>
   </div>
   </sc-if>
-  <div data-pj="panel" style="position:absolute;z-index:30;left:24px;bottom:30px;display:flex;gap:20px;align-items:flex-end;padding:16px 20px 20px">
-    <div style="display:flex;flex-direction:column;gap:6px">
-      <div data-tip="w-roster" style="font-size:22px;color:#a9a3c9">部队 <span style="color:#f4efe0">{{w.rosterN}}</span></div>
-      <div data-fx="roster" style="display:flex;gap:8px;align-items:flex-end;min-height:80px;min-width:120px;transform:scale({{w.rosSc}})">
+  <div style="position:absolute;z-index:30;left:24px;top:{{w.rosTop}}px;display:flex;flex-direction:column;gap:8px">
+      <div data-tip="w-roster" style="font-size:22px;color:#a9a3c9;text-shadow:3px 3px 0 #07060f">部队 <span style="color:#f4efe0">{{w.rosterN}}</span></div>
+      <div data-fx="roster" style="display:grid;grid-template-columns:repeat(2,78px);grid-auto-rows:96px;gap:8px;min-height:96px;min-width:78px;transform:scale({{w.rosFit}});transform-origin:left top">
         <sc-for list="{{w.roster}}" as="wr" hint-placeholder-count="0">
           <div sc-camel-on-click="{{wr.onClick}}" sc-camel-on-mouse-enter="{{wr.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:0;width:78px;height:96px;box-sizing:border-box;padding:2px;border:3px solid {{wr.border}};background:{{wr.bg}};box-shadow:0 0 0 3px #07060f,{{wr.glow}};cursor:pointer" style-hover="transform:translateY(-6px)"><sc-if value="{{wr.hasR}}"><m-img data-tip="{{wr.ri.tip}}" src="{{wr.ri.img}}" style="position:absolute;left:-3px;top:-3px;width:24px;height:24px;background:#07060f"></m-img></sc-if><sc-if value="{{wr.hasV}}"><m-img data-tip="{{wr.vi.tip}}" src="{{wr.vi.img}}" style="position:absolute;right:-3px;top:-3px;width:24px;height:24px;background:#07060f"></m-img></sc-if><m-img src="{{wr.img}}" style="max-width:74px;max-height:74px"></m-img><div style="font-size:18px;color:#ffcf4a;height:17px">{{wr.stars}}</div></div>
         </sc-for>
       </div>
-    </div>
-    <div style="width:3px;align-self:stretch;background:repeating-linear-gradient(180deg,#3d3a8c 0 6px,transparent 6px 12px)"></div>
-    <div style="display:flex;flex-direction:column;gap:6px">
-      <div data-tip="b-items" style="font-size:22px;color:#a9a3c9">支援道具</div>
-      <div data-fx="items" style="display:flex;gap:8px;transform:scale({{w.itSc}})">
-        <sc-for list="{{w.items}}" as="wi" hint-placeholder-count="0">
-          <div sc-camel-on-mouse-enter="{{wi.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" style="position:relative;width:84px;height:84px;border:3px solid {{wi.border}};box-sizing:border-box;background:{{wi.bg}};box-shadow:inset 0 -9px 0 0 #07060f,{{wi.glow}};display:flex;align-items:center;justify-content:center"><sc-if value="{{wi.has}}"><m-img src="{{wi.img}}"></m-img></sc-if><sc-if value="{{wi.has}}"><div style="position:absolute;left:-8px;right:-8px;top:100%;margin-top:6px;text-align:center;font-size:16px;color:#c9a24a;text-shadow:2px 2px 0 #07060f;white-space:nowrap;pointer-events:none">{{wi.type}}</div></sc-if></div>
-        </sc-for>
-      </div>
-    </div>
   </div>
   <sc-if value="{{isWorld}}"><div style="position:absolute;left:0;bottom:30px;width:1920px;text-align:center;font-size:26px;color:#f4efe0;pointer-events:none;text-shadow:3px 3px 0 #07060f">{{worldHint}}</div></sc-if>
 </sc-if>
@@ -1209,11 +1202,11 @@
   </div>
   <sc-if value="{{pausedOn}}"><div style="position:absolute;left:0;top:480px;width:1920px;text-align:center;font-size:110px;text-shadow:5px 0px 0 #07060f,-5px 0px 0 #07060f,0px 5px 0 #07060f,0px -5px 0 #07060f,5px 5px 0 #07060f,-5px 5px 0 #07060f,5px -5px 0 #07060f,-5px -5px 0 #07060f,0 10px 0 #07060f,5px 10px 0 #07060f,-5px 10px 0 #07060f;pointer-events:none"><mc-wave t="已暂停"></mc-wave></div></sc-if>
   <div style="position:absolute;left:0;top:900px;width:1920px;height:180px;box-sizing:border-box;background:#1a1640;box-shadow:inset 0 6px 0 0 #07060f,inset 0 9px 0 0 #3d3a8c">
-    <div data-tip="b-items" style="position:absolute;left:50px;top:18px;font-size:22px;color:#a9a3c9">支援道具</div>
-    <div style="position:absolute;left:50px;top:50px;display:flex;gap:18px">
-      <sc-for list="{{h.items}}" as="it" hint-placeholder-count="0">
-        <div sc-camel-on-click="{{it.onClick}}" sc-camel-on-mouse-enter="{{it.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" style="width:104px;height:104px;box-sizing:border-box;border:3px solid {{it.border}};background:{{it.bg}};box-shadow:0 0 0 3px #07060f,inset 0 -9px 0 0 #07060f;position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;transform:scale({{it.sc}})" style-hover="translate:0 -3px" style-active="translate:0 6px"><sc-if value="{{it.keyOn}}"><mc-num v="{{it.key}}" style="position:absolute;left:-12px;top:-14px;min-width:34px;height:34px;padding:0 6px;box-sizing:border-box;background:#f4efe0;box-shadow:0 0 0 3px #07060f,inset 0 -6px 0 0 #a9a3c9;color:#07060f;font-family:'Silkscreen','Fusion Pixel 12px Proportional SC',monospace;font-size:18px;display:flex;align-items:center;justify-content:center;pointer-events:none"></mc-num></sc-if><sc-if value="{{it.has}}"><m-img src="{{it.img}}"></m-img></sc-if><sc-if value="{{it.has}}"><div style="position:absolute;left:-10px;right:-10px;top:100%;margin-top:8px;text-align:center;font-size:17px;color:#c9a24a;text-shadow:2px 2px 0 #07060f;white-space:nowrap;pointer-events:none">{{it.type}}</div></sc-if></div>
-      </sc-for>
+    <div data-tip="b-fever" sc-camel-on-mouse-enter="{{h.fvTip}}" sc-camel-on-mouse-leave="{{tipOff}}" style="position:absolute;left:50px;top:22px;width:360px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;justify-content:space-between">
+        <sc-for list="{{h.fvL}}" as="fl" hint-placeholder-count="5"><div style="font-family:'Silkscreen','Fusion Pixel 12px Proportional SC',monospace;font-size:56px;line-height:64px;color:{{fl.c}};text-shadow:4px 0 0 #07060f,-4px 0 0 #07060f,0 4px 0 #07060f,0 -4px 0 #07060f,4px 4px 0 #07060f;transform:translateY({{fl.dy}}px)">{{fl.ch}}</div></sc-for>
+      </div>
+      <div style="position:relative;height:24px;background:#07060f;box-shadow:0 0 0 3px #07060f"><div style="position:absolute;left:0;top:0;bottom:0;width:{{h.fvW}};background:{{h.fvC}};box-shadow:inset 0 6px 0 0 rgba(255,255,255,0.35)"></div></div>
     </div>
     <div data-g="b-skill" sc-camel-on-click="{{castSkill}}" sc-camel-on-mouse-enter="{{skillTip}}" sc-camel-on-mouse-leave="{{tipOff}}" style="position:absolute;left:450px;top:{{h.skTop}}px;width:360px;height:{{h.skH}}px;overflow:hidden;box-sizing:border-box;border:3px solid {{h.skillBorder}};background:{{h.skillBg}};box-shadow:0 0 0 3px #07060f,inset 0 -9px 0 0 rgba(7,6,15,0.45),{{h.skillGlow}};display:flex;align-items:center;gap:14px;padding:0 16px;cursor:pointer" style-hover="translate:0 -3px" style-active="translate:0 6px">
       <sc-if value="{{h.skFoldOn}}" hint-placeholder-val="{{false}}"><div style="position:absolute;inset:0;display:flex;align-items:center;gap:10px;padding:0 14px;opacity:{{h.skFoldOp}};pointer-events:none"><sc-if value="{{h.psOn}}" hint-placeholder-val="{{false}}"><span style="font-size:22px;color:{{h.psC}};white-space:nowrap">{{h.psName}}</span><div style="flex:1;height:12px;background:#07060f;box-shadow:0 0 0 3px #07060f,0 0 0 6px #3d3a8c"><div style="height:100%;width:{{h.psW}};background:{{h.psC}};box-shadow:inset 0 3px 0 0 rgba(255,243,176,0.55)"></div></div><span style="font-size:18px;color:#a9a3c9;white-space:nowrap">{{h.psRes}}</span></sc-if></div></sc-if>
@@ -1273,7 +1266,7 @@
         <sc-for list="{{w.banners}}" as="wb" hint-placeholder-count="0"><div sc-camel-on-mouse-enter="{{wb.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}"><mc-flag n="{{wb.n}}" style="width:48px;height:66px"></mc-flag></div></sc-for>
       </div>
     </div>
-    <sc-if value="{{s.showU}}" hint-placeholder-val="{{true}}"><div data-pj="panel" style="position:absolute;left:40px;top:196px;width:{{s.uW}}px;height:644px;box-sizing:border-box;padding:40px 24px 22px;display:flex;flex-direction:column;gap:14px">
+    <sc-if value="{{s.showU}}" hint-placeholder-val="{{true}}"><div data-pj="panel" style="position:absolute;left:{{s.uL}}px;top:196px;width:{{s.uW}}px;height:644px;box-sizing:border-box;padding:40px 24px 22px;display:flex;flex-direction:column;gap:14px">
       <div data-g="shop-units" data-pj="subtab">部队</div>
       <div style="display:grid;grid-template-columns:repeat({{s.uCols}},1fr);gap:16px;flex:1">
         <sc-for list="{{s.units}}" as="su" hint-placeholder-count="6">
@@ -1451,6 +1444,33 @@
 
 <canvas ref="{{fxRef}}" width="1920" height="1080" style="position:absolute;left:0;top:0;width:1920px;height:1080px;pointer-events:none;z-index:{{fxZ}}"></canvas>
 <sc-if value="{{coverOn}}" hint-placeholder-val="{{false}}"><div sc-camel-on-click="{{coverClick}}" style="position:absolute;inset:0;cursor:pointer;z-index:{{fxZ}}"></div></sc-if>
+<sc-if value="{{visitOn}}" hint-placeholder-val="{{false}}"><div data-g="visit" sc-camel-on-click="{{vs.skip}}" style="position:absolute;inset:0;z-index:66;background:rgba(7,6,15,{{vs.shade}})">
+  <sc-if value="{{vs.talk}}" hint-placeholder-val="{{false}}"><div data-pj="panel plate" sc-camel-on-click="{{stop}}" style="position:absolute;left:560px;top:646px;width:800px;box-sizing:border-box;padding:20px 28px 26px;display:flex;flex-direction:column;gap:12px;opacity:{{vs.op}};transform:translateY({{vs.dy}}px)">
+    <div style="display:flex;align-items:baseline;gap:14px"><span style="font-size:34px;color:{{vs.c}};text-shadow:3px 3px 0 #07060f">{{vs.title}}</span><span style="font-size:22px;color:#a9a3c9">{{vs.who}}</span></div>
+    <div style="font-size:26px;color:#e8dcc4;line-height:36px">{{vs.text}}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:4px">
+      <sc-for list="{{vs.opts}}" as="vo" hint-placeholder-count="0"><div sc-camel-on-click="{{vo.onClick}}" sc-camel-on-mouse-enter="{{vo.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" data-pj="{{vo.pj}}" style="flex:1 1 30%;min-width:200px;box-sizing:border-box;padding:10px 14px 18px;display:flex;flex-direction:column;align-items:center;gap:4px;opacity:{{vo.op}}"><span style="font-size:26px">{{vo.t}}</span><span style="font-size:19px">{{vo.sub}}</span></div></sc-for>
+    </div>
+  </div></sc-if>
+</div></sc-if>
+<sc-if value="{{dirOn}}" hint-placeholder-val="{{false}}"><div data-g="dirs" sc-camel-on-click="{{stop}}" style="position:absolute;inset:0;z-index:67;background:rgba(7,6,15,0.8)">
+  <div data-pj="dither" data-enter="fade" style="position:absolute;inset:0;opacity:0.4;pointer-events:none"></div>
+  <div data-enter="drop" style="position:absolute;left:0;right:0;top:110px;display:flex;flex-direction:column;align-items:center;gap:14px">
+    <div style="font-size:56px;color:#ffcf4a;text-shadow:4px 0 0 #07060f,-4px 0 0 #07060f,0 4px 0 #07060f,0 -4px 0 #07060f,4px 4px 0 #07060f,0 8px 0 #07060f"><mc-wave t="{{dp.title}}"></mc-wave></div>
+    <div style="font-size:32px;color:#e8dcc4;text-shadow:3px 3px 0 #07060f">{{dp.line}}</div>
+  </div>
+  <div data-enter-rows="1" style="--rd:.14s;position:absolute;left:0;right:0;top:290px;display:flex;justify-content:center;gap:90px">
+    <sc-for list="{{dp.cards}}" as="dc" hint-placeholder-count="2">
+      <div data-pj="opt" data-fx="{{dc.fx}}" sc-camel-on-click="{{dc.onPick}}" style="width:660px;box-sizing:border-box;padding:30px 30px 34px;display:flex;flex-direction:column;align-items:center;gap:14px;--q:{{dc.c}};opacity:{{dc.op}}">
+        <m-img src="{{dc.img}}" style="width:600px;height:300px"></m-img>
+        <div style="font-size:54px;color:{{dc.c}};text-shadow:4px 4px 0 #07060f"><span data-pj="cur" style="font-size:36px;margin-right:12px">▶</span>{{dc.n}}</div>
+        <div style="font-size:30px;line-height:42px;color:#f4efe0;text-align:center;min-height:84px;text-wrap:balance">{{dc.t}}</div>
+        <sc-if value="{{dc.hasSub}}"><div style="font-size:22px;color:#a9a3c9">{{dc.sub}}</div></sc-if>
+      </div>
+    </sc-for>
+  </div>
+</div></sc-if>
+<sc-if value="{{lockOn}}" hint-placeholder-val="{{false}}"><div data-g="lock" sc-camel-on-click="{{lockClick}}" style="position:absolute;inset:0;z-index:70"></div></sc-if>
 <sc-if value="{{miniOn}}" hint-placeholder-val="{{false}}"><div style="position:absolute;z-index:60;left:0;top:828px;width:1920px;display:flex;justify-content:center;gap:22px;pointer-events:none">
   <sc-for list="{{mini.btns}}" as="mn" hint-placeholder-count="0"><div data-minibtn="1" sc-camel-on-click="{{mn.onClick}}" data-pj="key {{mn.k}}" style="pointer-events:auto;min-width:230px;max-width:420px;box-sizing:border-box;padding:12px 26px 20px;display:flex;flex-direction:column;align-items:center;gap:2px;opacity:{{mn.op}}"><span style="font-size:34px;line-height:1.1;white-space:nowrap">{{mn.t}}</span><sc-if value="{{mn.hasSub}}"><span style="font-size:20px;opacity:0.8;text-align:center">{{mn.sub}}</span></sc-if></div></sc-for>
 </div></sc-if>
@@ -1540,7 +1560,7 @@ class Component extends DCLogic {
     const on = (fn) => (e) => { if (g) fn(e); };
     const base = { scale: this.state.scale, stageRef: this.stageRef, introRef: this.introRef, roomRef: this.roomRef, isRoom: false, rm: {}, fieldRef: this.fieldRef, worldRef: this.worldRef, baseRef: this.baseRef, fxRef: this.fxRef,
       loading: !g, loadErr: !!this.loadErr, retryLoad: () => location.reload(), shx: 0, shy: 0,
-      isIntro: false, isMenu: false, isBase: false, isRaid: false, isWorld: false, isBattle: false, isShop: false, isEnd: false, isOver: false, modalOn: false, settleOn: false, coverOn: false, coachOn: false, tipOn: false, toastOn: false, pnOn: false, w: null, rulesOpen: !!this.rulesOpen || !!(g && g.rulesOpen), showMute: false,
+      isIntro: false, isMenu: false, isBase: false, isRaid: false, isWorld: false, isBattle: false, isShop: false, isEnd: false, isOver: false, modalOn: false, settleOn: false, coverOn: false, lockOn: false, lockClick: () => {}, pickOn: false, pickCancel: () => {}, pnZ: 'auto', visitOn: false, vs: { opts: [] }, dirOn: false, dp: { cards: [] }, coachOn: false, tipOn: false, toastOn: false, pnOn: false, w: null, rulesOpen: !!this.rulesOpen || !!(g && g.rulesOpen), showMute: false,
       stop: (e) => e.stopPropagation(), tipOff: on(() => { g.tipData = null; g.tipKey = null; g.tipPrev = null; }), fxZ: 'auto',
       onMove: on((e) => { const p = this.sp(e); g.mx = p.x; g.my = p.y; g.tiltMove(p.x, p.y); }), shr: 0,
       onPress: on((e) => { M.Sfx.init(); const p = this.sp(e); g.uiPress(e.target, p.x, p.y); }),

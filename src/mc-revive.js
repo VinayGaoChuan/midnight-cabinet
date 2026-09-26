@@ -15,16 +15,18 @@ M.FAIL_EXP = 0.5;
 G.runFail = function () {
   const m = this.meta, run = this.run, h = run.hero, tut = !!(run.region && run.region.tut);
   // half of what the leader learned on the way stays with it (2026-09-26: a lost run still moves you on)
-  const ex = tut ? 0 : Math.round(((run.loot && run.loot.exp) || 0) * M.FAIL_EXP); if (ex > 0) M.addExp(h, ex);
+  const ex = tut ? 0 : Math.round(((run.loot && run.loot.exp) || 0) * Math.min(1, M.FAIL_EXP + (M.baseMods(m).failExp || 0)));   /* 守墓人的墓园 keeps it all */ if (ex > 0) M.addExp(h, ex);
   const mx = M.heroMaxHp(h, m);
-  const before = m.core == null ? M.CORE_MAX : m.core, after = tut ? before : Math.max(0, before - 1);
+  // 信仰值 (mc-faith.js): with enough of it, faith pays for the leader instead of a heart of the core
+  const before = m.core == null ? M.CORE_MAX : m.core, fc = M.RITE_FAITH || 30, byFaith = !tut && before > 0 && M.faithOn && M.faithOn(m) && (m.faith || 0) >= fc, after = tut || byFaith ? before : Math.max(0, before - 1);
+  if (byFaith) m.faith -= fc;
   m.core = after; h.hp = after > 0 ? mx : 1; h.relics = []; h.runs = (h.runs || 0) + 1; m.runs++;
   m.st = m.st || {}; m.st.fails = (m.st.fails || 0) + 1; if (!tut) m.st.deaths = (m.st.deaths || 0) + 1;
   if (!tut) this.pendingDay = true;
   this.save(); S.lose && S.lose();
   const card = { name: M.heroN(h), cls: h.cls, lv: h.lv, rarity: h.rarity, region: run.region.n };
   this.endInfo = { title: '探索失败', color: '#ff4a4a', sub: after > 0 ? M.heroN(h) + ' 倒在了' + run.region.n + '，这一趟的收获丢了，经验留下一半。' : '基地核心的最后一颗心保不住了。',
-    tiles: [], lines: [{ k: '基地核心', v: after + ' / ' + M.CORE_MAX, c: after <= 1 ? '#ff4a4a' : '#ff8ab0' }].concat(ex > 0 ? [{ k: '经验', v: '+' + ex, c: '#9cff7a' }] : []), at: now(), gain: {}, revive: tut ? null : { card, before, after } };
+    tiles: [], lines: [byFaith ? { k: '信仰值', v: '-' + fc, c: '#ffe6a0' } : { k: '基地核心', v: after + ' / ' + M.CORE_MAX, c: after <= 1 ? '#ff4a4a' : '#ff8ab0' }].concat(ex > 0 ? [{ k: '经验', v: '+' + ex, c: '#9cff7a' }] : []), at: now(), gain: {}, revive: tut ? null : { card, before, after, faith: byFaith ? fc : 0 } };
   this.go('end');
 };
 // the rite is the first thing that happens back home
@@ -43,6 +45,7 @@ const T_IN = 0.8, T_RIP = 2.1, T_NPC = 3.0, T_LINES = 4.2, LINE = 1.45, CX = 960
 const lines = (rv) => {
   const cls = M.HEROES[rv.card.cls].n;
   if (rv.after <= 0) return ['长夜还没有结束，灯还亮着。', '机台记得每一个没有回来的人。', '……核心里，已经没有心了。'];
+  if (rv.faith) return ['长夜还没有结束，灯还亮着。', '机台记得每一个没有回来的人。', '以 ' + rv.faith + ' 点信仰，缝好你的名字。', '醒来吧，' + cls + '。'];
   return ['长夜还没有结束，灯还亮着。', '机台记得每一个没有回来的人。', rv.after === 1 ? '这是核心的最后一颗心。' : '以核心的一颗心，缝好你的名字。', '醒来吧，' + cls + '。'];
 };
 const timing = (rv) => { const L = lines(rv).length, tL = T_LINES + L * LINE, tH = tL + 0.2, tHit = tH + 1.2, tWhole = tHit + 2.1, tEnd = rv.after > 0 ? tWhole + 2.2 : tL + 2.6; return { L, tL, tH, tHit, tWhole, tEnd }; };
@@ -65,7 +68,7 @@ G.riteTick = function (dt) {
   const li = Math.floor((t - T_LINES) / LINE); if (t >= T_LINES && li < T.L && li !== R.line) { R.line = li; S.cast && S.cast(); }
   if (rv.after > 0) {
     // the heart leaves the core: the pip in the bar goes dark the moment it lifts off
-    if (t >= T.tH) once(R, 'heart', () => { this.coreShow = null; const p = this.fxPos('core'); R.from = p || { x: 120, y: 50 }; S.whoosh && S.whoosh(0.6); this.pulse.core = now(); });
+    if (t >= T.tH) once(R, 'heart', () => { this.coreShow = null; const k = rv.faith ? 'mfa' : 'core', p = this.fxPos(k); R.from = p || { x: 120, y: 50 }; S.whoosh && S.whoosh(0.6); this.pulse[k] = now(); });   // faith: a golden heart from the 信仰值 chip
     if (t >= T.tHit) once(R, 'hit', () => { S.impact(); this.fx.kick(14); this.fx.flash('#ff2a4a', 0.25); });
     const bi = Math.floor((t - T.tHit) / 0.6); if (t > T.tHit && t < T.tWhole && bi !== R.hb) { R.hb = bi; S.heart && S.heart(); this.fx.kick(6 + bi * 3); }
     if (t >= T.tWhole) once(R, 'whole', () => { S.impact(); S.fanfare(); S.heal && S.heal(); this.fx.flash(P.white, 0.8); this.fx.kick(30); this.fx.rays(CX, CY, P.gold, 2.2, { r: 520 }); this.fx.confetti(120); });
@@ -76,7 +79,7 @@ G.riteTick = function (dt) {
   if (t >= T.tEnd) {
     this.rite = null; this.coreShow = null;
     if (rv.after <= 0) { if (this.homeQ) this.homeQ.steps.length = 0; this.coreQueue = { pd: false, hp: 0 }; }
-    else { const p = this.fxPos('heroes'); if (p) { this.fx.pop(p.x, p.y - 90, '复活', P.gold, 44); this.fx.rays(p.x, p.y, P.gold, 1, { r: 180 }); } this.toast(rv.after === 1 ? '基地核心只剩最后 1 颗心了' : '基地核心还剩 ' + rv.after + ' 颗心', rv.after === 1 ? '#ff4a4a' : '#ff8ab0'); }
+    else { const p = this.fxPos('heroes'); if (p) { this.fx.pop(p.x, p.y - 90, '复活', P.gold, 44); this.fx.rays(p.x, p.y, P.gold, 1, { r: 180 }); } this.toast(rv.faith ? '信仰值替基地核心付了这一次' : rv.after === 1 ? '基地核心只剩最后 1 颗心了' : '基地核心还剩 ' + rv.after + ' 颗心', rv.faith ? '#ffe6a0' : rv.after === 1 ? '#ff4a4a' : '#ff8ab0'); }
   }
   this.bump();
 };
@@ -146,7 +149,7 @@ M.drawRite = function (x, g) {
     const hx = f.x + (CX - f.x) * e, hy = f.y + (CY - f.y) * e - Math.sin(e * Math.PI) * 220, beat = t > T.tHit ? Math.max(0, 1 - ((t - T.tHit) % 0.6) / 0.25) : 0, s = Math.round(12 + beat * 6 + (1 - q) * 2);
     if (q < 1 && !RM()) for (let k = 1; k <= 6; k++) { const e2 = Math.max(0, e - k * 0.035); U.R(x, f.x + (CX - f.x) * e2 - 4, f.y + (CY - f.y) * e2 - Math.sin(e2 * Math.PI) * 220 - 4, 8, 8, k % 2 ? P.red : P.pink); }
     M.pxGlow && M.pxGlow(x, hx, hy, 90 + beat * 60, P.red, 0.6);
-    heartPx(x, Math.round(hx), Math.round(hy), s, P.red, P.pink);
+    heartPx(x, Math.round(hx), Math.round(hy), s, rv.faith ? P.gold : P.red, rv.faith ? P.butter : P.pink);
   }
   // the keeper: rises from the left of the altar, raises its hands while speaking
   if (t >= T_NPC && dim > 0) {
@@ -164,7 +167,7 @@ M.drawRite = function (x, g) {
   if (t > 2.3 && t < T.tWhole) { const a = cl((t - 2.3) / 0.4, 0, 1) * cl((T.tWhole - t) / 0.4, 0, 1) * dim; x.save(); x.globalAlpha = a; U.text(x, '领袖倒下', CX, 196, 80, P.red, { outline: true }); x.restore(); }
   if (whole) { const u = t - T.tWhole, a = cl(u / 0.2, 0, 1) * cl((T.tEnd - 0.3 - t) / 0.4, 0, 1), sc = 1 + 0.5 * Math.max(0, 1 - u / 0.25);
     x.save(); x.globalAlpha = a; x.translate(CX, 190); x.scale(sc, sc); U.text(x, '复活', 0, 0, 104, P.gold, { outline: true, ramp: true }); x.restore();
-    x.save(); x.globalAlpha = a; U.text(x, '基地核心 ' + rv.after + ' / ' + M.CORE_MAX, CX, 752, 34, rv.after === 1 ? P.red : P.pink, { outline: true }); x.restore(); }
+    x.save(); x.globalAlpha = a; U.text(x, rv.faith ? '信仰值 -' + rv.faith : '基地核心 ' + rv.after + ' / ' + M.CORE_MAX, CX, 752, 34, rv.faith ? P.butter : rv.after === 1 ? P.red : P.pink, { outline: true }); x.restore(); }
   x.restore();
 };
 

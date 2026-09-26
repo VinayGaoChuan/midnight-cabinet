@@ -38,7 +38,8 @@ function checkMeta(raw) {
     if (isObj(x.job) && x.job.key === 'sanitarium') { x.job = null; m.supplies += 90; mig = true; }
     if (x.b != null && !M.BUILDINGS[x.b]) { x.b = null; note('基地房间'); }
     if (x.tile != null && !M.TILES[x.tile]) { x.tile = null; note('地格'); }
-    if (x.job != null && !(isObj(x.job) && (x.job.kind === 'dig' || (x.job.kind === 'build' && M.BUILDINGS[x.job.key])) && isNum(x.job.days))) { x.job = null; note('工程'); }
+    if (x.job != null && !(isObj(x.job) && (x.job.kind === 'dig' || ((x.job.kind === 'build' || x.job.kind === 'repair' || x.job.kind === 'demolish') && M.BUILDINGS[x.job.key])) && isNum(x.job.days))) { x.job = null; note('工程'); }   // repairs and demolitions survive a reload (2026-09-27)
+    if (x.fort != null && !(isNum(x.fort) && x.fort >= 0 && x.fort <= 3)) { x.fort = 0; note('加固'); }
     x.dug = !!(x.dug || x.b);
   }
   const co = m.base.cells[M.CORE.r][M.CORE.c]; if (co.b !== 'core') { Object.assign(co, { b: 'core', dug: true, job: null }); note('基地核心房间'); }

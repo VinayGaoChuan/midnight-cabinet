@@ -184,11 +184,12 @@ M.drawFxPx = function (ctx, f, T, b) {
 const oHud = M.drawBattleHudPx;
 M.drawBattleHudPx = function (ctx, b, T) {
   if (oHud) oHud.apply(this, arguments);
+  if (M.uiScreen && !M.uiScreen()) return;   // pinned to the screen: the screen pass only (mc-omen.js)
   const e = b.ents.find(x => x.boss && x.side === 'E' && (b.cfg.fb || b.cfg.mb)); if (!e || T < (e.entryT || 0) + 0.3) return;
   const U = M.bUI; if (!U) return;
   const W = 900, H = 22, X = 960 - W / 2, Y = 52, k = clamp(e.hp / e.maxHp, 0, 1), fb = !!e.fb;
   e._hpLag = e._hpLag == null ? k : Math.max(k, e._hpLag - 0.35 * (1 / 60));
-  U.text(ctx, e.d.n, 960, Y - 22, fb ? 32 : 26, fb ? PL.butter : PL.pink, { drop: 3 });
+  U.text(ctx, e.nm || e.d.n, 960, Y - 22, fb ? 32 : 26, fb ? PL.butter : PL.pink, { drop: 3 });
   U.R(ctx, X - 4, Y - 4, W + 8, H + 8, PL.ink); U.R(ctx, X, Y, W, H, PL.abyss);
   U.R(ctx, X, Y, W * e._hpLag, H, PL.cream); U.R(ctx, X, Y, W * k, H, PL.red); U.R(ctx, X, Y, W * k, 4, PL.pink); U.R(ctx, X, Y + H - 6, W * k, 6, PL.wine);
   if (fb) { const A = e.ai; U.R(ctx, X + W * 0.5 - 2, Y - 6, 4, H + 12, A && A.phase === 2 ? PL.red : PL.gold); }

@@ -110,10 +110,14 @@ function startAction(b, e, kind, o) {
 function stopAction(e) { if (e && e._pa) { giveBack(e._pa.g); e._pa = null; } }
 // stage -> canvas: only the used width (dummy x + 40) is converted; each engine keeps one canvas per scale
 function stageCanvas(pa) {
-  const g = pa.g, fb = g.render(), W = g.W, H = g.H, k = ART * pa.big, xMax = Math.min(W, g.DUMMY_X + 40);
+  const g = pa.g, W = g.W, H = g.H, k = ART * pa.big, xMax = Math.min(W, g.DUMMY_X + 40);
   let s = g._cv[k];
   if (!s) { const cv = mkCanvas(W, H), cx = cv.getContext('2d'), im = cx.createImageData(W, H); s = g._cv[k] = { cv: M.asPx(cv, k), cx, im, px: new Uint32Array(im.data.buffer) }; }
-  const lut = g.lut, px = s.px; px.fill(0);
+  // the same action is redrawn at most about 33 times a second of real time (poses change at 12 a second of game time, so
+  // even at 3× speed nothing is lost); in between the last picture stands. Every unit redrawing its action every frame was
+  // what grew with the army (2026-09-27 profiling: 60 units stuttered even on PCs)
+  const tn = performance.now(); if (s.pa === pa && tn - s.at < 30) return s.cv; s.pa = pa; s.at = tn;
+  const fb = g.render(), lut = g.lut, px = s.px; px.fill(0);
   for (let y = 0; y < H; y++) { const r = y * W; for (let x = 0; x < xMax; x++) { const v = fb[r + x]; if (v !== 255) px[r + x] = lut[v]; } }
   s.cx.putImageData(s.im, 0, 0);
   const cv = s.cv, P = g.C.P; cv.cx = g.HX * k; cv.footY = g.HY * k; cv.focus = [(P.gx + (P.mx || 0)) * k, P.gy * k]; cv.S = body(g.C.key).top * k;

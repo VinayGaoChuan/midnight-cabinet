@@ -81,7 +81,6 @@ G.tipFor = function (key) {
     'b-count': () => ({ title: '战况', c: '#e8dcc4', d: '我方剩余部队 / 剩余敌人。' }),
     'b-pause': () => ({ title: '暂停 ' + kq('pause'), c: '#e8dcc4' }),
     'b-speed': () => ({ title: '战斗速度 ' + kq('speed'), c: '#f2c14e' }),
-    'b-items': () => ({ title: '支援道具', c: M.ITEM_C, d: '用的时候转一下，转出这次的效果。' }),
     'w-hero': () => run && this.heroTip(run.hero),
     'w-hp': () => ({ title: '领袖生命', c: '#f2c14e', d: '不会自动恢复，归零领袖永久死亡。' }),
     'w-wallet': () => ({ title: '积分', c: '#ffcc33', d: '这次出征的钱，回基地后清空。' }),
@@ -147,7 +146,7 @@ M.makeBattleCfg = function (run, node) { CUR = run.region.tut ? null : run.regio
 const oDrop = M.dropBp;
 M.dropBp = function (bias, style, qUp) {
   if (!style || Math.random() < 0.4) return oDrop(bias);
-  if (Math.random() < 0.45) return 'rbp:' + M.pick(Object.keys(M.RELICS));
+  if (Math.random() < 0.45) return 'rbp:' + M.pick(M.relicPool());
   const w = M.bpWeights ? M.bpWeights(bias, qUp) : [60, 25, 11, 4].map((x, i) => i === 0 ? x : x * (1 + (bias || 0) + (qUp || 0) * 0.8));
   const ks = Object.keys(M.BUILDINGS).filter(k => !M.BUILDINGS[k].fixed && M.BUILDINGS[k].style === style); if (!ks.length) return oDrop(bias);
   const q = M.wpick([0, 1, 2, 3], i => ks.some(k => M.BUILDINGS[k].q === i) ? w[i] : 0);
@@ -170,14 +169,13 @@ G.startSettle = function () {
   if (!good) { title = '领袖倒下'; col = '#ff4a4a'; }
   if (good) {
     const sc = Math.round(score * (th.wallet || 1)); this.hold('wallet', run.wallet); run.wallet += sc; tiles.push({ icon: 'coin', v: M.fmt(sc), c: '#ffcc33', to: 'wallet' });
-    const sup = Math.round((8 + 4 * cfg.w) * run.lootMul * (1 + (run.mods.supplies || 0)) * (th.sup || 1)); this.hold('rsup', run.loot.supplies); run.loot.supplies += sup; tiles.push({ icon: 'sack', v: sup, c: '#e8c86a', to: 'rsup' });
+    const sup = Math.round((10 + 2.5 * cfg.w) * run.lootMul * (1 + (run.mods.supplies || 0)) * (th.sup || 1)); this.hold('rsup', run.loot.supplies); run.loot.supplies += sup; tiles.push({ icon: 'sack', v: sup, c: '#e8c86a', to: 'rsup' });
     const ex = Math.round((b.kills * 3 + 10 * cfg.w) * (1 + (run.mods.exp || 0)) * (th.exp || 1)); this.hold('rexp', run.loot.exp); run.loot.exp += ex; tiles.push({ icon: 'orb', v: ex, c: '#9cff7a', to: 'rexp' });
     if (th.shards) { const sh = Math.round((2 + cfg.w * 1.5) * (n.type === 'boss' ? 4 : n.type === 'elite' ? 2 : 1)); this.hold('rshard', run.loot.shards); run.loot.shards += sh; tiles.push({ icon: 'shard', v: sh, c: '#d8a0ff', to: 'rshard' }); }
     const bpHold = () => this.hold('rbp', run.loot.bp.length);
     const pb = n.type === 'boss' && n.final ? 0 : M.bpChance(run, n.type);   // rare (mc-danger.js); clearing the world pays its own fixed blueprint
     const drop = (k) => { bpHold(); run.loot.bp.push(k); const I = M.itemInfo(k); tiles.push({ icon: I.icon, v: 1, c: I.c, to: 'rbp', n: I.n, key: k }); };
-    if (Math.random() < pb && !run.tut) drop(th.rbp && Math.random() < 0.6 ? 'rbp:' + M.pick(Object.keys(M.RELICS)) : M.dropBp(0, run.theme && run.theme.style, th.bpq));
-    if (!run.tut && Math.random() < (n.type === 'boss' ? 0.15 : 0) + (th.tile || 0)) drop('tile:' + M.dropTile());
+    if (Math.random() < pb && !run.tut) drop(th.rbp && Math.random() < 0.6 ? 'rbp:' + M.pick(M.relicPool()) : M.dropBp(0, run.theme && run.theme.style, th.bpq));
     const heal = (run.mods.postHeal || 0) + (th.heal || 0); if (heal) { const v = Math.round(mx * heal); this.hold('hp', Math.round(h.hp)); h.hp = Math.min(mx, h.hp + v); tiles.push({ icon: 'r_heart', v: '+' + v, c: '#9cff7a', to: 'hp' }); }
     run.roster.forEach(u => { u.battles = (u.battles || 0) + 1; (DB[u.type].tr || []).forEach(t => { const T = M.TDB[t]; if (!T) return; const hh = M.TRAIT_H[T.cls.replace(/^Summon|Trait$/g, '')]; if (hh && hh.post) hh.post(b, null, T.v, u); }); });
     (b.grew || []).forEach(g => tiles.push({ icon: g.type, v: g.v, c: '#ffcc33', to: 'roster', unit: 1 }));

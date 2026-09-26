@@ -452,6 +452,7 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
   // the main base (user ruling 2026-09-25): on the surface, a storehouse hall whose gate is the portal. The wings are
   // the warehouse (click: the stock), the gate is the portal (click: the worlds); monsters of a 混沌来袭 attack it
   // the pixel main base (mc-pxroom-base.js) is the building, the portal gate and the shaft head in one lit piece
+  (M.BASE_HOOKS || []).forEach(h => h(ctx, meta, bv, lights, 'behind', opts));   // the city behind the main base (mc-town.js)
   const pH = meta.portal.hp / M.portalMax(meta), U = M.UI, po = bv.po || 0;
   if (M.PXR && M.PXR.has('_mainbase')) { M.PXR.mainBase(ctx, bv, t, meta); if (bv.hover && bv.hover.wing) frameIn(ctx, DOOR_X - MB.w / 2 - 10, MB.top - 80, MB.w + 20, -MB.top + 88, 3 / bv.z, PP.butter); }
   else {
@@ -483,12 +484,14 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
   if (opts.raid) opts.raid.draw(ctx, lights);
   // lighting
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (!M.NO_LIGHTMAP) {   // the night: dark everywhere but round the lights (M.NO_LIGHTMAP: a test switch)
   const lm = M._blm || (M._blm = (() => { const c = document.createElement('canvas'); c.width = 480; c.height = 270; return c; })()), lx = lm.getContext('2d');
   lx.globalCompositeOperation = 'source-over'; lx.fillStyle = 'rgba(3,2,8,0.9)'; lx.fillRect(0, 0, 480, 270);
   const sur = bv.toScreen(0, 0).y; lx.fillStyle = 'rgba(0,0,0,1)'; lx.globalCompositeOperation = 'destination-out'; lx.globalAlpha = 0.85; lx.fillRect(0, 0, 480, Math.max(0, sur / 4)); lx.globalAlpha = 1;
   lights.forEach(L => { const p = bv.toScreen(L.x, L.y), r = L.r * bv.z * L.f / 4; const g = lx.createRadialGradient(p.x / 4, p.y / 4, 0, p.x / 4, p.y / 4, r); if (L.cell) { g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.62, 'rgba(0,0,0,0.92)'); g.addColorStop(1, 'rgba(0,0,0,0)'); } else { g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.6, 'rgba(0,0,0,0.5)'); g.addColorStop(1, 'rgba(0,0,0,0)'); } lx.fillStyle = g; lx.fillRect(p.x / 4 - r, p.y / 4 - r, r * 2, r * 2); });
   ctx.imageSmoothingEnabled = true; ctx.drawImage(lm, 0, 0, 1920, 1080);
-  lights.forEach(L => { const p = bv.toScreen(L.x, L.y); M.glow(ctx, p.x, p.y, (L.cell ? CW * 0.9 : L.r * 0.5) * bv.z, L.c, 0.14); });
+  }
+  if (!M.LOW_FX) lights.forEach(L => { const p = bv.toScreen(L.x, L.y); M.glow(ctx, p.x, p.y, (L.cell ? CW * 0.9 : L.r * 0.5) * bv.z, L.c, 0.14); });   // phones: no halos (mc-fx.js)
   if (M.PXR && M.PXR.motes) M.PXR.motes(ctx, bv); else bv.amb.draw(ctx, bv.x, bv.y);
   const fy = bv.sel && !bv.sel.door ? bv.toScreen(0, M.cellCenter(bv.sel.c, bv.sel.r).y).y / 1080 : 0.5;
   M.hd2d(ctx, 1920, 1080, { focus: clamp(fy, 0.2, 0.8), band: bv.z > 1.2 ? 0.14 : 0.3, dofBlur: bv.z > 1.2 ? 3 : 1.6, bloom: 0.5, grade: ['#ffb070', '#102040'], gradeA: 0.25, vig: 0.6 });
@@ -506,8 +509,8 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
     const x = M.cell(meta, c, r), a = bv.toScreen(cellX(c), cellY(r)), b = bv.toScreen(cellX(c) + CW, cellY(r) + CH);
     if (b.x < -80 || a.x > 2000 || b.y < -80 || a.y > 1160) continue;
     const hot = bv.hoverIc && bv.hoverIc.c === c && bv.hoverIc.r === r ? bv.hoverIc.k : null;
-    if (x.b) { const B = BUILDINGS[x.b], st = M.TAG.style(B.style), ct = M.TAG.cat(B.cat);
-      badge(st.icon, a.x + pad, a.y + pad, st.c, { tag: st, key: x.b, c, r }, hot === 's'); badge(ct.icon, b.x - pad - S, b.y - pad - S, ct.c, { tag: ct, key: x.b, c, r }, hot === 'f'); }
+    if (x.b) { const B = BUILDINGS[x.b], st = M.TAG.style(B.style), ct = M.TAG.cat(B.cat);   // style top-left (发展方向 build on it), category bottom-right
+      if (st && x.b !== 'core') badge(st.icon, a.x + pad, a.y + pad, st.c, { tag: st, key: x.b, c, r }, hot === 's'); if (ct) badge(ct.icon, b.x - pad - S, b.y - pad - S, ct.c, { tag: ct, key: x.b, c, r }, hot === 'f'); }
     else if (x.job) { const cx = (a.x + b.x) / 2; badge(x.job.kind === 'dig' ? 'u_pick' : 'u_hammer', cx - S - 4, b.y - pad - S, PP.gold, { job: 1, c, r }, hot === 'j');
       // 剩余天数：墨框深渊小窗 + 金色机台数码
       ctx.fillStyle = PP.ink; ctx.fillRect(cx + 1, b.y - pad - S - 3, S * 1.3 + 4, S + 6); ctx.fillStyle = PP.abyss; ctx.fillRect(cx + 4, b.y - pad - S, S * 1.3 - 2, S); M.pxNum(ctx, String(x.job.days), cx + 3 + S * 0.65, b.y - pad - S / 2, PP.gold, S / 26); }
