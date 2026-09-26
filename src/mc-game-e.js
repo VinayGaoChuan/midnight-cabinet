@@ -12,12 +12,12 @@ Object.assign(G, {
     if (p.kind === 'room') {
       const B = M.BUILDINGS[p.key], x = M.cell(m, p.c, p.r), pw = M.roomPw(m, p.c, p.r, p.key);
       Object.assign(pn, { isRoom: true, title: B.n, titleColor: B.q ? M.QUALITY[B.q].c : '#ffe8b0', sub: (B.q ? '奇观 · ' : '') + M.QUALITY[B.q].n + ' · ' + M.STYLE[B.style] + ' · ' + M.CAT[B.cat], d: B.d, thumb: M.roomThumb(p.key),
-        chips: [].concat(x.tile ? [{ t: '地格 · ' + M.TILES[x.tile].n, c: M.TILES[x.tile].c }] : []).concat(B.weapon ? [{ t: '射程 ' + M.weaponStats(m, p.c, p.r).range + ' · 伤害 ' + Math.round(M.weaponStats(m, p.c, p.r).dmg), c: '#ff8a8a' }] : []),
+        chips: [].concat(x.tile ? [{ t: '地格 · ' + M.TILES[x.tile].n, c: M.TILES[x.tile].c }] : []).concat(B.weapon && M.weaponStats(m, p.c, p.r) ? [{ t: '射程 ' + M.towerRange(M.weaponStats(m, p.c, p.r)) + ' · 伤害 ' + Math.round(M.weaponStats(m, p.c, p.r).dmg), c: '#ff8a8a' }] : []),
         tileTxt: x.tile ? M.TILES[x.tile].n + '：' + M.TILES[x.tile].d : '', hasTile: !!x.tile,
         isCore: p.key === 'core', isForge: !!B.forge, isRecruit: !!B.recruit, isTrain: !!B.train, isMed: B.cat === 'med', isWeapon: !!B.weapon });
       if (pn.isCore || pn.isForge || pn.isRecruit) pn.d = '';
       pn.hasD = !!pn.d;
-      if (B.weapon) { const rc = M.weaponReach(m, p.c, p.r); pn.reachTxt = rc ? '覆盖地面第 ' + (rc.c0 + 1) + '–' + (rc.c1 + 1) + ' 列。' : '太深了，打不到地面。'; }
+      if (B.weapon) pn.reachTxt = '地面上红色的一段是它的射程。';
       if (pn.isCore) pn.inv = M.invList(m).map(it => ({ img: M.spriteURL(it.icon, 5), count: it.count > 1 || it.key === 'supplies' || it.key === 'shards' || it.key === 'orbs' ? M.fmt(it.count) : '', border: it.q != null ? M.QUALITY[it.q].c : it.c, tipOn: this.tipFn(it.rid ? this.relicTip(m.relics.find(r => r.id === it.rid)) : { title: it.n, c: it.c, kind: it.kind + (it.sub ? ' · ' + it.sub : ''), d: it.d }) }));
       if (pn.isCore) pn.invN = pn.inv.length + ' 种';
       if (pn.isForge) { const cost = this.craftCost(); pn.forgeCost = '打造：' + cost + ' 物资 + 1 张图纸' + (B.forge.qUp ? '，品质 +' + B.forge.qUp : '') + (B.forge.twice ? '，' + Math.round(B.forge.twice * 100) + '% 双倍' : '');

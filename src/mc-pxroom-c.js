@@ -1,7 +1,7 @@
 // ==== mc-pxroom-c.js ====
 (function () {
 // Pixel rooms, batch c (written by the pixel-room workflow; see mc-pxroom-a.js for the pattern, docs/design.md §10.1):
-// 弩炮室 ballista · 蒸汽加农炮 cannon · 特斯拉线圈 tesla · 奥术尖塔 spire · 军械库 armory.
+// 弩炮室 ballista · 蒸汽加农炮 cannon · 特斯拉线圈 tesla · 奥术尖塔 spire · 军械库 armory · 石墙 wall.
 // The four defence rooms are manned between shots and fire while rs.fireAge is under 0.5 s (raids); each room also has
 // an idle moment every ~10 s.
 const M = window.MC, X = M.PXR; if (!X) return;
@@ -827,6 +827,88 @@ X.def('armory', {
   },
 });
 
+// ───────── 石墙 wall (medieval · defence, the town wall on the surface) ─────────
+// the mason's store under the town wall: dressed blocks stacked on the left, a mason squaring a block on a timber banker
+// (chips fly and stone dust puffs on each blow), a hatch in the ceiling on the right where moonlight falls in and a rope
+// hauls the blocks up to the wall on the surface one by one; the empty hook comes back down and the next block is dragged
+// over from the stack under it. A wall torch, a lantern over the banker.
+const WHX = 121;   // the hoist rope's x
+X.def('wall', {
+  amb: [0.27, 0.25],
+  paint(S, sc) {
+    X.shell(S, sc, 'medieval');
+    sc.light({ x: 66, y: 24, z: 20, r: 80, i: 0.95, c: '#ffc070', fl: 'candle', tint: 0.4 });            // 0 lantern over the banker
+    sc.light({ x: 46, y: 32, z: 10, r: 60, i: 0.8, c: '#ffb060', fl: 'fire', ph: 2, tint: 0.4 });        // 1 wall torch
+    sc.light({ x: WHX, y: 8, z: 6, r: 78, i: 0.55, c: '#a8b8ff', tint: 0.4 });                           // 2 moonlight down the hatch
+    // the hatch: a square hole through the ceiling beam, night and a few stars beyond, a timber frame
+    S.lay('wall');
+    for (let y = 0; y < 9; y++) for (let x = 113; x < 130; x++) S.px(x, y, 'night', 1.2 + (9 - y) * 0.25, { e: 255 });
+    [[116, 2], [125, 4], [119, 6]].forEach(([x, y]) => S.px(x, y, 'linen', 8, { e: 255 }));
+    S.beg(); S.box(111, 0, 2, 10, 'wood', 5); S.box(130, 0, 2, 10, 'wood', 4); S.hl(111, 9, 21, 'wood', 3); S.end();
+    // moonlight on the wall under the hatch
+    S.lay('wall'); for (let y = 10; y < FY; y++) { const k = (y - 10) / (FY - 10), hw = 6 + k * 8; for (let x = Math.floor(WHX - hw); x <= WHX + hw; x++) S.tone(x, y, 0.5 * (1 - k) * (1 - Math.abs(x - WHX) / (hw + 1))); }
+    // wall torch: bracket + stick (the flame is animated)
+    S.lay('back'); S.beg(); S.box(43, 42, 6, 3, 'iron', 5); S.line(46, 42, 46, 36, 'wood', 6, { w: 1 }); S.px(45, 36, 'wood', 4); S.px(47, 36, 'wood', 4); S.end();
+    // lantern on a chain from the beam
+    S.beg(); for (let y = 9; y < 18; y += 2) { S.px(66, y, 'iron', 5); S.px(66, y + 1, 'iron', 3); } S.rect(63, 18, 7, 1, 'iron', 7); S.rect(62, 19, 9, 8, 'iron', 4); S.rect(63, 20, 7, 6, 'lamp', 8, { e: 255 }); S.vl(66, 20, 6, 'iron', 4); S.rect(63, 27, 7, 1, 'iron', 6); S.end({ lit: 1 });
+    // the stack of dressed blocks on the left: three, two, one; tooled faces, a mason's mark
+    const blk = (x, y, w, h, t) => { S.beg(); S.box(x, y, w, h, 'stone', t, { top: 1 }); for (let k = 0; k < 3; k++) S.hl(x + 2, y + 2 + k * 3, w - 4, 'stone', t - 0.8); S.end(); };
+    [[5, 80], [17, 80], [29, 80]].forEach(([x, y], i) => blk(x, y, 11, 10, 5.4 + (i % 2) * 0.5));
+    [[11, 70], [23, 70]].forEach(([x, y], i) => blk(x, y, 11, 10, 5.8 - i * 0.4));
+    blk(17, 60, 11, 10, 6.2);
+    S.px(21, 64, 'crimson', 5); S.px(22, 65, 'crimson', 5); S.px(23, 64, 'crimson', 5);   // the mason's mark
+    // the stack on the right, beside the hatch: the next blocks for the wall
+    blk(137, 80, 11, 10, 5.2); blk(138, 71, 10, 9, 5.8);
+    // the banker: a stout timber trestle, a half-dressed block on it (smooth on the left, rough on the right)
+    S.lay('mid');
+    S.beg(); S.box(52, 76, 34, 4, 'wood', 5, { top: 1 }); S.box(55, 80, 4, 10, 'wood', 4); S.box(79, 80, 4, 10, 'wood', 3.6); S.hl(59, 85, 20, 'wood', 3.5); S.end();
+    S.beg(); S.box(56, 64, 24, 12, 'stone', 6, { top: 1 }); S.end();
+    for (let y = 64; y < 76; y++) for (let x = 70; x < 80; x++) if ((x * 7 + y * 13) % 5 < 2) S.px(x, y, 'stone', 4.5 + ((x + y) % 3));
+    for (let y = 66; y < 75; y += 2) S.hl(58, y, 11, 'stone', 6.6);
+    // a mallet and a set square left on the banker
+    S.beg(); S.line(53, 74, 53, 70, 'wood', 6); S.box(51, 68, 5, 3, 'wood', 5); S.end();
+    S.beg(); S.hl(82, 75, 3, 'iron', 7); S.vl(82, 72, 3, 'iron', 7); S.end();
+    // a mortar tub and a trowel, close to the eye; chips on the floor
+    S.lay('front');
+    S.beg(); S.poly([[34, 90], [50, 90], [48, 83], [36, 83]], 'wood', 4.5); S.hl(36, 83, 12, 'wood', 6.5); S.hl(37, 84, 10, 'linen', 5); S.end();
+    S.beg(); S.line(46, 83, 51, 78, 'wood', 6); S.poly([[43, 84], [47, 82], [48, 84]], 'iron', 7); S.end();
+    [[60, 89], [66, 88], [84, 89], [88, 88], [92, 89], [100, 89]].forEach(([x, y], i) => S.px(x, y, 'stone', 7 + (i % 3)));
+    foot(S, 5, 40); foot(S, 52, 86); foot(S, 137, 148); foot(S, 34, 50, 1);
+    sc.emit({ k: 'dust', x: WHX, y: 40, w: 22, h: 60, rate: 1.2, sp: 2, life: 4 });
+  },
+  anim(D, t, rs) {
+    const st = rs.st, dt = clamp(t - (st.lt == null ? t : st.lt), 0, 0.1); st.lt = t;
+    // the mason: raise, strike, lift — chips and a puff of stone dust on each blow
+    const hp = steps(t, 0.95), strike = hp > 0.52 && hp < 0.62;
+    let aF; if (hp < 0.5) aF = 1.2 + Math.sin(hp / 0.5 * Math.PI / 2) * 1.5; else if (hp < 0.56) aF = 2.7 - (hp - 0.5) / 0.06 * 1.5; else aF = 1.2 - Math.min(1, (hp - 0.56) / 0.3) * 0.1;
+    D.lay('mid');
+    man(D, 97, FY, { skin: ['skin', 6], hair: ['hair', 3], top: ['linen', 6], bot: ['leather', 4], boot: ['hair', 2], apron: ['leather', 5], cap: ['stone', 7] },
+      { aF, eF: hp < 0.5 ? -0.3 : 0.1, aB: 1.4, eB: 0.2, lB: -0.2, lF: 0.25, kB: 0.1, lean: hp > 0.5 && hp < 0.7 ? 0.6 : 0.2, tool: 'hammer', ta: 0.3 }, -1);
+    if (strike && !st.hit) { st.hit = 1; rs.flash(0, 0.12); rs.burst('steam', 80, 70, 3, { sp: 6, ang: 0.6, spread: 1.2, life: 1.1 }); if (R() < 0.4) rs.burst('spark', 80, 70, 2, { sp: 30, ang: 0.8, spread: 1.2, life: 0.4, floor: FY - 1 });
+      st.ch = (st.ch || []).filter(c => c.a < 2.5); for (let k = 0; k < 3 + Math.floor(R() * 3); k++) st.ch.push({ x: 80, y: 68 + R() * 5, vx: 12 + R() * 30, vy: -20 - R() * 30, a: 0 }); }
+    if (hp > 0.7) st.hit = 0;
+    (st.ch || []).forEach(c => { c.a += dt; if (c.y < FY - 1) { c.vy += 160 * dt; c.x += c.vx * dt; c.y = Math.min(FY - 1, c.y + c.vy * dt); } if (c.a < 2.5) D.px(c.x, c.y, 'stone', c.a < 2 ? 8 : 6); });
+    // the hoist, on a 12 s cycle: the block rises into the hatch; the empty hook comes back down; the next block is dragged over
+    const q = steps(t, 12) * 12; let by = null, bx = 115, hy;
+    if (q < 5) { by = 80 - ease(q / 5) * 80; hy = by - 4; } else if (q < 8) { hy = 9 + ease((q - 5) / 3) * 67; } else if (q < 9.6) { hy = 76; by = 80; bx = 128 - ease((q - 8) / 1.6) * 13; } else { hy = 76; by = 80; }
+    const ph = q < 5 ? 0 : q < 8 ? 1 : 2; if (st.ph !== ph) { if (ph === 2) rs.burst('steam', 128, 88, 3, { sp: 5, ang: 0, spread: 2, life: 1 }); if (ph === 0 && st.ph != null) rs.burst('steam', 121, 88, 2, { sp: 4, ang: 0, spread: 2, life: 0.9 }); st.ph = ph; }
+    if (by != null && by < 14 && by > 0 && R() < 0.2) rs.burst('dust', WHX + (R() - 0.5) * 12, 11, 1, { sp: 3, ang: Math.PI, spread: 0.6, life: 2.2 });
+    const sway = q < 5 ? Math.round(Math.sin(t * 1.7) * 0.8) : 0, rx = WHX + sway;
+    ol(D, 100, 0, 146, 91, () => {
+      D.beg(); D.vl(WHX, 0, Math.max(0, Math.round(hy) - 0), 'leather', 6); D.end();
+      const hx = rx, hk = Math.round(hy); D.px(hx, hk, 'iron', 7); D.px(hx, hk + 1, 'iron', 6); D.px(hx + 1, hk + 2, 'iron', 5); D.px(hx - 1, hk + 2, 'iron', 7);
+      if (by != null) {
+        const x0 = Math.round(bx + (q < 5 ? sway : 0)), y0 = Math.round(by), attached = q < 5 || q >= 9.6;
+        if (attached) { for (let y = Math.max(10, y0 - 3); y < y0; y++) { const f = (y - (y0 - 3)) / 3; D.px(hx - 1 - f * 5, y, 'leather', 5); D.px(hx + 1 + f * 5, y, 'leather', 4); } }
+        D.beg(); for (let y = Math.max(10, y0); y < y0 + 10; y++) D.hl(x0, y, 12, 'stone', y === y0 ? 7.4 : y === y0 + 9 ? 4.2 : 5.6 + ((y - y0) % 3 === 0 ? -0.6 : 0)); D.end();
+        if (y0 >= 10) { D.vl(x0, y0, 10, 'stone', 6.8); D.vl(x0 + 11, y0, 10, 'stone', 4.4); }
+      }
+    });
+    // the torch
+    D.lay('back'); flame(D, 46, 35, 6, t, 1.3);
+  },
+});
+
 // what each pixel room shows, in words (docs/effects.md §R is generated from M.ROOM_D)
 const D_ = {
   ballista: '巨型弩炮架在木架上，弦已上好、大箭已搭上，斜指墙上的射口，射口外是月夜和地面的草；墙上的架子挂着一排大箭，桶里插着箭，吊灯在弩臂上方轻轻晃，火盆火苗翻动，月光从射口斜照进来、灰尘在光里飘；守卫扶着绞盘，不时使劲再绞几圈，弩臂吱呀往后一弯，梁上落下细灰；开火时弩臂猛地弹回，大箭拖着白光从射口飞出，木架一震、火花和尘土四起、吊灯被震得直晃，守卫再把弦绞回去',
@@ -834,6 +916,7 @@ const D_ = {
   tesla: '线圈立在黑黄警示条的机柜上，底座上平盘着三圈铜管，中间的铜线绕得密密的，顶上是金属圆环和放电球，细小的电弧不停从球上窜出、在圆环上爬，不时一道电弧跳到两边的避雷杆上；左边闸刀开关偶尔冒火花，电容管里的电一格格涨，工程师拿着夹板看屏幕，地上盘着一卷黄色电缆；电容充满时两道大电弧同时打到避雷杆、满屋一白，工程师抬手挡脸；开火时电弧穿过天花板的导电口冲上地面，火花往下落，红色警示灯一闪',
   spire: '黄铜转台上架着一根紫水晶炮管，斜指墙角的射击口，口外是月夜和半个月亮，口沿结着冰凌、不时滴水；两道符环套在炮管上转，炮口前还悬着一道，一道亮光不停沿水晶往上跑；左边的充能线圈里紫光一路往上涌，两道符环绕着它上下转，能量顺着地上的导管流进炮座；技师戴着镜片、捧着书站在一旁，墙上架着备用水晶，烛台摇曳，头顶挂着几张符纸；技师举书念咒时符文飞向炮尾、符环收紧、水晶一亮、炮口冒出冷雾；开火时符环猛地收紧往前冲，一道紫蓝光束从射击口射出，口沿震落一片蓝白冰晶，冷雾涌进来',
   armory: '一整套板甲立在石台上，双手按着插在身前的长剑，身后挂着绣交叉双剑的红旗，头顶铁格窗漏下一道淡白的光柱照在头盔上，在石台和地板上照出一块亮斑，灰尘在光里飘，白色羽饰轻轻摆；左边架子上立着长戟、长矛和三把尖头长剑，右墙挂着两面纹章盾，一面圆盾压在两把交叉的斧头上，刀刃不时闪一下；两边火把摇曳，木柱上的油灯跳着小火苗，水槽上两根木柱架着一块圆磨石，铠甲匠踩着踏板，磨石上的四道深槽跟着转，他把剑压在磨石左上边、火花飞溅；磨好后他把剑举到光下，光柱猛地大亮、地上的亮斑跟着变亮，一道亮光从头盔顺着胸甲滑到剑上，光里的灰尘打着旋，旗边轻轻一抖',
+  wall: '城墙底下的石料间：左边码着一堆方石，石匠在木架上的石块旁抡锤凿打，每一下石屑飞出、扬起一小团石粉；右边天花板开着吊口，月光漏下来，绳子把方石一块块吊上地面的城墙，空钩再放下来，下一块石头从石堆拖到钩下；墙上的火把摇曳，吊灯挂在木架上方',
 };
 if (M.ROOM_D) Object.assign(M.ROOM_D, D_);
 })();

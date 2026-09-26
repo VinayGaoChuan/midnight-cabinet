@@ -34,7 +34,7 @@ Object.assign(G, {
         heroes: m.heroes.map(h => { const mx = M.heroMaxHp(h, m), R = M.RARITY[h.rarity]; return { fx: 'hero-' + h.id, n: M.HEROES[h.cls].n, img: M.spriteURL(M.HEROES[h.cls].sprite, 4), clsIc: M.iconURL('c_' + h.cls, 2), lv: h.lv, rc: R.c, hpW: Math.max(0, h.hp / mx * 100) + '%', hpC: h.hp / mx < 0.35 ? '#ff5a4a' : '#9cff7a', dot: h.points > 0, op: h.status ? 0.5 : 1, sc: this.ps('heroes'), tipOn: this.tipFn(() => this.heroTip(h)), onClick: () => { M.Sfx.click(); this.openHero(h.id); } }; }),
         heroCap: m.heroes.length + ' / ' + M.heroCap(m) };
       v.pwTip = this.tipFn({ title: '电力', c: '#8ff6ff', kind: '已用 ' + pw.used + ' / 产出 ' + pw.made, d: '电不够就建不了新的耗电房间。' });
-      v.raidTip = this.tipFn({ title: '守城', c: '#ff6a5a', kind: '每 ' + M.RAID_EVERY + ' 天一次 · 下次在第 ' + M.nextRaid(m) + ' 天', d: '所有领袖参与守城，不会永久死亡，但损失的生命不会自动恢复。地下的武器房间会向地面开火，射程受深度限制：每往下一层，就少覆盖一格。传送门被摧毁，游戏结束。' });
+      v.raidTip = this.tipFn({ title: '守城', c: '#ff6a5a', kind: '每 ' + M.RAID_EVERY + ' 天一次 · 下次在第 ' + M.nextRaid(m) + ' 天', d: '怪物攻打主基地：城墙挡路、防御塔开火、兵营出兵，领袖在屋顶指挥。主基地被攻破，这一局结束。' });
       v.pnOn = !!this.panel && s === 'base';
       if (this.panel) Object.assign(v, this.panelView());
     }

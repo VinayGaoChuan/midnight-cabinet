@@ -6,7 +6,7 @@ const PX = M.PX, RCOL = M.RACES, FW = 1920, FH = 720;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const eo = (t) => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
 const rnd = (i) => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
-const BAL = M.BAL = { MANA_MUL: 2.0, ALLY_FLOOR: 5, ENEMY_K: 1.8 };   // batch G/H rebalance: a shopping player won everything at 1.15; 1.6 → 1.8 with the layered talent trees and levelled leaders (2026-09-25)
+const BAL = M.BAL = { MANA_MUL: 2.0, ALLY_FLOOR: 5, ENEMY_K: 1.6 };   // 2026-09-26: 1.8 → 1.6, the leader lost its field skill and a lost run costs a core heart   // batch G/H rebalance: a shopping player won everything at 1.15; 1.6 → 1.8 with the layered talent trees and levelled leaders (2026-09-25)
 let { MANA_MUL, ALLY_FLOOR } = BAL;
 M.setBal = (o) => { Object.assign(BAL, o); ({ MANA_MUL, ALLY_FLOOR } = BAL); };
 // enemies are a little tougher outside the tutorial
@@ -45,7 +45,7 @@ P.skillSpec = function (e) {
   return { n, col: e.side === 'E' ? '#ff6a5a' : col, q, tier, pw: [1, 1.25, 1.55, 2][q] * (e.side === 'E' ? 0.85 : 1) };
 };
 P.beginCast = function (e, o = {}) {
-  const sp = this.skillSpec(e), dur = [0.34, 0.5, 0.72, 0.95][sp.tier];
+  const sp = this.skillSpec(e), dur = sp.dur || [0.34, 0.5, 0.72, 0.95][sp.tier];   // sp.dur: by quality (mc-omen.js)
   e.mana = 0; e.casting = { t0: this.t, until: this.t + dur, sp };
   this.fxp({ k: 'cast', ent: e, col: sp.col, tier: sp.tier, life: dur + 0.3 });
   // one headline banner at a time: only the newest big cast owns the top of the screen

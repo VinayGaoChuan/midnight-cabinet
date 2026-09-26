@@ -172,7 +172,7 @@ function goods(g, m) {
   const out = [], bld = Object.keys(M.BUILDINGS).filter(k => !M.BUILDINGS[k].fixed), rel = Object.keys(M.RELICS), gifts = Object.keys(M.GIFTS || {}).filter(k => M.GIFTS[k].w > 0);
   const bk = pick(bld), B = M.BUILDINGS[bk]; out.push({ n: B.n + '图纸', d: B.d, cost: B.q >= 2 ? ['sh', 40 + 20 * B.q] : ['sup', 90 + 50 * B.q], give: () => M.invAdd(m, 'bbp:' + bk, 1) });
   const rk = pick(rel), Rl = M.RELICS[rk]; out.push({ n: Rl.n + '图纸', d: '打造「' + Rl.n + '」', cost: ['sh', 30], give: () => M.invAdd(m, 'rbp:' + rk, 1) });
-  const tk = M.dropTile(), T = M.TILES[tk]; out.push({ n: '地脉结晶·' + T.n, d: '把一格岩层变成「' + T.n + '」：' + (T.anyD || T.d), cost: ['sup', 140], give: () => { const at = M.tileSpot && M.tileSpot(m); if (at) { const [c, r] = at; M.cell(m, c, r).tile = tk; g.homeQueue(g.tileReveal(c, r, tk)); } } });
+  const tk = M.dropTile(), T = M.TILES[tk]; out.push({ n: '地脉结晶·' + T.n, d: '把一格岩层变成「' + T.n + '」：' + (T.anyD || T.d), cost: ['sup', 140], give: () => { const at = M.tileSpot && M.tileSpot(m, tk); if (at) { const [c, r] = at; M.cell(m, c, r).tile = tk; g.homeQueue(g.tileReveal(c, r, tk)); } } });
   { const gk = pick(gifts), K = M.GIFTS[gk]; out.push({ n: K.n, d: K.d, cost: ['sup', 70], give: () => { const r = K.apply(g, m, null); g.toast(K.n + ' · ' + ((r && r.t) || ''), K.c); } }); }
   return out;
 }
@@ -205,7 +205,7 @@ G.dayEvent = function (k) {
   if (k === 'recruit') { m.freeRecruit = (m.freeRecruit || 0) + 1; this.save(); this.toast(E.n + '：' + E.d, E.c); return; }
   if (k === 'harvest') { let n = 0; for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) { const x = m.base.cells[r][c]; if (!x.job) continue; n++; x.job.days -= 1; if (x.job.days <= 0) { if (x.job.kind === 'dig') x.dug = true; else { x.b = x.job.key; x.dug = true; } x.job = null; const p = this.cellPos(c, r); this.fx.rays(p.x, p.y, E.c, 1.2, { r: 240 }); } }
     this.save(); this.toast(n ? E.n + '：' + n + ' 项工程各推进 1 天' : E.n + '：现在没有工程', E.c); return; }
-  if (k === 'ley') { const at = M.tileSpot && M.tileSpot(m); if (!at) { this.toast(E.n + '：没有能变的岩层', E.c); return; } const [c, r] = at, tk = M.dropTile(); M.cell(m, c, r).tile = tk; this.save(); this.homeQueue(this.tileReveal(c, r, tk)); }
+  if (k === 'ley') { const tk = M.dropTile(), at = M.tileSpot && M.tileSpot(m, tk); if (!at) { this.toast(E.n + '：没有能变的岩层', E.c); return; } const [c, r] = at; M.cell(m, c, r).tile = tk; this.save(); this.homeQueue(this.tileReveal(c, r, tk)); }
 };
 // ───────── effects waiting to happen, in a row under the top bar (user ruling 2026-09-25) ─────────
 // what a keepsake or an event promised for later is shown until it is used: next raid weaker, next recruit free …

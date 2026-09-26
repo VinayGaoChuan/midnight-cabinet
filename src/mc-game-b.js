@@ -21,7 +21,7 @@ Object.assign(G, {
   },
   bldTip(key, c, r) {
     const B = M.BUILDINGS[key], m = this.meta, lines = [{ t: M.QUALITY[B.q].n + ' · ' + M.STYLE[B.style] + ' · ' + M.CAT[B.cat], c: M.QUALITY[B.q].c }];
-    if (B.weapon) lines.push({ t: '射程 ' + (c != null ? M.weaponStats(m, c, r).range : B.weapon.range) + ' 格', c: '#ff8a8a' });
+    if (B.weapon) { const w = c != null && M.weaponStats(m, c, r) || B.weapon; lines.push({ t: '射程 ' + M.towerRange(w), c: '#ff8a8a' }); }
     if (c != null) { const x = M.cell(m, c, r); if (x.tile) lines.push({ t: M.TILES[x.tile].n + '：' + M.TILES[x.tile].d, c: M.TILES[x.tile].c }); }
     return { title: B.n, c: B.q ? M.QUALITY[B.q].c : '#e8dcc4', kind: B.q ? '奇观' : '建筑', d: B.d, lines };
   },
@@ -126,7 +126,7 @@ Object.assign(G, {
     const p = this.panel, m = this.meta, h = m.heroes.find(x => x.id === p.hero);
     m.lastRelics = p.relics.slice(); this.panel = null; this.coachData = null; M.Sfx.launch();
     this.bv.tx = M.BASE_GEO.DOOR_X; this.bv.ty = -125; this.bv.tz = 3.4; this.fx.flash('#bff8ee', 0.2);
-    setTimeout(() => { this.fx.flash('#e0fff5', 1); this.run = M.newRun3(m, h, p.world, p.relics); this.enterWorld(); this.toast(this.run.region.n + ' · ' + this.run.len.boss + ' 个首领 · ' + this.run.map.cols + ' 站', '#f2c14e'); }, 750);
+    setTimeout(() => { this.fx.flash('#e0fff5', 1); this.run = M.newRun3(m, h, p.world, p.relics); this.enterWorld(); this.toast(this.run.region.n + ' · ' + (this.run.scene ? this.run.scene.n : this.run.len.boss + ' 个首领') + ' · ' + this.run.map.cols + ' 站', '#f2c14e'); }, 750);
   },
   restDay() { this.closePanel(); this.passDay(); setTimeout(() => this.checkRaid(), 1200); },
   passDay() {

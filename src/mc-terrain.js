@@ -49,7 +49,7 @@ const DEF = {
   ley:     { n: '灵脉', hue: '#b86bff', any: { shardDaily: 2, deathShards: 0.3 }, anyD: '基地每天 +2 灵魂碎片，领袖阵亡的碎片 +30%', fitN: '招募 / 魔法', fit: (B) => B.cat === 'recruit' || B.style === 'magic' || B.style === 'fantasy', fitFx: () => ({ recruitMin: 1 }), fitD: '招募的领袖至少为「稀有」' },
   amber:   { n: '琥珀层', hue: '#ffb03a', any: { orbDaily: 30 }, anyD: '基地每天 +30 经验球', fitN: '训练', fit: cat('train'), fitFx: () => ({ orbMul: 1 }), fitD: '升级少花一半经验球' },
   mint:    { n: '金脉', hue: '#ffd650', any: { lootSup: 0.25 }, anyD: '出征带回的物资 +25%', fitN: '运势', fit: cat('luck'), fitFx: () => ({ lootSup: 0.3, startMult: 0.2 }), fitD: '物资再 +30%，每场战斗初始积分倍率 +0.2' },
-  rift:    { n: '裂隙', hue: '#9cff7a', any: { defDmg: 0.2 }, anyD: '所有武器房间伤害 +20%', fitN: '武器', fit: isW, fitFx: () => ({ range: 1, wcd: 0.5 }), fitD: '射程 +1，攻速 +50%' },
+  rift:    { n: '裂隙', hue: '#9cff7a', any: { defDmg: 0.2 }, anyD: '所有防御塔伤害 +20%', fitN: '武器', fit: isW, fitFx: () => ({ range: 1, wcd: 0.5 }), fitD: '射程 +1，攻速 +50%' },
   ore:     { n: '富矿脉', hue: '#e0904a', any: { craftCost: -0.3 }, anyD: '宝物打造费用 -30%', fitN: '锻造 / 武器', fit: (B) => !!B.forge || !!B.weapon, fitFx: (B) => (B.forge ? { forgeLuck: 0.6 } : { dmg: 0.5 }), fitD: '锻造：60% 概率品质 +1；武器：伤害 +50%' },
   wind:    { n: '风穴', hue: '#bfefff', any: { vision: 1, startMult: 0.1 }, anyD: '出征视野 +1，初始积分倍率 +0.1', fitN: '运势 / 特殊', fit: cat('luck', 'misc'), fitFx: () => ({ tower: 1, startMult: 0.1 }), fitD: '出征地图一开始就全亮，积分倍率再 +0.1' },
   dragon:  { n: '龙骨', hue: '#ff5a3a', any: { unitAtk: 0.1 }, anyD: '出征部队攻击 +10%', fitN: '训练', fit: cat('train'), fitFx: () => ({ orbMul: 0.6, newHeroLv: 1 }), fitD: '升级少花 38% 经验球，新领袖多 1 级' },

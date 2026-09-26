@@ -97,7 +97,7 @@ G.raidEnd = function () {
   const killR = r.total ? r.kills / r.total : 1, keep = r.portal0 ? Math.max(0, Math.min(1, r.portal.hp / r.portal0)) : 1, sc = 0.55 * killR + 0.45 * keep;
   const gi = sc >= 0.97 ? 0 : sc >= 0.85 ? 1 : sc >= 0.7 ? 2 : 3, GR = GRADE[gi];
   const sup = Math.round((80 + m.day * 12) * GR.m), orb = Math.round(r.kills * 4 * GR.m), shK = Math.round(r.kills * 1.5 * GR.m), bps = [];   // shards: the main source is the monsters killed here (2026-09-25)
-  bps.push(M.oneBldBp(null));   // fixed: one random building blueprint for holding (user ruling 2026-09-25); the grade still scales supplies and exp
+  bps.push(Math.random() < 0.6 && M.defBp ? M.defBp() : M.oneBldBp(null));   // 2026-09-26: 60% a defence blueprint (the town holds the raids now)   // fixed: one random building blueprint for holding (user ruling 2026-09-25); the grade still scales supplies and exp
   const boss = r.ents.some(e => e.side === 'E' && e.boss && !e.alive);
   // pay out (the HUD numbers are held until the icons land)
   ['msup', 'msh'].forEach((k, i) => this.hold(k, [m.supplies, m.shards][i]));
@@ -111,6 +111,7 @@ G.raidEnd = function () {
   const lines = ['击退 ' + r.kills + ' / ' + r.total + ' · 主基地保住 ' + Math.round(keep * 100) + '%', '物资 +' + sup + ' · 灵魂碎片 +' + shK + ' · 领袖经验 +' + orb];
   if (bps.length) lines.push('图纸：' + bps.map(k => M.itemInfo(k).n).join('、'));
   if (falls.length) lines.push(M.heroN(falls[0].h) + ' 倒下过，守完以 1 点生命站起来。');
+  if (r.ruinedN && r.ruinedN.length) lines.push('倒塌：' + r.ruinedN.join('、') + '（修好之前不起作用）');
   if (spare) lines.push(spare);
   const collect = () => {
     if (!this.modal || !this.modal.raidRes) return; this.modal = null; M.Sfx.click();

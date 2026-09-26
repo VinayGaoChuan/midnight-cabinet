@@ -1,8 +1,8 @@
 // ==== mc-solo.js ====
 (function () {
 // One leader (user ruling 2026-09-25). The game has a single leader — the player's avatar — with no quality and a level
-// cap. A lost expedition sends it home with 1 life and costs the haul, never the leader, its relics or a base core
-// (there are no core lives any more; only the main base falling in a 混沌来袭 ends the game). Exp is not an item: what
+// cap. A lost expedition costs the haul and one heart of the base core (mc-revive.js: the leader is revived in a rite),
+// never the leader or its relics. Exp is not an item: what
 // the leader earns it gets at once (no exp orbs, no level-up button). Everything that only made sense with many
 // mortal leaders is gone or reworked: recruiting, leader caps, death payouts, "every leader" wording. Soul shards now
 // come mainly from the monsters killed in a 混沌来袭. A new game starts with a random class and a plain hospital.
@@ -27,7 +27,7 @@ const oNH = M.newHero;
 M.newHero = function (meta, cls) { return oNH.call(this, meta, cls, M.SOLO_R); };
 const CLS = () => Object.keys(M.HEROES);
 const oDM = M.defaultMeta3;
-M.defaultMeta3 = function () { const m = oDM.apply(this, arguments); m.heroes = [M.newHero(m, M.pick(CLS()))]; m.orbs = 0; delete m.core; return m; };
+M.defaultMeta3 = function () { const m = oDM.apply(this, arguments); m.heroes = [M.newHero(m, M.pick(CLS()))]; m.orbs = 0; return m; };
 
 // ───────── buildings: recruiting is gone, death / cap / orb effects become exp and supplies ─────────
 const setB = (k, o) => { if (B[k]) Object.assign(B[k], o); };
@@ -87,7 +87,7 @@ G.runFail = function () {
   this.go('end');
 };
 const oWin = G.runWin;
-G.runWin = function () { const r = oWin.apply(this, arguments), e = this.endInfo; if (e) { delete e.coreHeal; e.lines = (e.lines || []).filter(l => !/核心/.test(l.k || '')); if (e.gain) e.gain.morb = 0; e.tiles = (e.tiles || []).filter(t => t.icon !== 'orb' || t.n === '经验'); } return r; };
+G.runWin = function () { const r = oWin.apply(this, arguments), e = this.endInfo; if (e) { if (e.gain) e.gain.morb = 0; e.tiles = (e.tiles || []).filter(t => t.icon !== 'orb' || t.n === '经验'); } return r; };   // the core is back (2026-09-26): its +1 line stays
 // a leader falling in a 混沌来袭 gets up with 1 life when it is over
 M.raidFall = function (m, h) { h.hp = 1; return { h, sh: 0, orb: 0 }; };
 
@@ -101,7 +101,6 @@ M.soloFix = function (m) {
     if ((m.orbs || 0) > 0) { M.addExp(h, m.orbs); ch = true; }
   }
   if (m.orbs) { m.orbs = 0; ch = true; }
-  if (m.core != null) { delete m.core; ch = true; }
   ['freeRecruit', 'recruitMinOnce'].forEach(k => { if (m[k]) { delete m[k]; ch = true; } });
   if (m.base && m.base.cells) m.base.cells.forEach(row => row.forEach(x => { if (x && (x.b === 'altar' || x.b === 'tavern')) { x.b = 'hospital'; ch = true; } if (x && x.job && x.job.kind === 'build' && (x.job.key === 'altar' || x.job.key === 'tavern')) { x.job.key = 'hospital'; ch = true; } }));
   if (m.inv) ['altar', 'tavern'].forEach(k => { if (m.inv['bbp:' + k]) { m.supplies = (m.supplies || 0) + 60 * m.inv['bbp:' + k]; delete m.inv['bbp:' + k]; ch = true; } });

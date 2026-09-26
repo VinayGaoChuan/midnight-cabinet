@@ -72,6 +72,8 @@ function checkMeta(raw) {
   m.heroes = heroes.length ? heroes : D.heroes;
   // one leader, no exp orbs, no core lives, no recruiting rooms (2026-09-25, mc-solo.js)
   if (M.soloFix && M.soloFix(m)) mig = true;
+  if (M.coreFix && M.coreFix(m)) mig = true;   // the base core came back (2026-09-26)
+  if (M.prosFix && M.prosFix(m)) mig = true;   // prosperity and the unlocked rings (2026-09-26)
   // inventory: only blueprints and vein crystals this version knows
   if (m.inv['bbp:sanitarium']) { delete m.inv['bbp:sanitarium']; mig = true; }
   m.graveyard.forEach(g => { if (isObj(g) && M.HEROES[g.cls] && g.name !== M.HEROES[g.cls].n) { g.name = M.HEROES[g.cls].n; mig = true; } });

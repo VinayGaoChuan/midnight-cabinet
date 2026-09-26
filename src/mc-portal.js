@@ -241,6 +241,7 @@ M.drawSteles = function (ctx, meta, bv, lights, layer) {
     const tw = U.measure(ctx, Dg.n, fs), x0 = Math.round(c.x - (ss + 8 * z + tw) / 2);
     if (sk) ctx.drawImage(sk, x0, dy - ss / 2, ss, ss);
     U.text(ctx, Dg.n, Math.round(x0 + ss + 8 * z + tw / 2), dy, fs, Dg.c, { outline: true });
+    const sc = M.sceneOf && M.sceneOf(meta, k); if (sc) U.text(ctx, sc.n, Math.round(c.x), Math.round(c.y + 42 * z), Math.max(24, Math.round(34 * z / 12) * 12), sc.replay ? '#a89ca8' : '#f4efe0', { outline: true });   // the scene this stele leads to (mc-scenes.js)
     const is = 38 * z, gap = 10 * z, wT = L.length * is + (L.length - 1) * gap; let lx = c.x - wT / 2; const ly = c.y + 150 * z;
     L.forEach(l => { const cv = icCanvas(l.ic); if (cv) { const s = Math.min(is / cv.width, is / cv.height); ctx.drawImage(cv, lx + (is - cv.width * s) / 2, ly + (is - cv.height * s) / 2, cv.width * s, cv.height * s); } lx += is + gap; });
     ctx.restore();
@@ -280,7 +281,7 @@ const oGo = G.go; G.go = function (s) { if (s !== 'base' && this.bv) { this.bv.p
 
 // ───────── guide anchors ─────────
 const stAt = (g, f) => { if (!g.portalOn || !g.portalOn() || !g.bv || !g.bv.steles || !g.bv.steles.length) return null; const s = g.bv.steles[0]; return f(s); };
-M.STELE_AT = { danger: (g) => stAt(g, s => ({ x: s.x, y: s.y + s.h * 0.3, w: s.w, h: s.h * 0.25 })), loot: (g) => stAt(g, s => ({ x: s.x, y: s.y + s.h * 0.58, w: s.w, h: s.h * 0.25 })) };
+M.STELE_AT = { scene: (g) => stAt(g, s => ({ x: s.x, y: s.y + s.h * 0.08, w: s.w, h: s.h * 0.2 })), danger: (g) => stAt(g, s => ({ x: s.x, y: s.y + s.h * 0.3, w: s.w, h: s.h * 0.25 })), loot: (g) => stAt(g, s => ({ x: s.x, y: s.y + s.h * 0.58, w: s.w, h: s.h * 0.25 })) };
 })();
 
 ;

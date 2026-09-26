@@ -57,7 +57,7 @@ M.FURN = [
   { k: 'calendar', icon: 'r_skel', names: ['挂历', '行事历', '预言历'], cost: [120, 280, 520], what: '把混沌来袭的日子圈出来。', lv: [
     { d: '混沌来袭间隔 5 天 → 6 天', fx: { raidEvery: 6 } },
     { d: '混沌来袭间隔 7 天', fx: { raidEvery: 7 } },
-    { d: '混沌来袭间隔 7 天；混沌来袭时武器房间伤害 +40%', fx: { raidEvery: 7, defDmg: 0.4 } }] },
+    { d: '混沌来袭间隔 7 天；混沌来袭时防御塔伤害 +40%', fx: { raidEvery: 7, defDmg: 0.4 } }] },
   { k: 'photo', icon: 't_heart', names: ['相框', '照片墙', '纪念碑'], cost: [100, 240, 480], what: '记住每一个没回来的人。', lv: [
     { d: '领袖阵亡时，多留下 50% 经验球', fx: { deathOrbsX: 0.5 } },
     { d: '阵亡多留 50% 经验球；阵亡时宝物全部保住', fx: { deathOrbsX: 0.5, bank: 9 } },

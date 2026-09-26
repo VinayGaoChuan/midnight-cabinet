@@ -8,15 +8,15 @@
 //   (r = life ÷ damage per second: a 先锋 has ~50, an 刺客 ~7).
 const M = window.MC, DB = M.DB, TDB = M.TDB;
 const VOC = {
-  先锋:   { d: '该职业擅长防御。', c: '#7fb0ff', r: 50, f: 1.0, def: 1, ic: 'v_vanguard' },
-  守护者: { d: '该职业擅长防御，并保护身边的友军。', c: '#9ad0ff', r: 42, f: 0.95, def: 1, ic: 'v_guardian' },
+  先锋:   { d: '该职业擅长站在最前面扛伤害。', c: '#7fb0ff', r: 50, f: 1.0, def: 1, ic: 'v_vanguard' },
+  守护者: { d: '该职业擅长防御，并用光环保护身边的友军。', c: '#9ad0ff', r: 42, f: 0.95, def: 1, ic: 'v_guardian' },
   战士:   { d: '该职业擅长近战输出，和简单防御。', c: '#ff8a6a', r: 22, f: 1.05, ic: 'v_warrior' },
   圣骑士: { d: '该职业擅长恢复，和简单防御。', c: '#ffe08a', r: 32, f: 0.95, ic: 'v_paladin' },
-  射手:   { d: '该职业擅长输出，但很脆弱。', c: '#ffd060', r: 9, f: 1.0, ic: 'v_archer' },
-  刺客:   { d: '该职业擅长爆发攻击，但很脆弱。', c: '#ff5a8a', r: 7, f: 1.05, ic: 'v_assassin' },
-  法师:   { d: '该职业擅长技能攻击，但很脆弱。', c: '#c890ff', r: 10, f: 0.9, ic: 'v_mage' },
-  牧师:   { d: '该职业擅长恢复，但很脆弱。', c: '#9cffb0', r: 12, f: 0.85, ic: 'v_cleric' },
-  祭司:   { d: '该职业擅长强化和削弱，但很脆弱。', c: '#ffb0f0', r: 13, f: 0.85, ic: 'v_priest' },
+  射手:   { d: '该职业擅长远程输出，但很脆弱。', c: '#ffd060', r: 9, f: 1.0, ic: 'v_archer' },
+  刺客:   { d: '该职业擅长优先击杀弱小的单位，但很脆弱。', c: '#ff5a8a', r: 7, f: 1.05, ic: 'v_assassin' },
+  法师:   { d: '该职业擅长群体伤害，但很脆弱。', c: '#c890ff', r: 10, f: 0.9, ic: 'v_mage' },
+  牧师:   { d: '该职业擅长治疗友军，但很脆弱。', c: '#9cffb0', r: 12, f: 0.85, ic: 'v_cleric' },
+  祭司:   { d: '该职业擅长用光环强化友军、削弱敌人，但很脆弱。', c: '#ffb0f0', r: 13, f: 0.85, ic: 'v_priest' },
   召唤师: { d: '该职业擅长召唤帮手，但很脆弱。', c: '#b8a0ff', r: 13, f: 0.8, ic: 'v_summoner' },
   商人:   { d: '该职业擅长赚钱，但不擅长战斗。', c: '#ffcc33', r: 14, f: 0.85, ic: 'v_merchant' },
 };
@@ -40,7 +40,11 @@ const VOC_OF = {}; Object.keys(ASSIGN).forEach(v => ASSIGN[v].split(/\s+/).filte
 // front-liners whose skill did not defend take a defensive one (merchants' coin skills, pikemen's stimulant, a robot's
 // splash, horses that only fed mana)
 const SWAP = { VikingWarrior: 'SummonStoneskinTrait', Troll: 'SummonBoneRegenerationTrait', SickleWorm: 'SummonBarbsTrait', Ogre: 'SummonHardenTrait', Rooster: 'SummonRangedDamageReductionTrait',
-  Pikeman: 'SummonRangedDamageReductionTrait', ChainmailPikeman: 'SummonHardenTrait', Pulsebot: 'SummonGraniteSkinTrait', YellowManeHorse: 'SummonThickHideTrait', SweatBloodHorse: 'SummonThickHideTrait' };
+  Pikeman: 'SummonRangedDamageReductionTrait', ChainmailPikeman: 'SummonHardenTrait', Pulsebot: 'SummonGraniteSkinTrait', YellowManeHorse: 'SummonThickHideTrait', SweatBloodHorse: 'SummonThickHideTrait',
+  // 2026-09-26 (user: one vocation for group damage, one for auras): single-target nukers among the 法师 take a group skill,
+  // the two 祭司 without an aura take one
+  MageApprentice: 'SummonLightningStrikeTrait', CelestialMage: 'SummonLightningStrikeTrait', MoonlightApostle: 'SummonIronHailTrait',
+  DarkFang: 'SummonLeadershipAuraTrait', Mage: 'SummonAttackSpeedAuraTrait' };
 // power = price (user ruling 2026-09-25): a unit's power is exactly its price, so the shop never has to show it.
 // Stats are K × price split between life and damage by the vocation; every power number in the game is divided by K.
 const K = M.POWER_K = 1.8;
