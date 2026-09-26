@@ -35,6 +35,12 @@ M.BOSS_BLD = {}; Object.keys(LIST).forEach(k => { M.BOSS_BLD[LIST[k].boss] = k; 
 // owned: built, being built, or its blueprint waiting at home
 M.bbOwned = (m, key) => !!m && ((m.inv && m.inv['bbp:' + key] > 0) || m.base.cells.some(row => row.some(x => x && (x.b === key || (x.job && x.job.key === key)))));   // a ruined one still counts
 
+// a boss building says so on its blueprint and in its tips
+const oInfo = M.itemInfo;
+M.itemInfo = function (key) { const I = oInfo.apply(this, arguments), id = typeof key === 'string' && key.startsWith('bbp:') ? key.slice(4) : null; if (I && id && B[id] && B[id].boss) { I.sub = '首领建筑 · ' + M.CAT[B[id].cat]; I.c = '#ffb13a'; } return I; };
+const G = M.Game.prototype, oBT = G.bldTip;
+if (oBT) G.bldTip = function (key) { const t = oBT.apply(this, arguments); if (t && B[key] && B[key].boss) { t.kind = '首领建筑 · ' + M.DB[B[key].boss].n; t.c = '#ffb13a'; } return t; };
+
 // ───────── what they do beyond the usual keys ─────────
 // raidStun / bowRate: mc-siege.js · failExp: mc-revive.js · postHeal: mc-terrain.js (with the other leader keys)
 const oNR = M.newRun3;

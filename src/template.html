@@ -983,6 +983,7 @@
         </div>
         <sc-if value="{{pn.isWeapon}}"><div style="font-size:24px;color:#ff9aa8;line-height:1.4">{{pn.reachTxt}}</div></sc-if>
         <sc-if value="{{pn.ruinOn}}" hint-placeholder-val="{{false}}"><div style="font-size:24px;color:#ff8a6a;line-height:1.4">{{pn.ruinTxt}}</div><div sc-camel-on-click="{{pn.onRepair}}" data-pj="key teal cta" style="padding:14px 0 20px;text-align:center;font-size:30px;opacity:{{pn.repairOp}}">{{pn.repairBtn}}</div></sc-if>
+        <sc-if value="{{pn.moveOn}}" hint-placeholder-val="{{false}}"><div data-g="move" sc-camel-on-click="{{pn.onMove}}" data-pj="ring" style="--q:{{pn.moveC}};padding:10px 0;text-align:center;font-size:24px;color:{{pn.moveC}}" style-hover="translate:0 -3px" style-active="transform:translateY(4px)">{{pn.moveBtn}}</div></sc-if>
         <sc-if value="{{pn.demoOn}}" hint-placeholder-val="{{false}}"><div sc-camel-on-click="{{pn.onDemo}}" data-pj="ring" style="--q:{{pn.demoC}};padding:10px 0;text-align:center;font-size:24px;color:{{pn.demoC}}" style-hover="translate:0 -3px" style-active="transform:translateY(4px)">{{pn.demoBtn}}</div></sc-if>
         <sc-if value="{{pn.isCore}}">
           <div style="font-size:30px;color:#ffcf4a">仓库 · {{pn.invN}}</div>
@@ -1179,7 +1180,7 @@
       <div data-tip="b-items" style="font-size:22px;color:#a9a3c9">支援道具</div>
       <div data-fx="items" style="display:flex;gap:8px;transform:scale({{w.itSc}})">
         <sc-for list="{{w.items}}" as="wi" hint-placeholder-count="0">
-          <div sc-camel-on-mouse-enter="{{wi.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" style="position:relative;width:84px;height:84px;border:3px solid {{wi.border}};box-sizing:border-box;background:{{wi.bg}};box-shadow:inset 0 -9px 0 0 #07060f,{{wi.glow}};display:flex;align-items:center;justify-content:center"><sc-if value="{{wi.has}}"><m-img src="{{wi.img}}"></m-img></sc-if><sc-if value="{{wi.has}}"><div style="position:absolute;left:-8px;right:-8px;top:100%;margin-top:6px;text-align:center;font-size:16px;color:#c9a24a;text-shadow:2px 2px 0 #07060f;white-space:nowrap;pointer-events:none">{{wi.type}}</div></sc-if></div>
+          <div sc-camel-on-mouse-enter="{{wi.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" style="position:relative;width:84px;height:84px;border:3px solid {{wi.border}};box-sizing:border-box;background:{{wi.bg}};box-shadow:inset 0 -9px 0 0 #07060f,{{wi.glow}};display:flex;align-items:center;justify-content:center"><sc-if value="{{wi.has}}"><m-img src="{{wi.img}}"></m-img></sc-if><sc-if value="{{wi.ghost}}"><m-img src="{{wi.gimg}}" style="opacity:0.3;filter:grayscale(0.7)"></m-img></sc-if><sc-if value="{{wi.has}}"><div style="position:absolute;left:-8px;right:-8px;top:100%;margin-top:6px;text-align:center;font-size:16px;color:#c9a24a;text-shadow:2px 2px 0 #07060f;white-space:nowrap;pointer-events:none">{{wi.type}}</div></sc-if></div>
         </sc-for>
       </div>
     </div>
@@ -1300,6 +1301,7 @@
           <div data-fx="{{sb.fx}}" sc-camel-on-click="{{sb.onBuy}}" sc-camel-on-mouse-enter="{{sb.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" data-pj="well" style="--q:{{sb.qc}};position:relative;flex:1;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:12px;cursor:pointer;transform:translate({{sb.sh}}px,{{sb.dy}}px);opacity:{{sb.op}}">
             <mc-flag data-tip="{{sb.icTip}}" n="{{sb.n}}" style="width:96px;height:132px"></mc-flag>
             <div style="font-size:26px;color:{{sb.qc}}">{{sb.n}}</div>
+            <div style="font-size:20px;color:{{sb.pwC}}">{{sb.pw}}</div>
             <div style="display:flex;align-items:center;gap:6px;padding:2px 12px 4px;background:#07060f"><i data-pj="coin" style="--s:18px;box-shadow:inset 3px 3px 0 0 #fff3b0,inset -3px -3px 0 0 #e0781f"></i><mc-num v="{{sb.price}}" style="font-size:22px;color:{{sb.priceC}}"></mc-num><sc-if value="{{sb.saleOn}}"><span style="padding:0 8px;font-size:20px;color:#07060f;background:#ff5a4a;box-shadow:0 0 0 3px #07060f;animation:fitBlink 1s ease-in-out infinite">{{sb.sale}}</span></sc-if></div>
             <sc-if value="{{sb.sold}}"><div style="position:absolute;inset:0;background:rgba(7,6,15,0.8);display:flex;align-items:center;justify-content:center"><span data-pj="pop" style="font-size:44px;color:#e8434f;box-shadow:0 0 0 6px #e8434f;padding:4px 18px;transform:rotate(-12deg) scale({{sb.stampSc}});text-shadow:3px 0px 0 #07060f,-3px 0px 0 #07060f,0px 3px 0 #07060f,0px -3px 0 #07060f,3px 3px 0 #07060f,-3px 3px 0 #07060f,3px -3px 0 #07060f,-3px -3px 0 #07060f,0 6px 0 #07060f,3px 6px 0 #07060f,-3px 6px 0 #07060f">已购</span></div></sc-if>
           </div>

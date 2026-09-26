@@ -107,4 +107,5 @@ mc-omen.js
 mc-titan.js
 mc-bossfight.js
 mc-vocplay.js
+mc-spend.js
 mc-tele.js

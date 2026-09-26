@@ -114,7 +114,7 @@ Object.assign(G, {
     const b = this.battle; if (!b) return;
     if (!this.paused && !this.settle) b.step(dt * this.speed * (this.reel ? 0.03 : 1));
     if (b.cutin && b.cutin !== this.lastCut) { this.lastCut = b.cutin; M.Sfx.cutin(); this.banner({ kind: 'skill', text: b.cutin.text, sub: b.cutin.sub, col: b.cutin.col, img: M.spriteCanvas(b.cutin.sprite, 22), life: 1.25, y: 470 }); }
-    if (this.run.tut && b.canCast() && !this.settle) this.coachOnce('skill', '领袖技能就绪！点击下方「技能」按钮释放。技能冷却按节点计算，每场最多用一次。', 640, 800, 615, 990);
+    if (this.run.tut && b.canCast() && !this.settle) this.coachOnce('skill', '领袖技能就绪！点击下方「技能」按钮释放。每场战斗都能用一次。', 640, 800, 615, 990);
     if (this.settle) this.settleTick(dt); else if (b.over && b.overT > 1.0) this.startSettle();
     const c = this.ui.cv('field'); if (c) b.render(c.getContext('2d'), { slow: this.reel ? 1 : 0 });
   },

@@ -46,7 +46,7 @@ Object.assign(G, {
       const H = M.HEROES[h.cls], R = M.RARITY[h.rarity], mx = M.heroMaxHp(h, m);
       Object.assign(pn, { isHero: true, title: H.n, titleColor: R.c, sub: R.n + ' · Lv ' + h.lv + ' · 经验 ' + h.exp + '/' + M.expNeed(h.lv) + ' · 天赋点 ' + h.points, img: M.spriteURL(H.sprite, 10),
         stats: [{ k: '生命', v: Math.round(h.hp) + ' / ' + mx }, { k: '攻击', v: Math.round(M.heroAtk(h, m)) }, { k: '宝物格', v: M.relicSlots(h, m) }, { k: '出征', v: h.runs + ' 次' }],
-        skill: '「' + H.skill.n + '」' + M.skillDesc(h), skillCd: '冷却 ' + M.skillNodeCd(h, m) + ' 个节点 · 每场战斗最多 1 次 · 效果随等级提升' });
+        skill: '「' + H.skill.n + '」' + M.skillDesc(h), skillCd: '每场战斗 1 次，一开战就能用 · 效果随等级提升' });
     }
     return v;
   },
