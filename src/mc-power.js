@@ -58,7 +58,7 @@ M.BOSS_SHOW = 1.05;
 M.MB_SHOW = 1.26; M.FB_SHOW = 0.92;
 // how strong a boss is, against the elite fight at the same stop (2026-09-26 growth sims, tools/prog.js): the first small
 // boss 0.75× (the army has seen one shop), later small bosses 1.0×, the final boss 1.15×
-M.BOSS_T0 = 0.75; M.BOSS_TM = 1.0; M.BOSS_TF = 1.25;
+M.BOSS_T0 = 0.75; M.BOSS_TM = 1.1; M.BOSS_TF = 1.4;   // 2026-09-26 (evolution lines): bosses were beaten at 2–3 times their strength; 1.0 / 1.25 → 1.1 / 1.4 on top of ENEMY_K 1.9
 // a final boss had too much life for what it hits (2026-09-27 playtest: median 62 s, a third over 90 s, up to 4 minutes,
 // and still won almost every time): the same power, less life and harder blows (power = √(life × damage) is kept)
 M.FB_SKEW = 0.45;

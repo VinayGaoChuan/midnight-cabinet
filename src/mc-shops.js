@@ -32,12 +32,12 @@ M.genMap2 = function (run) {
 const oRoll = M.rollShop;
 M.rollShop = function (run) {
   const S = SHOPS[run.shopKind] || SHOPS.bazaar;
-  const pooled = !!(run.pool && M.unitPool), qw = M.shopQW(run), pm = M.priceMul(run), base = (pooled ? M.unitPool(run) : M.SHOP_POOL.concat(['JadeBeast'])).filter(k => DB[k]), units = [];
+  const pooled = !!(run.pool && M.unitPool), qw = M.shopQW(run), pm = M.priceMul(run), base = (pooled ? M.unitPool(run) : M.SHOP_POOL).filter(k => DB[k]), units = [], QB = (pooled ? (M.POOL_QB || [1, 1, 1, 1]) : [1, 1, 1, 1]).map((x, i) => (i === 0 && run.M && run.M.kit2 === 'focus' ? x * 1.8 : x));   // 专精卡带 (mc-legacy.js)
   // the area's pool (mc-evo.js): copies are the point, up to three of one unit; a trade the pool cannot serve falls back to all units
   const pool0 = S.pool ? base.filter(S.pool) : base, pool = pool0.length ? pool0 : M.SHOP_POOL.filter(k => DB[k] && (!S.pool || S.pool(k)));
   const room = (k) => (pooled ? units.filter(u => u.type === k).length < (M.POOL_COPIES || 3) : !units.some(u => u.type === k));
   for (let i = 0; i < (S.units || 0); i++) {
-    const q = M.wpick([0, 1, 2, 3], x => qw[x] * (S.qBoost && x >= 1 ? S.qBoost : 1)), c = pool.filter(k => DB[k].q === q && room(k)), rest = pool.filter(room); if (!c.length && !rest.length) break; const k = pick(c.length ? c : rest);
+    const q = M.wpick([0, 1, 2, 3], x => Math.max(0, qw[x]) * QB[x] * (S.qBoost && x >= 1 ? S.qBoost : 1)), c = pool.filter(k => DB[k].q === q && room(k)), rest = pool.filter(room); if (!c.length && !rest.length) break; const k = pick(c.length ? c : rest);
     units.push({ kind: 'unit', type: k, q: DB[k].q, cost: Math.max(5, Math.round(DB[k].cost * pm * (S.price || 1))) });
   }
   run.shop = { units, banners: [], items: [] };

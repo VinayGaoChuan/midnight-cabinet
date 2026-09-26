@@ -157,7 +157,7 @@ M.newRun3 = function (meta, hero, worldKey, relicIds) {
   const starters = M.SHOP_POOL.filter(k => DB[k].q === 0 && DB[k].cost >= 15 && DB[k].cost <= 60 && DB[k].ranged !== 2).sort(() => Math.random() - 0.5);
   const tut = run.region.tut;
   const defS = starters.filter(k => M.isDefVoc && M.isDefVoc(DB[k].voc)), rest = starters.filter(k => !defS.includes(k));
-  (tut ? ['FootSoldier', 'FootSoldier', 'Ranger', 'Guard'] : (defS.length ? [defS[0]] : []).concat(rest).slice(0, 3)).forEach(k => M.addUnit(run, k));
+  (tut ? ['FootSoldier_T1', 'FootSoldier_T1', 'Ranger_T1', 'YellowManeHorse_T1'] : (defS.length ? [defS[0]] : []).concat(rest).slice(0, 3)).forEach(k => M.addUnit(run, k));
   run.startMult = Math.round(((run.startMult || 0)) * 10) / 10;
   const df = run.region.diff || 0; run.lvl0 = tut ? 0.3 : 0.5 + df * 0.2 + Math.min(0.8, (meta.day - 1) * 0.03); const endL = tut ? 1.5 : Math.min(11.5, 3 + df * 1.0 + run.len.cols * 0.16); run.lvlStep = Math.max(0.12, (endL - run.lvl0) / Math.max(1, run.len.cols - 1));
   if (tut) { run.len = { n: '序章', cols: 10, ex: 0, elite: [1, 1], boss: 1 }; run.map = M.genMap2(run, meta); }

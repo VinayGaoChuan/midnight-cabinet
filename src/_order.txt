@@ -12,6 +12,7 @@ mc-data3.js
 mc-db.js
 mc-voc.js
 mc-units.js
+mc-lines.js
 mc-icons.js
 mc-fx.js
 mc-audio.js
@@ -119,4 +120,5 @@ mc-religion.js
 mc-tele.js
 mc-pcd.js
 mc-pcd-game.js
+mc-lines-art.js
 mc-opening.js
