@@ -106,3 +106,4 @@ mc-vocplay.js
 mc-tele.js
 mc-pcd.js
 mc-pcd-game.js
+mc-opening.js

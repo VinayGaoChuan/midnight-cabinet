@@ -24,8 +24,8 @@
 
 | 编号 | 效果 | 什么时候出现 | 现在的样子 | 代码位置 |
 |---|---|---|---|---|
-| A01 | 开场像素房间 | 打开游戏 | 320×180 像素的小房间场景，放大 6 倍，「点击任意处开始」；镜头最后停在机台正面，屏幕上的标题上移，让出菜单 | `mc-engine.js` intro |
-| A01b | 机台屏幕菜单 | 开场结束 / 回到标题 | 机台正面静止镜头，屏幕上「▶ 开始游戏」「玩法说明」「设置」+ 扫描线；点开始游戏，镜头推进钻进屏幕、黑场，进入基地 | `mc-engine.js` `drawCabinet`、`mc-flow.js` `menuGo` |
+| A01 | 开场演出（三幕） | 打开游戏 | 待机：雨夜公寓、青光窗、23:59、闪电；点击后：① 00:00 钟声、闪电里的笑脸云、镜头推进青光窗 ② 漆黑走廊：手电光锥、肖像眼睛跟随、红眼、滚来的金币、「获得道具」式悬浮金币、闪电中戴帽子的巨大影子、转身空无一物、音乐盒音符、门开青光涌出 ③ 恶魔脸老虎机：自己通电、屏幕鬼脸、投币、拉杆自己拉下、三只眼睛停下盯人、中大奖金币喷出、标题逐字砸下；电影遮幅、暗角、主角「小夜」Q 版像素角色 + 表情气泡；机台 / 云 / 月亮是像素浮雕（逐像素受光、投影、暗角、高光、材质色阶 + 有序抖动）；闪电时换亮一级的整版画面 | `mc-opening.js` `drawIntro`、`sceneA/B/C`、`drawSide`/`drawBack`、`Relief`、`cloudSprite`、`paintCab` |
+| A01b | 老虎机屏幕菜单 | 开场结束 / 回到标题 | 镜头停在老虎机屏幕上，屏幕里「开始游戏」「玩法说明」「设置」+ 扫描线；灯泡追逐、眼灯和转轮眼睛眨眼四顾、小夜在左下角呼吸；点开始游戏，镜头推进钻进屏幕、黑场 | `mc-opening.js` `drawCabinet`、`mc-flow.js` `menuGo` |
 | A01c | 传送门开启 · 世界碑 | 基地里点传送门 | 暗的石拱门里漩涡转起来；今天能去的世界碑逐块从门里升起、悬浮上下浮动，一道光线连着传送门；碑上骷髅 + 低 / 中 / 高、特产图标 | `mc-portal.js` `drawSteles` |
 | A01d | 选碑 · 碑砸进传送门 | 点一块碑 | 碑抬起 → 加速砸进门里 → 碎成石片（重力、旋转）+ 冲击环 + 闪光 + 震屏；其余碑沉回门里 | `mc-portal.js` `steleDrop` |
 | A01e | 世界主题传送门（9 种） | 碑碎之后 | 门里以圆形展开这个世界：小镇起雾、森林绿意（藤蔓爬满门柱、萤火虫）、游乐园旋转彩条 + 灯泡 + 彩纸、港口水波气泡 + 水漫出门槛、铸造厂齿轮 + 蒸汽、医院鬼魂尖啸 + 地面白雾、星舰跃迁星光、地狱血流 + 火焰 + 火星、赌场转盘 + 金币；整幅画面收进像素主基地的尖拱门洞（按拱形逐行裁剪、按美术像素网格画），不溢出成方块 | `mc-portal.js` `THEME`、`archTheme` |
@@ -812,6 +812,13 @@
 | V137 | `Sfx.rankStamp` | 守城 | 0 |
 | V138 | `Sfx.portalCollapse` | 守城 | 1 |
 | V139 | `Sfx.mini` | 小游戏 | 145 |
+| V140 | `Sfx.introToll` | 开场演出 | 0 |
+| V141 | `Sfx.coinRoll` | 开场演出 | 0 |
+| V142 | `Sfx.spook` | 开场演出 | 0 |
+| V143 | `Sfx.musicBox` | 开场演出 | 0 |
+| V144 | `Sfx.reelSpin` | 开场演出 | 0 |
+| V145 | `Sfx.glitch` | 开场演出 | 0 |
+| V146 | `Sfx.jackpot` | 开场演出 | 0 |
 
 小游戏各自的一组（`Sfx.mini(小游戏, 事件)`）：`mine` pick / loosen / gem / cavein；`roulette` spin / click / bet / gold / win / skull / miss；`fruit` gogo / lever / spin / stop / jackpot / win / skulls / nomatch；`claw` move / drop / grab / lift / prize / slip / empty / bounce；`pachinko` launch / peg / slot / edge；`tree` curse / pick / water / cut / grow / fruit；`tarot` lift / shuffle / flip / good / bad；`eggs` hammer / crack / prize / snake；`dice` shake / roll / clack / win / lose / tie；`fate` cost / spin / click / stop；`musician` note / metro / miss / great / ok / poor；`granny` stitch / miss / done；`well` charge / toss / splash / great / ok / miss；`child` step / wrong / lost / found；`grave` lid / dig / candle / coffin / hand / out / treasure；`clinic` pick / drink / good / bad / mult；`mirror` tone / wrong / pass；`altar` pour / flicker / out / win；`peddler` shuffle / lift / win / lose；`spring` zone / bubble / tick / good / hot / cool；`trap` step / num / boom / box；`cat` wave / coin / bar / bomb / miss；`market` grab / swing / stamp / deal / miss；`trainer` bell / punch / done；`statue` eyes / turn / align / wake / fail；`arena` ko / open / roar / cheer / bet / hit / win / lose；`camp` fire / rest / sharpen；`recruit` curtain / reveal / full。
 
