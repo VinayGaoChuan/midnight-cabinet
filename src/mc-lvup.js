@@ -153,12 +153,6 @@ M.advanceDay = function (m) {
   ups.forEach(u => { const h = m.heroes.find(x => x.id === u.id); logs.push({ t: h.name + ' 升到 Lv ' + h.lv + '！' }); });
   m._lvUps = ups; return logs;
 };
-const oPass = G.passDay;
-G.passDay = function () {
-  const r = oPass.apply(this, arguments), m = this.meta, ups = m._lvUps || []; m._lvUps = null;
-  ups.forEach((u, i) => { const h = m.heroes.find(x => x.id === u.id); try { M.T && h && M.T.ev('lvup', { src: 'daily', lv: h.lv }); } catch (e) {} if (h) setTimeout(() => this.lvUpFx(h, u.lv0, h.lv, u.p0, M.heroPower(h, m)), 1500 + i * 200); });
-  return r;
-};
 
 // ───────── hero page: combat power + the level-up button ─────────
 const oView = G.view;

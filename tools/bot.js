@@ -62,7 +62,7 @@ window.__bot = async function (secs, opts = {}) {
       else if (s === 'base') {
         if (opts.stopAtBase && nodes > 2) break;
         if (g.modal && g.modal.choices && !g.modal.over) { const ch = g.modal.choices.find(c => !c.dis) || g.modal.choices[g.modal.choices.length - 1]; events++; ch.fn(); if (g.modal && g.modal.title === '流浪商人') g.modal.choices[g.modal.choices.length - 1].fn(); for (let i = 0; i < 10; i++) g.tick(1 / 30); continue; }   // calendar events: take the first thing on offer
-        if (g.homeQ || g.lvFx || g.dayFx || g.tlFx || g.rite || g.expand) { for (let i = 0; i < (opts.fast ? 120 : 40); i++) g.tick(1 / 30); await sleep(opts.fast ? 2 : 40); continue; }   // the return home plays in order: let it
+        if (g.homeQ || g.lvFx || g.tlFx || g.rite || g.expand) { for (let i = 0; i < (opts.fast ? 120 : 40); i++) g.tick(1 / 30); await sleep(opts.fast ? 2 : 40); continue; }   // the return home plays in order: let it
         if (opts.base !== false && !g.panel && M.startBuild && botBase(g, M)) builds++;
         // leaders grow like a plain player grows them: level up when the orbs are there, spend every talent point
         if (opts.grow !== false && !g.panel) { let lv = false; g.meta.heroes.forEach(h => { if (!lv && h.lv < 10 && M.lvOrbs(h, g.meta) <= g.meta.orbs) { g.heroLvUp(h.id); lv = true; } for (let k = 0; k < 20 && h.points > 0; k++) { const c = (h.tree || []).map((_, i) => i).filter(i => M.talCan(h, i)); if (!c.length) break; g.takeTalent(h.id, c[Math.floor(Math.random() * c.length)]); talents++; } }); if (lv) continue; }

@@ -128,13 +128,6 @@ Object.assign(G, {
     this.bv.tx = M.BASE_GEO.DOOR_X; this.bv.ty = -125; this.bv.tz = 3.4; this.fx.flash('#bff8ee', 0.2);
     setTimeout(() => { this.fx.flash('#e0fff5', 1); this.run = M.newRun3(m, h, p.world, p.relics); this.enterWorld(); this.toast(this.run.region.n + ' · ' + (this.run.scene ? this.run.scene.n : this.run.len.boss + ' 个首领') + ' · ' + this.run.map.cols + ' 站', '#f2c14e'); }, 750);
   },
-  restDay() { this.closePanel(); this.passDay(); setTimeout(() => this.checkRaid(), 1200); },
-  passDay() {
-    const m = this.meta, logs = M.advanceDay(m); m.portal.hp = Math.min(M.portalMax(m), m.portal.hp + M.portalMax(m) * 0.15); this.save();
-    this.banner({ kind: 'win', text: '第 ' + m.day + ' 天', col: '#ffe8b0', col2: '#6a4a20', life: 1.6, y: 420 }); M.Sfx.whoosh(0.5);
-    logs.forEach((l, i) => setTimeout(() => { if (l.c != null) { const p = this.cellPos(l.c, l.r); this.fx.rays(p.x, p.y, '#ffd060', 1.4, { r: 300 }); this.fx.pop(p.x, p.y - 40, l.t, '#ffe08a', 50, { slam: 1 }); this.fx.explode(p.x, p.y, '#ffd060', 1.6); M.Sfx.up(2); } else this.toast(l.t, '#9ccc6a'); }, 900 + i * 450));
-    return logs;
-  },
   checkRaid() {
     const m = this.meta;
     if (m.day % M.RAID_EVERY === 0 && m.lastRaid !== m.day && m.heroes.length) { setTimeout(() => this.startRaid(), 600); return true; }

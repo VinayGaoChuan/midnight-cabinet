@@ -95,7 +95,7 @@ G.tick = function (dt) {
   if (this.expand && !this.fx.frozen) this.expandTick(Math.min(dt || 0, 0.05));
   // a level reached some other way (a keepsake finishing a room, an old save) opens its ring once the base is quiet
   const m = this.meta;
-  if (m && this.screen === 'base' && !this.expand && !this.homeQ && !this.raid && !this.rite && !this.modal && !this.tlFx && !this.dayFx) {
+  if (m && this.screen === 'base' && !this.expand && !this.homeQ && !this.raid && !this.rite && !this.modal && !this.tlFx) {
     if (m.prosUp) { const up = m.prosUp; delete m.prosUp; this.save(); this.expandStart(up); }
     else { const l1 = M.prosLvOf(M.prosperity(m)), l0 = M.prosLv(m); if (l1 > l0) { m.prosLv = l1; this.save(); this.expandStart({ from: l0, to: l1 }); } }
   }
