@@ -18,7 +18,7 @@ G.runFail = function () {
   const ex = tut ? 0 : Math.round(((run.loot && run.loot.exp) || 0) * Math.min(1, M.FAIL_EXP + (M.baseMods(m).failExp || 0)));   /* 守墓人的墓园 keeps it all */ if (ex > 0) M.addExp(h, ex);
   const mx = M.heroMaxHp(h, m);
   // 信仰值 (mc-faith.js): with enough of it, faith pays for the leader instead of a heart of the core
-  const before = m.core == null ? M.CORE_MAX : m.core, fc = M.RITE_FAITH || 30, byFaith = !tut && before > 0 && M.faithOn && M.faithOn(m) && (m.faith || 0) >= fc, after = tut || byFaith ? before : Math.max(0, before - 1);
+  const before = m.core == null ? M.CORE_MAX : m.core, fc = M.RITE_FAITH || 30, byFaith = false,   /* faith no longer pays for the revival (2026-09-26: 信仰值 grows the religion, mc-religion.js) */ after = tut || byFaith ? before : Math.max(0, before - 1);
   if (byFaith) m.faith -= fc;
   m.core = after; h.hp = after > 0 ? mx : 1; h.relics = []; h.runs = (h.runs || 0) + 1; m.runs++;
   m.st = m.st || {}; m.st.fails = (m.st.fails || 0) + 1; if (!tut) m.st.deaths = (m.st.deaths || 0) + 1;

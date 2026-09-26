@@ -115,6 +115,7 @@ mc-fever.js
 mc-feverstage.js
 mc-evo.js
 mc-legacy.js
+mc-religion.js
 mc-tele.js
 mc-pcd.js
 mc-pcd-game.js

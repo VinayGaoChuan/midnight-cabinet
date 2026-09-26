@@ -938,7 +938,7 @@
   </div>
   <!-- resources sit in one row with the waiting effects, under the top bar (user ruling 2026-09-26) -->
   <div style="position:absolute;left:30px;top:112px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;max-width:1200px;pointer-events:auto">
-    <sc-for list="{{b.res}}" as="r" hint-placeholder-count="0"><div data-fx="{{r.fx}}" sc-camel-on-mouse-enter="{{r.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" data-pj="ink" style="--q:{{r.c}};display:flex;align-items:center;gap:10px;padding:4px 12px 6px 8px;transform:scale({{r.sc}})"><m-img src="{{r.img}}" style="max-width:30px;max-height:30px"></m-img><mc-num v="{{r.v}}" style="font-size:26px;color:{{r.c}}"></mc-num></div></sc-for>
+    <sc-for list="{{b.res}}" as="r" hint-placeholder-count="0"><div data-fx="{{r.fx}}" sc-camel-on-mouse-enter="{{r.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" data-pj="ink" style="--q:{{r.c}};display:flex;align-items:center;gap:10px;padding:4px 12px 6px 8px;transform:scale({{r.sc}})"><m-img src="{{r.img}}" style="max-width:30px;max-height:30px"></m-img><mc-num v="{{r.v}}" style="font-size:26px;color:{{r.c}}"></mc-num><sc-if value="{{r.hasSub}}"><span style="font-size:18px;color:#a9a3c9">{{r.sub}}</span></sc-if></div></sc-for>
     <sc-if value="{{b.hasBuffs}}" hint-placeholder-val="{{false}}"><div data-g="buffs" style="display:flex;gap:10px;flex-wrap:wrap;pointer-events:auto"><sc-for list="{{b.buffs}}" as="bf" hint-placeholder-count="0"><div sc-camel-on-mouse-enter="{{bf.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" data-pj="ink" style="--q:{{bf.c}};display:flex;align-items:center;gap:8px;padding:4px 12px 6px 8px"><m-img src="{{bf.img}}" style="width:30px;height:30px"></m-img><span style="font-size:22px;color:{{bf.c}};text-shadow:3px 3px 0 #07060f">{{bf.t}}</span></div></sc-for></div></sc-if>
   </div>
   <sc-if value="{{tlShadeOn}}" hint-placeholder-val="{{false}}"><div style="position:absolute;inset:0;background:rgba(7,6,15,{{tlShade}});pointer-events:none;z-index:50"></div></sc-if>
@@ -1513,6 +1513,22 @@
     </div>
   </div></sc-if>
 </div></sc-if>
+<sc-if value="{{relOn}}" hint-placeholder-val="{{false}}"><div data-g="religion" sc-camel-on-click="{{stop}}" style="position:absolute;inset:0;z-index:67;background:rgba(7,6,15,0.82)">
+  <div data-pj="dither" data-enter="fade" style="position:absolute;inset:0;opacity:0.4;pointer-events:none"></div>
+  <div data-enter="drop" style="position:absolute;left:0;right:0;top:110px;display:flex;flex-direction:column;align-items:center;gap:14px">
+    <div style="font-size:56px;color:#ffe6a0;text-shadow:4px 0 0 #07060f,-4px 0 0 #07060f,0 4px 0 #07060f,0 -4px 0 #07060f,4px 4px 0 #07060f,0 8px 0 #07060f"><mc-wave t="{{rp.title}}"></mc-wave></div>
+    <div style="font-size:32px;color:#e8dcc4;text-shadow:3px 3px 0 #07060f">{{rp.line}}</div>
+  </div>
+  <div data-enter-rows="1" style="--rd:.12s;position:absolute;left:60px;right:60px;top:280px;display:flex;flex-wrap:wrap;justify-content:center;gap:28px 36px">
+    <sc-for list="{{rp.cards}}" as="rc" hint-placeholder-count="2">
+      <div data-pj="opt" sc-camel-on-click="{{rc.onPick}}" style="width:400px;box-sizing:border-box;padding:18px 20px 22px;display:flex;flex-direction:column;align-items:center;gap:10px;--q:{{rc.c}};opacity:{{rc.op}}">
+        <m-img src="{{rc.img}}" style="width:240px;height:168px"></m-img>
+        <div style="font-size:28px;color:{{rc.c}};text-shadow:3px 3px 0 #07060f"><span data-pj="cur" style="font-size:24px;margin-right:8px">▶</span>{{rc.n}}</div>
+        <div style="font-size:30px;line-height:40px;color:#f4efe0;text-align:center;min-height:80px;text-wrap:balance">{{rc.t}}</div>
+      </div>
+    </sc-for>
+  </div>
+</div></sc-if>
 <sc-if value="{{dirOn}}" hint-placeholder-val="{{false}}"><div data-g="dirs" sc-camel-on-click="{{stop}}" style="position:absolute;inset:0;z-index:67;background:rgba(7,6,15,0.8)">
   <div data-pj="dither" data-enter="fade" style="position:absolute;inset:0;opacity:0.4;pointer-events:none"></div>
   <div data-enter="drop" style="position:absolute;left:0;right:0;top:110px;display:flex;flex-direction:column;align-items:center;gap:14px">
@@ -1625,7 +1641,7 @@ class Component extends DCLogic {
     const on = (fn) => (e) => { if (g) fn(e); };
     const base = { scale: this.state.scale, stageRef: this.stageRef, introRef: this.introRef, roomRef: this.roomRef, isRoom: false, rm: {}, fieldRef: this.fieldRef, worldRef: this.worldRef, baseRef: this.baseRef, fxRef: this.fxRef,
       loading: !g, loadErr: !!this.loadErr, retryLoad: () => location.reload(), shx: 0, shy: 0,
-      isIntro: false, isMenu: false, isBase: false, isRaid: false, isWorld: false, isBattle: false, isShop: false, isEnd: false, isOver: false, modalOn: false, settleOn: false, coverOn: false, lockOn: false, lockClick: () => {}, pickOn: false, pickCancel: () => {}, pnZ: 'auto', visitOn: false, lgOn: false, mnWall: false, vs: { opts: [] }, dirOn: false, dp: { cards: [] }, coachOn: false, tipOn: false, toastOn: false, pnOn: false, w: null, rulesOpen: !!this.rulesOpen || !!(g && g.rulesOpen), showMute: false,
+      isIntro: false, isMenu: false, isBase: false, isRaid: false, isWorld: false, isBattle: false, isShop: false, isEnd: false, isOver: false, modalOn: false, settleOn: false, coverOn: false, lockOn: false, lockClick: () => {}, pickOn: false, pickCancel: () => {}, pnZ: 'auto', visitOn: false, lgOn: false, mnWall: false, relOn: false, vs: { opts: [] }, dirOn: false, dp: { cards: [] }, coachOn: false, tipOn: false, toastOn: false, pnOn: false, w: null, rulesOpen: !!this.rulesOpen || !!(g && g.rulesOpen), showMute: false,
       stop: (e) => e.stopPropagation(), tipOff: on(() => { g.tipData = null; g.tipKey = null; g.tipPrev = null; }), fxZ: 'auto',
       onMove: on((e) => { const p = this.sp(e); g.mx = p.x; g.my = p.y; g.tiltMove(p.x, p.y); }), shr: 0,
       onPress: on((e) => { M.Sfx.init(); const p = this.sp(e); g.uiPress(e.target, p.x, p.y); }),
