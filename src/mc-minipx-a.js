@@ -174,7 +174,7 @@ X.def('_mg_fruit', {
 
 // ═════════════ 午夜转盘：地下赌场，前后两层（荷官站在中间：幕布之后、赌桌之前） ═════════════
 // the wheel is seen from above at an angle: centre (WX, WY), radii WRX × WRY; 14 pockets, 0 = 金 · 7 = 骷髅 · odd = 红 · even = 黑
-const RL = M.ROUL_PX = { WX: 204, WY: 124, WRX: 60, WRY: 25, N: 14, top: 100, spots: { r: [66, 147], b: [104, 147], g: [142, 147] }, rack: [81, 108], board: [252, 18], cr: [120, 128] };
+const RL = M.ROUL_PX = { WX: 204, WY: 124, WRX: 60, WRY: 25, N: 14, top: 100, spots: { r: [66, 147], b: [104, 147], g: [142, 147] }, rack: [81, 108], board: [252, 18], cr: [124, 121] };   // cr: the croupier's feet — his waist (21 cells up) sits on the table top
 const secM = (i) => (i === 0 ? ['gold', 8.5] : i === 7 ? ['bone', 4] : i % 2 ? ['red', 6.5] : ['night', 2.6]);
 const roulLights = (sc) => {
   sc.light({ x: RL.WX - 10, y: 70, z: 30, r: 120, i: 1.25, c: '#ffd68a', fl: 'candle', ph: 1, tint: 0.45 });   // 0 the lamp over the table
