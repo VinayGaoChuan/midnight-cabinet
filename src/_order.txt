@@ -138,3 +138,4 @@ mc-boons.js
 mc-q7.js
 mc-roster.js
 mc-opening.js
+mc-perf.js

@@ -575,10 +575,14 @@ PXR.draw = function (ctx, X, Y, key, t, o, id, zoom) {
   const s = slot(id, key);
   // on screen small (zoomed out), a room refreshes every few frames, staggered; close up, every frame. On top, a per-frame
   // budget: once rooms have used BUDGET ms this frame the rest keep last frame's picture (none waits more than 0.2 s)
-  if (t !== FB.t) { FB.t = t; FB.ms = 0; }
-  const every = (zoom || 1) < 0.7 ? 4 : (zoom || 1) < 0.9 ? 3 : (zoom || 1) < 1.3 ? 2 : 1, stale = s.lr == null ? 9 : t - s.lr;
-  const skip = s.fn > 0 && stale < 0.2 && ((every > 1 && (s.fn + (hstr(id) % every)) % every !== 0) || FB.ms > PXR.BUDGET);
-  if (skip) s.fn++; else { const t0 = performance.now(); render(s, t, o || NO); s.cx.putImageData(s.img, 0, 0); s.lr = t; FB.ms += performance.now() - t0; }
+  if (t !== FB.t) { FB.t = t; FB.ms = 0; FB.n = 0; }
+  // phones (M.LOW_FX, 2026-09-27, the S9+ pass: a room costs 1–4 ms there, and the 0.2 s refresh floor alone made a built-up
+  // base re-render four or five rooms a frame): at most 30 room pictures a second in all (10 while a night raid is on, when
+  // the eyes are on the fight), one a frame; a room that has waited 2 s (5 s in a raid) goes regardless
+  const lo = !!M.LOW_FX, every = (zoom || 1) < 0.7 ? 4 : (zoom || 1) < 0.9 ? 3 : (zoom || 1) < 1.3 ? 2 : 1, stale = s.lr == null ? 9 : t - s.lr;
+  const raid = lo && M._g && M._g.raid, gapLo = raid ? 0.1 : 1 / 30;
+  const skip = s.fn > 0 && (lo ? stale < (raid ? 5 : 2) && (FB.n >= 1 || t - (FB.lo || -9) < gapLo || stale < 0.1 * every) : stale < 0.2 && ((every > 1 && (s.fn + (hstr(id) % every)) % every !== 0) || FB.ms > PXR.BUDGET));
+  if (skip) s.fn++; else { const t0 = performance.now(); render(s, t, o || NO); s.cx.putImageData(s.img, 0, 0); s.lr = t; FB.ms += performance.now() - t0; FB.n++; FB.lo = t; }
   const sel = s.ev.sel != null ? Math.max(0, 1 - (t - s.ev.sel) / 0.45) : 0, bt = s.ev.built != null ? t - s.ev.built : 9;
   const pop = 1 + 0.035 * Math.sin(sel * Math.PI) + (bt < 0.5 ? 0.05 * Math.sin(bt / 0.5 * Math.PI) : 0), ww = W * 2, wh = H * 2, cw = ww * pop, ch = wh * pop;
   const shake = bt < 2.4 && bt > 2.1 ? Math.round(Math.sin(bt * 90) * 2) : 0;

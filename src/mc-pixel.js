@@ -138,6 +138,17 @@ M.pxNum = function (ctx, str, x, y, col, scale, o = {}) {
 };
 
 // ───────── dithered glow + pixel primitives for effects ─────────
+// a smooth radial gradient painted once and stamped with drawImage (2026-09-27, the S9+ pass: a new gradient per light and
+// per mote every frame was one of the biggest draw costs on phones). key names the stops; n = sprite size
+const rcache = {};
+M.radSprite = function (key, stops, n) {
+  n = n || 64; const k = key + '|' + n; let c = rcache[k]; if (c) return c;
+  c = mk(n, n); const x = c.getContext('2d'), g = x.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2); stops.forEach(s => g.addColorStop(s[0], s[1])); x.fillStyle = g; x.fillRect(0, 0, n, n);
+  return (rcache[k] = c);
+};
+// a filled ellipse (ground shadows) painted once per colour, stamped with drawImage: one call instead of a path fill
+const ecache = {};
+M.ellSprite = function (col) { let c = ecache[col]; if (c) return c; c = mk(128, 32); const x = c.getContext('2d'); x.fillStyle = col; x.beginPath(); x.ellipse(64, 16, 64, 16, 0, 0, 7); x.fill(); return (ecache[col] = c); };
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 const gcache = {};
 M.pxGlowCanvas = function (col, r) {
@@ -153,7 +164,7 @@ M.pxGlow = function (ctx, x, y, r, col, a) {
 };
 // dotted pixel ellipse (magic circles, rings): points snapped to the art grid
 M.pxRing = function (ctx, x, y, rx, ry, col, o = {}) {
-  const n = Math.max(12, Math.round((rx + ry) * (o.dense || 0.9))), sz = (o.w || 1) * PX, rot = o.rot || 0;
+  const n = Math.max(12, Math.round((rx + ry) * (o.dense || 0.9) * (M.LOW_FX ? 0.6 : 1))),   /* phones: fewer dots (2026-09-27) */ sz = (o.w || 1) * PX, rot = o.rot || 0;
   ctx.fillStyle = col;
   for (let i = 0; i < n; i++) { if (o.gap && (i % o.gap) === 0) continue; const a = rot + i / n * Math.PI * 2, px = x + Math.cos(a) * rx, py = y + Math.sin(a) * ry; ctx.fillRect(Math.round(px / PX) * PX - sz / 2, Math.round(py / PX) * PX - sz / 2, sz, sz); }
 };

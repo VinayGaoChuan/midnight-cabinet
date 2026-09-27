@@ -308,8 +308,10 @@ function drawNpc(ctx, n, t, lights, v) {
   else if (n.st === 'work') { const u = t - (n.swing || -9); st = u < 0.3 ? 'atk' : 'idle'; f = u < 0.3 ? Math.min(2, Math.floor(u / 0.1)) : f; }
   const im = M.P16 && M.P16.img(n.key, st, f, null, 64); if (!im) return;
   const R = ROWS[n.depth] || ROWS[0], y = R.y + 8, sc = R.sc;
-  ctx.save(); ctx.globalAlpha *= 0.45; ctx.fillStyle = P.ink; ctx.beginPath(); ctx.ellipse(n.x, y + 2, 16 * sc, 4, 0, 0, 7); ctx.fill(); ctx.restore();
-  ctx.save(); ctx.translate(Math.round(n.x), y); ctx.scale(sc, sc); if ((n.face || 1) < 0) ctx.scale(-1, 1); ctx.drawImage(im, -im.cx, -im.footY); ctx.restore();
+  // stamped shadow, and no save/translate/scale/restore for one facing right (2026-09-27, the S9+ pass: five calls a resident)
+  const ga = ctx.globalAlpha; ctx.globalAlpha = ga * 0.45; ctx.drawImage(M.ellSprite(P.ink), n.x - 16 * sc, y - 2, 32 * sc, 8); ctx.globalAlpha = ga;
+  if ((n.face || 1) >= 0) ctx.drawImage(im, Math.round(n.x) - im.cx * sc, y - im.footY * sc, im.width * sc, im.height * sc);
+  else { ctx.save(); ctx.translate(Math.round(n.x), y); ctx.scale(-sc, sc); ctx.drawImage(im, -im.cx, -im.footY); ctx.restore(); }
   if (n.carry) { const s = M.spriteCanvas('sack', 2); if (s) ctx.drawImage(s, n.x - 14 * sc, y - 90 * sc, 28 * sc, 28 * sc * s.height / s.width); }
   if (n.st === 'work' && t - (n.swing || -9) < 0.2 && v.B.cat === 'forge') { for (let i = 0; i < 4; i++) { ctx.fillStyle = i % 2 ? P.gold : P.amber; ctx.fillRect(n.x + n.face * 22 + (rnd(i + t * 30) - 0.5) * 26, y - 34 - rnd(i * 3 + t * 20) * 26, 4, 4); } if (lights) lights.push({ x: n.x + n.face * 22, y: y - 34, r: 100, c: '#ffb060', f: 1 }); }
   if (n.pop && t - n.pop < 0.8) { const q = (t - n.pop) / 0.8; ctx.save(); ctx.globalAlpha = 1 - q; U.text(ctx, '+', n.x, y - 96 - q * 30, 30, P.gold, { outline: true }); ctx.restore(); }

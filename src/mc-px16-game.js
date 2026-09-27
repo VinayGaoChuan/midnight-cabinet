@@ -80,9 +80,18 @@ BP.deal = function (src, tg, amt, o = {}) {
 };
 P16.drawPool = function (ctx, b) { if (b.p16) b.p16.draw(ctx); };
 // pixel ellipse (outline or filled) on the ART grid: shadows and quality rings under units
+// cached per size and colour (2026-09-27, the S9+ pass: a shadow was one fillRect per row, ~170 a frame in a big battle)
+const ECACHE = new Map();
 P16.ellipse = function (ctx, cx, cy, rx, ry, col, ring) {
-  const ax = Math.round(rx / ART), ay = Math.max(1, Math.round(ry / ART)); ctx.fillStyle = col; cx = snap(cx); cy = snap(cy);
-  for (let y = -ay; y <= ay; y++) { const w = Math.round(ax * Math.sqrt(Math.max(0, 1 - (y * y) / (ay * ay + 0.4)))); if (ring) { ctx.fillRect(cx - w * ART, cy + y * ART, ART, ART); ctx.fillRect(cx + w * ART, cy + y * ART, ART, ART); if (y === -ay || y === ay) ctx.fillRect(cx - w * ART, cy + y * ART, (2 * w + 1) * ART, ART); } else ctx.fillRect(cx - w * ART, cy + y * ART, (2 * w + 1) * ART, ART); }
+  const ax = Math.round(rx / ART), ay = Math.max(1, Math.round(ry / ART)); cx = snap(cx); cy = snap(cy); if (ax < 0) return;
+  const k = ax + '|' + ay + '|' + col + '|' + (ring ? 1 : 0); let c = ECACHE.get(k);
+  if (!c) {
+    if (ECACHE.size > 600) ECACHE.clear();
+    c = document.createElement('canvas'); c.width = 2 * ax + 1; c.height = 2 * ay + 1; const x = c.getContext('2d'); x.fillStyle = col;
+    for (let y = -ay; y <= ay; y++) { const w = Math.round(ax * Math.sqrt(Math.max(0, 1 - (y * y) / (ay * ay + 0.4)))); if (ring) { x.fillRect(ax - w, ay + y, 1, 1); x.fillRect(ax + w, ay + y, 1, 1); if (y === -ay || y === ay) x.fillRect(ax - w, ay + y, 2 * w + 1, 1); } else x.fillRect(ax - w, ay + y, 2 * w + 1, 1); }
+    ECACHE.set(k, c);
+  }
+  const sm = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = false; ctx.drawImage(c, cx - ax * ART, cy - ay * ART, (2 * ax + 1) * ART, (2 * ay + 1) * ART); ctx.imageSmoothingEnabled = sm;
 };
 P16.snap = snap;
 

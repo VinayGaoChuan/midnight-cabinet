@@ -379,8 +379,9 @@ class B3 extends M.Battle2 {
     for (const e of list) { const c = e.side === 'E' ? (e.boss ? '#ff4a4a' : '#ff9a6a') : (RCOL[e.d.race] || '#ffe6b0'); lights.push({ x: e.x, y: e.y - 40 * e.sz, r: (e.boss ? 340 : 210) * e.sz, c }); }
     for (const p of this.proj) lights.push({ x: p.x, y: p.y, r: 90, c: p.col });
     for (const f of this.fx) { const q = 1 - (T - f.t0) / f.life; if (q <= 0) continue; if (f.k === 'boom') lights.push({ x: f.x, y: f.y, r: 340 * q, c: f.col || '#ff9a3a' }); if (f.k === 'bolt' || f.k === 'arc' || f.k === 'beam2' || f.k === 'meteor' || f.k === 'spout') lights.push({ x: f.x2 || f.x, y: (f.y2 || f.y) - 60, r: 360 * q, c: f.col || '#e0e8ff' }); if (f.k === 'pillar' || f.k === 'rays') lights.push({ x: f.x, y: f.y || 380, r: 280 * q, c: f.col }); }
-    const lm = M._bLight(), lx = lm.getContext('2d'); lx.globalCompositeOperation = 'source-over'; if (M.pixelMode) lx.clearRect(0, 0, 480, 180); lx.fillStyle = M.pixelMode ? 'rgba(4,2,10,0.34)' : 'rgba(4,2,10,0.14)'; lx.fillRect(0, 0, 480, 180); lx.globalCompositeOperation = 'destination-out';
-    lights.forEach(L => { const r = L.r / 4; if (r <= 0) return; const g = lx.createRadialGradient(L.x / 4, L.y / 4, 0, L.x / 4, L.y / 4, r); g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)'); lx.fillStyle = g; lx.fillRect(L.x / 4 - r, L.y / 4 - r, r * 2, r * 2); });
+    const lm = M._bLight(), lx = lm.getContext('2d'); this._lmN = (this._lmN || 0) + 1; if (!M.LOW_FX || this._lmN % 2) {   /* phones: the light map every other frame (2026-09-27) */ lx.globalCompositeOperation = 'source-over'; if (M.pixelMode) lx.clearRect(0, 0, 480, 180); lx.fillStyle = M.pixelMode ? 'rgba(4,2,10,0.34)' : 'rgba(4,2,10,0.14)'; lx.fillRect(0, 0, 480, 180); lx.globalCompositeOperation = 'destination-out';
+    const pch = M.radSprite('punch', [[0, 'rgba(0,0,0,1)'], [1, 'rgba(0,0,0,0)']]); lx.imageSmoothingEnabled = true;
+    lights.forEach(L => { const r = L.r / 4; if (r <= 0) return; lx.drawImage(pch, L.x / 4 - r, L.y / 4 - r, r * 2, r * 2); }); }
     ctx.drawImage(lm, 0, 0, FW, FH);
     if (!M.LOW_FX) lights.forEach(L => { if (L.r > 0 && L.c && L.c.length === 7) M.glow(ctx, L.x, L.y, L.r * 0.5, L.c, 0.14); });
     if (!this.amb) this.amb = new M.Ambient(R.amb || 'motes', FW, FH, 50);

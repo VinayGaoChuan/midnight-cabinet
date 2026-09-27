@@ -89,8 +89,7 @@ M.hd2d = function (ctx, W, H, o = {}) {
 };
 M.glow = function (ctx, x, y, r, col, a) {
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a == null ? 0.5 : a;
-  const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, col); g.addColorStop(0.35, col + '66'); g.addColorStop(1, col + '00');
-  ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2); ctx.restore();
+  ctx.imageSmoothingEnabled = true; ctx.drawImage(M.radSprite('glow' + col, [[0, col], [0.35, col + '66'], [1, col + '00']], 128), x - r, y - r, r * 2, r * 2); ctx.restore();
 };
 M.godRays = function (ctx, W, H, t, col, n, a) {
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
@@ -104,7 +103,7 @@ M.godRays = function (ctx, W, H, t, col, n, a) {
 
 // ───────── ambient particles ─────────
 M.Ambient = class {
-  constructor(kind, W, H, n) { this.kind = kind; this.W = W; this.H = H; this.p = []; for (let i = 0; i < (n || 60); i++) this.p.push(this.spawn(true)); }
+  constructor(kind, W, H, n) { this.kind = kind; this.W = W; this.H = H; this.p = []; const k = Math.ceil((n || 60) * (M.LOW_FX ? 0.5 : 1)); for (let i = 0; i < k; i++) this.p.push(this.spawn(true)); }   /* phones: half the motes (2026-09-27) */
   spawn(init) {
     const k = this.kind, W = this.W, H = this.H;
     const p = { x: Math.random() * W, y: init ? Math.random() * H : (k === 'embers' || k === 'bubbles' ? H + 20 : k === 'snow' || k === 'ash' || k === 'petals' ? -20 : Math.random() * H), z: 0.4 + Math.random() * 1.2, ph: Math.random() * 7, life: 0 };
@@ -124,12 +123,12 @@ M.Ambient = class {
   }
   draw(ctx, ox, oy) {
     const k = this.kind, col = { motes: '#ffe6a8', embers: '#ff8a3a', fireflies: '#c8ff7a', snow: '#eef6ff', ash: '#9a8f9a', bubbles: '#9fe8ff', spores: '#d59bff', petals: '#ffb0d0', sparks: '#8ff6ff' }[k] || '#fff';
-    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; const spr = M.radSprite('amb' + col, [[0, col], [1, col + '00']], 32);
     this.p.forEach((p, i) => {
       const px = ((p.x - (ox || 0) * p.z * 0.15) % this.W + this.W) % this.W, py = p.y - (oy || 0) * p.z * 0.08;
       let a = 0.5 * p.z; if (k === 'fireflies' || k === 'motes' || k === 'spores' || k === 'sparks') a *= 0.5 + 0.5 * Math.sin(p.ph * (k === 'fireflies' ? 3 : 1.2) + i);
       const s = Math.round((k === 'snow' ? 3 : k === 'bubbles' ? 4 : 2.5) * p.z * 2);
-      ctx.globalAlpha = clamp(a, 0, 1) * 0.35; const g = ctx.createRadialGradient(px, py, 0, px, py, s * 4); g.addColorStop(0, col); g.addColorStop(1, col + '00'); ctx.fillStyle = g; ctx.fillRect(px - s * 4, py - s * 4, s * 8, s * 8);
+      ctx.globalAlpha = clamp(a, 0, 1) * 0.35; ctx.drawImage(spr, px - s * 4, py - s * 4, s * 8, s * 8);
       ctx.globalAlpha = clamp(a, 0, 1); ctx.fillStyle = col;
       if (k === 'bubbles') { ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.strokeRect(px - s, py - s, s * 2, s * 2); } else ctx.fillRect(Math.round(px - s / 2), Math.round(py - s / 2), s, s);
     });

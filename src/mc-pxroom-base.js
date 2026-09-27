@@ -299,9 +299,10 @@ M.PXR.surface = function (ctx, bv, t) {
   // sky bands (hard steps, like a pixel sky), then the far things by their parallax
   SKY.forEach(([y0, tn], i) => { const y1 = i + 1 < SKY.length ? SKY[i + 1][0] : -16; ctx.fillStyle = hexOf(col('night', tn)); ctx.fillRect(SX0 - 2000, y0, SXW + 4000, y1 - y0); });
   ctx.fillStyle = hexOf(col('night', 0.4)); ctx.fillRect(SX0 - 2000, -3000, SXW + 4000, 2000);
-  const kS = 0.8; S.stars.forEach(s => { const a = s.band ? s.b : 0.35 + 0.65 * Math.abs(Math.sin(t * (0.4 + s.s * 0.3) + s.p)); if (a < 0.3) return; const x = sn(s.x + cx * kS), y = sn(s.y + cy * kS * 0.5);
+  const kS = 0.8, lo = !!M.LOW_FX, V0 = bv.toWorld(0, 0), V1 = bv.toWorld(1920, 1080); S.stars.forEach((s, si) => { if (lo && (si & 1)) return; const x = sn(s.x + cx * kS), y = sn(s.y + cy * kS * 0.5); if (x < V0.x - 4 || x > V1.x + 4 || y < V0.y - 4 || y > V1.y + 4) return;   /* off screen: skipped; phones: half the stars, no sparkle crosses (2026-09-27) */
+    const a = s.band ? s.b : 0.35 + 0.65 * Math.abs(Math.sin(t * (0.4 + s.s * 0.3) + s.p)); if (a < 0.3) return;
     ctx.fillStyle = hexOf(s.band ? col(s.b > 0.3 ? 'lav' : 'night', s.b > 0.3 ? 7 : 5.5) : col('linen', 6 + a * 4)); ctx.fillRect(x, y, 2, 2);
-    if (!s.band && a > 0.93 && s.s > 2.6) { ctx.fillStyle = hexOf(col('linen', 7)); ctx.fillRect(x - 2, y, 2, 2); ctx.fillRect(x + 2, y, 2, 2); ctx.fillRect(x, y - 2, 2, 2); ctx.fillRect(x, y + 2, 2, 2); } });
+    if (!lo && !s.band && a > 0.93 && s.s > 2.6) { ctx.fillStyle = hexOf(col('linen', 7)); ctx.fillRect(x - 2, y, 2, 2); ctx.fillRect(x + 2, y, 2, 2); ctx.fillRect(x, y - 2, 2, 2); ctx.fillRect(x, y + 2, 2, 2); } });
   // a shooting star every 12–19 s
   const bucket = Math.floor(t / 15), sq = t - bucket * 15 - h1(bucket) * 4; if (sq > 0 && sq < 0.7) { const x0 = SX0 + 1500 + h1(bucket + 9) * 2600 + cx * kS, y0 = -960 + h1(bucket + 3) * 300; for (let k = 0; k < 12; k++) { const q = sq / 0.7 - k * 0.018; if (q < 0 || q > 1) continue; ctx.fillStyle = hexOf(col('linen', 10 - k * 0.8)); ctx.fillRect(sn(x0 - q * 420), sn(y0 + q * 210), 2, 2); } }
   ctx.drawImage(S.moon, sn(1750 - 110 + cx * 0.85), sn(-560 - 110 + cy * 0.45), 220, 220);
@@ -311,7 +312,11 @@ M.PXR.surface = function (ctx, bv, t) {
   ctx.drawImage(S.ground, SX0, -24, SXW, 48);
   // soil below the ground (the grid cells are drawn over it)
   const L = bv.toWorld(0, 0), Rr = bv.toWorld(1920, 1080), tx0 = Math.floor((Math.max(L.x, SX0) - SX0) / 300) * 300 + SX0, ty0 = 24;
-  for (let y = ty0; y < Math.min(Rr.y, 1600); y += 200) { if (y + 200 < L.y) continue; for (let x = tx0; x < Math.min(Rr.x, SX0 + SXW); x += 300) ctx.drawImage(S.soil, x, y, 300, 200); }
+  if (lo) {   // phones: one pattern fill instead of a drawImage per 300×200 tile (2026-09-27)
+    const xe = Math.min(Rr.x, SX0 + SXW), ye = Math.min(Rr.y, 1600), y0 = ty0 + Math.max(0, Math.floor((L.y - ty0) / 200)) * 200;
+    if (xe > tx0 && ye > y0) { if (!S.soilPat) S.soilPat = ctx.createPattern(S.soil, 'repeat'); S.soilPat.setTransform(new DOMMatrix([300 / S.soil.width, 0, 0, 200 / S.soil.height, SX0, ty0]));
+      ctx.fillStyle = S.soilPat; ctx.fillRect(tx0, y0, Math.ceil((xe - tx0) / 300) * 300, Math.ceil((ye - y0) / 200) * 200); }
+  } else for (let y = ty0; y < Math.min(Rr.y, 1600); y += 200) { if (y + 200 < L.y) continue; for (let x = tx0; x < Math.min(Rr.x, SX0 + SXW); x += 300) ctx.drawImage(S.soil, x, y, 300, 200); }
   ctx.imageSmoothingEnabled = sm;
 };
 

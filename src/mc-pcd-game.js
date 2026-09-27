@@ -116,7 +116,8 @@ function stageCanvas(pa) {
   // the same action is redrawn at most about 33 times a second of real time (poses change at 12 a second of game time, so
   // even at 3× speed nothing is lost); in between the last picture stands. Every unit redrawing its action every frame was
   // what grew with the army (2026-09-27 profiling: 60 units stuttered even on PCs)
-  const tn = performance.now(); if (s.pa === pa && tn - s.at < 30) return s.cv; s.pa = pa; s.at = tn;
+  // phones (2026-09-27, the S9+ pass): only when the pose frame (12 a second of game time) changes, or every 84 ms for the dust
+  const tn = performance.now(), fk = g.state + '|' + Math.floor(g.stT * 12); if (s.pa === pa && (M.LOW_FX ? s.fk === fk && tn - s.at < 84 : tn - s.at < 30)) return s.cv; s.pa = pa; s.at = tn; s.fk = fk;
   const fb = g.render(), lut = g.lut, px = s.px; px.fill(0);
   for (let y = 0; y < H; y++) { const r = y * W; for (let x = 0; x < xMax; x++) { const v = fb[r + x]; if (v !== 255) px[r + x] = lut[v]; } }
   s.cx.putImageData(s.im, 0, 0);

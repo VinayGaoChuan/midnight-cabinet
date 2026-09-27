@@ -378,6 +378,7 @@ M.BaseView = class {
   }
 };
 M.BASE_HOOKS = [];
+const BADGES = new Map();
 M.drawBase = function (ctx, meta, bv, opts = {}) {
   const t = bv.t; ctx.imageSmoothingEnabled = false;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -486,9 +487,14 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   if (!M.NO_LIGHTMAP) {   // the night: dark everywhere but round the lights (M.NO_LIGHTMAP: a test switch)
   const lm = M._blm || (M._blm = (() => { const c = document.createElement('canvas'); c.width = 480; c.height = 270; return c; })()), lx = lm.getContext('2d');
+  // phones (2026-09-27): with the camera still, the light map is redrawn every third frame (flicker at 20 a second is plenty)
+  const lk = Math.round(bv.x) + '|' + Math.round(bv.y) + '|' + Math.round(bv.z * 1000), LMS = M._blmS || (M._blmS = { k: '', n: 0 });
+  if (!M.LOW_FX || LMS.k !== lk || ++LMS.n >= 3) { LMS.k = lk; LMS.n = 0;
   lx.globalCompositeOperation = 'source-over'; lx.fillStyle = 'rgba(3,2,8,0.9)'; lx.fillRect(0, 0, 480, 270);
   const sur = bv.toScreen(0, 0).y; lx.fillStyle = 'rgba(0,0,0,1)'; lx.globalCompositeOperation = 'destination-out'; lx.globalAlpha = 0.85; lx.fillRect(0, 0, 480, Math.max(0, sur / 4)); lx.globalAlpha = 1;
-  lights.forEach(L => { const p = bv.toScreen(L.x, L.y), r = L.r * bv.z * L.f / 4; const g = lx.createRadialGradient(p.x / 4, p.y / 4, 0, p.x / 4, p.y / 4, r); if (L.cell) { g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.62, 'rgba(0,0,0,0.92)'); g.addColorStop(1, 'rgba(0,0,0,0)'); } else { g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.6, 'rgba(0,0,0,0.5)'); g.addColorStop(1, 'rgba(0,0,0,0)'); } lx.fillStyle = g; lx.fillRect(p.x / 4 - r, p.y / 4 - r, r * 2, r * 2); });
+  const pc = M.radSprite('punchC', [[0, 'rgba(0,0,0,1)'], [0.62, 'rgba(0,0,0,0.92)'], [1, 'rgba(0,0,0,0)']]), pl = M.radSprite('punchL', [[0, 'rgba(0,0,0,1)'], [0.6, 'rgba(0,0,0,0.5)'], [1, 'rgba(0,0,0,0)']]); lx.imageSmoothingEnabled = true;   /* stamped sprites, not a gradient per light (2026-09-27) */
+  lights.forEach(L => { const p = bv.toScreen(L.x, L.y), r = L.r * bv.z * L.f / 4; if (!(r > 0)) return; lx.drawImage(L.cell ? pc : pl, p.x / 4 - r, p.y / 4 - r, r * 2, r * 2); });
+  }
   ctx.imageSmoothingEnabled = true; ctx.drawImage(lm, 0, 0, 1920, 1080);
   }
   if (!M.LOW_FX) lights.forEach(L => { const p = bv.toScreen(L.x, L.y); M.glow(ctx, p.x, p.y, (L.cell ? CW * 0.9 : L.r * 0.5) * bv.z, L.c, 0.14); });   // phones: no halos (mc-fx.js)
@@ -500,6 +506,11 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
   // 标签徽章：深渊底 + 3px 墨框（悬停金框、两档步进放大）+ 3px 标签色内圈
   const badge = (ic, x0, y0, col, tip, hot) => {
     const pu = hot && !PJ.reduced ? 1.04 + 0.04 * Math.sin(t * 4 * Math.PI) : 1, s = Math.round(S * pu), xx = Math.round(x0 - (s - S) / 2), yy = Math.round(y0 - (s - S) / 2);
+    // a resting badge is one cached picture (2026-09-27, the S9+ pass: seven draw calls a badge, two badges a room)
+    if (!hot) { const k = ic + '|' + col + '|' + s; let c = BADGES.get(k); if (!c) { if (BADGES.size > 300) BADGES.clear(); c = document.createElement('canvas'); c.width = c.height = s + 6; const x = c.getContext('2d');
+        x.fillStyle = PP.ink; x.fillRect(0, 0, s + 6, s + 6); x.fillStyle = PP.abyss; x.fillRect(3, 3, s, s); x.fillStyle = U ? U.pal(col) : col; x.fillRect(3, 3, s, 3); x.fillRect(3, s, s, 3); x.fillRect(3, 3, 3, s); x.fillRect(s, 3, 3, s);
+        const im = M.iconCanvas(ic, 2); if (im) x.drawImage(im, 3 + s * 0.12, 3 + s * 0.12, s * 0.76, s * 0.76); BADGES.set(k, c); }
+      ctx.drawImage(c, xx - 3, yy - 3); icons.push({ x: xx, y: yy, w: s, h: s, tip }); return; }
     ctx.fillStyle = hot ? PP.gold : PP.ink; ctx.fillRect(xx - 3, yy - 3, s + 6, s + 6); ctx.fillStyle = PP.abyss; ctx.fillRect(xx, yy, s, s);
     ctx.fillStyle = U ? U.pal(col) : col; ctx.fillRect(xx, yy, s, 3); ctx.fillRect(xx, yy + s - 3, s, 3); ctx.fillRect(xx, yy, 3, s); ctx.fillRect(xx + s - 3, yy, 3, s);
     const im = M.iconCanvas(ic, 2); if (im) ctx.drawImage(im, xx + s * 0.12, yy + s * 0.12, s * 0.76, s * 0.76);
@@ -612,10 +623,10 @@ M.Raid = class {
       const img = ps ? M.P16.img(e.sprite, ps[0], ps[1], e.flash && T - e.flash < 0.08 ? '#ffffff' : !e.alive ? '#3a2c48' : null, e.s * 13 * 0.8) : spriteCanvas(e.sprite, e.s, e.flash && T - e.flash < 0.08 ? '#ffffff' : !e.alive ? '#3a3440' : null);
       let x = e.x; if (e.lunge != null && T - e.lunge < 0.15) x += e.face * 14 * Math.sin((T - e.lunge) / 0.15 * Math.PI);
       const bob = ps ? 0 : e.alive ? Math.abs(Math.sin((e.walk || 0) / 30)) * 5 : 0;
-      ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.beginPath(); ctx.ellipse(e.x, e.y - 1, img.S ? img.S * 0.42 : img.width * 0.35, 5, 0, 0, 7); ctx.fill();
-      ctx.save(); ctx.translate(x, e.y - bob); if (ps) { if ((e.face || 1) < 0) ctx.scale(-1, 1); ctx.drawImage(img, -img.cx, -img.footY); } else { if (!e.alive) ctx.rotate(-Math.PI / 2 * (e.face || 1)); const need = (SPF(e.sprite) === 'R') !== (e.face > 0); if (need) ctx.scale(-1, 1); ctx.drawImage(img, -img.width / 2, -img.height); } ctx.restore();
+      { const rx = img.S ? img.S * 0.42 : img.width * 0.35; ctx.drawImage(M.ellSprite('rgba(0,0,0,0.5)'), e.x - rx, e.y - 6, rx * 2, 10); }   /* stamped shadow (2026-09-27) */
+      if (ps && (e.face || 1) >= 0) ctx.drawImage(img, x - img.cx, e.y - bob - img.footY, img.width, img.height); else { ctx.save(); ctx.translate(x, e.y - bob); if (ps) { if ((e.face || 1) < 0) ctx.scale(-1, 1); ctx.drawImage(img, -img.cx, -img.footY); } else { if (!e.alive) ctx.rotate(-Math.PI / 2 * (e.face || 1)); const need = (SPF(e.sprite) === 'R') !== (e.face > 0); if (need) ctx.scale(-1, 1); ctx.drawImage(img, -img.width / 2, -img.height); } ctx.restore(); }
       // 血条：墨框硬边小条（领袖金、民兵绿、敌人红）
-      if (e.alive) { const bw = Math.max(40, img.S ? img.S * 0.9 : img.width * 0.7), top = e.y - (img.S ? img.S * 1.25 : img.height) - 14, hc = e.side === 'A' ? (e.hero ? PP.gold : PP.green) : PP.red; if (M.UI) M.UI.bar(ctx, x - bw / 2, top, bw, 6, e.hp / e.max, { col: hc }); else { ctx.fillStyle = '#000'; ctx.fillRect(x - bw / 2 - 2, top - 2, bw + 4, 10); ctx.fillStyle = hc; ctx.fillRect(x - bw / 2, top, bw * clamp(e.hp / e.max, 0, 1), 6); } }
+      if (e.alive && (!M.LOW_FX || e.hero || e.hp < e.max)) { const bw = Math.max(40, img.S ? img.S * 0.9 : img.width * 0.7),   /* phones: no bar on the unhurt (2026-09-27) */ top = e.y - (img.S ? img.S * 1.25 : img.height) - 14, hc = e.side === 'A' ? (e.hero ? PP.gold : PP.green) : PP.red; if (M.UI) M.UI.bar(ctx, x - bw / 2, top, bw, 6, e.hp / e.max, { col: hc }); else { ctx.fillStyle = '#000'; ctx.fillRect(x - bw / 2 - 2, top - 2, bw + 4, 10); ctx.fillStyle = hc; ctx.fillRect(x - bw / 2, top, bw * clamp(e.hp / e.max, 0, 1), 6); } }
       if (e.hero && e.alive) lights.push({ x: e.x, y: e.y - 40, r: 160, c: '#ffe6b0', f: 1 });
     });
     this.proj.forEach(p => { ctx.fillStyle = p.col; ctx.fillRect(p.x - 7, p.y - 7, 14, 14); lights.push({ x: p.x, y: p.y, r: 60, c: p.col.length === 7 ? p.col : '#ffffff', f: 1 }); });

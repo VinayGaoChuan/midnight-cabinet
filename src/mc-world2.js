@@ -162,6 +162,38 @@ function lightMap() { if (!lightC.c) { lightC.c = document.createElement('canvas
 const fgCache = {};
 function blurred(key, s) { const k = key + s; if (!fgCache[k]) { const img = spriteCanvas(key, s), c = document.createElement('canvas'); c.width = img.width + 60; c.height = img.height + 60; const x = c.getContext('2d'); x.filter = 'blur(10px) brightness(0.25)'; x.drawImage(img, 30, 30); fgCache[k] = c; } return fgCache[k]; }
 
+// the ground: tile colour, checker, grain, roads and their dashes (all static but for which roads are revealed)
+function paintGround(ctx, map, R, vx0, vy0, vx1, vy1) {
+  ctx.fillStyle = R.tile; ctx.fillRect(vx0, map.top - 400, vx1 - vx0, map.bot - map.top + 800);
+  for (let gx = Math.floor(vx0 / 120) * 120; gx < vx1; gx += 120) for (let gy = Math.floor(vy0 / 120) * 120; gy < vy1; gy += 120) { if (((gx / 120) + (gy / 120)) % 2 === 0) { ctx.fillStyle = 'rgba(255,255,255,0.018)'; ctx.fillRect(gx, gy, 120, 120); } }
+  map.grain.forEach(g => { if (g.x > vx0 - 12 && g.x < vx1 && g.y > vy0 - 12 && g.y < vy1) { ctx.fillStyle = g.c; ctx.fillRect(Math.floor(g.x / 6) * 6, Math.floor(g.y / 6) * 6, g.s, g.s); } });
+  const vis = (e) => map.nodes[e.a].seen || map.nodes[e.b].seen;
+  const path = (e) => { ctx.beginPath(); ctx.moveTo(e.pts[0][0], e.pts[0][1]); for (let i = 1; i < e.pts.length; i++) ctx.lineTo(e.pts[i][0], e.pts[i][1]); };
+  ctx.lineCap = 'square'; ctx.lineJoin = 'miter';
+  [[118, 'rgba(0,0,0,0.4)', 8], [96, R.road, 0], [96, 'rgba(255,255,255,0.04)', -4]].forEach(([w, c, oy]) => { ctx.strokeStyle = c; ctx.lineWidth = w; map.edges.forEach(e => { if (!vis(e)) return; ctx.save(); ctx.translate(0, oy); path(e); ctx.stroke(); ctx.restore(); }); });
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  map.edges.forEach(e => { if (!vis(e)) return; for (let i = 1; i < e.pts.length; i++) { const [x1, y1] = e.pts[i - 1], [x2, y2] = e.pts[i], l = Math.abs(x2 - x1) + Math.abs(y2 - y1); for (let s = 24; s < l; s += 48) { const q = s / l, x = x1 + (x2 - x1) * q, y = y1 + (y2 - y1) * q; ctx.fillRect(Math.floor(x / 6) * 6 - 18, Math.floor(y / 6) * 6 - 18, 36, 6); } } });
+}
+// phones (2026-09-27, the S9+ pass: the ground was redrawn every frame — 1 680 grain dots, three road passes — 4.5 ms a frame
+// on an M4): baked once into 1024-world-px tiles at the layer's art scale, rebuilt when another stop is revealed
+const GT = { map: null, sig: '', tiles: new Map() }, GTW = 1024;
+function groundTiles(ctx, map, R, vx0, vy0, vx1, vy1) {
+  let seen = 0; for (const n of map.nodes) if (n.seen) seen++;
+  const sig = seen + '|' + R.tile + '|' + R.road; if (GT.map !== map || GT.sig !== sig) { GT.map = map; GT.sig = sig; GT.tiles.clear(); }
+  const sm = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = false;
+  for (let ty = Math.floor(vy0 / GTW); ty <= Math.floor(vy1 / GTW); ty++) for (let tx = Math.floor(vx0 / GTW); tx <= Math.floor(vx1 / GTW); tx++) {
+    const k = tx + ',' + ty; let c = GT.tiles.get(k);
+    if (!c) {
+      if (GT.tiles.size > 40) GT.tiles.clear();
+      c = document.createElement('canvas'); c.width = c.height = GTW / PXS; const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
+      x.setTransform(1 / PXS, 0, 0, 1 / PXS, -tx * GTW / PXS, -ty * GTW / PXS); paintGround(x, map, R, tx * GTW, ty * GTW, (tx + 1) * GTW, (ty + 1) * GTW);
+      GT.tiles.set(k, c);
+    }
+    ctx.drawImage(c, tx * GTW, ty * GTW, GTW, GTW);
+  }
+  ctx.imageSmoothingEnabled = sm;
+}
+const PXS = M.PX || 2;
 M.drawWorld2 = function (ctx, run, walker, opts = {}) {
   const map = run.map, R = run.region, T = walker.t, z = opts.zoom || 1;
   ctx.imageSmoothingEnabled = false;
@@ -170,17 +202,7 @@ M.drawWorld2 = function (ctx, run, walker, opts = {}) {
   const toS = (x, y) => ({ x: 960 + (x - walker.camX) * z, y: 560 + (y - walker.camY) * z });
   ctx.setTransform(z, 0, 0, z, 960 - walker.camX * z, 560 - walker.camY * z);
   const vx0 = walker.camX - 1100 / z, vx1 = walker.camX + 1100 / z, vy0 = walker.camY - 700 / z, vy1 = walker.camY + 700 / z;
-  ctx.fillStyle = R.tile; ctx.fillRect(vx0, map.top - 400, vx1 - vx0, map.bot - map.top + 800);
-  for (let gx = Math.floor(vx0 / 120) * 120; gx < vx1; gx += 120) for (let gy = Math.floor(vy0 / 120) * 120; gy < vy1; gy += 120) { if (((gx / 120) + (gy / 120)) % 2 === 0) { ctx.fillStyle = 'rgba(255,255,255,0.018)'; ctx.fillRect(gx, gy, 120, 120); } }
-  map.grain.forEach(g => { if (g.x > vx0 && g.x < vx1 && g.y > vy0 && g.y < vy1) { ctx.fillStyle = g.c; ctx.fillRect(Math.floor(g.x / 6) * 6, Math.floor(g.y / 6) * 6, g.s, g.s); } });
-  // roads
-  const vis = (e) => map.nodes[e.a].seen || map.nodes[e.b].seen;
-  const path = (e) => { ctx.beginPath(); ctx.moveTo(e.pts[0][0], e.pts[0][1]); for (let i = 1; i < e.pts.length; i++) ctx.lineTo(e.pts[i][0], e.pts[i][1]); };
-  ctx.lineCap = 'square'; ctx.lineJoin = 'miter';
-  const taken = new Set(); if (walker.edge) taken.add(walker.edge);
-  [[118, 'rgba(0,0,0,0.4)', 8], [96, R.road, 0], [96, 'rgba(255,255,255,0.04)', -4]].forEach(([w, c, oy]) => { ctx.strokeStyle = c; ctx.lineWidth = w; map.edges.forEach(e => { if (!vis(e)) return; ctx.save(); ctx.translate(0, oy); path(e); ctx.stroke(); ctx.restore(); }); });
-  ctx.fillStyle = 'rgba(0,0,0,0.18)';
-  map.edges.forEach(e => { if (!vis(e)) return; for (let i = 1; i < e.pts.length; i++) { const [x1, y1] = e.pts[i - 1], [x2, y2] = e.pts[i], l = Math.abs(x2 - x1) + Math.abs(y2 - y1); for (let s = 24; s < l; s += 48) { const q = s / l, x = x1 + (x2 - x1) * q, y = y1 + (y2 - y1) * q; ctx.fillRect(Math.floor(x / 6) * 6 - 18, Math.floor(y / 6) * 6 - 18, 36, 6); } } });
+  if (M.LOW_FX && M.pixelMode) groundTiles(ctx, map, R, vx0, vy0, vx1, vy1); else paintGround(ctx, map, R, vx0, vy0, vx1, vy1);
   // closed paths (behind you / not chosen) get dimmed
   const cur = walker.edge ? walker.edge.b : walker.node, curCol = map.nodes[cur].col;
   ctx.fillStyle = 'rgba(0,0,0,0.35)';
@@ -228,7 +250,8 @@ M.drawWorld2 = function (ctx, run, walker, opts = {}) {
   const lm = lightMap(), lx = lm.getContext('2d');
   lx.globalCompositeOperation = 'source-over'; lx.fillStyle = 'rgba(4,2,10,0.46)'; lx.fillRect(0, 0, 480, 270);
   lx.globalCompositeOperation = 'destination-out';
-  lights.forEach(L => { const p = toS(L.x, L.y), r = L.r * z * L.f / 4; const g = lx.createRadialGradient(p.x / 4, p.y / 4, 0, p.x / 4, p.y / 4, r); g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.5, 'rgba(0,0,0,0.6)'); g.addColorStop(1, 'rgba(0,0,0,0)'); lx.fillStyle = g; lx.fillRect(p.x / 4 - r, p.y / 4 - r, r * 2, r * 2); });
+  const pch = M.radSprite('punchW', [[0, 'rgba(0,0,0,1)'], [0.5, 'rgba(0,0,0,0.6)'], [1, 'rgba(0,0,0,0)']]); lx.imageSmoothingEnabled = true;   /* stamped, not a gradient per light (2026-09-27) */
+  lights.forEach(L => { const p = toS(L.x, L.y), r = L.r * z * L.f / 4; if (!(r > 0)) return; lx.drawImage(pch, p.x / 4 - r, p.y / 4 - r, r * 2, r * 2); });
   ctx.imageSmoothingEnabled = true; ctx.drawImage(lm, 0, 0, 1920, 1080);
   if (!M.LOW_FX) { lights.forEach(L => { const p = toS(L.x, L.y); M.glow(ctx, p.x, p.y, L.r * z * 0.55 * L.f, L.c, 0.22); }); M.godRays(ctx, 1920, 1080, T, R.light, 4, 0.05); }   // phones: no halos or rays (mc-fx.js)
   if (!run.amb) run.amb = new M.Ambient(R.amb || 'motes', 1920, 1080, 70);
