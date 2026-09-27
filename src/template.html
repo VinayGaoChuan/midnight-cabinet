@@ -1043,6 +1043,7 @@
               <div style="flex:1;display:flex;flex-direction:column;gap:4px">
                 <div style="font-size:30px;color:{{op.c}}">{{op.n}} <span style="display:inline-block;font-size:22px;color:#ffcf4a;text-shadow:0 0 10px #ffcf4a;animation:{{op.banim}}">{{op.bonus}}</span></div>
                 <div style="display:flex;align-items:center;gap:14px;font-size:22px;color:#a9a3c9"><sc-for list="{{op.ms}}" as="om" hint-placeholder-count="0"><span style="display:inline-flex;align-items:center;gap:4px"><m-img src="{{om.img}}" style="width:26px;height:26px"></m-img>{{om.t}}</span></sc-for></div>
+                <div data-g="bld-eff" style="font-size:21px;line-height:1.3;color:#e8dcc4">{{op.eff}}</div>
                 <sc-if value="{{op.hasWhy}}"><div style="font-size:22px;color:#e8434f">{{op.why}}</div></sc-if>
               </div>
             </div>

@@ -114,7 +114,8 @@ G.evoStart = function (three, to, host) {
   else { const order = rosterOrder(this); pos = three.map(u => { const i = order.indexOf(u); return slotPos(this, i < 0 ? 0 : i); }); }
   three.forEach(u => this.hideU.add(u.uid));
   const sparks = []; for (let i = 0; i < 46; i++) { const a = rnd() * 6.283, sp = 380 + rnd() * 900; sparks.push({ vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.75 - 120, s: 6 + Math.floor(rnd() * 3) * 3 }); }
-  this.evoFx = { t: 0, three, to, from, evo, host: host || null, over: !!(DB[to].tier > M.EVO_BASE), qA: DB[from].q, qB: DB[to].q, pos, imgA: imgOf(from, 6), imgB: imgOf(to, 8), sparks, s: {}, first: !(this.prof && this.prof.stats && this.prof.stats.evos) };
+  const pwA = three.reduce((t, u) => t + M.unitPower(u.type, u), 0);   // what the three were worth together, for 「★A → ★B」
+  this.evoFx = { t: 0, three, to, from, evo, pwA, host: host || null, over: !!(DB[to].tier > M.EVO_BASE), qA: DB[from].q, qB: DB[to].q, pos, imgA: imgOf(from, 6), imgB: imgOf(to, 8), sparks, s: {}, first: !(this.prof && this.prof.stats && this.prof.stats.evos) };
   S.rc && S.rc('in'); this.bump();
 };
 function beat(F, k, at, fn) { if (F.t >= at && !F.s[k]) { F.s[k] = 1; try { fn(); } catch (e) {} } }
@@ -140,7 +141,7 @@ function drawCard(ctx, x, y, sc, F) {
   ctx.restore();
 }
 function drawEvo(ctx, g, F) {
-  const T = F.t, still = RM(), C = { x: 960, y: 460 }, qa = F.qA, qb = F.qB;
+  const T = F.t, still = RM(), C = { x: 960, y: 500 }, qa = F.qA, qb = F.qB;
   const climb = T < T_IN ? qa : Math.min(qb, qa + Math.floor((T - T_IN) / ((T_BOOM - T_IN) / (qb - qa + 1)))), gc = Q[climb].c, cB = Q[qb].c;
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
   U.dim(ctx, T < T_HOLD ? cl(T / 0.3, 0, 1) : 1 - cl((T - T_HOLD) / (T_END - T_HOLD), 0, 1));
@@ -175,7 +176,9 @@ function drawEvo(ctx, g, F) {
     if (fl < 1) drawCard(ctx, x, y, sc, F);
     if (!F.go && d > 0.6) { ctx.globalAlpha = 0.55 + 0.45 * Math.abs(Math.sin(T * 3)); U.text(ctx, '点击继续', C.x, C.y + CH / 2 + 60, 30, P.cream, { outline: true }); ctx.globalAlpha = 1; }
     // the words: 进化！ and what became what
-    if (fl < 0.2) { const a = cl(d / 0.25, 0, 1) * (1 - fl / 0.2); ctx.globalAlpha = a; U.text(ctx, F.over ? '超限进化！' : '进化！', C.x, 96, 88, F.over ? Q[F.qB].c : P.gold, { outline: true, ramp: true }); U.text(ctx, DB[F.from].n + '  →  ' + DB[F.to].n, C.x, 176, 36, P.cream, { outline: true }); ctx.globalAlpha = 1; }
+    if (fl < 0.2) { const a = cl(d / 0.25, 0, 1) * (1 - fl / 0.2); ctx.globalAlpha = a; U.text(ctx, F.over ? '超限进化！' : '进化！', C.x, 96, 88, F.over ? Q[F.qB].c : P.gold, { outline: true, ramp: true }); U.text(ctx, DB[F.from].n + '  →  ' + DB[F.to].n, C.x, 170, 36, P.cream, { outline: true });
+      // what changed (2026-09-27 feedback: 「合成后人数减少，升级了多少也不直观」): three become one, the power before and after
+      const pwB = F.nu ? M.unitPower(F.nu.type, F.nu) : DB[F.to].cost; U.text(ctx, F.three.length + ' 支 → 1 支 · ★ ' + F.pwA + ' → ★ ' + pwB, C.x, 216, 30, P.gold, { outline: true }); ctx.globalAlpha = 1; }
   }
   ctx.restore();
 }
@@ -224,7 +227,7 @@ const pips = (n, of, on, off) => { const a = []; for (let i = 0; i < of; i++) a.
 const oView = G.view;
 G.view = function () {
   const v = oView.call(this), run = this.run;
-  if (this.evoFx) { const F = this.evoFx; v.fxZ = 75; v.coverOn = true; v.coverClick = () => { if (F.t >= T_BOOM + 0.45) { F.go = true; S.click && S.click(); } else if (this.hurry) this.hurry(); }; }
+  if (this.evoFx) { const F = this.evoFx; v.fxZ = 75; v.coverOn = true; v.toastOn = false; v.coverClick = () => { if (F.t >= T_BOOM + 0.45) { F.go = true; S.click && S.click(); } else if (this.hurry) this.hurry(); }; }
   if (!run || !v.w) return v;
   this._rosLay = { top: v.w.rosTop, fit: v.w.rosFit };
   // roster cards: one gold diamond per evolution
