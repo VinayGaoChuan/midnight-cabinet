@@ -34,6 +34,9 @@ function payout(g, mg, o) {
 // 曲子、伴奏、判定都在音频时钟上（mc-audio.js 的 S.song）：音符时间是玩家真正听到的时间，按键用事件自己的时间戳
 const MUA = M.MCPX, MU = MUA.MUS, LANE_X = MU.lane.map(x => MUA.lx(x)), HIT_Y = MUA.ly(MU.hit);
 const mTier = (p) => (p >= 0.8 ? 3 : p >= 0.55 ? 2 : p >= 0.3 ? 1 : 0);
+// 完成度条：左上角，三条线就是三档奖励线，线上写评级、线下写奖励——选了合奏就摆出来，预备四拍里亮着提醒
+const MBAR = { x: SX + 50, y: SY + 84, w: 480 }, MTH = [[0.3, 'B', '物资', C.teal], [0.55, 'A', '攻击 +10%', C.magenta], [0.8, 'S', '攻击 · 积分', C.gold]];
+const mbx = (v) => MBAR.x + Math.round(MBAR.w * v);
 const muLayer = (c) => (c >= 12 ? 4 : c >= 8 ? 3 : c >= 5 ? 2 : c >= 3 ? 1 : 0);
 let lastInTs = 0; if (typeof window !== 'undefined') ['keydown', 'pointerdown'].forEach(n => window.addEventListener(n, (e) => { lastInTs = e.timeStamp; }, true));
 const inTs = () => (performance.now() - lastInTs < 80 ? lastInTs : performance.now());
@@ -45,7 +48,9 @@ function songAt(mg, ts) { if (mg.useAudio) { const v = S.song.heard(ts); if (v !
 MINI.musician = { title: '流浪乐师', img: 'musician', col: C.gold, text: '没有脸的乐师拉着琴。琴声停下来，他把弓递给了你。',
   init(mg) { const B = S.song.B; mg.B = B; mg.notes = S.song.NOTES.map(n => ({ i: n.i, t: (n.beat + 4) * B, l: n.l, st: 0 })); mg.end = 40 * B; mg.score = 0; mg.combo = 0; mg.maxCombo = 0; mg.perf = 0;
     mg.laneF = [0, 0, 0]; mg.laneG = [0, 0, 0]; mg.laneBad = [0, 0, 0]; mg.keyP = [-9, -9, -9]; mg.lastN = mg.notes[mg.notes.length - 1]; mg.layer = 0; mg.lampK = 1; mg.bulbsK = 0; mg.crowd = 0; mg.song = null; mg.cnt = -1; },
-  start(mg) { this.miniSet('play'); S.whoosh(0.3); const sg = S.song.begin(); mg.useAudio = !!sg; mg.clock0 = performance.now() + 200; mg.song = songAt(mg); },
+  // 选了合奏先放 1.9 秒示范（一颗虚影音符落到琴马上、中间的弦响、键帽按下去），然后才起曲子的预备四拍
+  start(mg) { this.miniSet('demo'); mg.demoT = 0; S.whoosh(0.3); },
+  go(mg) { this.miniSet('play'); const sg = S.song.begin(); mg.useAudio = !!sg; mg.clock0 = performance.now() + 200; mg.song = songAt(mg); },
   hit(mg, l) { if (mg.phase !== 'play') return; mg.keyP[l] = mg.t; const at = songAt(mg, inTs()); let best = null, bd = 0.24;
     mg.notes.forEach(n => { if (n.st || n.l !== l) return; const d = Math.abs(n.t - at); if (d < bd) { bd = d; best = n; } });
     const sl = muSlot(), bx = MU.lane[l], by = MU.hit - 3;
@@ -68,6 +73,7 @@ MINI.musician = { title: '流浪乐师', img: 'musician', col: C.gold, text: '�
     mg.laneF = mg.laneF.map(f => Math.max(0, f - dt * 4)); mg.laneBad = mg.laneBad.map(f => Math.max(0, f - dt * 5)); mg.lampK += (1 - mg.lampK) * Math.min(1, dt * 1.5);
     mg.bulbsK = cl(mg.bulbsK + (mg.layer >= 2 ? dt * 1.2 : -dt * 3), 0, 1); mg.crowd = cl(mg.crowd + (mg.layer >= 3 ? dt * 1.5 : -dt * 2), 0, 1);
     if (mg.phase === 'tally') return MINI.musician.tally.call(this, mg, dt);
+    if (mg.phase === 'demo') { mg.demoT += dt; if (!mg.demo && mg.demoT >= 1.3) { mg.demo = 1; mg.keyP[1] = mg.t; mg.laneF[1] = 1; mg.laneG[1] = 2; S.mini('musician', 'pluck'); } if (mg.demoT >= 1.9) MINI.musician.go.call(this, mg); return; }
     if (mg.phase !== 'play') return; mg.song = songAt(mg); const B = mg.B, song = mg.song;
     // 预备小节：第 2、3、4 拍砸「3」「2」「1」
     const bi = Math.floor(song / B); if (bi !== mg.cnt && bi >= 1 && bi <= 3 && song < 4 * B) { mg.cnt = bi; SHW.stamp(mg, String(4 - bi), CX, SY + 260, C.gold, 110 + bi * 10, B * 0.9); this.fx.kick(1 + bi); }
@@ -79,8 +85,8 @@ MINI.musician = { title: '流浪乐师', img: 'musician', col: C.gold, text: '�
   // 结算四拍：完成度条从 0 往上滚、跨线一拍一拍加码、评级字母升格 → 卡帧 → 评级章 → 逐项砸出 → 奖励
   tally(mg, dt) { const T = mg.tally; T.t += dt; const p = Math.min(T.pct, T.t / 1.3 * Math.max(0.3, T.pct)); T.shown = p;
     if (Math.floor(p * 20) !== T.tick) { T.tick = Math.floor(p * 20); S.mini('musician', 'tick', T.tick); }
-    [0.3, 0.55, 0.8].forEach((v, k) => { if (p >= v && T.cross <= k) { T.cross = k + 1; SHW.stamp(mg, 'CBAS'[k + 1], SX + 80 + Math.round(300 * v), SY + 190, [C.teal, C.magenta, C.gold][k], 60 + k * 14, 0.9); this.fx.flash('#ffffff', 0.12 + k * 0.06); this.fx.kick(3 + k * 3); S.mini('musician', 'cross', k); } });
-    if (T.t > 1.3 && !T.done) { T.done = 1; SHW.hitstop(mg, 0.15, SX + 80 + Math.round(300 * T.pct), SY + 130, () => { MINI.musician.pay.call(this, mg);
+    [0.3, 0.55, 0.8].forEach((v, k) => { if (p >= v && T.cross <= k) { T.cross = k + 1; SHW.stamp(mg, 'CBAS'[k + 1], mbx(v), SY + 200, [C.teal, C.magenta, C.gold][k], 60 + k * 14, 0.9); this.fx.flash('#ffffff', 0.12 + k * 0.06); this.fx.kick(3 + k * 3); S.mini('musician', 'cross', k); } });
+    if (T.t > 1.3 && !T.done) { T.done = 1; SHW.hitstop(mg, 0.15, mbx(T.pct), MBAR.y + 9, () => { MINI.musician.pay.call(this, mg);
       SHW.items(this, mg, [{ text: '完成度 ' + Math.round(T.pct * 100) + '%', col: C.cream, size: 40 }, { text: '最大连击 ' + mg.maxCombo, col: C.gold, size: 40 }, { text: 'PERFECT ' + mg.perf, col: C.magenta, size: 40 }], { x: SX + SW - 270, y: SY + 250, dy: 64, gap: 0.22, t0: 0.3 }); }); } },
   pay(mg) { const N = mg.notes.length, pct = mg.score / (N * 2); let tx, col, g = [], gr, ev;
     if (pct >= 0.8) { this.run.runBuff.unitAtk = (this.run.runBuff.unitAtk || 0) + 0.08; g.push({ k: 'wallet', v: M.nice(mg.P * 6) }); tx = '乐师第一次笑了（如果那算笑的话）。这一趟部队攻击 +8%。'; col = '#ffcc33'; gr = 'S'; ev = 'great'; }
@@ -94,16 +100,24 @@ MINI.musician = { title: '流浪乐师', img: 'musician', col: C.gold, text: '�
     const song = mg.song == null ? -9 : mg.song, beat = song / (mg.B || 0.4545), bp = beat - Math.floor(beat), pulse = song > 0 ? Math.max(0, 1 - bp * 4) : 0;
     K.pxr(x, 'mini_musician', 0, 0, mg.t, { song, beat, layers: mg.layer, laneF: mg.laneF, laneG: mg.laneG, laneBad: mg.laneBad, notes: mg.phase === 'play' || mg.phase === 'tally' ? mg.notes : [], lampK: mg.lampK, bulbsK: mg.bulbsK, crowd: mg.crowd }, 'mc_mus');
     // 乐师（像素人物做好之前是剪影）和领袖：都踩着拍子
-    MINI.musician.npc(x, mg, pulse); MUA.cast(x, heroSp(this), 256, 148 - (mg.phase === 'play' ? Math.round(pulse) : 0), 'idle', mg.t, true);
+    MINI.musician.npc(x, mg, pulse); MUA.cast(x, heroSp(this), 262, 148 - (mg.phase === 'play' ? Math.round(pulse) : 0), 'idle', mg.t, true);
     // Q W E 键帽：开始合奏才亮出来（手柄是 ← ↓ →，手机直接点音轨、不画键帽）；按下先压扁再弹大
-    const capL = mg.phase === 'play' ? M.byInput({ kbm: ['Q', 'W', 'E'], pad: ['←', '↓', '→'], touch: null }, this) : null;
+    const capL = mg.phase === 'play' || mg.phase === 'demo' ? M.byInput({ kbm: ['Q', 'W', 'E'], pad: ['←', '↓', '→'], touch: null }, this) : null;
     if (capL) for (let l = 0; l < 3; l++) { const q = (mg.t - mg.keyP[l]) / 0.2, k = q < 0.3 ? 1 - 0.1 * q / 0.3 : q < 1 ? 0.9 + 0.22 * Math.sin((q - 0.3) / 0.7 * Math.PI) * (1 - (q - 0.3) / 0.7) + 0.1 * (q - 0.3) / 0.7 : 1; x.save(); x.translate(LANE_X[l], HIT_Y + 58); x.scale(k, k); U.key(x, capL[l], -22, -14, { size: 22 }); x.restore(); }
-    if (mg.phase === 'play' || mg.phase === 'tally') { const shown = mg.phase === 'tally' ? mg.tally.shown : mg.score / (mg.notes.length * 2);
-      U.bar(x, SX + 80, SY + 120, 300, 18, shown, { col: C.gold }); [0.3, 0.55, 0.8].forEach(v => K.R(x, SX + 80 + Math.round(300 * v) - 1, SY + 112, 3, 34, C.white)); U.text(x, '完成度', SX + 230, SY + 160, T.cap, C.lavender);
-      if (mg.phase === 'play') K.sign(x, '连击 ' + mg.combo, SX + SW - 200, SY + 140, { kind: 'dark', size: T.btn, minW: 180 }); }
+    if (mg.phase === 'play' || mg.phase === 'tally' || mg.phase === 'demo') { const shown = mg.phase === 'tally' ? mg.tally.shown : mg.phase === 'demo' ? 0 : mg.score / (mg.notes.length * 2), pre = mg.phase === 'demo' || (mg.phase === 'play' && song < 4 * mg.B), bx = MBAR.x, by = MBAR.y;
+      x.save(); x.globalAlpha *= 0.72; K.R(x, bx - 16, by - 58, MBAR.w + 32, 118, '#0d0b1e'); x.restore();
+      U.text(x, '完成度', bx, by - 32, T.cap, C.lavender, { align: 'left' }); U.bar(x, bx, by, MBAR.w, 18, shown, { col: C.gold });
+      MTH.forEach(([v, g, r, c]) => { const tx = mbx(v), on = shown >= v, k = pre ? 1 + 0.12 * Math.max(0, Math.sin(mg.t * 7 - v * 6)) : 1; K.R(x, tx - 1, by - 8, 3, 34, on ? c : C.white);
+        x.save(); x.translate(tx, by - 30); x.scale(k, k); U.text(x, g, 0, 0, 30, c, { outline: true }); x.restore(); U.text(x, r, tx, by + 42, 18, on ? c : C.cream); });
+      // 示范和预备四拍里：琴马上的判定线一闪一闪；示范时一颗虚影音符沿中间的弦落到线上
+      if (pre) { const SPd = (MU.hit - MU.top) / 1.5, ay = mg.phase === 'demo' ? MU.hit - (1.3 - mg.demoT) * SPd : -1, bl = MUA.lx(MU.x(0, MU.hit) - 12), br = MUA.lx(MU.x(2, MU.hit) + 12);
+        x.save(); x.globalAlpha *= 0.55 + 0.35 * Math.sin(mg.t * 10); K.R(x, bl, HIT_Y - 8, br - bl, 16, C.gold); x.restore();
+        for (let k = 0; k < 4; k++) { const h = 24 - k * 6; K.R(x, bl - 28 + k * 4, HIT_Y - h / 2, 4, h, C.gold); K.R(x, br + 24 - k * 4, HIT_Y - h / 2, 4, h, C.gold); }   // ▶ … ◀ pointing at the line
+        if (mg.phase === 'demo' && mg.demoT < 1.3 && ay >= MU.top) { const r = Math.round((1 + MU.k(ay) * 4) * 4) + 6, nx = MUA.lx(MU.x(1, ay)), ny = MUA.ly(ay); x.save(); x.globalAlpha *= 0.55; K.CI(x, nx, ny, r, C.cream); x.restore(); K.RR(x, nx - r, ny - r, r * 2, r * 2, 0, null, C.white, 3); U.text(x, '示范', nx + r + 36, ny, T.cap, C.cream, { outline: true }); } }
+      if (mg.phase !== 'tally') K.sign(x, '连击 ' + mg.combo, SX + SW - 200, SY + 140, { kind: 'dark', size: T.btn, minW: 180 }); }
   },
   // 乐师的剪影占位：宽檐帽、苍白的脸、长大衣，踩拍子一沉一起（像素人物做好后换成 pcd 角色）
-  npc(x, mg, pulse) { if (M.MCPX.npcDraw(x, 'MidnightFiddler', 44, 148, mg.t, false, mg)) return; const bob = mg.phase === 'play' ? Math.round(pulse) : Math.round(Math.sin(mg.t * 2) * 0.5 + 0.5), ax = 44, feet = 148;
+  npc(x, mg, pulse) { if (M.MCPX.npcDraw(x, 'MidnightFiddler', 40, 150, mg.t, false, mg, 1.5)) return; const bob = mg.phase === 'play' ? Math.round(pulse) : Math.round(Math.sin(mg.t * 2) * 0.5 + 0.5), ax = 44, feet = 148;
     const px = (a, b, c) => { x.fillStyle = U.pal(c); x.fillRect(MUA.lx(a), MUA.ly(b), 4, 4); };
     for (let k = 0; k < 40; k++) { const y = feet - 1 - k - (k > 6 ? bob : 0), q = k / 40; let hw = q > 0.9 ? (q > 0.95 ? 3 : 7) : q > 0.82 ? 2.5 : 4 + (1 - q) * 4; if (q > 0.82 && q <= 0.9) hw = 3;
       for (let d = -Math.round(hw); d <= Math.round(hw); d++) px(ax + d, y, d === -Math.round(hw) ? '#ffb060' : q > 0.82 && q <= 0.9 && Math.abs(d) < 3 ? '#d8d2c8' : '#12101e'); } },

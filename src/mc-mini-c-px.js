@@ -41,14 +41,14 @@ A.npc = function (key) {
 // play a state: 'attack' / 'skill' / 'hurt' / 'death' / 'move' / 'idle'; one-shot states fall back to idle when done
 A.npcAct = function (key, st) { const n = A.npc(key); if (!n) return false; n.g.enter(st === 'skill' ? 'charge' : st); n.st = st; return true; };
 // draw an NPC with its feet at art (ax, ay), facing right (flip: left); a new minigame run starts it fresh in idle
-A.npcDraw = function (x, key, ax, ay, t, flip, mg) {
+A.npcDraw = function (x, key, ax, ay, t, flip, mg, sc) {
   const n = A.npc(key); if (!n) return false;
   if (n.mg !== mg) { n.mg = mg; n.lt = null; n.g.enter('idle'); n.st = 'idle'; }
   const dt = n.lt == null ? 0 : clamp(t - n.lt, 0, 0.1); n.lt = t; n.g.step(dt, 1);
   if (n.g.done && !n.g.busy()) { if (n.st === 'idle' || n.st === 'move') n.g.enter(n.st); else if (n.st !== 'death') { n.g.enter('idle'); n.st = 'idle'; } }
   const fb = n.g.render(), lut = n.g.lut, px = n.px; px.fill(0); for (let j = 0; j < fb.length; j++) if (fb[j] !== 255) px[j] = lut[fb[j]]; n.cx.putImageData(n.im, 0, 0);
   const sm = x.imageSmoothingEnabled; x.imageSmoothingEnabled = false; x.save(); x.translate(Math.round(SX + ax * ART), Math.round(SY + ay * ART)); if (flip) x.scale(-1, 1);
-  x.drawImage(n.cv, -n.g.HX * ART, -n.g.HY * ART, n.g.W * ART, n.g.H * ART); x.restore(); x.imageSmoothingEnabled = sm; return true;
+  const Z = ART * (sc || 1); x.drawImage(n.cv, -n.g.HX * Z, -n.g.HY * Z, n.g.W * Z, n.g.H * Z); x.restore(); x.imageSmoothingEnabled = sm; return true;
 };
 // a moving light from anim: lights the stage around it this frame (x, y art px; c hex; i 0…1.5)
 A.glow = (rs, x, y, r, c, i, z) => { rs.dl.push({ x, y, z: z == null ? 14 : z, r, i, rgb: rgb(c), tint: 0.55 }); };
@@ -275,7 +275,10 @@ A.def('mini_clinic', {
 
 // ═════════════════════ 流浪乐师 · under the bridge ═════════════════════
 // the note highway is a violin neck in perspective: three strings = three lanes, the bridge = the hit line
-const MU = { top: 36, hit: 131, lane: [108, 150, 192], topLane: [140, 150, 160], lamp: [74, 56], moon: 0, bulbs: 0, crowd: 0 };
+// the violin is drawn at VS of its first size (2026-09-27 feedback: 「琴占得太满，乐师存在感太低……建议把琴缩小约 20%」), scaled about
+// the bridge's middle (150, hit); the body still runs off the bottom of the stage
+const VS = 0.8, vx = (x) => 150 + (x - 150) * VS;
+const MU = { top: Math.round(131 - 95 * VS), hit: 131, lane: [Math.round(vx(108)), 150, Math.round(vx(192))], topLane: [Math.round(vx(140)), 150, Math.round(vx(160))], lamp: [74, 56], moon: 0, bulbs: 0, crowd: 0, VS };
 MU.k = (y) => clamp((y - MU.top) / (MU.hit - MU.top), 0, 1.25);
 MU.x = (l, y) => { const k = MU.k(y); return MU.topLane[l] + (MU.lane[l] - MU.topLane[l]) * k; };
 A.MUS = MU;
@@ -326,27 +329,29 @@ A.def('mini_musician', {
     S.lay('mid');
     // the violin: scroll and pegs at the top, an ebony fingerboard in perspective, the maple bridge (hit line), the spruce top with f-holes
     const T0 = MU.top, HB = MU.hit;
-    S.beg(); for (let y = T0; y <= HB; y++) { const k = MU.k(y), xl = Math.round(MU.x(0, y) - 7 - 7 * k), xr = Math.round(MU.x(2, y) + 7 + 7 * k);
+    S.beg(); for (let y = T0; y <= HB; y++) { const k = MU.k(y), xl = Math.round(MU.x(0, y) - (7 + 7 * k) * VS), xr = Math.round(MU.x(2, y) + (7 + 7 * k) * VS);
       for (let x = xl; x <= xr; x++) { const u = (x - (xl + xr) / 2) / ((xr - xl) / 2 + 0.5), g = Math.floor((u + 1) * 23) , grain = hash(g, Math.floor(y / 6), 7) > 0.7 ? 0.7 : hash(g, 3, 2) > 0.85 ? -0.6 : 0;
         S.px(x, y, 'wood', 1.6 + k * 0.7 + grain + (x === xl ? 2.6 : x === xl + 1 ? 1.2 : x === xr ? -0.8 : 0) - Math.abs(u) * 0.5, { n: [x <= xl + 1 ? -0.7 : x === xr ? 0.7 : u * 0.2, -0.2] }); } }
     S.end({ lit: 1 });
     // a faint strip of each string's colour near the bridge (where the notes land)
     [['pink', 0], ['ice', 1], ['screen', 2]].forEach(([m, l]) => { for (let y = HB - 26; y < HB - 3; y++) { const x = Math.round(MU.x(l, y)), a = (y - (HB - 26)) / 23; for (let d = -2; d <= 2; d++) if (Math.abs(d) < 1 + a * 2 && X.bayer(x + d, y) < a * 0.55) S.px(x + d, y, m, 3 + a * 2); } });
-    S.beg(); S.box(143, 25, 14, 11, 'wood', 5); S.ell(150, 22, 6, 5, 'wood', 6, { dome: 1 }); S.ell(150, 22, 3, 2.5, 'wood', 4, { ring: 1 }); S.px(150, 22, 'wood', 7);
-    [[138, 27], [138, 32], [162, 27], [162, 32]].forEach(([x, y], i) => { S.rect(x - (i < 2 ? 3 : 0), y, 4, 2, 'night', 3); S.ell(x + (i < 2 ? -4 : 5), y + 1, 2, 1.6, 'night', 3.5, { dome: 1 }); }); S.end();
-    S.beg(); for (let y = HB + 3; y < 175; y++) { const k = (y - HB) / 44, hw = 64 + Math.sin(Math.min(1, k * 1.4) * Math.PI / 2) * 22;
+    const py = T0 - 36;   // pegbox and scroll sit on top of the neck
+    S.beg(); S.box(144, py + 25, 12, 11, 'wood', 5); S.ell(150, py + 22, 5, 4, 'wood', 6, { dome: 1 }); S.ell(150, py + 22, 2.5, 2, 'wood', 4, { ring: 1 }); S.px(150, py + 22, 'wood', 7);
+    [[140, 27], [140, 32], [160, 27], [160, 32]].forEach(([x, y], i) => { S.rect(x - (i < 2 ? 3 : 0), py + y, 4, 2, 'night', 3); S.ell(x + (i < 2 ? -4 : 5), py + y + 1, 2, 1.6, 'night', 3.5, { dome: 1 }); }); S.end();
+    S.beg(); for (let y = HB + 3; y < 175; y++) { const k = (y - HB) / 44, hw = (64 + Math.sin(Math.min(1, k * 1.4) * Math.PI / 2) * 22) * VS;
       for (let x = Math.round(150 - hw); x <= Math.round(150 + hw); x++) { const u = (x - 150) / hw, e = Math.abs(u), d = (1 - e) * hw;
         let tn = 7 - e * e * 3.4 + (((x * 7) >> 2) % 5 === 0 ? -0.7 : 0);                       // spruce grain: fine lines along the top
         if (d < 1.2) tn = 2.5; else if (d >= 2.5 && d < 3.5) tn -= 2.6;                         // the edge, then the purfling inlay
         const hl = Math.abs(u + 0.42 - (y - HB) * 0.004) < 0.05 + k * 0.02; if (hl && d > 4) tn += 2.6;   // a varnish highlight sweeping down the left
         S.px(x, y, 'copper', tn, { n: [u * 0.75, -0.4] }); } } S.end({ lit: 1 });
     const fhole = (x0, s) => { for (let k = 0; k < 22; k++) { const y = HB + 12 + k, x = x0 + Math.round(Math.sin(k / 22 * Math.PI * 2) * 3 * s); S.px(x, y, 'ink', 0); if (k > 4 && k < 18) S.px(x + s, y, 'ink', 1); } S.ell(x0 + 2 * s, HB + 12, 1.5, 1.5, 'ink', 0); S.ell(x0 - 2 * s, HB + 33, 1.5, 1.5, 'ink', 0); };
-    fhole(116, 1); fhole(184, -1);
+    fhole(Math.round(vx(116)), 1); fhole(Math.round(vx(184)), -1);
     // strings run on over the body to the tailpiece
-    [0, 1, 2].forEach(l => S.line(MU.lane[l], HB + 3, 146 + l * 4, 158, 'iron', 7.5));
-    S.beg(); S.poly([[139, 157], [161, 157], [157, 175], [143, 175]], 'night', 2.2); S.hl(139, 157, 22, 'night', 4); [0, 1, 2].forEach(i => { S.rect(145 + i * 4, 160, 2, 3, 'iron', 8); S.px(145 + i * 4, 159, 'iron', 10); }); S.end();
-    S.beg(); S.poly([[96, HB + 3], [102, HB - 3], [198, HB - 3], [204, HB + 3]], 'sand', 7.5); S.hl(102, HB - 3, 96, 'sand', 9.5); S.rect(118, HB + 1, 64, 2, 'sand', 5); S.hl(96, HB + 3, 108, 'sand', 4);
-    for (let x = 104; x < 196; x += 3) S.px(x, HB - 1, 'sand', 6.5); S.ell(126, HB + 1, 3, 1.4, 'sand', 3.5); S.ell(174, HB + 1, 3, 1.4, 'sand', 3.5); S.end();
+    [0, 1, 2].forEach(l => S.line(MU.lane[l], HB + 3, 147 + l * 3, 158, 'iron', 7.5));
+    S.beg(); S.poly([[141, 157], [159, 157], [156, 175], [144, 175]], 'night', 2.2); S.hl(141, 157, 18, 'night', 4); [0, 1, 2].forEach(i => { S.rect(146 + i * 3, 160, 2, 3, 'iron', 8); S.px(146 + i * 3, 159, 'iron', 10); }); S.end();
+    const bl = Math.round(vx(96)), br = Math.round(vx(204));
+    S.beg(); S.poly([[bl, HB + 3], [bl + 6, HB - 3], [br - 6, HB - 3], [br, HB + 3]], 'sand', 7.5); S.hl(bl + 6, HB - 3, br - bl - 12, 'sand', 9.5); S.rect(Math.round(vx(118)), HB + 1, Math.round(64 * VS), 2, 'sand', 5); S.hl(bl, HB + 3, br - bl, 'sand', 4);
+    for (let x = bl + 8; x < br - 8; x += 3) S.px(x, HB - 1, 'sand', 6.5); S.ell(Math.round(vx(126)), HB + 1, 3, 1.4, 'sand', 3.5); S.ell(Math.round(vx(174)), HB + 1, 3, 1.4, 'sand', 3.5); S.end();
   },
   // o = mg: notes, song time, lane flashes, combo; without it a still frame
   anim(D, t, rs, o) {
@@ -371,7 +376,7 @@ A.def('mini_musician', {
     D.lay('mid');
     // beat lines (brass frets) scroll with the notes: every beat thin, every bar bright
     const SP = (HB - T0) / 1.5, secB = 60 / 132;
-    for (let b = Math.floor(beat) - 1; b < beat + 5; b++) { const dt = (b - beat) * secB, y = Math.round(HB - dt * SP); if (y < T0 + 2 || y > HB) continue; const bar = b % 4 === 0, xl = Math.round(MU.x(0, y) - 6 - 7 * MU.k(y)), xr = Math.round(MU.x(2, y) + 6 + 7 * MU.k(y));
+    for (let b = Math.floor(beat) - 1; b < beat + 5; b++) { const dt = (b - beat) * secB, y = Math.round(HB - dt * SP); if (y < T0 + 2 || y > HB) continue; const bar = b % 4 === 0, xl = Math.round(MU.x(0, y) - (6 + 7 * MU.k(y)) * VS), xr = Math.round(MU.x(2, y) + (6 + 7 * MU.k(y)) * VS);
       for (let x = xl; x <= xr; x++) D.px(x, y, 'brass', bar ? 8.5 : 6 - (1 - MU.k(y)) * 2, bar ? { e: 255 } : undefined); }
     // strings: steel, lit; a hit makes one vibrate (amplitude by grade) and glow in its lane colour
     const LC = [['pink', '#ff6bd6'], ['ice', '#bff7f0'], ['screen', '#b6f28a']];
