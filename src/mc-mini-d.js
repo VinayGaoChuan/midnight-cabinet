@@ -88,50 +88,75 @@ MINI.spring = { title: '地下温泉', img: 'e_spring', col: C.teal, text: '泉�
   } };
 
 // ═════════════════════ 地雷阵 · minesweeper crossing ═════════════════════
-// 每一步安全格是一记连击；站在两颗雷以上的格子上就压暗、心跳、脚下的数字跟着跳；
-// 走到最后一列：聚光罩住箱子，箱子先亮里面最好那件的品质色（可能升格），再打开走中奖档；踩雷一拍带过
-const TC = 6, TR = 3, TW = 150, TH = 130;
+// 像素舞台（mc-pxroom-mini-d.js 的 mini_trap）：残墙、火把、厚石板阵、石拱门、光柱里的宝箱。
+// 能走的石板缝里透光，悬停抬起一格；踩一格：领袖弧线跳过去，石板「咚」地沉下、喷灰，下面的刻痕亮起数字（连击往上爬）；
+// 站在两颗雷以上：听牌，周围没踩过的石板一起抖、漏灰（不透露哪块是雷）；踩雷：咔 → 轰，焦坑冒烟，领袖被掀回半格，一拍带过；
+// 走到最后一列：逐拍加码（箱子在品质色里抖、箱缝漏光，升档那拍撬开一条缝）→ 卡帧 → 箱盖飞开、品质色光柱冲天 → 奖励逐项砸出；
+// 然后没踩到的雷一颗颗亮红灯，一颗都没踩就变成烟花升空
+const TC = 6, TR = 3, TW = 148, TH = 128, TRX0 = K.lx(39), TRY0 = K.ly(43), TCHEST = { x: K.lx(278), y: K.ly(91) };
+const trapQC = [['linen', 10, [244, 239, 224]], ['teal', 9, [71, 214, 193]], ['arcane', 9, [184, 107, 255]], ['lamp', 10, [255, 207, 74]]];
+const trapSlot = () => M.PXR && M.PXR.slots['_mg:mini_trap'];
+const tileC = (r, c) => ({ x: TRX0 + c * TW + TW / 2, y: TRY0 + r * TH + TH / 2 });
 MINI.trap = { title: '地雷阵', img: 'e_trap', col: C.amber, text: '对面有个箱子。地上的数字告诉你周围埋了几颗雷。一次走一格。',
   init(mg) { mg.mine = [...Array(TR)].map(() => Array(TC).fill(0)); let n = 0; while (n < 5) { const r = Math.floor(rnd() * TR), c = 1 + Math.floor(rnd() * (TC - 2)); if (!mg.mine[r][c]) { mg.mine[r][c] = 1; n++; } }
-    mg.open = [...Array(TR)].map(() => Array(TC).fill(0)); mg.at = null; mg.hp = 0; mg.x0 = CX - TC * TW / 2; mg.y0 = SY + 170; mg.booms = []; },
+    mg.open = [...Array(TR)].map(() => Array(TC).fill(0)); mg.openT = [...Array(TR)].map(() => Array(TC).fill(-9)); mg.at = null; mg.hp = 0; mg.x0 = TRX0; mg.y0 = TRY0; mg.booms = [];
+    mg.cnt = (r, c) => MINI.trap.cnt(mg, r, c); mg.adjOk = (r, c) => !mg.open[r][c] && MINI.trap.adj(mg, r, c); mg.pos = { x: TRX0 - 64, y: K.ly(146) }; },
   cnt(mg, r, c) { let n = 0; for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) { const rr = r + dr, cc = c + dc; if ((dr || dc) && rr >= 0 && rr < TR && cc >= 0 && cc < TC && mg.mine[rr][cc]) n++; } return n; },
   adj(mg, r, c) { if (!mg.at) return c === 0; return Math.abs(mg.at.r - r) + Math.abs(mg.at.c - c) === 1 || (Math.abs(mg.at.r - r) === 1 && Math.abs(mg.at.c - c) === 1); },
-  step(mg, r, c) { if (mg.phase !== 'idle' || !MINI.trap.adj(mg, r, c)) return; mg.at = { r, c }; mg.open[r][c] = 1; mg.stepT = mg.t; S.mini('trap', 'step'); const n = MINI.trap.cnt(mg, r, c), px = mg.x0 + c * TW + TW / 2, py = mg.y0 + r * TH + TH / 2; if (!mg.mine[r][c]) S.mini('trap', 'num', n);
-    if (mg.mine[r][c]) { mg.hp++; S.mini('trap', 'boom'); this.fx.kick(14); this.fx.explode(px, py, '#ff7a2a', 0.9); this.heroHurt(0.1); mg.booms.push({ r, c }); SHOW.comboBreak(mg); SHOW.calm(mg); SHOW.state(mg).gray = 1; this.miniSay('轰！', '#ff5a4a', true);
-      if (mg.hp >= 3) { this.miniSet('dead'); endIn(this, mg, 0.45, '第三颗雷把你炸了回来。箱子还在对面。', '#d0453c'); } return; }
-    SHOW.combo(this, mg, px, py - 86);
-    if (c === TC - 1) { this.miniSet('win'); MINI.trap.chest.call(this, mg); return; }
-    if (n >= 2) SHOW.reach(this, mg, { x: px, y: py, r: 110, col: n >= 3 ? C.red : C.amber, label: '' }); else SHOW.calm(mg); },
-  chest(mg) { const run = this.run, clean = !mg.hp, cx = mg.x0 + TC * TW + 70, cy = mg.y0 + TR * TH / 2, gains = [K.item(run, mg.P), clean ? fixBp(this, K.bp(null, 1)) : { k: 'rsup', v: 20 }];
-    const q = Math.max(...gains.map(gq)), tier = clean ? (q >= 3 ? 4 : 3) : q >= 2 ? 2 : 1, path = SHOW.omenPath(q), open = 0.45 + 0.15 * q + (path.length - 1) * 0.4;
-    mg.box = { q: path[0], t0: mg.t, open: 0 }; SHOW.omen(this, mg, path[0]);
-    SHOW.reach(this, mg, Object.assign({ x: cx, y: cy, r: 120, col: clean ? C.gold : C.amber, lv: tier >= 4 ? 2 : 1 }, clean ? {} : { label: '' }));
-    path.slice(1).forEach((pq, i) => SHOW.later(mg, 0.45 + i * 0.4, () => { mg.box.q = pq; SHOW.promote(this, mg, cx, cy, pq); }));
-    SHOW.later(mg, open, () => { mg.box.open = mg.t; S.mini('trap', 'box'); this.fx.explode(cx, cy, QC(q), 0.8 + 0.3 * q);
-      SHOW.later(mg, 0.08, () => SHOW.win(this, mg, tier, { x: cx - 150, y: cy, col: tier >= 3 ? C.gold : QC(q), label: tier === 4 ? '大奖' : tier === 3 ? '大赢' : '' }));
-      SHOW.later(mg, tier === 4 ? 0.7 : 0.2, () => give(this, mg, gains, { x: cx, y: cy })); });
-    endIn(this, mg, open + TIER_END[tier - 1], clean ? '一颗雷都没踩！箱子里的东西全归你。' : '你带着一身灰摸到了箱子。', '#ff9a4a'); },
-  down(mg, px, py) { const c = Math.floor((px - mg.x0) / TW), r = Math.floor((py - mg.y0) / TH); if (r >= 0 && r < TR && c >= 0 && c < TC) MINI.trap.step.call(this, mg, r, c); },
+  hopTo(mg, x, y, dur, back) { mg.hop = { fx: mg.pos.x, fy: mg.pos.y, tx: x, ty: y, t0: mg.t, d: dur || 0.18, back }; mg.pos = { x, y }; },
+  step(mg, r, c) { if (mg.phase !== 'idle') return; if (!MINI.trap.adj(mg, r, c) || mg.open[r][c]) { const p = tileC(r, c); mg.nope = { r, c, t: mg.t }; S.mini('trap', 'nope'); return; }
+    const prev = mg.at, from = prev ? tileC(prev.r, prev.c) : null, p = tileC(r, c), n = MINI.trap.cnt(mg, r, c), s = trapSlot();
+    mg.at = { r, c }; mg.open[r][c] = 1; mg.openT[r][c] = mg.t + 0.16; mg.stepT = mg.t + 0.16; MINI.trap.hopTo(mg, p.x, p.y + TH / 2 - 14); S.mini('trap', 'hop');
+    // 落地那一下才压石板、出数字
+    SHOW.later(mg, 0.16, () => { S.mini('trap', 'step'); SHOW.shake(mg, 2);
+      if (mg.mine[r][c]) return;
+      S.mini('trap', 'num', n); if (s) { s.burst('dust', K.ax(p.x) - 16, K.ay(p.y) + 10, 5, { sp: 14, life: 0.8, w: 4 }); s.burst('dust', K.ax(p.x) + 16, K.ay(p.y) + 10, 5, { sp: 14, life: 0.8, w: 4 }); }
+      SHOW.burst(mg, p.x, p.y + 40, 10, { ramp: [C.cream, C.tan, C.brown, C.umber], sp: [60, 200], life: [0.25, 0.5], ang: -Math.PI / 2, spread: 2.6, w: 100 });
+      SHOW.combo(this, mg, p.x, p.y - 86);
+      if (c === TC - 1) { this.miniSet('win'); MINI.trap.chest.call(this, mg); return; }
+      if (n >= 2) SHOW.reach(this, mg, { x: p.x, y: p.y, r: 110, col: n >= 3 ? C.red : C.amber, label: '' }); else SHOW.calm(mg); });
+    if (mg.mine[r][c]) { this.miniSet('boom'); SHOW.later(mg, 0.16, () => { S.mini('trap', 'click'); });
+      SHOW.later(mg, 0.26, () => { mg.hp++; S.mini('trap', 'boom'); this.fx.kick(14); SHOW.shake(mg, 14); SHOW.white(mg, 0.5); SHOW.burst(mg, p.x, p.y, 40, { ramp: [C.white, C.butter, C.orange, C.orangeDeep], sp: [150, 520], life: [0.3, 0.7], g: 400 }); SHOW.shock(mg, p.x, p.y, C.orange, { r: 200 }); this.fx.explode(p.x, p.y, '#ff7a2a', 0.9);
+        if (s) { s.burst('spark', K.ax(p.x), K.ay(p.y), 18, { sp: 60, spread: 6.3, life: 0.7 }); s.burst('steam', K.ax(p.x), K.ay(p.y) - 4, 6, { sp: 10, life: 2 }); }
+        this.heroHurt(0.1); mg.booms.push({ r, c }); mg.hitT = mg.t; SHOW.comboBreak(mg); SHOW.calm(mg); SHOW.state(mg).gray = 1; this.miniSay('轰！', '#ff5a4a', true);
+        if (mg.hp >= 3) { mg.flyT = mg.t; this.miniSet('dead'); endIn(this, mg, 0.45, '第三颗雷把你炸了回来。箱子还在对面。', '#d0453c'); return; }
+        // 被掀回半格
+        const bx = from ? (from.x + p.x) / 2 : p.x - TW / 2, by = from ? (from.y + p.y) / 2 + TH / 2 - 14 : p.y + TH / 2 - 14; MINI.trap.hopTo(mg, p.x + (bx - p.x) * 0.5, by, 0.22, 1);
+        SHOW.later(mg, 0.2, () => { if (this.mini === mg && mg.phase === 'boom') this.miniSet('idle'); }); }); } },
+  chest(mg) { const run = this.run, clean = !mg.hp, cx = TCHEST.x, cy = TCHEST.y, gains = [K.item(run, mg.P), clean ? fixBp(this, K.bp(null, 1)) : { k: 'rsup', v: 20 }];
+    const q = cl(Math.max(...gains.map(gq)), 0, 3), tier = clean ? (q >= 3 ? 4 : 3) : q >= 2 ? 2 : 1;
+    mg.box = { sk: 0, qc: trapQC[0] }; K.pxrFlash('mini_trap', 2, 0.8);
+    const T = SHOW.charge(this, mg, { x: cx, y: cy - 20, q, onBeat: (i, tq, up) => { mg.box.sk = 1 + i * 0.5; mg.box.qc = trapQC[tq]; S.mini('trap', 'rattle'); K.pxrFlash('mini_trap', 2, 0.4 + i * 0.2); },
+      onReveal: () => { mg.box.open = mg.t; mg.box.sk = 0; mg.box.qc = trapQC[q]; S.mini('trap', 'box'); K.pxrFlash('mini_trap', 'all', 1);
+        const s = trapSlot(); if (s) { s.burst('spark', K.ax(cx), K.ay(cy) - 8, 30, { sp: 70, spread: 3, ang: 0, life: 1 }); s.burst('glint', K.ax(cx), K.ay(cy) - 10, 12, { sp: 40, life: 0.8, w: 12, h: 12 }); }
+        SHOW.later(mg, 0.08, () => SHOW.win(this, mg, tier, { x: cx - 150, y: cy, col: tier >= 3 ? C.gold : QC(q), label: tier === 4 ? '大奖' : tier === 3 ? '大赢' : '' }));
+        SHOW.later(mg, tier === 4 ? 0.7 : 0.25, () => { const got = give(this, mg, gains, { x: cx, y: cy }); SHOW.items(this, mg, got.map((g2, i) => ({ text: g2, col: i === got.length - 1 ? C.gold : C.cream, size: 36 })), { x: CX - 60, y: SY + 400, dy: 52 }); });
+        // 没踩到的雷一颗颗亮红灯；一颗都没踩就升空当烟花
+        mg.revealT = mg.t + 0.6; mg.fireworks = clean; SHOW.later(mg, 0.6, () => S.mini('trap', clean ? 'fireworks' : 'reveal')); } });
+    endIn(this, mg, T + TIER_END[tier - 1] + 0.3, clean ? '一颗雷都没踩！箱子里的东西全归你。' : '你带着一身灰摸到了箱子。', '#ff9a4a'); },
+  down(mg, px, py) { const c = Math.floor((px - TRX0) / TW), r = Math.floor((py - TRY0) / TH); if (r >= 0 && r < TR && c >= 0 && c < TC) MINI.trap.step.call(this, mg, r, c); else SHOW.tap(this, mg, px, py); },
   key(mg, k, down) { if (!down || mg.phase !== 'idle') return; const a = mg.at || { r: 1, c: -1 }, d = { up: [-1, 0], down: [1, 0], left: [0, -1], right: [0, 1] }[k]; if (d) { const r = cl(a.r + d[0], 0, TR - 1), c = a.c + d[1]; if (c >= 0 && c < TC) MINI.trap.step.call(this, mg, r, c); return true; } },
   btns(mg) { if (mg.phase !== 'idle') return []; return [{ t: '绕路', sub: mg.at ? '已经走进来了' : '-20 本局物资', leave: 1, dis: !!mg.at && false, fn: () => { const run = this.run; const v = Math.min(20, run.loot.supplies); this.hold('rsup', run.loot.supplies); run.loot.supplies -= v; this.release('rsup'); this.miniFinish('你绕了一大圈，丢了 ' + v + ' 物资。', '#8d8496'); } }]; },
   draw(x, mg) {
-    const t = mg.t, sh = mg.sh; bgv(x, '#2a2218', '#0e0a06');
-    for (let r = 0; r < TR; r++) for (let c = 0; c < TC; c++) { const px = mg.x0 + c * TW, py = mg.y0 + r * TH, op = mg.open[r][c], can = mg.phase === 'idle' && MINI.trap.adj(mg, r, c), hov = can && mg.mx > px && mg.mx < px + TW && mg.my > py && mg.my < py + TH;
-      // 地砖：没翻开的是凸起的棕砖（上沿亮一道），翻开的是凹下去的夜色；能走的格子描琥珀框，悬停变金
-      U.box(x, px + 6, py + 6, TW - 12, TH - 12, op ? C.night : C.umber); if (!op) K.R(x, px + 6, py + 6, TW - 12, 3, C.brown); if (can) K.RR(x, px + 6, py + 6, TW - 12, TH - 12, 0, null, hov ? C.gold : C.amber, 3);
-      if (!op) { for (let i = 0; i < 3; i++) K.R(x, px + 20 + i * 38, py + 30 + (i % 2) * 40, 18, 6, 'rgba(0,0,0,0.2)'); }
-      else if (mg.mine[r][c]) { K.CI(x, px + TW / 2, py + TH / 2, 26, C.slate); K.CI(x, px + TW / 2, py + TH / 2, 8, C.red); }
-    }
-    // 箱子：揭晓前在里面最好那件的品质色里抖，打开时鼓一下
-    const bx = mg.x0 + TC * TW + 70, by = mg.y0 + TR * TH / 2, B = mg.box; let jd = { dx: 0, dy: 0 }, bs = 1;
-    if (B && !B.open) jd = SHOW.aura(x, bx, by, 110, B.q, t, cl((t - B.t0) / 1.2, 0.2, 1)); if (B && B.open) { bs = 1.2 + 0.3 * Math.exp(-(t - B.open) * 7); K.GL(x, bx, by, 220, QC(B.q), 0.5 + 0.15 * Math.sin(t * 6)); }
-    K.chipC(x, '起点', mg.x0 - 60, mg.y0 + TR * TH / 2, C.cream); K.IC(x, 'chest', bx + jd.dx, by + jd.dy, 90 * bs); K.GL(x, bx, by, 90, C.gold, 0.4 + 0.2 * Math.sin(t * 3));
-    const hp = mg.at ? { x: mg.x0 + mg.at.c * TW + TW / 2, y: mg.y0 + mg.at.r * TH + TH - 10 } : { x: mg.x0 - 60, y: mg.y0 + TR * TH / 2 + 80 }; K.SP(x, heroSp(this), hp.x, hp.y, 110);
-    // the numbers sit above the leader standing on them (user ruling 2026-09-25); 脚下那个数字跟着心跳和落脚弹一下
-    for (let r = 0; r < TR; r++) for (let c = 0; c < TC; c++) { if (!mg.open[r][c] || mg.mine[r][c]) continue; const px = mg.x0 + c * TW + TW / 2, py = mg.y0 + r * TH + TH / 2, n = MINI.trap.cnt(mg, r, c), col = [C.lime, C.gold, C.amber, C.red, C.red][n] || C.white, cur = mg.at && mg.at.r === r && mg.at.c === c;
-      const beat = cur && sh && sh.tense ? Math.max(0, 1 - sh.beatT * 5) : 0, pop = cur && mg.stepT != null ? Math.exp(-(t - mg.stepT) * 10) : 0, k = 1 + 0.3 * beat + 0.45 * pop;
-      if (cur && n >= 2) K.GL(x, px, py, 70 + 30 * beat, col, 0.35 + 0.4 * beat);
-      x.save(); x.translate(px, py); x.scale(k, k); U.text(x, n ? String(n) : '·', 0, 0, T.num, col, { num: true, outline: true }); x.restore(); }
+    const t = mg.t, sh = mg.sh;
+    // 悬停：能走的格子抬起一格（石板本身画在舞台里）
+    const hc = Math.floor((mg.mx - TRX0) / TW), hr = Math.floor((mg.my - TRY0) / TH); mg.hov = hr >= 0 && hr < TR && hc >= 0 && hc < TC ? { r: hr, c: hc } : null;
+    if (mg.hov && mg.phase === 'idle' && mg.adjOk(hr, hc) && !(mg.hovWas && mg.hovWas.r === hr && mg.hovWas.c === hc)) S.mini('_', 'hover'); mg.hovWas = mg.hov && mg.phase === 'idle' && mg.adjOk(hr, hc) ? mg.hov : null;
+    if (!K.pxr(x, 'mini_trap', 0, 0, t, { mg, t })) bgv(x, '#2a2218', '#0e0a06');
+    // 数字压在石板的刻痕上，站着的那格跟着心跳和落脚弹一下（用户裁定 2026-09-25：数字画在领袖上面，站在格子上也看得见）
+    const numsFirst = [];
+    for (let r = 0; r < TR; r++) for (let c = 0; c < TC; c++) { if (!mg.open[r][c] || mg.mine[r][c] || t < mg.openT[r][c]) continue; numsFirst.push([r, c]); }
+    // 领袖：弧线跳格；被炸时白色剪影一帧、被掀回；第三颗雷转着飞出舞台
+    const hk = catHero(this), H0 = mg.hop, hq = H0 ? cl((t - H0.t0) / H0.d, 0, 1) : 1, lx = H0 ? H0.fx + (H0.tx - H0.fx) * hq : mg.pos.x, ly = (H0 ? H0.fy + (H0.ty - H0.fy) * hq : mg.pos.y) - Math.sin(hq * Math.PI) * (H0 && H0.back ? 40 : 28);
+    const hit = mg.hitT != null && t - mg.hitT < 0.08, fly = mg.flyT != null ? t - mg.flyT : -1;
+    if (fly >= 0) { x.save(); x.translate(lx - fly * 900, ly - fly * 700 + fly * fly * 400); x.rotate(-fly * 12); if (hk) M.PXR.MINI_D.cast(x, hk, 0, 0, 'hurt', 3, false); else K.SP(x, heroSp(this), 0, 0, 110); x.restore(); }
+    else if (hk) M.PXR.MINI_D.cast(x, hk, lx, ly, H0 && hq < 1 ? 'move' : 'idle', Math.floor(t * 12) % (H0 && hq < 1 ? 8 : 24), false, hit ? '#ffffff' : null);
+    else K.SP(x, heroSp(this), lx, ly, 110);
+    numsFirst.forEach(([r, c]) => { const p = tileC(r, c), n = MINI.trap.cnt(mg, r, c), col = [C.lime, C.gold, C.amber, C.red, C.red][n] || C.white, cur = mg.at && mg.at.r === r && mg.at.c === c;
+      const beat = cur && sh && sh.tense ? Math.max(0, 1 - sh.beatT * 5) : 0, st = t - mg.openT[r][c], pop = st < 0.3 ? (st < 0.06 ? 0.35 + st / 0.06 * 0.9 : 1.25 - (st - 0.06) / 0.24 * 0.25) : 1, k = pop + 0.3 * beat;
+      x.save(); x.translate(p.x, p.y - 6); x.scale(k, k); U.text(x, n ? String(n) : '·', 0, 0, T.num, col, { num: true, outline: true }); x.restore(); });
+    // 不能走的格子：那块摇一下头
+    if (mg.nope && t - mg.nope.t < 0.25) { const p = tileC(mg.nope.r, mg.nope.c), w = Math.round(Math.sin((t - mg.nope.t) * 60) * 2) * 4; x.save(); x.globalAlpha = 0.9; K.RR(x, p.x - TW / 2 + 8 + w, p.y - TH / 2 + 4, TW - 16, TH - 16, 0, null, C.red, 4); x.restore(); }
     for (let i = 0; i < 3; i++) K.IC(x, 't_heart', SX + 90 + i * 50, SY + 130, 40 * (i < 3 - mg.hp ? 1 : 0.4));
   } };
 

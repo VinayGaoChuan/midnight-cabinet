@@ -1067,7 +1067,7 @@
 | V136 | `Sfx.raidWin` | 守城 | 1 |
 | V137 | `Sfx.rankStamp` | 守城 | 0 |
 | V138 | `Sfx.portalCollapse` | 守城 | 1 |
-| V139 | `Sfx.mini` | 小游戏 | 169 |
+| V139 | `Sfx.mini` | 小游戏 | 175 |
 | V140 | `Sfx.introToll` | 开场演出 | 0 |
 | V141 | `Sfx.coinRoll` | 开场演出 | 0 |
 | V142 | `Sfx.spook` | 开场演出 | 0 |
@@ -1076,6 +1076,6 @@
 | V145 | `Sfx.glitch` | 开场演出 | 0 |
 | V146 | `Sfx.jackpot` | 开场演出 | 0 |
 
-小游戏各自的一组（`Sfx.mini(小游戏, 事件)`）：`mine` pick / loosen / gem / cavein；`roulette` spin / click / bet / gold / win / skull / miss；`fruit` gogo / lever / spin / stop / jackpot / win / skulls / nomatch；`claw` move / drop / grab / lift / prize / slip / empty / bounce；`pachinko` launch / peg / slot / edge；`tree` curse / pick / water / cut / grow / fruit；`tarot` lift / shuffle / flip / good / bad；`eggs` hammer / crack / prize / snake；`dice` shake / roll / clack / win / lose / tie；`fate` cost / spin / click / stop；`musician` note / metro / miss / pluck / tick / cross / great / ok / poor / snap；`granny` stitch / miss / done；`well` charge / toss / splash / great / ok / miss；`child` step / wrong / lost / found；`grave` lid / dig / candle / coffin / hand / out / treasure；`clinic` pick / drink / good / bad / mult / hover / pop / crack / fizz / omen；`mirror` tone / wrong / pass；`altar` pour / flicker / out / win；`peddler` shuffle / lift / win / lose；`spring` zone / bubble / tick / good / hot / cool / plunge / drop / clamp / geyser；`trap` step / num / boom / box；`cat` wave / coin / bar / bomb / miss / flick / spill / weigh / bell / clink；`market` grab / swing / stamp / deal / miss；`trainer` bell / punch / done；`statue` eyes / turn / align / wake / fail；`arena` ko / open / roar / cheer / bet / hit / win / lose；`camp` fire / rest / sharpen；`recruit` curtain / reveal / full。
+小游戏各自的一组（`Sfx.mini(小游戏, 事件)`）：`mine` pick / loosen / gem / cavein；`roulette` spin / click / bet / gold / win / skull / miss；`fruit` gogo / lever / spin / stop / jackpot / win / skulls / nomatch；`claw` move / drop / grab / lift / prize / slip / empty / bounce；`pachinko` launch / peg / slot / edge；`tree` curse / pick / water / cut / grow / fruit；`tarot` lift / shuffle / flip / good / bad；`eggs` hammer / crack / prize / snake；`dice` shake / roll / clack / win / lose / tie；`fate` cost / spin / click / stop；`musician` note / metro / miss / pluck / tick / cross / great / ok / poor / snap；`granny` stitch / miss / done；`well` charge / toss / splash / great / ok / miss；`child` step / wrong / lost / found；`grave` lid / dig / candle / coffin / hand / out / treasure；`clinic` pick / drink / good / bad / mult / hover / pop / crack / fizz / omen；`mirror` tone / wrong / pass；`altar` pour / flicker / out / win；`peddler` shuffle / lift / win / lose；`spring` zone / bubble / tick / good / hot / cool / plunge / drop / clamp / geyser；`trap` step / num / boom / box / hop / nope / click / rattle / reveal / fireworks；`cat` wave / coin / bar / bomb / miss / flick / spill / weigh / bell / clink；`market` grab / swing / stamp / deal / miss；`trainer` bell / punch / done；`statue` eyes / turn / align / wake / fail；`arena` ko / open / roar / cheer / bet / hit / win / lose；`camp` fire / rest / sharpen；`recruit` curtain / reveal / full。
 
 <!-- /gen:sounds -->

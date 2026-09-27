@@ -39,6 +39,11 @@ function lantern(D, x, y, li, sw, big) {
   D.end();
   D.beg(); const ty = top + 4 + bh; D.px(cx, ty, 'gold', 8); for (let k = 1; k < 6; k++) { D.px(cx - 1 + Math.round(sw * 0.2 * k / 5), ty + k, 'gold', 6 - (k > 3 ? 1 : 0)); D.px(cx + Math.round(sw * 0.2 * k / 5), ty + k, 'gold', 7 - (k > 3 ? 1 : 0)); } D.end();
 }
+// a small torch / candle flame (s px tall), flickering, glowing
+function flame(D, x, y, s, t, ph) {
+  const hh = Math.round(s * (0.8 + 0.25 * n1(t * 9 + ph))), sw = Math.round(n1(t * 5 + ph * 2) * 0.8);
+  for (let k = 0; k < hh; k++) { const q = k / hh, w = Math.max(1, Math.round((1 - q * q) * s * 0.45)), cx = x + Math.round(sw * q); for (let i = -w + 1; i < w; i++) D.px(cx + i, y - k, 'fire', clamp(11 - q * 6 - Math.abs(i) * 2.2, 3, 11), { e: 255 }); }
+}
 // a square-holed coin seen at turn phase a (0 = face on): 7 px across at most
 function coin(D, x, y, a, tone, big) {
   const r = big ? 4 : 3, c = Math.cos(a), w = Math.max(0.6, Math.abs(c) * r), edge = Math.abs(c) < 0.3;
@@ -353,6 +358,112 @@ X.def('mini_spring', {
       if (gz < 1.8 && Math.random() < 0.9) rs.burst('drip', px0 + (Math.random() - 0.5) * 20, py0 - hh, 2, { sp: 40, spread: 2.4, life: 1.4, floor: py0 });
       if (gz > 0.3) { const ra = Math.min(1, (gz - 0.3) / 0.4) * (gz > 1.8 ? Math.max(0, 1 - (gz - 1.8) / 0.4) : 1), R0 = 58, cols = [['red', 8], ['fire', 8], ['lamp', 9], ['leaf', 9], ['teal', 8], ['water', 8], ['arcane', 7]];
         D.lay('wall'); if (ra > 0.1) cols.forEach(([m, tn], i) => { const r = R0 - i * 2; for (let a = 0; a < Math.PI * ra; a += 0.5 / r) { const x = Math.round(px0 - Math.cos(a) * r * 1.3), y = Math.round(py0 - 16 - Math.sin(a) * r * 0.9); if (y > 18) { D.px(x, y, m, tn, { e: 255 }); D.px(x, y + 1, m, tn - 1, { e: 255 }); } } }); } }
+  },
+});
+
+// ═════════════════════ 地雷阵 · the minefield in a ruined pass ═════════════════════
+// a broken ashlar wall with a torn war banner, two torches, a barbed-wire line; a 6×3 field of thick stone slabs (the grid
+// the game walks); an arch you came in by, a skull sign; the chest on a plinth in a shaft of light; rubble up front.
+// Opened slabs sink and show a lit engraving under the number, mines are rusty spiked iron with a red lamp, blasts leave
+// charred craters that smoke. The field trembles (every closed neighbour alike — no hint) while you stand on a 2+.
+const TG = { x0: 39, y0: 43, tw: 37, th: 32, tc: 6, tr: 3, chest: [278, 91] };
+MD.TRAP = TG;
+const NUMC = [['screen', 9], ['lamp', 9], ['fire', 8], ['red', 8], ['red', 9]];
+function slab(D, x, y, w, h, t, o) {
+  o = o || {}; const dy = o.dy || 0, th = 4;
+  D.beg();
+  for (let k = 0; k < th; k++) D.rect(x + 1, y + h - th + dy + k, w - 2, 1, 'stone', t - 2.6 - k * 0.5, { n: [0, 0.7] });   // front face (thickness), darker toward the ground
+  for (let k = 0; k < h - th; k++) D.px(x + w - 1, y + k + dy + 1, 'stone', t - 3.4, { n: [0.7, 0] });                          // right face in shadow
+  for (let yy = 0; yy < h - th; yy++) for (let xx = 1; xx < w - 1; xx++) { const e = xx < 2 || yy < 1, f = xx > w - 3 || yy > h - th - 2, cu = ((xx - w / 2) / (w / 2)) ** 2 + ((yy - (h - th) / 2) / ((h - th) / 2)) ** 2; D.px(x + xx, y + yy + dy, 'stone', t + (e ? 1.6 : f ? -1 : cu < 0.35 ? 0.5 : 0), { n: [0, -0.85] }); }
+  D.end();
+  if (!o.plain) { D.noise(x + 2, y + 1 + dy, w - 4, h - th - 2, 1, 4, (x * 31 + y) | 0, { only: 'stone' }); const r = X.rng(x * 7 + y); for (let k = 0; k < 3; k++) D.px(x + 3 + Math.floor(r() * (w - 6)), y + 2 + dy + Math.floor(r() * (h - th - 4)), 'stone', t - 2); if (r() < 0.5) { let cx = x + 5 + Math.floor(r() * (w - 10)), cy = y + 2 + dy; for (let k = 0; k < h - th - 5; k++) { D.px(cx, cy + k, 'stone', t - 2.6); if (r() < 0.4) cx += r() < 0.5 ? -1 : 1; } } }
+}
+function mine(D, x, y, t, lit) {
+  D.beg(); for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2; D.line(x + Math.round(Math.cos(a) * 5), y + Math.round(Math.sin(a) * 4), x + Math.round(Math.cos(a) * 7), y + Math.round(Math.sin(a) * 5.5), 'iron', 6); } D.end();
+  D.beg(); blob(D, x, y, 5.5, 4.5, 'copper', 4.4, { k: 2 }); D.hl(x - 4, y, 9, 'iron', 3); [[-3, -1], [2, -2], [3, 1]].forEach(([a, b]) => D.px(x + a, y + b, 'copper', 7)); D.end();
+  D.px(x, y - 4, lit ? 'red' : 'red', lit ? 10 : 5, lit ? { e: 255 } : undefined); D.px(x, y - 5, 'iron', 7);
+}
+X.def('mini_trap', {
+  size: [W, H], fy: FY, noFrame: 1, amb: [0.22, 0.24],
+  paint(S, sc) {
+    sc.light({ x: 72, y: 16, z: 18, r: 92, i: 1.1, c: '#ff9040', fl: 'fire', ph: 0, tint: 0.55 });    // 0 left torch
+    sc.light({ x: 230, y: 16, z: 18, r: 92, i: 1.1, c: '#ff9040', fl: 'fire', ph: 2, tint: 0.55 });   // 1 right torch
+    sc.light({ x: 278, y: 70, z: 30, r: 56, i: 0.9, c: '#ffe0a0', tint: 0.3 });                         // 2 the shaft on the chest
+    sc.light({ x: 20, y: 96, z: 10, r: 40, i: 0.35, c: '#8fa0ff', tint: 0.4 });                         // 3 cold air from the arch
+    sc.light({ x: 150, y: 90, z: 60, r: 170, i: 0.35, c: '#c0b8ff', tint: 0.12 });                      // 4 the dim over the field
+    // ── wall: ashlar with a broken top, a torn banner, torch brackets, a line of wire posts ──
+    S.lay('wall'); S.rect(0, 0, W, FY, 'stone', 2); TX.ashlar(S, 0, 0, W, 40, 'stone', 5, { bh: 8, bw: 18, crack: 0.25 });
+    for (let x = 0; x < W; x++) { const top = 3 + Math.round(Math.abs(Math.sin(x * 0.09)) * 5 + (x % 17 < 4 ? 3 : 0)); for (let y = 0; y < top; y++) S.px(x, y, 'night', 1, { e: 255 }); }
+    S.ao(0, 26, W, 14, 'b', 2); S.hl(0, 40, W, 'stone', 1);
+    S.lay('back'); S.beg(); S.rect(141, 4, 18, 30, 'crimson', 5); for (let y = 4; y < 34; y++) { S.px(141, y, 'crimson', 6.5); S.px(158, y, 'crimson', 3); } S.poly([[141, 34], [150, 27], [159, 34], [159, 38], [155, 35], [150, 31], [144, 37], [141, 36]], 'crimson', 4.5); S.rect(139, 3, 22, 2, 'wood', 5); S.end();
+    S.ell(150, 15, 5, 5, 'gold', 5, { ring: 1 }); S.px(150, 15, 'gold', 7); S.rect(146, 20, 9, 1, 'gold', 4); [[147, 26], [153, 29]].forEach(([x, y]) => { S.px(x, y, 'crimson', 1.5); S.px(x + 1, y, 'crimson', 1.5); });
+    [72, 230].forEach(x => { S.beg(); S.box(x - 3, 20, 7, 3, 'iron', 5); S.line(x, 20, x, 13, 'wood', 6); S.px(x - 1, 13, 'wood', 4); S.px(x + 1, 13, 'wood', 4); S.end(); });
+    for (let x = 6; x < W; x += 30) { S.beg(); S.rect(x, 30, 2, 12, 'wood', 5); S.px(x, 30, 'wood', 7); S.end(); }
+    for (let x = 0; x < W; x++) { const y = 33 + Math.round(Math.abs(((x % 10) - 5)) * 0.4); S.px(x, y, 'iron', 6); if (x % 5 === 0) { S.px(x, y - 1, 'iron', 8); S.px(x, y + 1, 'iron', 4); } }
+    // ── ground: gravel and packed dirt between everything ──
+    S.lay('wall'); S.rect(0, 40, W, H - 40, 'earth', 3.5); S.noise(0, 40, W, H - 40, 1.2, 2, 31, { only: 'earth' });
+    // ── the slab field (closed slabs; opened ones are drawn live) ──
+    for (let r = 0; r < TG.tr; r++) for (let c = 0; c < TG.tc; c++) slab(S, TG.x0 + c * TG.tw, TG.y0 + r * TG.th, TG.tw, TG.th, 5.2 + ((r + c) % 2) * 0.4);
+    for (let i = 0; i < 26; i++) { const x = TG.x0 + Math.floor(S.r() * TG.tw * 6), y = TG.y0 + Math.floor(S.r() * TG.th * 3); if (S.at(x, y) && S.r() < 0.6) S.px(x, y, 'moss', 4 + S.r() * 2); }
+    // ── the arch on the left, the skull sign ──
+    S.lay('back'); S.beg(); TX.ashlar(S, 0, 44, 34, 104, 'stone', 5.6, { bh: 7, bw: 10 }); S.end();
+    for (let y = 60; y < 148; y++) for (let x = 6; x < 28; x++) { const u = (x + 0.5 - 17) / 11, top = 72 - 12 * Math.sqrt(Math.max(0, 1 - u * u)); if (y >= top) S.px(x, y, 'night', 0.8 + (y - top) / 90, { e: 255 }); }
+    S.lay('mid'); S.beg(); S.rect(28, 118, 2, 26, 'wood', 5); S.box(20, 110, 18, 12, 'wood', 6); S.end();
+    S.ell(29, 115, 3, 2.6, 'bone', 9); S.px(28, 115, 'ink', 0); S.px(30, 115, 'ink', 0); S.hl(28, 118, 3, 'bone', 7); S.line(24, 112, 34, 120, 'bone', 7); S.line(34, 112, 24, 120, 'bone', 7);
+    // ── the chest's plinth and the shaft of light ──
+    S.lay('back'); S.beg(); S.box(262, 100, 34, 14, 'stone', 6.4, { top: 2 }); S.box(258, 114, 42, 34, 'stone', 5.6, { top: 1 }); S.end(); TX.ashlar(S, 258, 116, 42, 32, 'stone', 5.4, { bh: 8, bw: 14 });
+    sc.shaft({ x: 278, y0: 0, y1: 100, w0: 7, w1: 15, i: 0.45, haze: 0.6, c: '#fff0c8', f: (t) => 0.85 + 0.15 * Math.sin(t * 1.4) });
+    sc.emit({ k: 'dust', x: 278, y: 60, w: 20, h: 70, rate: 4, sp: 3, life: 3 });
+    // ── rubble up front: a dented helmet, bones, a broken blade in the dirt, loose stones ──
+    S.lay('front'); for (let i = 0; i < 14; i++) { const x = 40 + i * 17 + Math.floor(S.r() * 8), y = 152 + Math.floor(S.r() * 16); S.beg(); blob(S, x, y, 2 + S.r() * 3, 1.5 + S.r() * 1.5, 'stone', 5 + S.r(), { k: 2 }); S.end(); }
+    S.beg(); blob(S, 96, 162, 6, 4, 'iron', 5, { k: 2.4, clipY: 164 }); S.hl(90, 164, 13, 'iron', 3); S.rect(94, 160, 1, 3, 'ink', 1); S.end();
+    S.beg(); S.line(200, 150, 204, 166, 'iron', 8); S.line(201, 150, 205, 166, 'iron', 6); S.rect(197, 148, 9, 2, 'brass', 6); S.rect(200, 145, 3, 3, 'wood', 5); S.end();
+    S.beg(); S.line(150, 167, 162, 164, 'bone', 8); S.px(149, 166, 'bone', 9); S.px(163, 163, 'bone', 9); S.end();
+  },
+  anim(D, t, rs, o) {
+    const mg = (o && o.mg) || {}, T = o && o.t != null ? o.t : t, sh = mg.sh || {}, idle = mg.phase === 'idle';
+    // torches
+    [72, 230].forEach((x, i) => flame(D, x, 13, 6, T, i * 2.3));
+    if (!mg.open) return;
+    const at = mg.at, tense = sh.tense && at, adj = (r, c) => at && Math.abs(at.r - r) <= 1 && Math.abs(at.c - c) <= 1 && !(at.r === r && at.c === c);
+    for (let r = 0; r < TG.tr; r++) for (let c = 0; c < TG.tc; c++) {
+      const x = TG.x0 + c * TG.tw, y = TG.y0 + r * TG.th, op = mg.open[r][c], mn = mg.mine[r][c];
+      if (op && mg.openT && mg.openT[r] && T < mg.openT[r][c]) continue;   // still in the air: the slab has not sunk yet
+      if (op) {
+        const st = mg.openT && mg.openT[r] ? T - mg.openT[r][c] : 9, press = st < 0.08 ? 3 : st < 0.16 ? 1 : 2;
+        D.lay('back');
+        if (mn) { // a charred crater: black ring, glowing cracks that cool, the mine's burst shell
+          D.rect(x + 1, y, TG.tw - 2, TG.th, 'earth', 1.5); D.ell(x + TG.tw / 2, y + TG.th / 2, 14, 10, 'ink', 1); D.ell(x + TG.tw / 2, y + TG.th / 2, 14, 10, 'earth', 2.6, { ring: 2 });
+          const cool = Math.max(0, 1 - st / 4); for (let k = 0; k < 7; k++) { const a = k * 0.9 + 0.3; D.line(x + TG.tw / 2 + Math.cos(a) * 4, y + TG.th / 2 + Math.sin(a) * 3, x + TG.tw / 2 + Math.cos(a) * 11, y + TG.th / 2 + Math.sin(a) * 8, 'fire', 3 + cool * 7, cool > 0.1 ? { e: 255 } : undefined); }
+          if (Math.random() < 0.15) rs.burst('steam', x + TG.tw / 2, y + TG.th / 2 - 2, 1, { sp: 5, ang: 0, spread: 0.5, life: 2 });
+          if (cool > 0.3 && Math.random() < 0.3) rs.burst('ember', x + TG.tw / 2 + (Math.random() - 0.5) * 16, y + TG.th / 2, 1, { sp: 8, ang: 0, spread: 1, life: 1 });
+        } else { // sunk slab with a lit engraving under the number
+          D.rect(x + 1, y, TG.tw - 2, TG.th, 'earth', 1.2); slab(D, x, y + press, TG.tw, TG.th - press, 4.4, { plain: 1 });
+          const n = mg.cnt ? mg.cnt(r, c) : 0, [m, tn] = NUMC[n] || NUMC[4], cx = x + Math.round(TG.tw / 2), cy = y + press + Math.round((TG.th - 4) / 2);
+          D.rect(cx - 7, cy - 8, 15, 15, 'stone', 2.2); D.rect(cx - 6, cy - 7, 13, 13, m, tn - 6, { e: 255 });
+          D.hl(cx - 7, cy - 8, 15, m, tn - (st < 0.3 ? 0 : 2), { e: 255 }); D.hl(cx - 7, cy + 6, 15, m, tn - 3, { e: 255 }); D.vl(cx - 7, cy - 8, 15, m, tn - 2, { e: 255 }); D.vl(cx + 7, cy - 8, 15, m, tn - 3, { e: 255 });
+          if (n >= 2) rs.dl.push({ x: cx, y: cy, z: 8, r: 14 + n * 3, i: 0.4, rgb: n >= 3 ? [255, 70, 60] : [255, 150, 60], tint: 0.6 });
+        }
+        continue;
+      }
+      // closed: tremble while standing on a 2+ (all the closed neighbours alike), lift and glow when it is a legal step
+      const can = idle && mg.adjOk && mg.adjOk(r, c), hov = can && mg.hov && mg.hov.r === r && mg.hov.c === c, sj = tense && adj(r, c) ? ((Math.floor(T * 30) + r * 3 + c) % 3) - 1 : 0;
+      if (sj || hov) { D.lay('back'); D.rect(x + 1, y, TG.tw - 2, TG.th, 'earth', 1.5); slab(D, x + sj, y - (hov ? 1 : 0), TG.tw, TG.th, 5.6 + (hov ? 0.6 : 0)); if (sj && Math.random() < 0.08) rs.burst('dust', x + TG.tw / 2 + (Math.random() - 0.5) * TG.tw, y + TG.th - 3, 2, { sp: 4, life: 1 }); }
+      if (can) { D.lay('back'); const g = hov ? 11 : 8 + Math.sin(T * 5) * 1.5, m = hov ? 'lamp' : 'fire';
+        for (let xx = x + 1; xx < x + TG.tw - 1; xx++) { D.px(xx, y - (hov ? 1 : 0), m, g, { e: 255 }); D.px(xx, y + TG.th - 1, m, g - 3, { e: 255 }); } for (let yy = y; yy < y + TG.th; yy++) { D.px(x + 1, yy - (hov ? 1 : 0), m, g - 1, { e: 255 }); D.px(x + TG.tw - 2, yy - (hov ? 1 : 0), m, g - 2, { e: 255 }); } }
+    }
+    // mines that were never stepped on, shown once the chest is open (red lamps blink one by one); a clean run sends them up as fireworks
+    if (mg.revealT != null && T > mg.revealT) for (let r = 0; r < TG.tr; r++) for (let c = 0; c < TG.tc; c++) { if (!mg.mine[r][c] || mg.open[r][c]) continue; const k = r * 6 + c, on = T - mg.revealT > k * 0.05;
+      if (!on) continue; const x = TG.x0 + c * TG.tw + TG.tw / 2, y = TG.y0 + r * TG.th + TG.th / 2 - 2;
+      if (mg.fireworks) { const ft = T - mg.revealT - k * 0.12; if (ft < 0) { D.lay('mid'); mine(D, x, y, T, 1); } else if (ft < 0.5) { D.lay('front'); for (let j = 0; j < 4; j++) D.px(x, y - ft * 160 + j, 'fire', 11 - j * 2, { e: 255 }); } else if (!mg.fw || !mg.fw[k]) { (mg.fw = mg.fw || {})[k] = 1; rs.burst('spark', x, y - 80, 22, { sp: 60, spread: 6.3, life: 1.1 }); rs.burst('glint', x, y - 80, 8, { sp: 40, life: 0.8, w: 10, h: 10 }); } }
+      else { D.lay('mid'); mine(D, x, y, T, Math.floor(T * 8 + k) % 2); } }
+    // the chest: shakes in its omen colour, light leaks from the seams; the lid flies open and a pillar of light goes up
+    const B = mg.box || {}, cx = TG.chest[0], cy = TG.chest[1], sk = B.sk || 0, jx = Math.round(Math.sin(T * 50) * sk), op2 = B.open != null ? T - B.open : -1, qc = B.qc || null;
+    D.lay('mid'); D.beg(); D.box(cx - 12 + jx, cy - 4, 24, 13, 'wood', 5, { top: 1 }); D.hl(cx - 12 + jx, cy + 2, 24, 'brass', 7); D.vl(cx - 12 + jx, cy - 4, 13, 'brass', 7); D.vl(cx + 11 + jx, cy - 4, 13, 'brass', 5); D.rect(cx - 2 + jx, cy - 3, 5, 5, 'brass', 8); D.px(cx + jx, cy - 1, 'ink', 0); D.end();
+    if (op2 < 0) { D.beg(); D.box(cx - 13 + jx, cy - 11 - (sk > 1 ? 1 : 0), 26, 7, 'wood', 6, { top: 1 }); D.hl(cx - 13 + jx, cy - 11, 26, 'brass', 8); D.vl(cx - 13 + jx, cy - 11, 7, 'brass', 7); D.vl(cx + 12 + jx, cy - 11, 7, 'brass', 5); D.end();
+      if (qc) { D.hl(cx - 11 + jx, cy - 4, 22, qc[0], qc[1], { e: 255 }); D.px(cx + jx, cy - 1, qc[0], qc[1] + 1, { e: 255 }); rs.dl.push({ x: cx, y: cy - 4, z: 10, r: 30 + sk * 6, i: 0.6 + sk * 0.2, rgb: qc[2], tint: 0.6 }); } }
+    else { const la = Math.min(1, op2 / 0.25), ly = cy - 11 - Math.round(la * 14), lx = cx + Math.round(la * 10); D.beg(); D.box(lx - 13, ly, 26, 4 + Math.round((1 - la) * 3), 'wood', 6.5, { top: 1 }); D.hl(lx - 13, ly, 26, 'brass', 8); D.end();
+      if (qc) { const ph = Math.max(0, 1 - op2 / 2.5); for (let y = 0; y < cy - 4; y++) { const w = 4 + Math.round((cy - 4 - y) / 12); for (let j = -w; j <= w; j++) if (Math.abs(j) < w * ph + 1) D.px(cx + j, y, qc[0], qc[1] - Math.abs(j) / w * 3, { e: 255 }); } rs.dl.push({ x: cx, y: cy - 10, z: 20, r: 70, i: 1.2 * ph, rgb: qc[2], tint: 0.6 }); } }
   },
 });
 })();
