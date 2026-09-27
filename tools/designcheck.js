@@ -27,6 +27,10 @@
     };
     const missing = {};
     Object.keys(lists).forEach(k => { const miss = lists[k].filter(n => n && !doc.includes(String(n).replace(/卡带$/, ''))); if (miss.length) missing[k] = miss; });
+    // every card on the 玩法说明 page has its own animation (user ruling 2026-09-27, src/mc-demo.js)
+    const onPage = ['房间', '基地', '领袖', '出征', '战斗', '夜市', '混沌来袭', '标签与品质'];
+    const noDemo = (M.GUIDE || []).filter(c => onPage.includes(c.cat) && !(M.DEMO && M.DEMO[c.id])).map(c => c.id + ' ' + c.title);
+    if (noDemo.length) missing['说明动画（缺）'] = noDemo;
     return { ok: !Object.keys(missing).length, missing };
   };
 })();

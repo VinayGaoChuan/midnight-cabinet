@@ -155,4 +155,5 @@ mc-endone.js
 mc-clarity.js
 mc-shopcard.js
 mc-report.js
+mc-demo.js
 mc-perf.js

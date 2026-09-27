@@ -1498,15 +1498,20 @@
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
         <sc-for list="{{gl.loop}}" as="gp" hint-placeholder-count="4"><div data-pj="well" style="display:flex;gap:12px;align-items:flex-start;padding:12px 14px 18px"><m-img src="{{gp.img}}" style="width:48px;height:48px;flex:none"></m-img><div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:28px;color:#ffcf4a">{{gp.t}}</span><span style="font-size:20px;line-height:1.4;color:#a9a3c9">{{gp.d}}</span></div></div></sc-for>
       </div>
-      <div style="flex:1;min-height:0;overflow-y:auto;padding-right:8px;display:flex;flex-direction:column;gap:14px">
-        <sc-for list="{{gl.cats}}" as="gc" hint-placeholder-count="2">
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <div style="font-size:30px;color:#ffcf4a;text-shadow:3px 3px 0 #07060f">{{gc.n}}</div><div data-pj="div"></div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 24px">
-              <sc-for list="{{gc.items}}" as="gi" hint-placeholder-count="2"><div style="display:flex;gap:12px;align-items:center"><m-img src="{{gi.img}}" style="width:40px;height:40px;flex:none"></m-img><div style="display:flex;flex-direction:column"><span style="font-size:24px;color:#f4efe0">{{gi.t}}</span><span style="font-size:20px;line-height:1.35;color:#a9a3c9">{{gi.d}}</span></div></div></sc-for>
+      <div style="flex:1;min-height:0;display:flex;gap:30px">
+        <div data-g="help-list" style="width:600px;flex:none;overflow-y:auto;padding-right:8px;display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{gl2}}" as="gc" hint-placeholder-count="2">
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <div style="font-size:26px;color:#ffcf4a;text-shadow:3px 3px 0 #07060f;padding:4px 0">{{gc.n}}</div>
+              <sc-for list="{{gc.items}}" as="gi" hint-placeholder-count="2"><div sc-camel-on-click="{{gi.pick}}" sc-camel-on-mouse-enter="{{gi.pick}}" style="display:flex;gap:12px;align-items:center;padding:5px 10px;background:{{gi.bg}};cursor:pointer"><m-img src="{{gi.img}}" style="width:32px;height:32px;flex:none"></m-img><span style="font-size:22px;color:{{gi.col}}">{{gi.t}}</span></div></sc-for>
             </div>
-          </div>
-        </sc-for>
+          </sc-for>
+        </div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px">
+          <canvas data-g="demo-cv" width="1600" height="900" style="width:760px;height:428px;background:#0d0b1e;box-shadow:0 0 0 3px #07060f,6px 6px 0 3px #07060f;image-rendering:pixelated"></canvas>
+          <div style="font-size:30px;color:#ffe08a;text-shadow:3px 3px 0 #07060f">{{hsel.t}}</div>
+          <div style="font-size:22px;line-height:1.4;color:#cfc8ea;max-width:860px">{{hsel.d}}</div>
+        </div>
       </div>
     </div>
   </div>
