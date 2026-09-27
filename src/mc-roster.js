@@ -6,8 +6,7 @@
 // · How many go out: 6 places, +1 at leader Lv4 and Lv7, +1 each for 军械库 and 罗马斗兽场, 10 at most. A card that makes three
 //   of a kind can always be bought (they merge at once); any other card, with the army full, is a swap: pick the unit to
 //   let go (it pays back half its price) and the new one takes its place. Other gifts of a unit, full: half its price.
-// · Vocation pairs (职业羁绊): 2 and 4 of one vocation light a bonus that fits the vocation; the shop and the fight show
-//   them, a card that would complete one says so.
+// · (Vocation pairs came and went the same day: removed at the user's word.)
 // · Shops lay out 5 units; the first refresh in a shop costs 5, each next one 5 more; deeper stops sell better tiers.
 // · The base: blueprints come as 「图纸三选一」 (an area's final boss, a prosperity level) and random drops are halved;
 //   an evolution building raises one garrison unit of its vocation a tier for soul shards, once a day; every 发展方向
@@ -30,7 +29,7 @@ M.canAdd = (run, type) => !run || M._noCap || run.roster.length < M.rosterCap(ru
 M.addUnit = function (run, type) { if (!M.canAdd(run, type)) return null; run.roster.push({ uid: M.rid(), type, star: 1, bAtk: 0, bHp: 0, lv: 1, battles: 0, kills: 0, mana: 0, bonusAtk: 0 }); return null; };
 // the starting army is never cut short by the cap
 const oNR = M.newRun3;
-M.newRun3 = function () { M._noCap = true; let run; try { run = oNR.apply(this, arguments); } finally { M._noCap = false; } if (run) M.synBind(run); return run; };
+M.newRun3 = function () { M._noCap = true; let run; try { run = oNR.apply(this, arguments); } finally { M._noCap = false; } return run; };
 // a unit given while the army is full: half its price in points
 const oAward = G.award;
 G.award = function (list, from) {
@@ -68,43 +67,7 @@ G.tick = function (dt) {
   return r;
 };
 
-// ───────── vocation pairs ─────────
-// per vocation: the bonus at 2 and at 4 (own units, or the whole army for team:1), and how it reads
-const SYN = M.SYN = {
-  先锋: { a: { hp: 0.2 }, b: { hp: 0.45 }, t: ['先锋生命 +20%', '先锋生命 +45%'] },
-  守护者: { team: 1, a: { hp: 0.05 }, b: { hp: 0.12 }, t: ['全队生命 +5%', '全队生命 +12%'] },
-  战士: { a: { atk: 0.2 }, b: { atk: 0.45 }, t: ['战士攻击 +20%', '战士攻击 +45%'] },
-  圣骑士: { a: { hp: 0.15, atk: 0.1 }, b: { hp: 0.3, atk: 0.2 }, t: ['圣骑士生命 +15%、攻击 +10%', '圣骑士生命 +30%、攻击 +20%'] },
-  射手: { a: { as: 0.15 }, b: { as: 0.35 }, t: ['射手攻速 +15%', '射手攻速 +35%'] },
-  刺客: { a: { atk: 0.25 }, b: { atk: 0.55 }, t: ['刺客攻击 +25%', '刺客攻击 +55%'] },
-  法师: { a: { mana: 0.25 }, b: { mana: 0.6 }, t: ['法师回法力 +25%', '法师回法力 +60%'] },
-  牧师: { a: { mana: 0.3 }, b: { mana: 0.7 }, t: ['牧师回法力 +30%', '牧师回法力 +70%'] },
-  祭司: { team: 1, a: { atk: 0.05 }, b: { atk: 0.12 }, t: ['全队攻击 +5%', '全队攻击 +12%'] },
-  召唤师: { a: { mana: 0.25 }, b: { mana: 0.6 }, t: ['召唤师回法力 +25%', '召唤师回法力 +60%'] },
-  商人: { score: [0.15, 0.35], t: ['击杀积分 +15%', '击杀积分 +35%'] },
-};
-M.SYN_AT = [2, 4];
-M.synCount = (roster) => { const c = {}; (roster || []).forEach(u => { const d = DB[u.type]; if (d && d.voc) c[d.voc] = (c[d.voc] || 0) + 1; }); return c; };
-M.synLv = (roster) => { const c = M.synCount(roster), L = {}; Object.keys(c).forEach(v => { if (SYN[v]) L[v] = c[v] >= 4 ? 2 : c[v] >= 2 ? 1 : 0; }); return L; };
-// the army's own modifiers know their run (hidden), so every unit built for a fight and every power estimate sees the pairs
-M.synBind = (run) => { if (run && run.mods && !run.mods.__run) Object.defineProperty(run.mods, '__run', { value: run, enumerable: false, writable: true }); };
-const oVM = M.vocMods;
-M.vocMods = function (md, d) {
-  const r = oVM.apply(this, arguments), run = md && md.__run; if (!run || !d || !d.voc) return r;
-  const L = M.synLv(run.roster), add = (x) => { if (!x) return; ['hp', 'atk', 'as', 'mana'].forEach(k => { if (x[k]) r[k] = (r[k] || 0) + x[k]; }); };
-  Object.keys(L).forEach(v => { const S2 = SYN[v], lv = L[v]; if (!lv || !S2 || S2.score) return; if (S2.team || v === d.voc) add(lv === 2 ? S2.b : S2.a); });
-  return r;
-};
-const oInit = BP.init;
-BP.init = function (run) {
-  if (run) M.synBind(run);
-  const r = oInit.apply(this, arguments);
-  const L = run ? M.synLv(run.roster) : {}; if (L.商人) this.scoreK = Math.max(this.scoreK || 0, SYN.商人.score[L.商人 - 1]);
-  return r;
-};
-// only the lit pairs (a card that would complete one says so on the card): fewer words on screen
-const synChips = (run) => { const c = M.synCount(run.roster); return Object.keys(c).filter(v => SYN[v] && c[v] >= 2).sort((a, b) => c[b] - c[a]).map(v => { const n = c[v], lv = n >= 4 ? 2 : n >= 2 ? 1 : 0, S2 = SYN[v], col = (M.VOCS && M.VOCS[v]) || '#e8dcc4';
-  return { label: lv ? v + ' ' + n + ' · ' + S2.t[lv - 1] : v + ' ' + n + '/2', color: lv ? col : '#6b6570' }; }); };
+// ───────── vocation pairs: removed (user ruling 2026-09-26: 「把羁绊先去掉……没有羁绊，我也不会乱买，为了凑高等级单位」) ─────────
 
 // ───────── shops ─────────
 Object.keys(M.SHOPS || {}).forEach(k => { const s = M.SHOPS[k]; if (s && s.units > 5) s.units = 5; });
@@ -120,13 +83,10 @@ const oView = G.view;
 G.view = function () {
   const v = oView.call(this), run = this.run, T = now();
   if (v.w && run && !run.raid) v.w.rosterN = run.roster.length + ' / ' + M.rosterCap(run);
-  if (run && !run.raid && (this.screen === 'shop' || this.screen === 'battle')) v.syn = synChips(run);
-  if (run && run.raid && this.screen === 'battle') v.syn = synChips(run);
   if (v.s && run && this.screen === 'shop' && run.shop && run.shop.units) {
-    const full = run.roster.length >= M.rosterCap(run), c0 = M.synCount(run.roster);
-    (v.s.units || []).forEach((cv, i) => { const c = run.shop.units[i]; if (!c || c.sold) return; const d = DB[c.type];
-      if (full && !M.wouldMerge(run, c.type)) { cv.saleOn = true; cv.sale = '替换'; }
-      else if (d && d.voc && SYN[d.voc] && M.SYN_AT.includes((c0[d.voc] || 0) + 1) && !cv.saleOn) { cv.saleOn = true; cv.sale = d.voc + ' ' + ((c0[d.voc] || 0) + 1); } });
+    const full = run.roster.length >= M.rosterCap(run);
+    (v.s.units || []).forEach((cv, i) => { const c = run.shop.units[i]; if (!c || c.sold) return;
+      if (full && !M.wouldMerge(run, c.type)) { cv.saleOn = true; cv.sale = '替换'; } });
     const R = this.replace, rc = R && run.shop.units[R.i];
     if (rc) { v.s.selOn = true; v.s.sell = '点一支部队换成' + DB[rc.type].n + ' · 点这里取消'; if (v.w && v.w.roster) { const on = Math.floor(T / 250) % 2; v.w.roster.forEach(r => { r.border = on ? '#ff5a4a' : '#7a2a2a'; }); } }
   }
@@ -136,7 +96,6 @@ G.view = function () {
 const oTip = G.tipFor;
 G.tipFor = function (key) {
   const run = this.run;
-  if (key === 's-syn') return { title: '职业羁绊', c: '#ffcf4a', d: '同职业凑 2 支、4 支，各亮一档加成。' };
   if (key === 'w-roster' && run && !run.raid) { const h = run.hero, bm = run.M ? M.baseMods(run.M) : {}; return { title: '上场人数 ' + run.roster.length + ' / ' + M.rosterCap(run), c: '#ffcf4a', d: '满了还能买能凑成三合一的；别的要替换一支。', lines: [{ t: '领袖 Lv4、Lv7 各 +1' + (h && h.lv >= 4 ? '（已有 ' + ((h.lv >= 7) ? 2 : 1) + '）' : ''), c: '#a9a3c9' }, { t: '军械库、罗马斗兽场各 +1' + (bm.rosterCap ? '（已有 ' + bm.rosterCap + '）' : ''), c: '#a9a3c9' }] }; }
   return oTip.apply(this, arguments);
 };
@@ -222,7 +181,6 @@ G.beginBattle = function (n) {
 if (M.GUIDE) M.GUIDE.push(
   { id: 'rostercap', cat: '出征', icon: 't_command', title: '上场人数', line: '一趟最多带这么多部队；满了还能买能凑成三合一的，别的要替换一支。', scr: 'shop', sel: '[data-tip="w-roster"]' },
   { id: 'swap', cat: '夜市', icon: 'e_market', title: '替换', line: '队伍满了时点卡片，再点一支要放走的部队，它退一半积分。', scr: 'shop', sel: '[data-tip="w-roster"]' },
-  { id: 'vocsyn', cat: '战斗', icon: 'u_star', title: '职业羁绊', line: '同职业凑 2 支、4 支，各亮一档加成。', scr: 'shop', sel: '[data-tip="w-roster"]' },
   { id: 'bppick', cat: '基地', icon: 'g_scroll', title: '图纸三选一', line: '区域最终首领和繁荣度升级各给一次，从三张建筑图纸里选一张。', scr: 'base', sel: '[data-fx="core"]' },
   { id: 'garup', cat: '基地', icon: 'u_star', title: '驻军升档', line: '进化建筑每天能花灵魂碎片，让一支这个职业的驻军升一档。', scr: 'base', sel: '[data-fx="mgar"]' });
 })();

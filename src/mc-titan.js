@@ -5,7 +5,7 @@
 // times a unit's size. One rig — torso, head, two arms solved to where the fists must land, what grows on the back,
 // what the near hand holds — dressed per boss: the demon's horns and bat wings, the druid's antlers and staff, the old
 // tree's face in its bark, the queen's crescent crown … The moves are the same three for all (mc-bossfight.js); what
-// they are called, what rains in the second phase and the arena they stand in are the boss's own.
+// they are called, what rains in the first phase and the arena they stand in are the boss's own.
 // Rig space: art pixels, x forward (the boss faces right here and is mirrored on the field), y up is negative, the
 // arena's surface at y = 0. Everything below the surface is hidden by the arena drawn over it.
 const M = window.MC, P16 = M.P16; if (!P16) return;
@@ -464,7 +464,7 @@ M.TITAN.lip = function (ctx, b, T) {
   ctx.restore();
 };
 
-// ───────── what rains in the second phase ─────────
+// ───────── what rains in the first phase (天降) ─────────
 // falling things come from the sky slightly behind (towards the boss); rising things (thorns, hands, water) crack the
 // ground first and burst out on the hit
 const ERUPT = new Set(['thorn', 'hand', 'spout']);

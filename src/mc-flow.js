@@ -41,20 +41,20 @@ G.tick = function (dt) {
 const oStart = G.startGame;
 G.startGame = function () { if (this.modal && this.modal.over) this.modal = null; return oStart.apply(this, arguments); };
 
-// 放弃: everything of this game is wiped (base, leaders, rooms, stock, day); the tutorial stays done, settings stay
+// 放弃 is losing the game (user ruling 2026-09-26: 「选择放弃的话，相当于游戏失败，播放失败动画并进入结算」): the base blows up
+// room by room like a broken core (mc-meta-b.js), then the game's summary and everything a lost game brings (mc-legacy.js)
 G.askAbandon = function () {
-  if (this.raid || this.coreFx || this.tear) return;
-  this.modal = { title: '放弃这一局？', text: '基地、领袖、建筑、物资全部清空，从第 1 天重新开始。', border: '#d0453c', img: 'skull', back: () => { this.modal = null; this.bump(); },
-    choices: [{ t: '放弃，重新开始', danger: 1, fn: () => { this.modal = null; this.abandon(); } }, { t: '再想想', fn: () => { this.modal = null; this.bump(); } }] };
+  if (this.raid || this.coreFx || this.coreQueue || this.tear || this.night) return;
+  this.modal = { title: '放弃这一局？', text: '算作失败：基地爆炸，这一局结束，进入结算。', border: '#d0453c', img: 'skull', back: () => { this.modal = null; this.bump(); },
+    choices: [{ t: '放弃', danger: 1, fn: () => { this.modal = null; this.abandon(); } }, { t: '再想想', fn: () => { this.modal = null; this.bump(); } }] };
   this.bump();
 };
 G.abandon = function () {
-  const tut = !!(this.meta && this.meta.tutDone);
-  this.panel = null; this.raidPrep = null; this.raidGo = false; this.run = null; this.battle = null; this.raid = null; this.tipData = null; this.guide = null;
-  if (this.prof) { this.prof.active = false; this.prof.carry = null; this.prof.pending = null; this.saveProfile && this.saveProfile(); }
-  this.meta = M.resetMeta3(); this.meta.tutDone = tut; this.meta.baseTut = tut ? 99 : 0; this.save();
-  this.startGame();
-  this.toast('重新开始了 · 第 1 天 · 序章奖励已送到', '#ffe08a');
+  const m = this.meta; if (!m) return;
+  this.panel = null; this.raidPrep = null; this.tipData = null; this.guide = null; this.homeQ = null;
+  if (this.screen !== 'base') this.toBase();
+  this.abandoning = true; m.core = 0; this.save();
+  this.coreQueue = { pd: false, hp: 0 };
 };
 
 // 序章的结算奖励 (user ruling 2026-09-24): every new game after the tutorial starts with what the tutorial paid out

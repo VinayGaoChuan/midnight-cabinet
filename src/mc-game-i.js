@@ -138,8 +138,8 @@ G.setInputMode = function (m) { M.settings.input = m; M.saveSettings(M.settings)
 G.settingsView = function () {
   const S = M.settings, md = M.inputMode(this), plat = { pc: '电脑', deck: 'Steam 掌机', mobile: '手机 / 平板' }[M.platform];
   const modes = (M.platform === 'mobile' ? [['auto', '触屏'], ['pad', '手柄']] : [['auto', '自动'], ['kbm', '键鼠'], ['pad', '手柄']]).map(([k, n]) => ({ n, on: S.input === k, border: S.input === k ? '#47d6c1' : '#1f8f8a', bg: S.input === k ? '#47d6c1' : 'transparent', color: S.input === k ? '#07060f' : '#a89ca8', onClick: () => this.setInputMode(k) }));
-  const kacts = ['up', 'down', 'right', 'item1', 'item2', 'item3', 'skill', 'pause', 'speed', 'back'];
-  const pacts = ['confirm', 'back', 'item1', 'item2', 'item3', 'skill', 'pause', 'speed'];
+  const kacts = ['up', 'down', 'right', 'item1', 'item2', 'item3', 'pause', 'speed', 'back'];
+  const pacts = ['confirm', 'back', 'item1', 'item2', 'item3', 'pause', 'speed'];
   return { set: { plat, cur: { kbm: '键鼠', pad: '手柄', touch: '触屏' }[md], modes, showKeys: M.platform !== 'mobile',
     keys: kacts.map(a => ({ n: M.ACTION_N[a], k: this.rebind === a ? '按下新按键…' : (S.keys[a] || []).map(M.keyName).join(' / '), c: this.rebind === a ? '#ffe08a' : '#e8dcc4', border: this.rebind === a ? '#f2c14e' : '#3a3040', onClick: () => this.startRebind(a) })),
     pads: pacts.map(a => ({ n: M.ACTION_N[a], k: this.rebindPad === a ? '按下手柄按键…' : M.padName(S.pad[a]), c: this.rebindPad === a ? '#ffe08a' : '#e8dcc4', border: this.rebindPad === a ? '#f2c14e' : '#3a3040', onClick: () => this.startRebind(a, true) })),

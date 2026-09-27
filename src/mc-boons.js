@@ -10,7 +10,7 @@ const cl = (v, a, b) => Math.max(a, Math.min(b, v)), eo = (q) => 1 - Math.pow(1 
 
 // the battle keys and how they read (percentages unless noted)
 const BN = { unitAtk: '部队攻击 +{p}%', unitHp: '部队生命 +{p}%', heroAtk: '领袖攻击 +{p}%', heroHp: '领袖生命 +{p}%', shield: '部队开局护盾 {p}%', baseScore: '击杀积分 +{p}%',
-  feverStart: 'FEVER 槽开局 {p}%', feverRate: 'FEVER 槽涨得快 {p}%', skillPow: '领袖技能效果 +{p}%', vanHp: '先锋生命 +{p}%', guaHp: '守护者生命 +{p}%', warAtk: '战士攻击 +{p}%',
+  feverStart: 'FEVER 槽开局 {p}%', feverRate: 'FEVER 槽涨得快 {p}%', skillPow: '被动技能效果 +{p}%', vanHp: '先锋生命 +{p}%', guaHp: '守护者生命 +{p}%', warAtk: '战士攻击 +{p}%',
   palHp: '圣骑士生命 +{p}%', rngAtk: '射手攻击 +{p}%', rngAs: '射手攻速 +{p}%', assAtk: '刺客攻击 +{p}%', magAtk: '法师攻击 +{p}%', cleHp: '牧师生命 +{p}%', priAtk: '祭司攻击 +{p}%',
   priHp: '祭司生命 +{p}%', sumHp: '召唤师生命 +{p}%', sumAtk: '召唤师攻击 +{p}%', diverse: '每种职业全体生命 +{p}%', bossStun: '首领开场停顿 {v} 秒' };
 const GAR = { garHp: '驻军生命 +{p}%', defDmg: '驻军攻击 +{p}%' };

@@ -293,7 +293,7 @@ G.gameOver = function (reason) {
   if (M.META_ROOM && this.toRoom) { this.toRoom({ settle: true }); return; }
   // no room: back to the title menu with the game's summary
   this.go('menu');
-  const why = reason === 'core' ? '基地核心碎了' : reason === 'portal' ? '主基地被攻破了' : '这一局结束了';
+  const why = reason === 'core' ? '基地核心碎了' : reason === 'portal' ? '主基地被攻破了' : reason === 'abandon' ? '放弃了这一局' : '这一局结束了';
   this.modal = { over: 1, title: '这一局结束了', text: why + '。\n坚持到第 ' + S0.day + ' 天，通关 ' + S0.clears + ' 个世界。', border: '#d0453c', img: 'skull', back: () => { this.modal = null; }, choices: [{ t: '重新开始', fn: () => { this.modal = null; this.startGame(); } }, { t: '回到标题', fn: () => { this.modal = null; } }] }; this.bump();
 };
 // the portal collapsing is also the end of the game

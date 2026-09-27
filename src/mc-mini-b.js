@@ -75,7 +75,10 @@ MINI.pachinko = { title: '弹珠台', img: 'e_pachinko', col: C.gold, text: '钢
       b.vy += 1500 * h; b.x += b.vx * h; b.y += b.vy * h;
       if (b.x < PB.L + br) { b.x = PB.L + br; b.vx = Math.abs(b.vx) * 0.6; } if (b.x > PB.R - br) { b.x = PB.R - br; b.vx = -Math.abs(b.vx) * 0.6; }
       mg.pegs.forEach(q => { const dx = b.x - q.x, dy = b.y - q.y, d = Math.hypot(dx, dy); if (d < br + pr && d > 0) { const nx = dx / d, ny = dy / d, vn = b.vx * nx + b.vy * ny; b.x = q.x + nx * (br + pr); b.y = q.y + ny * (br + pr); if (vn < 0) { b.vx -= 1.55 * vn * nx; b.vy -= 1.55 * vn * ny; b.vx += (rnd() - 0.5) * 60; } if (q.f < 0.5) { q.f = 1; const hot = b === mg.reachB; if (hot) this.fx.spark(q.x, q.y, C.gold, 5, { v: 320, w: 3 }); if (hot || rnd() < 0.3) S.mini('pachinko', 'peg', Math.round((q.y - PB.T - 90) / 46)); } } });
-      if (b.y > PB.B - 70) { const k = Math.floor((b.x - PB.L) / sw), x0 = PB.L + k * sw; if (b.x - x0 < br && k > 0) { b.x = x0 + br; b.vx = Math.abs(b.vx) * 0.5; } if (x0 + sw - b.x < br && k < SLOTS.length - 1) { b.x = x0 + sw - br; b.vx = -Math.abs(b.vx) * 0.5; } }
+      // the dividers start below the last row of pegs: a ball sitting on a peg inside them was pinned there for good (2026-09-26)
+      if (b.y > PB.B - 44) { const k = Math.floor((b.x - PB.L) / sw), x0 = PB.L + k * sw; if (b.x - x0 < br && k > 0) { b.x = x0 + br; b.vx = Math.abs(b.vx) * 0.5; } if (x0 + sw - b.x < br && k < SLOTS.length - 1) { b.x = x0 + sw - br; b.vx = -Math.abs(b.vx) * 0.5; } }
+      // never at rest anywhere but the slots: a ball that has stopped gets a nudge
+      if (Math.abs(b.vx) + Math.abs(b.vy) < 40) { b.still = (b.still || 0) + h; if (b.still > 0.4) { b.still = 0; b.vx = (rnd() < 0.5 ? -1 : 1) * (90 + rnd() * 60); b.vy = 60; } } else b.still = 0;
       if (b.y > PB.B - 16 && !b.done) { b.done = true; MINI.pachinko.land.call(this, mg, cl(Math.floor((b.x - PB.L) / sw), 0, SLOTS.length - 1), b); } }); }
     mg.balls = mg.balls.filter(b => !b.done);
     mg.balls.forEach(b => { b.tr.push(b.x, b.y); if (b.tr.length > 16) b.tr.splice(0, 2); });

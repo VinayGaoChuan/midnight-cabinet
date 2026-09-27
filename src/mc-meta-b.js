@@ -224,13 +224,13 @@ G.endBack = function () {
 G.coreTick = function (dt) {
   if (this.coreQueue && !this.tear && this.screen === 'base') { const q = this.coreQueue; this.coreQueue = null; this.coreFx = { t: 0, hp: q.hp, pd: q.pd, hit: false, boom: false }; const cc = M.cellCenter(M.CORE.c, M.CORE.r); this.bv.keepFree(); this.bv.tx = cc.x; this.bv.ty = cc.y - 40; this.bv.tz = 1.25; }
   const F = this.coreFx; if (!F) return; F.t += dt; const cp = this.corePos();
-  if (!F.hit && F.t > 0.7) { F.hit = true; S.impact(); S.shatter(); this.fx.kick(30); this.fx.flash('#ff2a4a', 0.4); this.fx.explode(cp.x, cp.y, '#ff4a6a', 1.6); this.fx.pop(cp.x, cp.y - 120, '基地核心 -1', '#ff4a6a', 64, { slam: 1 }); this.pulse.core = now(); }
+  if (!F.hit && F.t > 0.7) { F.hit = true; S.impact(); S.shatter(); this.fx.kick(30); this.fx.flash('#ff2a4a', 0.4); this.fx.explode(cp.x, cp.y, '#ff4a6a', 1.6); this.fx.pop(cp.x, cp.y - 120, this.abandoning ? '放弃' : '基地核心 -1', '#ff4a6a', 64, { slam: 1 }); this.pulse.core = now(); }
   if (F.hp > 0 && F.t > 2.4) { this.coreFx = null; this.bv.home(); this.toast(F.hp === 1 ? '基地核心只剩最后 1 点了' : '基地核心还剩 ' + F.hp + ' 点', F.hp === 1 ? '#ff4a4a' : '#ff8ab0'); if (F.pd) setTimeout(() => { this.passDay(); setTimeout(() => this.checkRaid(), 1600); }, 300); return; }
   if (F.hp <= 0) {
     if (!F.boom && F.t > 1.6) { F.boom = true; S.alarm(); this.bv.tx = 1050; this.bv.ty = 470; this.bv.tz = 0.62; const m = this.meta, cells = []; for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) { const x = m.base.cells[r][c]; if (x.dug || x.b) cells.push([c, r, Math.hypot(c - M.CORE.c, r - M.CORE.r)]); } cells.sort((a, b) => a[2] - b[2]); F.cells = cells; }
     if (F.boom) { const i = Math.floor((F.t - 1.8) / 0.12); (F.cells || []).forEach((cc, k) => { if (k === i && !cc[3]) { cc[3] = 1; const p = this.cellPos(cc[0], cc[1]); this.fx.explode(p.x, p.y, k % 2 ? '#ff7a2a' : '#ffcc33', 1.3); S.boom(); this.fx.kick(18); const cell = M.cell(this.meta, cc[0], cc[1]); if (cell) { cell.b = null; cell.job = null; cell.dug = true; } } }); }
-    if (F.t > 1.8 + (F.cells || []).length * 0.12 + 0.6 && !F.white) { F.white = true; this.fx.flash('#ffffff', 1); S.impact(); this.banner({ kind: 'win', text: '基地爆炸', col: '#ff4a4a', col2: '#3a0000', sub: '核心碎了。这一局结束了。', life: 2.4, y: 440 }); }
-    if (F.white && F.t > 1.8 + (F.cells || []).length * 0.12 + 3.0) { this.coreFx = null; this.gameOver('core'); }
+    if (F.t > 1.8 + (F.cells || []).length * 0.12 + 0.6 && !F.white) { F.white = true; this.fx.flash('#ffffff', 1); S.impact(); this.banner({ kind: 'win', text: '基地爆炸', col: '#ff4a4a', col2: '#3a0000', sub: this.abandoning ? '放弃了。这一局结束了。' : '核心碎了。这一局结束了。', life: 2.4, y: 440 }); }
+    if (F.white && F.t > 1.8 + (F.cells || []).length * 0.12 + 3.0) { this.coreFx = null; const ab = this.abandoning; this.abandoning = false; this.gameOver(ab ? 'abandon' : 'core'); }
   }
   this.bump();
 };

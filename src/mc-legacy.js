@@ -2,18 +2,22 @@
 (function () {
 // The cabinet between games: portraits, cartridges, leaders, achievements (user rulings 2026-09-26: the plan's 遗像 and
 // 精简的机台层, then 「机台物中的东西，只有第一次失败后，才会展开，否则没有意义，也会让每个玩家觉得太多，太复杂」).
-// · Nothing of it shows before the first game is lost (核心碎了 / 主基地被攻破; 放弃 does not count). A player who has
-//   never failed sees the cabinet as before: 开始游戏 / 继续, 玩法说明, 设置.
+// · Nothing of it shows before the first game is lost (核心碎了 / 主基地被攻破 / 放弃 — giving up is a loss since
+//   2026-09-26). A player who has never failed sees the cabinet as before: 开始游戏 / 继续, 玩法说明, 设置.
 // · 遗像: when a game is lost, the fallen leader's card lies on the table and one talent it learned is carved into a
 //   portrait. The portrait hangs on the wall (6 at most, the oldest falls off). A new game may take one: the new leader
 //   starts with that talent outside its tree, one talent point more if it is the same vocation; the portrait is used up.
-// · 投币前 (a new game): pick the leader among the unlocked ones, one cartridge, one portrait, then 投币.
-// · Leaders: 守夜人, 驱魔修女, 焚尸人 from the start; a vocation once played stays open; the other three open by a feat.
+// · 投币前 (a new game): pick the leader among the figurines owned, one cartridge, one portrait, then 投币.
+// · 手办台 (the figurine stand, user ruling 2026-09-26: 「机器屋中要有一个人手办台，通过某些方式可以解锁手办，如果有多个手办可以用，
+//   那么从失败后重新进入游戏的时候，玩家可以自主选择英雄。新玩家游戏开始时随机选择的那个英雄的手办默认赠送，如果玩家不买新手办，下次
+//   进游戏还是这个英雄」): a new player's first leader is random and its figurine is a gift; the others are bought with
+//   tokens, and three of them also come free with a feat. Only a leader whose figurine stands here can be picked.
 // · Cartridges are bought once with the tokens every game pays out (the old settlement); one per game.
 // · Achievements pay tokens once. The old furniture and its perks stay switched off (M.META_ROOM).
 const M = window.MC, G = M.Game.prototype, S = M.Sfx, B = M.BUILDINGS, H = M.HEROES, T = M.TALENTS, Q = M.QUALITY;
 const now = () => performance.now(), rnd = Math.random, pick = (a) => a[Math.floor(rnd() * a.length)];
-const CLS = Object.keys(H), START = ['watchman', 'nun', 'cremator'];
+const CLS = Object.keys(H);
+const FIG_COST = M.FIG_COST = { watchman: 150, nun: 150, cremator: 150, widow: 250, butcherlord: 250, clockmaker: 250 };
 const UNLOCK = M.CLS_UNLOCK = {
   widow: { d: 'FEVER 转出一次传说效果', ok: (p) => !!p.stats.feverLegend },
   butcherlord: { d: '累计让 3 支部队进化', ok: (p) => (p.stats.evos || 0) >= 3 },
@@ -46,10 +50,20 @@ M.SHRINE_MAX = 6;
 // ───────── the profile ─────────
 const stats = (p) => p.stats || (p.stats = {});
 M.unfolded = (p) => !!(p && p.stats && p.stats.games > 0);
-// players who have lost a game before this (2026-09-26) keep every leader they could pick
-const fix = (p) => { if (!p || p.lgV === 1) return p; if (stats(p).games > 0) stats(p).allCls = 1; p.lgV = 1; p.shrine = p.shrine || []; p.kits2 = p.kits2 || {}; p.ach2 = p.ach2 || {}; return p; };
+// players who have lost a game before this (2026-09-26) keep every leader they could pick; with the figurine stand
+// (lgV 2) that is a figurine for every leader they have played, or all of them if every leader was open to them
+const fix = (p) => {
+  if (!p || p.lgV === 2) return p;
+  if (p.lgV !== 1 && stats(p).games > 0) stats(p).allCls = 1;
+  p.shrine = p.shrine || []; p.kits2 = p.kits2 || {}; p.ach2 = p.ach2 || {};
+  const f = p.figs = Object.assign({}, p.figs); if (stats(p).allCls) CLS.forEach(k => { f[k] = 1; }); Object.keys(stats(p).played || {}).forEach(k => { if (H[k]) f[k] = 1; });
+  p.lgV = 2; return p;
+};
 const P_ = (g) => fix(g.prof);
-M.clsOpen = (p, k) => !!H[k] && (START.includes(k) || !!stats(p).allCls || !!(stats(p).played && stats(p).played[k]) || !!(UNLOCK[k] && UNLOCK[k].ok(p)));
+M.clsOpen = (p, k) => !!H[k] && !!(p && p.figs && p.figs[k]);
+const figAdd = (g, p, k, say) => { p.figs = Object.assign({}, p.figs, { [k]: 1 }); if (say && g.toast) g.toast('手办台上多了「' + H[k].n + '」', '#ffcf4a'); };
+// a feat brings its leader's figurine (told once the cabinet is open)
+G.figFeats = function () { const p = P_(this); if (!p) return; let got = 0; Object.keys(UNLOCK).forEach(k => { if (!M.clsOpen(p, k) && UNLOCK[k].ok(p)) { figAdd(this, p, k, M.unfolded(p)); got++; } }); if (got) this.saveProfile(); };
 // feats the unlocks and achievements read
 const oFS = G.fvStageStart;
 if (oFS) G.fvStageStart = function (key, tier) { if (tier === 3 && this.prof) { stats(this.prof).feverLegend = 1; this.saveProfile && this.saveProfile(); } return oFS.apply(this, arguments); };
@@ -59,6 +73,7 @@ const oEM = M.evoMerge;
 M.evoMerge = function (run, three) { const nu = oEM.apply(this, arguments); const g = M._g; if (g && g.prof && nu) { const st = stats(g.prof); st.evoMax = Math.max(st.evoMax || 0, nu.evo || 0); g.saveProfile && g.saveProfile(); } return nu; };
 // achievements: tokens once, told as they come (only once the cabinet is open)
 G.achCheck2 = function () {
+  this.figFeats();
   const p = P_(this), m = this.meta; if (!p || !m || !M.unfolded(p)) return; p.ach2 = p.ach2 || {};
   let got = 0; ACH.forEach(a => { if (p.ach2[a.k]) return; let ok = false; try { ok = a.ok(m, p); } catch (e) {} if (!ok) return; p.ach2[a.k] = 1; p.tokens = (p.tokens || 0) + a.tok; got++; this.toast && this.toast('成就 · ' + a.n + ' · 代币 +' + a.tok, '#ffcf4a'); });
   if (got) { S.up && S.up(2); this.saveProfile(); }
@@ -108,7 +123,7 @@ G.gameOver = function (reason) {
 
 // ───────── 投币前 / 遗像墙 ─────────
 G.lgOpen = function (mode) {
-  const p = P_(this), open = CLS.filter(k => M.clsOpen(p, k));
+  const p = P_(this); this.figFeats(); const open = CLS.filter(k => M.clsOpen(p, k));
   const cls = open.includes(p.lastCls) ? p.lastCls : open[0], kit = p.lastKit && (p.kits2 || {})[p.lastKit] ? p.lastKit : null;
   this.lg = { mode, cls, kit, pid: null, at: now() }; S.click && S.click(); this.bump();
 };
@@ -118,8 +133,15 @@ G.lgBuy = function (k) {
   if ((p.tokens || 0) < K.cost) { this.deny && this.deny('代币不够：要 ' + K.cost, '#d0453c'); return; }
   p.tokens -= K.cost; p.kits2 = Object.assign({}, p.kits2, { [k]: 1 }); this.saveProfile(); S.up && S.up(2); if (this.lg && this.lg.mode === 'setup') this.lg.kit = k; this.bump();
 };
+// a figurine bought with tokens
+G.lgBuyFig = function (k) {
+  const p = P_(this), c = FIG_COST[k]; if (!H[k] || M.clsOpen(p, k)) return;
+  if ((p.tokens || 0) < c) { this.deny && this.deny('代币不够：要 ' + c, '#d0453c'); return; }
+  p.tokens -= c; figAdd(this, p, k, true); this.saveProfile(); S.up && S.up(2); if (this.lg && this.lg.mode === 'setup') this.lg.cls = k; this.bump();
+};
 G.lgGo = function () {
   const L = this.lg, p = P_(this); if (!L) return;
+  if (!M.clsOpen(p, L.cls)) { this.deny && this.deny('先把这个手办买下来', '#8d8496'); return; }
   this._lgPick = { cls: L.cls, kit: L.kit, pid: L.pid }; M._nextCls = L.cls; this.lg = null;
   p.lastCls = L.cls; p.lastKit = L.kit; this.saveProfile();
   if (this.screen === 'menu' && this.menuGo) this.menuGo(); else this.startGame();
@@ -133,8 +155,12 @@ M.defaultMeta3 = function () { const m = oDM.apply(this, arguments); if (M._next
 const wsBp = () => { const ks = Object.keys(B).filter(k => B[k].cat === 'forge' && !B[k].boss && !B[k].fixed && !B[k].gone && B[k].q <= 2); return ks.length ? 'bbp:' + pick(ks) : null; };
 const oNG = G.newGame;
 G.newGame = function () {
+  // a new player: the first leader is random, its figurine a gift; without a new figurine the next game has it again
+  const p0 = P_(this), fresh = p0 && !Object.keys(p0.figs || {}).length;
+  if (fresh && !M._nextCls) M._nextCls = pick(CLS);
+  else if (p0 && !this._lgPick && !M._nextCls) { const own = CLS.filter(k => M.clsOpen(p0, k)); M._nextCls = own.includes(p0.lastCls) ? p0.lastCls : own[0] || null; }
   const r = oNG.apply(this, arguments), m = this.meta, p = P_(this), L = this._lgPick; M._nextCls = null; this._lgPick = null;
-  const h = m && m.heroes && m.heroes[0]; if (h && p) { const st = stats(p); st.played = Object.assign({}, st.played, { [h.cls]: 1 }); }
+  const h = m && m.heroes && m.heroes[0]; if (h && p) { const st = stats(p); st.played = Object.assign({}, st.played, { [h.cls]: 1 }); if (fresh) { figAdd(this, p, h.cls, false); p.lastCls = h.cls; this.saveProfile(); } }
   if (L && m) {
     m.kit2 = L.kit && (p.kits2 || {})[L.kit] ? L.kit : null;
     if (m.kit2 === 'dig') { m.supplies += 100; let n = 0; for (const [dc, dr] of [[-1, 0], [1, 0], [0, 1], [-2, 0], [2, 0]]) { const x = M.cell(m, M.CORE.c + dc, M.CORE.r + dr); if (x && !x.dug && n < 3) { x.dug = true; n++; } } }
@@ -163,9 +189,11 @@ G.view = function () {
   v.lgOn = !!L && this.screen === 'menu';
   if (!v.lgOn) return v;
   const setup = L.mode === 'setup', kits2 = p.kits2 || {};
-  const leaders = CLS.map(k => { const on = M.clsOpen(p, k), sel = setup && L.cls === k, Hk = H[k];
-    return { img: M.spriteURL(Hk.sprite, 6), n: Hk.n, c: on ? '#f4efe0' : '#6a6394', sub: on ? Hk.skill.n : UNLOCK[k] ? UNLOCK[k].d : '', ring: sel ? '#ffcf4a' : on ? '#3d3a8c' : '#2b2461', op: on ? 1 : 0.5,
-      tipOn: this.tipFn({ title: Hk.n, c: '#ffcf4a', d: Hk.skill.n + '：' + Hk.skill.d + '。' }), onClick: () => { if (!setup) return; if (!on) { this.deny && this.deny('还没解锁', '#8d8496'); return; } L.cls = k; S.click && S.click(); this.bump(); } }; });
+  // 手办台: the figurines owned stand lit; the others dark, with their price
+  const leaders = CLS.map(k => { const on = M.clsOpen(p, k), sel = setup && L.cls === k, Hk = H[k], cost = FIG_COST[k], can = (p.tokens || 0) >= cost, PV = M.PASSIVE && M.PASSIVE[k];
+    return { img: M.spriteURL(Hk.sprite, 6), n: Hk.n, c: on ? '#f4efe0' : '#a9a3c9', own: on, sub: Hk.skill.n, buy: !on, price: String(cost), pc: can ? '#ffcf4a' : '#e8434f', filt: on ? 'none' : 'brightness(0.3)', ring: sel ? '#ffcf4a' : on ? '#3d3a8c' : '#2b2461', op: on || can ? 1 : 0.6,
+      tipOn: this.tipFn({ title: Hk.n, c: '#ffcf4a', d: PV ? PV.n + '：' + PV.d(PV.v(1)) + '。' : '', lines: !on && UNLOCK[k] ? [{ t: UNLOCK[k].d + '，手办免费', c: '#a9a3c9' }] : [] }),
+      onClick: () => { if (!on) { this.lgBuyFig(k); return; } if (!setup) return; L.cls = k; S.click && S.click(); this.bump(); } }; });
   const kits = KITS.map(K => { const own = !!kits2[K.k], sel = setup && L.kit === K.k;
     return { img: M.iconURL(K.ic, 3), n: K.n, d: K.d, c: own ? '#f4efe0' : '#a9a3c9', buy: !own, price: String(K.cost), pc: (p.tokens || 0) >= K.cost ? '#ffcf4a' : '#e8434f',
       ring: sel ? '#ffcf4a' : own ? '#3d3a8c' : '#2b2461', op: own || (p.tokens || 0) >= K.cost ? 1 : 0.6,
@@ -185,6 +213,7 @@ G.tipFor = function (key) {
 };
 const oBack = G.backAction; if (oBack) G.backAction = function () { if (this.lg) { this.lgClose(); return; } return oBack.apply(this, arguments); };
 if (M.GUIDE) M.GUIDE.push(
+  { id: 'figs', cat: '机台', icon: 'u_star', title: '手办台', line: '有手办的领袖，新的一局可以选它。', scr: 'menu', sel: '[data-g="lg-wall"]', when: (g) => M.unfolded(g.prof) },
   { id: 'portrait', cat: '机台', icon: 't_heart', title: '遗像', line: '倒下的领袖留下的一个天赋，新的一局可以带上一张。', scr: 'menu', sel: '[data-g="lg-wall"]', when: (g) => M.unfolded(g.prof) },
   { id: 'kits2', cat: '机台', icon: 'scroll', title: '卡带', line: '用代币买下，每局开始前插一盘。', scr: 'menu', sel: '[data-g="lg-wall"]', when: (g) => M.unfolded(g.prof) },
   { id: 'tokens2', cat: '机台', icon: 'e_coin', title: '代币', line: '每一局结束和成就换来，用来买卡带。', scr: 'menu', sel: '[data-g="lg-wall"]', when: (g) => M.unfolded(g.prof) });

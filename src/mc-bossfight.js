@@ -4,11 +4,12 @@
 // Final boss — the end of a scene: the right of the field is its arena (lava, sea, roots … impassable), the boss rises
 //   out of it, only its upper body showing, and never moves. Melee units fight it from the edge. It strikes rarely and
 //   hard: every blow charges behind a red mark that fills up, shakes the screen and throws units.
-//   · 震击 (slam): both fists come down in front of it — everything in the ring is thrown up, everyone else on the field
-//     is knocked flat by the shockwave.
-//   · 扫臂 (sweep): one arm swings across a wide fan in front of it — everything in the fan is thrown.
-//   · below half its life it roars into its second phase and adds its own rain (demon: meteors; druid: thorns; …): a
-//     string of red marks across the field, then whatever falls, falls on them.
+//   · 震击 (slam): both fists come down in front of it — everything in the ring is thrown up; nothing outside it is touched.
+//   · 天降 (rain), first phase: a string of red marks across the field (demon: meteors; druid: thorns; …), then whatever
+//     falls, falls on them.
+//   · below half its life it roars into its second phase: the string stops, and one arm sweeps a wide fan in front of it
+//     (扫臂) — everything in the fan is thrown.
+//   A blow is only begun when someone already stands where it would land (user ruling 2026-09-26: 「否则放空技能太傻了」).
 //   Looks differ boss by boss (mc-titan.js); the moves are the same three, each dressed as that boss.
 // Small boss — the middle of a scene: one giant unit that walks and fights, with two charged blows of its own
 //   (重击 a ring on its target, 横扫 a fan in front of it), each behind a mark.
@@ -19,9 +20,10 @@ const EDGE = 1480, FB_X = EDGE + 60, FB_DX = 100, FB_Y = 440, SLAM_X = EDGE - 14
 const FOE = '#ff3a3a';
 const inRing = (u, x, y, r) => Math.hypot(u.x - x, (u.y - y) * 1.2) < r;
 const inFan = (u, x, y, r, half) => { const dx = x - u.x, dy = (u.y - y) * 1.2, d = Math.hypot(dx, dy); return d < r && dx > 0 && Math.abs(Math.atan2(dy, dx)) < half; };
-// numbers (per target, × the boss's attack): tuned against the shown power (docs/design.md §8.3)
-const FBK = M.FBK = { slam: 0.6, sweep: 0.35, rain: 0.45, windSlam: 1.45, windSweep: 1.55, windRain: 1.3, rest: 1.4, slamR: 250, sweepR: 820, sweepHalf: 1.08, rainN: 7, rainR: 118, downT: 0.6 };
-const MBK = M.MBK = { crush: 1.6, cleave: 1.2, every: 6.5, wind: [1.1, 1.2], crushR: 170, cleaveR: 300, cleaveHalf: 0.9 };
+// numbers (per target, × the boss's attack): tuned against the shown power (docs/design.md §8.3). 2026-09-26 (the slam
+// only hits its ring, the string is the first phase's, the sweep the second's): .ai/sim-boss3.js 400 fights a variant
+const FBK = M.FBK = { slam: 0.7, sweep: 0.25, rain: 0.4, windSlam: 1.45, windSweep: 1.55, windRain: 1.3, rest: 1.4, slamR: 250, sweepR: 820, sweepHalf: 1.08, rainN: 7, rainR: 118 };
+const MBK = M.MBK = { crush: 2.2, cleave: 1.65, every: 5.5, wind: [1.1, 1.2], crushR: 170, cleaveR: 300, cleaveHalf: 0.9 };
 
 // ───────── set-up ─────────
 const oSpawn = BP.spawnEnemy;
@@ -43,15 +45,18 @@ function riseY(e, T) { const A = e.ai; if (!A) return 0; if (A.st === 'rise') { 
 function pickLane(b, e) {
   const us = b.ents.filter(u => b.active(u) && u.side === 'A'); let best = 0, bn = -1;
   [270, 390, 510].forEach(y => { const n = us.filter(u => inRing(u, SLAM_X, y, FBK.slamR)).length; if (n > bn || (n === bn && y === 390)) { bn = n; best = y - FB_Y; } });
-  return best;
+  return bn > 0 ? best : null;
 }
+// who the string of marks runs through: the units standing on the field (not the ones still in the air)
+const standing = (b) => b.ents.filter(u => b.active(u) && u.side === 'A' && !u.air);
+const fanHas = (b) => b.ents.some(u => b.active(u) && u.side === 'A' && inFan(u, EDGE + 40, FB_Y, FBK.sweepR, FBK.sweepHalf));
 BP.fbBegin = function (e, k) {
   const A = e.ai, T = this.t, atk = e.atk; A.k = k; A.st = 'wind'; A.t0 = T; A.n++;
   const col = FOE;
-  if (k === 'slam') { A.lane = pickLane(this, e); A.t = T + FBK.windSlam; A.om = this.omen({ shape: 'circle', x: SLAM_X, y: FB_Y + A.lane, r: FBK.slamR, t0: T, until: A.t, col, src: e, keep: 1 }); }
+  if (k === 'slam') { A.lane = pickLane(this, e) || 0; A.t = T + FBK.windSlam; A.om = this.omen({ shape: 'circle', x: SLAM_X, y: FB_Y + A.lane, r: FBK.slamR, t0: T, until: A.t, col, src: e, keep: 1 }); }
   else if (k === 'sweep') { A.t = T + FBK.windSweep; A.om = this.omen({ shape: 'sector', x: EDGE + 40, y: FB_Y, r: FBK.sweepR, half: FBK.sweepHalf, dir: -1, t0: T, until: A.t, col, src: e, keep: 1 }); }
   else if (k === 'rain') {
-    const us = this.ents.filter(u => this.active(u) && u.side === 'A'), n = FBK.rainN;
+    const us = standing(this), n = FBK.rainN;
     const y0 = us.length ? us[Math.floor(Math.random() * us.length)].y : FB_Y, y1 = 120 + Math.random() * 480, x0 = EDGE - 150, x1 = 320;
     A.marks = []; for (let i = 0; i < n; i++) { const q = i / (n - 1), x = x0 + (x1 - x0) * q, y = clamp(y0 + (y1 - y0) * q + Math.sin(q * 9 + A.n) * 100, 110, 660); A.marks.push(this.omen({ shape: 'circle', x, y, r: FBK.rainR, t0: T + i * 0.1, until: T + FBK.windRain + i * 0.12, col, src: e, keep: 1, rain: e.fb.rain || 'meteor' })); }
     A.t = T + FBK.windRain + (n - 1) * 0.12 + 0.05; A.hit = 0;
@@ -64,9 +69,9 @@ BP.fbStrike = function (e) {
   const hitU = (u, m, vx, vy, lift) => { if (!this.active(u) || u.side !== 'A') return; this.deal(e, u, dmg(m), { skill: 1, big: 1, noKb: 1, col: FOE }); if (u.alive) this.launch(u, vx, vy, lift); };
   if (k === 'slam') {
     const x = SLAM_X, y = FB_Y + A.lane;
-    this.ents.forEach(u => { if (!this.active(u) || u.side !== 'A') return; if (inRing(u, x, y, FBK.slamR)) hitU(u, FBK.slam, (u.x - x) * 0.8 - 120, (u.y - y) * 0.6, 1.3); else this.knockDown(u, FBK.downT); });
+    this.ents.forEach(u => { if (!this.active(u) || u.side !== 'A') return; if (inRing(u, x, y, FBK.slamR)) hitU(u, FBK.slam, (u.x - x) * 0.8 - 120, (u.y - y) * 0.6, 1.3); });
     this.shake = Math.max(this.shake, 30); this.hs = Math.max(this.hs || 0, 0.09); this.flash = Math.max(this.flash, 0.35); this.flashCol = '#fff2e0';
-    this.fxp({ k: 'crack', x, y, life: 2.5 }); this.dust(x, y, 26); this.fxp({ k: 'fbwave', x, y, life: 0.7 }); this.ring(x, y - 10, 30, FBK.slamR * 1.1, '#ffd0a0', 14, 0.45);
+    this.fxp({ k: 'crack', x, y, life: 2.5 }); this.dust(x, y, 26); this.fxp({ k: 'fbwave', x, y, r: FBK.slamR, life: 0.5 }); this.ring(x, y - 10, 30, FBK.slamR * 1.1, '#ffd0a0', 14, 0.45);
     if (M.TITAN && M.TITAN.impact) M.TITAN.impact(this, e, 'slam', x, y);
     S.impact && S.impact(); S.boom && S.boom();
   } else if (k === 'sweep') {
@@ -101,8 +106,13 @@ BP.fbTick = function (e) {
   }
   if (A.st === 'roar') { if (T >= A.t) { A.st = 'idle'; A.t = T + 0.3; } else if (Math.random() < 0.25) this.shake = Math.max(this.shake, 10); return; }
   if (A.st === 'idle' && T >= A.t) {
-    const seq = A.phase === 1 ? ['slam', 'sweep'] : ['slam', 'rain', 'sweep', 'rain'];
-    this.fbBegin(e, seq[(A.phase === 1 ? A.n : A.n2 = (A.n2 || 0) + 1) % seq.length]); return;
+    // first phase: 震击 and 天降 by turns; second: 震击 and 扫臂. A blow nobody stands under waits; the other one may go.
+    const seq = A.phase === 1 ? ['slam', 'rain'] : ['sweep', 'slam'], i = A.phase === 1 ? A.n : (A.n2 || 0);
+    const can = (k) => k === 'slam' ? pickLane(this, e) != null : k === 'sweep' ? fanHas(this) : standing(this).length > 0;
+    const k = [seq[i % 2], seq[(i + 1) % 2]].find(can);
+    if (!k) { A.t = T + 0.25; return; }
+    if (A.phase === 2) A.n2 = i + (k === seq[i % 2] ? 1 : 2);
+    this.fbBegin(e, k); if (A.phase === 1 && k !== seq[i % 2]) A.n++; return;
   }
   if (A.st === 'wind') {
     if (A.k === 'rain') { this.fbRainTick(e); if (T >= A.t) { A.st = 'recover'; A.t = T + FBK.rest * 0.7; } return; }
@@ -115,8 +125,10 @@ BP.fbTick = function (e) {
 // ───────── the small boss ─────────
 BP.mbTick = function (e) {
   const A = e.mbAi, T = this.t; if (!A || !e.alive || this.opening || e.casting || T < A.next) return;
-  const tg = e.target && e.target.alive ? e.target : this.nearestFoe(e, 2000); if (!tg || Math.hypot(tg.x - e.x, tg.y - e.y) > 420) { A.next = T + 0.5; return; }
-  const k = A.n++ % 2 ? 'cleave' : 'crush', dur = MBK.wind[k === 'crush' ? 0 : 1];
+  const tg = e.target && e.target.alive ? e.target : this.nearestFoe(e, 2000), d = tg ? Math.hypot(tg.x - e.x, tg.y - e.y) : 1e9; if (d > 420) { A.next = T + 0.3; return; }
+  // 横扫 only when the target already stands in the fan's reach; otherwise 重击 on it, and 横扫 stays next
+  let k = A.n % 2 ? 'cleave' : 'crush'; if (k === 'cleave' && d > MBK.cleaveR * 0.9) k = 'crush'; else A.n++;
+  const dur = MBK.wind[k === 'crush' ? 0 : 1];
   const om = k === 'crush' ? this.omen({ shape: 'circle', ent: tg, r: MBK.crushR, t0: T, until: T + dur, col: FOE, src: e, tether: 1 })
     : this.omen({ shape: 'sector', x: e.x, y: e.y, r: MBK.cleaveR, half: MBK.cleaveHalf, dir: tg.x < e.x ? -1 : 1, t0: T, until: T + dur, col: FOE, src: e });
   e.casting = { t0: T, until: T + dur, sp: { n: k === 'crush' ? '重击' : '横扫', col: FOE, tier: 2, q: 3 }, mb: k, om, tg };
@@ -167,12 +179,12 @@ const oAfter = M.drawAfterUnits;
 M.drawAfterUnits = function (ctx, b, T) {
   if (oAfter) oAfter.apply(this, arguments);
   if (b.arena && M.TITAN && M.TITAN.lip) M.TITAN.lip(ctx, b, T);
-  // what falls in the second phase, over the units
+  // what falls in the first phase (天降), over the units
   (b.omens || []).forEach(o => { if (o.rain && M.TITAN && M.TITAN.drop) { const q = (T - (o.until - 0.42)) / 0.42; if (q > 0 && q <= 1) M.TITAN.drop(ctx, o.rain, o.x, o.y, q, T); } });
 };
 const oFx = M.drawFxPx;
 M.drawFxPx = function (ctx, f, T, b) {
-  if (f.k === 'fbwave') { const q = (T - f.t0) / f.life; if (q >= 1) return true; ctx.save(); ctx.globalAlpha = (1 - q) * 0.9; M.pxRing(ctx, f.x, f.y, 60 + q * 1500, (60 + q * 1500) / 1.2, PL.cream || '#f4efe0', { dense: 0.5, w: 3 }); M.pxRing(ctx, f.x, f.y, 40 + q * 1350, (40 + q * 1350) / 1.2, '#ff9a6a', { dense: 0.4, w: 2 }); ctx.restore(); return true; }
+  if (f.k === 'fbwave') { const q = (T - f.t0) / f.life, R = (f.r || 250) * (0.3 + 0.8 * q); if (q >= 1) return true; ctx.save(); ctx.globalAlpha = (1 - q) * 0.9; M.pxRing(ctx, f.x, f.y, R, R / 1.2, PL.cream || '#f4efe0', { dense: 0.5, w: 3 }); M.pxRing(ctx, f.x, f.y, R * 0.85, R * 0.85 / 1.2, '#ff9a6a', { dense: 0.4, w: 2 }); ctx.restore(); return true; }
   if (f.k === 'fbsweep') {
     const q = (T - f.t0) / f.life; if (q >= 1) return true; const dir = f.dir || -1, n = 26, a0 = -f.half + q * 2 * f.half;
     ctx.save(); ctx.globalCompositeOperation = 'lighter';

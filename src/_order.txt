@@ -124,6 +124,8 @@ mc-pcd-game.js
 mc-lines-art.js
 mc-q6.js
 mc-night.js
+mc-parade.js
+mc-passive.js
 mc-boons.js
 mc-q7.js
 mc-roster.js

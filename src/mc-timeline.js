@@ -9,7 +9,8 @@ const M = window.MC, G = M.Game.prototype, S = M.Sfx, cl = (v, a, b) => Math.max
 // round day nodes with three small dots between (user ruling 2026-09-25): a passing day lights the dots one by one
 const DAYS = 10, CW = 52, GAP = 50, PITCH = CW + GAP, NDOT = 3, TLX = 560, TLY = 6, STEP_D = 1.5, EV_D = 2.3, BIG_D = 4.4;
 const EV = {
-  raid:     { n: '血月', ic: 'e_skull', c: '#e8434f', d: '每 5 天的最后一晚：混沌来袭的怪物强两成多，还带一个精英。' },
+  raid:     { n: '强敌来袭', ic: 'e_skull', c: '#ff7a3a', d: '这一晚一个强敌带着怪物攻城。' },
+  bossn:    { n: '首领来袭', ic: 'e_skull', c: '#ff2a4a', d: '这一晚一个首领带着怪物攻城。' },
   merchant: { n: '流浪商人', ic: 't_coin', c: '#ffcf4a', d: '用物资或碎片，换随机的好东西。', w: 5 },
   star:     { n: '幸运之星', ic: 't_clover', c: '#9cff7a', d: '三选一：下一次出征的祝福。', w: 4 },
   recruit:  { n: '招募日', ic: 'f_recruit', c: '#7fb0ff', d: '下一次招募领袖免费，至少「稀有」。', w: 2 },
@@ -40,15 +41,16 @@ M.dayEvents = function (m) {
 };
 // the event that fires on a day (not yet done) / what a cell shows (done or not)
 M.eventOn = (m, d) => (raidOn(m, d) ? 'raid' : ((m.evs || []).find(e => e.day === d && !e.done) || {}).k || null);
-const shownOn = (m, d) => (M.bloodMoon && M.bloodMoon(d) ? 'raid' : ((m.evs || []).find(e => e.day === d) || {}).k || null);   // the blood moon closes every stretch (mc-night.js)
+const shownOn = (m, d) => { const nk = M.nightKind && M.nightKind(d); return nk ? (nk === 'boss' ? 'bossn' : 'raid') : ((m.evs || []).find(e => e.day === d) || {}).k || null; };   // every fifth night a strong foe, every tenth a boss (mc-night.js)
+const isNight = (k) => k === 'raid' || k === 'bossn';
 
 // ───────── the strip ─────────
 const IC = (k) => (M.iconURL ? M.iconURL(k, 2) : '');
 function cells(g, m, first, n) {
   const out = []; for (let i = 0; i < n; i++) {
-    const d = first + i, k = shownOn(m, d), E = k && EV[k], past = d < m.day || (d === m.day && k === 'raid' && m.lastRaid === d), today = d === m.day && !past, tom = d === m.day + 1;
+    const d = first + i, k = shownOn(m, d), E = k && EV[k], past = d < m.day || (d === m.day && isNight(k) && m.lastRaid === d), today = d === m.day && !past, tom = d === m.day + 1;
     out.push({ d, k, E, past, x: i * PITCH, num: String(d), lab: today ? '今天' : tom ? '明天' : '', c: E ? E.c : '#3d3a8c', dc: today ? '#ffcf4a' : E ? E.c : '#a9a3c9', hasIc: !!E, noIc: !E, ic: E ? IC(E.ic) : '',
-      tipOn: g.tipFn(() => (E ? { title: E.n, c: E.c, icon: E.ic, d: E.d, lines: [{ t: past ? '已经过去' : today ? '今天' : '第 ' + d + ' 天（' + (d - m.day) + ' 天后）', c: '#a9a3c9' }].concat(k === 'raid' && !past && d === M.nextRaid(m) && M.raidOddsLine ? [M.raidOddsLine(m)] : []) } : { title: today ? '今天 · 第 ' + d + ' 天' : '第 ' + d + ' 天', c: '#ffcf4a', d: past ? '已经过去。' : today ? '' : '这一天没有事件。' })),
+      tipOn: g.tipFn(() => (E ? { title: E.n, c: E.c, icon: E.ic, d: E.d, lines: [{ t: past ? '已经过去' : today ? '今天' : '第 ' + d + ' 天（' + (d - m.day) + ' 天后）', c: '#a9a3c9' }].concat(isNight(k) && M.nightFoe ? [(f => ({ t: f.who + ' · ' + f.n, c: f.c }))(M.nightFoe(m, d))] : []).concat(isNight(k) && !past && d === M.nextRaid(m) && M.raidOddsLine ? [M.raidOddsLine(m)] : []) } : { title: today ? '今天 · 第 ' + d + ' 天' : '第 ' + d + ' 天', c: '#ffcf4a', d: past ? '已经过去。' : today ? '' : '这一天没有事件。' })),
       op: past ? 0.45 : 1, dy: 0, sc: 1, stamp: past, stampSc: 1, fl: 0 });
   }
   return out;
@@ -97,7 +99,7 @@ function stripState(g, m) {
       else if (i >= DAYS) { const j = i - DAYS, k = (t - 2.05 - j * 0.14) / 0.42; c.sc = k <= 0 ? 0.01 : pop(k); c.op = k <= 0 ? 0 : 1; }
     });
     tl.x = -PITCH * n5 * eback((t - 1.3) / 0.8);
-    const nr = tl.cells.find(c => c.k === 'raid' && c.d > F.from + n5 - 1 && !c.past); if (nr && t > 2.9) nr.sc = 1 + 0.18 * Math.abs(Math.sin((t - 2.9) * 5));
+    const nr = tl.cells.find(c => isNight(c.k) && c.d > F.from + n5 - 1 && !c.past); if (nr && t > 2.9) nr.sc = 1 + 0.18 * Math.abs(Math.sin((t - 2.9) * 5));
     const bt = t - 2.7; tl.banner = bt > 0 && t < BIG_D - 0.55; tl.bannerTxt = '新的五天'; tl.bannerC = '#ffcf4a'; tl.bannerSub = nr ? '第 ' + nr.d + ' 天 · 混沌来袭' : ''; tl.bannerSubC = '#ff8a8a';
     tl.bannerSc = 1 + 0.6 * (1 - eio(bt / 0.22)); tl.bannerOp = eio(bt / 0.18) * (1 - eio((t - (BIG_D - 0.85)) / 0.3)); tl.mop = 0;
     today = -1;
@@ -201,7 +203,7 @@ const BLESS = [
 ];
 M.BLESS = BLESS;
 G.dayEvent = function (k) {
-  const m = this.meta, E = EV[k]; if (!E || k === 'raid') return;
+  const m = this.meta, E = EV[k]; if (!E || isNight(k)) return;
   const ev = (m.evs || []).find(e => e.day === m.day && e.k === k && !e.done); if (ev) ev.done = true; this.save();
   if (k === 'merchant') return merchant(this, m, goods(this, m));
   if (k === 'star') { const opts = BLESS.map((b, i) => i).sort(() => rnd() - 0.5).slice(0, 3);
