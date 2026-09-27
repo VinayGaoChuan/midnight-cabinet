@@ -323,49 +323,7 @@ M.drawReel = function (ctx, r) {
   if (SH && r.sh) SH.drawAll(ctx, r, 'front');
 };
 
-// ───────── treasure chest opening ─────────
-const ISC = [0.35, 0.7, 1.2, 0.94, 1.04, 1];
-M.drawChest = function (ctx, st) {
-  const t = st.t, X = 960, Y = 600, col = palC(st.col || P.gold), ts = stepT(t, 12);
-  ctx.save();
-  M.fxDim(ctx, st4(Math.min(1, t / 0.25)));
-  const drop = t < 0.5 ? -Math.round(700 * (1 - eo(ts / 0.5))) : 0, land = t >= 0.5 && t < 0.7 ? Math.round(Math.sin(clamp((ts - 0.5) / 0.2, 0, 1) * Math.PI) * 10) * 3 : 0;
-  const open = t >= 1.5, q = t - 1.5, qs = stepT(q, 12);
-  // 光芒：纯色楔形（内外两段），转角一格一格走；光晕 = 硬边色带
-  if (t > 0.9) { const k = open ? 1 : (t - 0.9) / 0.6; hardRays(ctx, X, Y - 60, 18, 1100, 90, col, open ? 0.12 : 0.05 * st4(k), stepT(t, 6) * 0.35, true); bglow(ctx, X, Y - 60, open ? 420 : 200 * k, col, open ? 0.6 : 0.4 * st4(k)); }
-  const shake = t > 0.8 && t < 1.5 ? (t - 0.8) / 0.7 * 14 : 0, jig = (v) => Math.round((Math.random() - 0.5) * v);
-  ctx.save(); ctx.translate(X + jig(shake), Y + drop + land + jig(shake * 0.5));
-  const sq = t >= 0.5 && t < 0.7 ? 1 - Math.sin(clamp((ts - 0.5) / 0.2, 0, 1) * Math.PI) * 0.15 : open && q < 0.2 ? 1 - Math.sin(qs / 0.2 * Math.PI) * 0.12 : 1;
-  ctx.scale(1 / sq, sq);
-  const s = 18, img = M.spriteCanvas('chest', s), w = img.width, h = img.height;
-  ctx.imageSmoothingEnabled = false;
-  // 落地影子：两块硬边墨色
-  ctx.globalAlpha = 0.5; ctx.fillStyle = P.ink; ctx.beginPath(); ctx.rect(Math.round(-w * 0.6), -6, Math.round(w * 1.2), 24); ctx.rect(Math.round(-w * 0.45), -15, Math.round(w * 0.9), 42); ctx.fill(); ctx.globalAlpha = 1;
-  const lidH = s * 3;
-  ctx.drawImage(img, 0, lidH, w, h - lidH, -w / 2, -h + lidH, w, h - lidH);
-  if (!open) { ctx.drawImage(img, 0, 0, w, lidH, -w / 2, -h, w, lidH); if (t > 0.9) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = RM() ? 1 : 0.7 + 0.3 * Math.sin(t * 12 * Math.PI); ctx.fillStyle = col; ctx.fillRect(-w / 2, -h + lidH - 6, w, 6); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; } }
-  else { const lq = eo(qs / 0.5); ctx.save(); ctx.translate(-w / 2 - lq * 160, -h - lq * 420); ctx.rotate(-lq * 2.4); ctx.drawImage(img, 0, 0, w, lidH, 0, 0, w, lidH); ctx.restore(); }
-  ctx.restore();
-  // items
-  if (open) {
-    const n = st.items.length, gap = Math.min(260, 1500 / Math.max(1, n));
-    st.items.forEach((it, i) => {
-      const d = q - 0.25 - i * 0.28; if (d < 0) return;
-      const dq = stepT(d, 15), tx = X + (i - (n - 1) / 2) * gap, ty = 380, e = eback(dq / 0.55), x = Math.round(X + (tx - X) * e), y = Math.round((Y - 120) + (ty - (Y - 120)) * e - Math.sin(clamp(dq / 0.55, 0, 1) * Math.PI) * 200);
-      if (!it.popped) { it.popped = true; st.onPop && st.onPop(it, tx, ty); }
-      it.x = tx; it.y = ty;
-      const ic = palC(it.c);
-      bglow(ctx, x, y, 140, ic, 0.6);
-      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(x, y); ctx.rotate(stepT(t, 8) * 1.4 + i); ctx.globalAlpha = 0.35; ctx.fillStyle = ic; for (let k = 0; k < 6; k++) { ctx.rotate(Math.PI / 3); ctx.fillRect(0, -3, 110, 6); } ctx.restore();
-      const bob = RM() ? 0 : -3 + 3 * Math.cos((t * 2.5 + i) * Math.PI), sc = seq(ISC, d, 0.07);
-      if (it.img) { const iw = Math.round(it.img.width * sc), ih = Math.round(it.img.height * sc); ctx.imageSmoothingEnabled = false; ctx.drawImage(it.img, Math.round(x - iw / 2), Math.round(y - ih / 2 + bob), iw, ih); }
-      // 名字：品质色像素字 + 墨描边；副行薰衣草色
-      if (d > 0.4) { ctx.globalAlpha = d > 0.5 ? 1 : 0.5; U.text(ctx, it.n, x, y + 110, 40, ic, { outline: true }); if (it.sub) U.text(ctx, it.sub, x, y + 150, 26, P.lavender); ctx.globalAlpha = 1; }
-    });
-    if (q > 0.6 + n * 0.28) { ctx.save(); ctx.globalAlpha *= RM() ? 1 : 0.6 + 0.4 * Math.cos(t * 2 * Math.PI); U.text(ctx, '点击任意处收下', X, 1000, 32, P.butter); ctx.restore(); }
-  } else if (t > 0.7) { ctx.save(); ctx.globalAlpha *= RM() ? 1 : 0.55 + 0.45 * Math.cos(t * 4 * Math.PI); U.text(ctx, '……', X, Y + 110, 40, col); ctx.restore(); }
-  ctx.restore();
-};
+// treasure chest: M.drawChest is in mc-chest.js (the vault, pixel room engine)
 
 // ───────── big banners (announcements / skill cut-in) ─────────
 // 通告横幅按意思分色：日常 = 酒红，好消息 = 金，撤离 = 青，危险 = 红（b.band 可以直接指定）

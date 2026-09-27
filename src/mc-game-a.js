@@ -179,23 +179,7 @@ class Game {
     }
     if (r.t >= M.reelDur(r)) { this.reel = null; r.onDone && r.onDone(); }
   }
-  // ── chest ──
-  openChest(items, col, onClose) { this.chest = { t: 0, items, col: col || '#ffcc33', onClose }; M.Sfx.creak(); this.bump(); }
-  chestTick(dt) {
-    const c = this.chest, p = c.t; c.t += dt;
-    if (p < 0.5 && c.t >= 0.5) { M.Sfx.chestLand(); this.fx.kick(14); this.fx.burst(960, 600, '#6a5a40', 20, { up: 200 }); }
-    if (c.t > 0.8 && c.t < 1.5) { if (Math.floor(p * 12) !== Math.floor(c.t * 12)) { M.Sfx.knock((c.t - 0.8) / 0.7); this.fx.kick(1 + (c.t - 0.8) * 4); } if (Math.random() < 0.6) this.fx.spark(960 + (Math.random() - 0.5) * 240, 470, c.col, 2, { dir: -Math.PI / 2, spread: 2, v: 500, w: 3, life: 0.35 }); }
-    if (p < 1.45 && c.t >= 1.45) this.fx.freeze(110);
-    if (p < 1.5 && c.t >= 1.5) { M.Sfx.chest(); this.fx.explode(960, 480, c.col, 3); this.fx.flash('#ffffff', 0.9); this.fx.confetti(160, { x: 960, y: 480 }); this.fx.coins(960, 520, 50, { v: 1400, spread: 1.6 }); this.fx.spark(960, 480, c.col, 60, { v: 1500, w: 6, life: 0.7 }); }
-    const q = c.t - 1.5; c.items.forEach((it, i) => { if (!it.snd && q > 0.25 + i * 0.28 + 0.5) { it.snd = 1; M.Sfx.itemReveal(Math.max(0, M.QUALITY.findIndex(Q => Q.c === it.c))); const gold = it.c === M.QUALITY[5].c || it.c === M.QUALITY[4].c || it.c === M.QUALITY[3].c; this.fx.explode(it.x || 960, it.y || 380, it.c, gold ? 1.6 : 0.8); if (gold) this.fx.rays(it.x || 960, it.y || 380, it.c, 1.2, { r: 320 }); } });
-  }
-  chestClick() {
-    const c = this.chest; if (!c) return; if (c.t < 1.5 + 0.6 + c.items.length * 0.28) { if (c.t < 1.4) c.t = 1.4; return; }
-    this.chest = null; const list = [], froms = [];
-    c.items.forEach(it => { if (it.award) { list.push(it.award); froms.push({ x: it.x, y: it.y }); } });
-    list.forEach((g, i) => { this.award([g], froms[i]); this.fx.explode(froms[i].x, froms[i].y, '#ffe08a', 0.6); }); M.Sfx.whoosh(0.5);
-    c.onClose && c.onClose();
-  }
+  // ── chest ── openChest / chestTick / chestClick live in mc-chest.js (the vault show)
   // ── banners ──
   banner(o) { this.banners.push(Object.assign({ t: 0, life: 1.8, col: '#ffd970' }, o)); }
   // ── main tick ──

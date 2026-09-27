@@ -41,9 +41,11 @@ mc-pxroom-base.js
 mc-pxroom-evo.js
 mc-pxroom-jobs.js
 mc-pxroom-mini-d.js
+mc-pxchest.js
 mc-game-a.js
 mc-game-b.js
 mc-game-c.js
+mc-chest.js
 mc-game-d.js
 mc-game-e.js
 mc-game-f.js

@@ -37,7 +37,7 @@ Object.assign(G, {
   finishNode() { if (this.node) this.node.done = true; this.modal = null; this.save(); this.bump(); },
   nodeChest(n) {
     const run = this.run, P = this.runP(n), luck = run.mods.eventLuck || 0;
-    if (!run.tut && Math.random() < 0.12 - luck * 0.5) { this.evModal('宝箱', 'chest', '箱子张开了嘴——是宝箱怪！', [{ t: '迎战', fn: () => { n.type = 'elite'; this.modal = null; this.trans = { kind: 'out', t: 0, node: n }; } }], null, '#d0453c'); return; }
+    if (!run.tut && Math.random() < 0.12 - luck * 0.5) { this.openMimic(() => { n.type = 'elite'; this.trans = { kind: 'out', t: 0, node: n }; }); return; }   // 宝箱怪：一拍带过，迎战 = 精英战（mc-chest.js）
     const sc = Math.round(P * 18 * (1 + (run.mods.chest || 0))), items = [];
     items.push({ n: '积分 ' + M.fmt(sc), c: '#ffcc33', img: M.spriteCanvas('coin', 12), award: { k: 'wallet', v: sc } });
     items.push({ n: '物资', c: '#caa84a', img: M.spriteCanvas('sack', 12), award: { k: 'rsup', v: 30 } });

@@ -142,7 +142,7 @@
 | C05 | 方向键 | 可前进的方向 | 金色街机键帽（像素箭头），平时两步上下跳；悬停上浮、描边变白 | `mc-world2.js` `arrowKey`、`mc-mouse.js` |
 | C06 | 小地图 | 右上角 | 机箱小面板 + 靛蓝标签牌（世界名 · 第 N 站），网点底；路线已走靛蓝、未走暮蓝、可走淡紫；你的位置金 / 白两步闪 | `mc-world2.js` `drawMinimap2` |
 | C07 | 到达节点 | 走到一站 | 着陆音效，进入对应内容（战斗 / 夜市 / 奇遇……） | `mc-game-h.js` `arrive` |
-| C08 | 宝箱 | 宝箱节点 | 墨色网点压暗；宝箱抖动、开盖，两档平色光芒按步转；奖励飞出，名字按品质色 40px 描边；「点击任意处收下」奶油色一亮一灭 | `mc-game-a.js` chest、`mc-fx.js` `drawChest` |
+| C08 | 宝箱 | 宝箱节点 | 整屏换成像素宝库地窖（铁闸门、宝物架、火把、吊灯、火盆、石台、红地毯），宝箱捆着 3～7 根铁链、挂一把铜锁。入场：光圈打开、宝箱砸上石台（贴地冲击波、铁链叮当）再浮起。待机呼吸、挂锁晃；悬停转视角提亮。按下挤压回弹，挂锁弹开掉在石台上。每拍一根链先烧成档位色再崩断：链环四散落地、盖子顶开一条缝吐金币和光、震屏逐拍加大、推镜头、光环火花、吊灯摇、掉灰、金币山滑落；升档那根整屏染色闪 + 白环 + 地面冲击波。卡帧 0.15 秒：盖缝里一道横光切过全屏，宝箱背光黑剪影。开盖：白闪、慢动作、光柱冲上天花板（传说起彩虹光带，神话起二次涌起）、火盆点燃、金币喷泉洒满地。奖品最差先出：次要的落在两侧地上，各自一道品质色掉落光柱和名牌；最好的升进大光柱停住。收下：奖品飞进计数器，光柱收回，盖子合上，光圈收拢。宝箱怪：链条一起崩开、獠牙红眼、红闪低吼，一拍后「迎战」 | `mc-chest.js`、`mc-pxchest.js`（`_chest_vault`、`_loot_*`） |
 | C09 | 奖励转盘（通用） | 宝箱、道具使用等 | 拉杆时机箱往上跳两下；滚轮 0.15 秒起速后全速转（图案竖着拉长 + 身后两道残影），1.95 秒正好转到起点那格猛地停住、往前冲一点再弹回（一声停轮 + 小震；不升档就直接锁定）；升档时先冲出三分之一多、再慢慢挪到位略过头再回来。街机机箱（酒红、铆钉、12px 投影）+ 招牌灯箱标题 + 34 颗方形灯泡（奶油亮 / 棕暗，定格后亮成结果色）；深井窗口滚动，金色硬边中奖线 + 像素箭头，拉杆是像素块；停在结果上，可能「升品」；结果条 52px 描边字；每次往上冲之前 0.42 秒蓄力（灯珠全灭、窗口透出下一档的颜色、机箱越抖越厉害、两下心跳），每升一格比上一格更响（炸光、闪光、「稀有！」「史诗！！」大字逐级变大，第二格起加光芒）；「再上一格？」没冲上去一声「差一点」；锁定按结果分四档（普通一圈光 → 传说先黑场 0.18 秒再全屏金币雨和彩纸），普通 / 稀有的余韵缩到 0.9 秒 | `mc-game-a.js` `startReel`、`mc-fx.js` `drawReel`、`M.reelEv`、`mc-game-a.js` `reelTick` |
 | C10 | 奇遇场景 | 奇遇节点 | 上下黑边 + 网点压暗；左侧奇遇像素插画（26 张，缓慢两步上下浮）；底部机箱对话框：金色名牌逐字跳、34px 对白、末尾金色光标闪；右侧选项行，悬停时 ▶ 左右跳 | 模板 `modalOn`、`mc-game-d.js`、`src/mc-pj-art.js` |
 | C11 | 奇遇小游戏框架 | 进入奇遇 | 墨色压暗 + 机箱舞台（墨框、本玩法颜色内圈、铆钉、硬投影）+ 压在上沿的招牌灯箱标题（跑马灯、果汁色带逐字跳）+ 规则一句 + 提示小面板；舞台里的牌子、读数、量表用同一套组件，数字变化时 4 步弹一下（1.45 → 0.9 → 1.06 → 1）；28 个玩法见 G | `mc-mini-a.js` `frameBegin / frameDeco` |
@@ -952,7 +952,7 @@
 | V021 | `Sfx.stamp` | 界面 | 6 |
 | V022 | `Sfx.pop` | 界面 | 1 |
 | V023 | `Sfx.toggle` | 界面 | 0 |
-| V024 | `Sfx.whoosh` | 通用 | 28 |
+| V024 | `Sfx.whoosh` | 通用 | 27 |
 | V025 | `Sfx.sparkle` | 通用 | 4 |
 | V026 | `Sfx.up` | 通用 | 38 |
 | V027 | `Sfx.mult` | 通用 | 4 |
@@ -963,10 +963,10 @@
 | V032 | `Sfx.alarm` | 通用 | 6 |
 | V033 | `Sfx.portal` | 通用 | 4 |
 | V034 | `Sfx.shatter` | 通用 | 8 |
-| V035 | `Sfx.creak` | 通用 | 2 |
+| V035 | `Sfx.creak` | 通用 | 1 |
 | V036 | `Sfx.lever` | 通用 | 2 |
 | V037 | `Sfx.reelStop` | 通用 | 2 |
-| V038 | `Sfx.chest` | 通用 | 1 |
+| V038 | `Sfx.chest` | 通用 | 0 |
 | V039 | `Sfx.dig` | 基地 | 2 |
 | V040 | `Sfx.build` | 基地 | 4 |
 | V041 | `Sfx.cast` | 通用 | 3 |
@@ -1022,8 +1022,8 @@
 | V091 | `Sfx.tear` | 演出 | 2 |
 | V092 | `Sfx.leaderDown` | 演出 | 0 |
 | V093 | `Sfx.chestShake` | 宝箱与转盘 | 0 |
-| V094 | `Sfx.knock` | 宝箱与转盘 | 1 |
-| V095 | `Sfx.itemReveal` | 宝箱与转盘 | 3 |
+| V094 | `Sfx.knock` | 宝箱与转盘 | 0 |
+| V095 | `Sfx.itemReveal` | 宝箱与转盘 | 2 |
 | V096 | `Sfx.reelUp` | 宝箱与转盘 | 1 |
 | V097 | `Sfx.launch` | 出征地图 | 1 |
 | V098 | `Sfx.step` | 出征地图 | 1 |
@@ -1067,7 +1067,7 @@
 | V136 | `Sfx.raidWin` | 守城 | 1 |
 | V137 | `Sfx.rankStamp` | 守城 | 0 |
 | V138 | `Sfx.portalCollapse` | 守城 | 1 |
-| V139 | `Sfx.mini` | 小游戏 | 227 |
+| V139 | `Sfx.mini` | 小游戏 | 228 |
 | V140 | `Sfx.introToll` | 开场演出 | 0 |
 | V141 | `Sfx.coinRoll` | 开场演出 | 0 |
 | V142 | `Sfx.spook` | 开场演出 | 0 |
@@ -1076,6 +1076,6 @@
 | V145 | `Sfx.glitch` | 开场演出 | 0 |
 | V146 | `Sfx.jackpot` | 开场演出 | 0 |
 
-小游戏各自的一组（`Sfx.mini(小游戏, 事件)`）：`mine` pick / loosen / gem / cavein；`roulette` spin / click / bet / gold / win / skull / miss；`fruit` gogo / lever / spin / stop / jackpot / win / skulls / nomatch / drop / zap；`claw` move / drop / grab / lift / prize / slip / empty / bounce；`pachinko` launch / peg / slot / edge；`tree` curse / pick / water / cut / grow / fruit；`tarot` lift / shuffle / flip / good / bad；`eggs` hammer / crack / prize / snake；`dice` shake / roll / clack / win / lose / tie；`fate` cost / spin / click / stop；`musician` note / metro / miss / pluck / tick / cross / great / ok / poor / snap；`granny` stitch / miss / done / snip / thread / light / whole；`well` charge / flick / rise / toss / splash / great / ok / miss；`child` step / crunch / wrong / lost / found；`grave` lid / dig / break / candle / coffin / hand / out / treasure；`clinic` pick / drink / good / bad / mult / hover / pop / crack / fizz / omen；`mirror` tone / wrong / pass；`altar` pour / rune / flicker / out / win；`peddler` shuffle / bell / lift / win / lose；`spring` zone / bubble / tick / good / hot / cool / plunge / drop / clamp / geyser；`trap` step / num / boom / box / hop / nope / click / rattle / reveal / fireworks；`cat` wave / coin / bar / bomb / miss / flick / spill / weigh / bell / clink；`market` grab / swing / stamp / deal / miss / bell / cackle / slapScroll / seal / fade / tap / chain / coinbag；`trainer` bell / punch / done / whistle / windup / finisher / snap；`statue` eyes / turn / align / wake / fail / snuff；`arena` ko / open / roar / cheer / bet / hit / win / lose / gong / gate / hush / ooh / toss / boo；`camp` fire / rest / sharpen / clang / scrape / pop；`recruit` curtain / reveal / full / lamp / flare / salute / none。
+小游戏各自的一组（`Sfx.mini(小游戏, 事件)`）：`mine` pick / loosen / gem / cavein；`roulette` spin / click / bet / gold / win / skull / miss；`fruit` gogo / lever / spin / stop / jackpot / win / skulls / nomatch / drop / zap；`claw` move / drop / grab / lift / prize / slip / empty / bounce；`pachinko` launch / peg / slot / edge；`tree` curse / pick / water / cut / grow / fruit；`tarot` lift / shuffle / flip / good / bad；`eggs` hammer / crack / prize / snake；`dice` shake / roll / clack / win / lose / tie；`fate` cost / spin / click / stop；`musician` note / metro / miss / pluck / tick / cross / great / ok / poor / snap；`granny` stitch / miss / done / snip / thread / light / whole；`well` charge / flick / rise / toss / splash / great / ok / miss；`child` step / crunch / wrong / lost / found；`grave` lid / dig / break / candle / coffin / hand / out / treasure；`clinic` pick / drink / good / bad / mult / hover / pop / crack / fizz / omen；`mirror` tone / wrong / pass；`altar` pour / rune / flicker / out / win；`peddler` shuffle / bell / lift / win / lose；`spring` zone / bubble / tick / good / hot / cool / plunge / drop / clamp / geyser；`trap` step / num / boom / box / hop / nope / click / rattle / reveal / fireworks；`cat` wave / coin / bar / bomb / miss / flick / spill / weigh / bell / clink；`market` grab / swing / stamp / deal / miss / bell / cackle / slapScroll / seal / fade / tap / chain / coinbag；`trainer` bell / punch / done / whistle / windup / finisher / snap；`statue` eyes / turn / align / wake / fail / snuff；`arena` ko / open / roar / cheer / bet / hit / win / lose / gong / gate / hush / ooh / toss / boo；`camp` fire / rest / sharpen / clang / scrape / pop；`recruit` curtain / reveal / full / lamp / flare / salute / none；`chest` in / spot / land / lift / rattle / unlock / lockfall / riser / snap / slit / boom / fire / pop / drop / last / roll / wave2 / itemTap / rush / claim / close / mimic / fight。
 
 <!-- /gen:sounds -->

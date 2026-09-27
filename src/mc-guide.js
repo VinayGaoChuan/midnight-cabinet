@@ -69,6 +69,7 @@ const CONCEPTS = [
   { id: 'defend', cat: '混沌来袭', icon: 't_shield', title: '混沌来袭', line: '每天夜里怪物攻打主基地：驻军迎敌，领袖在屋顶射箭。驻军败退，剩下的怪物打主基地。', scr: 'base', sel: '[data-g="raidprep"]' },
   // ── 出征 ──
   { id: 'nodes', cat: '出征', icon: 'e_path', title: '地图节点', line: '图标就是这一站的内容：战斗、夜市、营火、宝箱、奇遇……鼠标悬浮看详情。', scr: 'world', at: nextNode },
+  { id: 'chest', cat: '出征', img: () => sprite('chest'), title: '宝箱', line: '捆着铁链的宝箱：链条越多，里面的东西越好。', scr: 'world', at: () => null },
   { id: 'whp', cat: '出征', icon: 't_heart', title: '领袖生命', line: '不会自动回复：靠营火、奇遇，或者回基地后的医疗建筑。归零就探索失败，基地核心献出一颗心救回领袖。', scr: 'world', sel: '[data-tip="w-hp"]' },
   { id: 'wallet', cat: '出征', img: () => sprite('coin', 4), title: '积分', line: '这一局的钱：打赢战斗得到，在夜市和奇遇里花。回基地就清零。', scr: 'world', sel: '[data-tip="w-wallet"]' },
   { id: 'haul', cat: '出征', img: () => sprite('sack'), title: '本次收获', line: '物资、经验、图纸要撤离或通关才带得回基地；出征失败只留下一半经验。', scr: 'world', sel: '[data-tip="w-rsup"]' },
