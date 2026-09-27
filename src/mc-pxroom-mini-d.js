@@ -363,11 +363,14 @@ X.def('mini_spring', {
     if (soak && Math.random() < h * h * 1.6) rs.burst('steam', tx + 5, tt - 13, 1, { sp: 20 + h * 30, ang: 1.1, spread: 0.3, life: 0.9 });
     // PERFECT: a geyser out of the middle of the pool, a pixel rainbow in the mist
     const gz = mg.geyserT != null ? T - mg.geyserT : 9;
-    if (gz < 2.2) { const hh = Math.round(Math.min(1, gz / 0.25) * 96 * (gz > 1.4 ? Math.max(0, 1 - (gz - 1.4) / 0.8) : 1)); D.lay('front');
-      for (let y = 0; y < hh; y++) { const w = 3 + Math.round(Math.sin(y * 0.5 + T * 20) * 1) + (y < 6 ? 2 : 0); for (let j = -w; j <= w; j++) D.px(px0 + j, py0 - y, y > hh - 5 ? 'linen' : 'water', y > hh - 5 ? 11 : 9 + (j === -1 ? 1.5 : 0) - Math.abs(j) / w * 2, { e: 255 }); }
-      if (gz < 1.8 && Math.random() < 0.9) rs.burst('drip', px0 + (Math.random() - 0.5) * 20, py0 - hh, 2, { sp: 40, spread: 2.4, life: 1.4, floor: py0 });
+    const gx0 = 196;   // beside the leader, not on top of them
+    if (gz < 2.4) { const hh = Math.round(Math.min(1, gz / 0.22) * 100 * (gz > 1.6 ? Math.max(0, 1 - (gz - 1.6) / 0.8) : 1)); D.lay('front');
+      for (let y = 0; y < hh; y++) { const w = 4 + Math.round(Math.sin(y * 0.45 + T * 22) * 1.2) + (y < 8 ? 3 - Math.floor(y / 3) : 0); for (let j = -w; j <= w; j++) { const u = Math.abs(j) / w; D.px(gx0 + j, py0 - y, 'water', 10.4 - u * 3 + (j === -2 ? 1.2 : 0) + ((y + Math.floor(T * 40)) % 7 === 0 ? 1 : 0), { e: 255 }); } }
+      if (hh > 4) for (let k = 0; k < 26; k++) { const a = k / 26 * Math.PI * 2, r = 5 + (k % 3) * 2 + Math.sin(T * 12 + k) * 1.5; D.px(gx0 + Math.round(Math.cos(a) * r * 1.3), py0 - hh + Math.round(Math.sin(a) * r * 0.8), 'linen', 11 - (k % 3), { e: 255 }); }
+      D.ell(gx0, py0 - 1, 12, 3, 'linen', 10, { e: 255, ring: 1 });
+      if (gz < 2 && Math.random() < 0.95) rs.burst('drip', gx0 + (Math.random() - 0.5) * 24, py0 - hh, 3, { sp: 50, spread: 2.6, life: 1.4, floor: py0 });
       if (gz > 0.3) { const ra = Math.min(1, (gz - 0.3) / 0.4) * (gz > 1.8 ? Math.max(0, 1 - (gz - 1.8) / 0.4) : 1), R0 = 58, cols = [['red', 8], ['fire', 8], ['lamp', 9], ['leaf', 9], ['teal', 8], ['water', 8], ['arcane', 7]];
-        D.lay('wall'); if (ra > 0.1) cols.forEach(([m, tn], i) => { const r = R0 - i * 2; for (let a = 0; a < Math.PI * ra; a += 0.5 / r) { const x = Math.round(px0 - Math.cos(a) * r * 1.3), y = Math.round(py0 - 16 - Math.sin(a) * r * 0.9); if (y > 18) { D.px(x, y, m, tn, { e: 255 }); D.px(x, y + 1, m, tn - 1, { e: 255 }); } } }); } }
+        D.lay('wall'); if (ra > 0.1) cols.forEach(([m, tn], i) => { const r = R0 - i * 2; for (let a = 0; a < Math.PI * ra; a += 0.5 / r) { const x = Math.round(gx0 - 40 - Math.cos(a) * r * 1.3), y = Math.round(py0 - 16 - Math.sin(a) * r * 0.9); if (y > 18) { D.px(x, y, m, tn, { e: 255 }); D.px(x, y + 1, m, tn - 1, { e: 255 }); } } }); } }
   },
 });
 
@@ -601,12 +604,12 @@ X.def('mini_statue', {
 // blueprint scroll (left), the brass bell you slap to close the price (middle) and a mechanical price scale — brass case,
 // three enamel bands, a bone needle, glass with a glint, a little abacus base (right). The dealer (a pixel-cast character)
 // stands behind the table.
-const MK = { dial: [212, 96, 30], scroll: [80, 104], bell: [150, 114], lantern: [132, 58], table: [46, 254, 112] };
+const MK = { dial: [206, 104, 28], scroll: [90, 113], bell: [152, 122], lantern: [114, 108], table: [66, 234, 120] };   // a narrow stall; the ghost lantern stands on the table and lights the dealer from below   // a narrow stall so the dealer fills it
 MD.MARKET = MK;
 X.def('mini_market', {
   size: [W, H], fy: FY, noFrame: 1, amb: [0.18, 0.22],
   paint(S, sc) {
-    sc.light({ x: MK.lantern[0], y: MK.lantern[1] + 6, z: 24, r: 110, i: 1.25, c: '#6af0a0', fl: 'candle', tint: 0.6 });   // 0 the ghost lantern
+    sc.light({ x: MK.lantern[0], y: MK.lantern[1] + 2, z: 18, r: 120, i: 1.3, c: '#6af0a0', fl: 'candle', tint: 0.6 });   // 0 the ghost lantern on the table (lights the wall behind the dealer, where his shadow falls)
     sc.light({ x: 40, y: 20, z: 40, r: 90, i: 0.35, c: '#8fa8ff', tint: 0.3 });                                               // 1 cold street glow through the bridge gap
     sc.light({ x: 212, y: 96, z: 14, r: 34, i: 0.35, c: '#ffcf70', tint: 0.4 });                                              // 2 the scale's brass (kicked on a slap)
     sc.light({ x: 80, y: 104, z: 12, r: 30, i: 0.2, c: '#9ab8ff', tint: 0.5 });                                               // 3 the scroll (its omen glow)
@@ -626,9 +629,9 @@ X.def('mini_market', {
     S.lay('back'); [[260, 118, 34, 30], [266, 92, 26, 26]].forEach(([x, y, w, h]) => { S.beg(); TX.vplanks(S, x, y, w, h, 'wood', 4.6, { pw: 5 }); S.hl(x, y, w, 'wood', 6.4); S.line(x, y, x + w - 1, y + h - 1, 'wood', 3.4); S.end(); });
     S.ell(8, 146, 4, 2.4, 'ink', 0);
     // ── the canopy: a tattered violet cloth on two poles ──
-    S.lay('mid'); [[48, 40], [252, 40]].forEach(([x, y]) => { S.beg(); S.rect(x - 1, y, 3, 72, 'wood', 4.6); S.px(x - 1, y, 'wood', 7); S.end(); });
-    S.beg(); for (let x = 42; x <= 258; x++) { const sag = Math.round(Math.sin((x - 42) / 216 * Math.PI) * 5), top = 36 + sag, bot = top + 10 + ((x * 7) % 5 === 0 ? 3 : 0) - ((x * 11) % 7 === 0 ? 2 : 0); for (let y = top; y < bot; y++) S.px(x, y, 'magic', 6 - (y - top) * 0.3 + ((x >> 2) % 2 ? 0.6 : 0), { n: [0, -0.4] }); } S.end();
-    for (let x = 44; x < 258; x += 9) S.vl(x, 38 + Math.round(Math.sin((x - 42) / 216 * Math.PI) * 5), 8, 'magic', 3.4);
+    S.lay('mid'); [[64, 40], [236, 40]].forEach(([x, y]) => { S.beg(); S.rect(x - 1, y, 3, 72, 'wood', 4.6); S.px(x - 1, y, 'wood', 7); S.end(); });
+    S.beg(); for (let x = 58; x <= 242; x++) { const sag = Math.round(Math.sin((x - 58) / 184 * Math.PI) * 5), top = 36 + sag, bot = top + 10 + ((x * 7) % 5 === 0 ? 3 : 0) - ((x * 11) % 7 === 0 ? 2 : 0); for (let y = top; y < bot; y++) S.px(x, y, 'magic', 6 - (y - top) * 0.3 + ((x >> 2) % 2 ? 0.6 : 0), { n: [0, -0.4] }); } S.end();
+    for (let x = 60; x < 242; x += 9) S.vl(x, 38 + Math.round(Math.sin((x - 58) / 184 * Math.PI) * 5), 8, 'magic', 3.4);
     // ── the table: violet cloth with a gold fringe over a heavy board ──
     const [tx0, tx1, ty] = MK.table;
     S.beg(); S.box(tx0, ty, tx1 - tx0, 4, 'wood', 5.6, { top: 2 }); S.end();
@@ -636,8 +639,8 @@ X.def('mini_market', {
     for (let x = tx0 + 8; x < tx1 - 8; x += 24) { S.ell(x, ty + 11, 3, 3, 'gold', 5, { ring: 1 }); S.px(x, ty + 11, 'gold', 7); }
     S.lay('back'); S.rect(tx0 + 4, ty + 22, 3, FY - ty - 22, 'wood', 3); S.rect(tx1 - 7, ty + 22, 3, FY - ty - 22, 'wood', 3);
     // things on the table that never move: a candle stub, a pile of coins, a knife stuck in the board
-    S.lay('mid'); S.beg(); S.rect(60, ty - 5, 3, 5, 'bone', 7); S.end(); S.beg(); for (let i = 0; i < 7; i++) S.hl(170 + (i % 3) * 3, ty - 1 - Math.floor(i / 3), 3, 'gold', 7 + (i % 2)); S.end();
-    S.beg(); S.line(236, ty - 9, 238, ty, 'iron', 8); S.rect(234, ty - 13, 4, 4, 'wood', 5); S.end();
+    S.lay('mid'); S.beg(); for (let i = 0; i < 7; i++) S.hl(160 + (i % 3) * 3, ty - 1 - Math.floor(i / 3), 3, 'gold', 7 + (i % 2)); S.end();
+    S.beg(); S.line(72, ty - 9, 74, ty, 'iron', 8); S.rect(70, ty - 13, 4, 4, 'wood', 5); S.end();
     // ── the scale: brass case (a half disc standing on a little abacus), enamel bands, ticks; needle and glass are live ──
     const [dx, dy, dr] = MK.dial;
     S.lay('mid'); S.beg(); S.box(dx - dr - 4, dy + 2, (dr + 4) * 2, 12, 'wood', 4.4, { top: 1 }); for (let r = 0; r < 2; r++) { S.hl(dx - dr, dy + 5 + r * 4, dr * 2, 'brass', 6); for (let k = 0; k < 9; k++) S.ell(dx - dr + 4 + k * 7 + (r ? 3 : 0), dy + 5 + r * 4, 1.4, 1.4, 'wood', 7.5, { dome: 1 }); } S.end();
@@ -661,12 +664,12 @@ X.def('mini_market', {
     // the rat now and then
     const rp = steps(T, 11); if (rp < 0.25) { const rx = 10 + rp * 4 * 250; D.lay('mid'); D.beg(); D.rect(rx, 146, 6, 3, 'hair', 4); D.px(rx + 6, 147, 'hair', 5); D.px(rx + 7, 148, 'candy', 7); D.line(rx - 1, 148, rx - 5, 147 - Math.round(Math.sin(T * 20)), 'candy', 5); D.end(); }
     // the canopy's trinkets sway; the ghost lantern flickers green
-    D.lay('mid'); [[64, 'bottle'], [92, 'skull'], [178, 'charm'], [200, 'bottle2'], [232, 'bat']].forEach(([x, k], i) => { const sw = Math.round(Math.sin(T * 1.8 + i * 1.3) * 1.5), y0 = 44 + Math.round(Math.sin((x - 42) / 216 * Math.PI) * 5); D.beg(); D.line(x, y0, x + sw, y0 + 7, 'wood', 3); D.end({ none: 1 }); const y = y0 + 8;
+    D.lay('mid'); [[76, 'bottle'], [128, 'skull'], [166, 'charm'], [188, 'bottle2'], [224, 'bat']].forEach(([x, k], i) => { const sw = Math.round(Math.sin(T * 1.8 + i * 1.3) * 1.5), y0 = 44 + Math.round(Math.sin((x - 58) / 184 * Math.PI) * 5); D.beg(); D.line(x, y0, x + sw, y0 + 7, 'wood', 3); D.end({ none: 1 }); const y = y0 + 8;
       if (k === 'bottle' || k === 'bottle2') { D.beg(); D.rect(x + sw - 2, y, 5, 6, k === 'bottle' ? 'teal' : 'crimson', 6); D.rect(x + sw - 1, y - 2, 3, 2, 'glass', 6); D.px(x + sw - 1, y + 1, 'glass', 10); D.end(); }
       else if (k === 'skull') { D.beg(); D.ell(x + sw, y + 2, 3, 3, 'bone', 8, { dome: 1 }); D.px(x + sw - 1, y + 2, 'ink', 0); D.px(x + sw + 1, y + 2, 'ink', 0); D.hl(x + sw - 1, y + 5, 3, 'bone', 6); D.end(); }
       else if (k === 'charm') { D.beg(); D.ell(x + sw, y + 2, 3, 3, 'gold', 7, { ring: 1 }); D.px(x + sw, y + 2, 'red', 8); D.end(); }
       else { D.beg(); D.poly([[x + sw - 5, y], [x + sw, y + 3], [x + sw + 5, y], [x + sw + 3, y + 3], [x + sw, y + 5], [x + sw - 3, y + 3]], 'hair', 4); D.end(); } });
-    const [lx, ly] = MK.lantern; D.beg(); D.line(lx, 40, lx, ly - 4, 'iron', 4); D.box(lx - 4, ly - 4, 9, 2, 'iron', 6); for (let k = 0; k < 8; k++) { const w = k < 2 || k > 5 ? 3 : 4; D.rect(lx - w, ly - 2 + k, w * 2 + 1, 1, 'glass', 3); } D.box(lx - 4, ly + 6, 9, 2, 'iron', 5); D.end();
+    const [lx, ly] = MK.lantern; D.beg(); D.rect(lx, ly - 7, 1, 3, 'iron', 6); D.box(lx - 4, ly - 4, 9, 2, 'iron', 6); for (let k = 0; k < 8; k++) { const w = k < 2 || k > 5 ? 3 : 4; D.rect(lx - w, ly - 2 + k, w * 2 + 1, 1, 'glass', 3); } D.box(lx - 4, ly + 6, 9, 2, 'iron', 5); D.end();
     for (let k = 0; k < 5; k++) { const f = 0.8 + 0.25 * n1(T * 9 + k); D.px(lx + Math.round(n1(T * 4 + k) * 1.4), ly + 3 - Math.round(k * f), 'screen', 10 - k, { e: 255 }); D.px(lx - 1 + (k & 1), ly + 4 - Math.round(k * f * 0.7), 'teal', 9 - k, { e: 255 }); }
     // the scroll: rolled with a red wax seal; before the reveal it shakes in its omen colour and light leaks from the seal; then it unrolls
     const B = mg.bq || {}, [sx, sy] = MK.scroll, sk = B.sk || 0, jx = Math.round(Math.sin(T * 50) * sk), op = B.open != null ? T - B.open : -1;
@@ -746,15 +749,25 @@ X.def('mini_gym', {
     const [hx, hy] = GY.bag, fly = mg.flyT != null ? T - mg.flyT : -1, ang = (mg.bagAng || 0), sq = 1 + (mg.bag || 0) * 0.08;
     let cx, cy, rot = ang; if (fly >= 0) { cx = hx + Math.sin(ang) * GY.len + Math.min(1, fly / 0.35) * 70; cy = hy + GY.len - Math.sin(Math.min(1, fly / 0.35) * Math.PI * 0.6) * 24 + Math.max(0, fly - 0.35) * 40; rot = ang + fly * 5; } else { cx = hx + Math.sin(ang) * GY.len; cy = hy + Math.cos(ang) * GY.len; }
     D.lay('mid');
-    if (fly < 0) { D.beg(); for (let k = 0; k < GY.len - 30; k += 2) D.px(hx + Math.sin(ang) * k, hy + Math.cos(ang) * k, 'iron', 6 + (k % 4 ? -1 : 1)); D.end({ none: 1 }); }
+    if (fly < 0) { D.beg(); for (let k = 0; k < GY.len - 37; k += 2) D.px(hx + Math.sin(ang) * k, hy + Math.cos(ang) * k, 'iron', 6 + (k % 4 ? -1 : 1)); D.end({ none: 1 }); }
     else if (fly < 0.2) { rs.burst('spark', hx, hy + 10, 8, { sp: 40, spread: 6.3, life: 0.5 }); }
-    const w = Math.round(13 / sq), h = Math.round(58 * sq), top = cy - 30, split = fev || mg.phase === 'end';
-    if (fly < 0 || cy < FY + 20) { D.beg(); for (let yy = 0; yy < h; yy++) { const q = yy / h, ww = Math.round(w * (q < 0.08 ? 0.7 + q * 3 : q > 0.92 ? 0.8 : 1)); for (let xx = -ww; xx <= ww; xx++) { const u = xx / (ww + 0.5), px = cx + xx + Math.round(Math.sin(rot) * (yy - 28) * 0.9), py = top + yy; D.px(px, py, 'leather', 3.4 - u * 1.8 + (Math.abs(u) > 0.85 ? -0.8 : 0) + (u < -0.4 && u > -0.7 ? 1.3 : 0) - (q < 0.1 || q > 0.9 ? 0.6 : 0), { n: [u * 0.8, 0] }); } } D.end();
-      const at = (xx, yy, m, tt) => D.px(cx + xx + Math.round(Math.sin(rot) * (yy - 28) * 0.9), top + yy, m, tt);
-      [[6, 'linen'], [48, 'linen']].forEach(([yy, m]) => { for (let xx = -w; xx <= w; xx++) { at(xx, yy, m, 6.4 - xx / w * 1.4); at(xx, yy + 1, m, 5); } });
-      for (let yy = 14; yy < 44; yy += 3) at(-Math.round(w * 0.3), yy, 'leather', 2.2);
-      [[4, 22, 4, 5], [-6, 34, 5, 4]].forEach(([x0, y0, pw, ph]) => { for (let a = 0; a < pw; a++) for (let b = 0; b < ph; b++) at(x0 + a, y0 + b, 'iron', 6 - b * 0.4); });
-      if (split) { for (let yy = 30; yy < 38; yy++) at(Math.round(w * 0.4), yy, 'ink', 0); if (Math.random() < 0.6) rs.burst('dust', cx + w * 0.4, top + 38, 2, { sp: 8, life: 1.2 }); } }
+    // a red leather heavy bag: black domed cap and base, a swivel ring and four short harness chains, a vertical seam with
+    // stitches, a stitched band under the cap, a gold badge, a strip of grey tape; it bulges a little in the middle
+    const w = Math.round(12 / sq), h = Math.round(56 * sq), top = cy - 28, split = fev || mg.phase === 'end';
+    const at = (xx, yy, m, tt, o2) => D.px(cx + xx + Math.round(Math.sin(rot) * (yy - 28) * 0.9), top + yy, m, tt, o2);
+    if (fly < 0 || cy < FY + 20) {
+      if (fly < 0) { D.beg(); const sx = cx + Math.round(Math.sin(rot) * -34 * 0.9), sy = top - 7; D.ell(sx, sy, 2, 2, 'iron', 8, { ring: 1 }); [-w + 1, -Math.round(w / 3), Math.round(w / 3), w - 1].forEach(xx => D.line(sx, sy + 2, cx + xx + Math.round(Math.sin(rot) * -28 * 0.9), top + 1, 'iron', xx < 0 ? 7 : 5)); D.end({ none: 1 }); }
+      D.beg();
+      for (let yy = 0; yy < h; yy++) { const q = yy / h, cap = q < 0.12, base = q > 0.9, ww = Math.round(w * (q < 0.06 ? 0.72 + q * 4.6 : q > 0.94 ? 1 - (q - 0.94) * 6 : 1 + Math.sin(q * Math.PI) * 0.08));
+        for (let xx = -ww; xx <= ww; xx++) { const u = xx / (ww + 0.5), hi = u > -0.62 && u < -0.32, edge = Math.abs(u) > 0.84;
+          if (cap || base) at(xx, yy, 'hair', 3.4 - u * 1.2 + (hi ? 1.4 : 0) + (edge ? -0.8 : 0) + (cap && yy < 2 ? 0.8 : 0), { n: [u * 0.8, cap ? -0.5 : 0.5] });
+          else at(xx, yy, 'red', 4.6 - u * 2 + (hi ? 1.6 : 0) + (edge ? -1 : 0) - (q > 0.8 ? 0.6 : 0), { n: [u * 0.8, 0] }); } }
+      D.end();
+      const sx0 = Math.round(w * 0.38); for (let yy = 8; yy < h - 6; yy++) { at(sx0, yy, 'red', 2); if (yy % 3 === 0) at(sx0 + 1, yy, 'linen', 5); }   // seam + stitches
+      for (let xx = -w + 1; xx < w; xx += 2) { at(xx, 7, 'linen', 6 - (xx > 0 ? 1 : 0)); at(xx, h - 6, 'linen', 5 - (xx > 0 ? 1 : 0)); }            // stitched bands under the cap / over the base
+      for (let yy = -3; yy <= 3; yy++) for (let xx = -3; xx <= 3; xx++) { const d = Math.hypot(xx, yy); if (d > 3.4) continue; at(xx - 3, 24 + yy, d > 2.4 ? 'gold' : 'hair', d > 2.4 ? 7 - (xx + yy) * 0.3 : 3); } at(-4, 23, 'gold', 9);   // badge
+      for (let yy = 0; yy < 5; yy++) for (let xx = 0; xx < 6; xx++) at(3 + xx, 36 + yy - Math.round(xx * 0.3), 'iron', 6.4 - yy * 0.3 + (yy === 0 ? 1 : 0));                                               // tape
+      if (split) { for (let yy = 30; yy < 39; yy++) at(Math.round(w * 0.5), yy, 'ink', 0); if (Math.random() < 0.6) rs.burst('dust', cx + w * 0.5, top + 39, 2, { sp: 8, life: 1.2 }); } }
     if (fly >= 0.35 && !s.crashed) { s.crashed = 1; rs.burst('dust', cx, cy, 40, { sp: 40, spread: 6.3, life: 1.8 }); rs.burst('spark', cx, cy, 10, { sp: 50, spread: 6.3, life: 0.6 }); }
     if (fly < 0) s.crashed = 0;
     // the bell rings: the hammer shakes

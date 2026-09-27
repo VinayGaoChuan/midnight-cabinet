@@ -38,15 +38,17 @@ MINI.spring = { title: '地下温泉', img: 'e_spring', col: C.teal, text: '泉�
   down(mg, px, py) { if (mg.phase === 'ready') { this.miniSet('soak'); mg.inT = mg.t; S.mini('spring', 'bubble'); S.mini('spring', 'plunge'); splash(this, mg, SPW.x, SPW.y, 26, 1); SHOW.shake(mg, 4); return; }
     if (mg.phase !== 'soak') { const inPool = ((K.ax(px) - 150) / 104) ** 2 + ((K.ay(py) - 128) / 16) ** 2 < 1; if (inPool) { splash(this, mg, px, py, 8); S.mini('spring', 'drop'); } else SHOW.tap(this, mg, px, py); } },
   up(mg) { if (mg.phase === 'soak') MINI.spring.judge.call(this, mg); },
-  judge(mg) { if (mg.phase !== 'soak') return; const h = mg.heat, [a, b] = mg.band, gy = spY(h), pool = SPOOL; this.miniSet('done'); mg.lockH = h; mg.clampT = mg.t; S.mini('spring', 'clamp');
+  judge(mg) { if (mg.phase !== 'soak') return; const h = mg.heat, [a, b] = mg.band, gy = spY(h), pool = SPOOL; this.miniSet('done'); SHOW.calm(mg); mg.lockH = h; mg.clampT = mg.t; S.mini('spring', 'clamp');
     if (h >= a && h <= b) { const d = Math.abs(h - (a + b) / 2) / ((b - a) / 2), tier = d < 0.3 ? 3 : d < 0.65 ? 2 : 1, col = '#6fd0ff'; mg.win = tier;
       // 铜指针夹住 → 卡帧 → 按档揭晓；心从蒸汽里飞向生命条
       SHOW.hitstop(mg, 0.15, SPG.x, gy, () => { S.mini('spring', 'good');
-        if (tier === 3) { mg.geyserT = mg.t; S.mini('spring', 'geyser'); SHOW.reveal(this, mg, 3, { x: pool.x, y: pool.y - 60, col: C.teal }); K.pxrFlash('mini_spring', 'all', 1.4); }
+        // PERFECT：间歇泉就是揭晓本身——在领袖右边冲起一根水柱，光芒和冲击环从水柱顶上放出来，不再叠一层揭晓 / 大赢的全屏特效，免得把水柱盖住
+        if (tier === 3) { mg.geyserT = mg.t; const gx = K.lx(196), gt = K.ly(36); S.mini('spring', 'geyser'); S.mini('_', 'win3'); SHOW.white(mg, 0.3); SHOW.shake(mg, 12); this.fx.kick(12); K.pxrFlash('mini_spring', 'all', 1.4); splash(this, mg, gx, pool.y, 30, 1);
+          SHOW.later(mg, 0.25, () => { SHOW.rays(mg, gx, gt, C.teal, { n: 16, life: 1.8, r: 560, rainbow: 1 }); SHOW.ring(mg, gx, gt, 10, 320, C.white, { w: 2, life: 0.5 }); SHOW.ring(mg, gx, gt, 10, 420, C.teal, { life: 0.7, delay: 0.08 }); SHOW.burst(mg, gx, gt, 60, { ramp: [C.white, C.ice, C.teal, C.tealDeep], sp: [200, 620], life: [0.5, 1.1], g: 600 }); SHOW.stamp(mg, 'PERFECT', CX - 260, SY + 250, C.gold, 104, 2); S.mini('_', 'stamp'); SHOW.roll(mg, hpPct(this, 0.3), CX - 260, SY + 360, C.lime, 1.3); SHOW.ambient(mg, 2); }); }
         else if (tier === 2) { SHOW.reveal(this, mg, 1, { x: pool.x, y: pool.y, col: C.teal }); [1, 2, 3, 4].forEach(i => K.pxrFlash('mini_spring', i, 1.4)); splash(this, mg, pool.x, pool.y, 30, 1); }
         else { SHOW.ring(mg, SPG.x, gy, 8, 90, C.green, { life: 0.35 }); splash(this, mg, pool.x, pool.y, 18, 1); }
         if (tier < 3) SHOW.stamp(mg, tier === 2 ? 'GREAT' : 'GOOD', SPG.x - 170, gy, tier === 2 ? C.gold : C.lime, 48 + tier * 8, 1);
-        SHOW.later(mg, 0.08, () => SHOW.win(this, mg, tier, { x: pool.x, y: pool.y - 20, v: hpPct(this, 0.3), col: tier >= 3 ? C.gold : C.teal, label: tier === 3 ? 'PERFECT' : '' }));
+        if (tier < 3) SHOW.later(mg, 0.08, () => SHOW.win(this, mg, tier, { x: pool.x, y: pool.y - 20, v: hpPct(this, 0.3), col: C.teal }));
         SHOW.later(mg, 0.25, () => { healFly(this, mg, 0.3, { x: pool.x, y: pool.y - 90 }); mg.sighT = mg.t + 0.3; });
         this.miniSay('刚刚好', col, true); endIn(this, mg, [1.35, 1.6, 2.4][tier - 1], () => '刚刚好。回复 ' + mg.healV + ' 生命。', col); }); }
     else if (h > b) { const v = this.heroHurt(0.05), tx = '泡太久，晕了过去，醒来时头撞破了（-' + v + '）。'; mg.faintT = mg.t; S.mini('spring', 'hot'); SHOW.lose(this, mg); splash(this, mg, SPW.x, SPW.y, 14); this.miniSay(tx.split('。')[0], '#ff6a5a', true); endIn(this, mg, 0.6, tx, '#ff6a5a'); }
@@ -234,13 +236,13 @@ MINI.cat = { title: '招财猫', img: 'e_cat', col: C.gold, text: '猫爪一招�
 // 拍板：画面下方伸出一只手拍下铜铃，桌上的东西全跳一下，骨针颤两下停住，价格那一刻就定了；好价：慢镜头、聚光罩住秤盘、
 // 价签一格格往下翻，斗篷人一拍比一拍往后缩；贵价：他金牙一亮咧嘴笑，一拍带过；再砍一次他更不耐烦。
 // 成交：他把卷轴拍在桌上，卷轴逐拍加码（在品质色里抖、火漆透光）→ 卡帧 → 火漆炸开、卷轴展开、冲击波把雨推开 → 图纸逐项砸出；然后他化进黑暗，只剩两只眼
-const MKD = { x: K.lx(212), y: K.ly(96) }, MKP = { x: K.lx(80), y: K.ly(104) }, MKDEAL = 'BlackMarketDealer';
+const MKD = { x: K.lx(206), y: K.ly(104) }, MKP = { x: K.lx(90), y: K.ly(113) }, MKDEAL = 'BlackMarketDealer';
 const mkSlot = () => M.PXR && M.PXR.slots['_mg:mini_market'];
 MINI.market = { title: '黑市', img: 'e_market', col: C.violet, text: '斗篷底下的人亮出一张高级图纸。「价钱？看你手快不快。」',
   init(mg) { mg.base = M.nice(mg.P * 14); mg.needle = 0; mg.price = 0; mg.tries = 0; mg.react = { k: 'idle', t: 0 }; },
   stop(mg) { if (mg.phase !== 'swing') return; const k = 0.4 + mg.needle * 1.4; mg.mul = k; mg.price = M.nice(mg.base * k); this.miniSet('offer'); S.mini('market', 'stamp'); S.mini('market', 'bell'); this.fx.kick(5);
     const g = k < 0.6 ? 3 : k < 0.9 ? 2 : k < 1.2 ? 1 : 0, a = Math.PI + mg.needle * Math.PI; mg.grab = g; mg.stopN = mg.needle; mg.rollD = g >= 2 ? 0.5 : 0.25; mg.stamped = 0; mg.rs = -1;
-    mg.slapT = mg.t; SHOW.shake(mg, 6); K.pxrFlash('mini_market', 2, 1.4); SHOW.burst(mg, K.lx(150), K.ly(110), 10, { ramp: [C.white, C.butter, C.gold, C.amber], sp: [80, 220], life: [0.2, 0.4], ang: -Math.PI / 2, spread: 2.4 });
+    mg.slapT = mg.t; SHOW.shake(mg, 6); K.pxrFlash('mini_market', 2, 1.4); SHOW.burst(mg, K.lx(152), K.ly(118), 10, { ramp: [C.white, C.butter, C.gold, C.amber], sp: [80, 220], life: [0.2, 0.4], ang: -Math.PI / 2, spread: 2.4 });
     SHOW.burst(mg, MKD.x + Math.cos(a) * 100, MKD.y + Math.sin(a) * 100, 6 + g * 4, { col: g ? C.lime : C.red, sp: [100, 300], life: [0.2, 0.45] });
     mg.react = { k: g >= 2 ? 'recoil' : g ? 'idle' : 'laugh', t: mg.t };
     if (g >= 2) { SHOW.slowmo(mg, g >= 3 ? 0.3 : 0.5, 0.45); SHOW.reach(this, mg, { x: MKD.x, y: MKD.y, r: 170, col: C.lime, label: '' }); }
@@ -275,7 +277,10 @@ MINI.market = { title: '黑市', img: 'e_market', col: C.violet, text: '斗篷�
     else if (R.k === 'present') { st = 'attack'; fi = Math.min(8, Math.floor(rt * 12)); if (rt > 0.75) { st = 'idle'; fi = Math.floor(t * 12) % 24; } }
     else if (R.k === 'leave') { st = 'death'; fi = Math.min(34, 7 + Math.floor(rt * 12)); }
     const hoodPop = mg.hoodT != null && t - mg.hoodT < 0.25 ? -4 : 0;
-    if (!M.PXR.MINI_D.cast(x, MKDEAL, K.lx(112), K.ly(124) + hoodPop, st, fi, true, tint, K.ly(113))) K.SP(x, 'stall', CX + 300, FLOOR - 40, 180);
+    // 桌上的鬼火灯从下往上照着他，把他的影子放大一倍投在身后被照亮的砖墙上：人还是战斗角色那么大，影子让他压得住整个摊子
+    const P = M.PCDG, sc = P && P.has(MKDEAL) ? P.bodyFrame(MKDEAL, st, fi, '#07060f', 4) : null;
+    if (sc && (R.k !== 'leave' || rt < 1.4)) { x.save(); x.beginPath(); x.rect(K.lx(80), K.ly(58), K.lx(192) - K.lx(80), K.ly(120) - K.ly(58)); x.clip(); x.globalAlpha = 0.72 * (0.9 + 0.1 * Math.sin(t * 7)); x.imageSmoothingEnabled = false; x.translate(K.lx(140), K.ly(120) + hoodPop * 2); x.scale(-2, 2); x.drawImage(sc, -sc.cx, -sc.footY, sc.width, sc.height); x.restore(); }
+    if (!M.PXR.MINI_D.cast(x, MKDEAL, K.lx(132), K.ly(124) + hoodPop, st, fi, true, tint, K.ly(121))) K.SP(x, 'stall', CX + 300, FLOOR - 40, 180);
     // 卖部队：一条锁链从左边暗处把部队拖走，一袋钱落在桌上
     if (mg.phase === 'sell') { const q = cl((t - mg.sellT) / 0.7, 0, 1), ux = K.lx(170) - eo(q) * 900; if (!M.PXR.MINI_D.cast(x, mg.sellK, ux, K.ly(147), 'hurt', 6, false)) K.SP(x, mg.sellK, ux, FLOOR, 120); for (let k = 0; k < 30; k++) K.R(x, K.snap(SX + k * 8), K.ly(128) + ((k & 1) ? 0 : 4), 8, 4, k % 2 ? C.steel : C.slate); }
     // 价签：挂在秤盘下，数字像翻页数字一样一格格往下翻
