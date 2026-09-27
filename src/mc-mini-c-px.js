@@ -28,6 +28,28 @@ A.cast = function (x, key, ax, ay, st, t, flip, tint) {
   const c = P.bodyFrame(key, st || 'idle', fi, tint || '', ART); if (!c) return null; const sm = x.imageSmoothingEnabled; x.imageSmoothingEnabled = false;
   x.save(); x.translate(Math.round(SX + ax * ART), Math.round(SY + ay * ART)); if (flip) x.scale(-1, 1); x.drawImage(c, -c.cx, -c.footY, c.width, c.height); x.restore(); x.imageSmoothingEnabled = sm; return c;
 };
+// the minigame NPCs (乐师 / 裁缝老太 / 迷路的孩子 / 货郎) are pixel-cast modules (pcd/chars); each runs its own engine here so
+// every state (idle, move, attack, skill charge → cast → recover, hurt, death) plays with its own effects; sounds go to charFx
+const NPC = {}, NPC_SND = { swing: 1, shoot: 1, charge: 1, release: 1, impact: 1, fall: 1, step: 1 };
+A.npc = function (key) {
+  const P = window.PCD; if (!P || !P.has || !P.has(key)) return null; let n = NPC[key]; if (n) return n;
+  const g = P.createEngine({ game: true, W: 128, out: { sfx: (ev, o) => { if (NPC_SND[ev] && M.Sfx && M.Sfx.charFx) try { M.Sfx.charFx(ev, Object.assign({}, o, { pan: 0 })); } catch (e) {} } } });
+  g.load(key, { dummyX: 110 }); g.enter('idle');
+  const cv = document.createElement('canvas'); cv.width = g.W; cv.height = g.H; const cx = cv.getContext('2d'), im = cx.createImageData(g.W, g.H);
+  return (NPC[key] = { key, g, st: 'idle', cv, cx, im, px: new Uint32Array(im.data.buffer), lt: null, mg: null });
+};
+// play a state: 'attack' / 'skill' / 'hurt' / 'death' / 'move' / 'idle'; one-shot states fall back to idle when done
+A.npcAct = function (key, st) { const n = A.npc(key); if (!n) return false; n.g.enter(st === 'skill' ? 'charge' : st); n.st = st; return true; };
+// draw an NPC with its feet at art (ax, ay), facing right (flip: left); a new minigame run starts it fresh in idle
+A.npcDraw = function (x, key, ax, ay, t, flip, mg) {
+  const n = A.npc(key); if (!n) return false;
+  if (n.mg !== mg) { n.mg = mg; n.lt = null; n.g.enter('idle'); n.st = 'idle'; }
+  const dt = n.lt == null ? 0 : clamp(t - n.lt, 0, 0.1); n.lt = t; n.g.step(dt, 1);
+  if (n.g.done && !n.g.busy()) { if (n.st === 'idle' || n.st === 'move') n.g.enter(n.st); else if (n.st !== 'death') { n.g.enter('idle'); n.st = 'idle'; } }
+  const fb = n.g.render(), lut = n.g.lut, px = n.px; px.fill(0); for (let j = 0; j < fb.length; j++) if (fb[j] !== 255) px[j] = lut[fb[j]]; n.cx.putImageData(n.im, 0, 0);
+  const sm = x.imageSmoothingEnabled; x.imageSmoothingEnabled = false; x.save(); x.translate(Math.round(SX + ax * ART), Math.round(SY + ay * ART)); if (flip) x.scale(-1, 1);
+  x.drawImage(n.cv, -n.g.HX * ART, -n.g.HY * ART, n.g.W * ART, n.g.H * ART); x.restore(); x.imageSmoothingEnabled = sm; return true;
+};
 // a moving light from anim: lights the stage around it this frame (x, y art px; c hex; i 0…1.5)
 A.glow = (rs, x, y, r, c, i, z) => { rs.dl.push({ x, y, z: z == null ? 14 : z, r, i, rgb: rgb(c), tint: 0.55 }); };
 // the stage defs share this shape
@@ -436,7 +458,8 @@ A.def('mini_granny', {
     // the pattern (a half-round cape of pale paper, pinned to the wall) and the leader's shadow cast by the lamp over wall and paper
     D.lay('wall'); const sh = o.shadowK == null ? 1 : o.shadowK, br = Math.sin(t * 1.6) * 0.5 + (o.breath || 0) * 3, pat = ph !== 'idle' && ph !== 'select', sunk = o.sunk || 0;
     const inShadow = (x, y) => { if (y < 30) return 0; const dh = Math.hypot((x - 150) / 9.5, (y - 42) / 11); if (dh < 1) return 1; if (y < 52) return 0; const hw = y < 56 ? 5 : y < 64 ? 5 + (y - 56) * 2.2 : Math.min(26, 22 + (y - 64) * 0.2) - (y > 100 ? (y - 100) * 0.1 : 0) + br; return Math.abs(x - 150) < hw ? 1 : 0; };
-    for (let y = 30; y < 148; y++) for (let x = 60; x < 240; x++) {
+    const x0s = pat ? 60 : 110, x1s = pat ? 240 : 190;
+    for (let y = 30; y < 148; y++) for (let x = x0s; x < x1s; x++) {
       const r = Math.hypot(x - 150, (y - 116) * 1.0), onPaper = pat && y <= 116 && r < 77 - sunk * 77, shd = inShadow(x, y) * sh;
       if (onPaper) { const edge = r > 75.5, grain = ((x * 3 + y * 5) % 17 === 0) ? -0.6 : 0; const chalk = (Math.abs(r - 60) < 0.5 || (Math.abs(x - 150) < 0.5 && y > 60)) && (x + y) % 3; D.px(x, y, chalk ? 'linen' : 'paper', chalk ? 8 - shd * 4 : (edge ? 5.5 : 7.2) + grain - shd * 4.4 - (y > 110 ? 0.6 : 0)); }
       else if (shd) D.px(x, y, 'night', 0.6 + (X.bayer(x, y) > 0.5 && !inShadow(x - 2, y) ? 0.8 : 0));
@@ -554,7 +577,7 @@ A.def('mini_child', {
     o = o || {}; const g = o.girl || { x: 150, y: 124, lk: 1 };
     rs.mul[1] = g.lk == null ? 1 : g.lk; const L = X.defs.mini_child; L.__gl = g;
     // her lantern moves the light: nudge the def's light to where she stands
-    const B = rs; B.dl.push({ x: g.x + 3, y: g.y - 8, z: 10, r: 60 + 40 * (g.lk || 1), i: 0.9 * (g.lk || 1), rgb: [255, 192, 96], tint: 0.6 });
+    rs.dl.push({ x: g.x + 3, y: g.y - 8, z: 10, r: 38 + 22 * (g.lk || 1), i: 0.9 * (g.lk || 1), rgb: [255, 192, 96], tint: 0.6 });
     // the hollow birch she leads you to at the end: white bark, black scars, a dark hollow that fills with the omen colour
     if (o.hollow > 0) { const hx = 206, k = o.hollow; D.lay('mid'); D.beg(); for (let y = 40; y < 150; y++) for (let x = 0; x < 16; x++) { const u = x / 15 * 2 - 1; D.px(hx + x, y, 'bone', 8.5 - Math.abs(u) * 2 - (u > 0.4 ? 1.5 : 0) + (hash(hx + x, y >> 1, 9) > 0.93 ? -6 : 0) + ((y + 5) % 13 < 2 && x > 1 && x < 15 ? -5.5 : 0), { n: [u * 0.8, 0] }); } D.end({ lit: 1 });
       for (let y = 112; y < 138; y++) { const hw = Math.round(Math.sqrt(Math.max(0, 1 - Math.pow((y - 125) / 13, 2))) * 5); for (let x = -hw; x <= hw; x++) D.px(hx + 8 + x, y, o.hollowC ? 'gold' : 'ink', o.hollowC ? 4 + k * 6 - Math.abs(x) * 0.6 : 0.5, o.hollowC ? { e: 255 } : undefined); }
