@@ -873,7 +873,20 @@ const MINI = {
   // 砸金蛋：hammer 在锤子落下的那一帧调用，声音不能晚
   eggs: { hammer: (t) => { ring(t, 1800 * [1, .92, 1.08][VARI], .4, .08, { parts: [[1, 1], [2.4, .5], [3.8, .3]] }); thud(t, 150, 70, .1, .2); nz(t, .03, 'bandpass', 2500, 1.2, .06); }, crack: (t) => { for (let i = 0; i < 5; i++) nz(t + i * .025, .02, 'highpass', 3000, .7, .08); S.shatter(); }, prize: (t) => { S.up(3); coins(t + .1, 10, .03); }, snake: (t) => { nz(t, .6, 'highpass', 4500, .6, .08, { a: .05 }); S.hitAt(0, 1.2); } },
   dice: { shake: (t) => { for (let i = 0; i < 10; i++) nz(t + i * .045 + rnd(0, .015), .02, 'bandpass', rnd(1800, 3000), 2, .07); }, roll: (t) => whoosh(t, .2, 900, 2400, .04), clack: (t) => { nz(t, .02, 'bandpass', 1900 * [1, .85, 1.15][VARI], 2.5, .07); thud(t, 230, 130, .03, .06); }, win: (t) => S.up(2), lose: (t) => sad(t), tie: (t) => tone(t, 'p25', hz(5), .1, .03, { crush: 1 }) },
-  fate: { cost: (t) => { nz(t, .2, 'lowpass', 900, 1, .14); S.heart(); }, spin: (t) => grind(t, 1.8, .12), click: (t) => { nz(t, .015, 'bandpass', 2500 * [1, .92, 1.08][VARI], 3, .08); thud(t, 180, 110, .03, .05); }, stop: (t) => { thud(t, 120, 50, .3, .35); ring(t + .02, mtof(deg(0, -1)), 2.2, .08, { parts: [[1, 1], [2.01, .5], [2.76, .35], [5.4, .2]], rev: .6 }); } },
+  // 命运之轮 (2026-09-27): the grind lasts as long as the wheel runs fast; each stud clicks a step higher in the last stretch; the blood
+  // price is a drip, a hiss along the grooves and the ring of names lighting as low bells; hanging on a stud is a stone groan, then it
+  // slips over (a snap and a thud) or rolls back (a groan down); gold coins and a bell run for 积分, a minor organ chord for the curse
+  fate: { cost: (t) => { nz(t, .2, 'lowpass', 900, 1, .14); S.heart(); }, spin: (t, d) => { grind(t, d || 1.8, .12); nz(t, (d || 1.8) * 0.8, 'lowpass', 140, 1, .08, { src: 'brown', a: .1, hold: (d || 1.8) * 0.4 }); },
+    click: (t, i) => { const k = 1 + Math.min(8, i | 0) * 0.07; nz(t, .015, 'bandpass', 2500 * k * [1, .92, 1.08][VARI], 3, .08); thud(t, 180 * k, 110 * k, .03, .05); },
+    stop: (t) => { thud(t, 120, 50, .3, .35); ring(t + .02, mtof(deg(0, -1)), 2.2, .08, { parts: [[1, 1], [2.01, .5], [2.76, .35], [5.4, .2]], rev: .6 }); },
+    drip: (t) => { blip(t, 880, .09); thud(t + .02, 300, 120, .06, .07); nz(t, .04, 'highpass', 3000, .6, .04); },
+    flow: (t) => nz(t, .55, 'bandpass', 1500, 1.4, .05, { to: 600, a: .05 }),
+    rune: (t) => arp(t, [deg(0, -1), deg(2, -1), deg(4, -1), deg(7, -1)], .09, (tt, m) => bell(tt, m, 1.2, .045, { rev: .5 })),
+    creak: (t) => { nz(t, .55, 'bandpass', 220, 6, .1, { src: 'brown', to: 160, a: .04 }); tone(t, 'sawtooth', 62, .5, .03, { lp: 400, vib: [17, 40, .02], a: .05 }); },
+    slip: (t) => { nz(t, .03, 'bandpass', 2200, 2, .12); thud(t, 220, 70, .18, .26); },
+    back: (t) => { nz(t, .45, 'bandpass', 200, 4, .08, { src: 'brown', to: 110, a: .05 }); thud(t + .35, 140, 70, .12, .12); },
+    gold: (t) => { coins(t, 12, .04); arp(t + .05, [deg(4), deg(7), deg(9), deg(12)], .06, (tt, m) => bell(tt, m, .8, .05)); },
+    eye: (t) => { padc(t, [38, 39, 45], 1.4, .03, { lp: 600 }); fm(t, hz(-4, -1), .6, .06, { r: 1.414, i: 3, itau: .2, rev: .4 }); nz(t, .3, 'bandpass', 700, 3, .05); } },
   // 乐师：结算时完成度往上滚，钢片琴沿 D 多利亚音阶一格格往上爬；跨线是钟琴 + 吉他扫弦；结尾用曲子里的小提琴收
   musician: { note: (t, i) => fiddle(t, deg(i | 0, 0), .45, .05), metro: (t) => nz(t, .015, 'bandpass', 2600, 5, .09), miss: (t) => { tone(t, 'sawtooth', 190, .25, .05, { to: 170, lp: 2500, vib: [23, 120, .01] }); nz(t, .2, 'bandpass', 3500, 3, .04); },
     pluck: (t) => IN.pizz(t, pick([74, 77, 79, 81, 84, 86]), .4, .5, { rev: .25 }),

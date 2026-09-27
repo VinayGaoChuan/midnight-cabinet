@@ -43,6 +43,7 @@ mc-pxroom-jobs.js
 mc-pxmarket.js
 mc-pxroom-mini-d.js
 mc-pxchest.js
+mc-pxroom-minib.js
 mc-game-a.js
 mc-game-b.js
 mc-game-c.js

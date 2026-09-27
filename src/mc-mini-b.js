@@ -360,37 +360,112 @@ MINI.dice = { title: '骰子对决', img: 't_dice', col: C.cream, text: '一个�
     K.sign(x, '第 ' + Math.min(mg.max, Math.max(1, mg.round)) + ' / ' + mg.max + ' 局', SX + 150, SY + 150, { kind: 'indigo', size: T.body }); U.text(x, (mg.net >= 0 ? '+' : '') + M.fmt(mg.net), SX + SW - 150, SY + 150, T.title, mg.net >= 0 ? C.gold : C.red, { num: true });
   } };
 
-// ═════════════════════ 命运之轮 · pay in blood, spin the reel ═════════════════════
-// the wheel is a wheel (user ruling 2026-09-25): the stone disc itself spins, slows down and stops with a sector under
-// the pointer — no slot reel. Each sector says what it gives.
+// ═════════════════════ 命运之轮 · pay in blood, spin the stone wheel ═════════════════════
+// A real stone wheel (pixel stage mb_fate, mc-pxroom-minib.js): the disc itself turns, slows down like something heavy and stops
+// with a sector under the pointer (user ruling 2026-09-25; 2026-09-27: 「最后转那几下应该制造悬念，慢慢停止，然后根据大奖给不同的反馈」).
+// The result is drawn when you pay; the show only picks how the wheel comes to rest:
+//   a gold sector — it creeps up to the stud in front of it, hangs there with the pointer bent (spotlight, heartbeat), then tips over;
+//   just short of gold — it hangs on that stud and rolls back;  just past gold — it crawls through the gold sector and slips off its
+//   far end;  anything else — a plain slow stop. Each stud in the last stretch is a beat; then every prize has its own reveal.
 const FATE = [{ n: '空', c: C.haze, w: 16 }, { n: '部队攻击 +8%', c: C.magenta, w: 16 }, { n: '部队', c: C.blue, w: 16 }, { n: 'FEVER', c: C.violet, w: 14 }, { n: '图纸', c: C.tan, w: 12 }, { n: '积分', c: C.gold, w: 16 }, { n: '诅咒', c: C.red, w: 10 }];
-const SEG = Math.PI * 2 / FATE.length, FTA = 2.6;
-// 每格的中奖档（0 = 没中）；倍率和图纸是「金格」
+const SEG = Math.PI * 2 / FATE.length, FN = FATE.length;
+// 每格的中奖档（0 = 没中）；部队攻击和图纸是「金格」
 const FT = [0, 3, 2, 2, 3, 2, 0], TOPF = (k) => FT[k] >= 3;
+// where things are on the stage (logical px): the pointer's tip, the hub, the sector under the pointer, the bronze name plate
+const FPT = { x: K.lx(150), y: K.ly(43) }, FHUB = { x: K.lx(150), y: K.ly(92) }, FSEC = { x: K.lx(150), y: K.ly(62) }, FPL = { x: K.lx(150), y: K.ly(145) };
+// the spin: 1.7 s of blood price (drop 0.55 · grooves fill 0.5 · names light 0.4 · the wheel leans back 0.25), 0.4 s to full speed,
+// then friction: velocity falls smoothly to nothing ((1 − p)², so the last sector or so goes by at a crawl), then the ending
+const FPRE = 1.7, FUP = 0.4, FW0 = 18, FSTUD = 0.02;
+const fSector = (a) => ((Math.floor(-a / SEG) % FN) + FN) % FN;
+function fatePlan(a0, idx) {
+  const kind = TOPF(idx) ? 'gold' : TOPF((idx + FN - 1) % FN) ? 'short' : TOPF((idx + 1) % FN) ? 'scrape' : 'plain';
+  const edge = (j) => -(j + 1) * SEG;   // the angle (mod 2π) at which sector j comes under the pointer (the disc turns forward)
+  let stop, fin;
+  if (kind === 'gold') { stop = edge(idx) - FSTUD; fin = edge(idx) + (0.2 + rnd() * 0.15) * SEG; }
+  else if (kind === 'short') { stop = edge((idx + FN - 1) % FN) - FSTUD; fin = stop - (0.18 + rnd() * 0.05) * SEG; }
+  else if (kind === 'scrape') { stop = edge(idx) - FSTUD; fin = edge(idx) + (0.05 + rnd() * 0.04) * SEG; }
+  else { stop = edge(idx) + (0.3 + rnd() * 0.4) * SEG; fin = stop; }
+  const a1 = a0 + FW0 * FUP / 2, T = Math.PI * 2, dec = stop + T * Math.ceil((a1 + 22 - stop) / T), L = dec - a1, Td = 3 * L / FW0;
+  const hold = kind === 'gold' ? 0.85 : kind === 'short' ? 0.7 : kind === 'scrape' ? 0.5 : 0, move = kind === 'gold' ? 0.3 : kind === 'short' ? 0.5 : kind === 'scrape' ? 0.35 : 0;
+  return { idx, kind, a0, a1, dec, fin: dec + (fin - stop), L, Td, hold, move, t3: FPRE + FUP + Td, end: FPRE + FUP + Td + hold + move, s: 0, done: false, beat: 0, reach: false, lastSeg: Math.floor(a0 / SEG) };
+}
+function fateAngle(P, s) {
+  if (s < FPRE) { const q = (s - (FPRE - 0.25)) / 0.25; return P.a0 - (q > 0 ? 0.07 * Math.sin(Math.PI * Math.min(1, q)) : 0); }
+  if (s < FPRE + FUP) { const u = s - FPRE; return P.a0 + FW0 * u * u / (2 * FUP); }
+  if (s < P.t3) { const p = (s - FPRE - FUP) / P.Td; return P.a1 + P.L * (1 - Math.pow(1 - p, 3)); }
+  const e = s - P.t3;
+  if (P.kind === 'plain') return P.dec;
+  if (e < P.hold) return P.dec - Math.abs(Math.sin(e * 90)) * 0.004 * (1 - e / P.hold);   // hangs on the stud, grinding
+  const k = cl((e - P.hold) / P.move, 0, 1);
+  if (P.kind === 'short') return P.dec + (P.fin - P.dec) * eio(k) + Math.sin(k * Math.PI) * -0.012;   // rolls back
+  return P.dec + (P.fin - P.dec) * (P.kind === 'gold' ? eb(k) : eo(k));                               // tips over / slips off
+}
 MINI.fate = { title: '命运之轮', img: 'e_fate', col: C.red, text: '石头做的轮盘上刻满了名字。转动它的代价，是血。',
-  init(mg) { mg.ang = 0; mg.spin = null; mg.fl = 0; mg.flv = 0; },
-  btns(mg) { if (mg.phase !== 'idle') return []; return [{ t: '以血转动', sub: '领袖 -12% 生命', danger: 1, fn: () => MINI.fate.spin.call(this, mg) }, { t: '离开', leave: 1, fn: () => this.miniFinish('你没有碰它。石轮自己转了半圈。', '#8d8496') }]; },
+  init(mg) { mg.ang = 0; mg.w = 0; mg.spin = null; mg.fl = 0; mg.flv = 0; mg.blood = 0; mg.drop = -1; mg.runes = 0; mg.lit = -1; mg.hov = -1; mg.quake = 0; },
+  btns(mg) { if (mg.phase !== 'idle') return []; return [{ t: '以血转动', sub: '领袖 -12% 生命', danger: 1, fn: () => MINI.fate.spin.call(this, mg) }, { t: '离开', leave: 1, fn: () => { mg.leaveA = mg.ang; this.miniSet('leave'); S.mini('fate', 'creak'); } }]; },
   spin(mg) {
-    this.heroHurt(0.12); this.miniSet('spin'); S.mini('fate', 'cost'); S.mini('fate', 'spin');
-    const idx = FATE.indexOf(M.wpick(FATE, o => o.w)), N = FATE.length;
-    // 结果已定，下面只挑停在格子里的哪个位置：前一格是金格就「擦过」它、停在刚过线处；后一格是金格就停在线前
-    const scrape = TOPF((idx + 1) % N) && !TOPF(idx), short = TOPF((idx + N - 1) % N) && !TOPF(idx), u = scrape ? 0.1 + rnd() * 0.06 : short ? 0.84 + rnd() * 0.06 : 0.5 + (rnd() - 0.5) * 0.6;
-    // 指针下的格子 = floor(-角度/SEG)；角度的小数部分 u 就是停在格子里的位置；至少转 5 圈
-    const base = mg.ang - (mg.ang % (Math.PI * 2)); let a1 = base + Math.PI * 2 * 6 + (u - idx - 1) * SEG; if (a1 < mg.ang + Math.PI * 8) a1 += Math.PI * 2;
-    // 最后几格一格一格挪：每格之间停得越来越久，倒数第二格前多停一拍；擦过金格的最后一格慢慢蹭过去
-    const n = TOPF(idx) || scrape ? 6 : 5, aC = a1 - n * SEG, steps = []; let tt = 0;
-    for (let k = 0; k < n; k++) { const last = k === n - 1, sc = last && scrape, d = sc ? 1.0 : 0.16 + 0.035 * k + (last ? 0.1 : 0); steps.push({ t0: tt, d, a: aC + k * SEG, sc }); tt += d + (last ? 0 : 0.05 + 0.07 * k + (k === n - 2 ? 0.3 : 0)); }
-    mg.spin = { a0: mg.ang, aC, a1, u, tt: 0, steps, end: FTA + tt, idx, scrape, lastSeg: Math.floor(mg.ang / SEG), k: -1, ci: 0 };
+    this.heroHurt(0.12); this.miniSet('spin'); S.mini('fate', 'cost'); SHOW.flash(mg, C.red, 0.25);
+    const idx = FATE.indexOf(M.wpick(FATE, o => o.w)); mg.hov = -1; mg.spin = fatePlan(mg.ang, idx);
   },
-  beat(mg, k) { const sp = mg.spin, n = sp.steps.length;
-    if ((TOPF(sp.idx) || sp.scrape) && k === n - 2) SHOW.reach(this, mg, { x: CX, y: SY + 160, r: 130, lv: 1 });
-    if (k === n - 1) { if (TOPF(sp.idx)) SHOW.slowmo(mg, 0.45, 0.9); if (sp.scrape) SHOW.slowmo(mg, 0.5, 1.2); } },
-  // 停下：指针下那格先亮 → 近处火花 → 舞台中奖档 → 奖励从指针飞走 → 结算；没中一拍带过
-  land(mg) { const sp = mg.spin, idx = sp.idx, o = FATE[idx], tier = FT[idx], py = SY + 150; mg.hitT = mg.t; S.mini('fate', 'stop'); this.fx.kick(tier ? 4 + tier : 3);
-    if (tier) { this.fx.spark(CX, py + 20, o.c, 10 + tier * 5, { v: 600 }); this.fx.ring(CX, py, 10, 120, o.c, 5, 0.3);
-      SHOW.later(mg, 0.07, () => SHOW.win(this, mg, tier, { x: CX, y: SY + 380, col: o.c, v: idx === 5 ? M.nice(mg.P * 16) : 0, label: WL(tier) }));
-      SHOW.later(mg, 0.2, () => MINI.fate.resolve.call(this, mg, idx)); SHOW.later(mg, tier >= 3 ? 2.0 : 1.3, () => MINI.fate.finish.call(this, mg)); }
-    else { if (sp.scrape) SHOW.near(this, mg, CX, py + 40, '差一点！'); else SHOW.lose(this, mg); if (idx === 6) this.fx.flash(C.red, 0.15); MINI.fate.resolve.call(this, mg, idx); SHOW.later(mg, 0.45, () => MINI.fate.finish.call(this, mg)); } },
+  // a click on the wheel or the room: grit falls from the lintel, and the stage's own ripple
+  down(mg, px, py) { mg.tap = { x: K.ax(px), y: K.ay(py), n: (mg.tap ? mg.tap.n : 0) + 1 }; SHOW.tap(this, mg, px, py); },
+  // one stud in the last stretch: the pointer's tip flashes, a ring in the colour of the sector coming under it, a shake that
+  // grows with every beat, the camera leans in; a gold sector coming under the pointer adds a tint flash and a white ring
+  beat(mg, j) {
+    const sp = mg.spin, i = sp.beat++, col = FATE[j].c, gold = TOPF(j);
+    SHOW.shake(mg, 2 + i * 1.6 + (gold ? 5 : 0)); SHOW.zoom(mg, 0.01 + i * 0.004 + (gold ? 0.016 : 0), FPT.x, FPT.y + 40);
+    SHOW.ring(mg, FPT.x, FPT.y + 12, 8, 56 + i * 14, col, { life: 0.4 }); SHOW.burst(mg, FPT.x, FPT.y + 12, 6 + i * 3, { col, sp: [100, 260], life: [0.2, 0.5] });
+    if (gold) { SHOW.flash(mg, col, 0.22); SHOW.ring(mg, FPT.x, FPT.y + 12, 8, 150, C.white, { w: 2, life: 0.45, delay: 0.04 }); }
+    S.mini('_', 'beat', { i, tier: gold ? 3 : FT[j] ? 1 : 0, up: gold }); this.fx.kick(0.8 + i * 0.5);
+  },
+  tick(mg, dt) {
+    const sp = mg.spin;
+    if (mg.phase === 'idle') { mg.ang += dt * 0.2 * (0.55 + 0.45 * Math.sin(mg.t * 0.8)); mg.w = 0.2; }
+    else if (mg.phase === 'leave') { const k = cl(mg.pt / 1.6, 0, 1); mg.ang = mg.leaveA + Math.PI * eio(k); mg.w = Math.PI / 1.6 * (1 - Math.abs(1 - 2 * k)) * 1.5; mg.dim = cl(mg.pt / 1.2, 0, 1); if (mg.pt > 1.8 && !mg.left) { mg.left = 1; this.miniFinish('你没有碰它。石轮自己转了半圈。', '#8d8496'); } }
+    else if (sp && !sp.done) {
+      const s0 = sp.s; sp.s += dt; const s = sp.s, at = (x) => s0 < x && s >= x;
+      // the blood price: a drop falls onto the hub's jewel, runs out along the grooves, the ring of names lights, the wheel leans back
+      mg.drop = cl(s / 0.55, 0, 1); mg.blood = cl((s - 0.55) / 0.5, 0, 1); mg.runes = cl((s - 1.05) / 0.4, 0, 1);
+      if (at(0.55)) { S.mini('fate', 'drip'); SHOW.ring(mg, FHUB.x, FHUB.y, 6, 70, C.red, { life: 0.35 }); SHOW.burst(mg, FHUB.x, FHUB.y, 10, { col: C.red, sp: [80, 220], life: [0.2, 0.45] }); SHOW.shake(mg, 3); }
+      if (at(0.6)) S.mini('fate', 'flow'); if (at(1.05)) S.mini('fate', 'rune'); if (at(FPRE - 0.25)) S.mini('fate', 'creak');
+      if (at(FPRE)) { S.mini('fate', 'spin', FUP + sp.Td * 0.75); SHOW.shake(mg, 8); SHOW.zoom(mg, 0.03, FHUB.x, FHUB.y); SHOW.burst(mg, FHUB.x, K.ly(150), 16, { ramp: [C.cream, C.lavender, C.haze, C.indigo], sp: [80, 220], ang: -Math.PI / 2, spread: 2.4, life: [0.4, 0.8], w: 300 }); mg.quake++; }
+      mg.ang = fateAngle(sp, s); mg.w = (fateAngle(sp, s + 0.02) - fateAngle(sp, s - 0.02)) / 0.04;
+      // studs: a click each; in the last stretch (slower than 5.5 rad/s) each one is a beat
+      const seg = Math.floor(mg.ang / SEG); if (seg !== sp.lastSeg) { const fwd = seg > sp.lastSeg; sp.lastSeg = seg; S.mini('fate', 'click', sp.beat); if (fwd && s > FPRE + FUP && Math.abs(mg.w) < 5.5) MINI.fate.beat.call(this, mg, fSector(mg.ang + 0.001)); }
+      // a stall is coming: the spotlight falls on the pointer a sector ahead of it (超级听牌 when the gold one is the blueprint)
+      if (sp.kind !== 'plain' && !sp.reach && s < sp.t3 && sp.dec - mg.ang < SEG * 1.15) { sp.reach = true; const g2 = sp.kind === 'gold' ? sp.idx : sp.kind === 'short' ? (sp.idx + FN - 1) % FN : (sp.idx + 1) % FN; mg.reachLv = g2 === 4 ? 2 : 1; SHOW.reach(this, mg, { x: FPT.x, y: FPT.y + 30, r: 120, lv: mg.reachLv, col: FATE[g2].c, label: '' }); }
+      mg.grind = s >= sp.t3 && s < sp.t3 + sp.hold ? 1 : 0;
+      if (at(sp.t3) && sp.kind !== 'plain') { S.mini('fate', 'creak'); SHOW.shake(mg, 6); }
+      if (at(sp.t3 + sp.hold) && sp.kind !== 'plain') { S.mini('fate', sp.kind === 'short' ? 'back' : 'slip'); SHOW.shake(mg, sp.kind === 'short' ? 3 : 9); if (sp.kind !== 'short') SHOW.ring(mg, FPT.x, FPT.y + 12, 8, 120, C.white, { life: 0.3 }); }
+      if (s >= sp.end) { mg.ang = sp.fin; mg.w = 0; sp.done = true; MINI.fate.stop.call(this, mg); } }
+    if (mg.lit >= 0) mg.litAge = mg.t - mg.litT;
+    // 指针：每一格的钉子转过来时把它往一边顶，过去后弹回来晃两下
+    const uu = ((mg.ang / SEG) % 1 + 1) % 1, push = uu > 0.78 ? -(uu - 0.78) / 0.22 * 0.55 : 0;
+    if (push < mg.fl) { mg.fl = push; mg.flv = 0; } else { mg.flv += (-mg.fl * 300 - mg.flv * 16) * dt; mg.fl += mg.flv * dt; }
+  },
+  // stopped: the spotlight lets go; a win freezes a moment first (SHOW.win's big win carries its own freeze), a loss goes by in a beat
+  stop(mg) {
+    const idx = mg.spin.idx, tier = FT[idx]; SHOW.calm(mg); S.mini('fate', 'stop'); mg.quake++;
+    if (!tier) { MINI.fate.land.call(this, mg); return; }
+    if (tier >= 3) MINI.fate.land.call(this, mg); else SHOW.hitstop(mg, 0.15, FSEC.x, FSEC.y, () => MINI.fate.land.call(this, mg));
+  },
+  land(mg) {
+    const idx = mg.spin.idx, o = FATE[idx], tier = FT[idx]; mg.hitT = mg.t;
+    if (!tier) {   // nothing / the curse: one beat and out
+      MINI.fate.resolve.call(this, mg, idx);
+      if (idx === 6) { mg.curseT = mg.t; S.mini('fate', 'eye'); SHOW.flash(mg, C.red, 0.55); SHOW.shake(mg, 12); SHOW.burst(mg, FHUB.x, FHUB.y, 36, { ramp: [C.pink, C.red, C.wine, C.ink], sp: [160, 460], life: [0.3, 0.7], g: 700 }); SHOW.calm(mg); this.fx.kick(8); }
+      else { mg.drainT = mg.t; SHOW.lose(this, mg); if (mg.spin.kind === 'scrape') SHOW.near(this, mg, FSEC.x, FSEC.y, '差一点！'); }
+      this.miniSay(mg.fin[0].split('。')[0] + '。', mg.fin[1], idx === 6); SHOW.later(mg, idx === 6 ? 0.8 : 0.6, () => MINI.fate.finish.call(this, mg)); return; }
+    // a win: the sector burns in its colour, the braziers roar, the relief rises; then each prize its own way
+    mg.lit = idx; mg.litT = mg.t; mg.rise = { i: idx, t0: mg.t, k: tier >= 3 ? 2.4 : 1.6 };
+    const v = idx === 5 ? M.nice(mg.P * 16) : 0;
+    SHOW.win(this, mg, tier, { x: FSEC.x, y: FSEC.y, col: o.c, v, label: WL(tier) });
+    if (idx === 5) { mg.goldT = mg.t; S.mini('fate', 'gold'); this.fx.coins(FSEC.x, FSEC.y, 30, { v: 900 }); }
+    if (idx === 3) { mg.violetT = mg.t; [K.lx(34), K.lx(266)].forEach(bx => SHOW.burst(mg, bx, K.ly(86), 24, { col: C.violet, sp: [120, 340], ang: -Math.PI / 2, spread: 1.2, life: [0.4, 0.9] })); }
+    if (idx === 2) SHOW.burst(mg, FSEC.x, FSEC.y, 30, { ramp: [C.white, C.ice, C.blue, C.indigo], sp: [40, 140], ang: -Math.PI / 2, spread: 1, life: [0.8, 1.6], g: -120 });
+    SHOW.later(mg, tier >= 3 ? 0.55 : 0.25, () => { MINI.fate.resolve.call(this, mg, idx); mg.itemsT = mg.t; SHOW.items(this, mg, mg.items.map((s2, i) => ({ text: s2, col: i === mg.items.length - 1 ? o.c : C.cream, size: i ? 36 : 40 })), { x: FPL.x, y: FPL.y - 2, dy: 46, gap: 0.22 }); });
+    SHOW.later(mg, tier >= 3 ? 2.6 : 1.8, () => MINI.fate.finish.call(this, mg));
+  },
   resolve(mg, idx) {
     const run = this.run, P = mg.P; let tx = '', col = FATE[idx].c; const g = [];
     if (idx === 0) tx = '石轮停在空白处。血白流了。';
@@ -400,43 +475,28 @@ MINI.fate = { title: '命运之轮', img: 'e_fate', col: C.red, text: '石头做
     if (idx === 4) { g.push(K.bp(null, 1)); tx = '一张刻在石片上的图纸。'; }
     if (idx === 5) { g.push({ k: 'wallet', v: M.nice(P * 16) }); tx = '血变成了金子。'; }
     if (idx === 6) { tx = '石轮记住了你的名字。生命 -' + this.heroHurt(0.15) + '。'; }
-    const got = g.length ? this.award(g, { x: CX, y: SY + 200 }) : []; mg.fin = [tx + (got.length ? '\n获得：' + got.join('、') : ''), col];
+    const got = g.length ? this.award(g, { x: FSEC.x, y: FSEC.y }) : []; mg.fin = [tx + (got.length ? '\n获得：' + got.join('、') : ''), col];
+    mg.items = [FATE[idx].n].concat(got.length ? got : idx === 1 ? ['本局部队攻击 +8%'] : idx === 3 ? ['开局 FEVER 槽 +20%'] : []);
   },
   finish(mg) { if (this.mini === mg && mg.fin) this.miniFinish(mg.fin[0], mg.fin[1]); },
-  tick(mg, dt) {
-    const sp = mg.spin;
-    if (!sp) mg.ang += dt * 0.2;
-    else if (!sp.done) { sp.tt += dt;
-      if (sp.tt < FTA) mg.ang = sp.a0 + (sp.aC - sp.a0) * eo(sp.tt / FTA);
-      else { const tc = sp.tt - FTA; let k = 0; while (k + 1 < sp.steps.length && tc >= sp.steps[k + 1].t0) k++; const st = sp.steps[k], p = cl((tc - st.t0) / st.d, 0, 1);
-        if (k !== sp.k) { sp.k = k; MINI.fate.beat.call(this, mg, k); }
-        // 蹭过金格：慢慢挪到钉子前几乎停住、指针被顶弯，然后一下滑过去；停在线前的不用回弹，免得越线
-        const e2 = st.sc ? (p < 0.8 ? (0.97 - sp.u) * (1 - Math.pow(1 - p / 0.8, 2)) : (0.97 - sp.u) + (sp.u + 0.03) * eo((p - 0.8) / 0.2)) : sp.u < 0.8 ? eb(p) : eo(p);
-        mg.ang = st.a + SEG * e2; }
-      const seg = Math.floor(mg.ang / SEG); if (seg !== sp.lastSeg) { sp.lastSeg = seg; S.mini('fate', 'click'); if (sp.tt >= FTA) SHOW.crawl(this, mg, ++sp.ci); }
-      if (sp.tt >= sp.end) { mg.ang = sp.a1; sp.done = true; MINI.fate.land.call(this, mg); } }
-    // 指针：每一格的钉子转过来时把它往右顶，过去后弹回来晃两下
-    const uu = ((mg.ang / SEG) % 1 + 1) % 1, push = uu > 0.78 ? -(uu - 0.78) / 0.22 * 0.55 : 0;
-    if (push < mg.fl) { mg.fl = push; mg.flv = 0; } else { mg.flv += (-mg.fl * 300 - mg.flv * 16) * dt; mg.fl += mg.flv * dt; }
-  },
   draw(x, mg) {
-    const t = mg.t, sp = mg.spin; x.fillStyle = K.RG(x, CX, SY + 380, 40, 700, [[0, '#3a1010'], [1, '#0a0404']]); x.fillRect(SX, SY, SW, SH);
-    const wx = CX, wy = SY + 380, R = 240; K.CI(x, wx, wy + 16, R + 30, 'rgba(0,0,0,0.5)'); K.CI(x, wx, wy, R + 24, C.slate);
-    x.save(); x.translate(wx, wy); x.rotate(mg.ang);
-    // sectors, each in its outcome's colour with its name along the radius; 金格外圈闪一道白，停中的那格一跳一跳地亮
-    FATE.forEach((o, i) => { const a = -Math.PI / 2 + i * SEG; x.fillStyle = i % 2 ? '#2a2632' : '#1e1a26'; x.beginPath(); x.moveTo(0, 0); x.arc(0, 0, R, a, a + SEG); x.closePath(); x.fill();
-      if (sp && sp.done && i === sp.idx && FT[i]) { x.save(); x.globalAlpha = 0.25 + 0.2 * Math.sin((t - mg.hitT) * 10); x.fillStyle = U.pal(o.c); x.beginPath(); x.moveTo(0, 0); x.arc(0, 0, R, a, a + SEG); x.closePath(); x.fill(); x.restore(); }
-      x.fillStyle = o.c; x.beginPath(); x.arc(0, 0, R, a, a + SEG); x.arc(0, 0, R - 22, a + SEG, a, true); x.closePath(); x.fill();
-      if (TOPF(i)) { x.save(); x.globalAlpha = 0.35 + 0.3 * Math.sin(t * 5 + i); x.strokeStyle = U.pal(C.white); x.lineWidth = 4; x.beginPath(); x.arc(0, 0, R - 11, a + 0.04, a + SEG - 0.04); x.stroke(); x.restore(); }
-      x.strokeStyle = C.ink; x.lineWidth = 6; x.beginPath(); x.moveTo(0, 0); x.lineTo(Math.cos(a) * R, Math.sin(a) * R); x.stroke();
-      K.R(x, Math.round(Math.cos(a) * (R + 8)) - 8, Math.round(Math.sin(a) * (R + 8)) - 8, 16, 16, C.ink); K.R(x, Math.round(Math.cos(a) * (R + 8)) - 5, Math.round(Math.sin(a) * (R + 8)) - 5, 10, 10, C.gold);
-      x.save(); x.rotate(a + SEG / 2 + Math.PI / 2); M.UI.text(x, o.n, 0, -R * 0.6, o.n.length > 3 ? 20 : 26, o.c, { outline: true }); x.restore(); });
-    K.CI(x, 0, 0, 50, C.dusk); K.CI(x, 0, 0, 26, C.red); x.restore();
-    for (let i = 0; i < 8; i++) { const q = (t * 0.4 + i / 8) % 1; K.CI(x, wx - 300 + i * 80, SY + 120 + q * 500, 4, 'rgba(208,69,60,' + (1 - q) + ')'); }
-    // the pointer at the top hangs from a pivot and gets flicked by each stud; the sector under it glows once the wheel has stopped
-    x.save(); x.translate(wx, wy - R - 42); x.rotate(mg.fl); K.PL(x, [[-26, -2], [26, -2], [0, 52]], C.ink); K.PL(x, [[-20, 2], [20, 2], [0, 46]], C.red); K.CI(x, 0, 0, 8, C.gold); x.restore();
-    if (sp && sp.done) { const o = FATE[sp.idx]; K.big(x, o.n, wx, wy + R + 60, 40, o.c, t - mg.hitT, { outline: true }); }
-  } };
+    const t = mg.t, sp = mg.spin;
+    // the sector under the cursor (idle only): its strip and relief brighten, the plate turns to its name
+    if (mg.phase === 'idle') { const dx = K.ax(mg.mx) - 150, dy = K.ay(mg.my) - 92, r = Math.hypot(dx, dy); let h = -1; if (r < 58 && r > 11) { let lt = Math.atan2(dy, dx) - mg.ang + Math.PI / 2; lt = ((lt % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2); h = Math.floor(lt / SEG) % FN; }
+      if (h !== mg.hov) { mg.hov = h; if (h >= 0) S.mini('_', 'hover'); } }
+    const o = { ang: mg.ang, w: mg.w, fl: mg.fl, blood: mg.drainT != null ? cl(1 - (t - mg.drainT) / 0.35, 0, 1) : mg.blood, drop: mg.drop, runes: mg.drainT != null ? 0 : mg.runes, lit: mg.lit, litAge: mg.litAge || 0, hov: mg.hov,
+      clicks: sp ? sp.lastSeg : 0, flare: mg.lit >= 0 ? cl(1 - (t - mg.litT) * 0.9, 0, 1) : 0, dim: mg.dim || 0, curse: mg.curseT != null ? cl((t - mg.curseT) / 0.12, 0, 1) : 0, tap: mg.tap, grind: mg.grind || 0,
+      gold: mg.goldT != null ? cl((t - mg.goldT) / 0.3, 0, 1) : 0, violet: mg.violetT != null ? 1 : 0, rise: mg.rise && !mg.frontOK ? MINI.fate.rise(mg) : null, quake: mg.quake, tier: mg.lit >= 0 ? FT[mg.lit] + 1 : 0 };
+    if (!K.pxr(x, 'mb_fate', 0, 0, t, o)) { K.R(x, SX, SY, SW, SH, '#0a0404'); return; }
+    // the bronze plate under the wheel: the name of the sector under the pointer (a blur of names at speed; the result pops)
+    const j = mg.hov >= 0 ? mg.hov : fSector(mg.ang), fast = Math.abs(mg.w) > 6, landed = sp && sp.done && mg.hitT != null, name = fast ? '· · ·' : FATE[j].n;
+    if (mg.itemsT == null) { const k = landed ? K.pop(t - mg.hitT) : 1; x.save(); x.translate(FPL.x, FPL.y); x.scale(k, k); U.text(x, name, 0, 0, landed ? 26 : 22, landed ? FATE[j].c : fast ? C.haze : mg.hov >= 0 ? C.butter : C.cream, { shadow: true }); x.restore(); }
+    // the stall's sign sits on the left wall, so the pointer and the stud it hangs on stay in sight
+    if (SHOW.tense(mg)) { const T0 = mg.sh.tense, q = eb(cl(T0.t / 0.25, 0, 1)), beat = Math.max(0, 1 - mg.sh.beatT * 5), k = q * (1 + 0.06 * beat); x.save(); x.translate(K.lx(44), K.ly(58)); x.scale(k, k); K.sign(x, mg.reachLv >= 2 ? '超级听牌' : '听牌！', 0, 0, { kind: mg.reachLv >= 2 ? 'red' : 'gold', size: 36, minW: 180 }); x.restore(); }
+  },
+  rise(mg) { return { i: mg.rise.i, age: mg.t - mg.rise.t0, k: mg.rise.k }; },
+  // drawn after the show's dim and rays (when the framework offers it): the prize's relief stays the brightest thing on stage
+  front(x, mg) { if (!mg.rise) return; mg.frontOK = true; K.pxr(x, 'mb_fate_rise', 0, 0, mg.t, { rise: MINI.fate.rise(mg), noBoot: 1 }, 'fate_rise'); } };
 })();
 
 ;
