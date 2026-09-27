@@ -267,6 +267,14 @@ function facets(S, x0, y0, w, h, m, t, cell, seed, o) {
     S.px(x, y, m, tt, { n: [bp.nx * 0.6, bp.ny * 0.6] });
   }
 }
+// the same facets as a tone pass over what is already painted in material m: rough-hewn stone on a carved body
+function facetTone(S, x0, y0, w, h, m, cell, amp, seed) {
+  const r = X.rng(seed || 5), gw = Math.ceil(w / cell) + 2, gh = Math.ceil(h / cell) + 2, pts = [], mi = X.MI[m];
+  for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) pts.push({ x: x0 + (i - 0.5 + r()) * cell, y: y0 + (j - 0.5 + r()) * cell, d: (r() - 0.5) * amp * 2 + (r() < 0.5 ? amp * 0.6 : -amp * 0.2) });
+  for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) { if (S.at(x, y) !== mi) continue; let b1 = 1e9, b2 = 1e9, bp = null; const gi = Math.floor((x - x0) / cell), gj = Math.floor((y - y0) / cell);
+    for (let dj = -1; dj <= 2; dj++) for (let di = -1; di <= 2; di++) { const q = pts[(gj + dj) * gw + gi + di]; if (!q) continue; const d = (x - q.x) ** 2 + (y - q.y) ** 2; if (d < b1) { b2 = b1; b1 = d; bp = q; } else if (d < b2) b2 = d; }
+    const e = Math.sqrt(b2) - Math.sqrt(b1); S.tone(x, y, e < 0.9 ? -amp * 1.3 : e < 1.9 && y < bp.y ? amp * 0.8 : bp.d); }
+}
 function boulder(S, x, y, rx, ry, t, moss) {
   S.beg(); blob(S, x, y, rx, ry, 'rock', t, { k: 2.2 }); S.end();
   if (moss) for (let i = -rx + 1; i < rx - 1; i++) { const top = y - Math.round(ry * Math.sqrt(Math.max(0, 1 - (i / rx) ** 2))); if ((i * 7 + x) % 5 < 3) S.px(x + i, top + 1, 'moss', 5 + ((i + x) % 3)); if ((i * 3 + x) % 7 === 0) S.px(x + i, top + 2, 'moss', 4); }
@@ -464,6 +472,122 @@ X.def('mini_trap', {
       if (qc) { D.hl(cx - 11 + jx, cy - 4, 22, qc[0], qc[1], { e: 255 }); D.px(cx + jx, cy - 1, qc[0], qc[1] + 1, { e: 255 }); rs.dl.push({ x: cx, y: cy - 4, z: 10, r: 30 + sk * 6, i: 0.6 + sk * 0.2, rgb: qc[2], tint: 0.6 }); } }
     else { const la = Math.min(1, op2 / 0.25), ly = cy - 11 - Math.round(la * 14), lx = cx + Math.round(la * 10); D.beg(); D.box(lx - 13, ly, 26, 4 + Math.round((1 - la) * 3), 'wood', 6.5, { top: 1 }); D.hl(lx - 13, ly, 26, 'brass', 8); D.end();
       if (qc) { const ph = Math.max(0, 1 - op2 / 2.5); for (let y = 0; y < cy - 4; y++) { const w = 4 + Math.round((cy - 4 - y) / 12); for (let j = -w; j <= w; j++) if (Math.abs(j) < w * ph + 1) D.px(cx + j, y, qc[0], qc[1] - Math.abs(j) / w * 3, { e: 255 }); } rs.dl.push({ x: cx, y: cy - 10, z: 20, r: 70, i: 1.2 * ph, rgb: qc[2], tint: 0.6 }); } }
+  },
+});
+
+// ═════════════════════ 沉睡的古像 · the sleeping colossus ═════════════════════
+// a ruined temple swallowed by roots (cool grey ashlar, vines, glowing mushrooms, moonlight through a broken roof, cold-flame
+// braziers, broken pillars, a rune floor) around a seated giant in warm carved stone: stepped crown, heavy brow, closed eyes,
+// straight nose, a long braided beard, square shoulders, arms on its knees, a draped lap. Its chest is the three-ring dial
+// (carved rings with a rune groove, a direction mark each, a bronze tooth at 12 o'clock). Asleep, a faint teal breath pulses
+// in its cracks; on a reach its eyelids leak light with the heartbeat; awake, the eyes blaze, the cracks light from the chest
+// to the face, moss and dust shake off and the head lifts and nods.
+const ST = { x: 150, y: 98, R: [42, 28, 14], eye: [[142, 37], [158, 37]] };
+MD.STATUE = ST;
+function tealFlame(D, x, y, s, t, ph) {
+  const hh = Math.round(s * (0.85 + 0.2 * n1(t * 7 + ph))), sw = Math.round(n1(t * 4 + ph * 2) * 0.8);
+  for (let k = 0; k < hh; k++) { const q = k / hh, w = Math.max(1, Math.round((1 - q * q) * s * 0.5)), cx = x + Math.round(sw * q); for (let i = -w + 1; i < w; i++) D.px(cx + i, y - k, 'teal', clamp(11 - q * 5 - Math.abs(i) * 1.8, 4, 11), { e: 255 }); }
+}
+// a faceted stone mass: polygon filled with per-facet tones (light from the upper left), a lit top edge, a dark lower edge
+function carve(S, pts, m, t, o) {
+  o = o || {}; S.beg(); S.poly(pts, m, t, { n: o.n || [0, 0] });
+  let y0 = 1e9, y1 = -1e9, x0 = 1e9, x1 = -1e9; pts.forEach(([x, y]) => { y0 = Math.min(y0, y); y1 = Math.max(y1, y); x0 = Math.min(x0, x); x1 = Math.max(x1, x); });
+  for (let y = Math.floor(y0); y <= y1; y++) for (let x = Math.floor(x0); x <= x1; x++) { if (!S.at(x, y) || S.c.o[y * X.W + x] !== S.id) continue; const u = (x - x0) / Math.max(1, x1 - x0), v = (y - y0) / Math.max(1, y1 - y0); S.tone(x, y, (0.5 - u) * (o.k || 1.6) + (0.4 - v) * (o.kv || 1.2)); }
+  S.end();
+}
+const CRACKS = [[[150, 55], [148, 52], [150, 49], [147, 46]], [[124, 70], [116, 66], [108, 67], [100, 64]], [[176, 70], [184, 65], [192, 66], [200, 62]], [[124, 126], [118, 132], [110, 133]], [[176, 126], [182, 131], [190, 132]], [[150, 141], [151, 146]]];
+X.def('mini_statue', {
+  size: [W, H], fy: FY, noFrame: 1, amb: [0.2, 0.26],
+  paint(S, sc) {
+    sc.light({ x: 176, y: 70, z: 40, r: 120, i: 0.75, c: '#b8d8ff', tint: 0.35 });                          // 0 moonlight on the chest
+    [[36, 112], [264, 112]].forEach(([x, y], i) => sc.light({ x, y: y - 10, z: 18, r: 74, i: 1, c: '#47d6c1', fl: 'fire', ph: i * 2, tint: 0.55 }));   // 1–2 cold braziers
+    sc.light({ x: 150, y: 98, z: 12, r: 58, i: 0.25, c: '#6ad6c0', fl: 'pulse', amp: 0.5, sp: 1.3, tint: 0.5 });   // 3 the breath in the dial
+    sc.light({ x: 150, y: 150, z: 16, r: 96, i: 1, c: '#ffa050', fl: 'candle', tint: 0.5 });              // 4 the candle row, warm on the stone
+    sc.light({ x: 132, y: 30, z: 34, r: 56, i: 0.55, c: '#d8e4ff', tint: 0.25 });                          // 5 moon fill on the face
+    // ── temple wall ──
+    S.lay('wall'); S.rect(0, 0, W, FY, 'stone', 3); TX.ashlar(S, 0, 0, W, FY, 'stone', 4.4, { bh: 16, bw: 30, crack: 0.3 });
+    for (let x = 180; x < 240; x++) for (let y = 0; y < 16 - Math.abs(x - 210) * 0.4; y++) S.px(x, y, 'night', 2 + y * 0.12, { e: 255 });
+    [[194, 3], [218, 6], [230, 2]].forEach(([x, y]) => S.px(x, y, 'linen', 10, { e: 255 }));
+    S.ao(0, 0, W, 30, 't', 2); S.ao(0, 0, 30, FY, 'l', 1.6); S.ao(W - 30, 0, 30, FY, 'r', 1.6);
+    const vine = (x0, y0, len, dir) => { let x = x0; for (let y = y0; y < y0 + len; y++) { if (S.r() < 0.3) x += dir * (S.r() < 0.6 ? 1 : -1); S.px(x, y, 'leaf', 4 + (y % 3 === 0 ? 1.5 : 0)); if (y % 5 === 0) { S.px(x + 1, y, 'leaf', 6.5); S.px(x + 2, y + 1, 'leaf', 5); } } };
+    [[18, 0, 70, 1], [34, 0, 40, 1], [262, 0, 90, -1], [280, 10, 60, -1], [96, 0, 30, 1], [210, 14, 30, -1]].forEach(a => vine(...a));
+    [[24, 76], [276, 96], [60, 136], [240, 132], [110, 26]].forEach(([x, y]) => { S.ell(x, y, 2, 1, 'teal', 8, { e: 255 }); S.px(x, y + 1, 'bone', 7); S.ell(x + 3, y + 1, 1.5, 1, 'teal', 7, { e: 255 }); sc.light({ x, y, z: 6, r: 14, i: 0.5, c: '#6ad6c0', tint: 0.6 }); });
+    S.lay('back'); [[2, 30, 22], [276, 50, 22]].forEach(([x, top, w]) => { S.beg(); S.cyl(x, top, w, FY - top, 'stone', 5.2, { rim: 2.4 }); S.poly([[x, top], [x + w, top + 4], [x + w * 0.6, top - 5], [x + w * 0.3, top + 2]], 'stone', 6); S.end(); for (let y = top + 10; y < FY; y += 14) S.hl(x, y, w, 'stone', 3.6); });
+    [36, 264].forEach(x => { S.beg(); S.line(x - 6, 114, x - 8, 147, 'iron', 4); S.line(x + 6, 114, x + 8, 147, 'iron', 3); S.ell(x, 112, 9, 4, 'iron', 5.5, { dome: 1 }); S.hl(x - 9, 109, 19, 'iron', 8); S.end(); });
+    // ── the colossus in warm stone: lap, knees, arms, torso slab, shoulders (the head is live: it nods) ──
+    const m = 'mstone';
+    S.lay('back');
+    carve(S, [[70, 148], [230, 148], [222, 128], [196, 120], [104, 120], [78, 128]], m, 6.6, { k: 1.2 });                     // draped lap
+    for (let x = 80; x < 222; x += 6) { let xx = x; for (let y = 124; y < 148; y++) { if ((y + x) % 4 === 0) xx += Math.sign(150 - x); S.px(xx, y, m, 3.2); S.px(xx + 1, y, m, 6.4); } }   // folds
+    carve(S, [[80, 136], [118, 136], [122, 118], [112, 108], [86, 110], [78, 122]], m, 7.4);                                  // left knee
+    carve(S, [[182, 136], [220, 136], [222, 122], [214, 110], [188, 108], [178, 118]], m, 6.4);                              // right knee
+    carve(S, [[108, 60], [192, 60], [196, 126], [104, 126]], m, 6.8, { k: 1.4 });                                             // torso slab
+    carve(S, [[86, 62], [108, 56], [112, 70], [104, 112], [88, 116], [80, 104]], m, 7.6);                                     // left arm
+    carve(S, [[192, 56], [214, 62], [220, 104], [212, 116], [196, 112], [188, 70]], m, 6);                                  // right arm
+    carve(S, [[84, 108], [110, 106], [114, 118], [104, 124], [86, 122]], m, 8); carve(S, [[190, 106], [216, 108], [214, 122], [196, 124], [186, 118]], m, 6.6);   // hands
+    [[88, 118], [94, 120], [100, 120], [196, 120], [202, 120], [208, 118]].forEach(([x, y]) => S.vl(x, y, 4, m, 2.6));
+    carve(S, [[96, 64], [118, 50], [182, 50], [204, 64], [196, 70], [104, 70]], m, 7.8, { k: 1.4, kv: 0.6 });                // shoulders
+    facetTone(S, 70, 50, 162, 98, m, 8, 0.9, 41);
+    // moss and cracks
+    for (let i = 0; i < 110; i++) { const x = 78 + Math.floor(S.r() * 144), y = 50 + Math.floor(S.r() * 96); if (S.at(x, y) && !S.at(x, y - 2)) { S.px(x, y, 'moss', 6 + S.r() * 1.6); S.px(x, y + 1, 'moss', 4.6); if (S.r() < 0.4) S.px(x + 1, y + 1, 'moss', 3.5); } }
+    for (let i = 0; i < 50; i++) { const x = 96 + Math.floor(S.r() * 108), y = 50 + Math.floor(S.r() * 8); if (S.at(x, y)) { S.px(x, y, 'moss', 6 + S.r()); if (S.r() < 0.5) S.px(x, y + 1, 'moss', 4.5); } }
+    CRACKS.forEach(c => { for (let k = 0; k + 1 < c.length; k++) S.line(c[k][0], c[k][1], c[k + 1][0], c[k + 1][1], m, 1.8); });
+    S.ell(ST.x, ST.y, ST.R[0] + 2, ST.R[0] + 2, m, 1.6);   // the dial's recess
+    S.lay('mid'); S.beg(); S.poly([[146, 53], [154, 53], [150, 59]], 'brass', 7.5, { n: [0, -0.6] }); S.hl(146, 53, 9, 'brass', 9.5); S.end();
+    // ── floor and candles ──
+    S.lay('wall'); TX.tiles(S, 0, FY, W, H - FY, 'stone', 4.2, { s: 14, v: 1, gloss: false });
+    for (let i = 0; i < 16; i++) { const x = 10 + i * 18, y = 156 + (i % 2) * 8; S.rect(x, y, 5, 1, 'stone', 2.6); S.rect(x + 2, y - 2, 1, 5, 'stone', 2.6); }
+    for (let i = 0; i < 8; i++) { const x = 104 + i * 13 + (i >= 4 ? 2 : 0); S.lay('front'); S.beg(); S.rect(x, 143, 3, 8, 'bone', 8.5); S.px(x, 143, 'bone', 10); S.rect(x - 1, 150, 5, 2, 'bone', 6); S.end(); }
+    sc.shaft({ x: 200, dx: -44, y0: 0, y1: 100, w0: 12, w1: 20, i: 0.4, haze: 0.5, c: '#c8dcff', f: (t) => 0.8 + 0.2 * Math.sin(t * 0.9) });
+    sc.emit({ k: 'dust', x: 170, y: 60, w: 50, h: 80, rate: 5, sp: 2, life: 3.5 });
+  },
+  anim(D, t, rs, o) {
+    const mg = (o && o.mg) || {}, T = o && o.t != null ? o.t : t, sh = mg.sh || {}, wake = mg.phase === 'wake', m = 'mstone';
+    [36, 264].forEach((x, i) => tealFlame(D, x, 108, 8 + (wake ? 3 : 0), T, i * 2));
+    // ── the head: stepped crown, brow, closed eyes, nose, mustache, a long carved beard; lifts and nods when it wakes ──
+    const hy = wake ? (mg.pt < 0.9 ? -Math.round(Math.min(1, mg.pt / 0.5) * 2) : mg.pt < 1.3 ? 1 : mg.pt < 1.6 ? -1 : 0) : 0;
+    D.lay('back');
+    D.beg(); D.poly([[134, 26 + hy], [134, 14 + hy], [139, 18 + hy], [143, 9 + hy], [147, 16 + hy], [150, 6 + hy], [153, 16 + hy], [157, 9 + hy], [161, 18 + hy], [166, 14 + hy], [166, 26 + hy]], m, 6.8, { n: [0, -0.5] }); D.hl(134, 24 + hy, 33, m, 4); D.hl(134, 21 + hy, 33, m, 8.4); D.end();
+    D.beg(); for (let y = 25; y <= 50; y++) { const q = (y - 25) / 25, w = Math.round(15 + (q > 0.35 && q < 0.6 ? 1 : 0) - Math.max(0, q - 0.62) * 14); for (let x = -w; x <= w; x++) { const cb = q > 0.42 && q < 0.56 && Math.abs(Math.abs(x) - 9) < 2.5; D.px(150 + x, y + hy, m, 7.6 - x / w * 2.2 - (q > 0.86 ? 1.2 : 0) + (cb ? (x < 0 ? 1.2 : 0.4) : 0) - (Math.abs(x) === w ? 1 : 0), { n: [x / (w + 1) * 0.7, (q - 0.4) * 0.6] }); } } D.end();
+    D.px(135, 36 + hy, m, 5); D.px(135, 37 + hy, m, 4); D.px(165, 36 + hy, m, 3); D.px(165, 37 + hy, m, 2.5);   // ears
+    D.hl(137, 32 + hy, 11, m, 8.6); D.hl(152, 32 + hy, 11, m, 7.6); D.hl(137, 33 + hy, 11, m, 3); D.hl(152, 33 + hy, 11, m, 2.6);   // brow ridge and its shadow
+    D.rect(148, 34 + hy, 4, 9, m, 7.4); D.vl(148, 34 + hy, 9, m, 8.6); D.vl(151, 34 + hy, 9, m, 4.6); D.hl(147, 43 + hy, 6, m, 3.2); D.px(147, 42 + hy, m, 3.6); D.px(152, 42 + hy, m, 3.2);   // nose
+    D.beg(); for (let y = 44; y <= 66; y++) { const q = (y - 44) / 22, w = Math.round(12 - q * 8 + (q < 0.2 ? q * 6 : 0)); for (let x = -w; x <= w; x++) D.px(150 + x + Math.round(Math.sin(q * 3) * q), y + hy, m, (x % 3 === 0 ? 5 : 7) - x / (w + 1) * 1.4 - q * 0.8, { n: [x / (w + 1) * 0.6, 0.3] }); } D.end();   // beard
+    D.hl(142, 45 + hy, 7, m, 7.4); D.hl(151, 45 + hy, 7, m, 6.4); D.hl(145, 47 + hy, 10, m, 2.4);   // mustache, mouth
+    for (let i = 0; i < 12; i++) D.px(136 + (i * 7) % 29, 12 + (i * 5) % 14 + hy, 'moss', 5.5 + (i % 2));
+    // eyes: shut asleep; at a reach the lids leak light on each heartbeat; awake they blaze
+    const beat = sh.tense ? Math.max(0, 1 - (sh.beatT || 9) * 5) : 0, eye = wake ? clamp((mg.pt - 0.12) / 0.4, 0, 1) : 0;
+    ST.eye.forEach(([ex, ey]) => { D.rect(ex - 4, ey - 1 + hy, 9, 3, m, 2.6);
+      if (eye > 0) { D.rect(ex - 4, ey - 1 + hy, 9, 3, 'teal', 8 + eye * 3, { e: 255 }); D.hl(ex - 3, ey + hy, 7, 'bone', 10, { e: 255 }); rs.dl.push({ x: ex, y: ey + hy, z: 14, r: 30 + eye * 34, i: 0.6 + eye, rgb: [120, 240, 220], tint: 0.6 }); }
+      else { D.hl(ex - 4, ey + hy, 9, 'ink', 0.6); D.hl(ex - 3, ey - 1 + hy, 7, m, 6); if (beat > 0.15) { D.hl(ex - 3, ey + 1 + hy, 7, 'teal', 7 + beat * 4, { e: 255 }); rs.dl.push({ x: ex, y: ey + 1, z: 12, r: 18, i: beat * 0.8, rgb: [120, 240, 220], tint: 0.6 }); } } });
+    // ── cracks light from the chest outward: two per locked ring, all of them once awake ──
+    const al = (mg.rot || [1, 1, 1]).filter(v => v === 0).length, lit = wake ? CRACKS.length * clamp(mg.pt / 0.8, 0, 1) : al * 2 * (0.65 + 0.35 * Math.sin(T * 2));
+    CRACKS.forEach((c, ci) => { const a = clamp(lit - ci, 0, 1); if (a <= 0) return; for (let k = 0; k + 1 < c.length; k++) D.line(c[k][0], c[k][1] + (ci === 0 ? hy : 0), c[k + 1][0], c[k + 1][1] + (ci === 0 ? hy : 0), 'teal', 6 + a * 5, { e: 255 }); });
+    // ── the rings: carved warm stone, bevelled; a rune groove round the middle; a quarter turn tweens with an overshoot;
+    //    when a ring is set its groove lights teal from the tooth round both ways ──
+    const rot = mg.rot || [1, 2, 3], an = mg.anim || [0, 0, 0], lk = mg.lk || [0, 0, 0];
+    D.lay('mid');
+    [0, 1, 2].forEach(i => { const R0 = ST.R[i], R1 = i < 2 ? ST.R[i + 1] + 2 : 0, q = 1 - an[i], ov = an[i] > 0 ? Math.sin(q * Math.PI) * 0.1 : 0, ang = (rot[i] - an[i] + ov) * Math.PI / 2;
+      const on = wake || (rot[i] === 0 && !an[i]), sweep = lk[i] > 0 ? 1 - lk[i] : 1, hov = mg.hovRing === i && mg.phase === 'idle', lift = hov ? -1 : 0, t0 = [6, 6.8, 7.4][i], gr = i < 2 ? (R0 + R1) / 2 : 9;
+      D.beg();
+      for (let y = -R0; y <= R0; y++) for (let x = -R0; x <= R0; x++) { const d = Math.hypot(x + 0.5, y + 0.5); if (d > R0 || d < R1) continue; const th = Math.atan2(x + 0.5, -(y + 0.5)), phi = ((th - ang) % (Math.PI * 2) + Math.PI * 4) % (Math.PI * 2), seg = phi / (Math.PI / 6), f = seg - Math.floor(seg);
+        let tt = t0 - (x * 0.4 + y * 0.6) / R0 * 1.7; if (d > R0 - 1.2) tt += (x + y < 0 ? 1.6 : -2.2); else if (i < 2 && d < R1 + 1.2) tt += (x + y < 0 ? -2 : 1.2);
+        const groove = Math.abs(d - gr) < 0.7, glyph = !groove && Math.abs(d - gr) < 3.2 && f > 0.3 && f < 0.7 && ((Math.floor(seg) + i) % 3 !== 1 ? Math.abs(d - gr) < 2.2 : f > 0.42 && f < 0.58);
+        if ((groove || glyph) && on && (phi / (Math.PI * 2) < sweep / 2 || phi / (Math.PI * 2) > 1 - sweep / 2)) D.px(ST.x + x, ST.y + y + lift, 'teal', (groove ? 10 : 9) + Math.sin(T * 5 + seg) * 0.8, { e: 255 });
+        else D.px(ST.x + x, ST.y + y + lift, m, groove ? tt - 3 : glyph ? tt - 2.4 : tt, { n: [x / R0 * 0.7, y / R0 * 0.7] });
+      }
+      D.end();
+      // direction mark at the ring's own 12 o'clock: arrows on the outer two, an eye on the inner; gold while off, teal once set
+      const mr = i < 2 ? R0 - 4 : 7, mx = ST.x + Math.round(Math.sin(ang) * mr), my = ST.y - Math.round(Math.cos(ang) * mr) + lift, mm = on ? 'teal' : 'gold', mt = on ? 10 : 8.5, ex = on ? { e: 255 } : undefined, ux = Math.sin(ang), uy = -Math.cos(ang);
+      if (i === 2) { D.ell(ST.x, ST.y + lift, 4.5, 3.2, mm, mt - 1, ex); D.ell(ST.x, ST.y + lift, 1.6, 1.6, 'ink', 0); D.px(ST.x + Math.round(ux * 2), ST.y + lift + Math.round(uy * 2), mm, mt + 1, ex); }
+      else for (let k = 0; k < 4; k++) for (let j = -k; j <= k; j++) D.px(mx + Math.round(ux * (1 - k) - uy * j), my + Math.round(uy * (1 - k) + ux * j), mm, mt - k * 0.5, ex);
+      if (an[i] > 0.2 && Math.random() < 0.6) rs.burst('dust', ST.x + (Math.random() - 0.5) * R0 * 2, ST.y + R0 - 2, 2, { sp: 6, life: 1 });
+    });
+    // candles: one goes out per turn used (a thin smoke), the last two burn red
+    const mv = mg.moves == null ? 8 : mg.moves, low = mv <= 2 && mg.phase === 'idle';
+    D.lay('front'); for (let i = 0; i < 8; i++) { const x = 105 + i * 13 + (i >= 4 ? 2 : 0); if (i < mv || wake) { D.px(x, 142, low ? 'red' : 'fire', 10 + Math.sin(T * 13 + i) * 0.6, { e: 255 }); D.px(x, 141, low ? 'red' : 'fire', 8, { e: 255 }); } else if (Math.random() < 0.05) rs.burst('steam', x, 141, 1, { sp: 4, ang: 0, spread: 0.2, life: 1.4 }); }
+    if (wake && mg.pt < 1.4) { if (Math.random() < 0.9) rs.burst('dust', 150 + (Math.random() - 0.5) * 120, 54 + Math.random() * 20, 3, { sp: 10, life: 1.4 }); if (Math.random() < 0.4) rs.burst('leaf', 150 + (Math.random() - 0.5) * 100, 56, 1, { sp: 8, life: 1.6 }); }
+    if (wake) { const fr = clamp((mg.pt - 0.6) / 1, 0, 1); D.lay('wall'); for (let i = 0; i < 16; i++) { const x = 10 + i * 18, y = 156 + (i % 2) * 8, d = Math.abs(x - 150) / 150; if (d < fr) { D.rect(x, y, 5, 1, 'teal', 9, { e: 255 }); D.rect(x + 2, y - 2, 1, 5, 'teal', 9, { e: 255 }); } } }
   },
 });
 })();

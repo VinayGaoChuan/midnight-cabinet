@@ -303,34 +303,37 @@ MINI.trainer = { title: '地下拳馆', img: 'e_trainer', col: C.amber, text: '�
   } };
 
 // ═════════════════════ 古像 · rotate the rings to wake the statue ═════════════════════
-// 每转正一圈：一格一响 + 小章；两圈正了、第三圈还在转就听牌；醒来：慢镜头、双眼点亮、大赢；转不动了一拍带过
-const STR = [180, 120, 60];
+// 像素舞台（mc-pxroom-mini-d.js 的 mini_statue）：藤蔓吞掉的神殿，暖色石雕坐像，胸口是三圈石环表盘，脚下 8 根蜡烛就是剩余次数。
+// 悬停的那圈浮起一格；点一圈：转四分之一（过冲、回位、掉灰），灭一根蜡烛；转正一圈：刻槽从铜牙开始一圈亮成青色、咔地锁住、
+// 身上亮起两道裂纹；两圈正了听牌，石像眼皮缝跟着心跳透光；第三圈锁住：三拍加码（三圈刻槽由外到内全亮），卡帧，
+// 双眼睁开爆出青光、全身落灰落苔、抬头点头，地上的符文一圈圈亮开，两项加成逐项砸出；转不动了一拍带过
+const STR = [168, 112, 56], STC = { x: CX, y: K.ly(98) }, STEYE = K.ly(37);
+const stRing = (px, py) => { const d = Math.hypot(px - STC.x, py - STC.y); return d < STR[2] ? 2 : d < STR[1] ? 1 : d < STR[0] ? 0 : -1; };
 MINI.statue = { title: '沉睡的古像', img: 'e_statue', col: C.teal, text: '石像胸口有三圈刻纹。把图案转正，它就会醒过来。只能转八次。',
   init(mg) { mg.rot = [1 + Math.floor(rnd() * 3), 1 + Math.floor(rnd() * 3), Math.floor(rnd() * 4)]; if (mg.rot.every(v => v % 4 === 0)) mg.rot[0] = 2; mg.moves = 8; mg.anim = [0, 0, 0]; mg.lk = [0, 0, 0]; },
-  turn(mg, i) { if (mg.phase !== 'idle' || mg.moves <= 0) return; const was = mg.rot.slice(), cy = SY + 350; mg.rot[i] = (mg.rot[i] + 1) % 4; if (i < 2) mg.rot[i + 1] = (mg.rot[i + 1] + (i === 0 ? 0 : 1)) % 4; mg.moves--; mg.anim[i] = 1; S.mini('statue', 'turn'); if (mg.rot[i] === 0) S.mini('statue', 'align', i);
+  turn(mg, i) { if (mg.phase !== 'idle' || mg.moves <= 0) return; const was = mg.rot.slice(), cy = STC.y; mg.rot[i] = (mg.rot[i] + 1) % 4; if (i < 2) mg.rot[i + 1] = (mg.rot[i + 1] + (i === 0 ? 0 : 1)) % 4; mg.moves--; mg.anim[i] = 1; if (i === 1) mg.anim[2] = 1; S.mini('statue', 'turn'); S.mini('statue', 'snuff'); if (mg.rot[i] === 0) S.mini('statue', 'align', i);
+    SHOW.shake(mg, 3); SHOW.burst(mg, CX, cy + STR[i] - 8, 8, { ramp: [C.cream, C.tan, C.brown, C.umber], sp: [40, 160], life: [0.3, 0.6], g: 500, w: STR[i] });
     const al = mg.rot.filter(v => v === 0).length;
-    mg.rot.forEach((v, j) => { if (v === 0 && was[j] !== 0) { mg.lk[j] = 1; SHOW.crawl(this, mg, al); this.fx.ring(CX, cy, STR[j] - 10, STR[j] + 30, C.teal, 5, 0.3); if (al < 3) SHOW.stamp(mg, al >= 2 ? 'GREAT' : 'GOOD', CX + 340, cy - 60, al >= 2 ? C.gold : C.lime, 52, 0.9); } });
-    if (al === 3) { this.miniSet('wake'); S.mini('statue', 'wake'); MINI.statue.wake.call(this, mg); }
-    else if (mg.moves <= 0) { this.miniSet('sleep'); S.mini('statue', 'fail'); const j = mg.rot.findIndex(v => v !== 0); if (al === 2) SHOW.near(this, mg, CX, cy - STR[j] + 30, '差一点！'); else SHOW.lose(this, mg); endIn(this, mg, 0.45, '刻纹卡住了。石像没有醒。', '#8d8496'); }
-    else if (al === 2) { if (!SHOW.tense(mg)) SHOW.reach(this, mg, { x: CX, y: cy, r: 205, col: C.teal }); } else SHOW.calm(mg); },
-  wake(mg) { const cy = SY + 350, ey = SY + 90; SHOW.slowmo(mg, 0.35, 0.5); this.fx.flash(C.teal, 0.15);
-    SHOW.later(mg, 0.35, () => { S.mini('statue', 'eyes'); [-34, 34].forEach(dx => { this.fx.flare(CX + dx, ey, 140, C.teal, 0.35); this.fx.spark(CX + dx, ey, C.ice, 10, { v: 600 }); }); this.fx.shock(CX, ey, 500, C.teal, 0.5); this.fx.kick(10); });
-    SHOW.later(mg, 0.5, () => SHOW.win(this, mg, 3, { x: CX, y: cy + 80, col: C.teal, label: '大赢' }));
-    SHOW.later(mg, 0.75, () => { this.buffRun('unitAtk', 0.1, '部队攻击 +10%', '#8fe0ff'); this.run.mods.unitHp = (this.run.mods.unitHp || 0) + 0.1; });
-    endIn(this, mg, 2.3, '石像睁开了眼睛，向你的部队点了点头。本局部队攻击、生命各 +10%。', '#8fe0ff'); },
+    mg.rot.forEach((v, j) => { if (v === 0 && was[j] !== 0) { mg.lk[j] = 1; SHOW.crawl(this, mg, al); SHOW.ring(mg, CX, cy, STR[j] - 20, STR[j] + 20, C.teal, { life: 0.35, w: 2 }); SHOW.burst(mg, CX, cy - STR[j] + 10, 12, { ramp: [C.white, C.ice, C.teal, C.tealDeep], sp: [80, 240], life: [0.3, 0.6] }); SHOW.flash(mg, C.teal, 0.12); if (al < 3) SHOW.stamp(mg, al >= 2 ? 'GREAT' : 'GOOD', CX + 340, cy - 60, al >= 2 ? C.gold : C.lime, 52, 0.9); } });
+    if (al === 3) { this.miniSet('waking'); S.mini('statue', 'wake'); MINI.statue.wake.call(this, mg); }
+    else if (mg.moves <= 0) { this.miniSet('sleep'); S.mini('statue', 'fail'); const j = mg.rot.findIndex(v => v !== 0); SHOW.shake(mg, 4); if (al === 2) SHOW.near(this, mg, CX, cy - STR[j] + 30, '差一点！'); else SHOW.lose(this, mg); endIn(this, mg, 0.45, '刻纹卡住了。石像没有醒。', '#8d8496'); }
+    else if (al === 2) { if (!SHOW.tense(mg)) SHOW.reach(this, mg, { x: CX, y: cy, r: 190, col: C.teal }); } else SHOW.calm(mg); },
+  // 三拍加码（三圈刻槽由外到内全亮、镜头往脸上推）→ 卡帧 → 睁眼揭晓 → 两项加成逐项砸出
+  wake(mg) { SHOW.calm(mg);
+    const T = SHOW.charge(this, mg, { x: CX, y: STC.y - 60, q: 2, beats: 3, reveal: false, onBeat: (i) => { mg.lk[2 - i] = 1; S.mini('statue', 'align', 2 - i); K.pxrFlash('mini_statue', 3, 1 + i * 0.6); },
+      onReveal: () => { this.miniSet('wake'); S.mini('statue', 'eyes'); SHOW.reveal(this, mg, 2, { x: CX, y: STEYE, col: C.teal }); K.pxrFlash('mini_statue', 'all', 1.2); SHOW.stamp(mg, '大赢', CX, STEYE + 150, C.teal, 110, 1.8);
+        const s = M.PXR && M.PXR.slots['_mg:mini_statue']; if (s) s.burst('dust', 150, 60, 40, { sp: 20, life: 1.6, w: 100, h: 30 });
+        SHOW.later(mg, 0.7, () => { this.buffRun('unitAtk', 0.1, '部队攻击 +10%', '#8fe0ff'); this.run.mods.unitHp = (this.run.mods.unitHp || 0) + 0.1; SHOW.items(this, mg, [{ text: '部队攻击 +10%', col: C.ice, size: 40 }, { text: '部队生命 +10%', col: C.gold, size: 40 }], { x: CX, y: SY + 560, dy: 58 }); SHOW.ambient(mg, 2); }); } });
+    endIn(this, mg, T + 2.4, '石像睁开了眼睛，向你的部队点了点头。本局部队攻击、生命各 +10%。', '#8fe0ff'); },
   btns(mg) { if (mg.phase !== 'idle') return []; return [0, 1, 2].map(i => ({ t: ['转外圈', '转中圈（会带动内圈）', '转内圈'][i], sub: '剩 ' + mg.moves + ' 次', fn: () => MINI.statue.turn.call(this, mg, i) })).concat([{ t: '离开', leave: 1, fn: () => this.miniFinish('石像继续睡着。', '#8d8496') }]); },
-  down(mg, px, py) { const d = Math.hypot(px - CX, py - (SY + 350)); if (d < 60) MINI.statue.turn.call(this, mg, 2); else if (d < 120) MINI.statue.turn.call(this, mg, 1); else if (d < 180) MINI.statue.turn.call(this, mg, 0); },
+  down(mg, px, py) { const i = stRing(px, py); if (i >= 0) MINI.statue.turn.call(this, mg, i); else SHOW.tap(this, mg, px, py); },
   tick(mg, dt) { mg.anim = mg.anim.map(a => Math.max(0, a - dt * 4)); mg.lk = mg.lk.map(a => Math.max(0, a - dt * 3)); },
   draw(x, mg) {
-    const t = mg.t, cy = SY + 350, wk = mg.phase === 'wake'; bgv(x, '#1a2230', '#06080c'); K.PL(x, [[CX - 240, FLOOR], [CX + 240, FLOOR], [CX + 180, SY + 110], [CX - 180, SY + 110]], '#4a4a55'); K.CI(x, CX, SY + 90, 90, '#5a5a66');
-    // 醒来：双眼先点亮，再往下打出两道光
-    const eye = wk ? cl((mg.pt - 0.12) / 0.4, 0, 1) : 0; K.CI(x, CX - 34, SY + 90, 12, eye ? C.teal : '#2a2a33'); K.CI(x, CX + 34, SY + 90, 12, eye ? C.teal : '#2a2a33');
-    if (eye) { K.GL(x, CX, SY + 90, 200 + 80 * eye, C.teal, eye * 0.6); x.save(); x.globalAlpha = eye * (0.45 + 0.2 * Math.sin(t * 9)); [-1, 1].forEach(s => { K.LN(x, CX + s * 34, SY + 90, CX + s * 260, FLOOR, 10, C.teal); K.LN(x, CX + s * 34, SY + 90, CX + s * 260, FLOOR, 4, C.ice); }); x.restore(); }
-    [[180, 0], [120, 1], [60, 2]].forEach(([rr, i]) => { const a = (mg.rot[i] - mg.anim[i] * 1) * Math.PI / 2; K.CI(x, CX, cy, rr, [C.haze, C.steel, C.silver][i]); x.strokeStyle = C.ink; x.lineWidth = 6; x.beginPath(); x.arc(CX, cy, rr, 0, 7); x.stroke();
-      const lk = wk ? 0.6 + 0.4 * Math.sin(t * 8 + i) : mg.lk[i]; if (lk > 0) { x.save(); x.globalAlpha = lk; x.strokeStyle = C.teal; x.lineWidth = 6; x.beginPath(); x.arc(CX, cy, rr - 6, 0, 7); x.stroke(); x.restore(); }
-      x.save(); x.translate(CX, cy); x.rotate(a); const gc = wk || mg.rot[i] === 0 && !mg.anim[i] ? C.teal : C.gold; if (i === 2) { K.PL(x, [[0, -44], [14, -10], [-14, -10]], gc); K.CI(x, 0, 10, 12, gc); } else { K.PL(x, [[-12, -rr + 6], [12, -rr + 6], [0, -rr + 50]], gc); K.R(x, -4, rr - 50, 8, 40, gc); } x.restore(); });
-    K.PL(x, [[CX - 18, cy - 204], [CX + 18, cy - 204], [CX, cy - 176]], C.ink); K.PL(x, [[CX - 14, cy - 200], [CX + 14, cy - 200], [CX, cy - 180]], C.gold);
-    const low = mg.phase === 'idle' && mg.moves <= 2 && Math.sin(t * 10) > 0; for (let i = 0; i < 8; i++) K.pip(x, SX + 90 + i * 34, SY + 130, 18, i < mg.moves ? (low ? C.red : C.teal) : null);
+    const t = mg.t, i = mg.phase === 'idle' ? stRing(mg.mx, mg.my) : -1; if (i !== mg.hovRing && i >= 0) S.mini('_', 'hover'); mg.hovRing = i;
+    if (!K.pxr(x, 'mini_statue', 0, 0, t, { mg, t })) bgv(x, '#1a2230', '#06080c');
+    // 醒来：双眼往下打出两道光，扫过地面
+    const wk = mg.phase === 'wake', eye = wk ? cl((mg.pt - 0.12) / 0.4, 0, 1) : 0;
+    if (eye) { const sw = Math.sin(t * 1.6) * 60; x.save(); x.globalAlpha = eye * (0.4 + 0.15 * Math.sin(t * 9)); [-1, 1].forEach(s => { for (let k = 0; k < 24; k++) { const q = k / 24, px = K.snap(CX + s * 32 + (s * 180 + sw) * q), py = K.snap(STEYE + (FLOOR + 40 - STEYE) * q); K.R(x, px - 4, py - 4, 8 + Math.round(q * 3) * 4, 8, k % 2 ? C.teal : C.ice); } }); x.restore(); }
   } };
 
 // ═════════════════════ 斗兽场 · bet, then cheer ═════════════════════
