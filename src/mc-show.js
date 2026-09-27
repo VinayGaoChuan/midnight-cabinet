@@ -60,8 +60,8 @@ SH.burst = function (h, x, y, n, o) {
 SH.ring = function (h, x, y, r0, r1, col, o) { o = o || {}; st(h).fx.push({ k: 'ring', x, y, r0, r1, col: U ? U.pal(col) : col, w: o.w || 1, life: o.life || 0.45, t: -(o.delay || 0), sq: o.sq || 0.9 }); };
 // hard wedge rays turning round a point; o { n, life, r, c2, rainbow, spin }
 SH.rays = function (h, x, y, col, o) { o = o || {}; const rp = SH.ramp(col); st(h).fx.push({ k: 'rays', x, y, c1: o.c1 || rp[2], c2: o.c2 || rp[1], n: o.n || 16, r: o.r || 700, life: o.life || 1.4, t: -(o.delay || 0), rainbow: !!o.rainbow, spin: o.spin == null ? 0.35 : o.spin, a0: rnd() * 6.28 }); };
-// shockwave: a thick fast ring, a thin slow one, dust thrown along the ground
-SH.shock = function (h, x, y, col, o) { o = o || {}; SH.ring(h, x, y, 8, o.r || 260, col, { w: 3, life: 0.3 }); SH.ring(h, x, y, 8, (o.r || 260) * 1.5, C.white, { w: 1, life: 0.55, delay: 0.04 }); SH.burst(h, x, y + (o.dy || 0), o.n || 18, { ramp: [C.cream, C.lavender, C.haze, C.indigo], sp: [160, 380], ang: 0, spread: 0.5, life: [0.3, 0.6], drag: 4, size: [1, 3] }); SH.burst(h, x, y + (o.dy || 0), o.n || 18, { ramp: [C.cream, C.lavender, C.haze, C.indigo], sp: [160, 380], ang: Math.PI, spread: 0.5, life: [0.3, 0.6], drag: 4, size: [1, 3] }); };
+// shockwave: a thick fast ring, a thin slow one, dust thrown along the ground; o { r, sq (ring squash, 0.9 default; ~0.3 lies on the floor), dy, n }
+SH.shock = function (h, x, y, col, o) { o = o || {}; SH.ring(h, x, y, 8, o.r || 260, col, { w: 3, life: 0.3, sq: o.sq }); SH.ring(h, x, y, 8, (o.r || 260) * 1.5, C.white, { w: 1, life: 0.55, delay: 0.04, sq: o.sq }); SH.burst(h, x, y + (o.dy || 0), o.n || 18, { ramp: [C.cream, C.lavender, C.haze, C.indigo], sp: [160, 380], ang: 0, spread: 0.5, life: [0.3, 0.6], drag: 4, size: [1, 3] }); SH.burst(h, x, y + (o.dy || 0), o.n || 18, { ramp: [C.cream, C.lavender, C.haze, C.indigo], sp: [160, 380], ang: Math.PI, spread: 0.5, life: [0.3, 0.6], drag: 4, size: [1, 3] }); };
 // whole-stage flashes (flat, no gradient): white, a colour tint, a dim that eases back
 SH.white = function (h, a) { const s = st(h); s.flashA = Math.max(s.flashA, RM() ? a * 0.4 : a); s.flashC = C.white; };
 SH.flash = function (h, col, a) { const s = st(h); s.tintA = Math.max(s.tintA, RM() ? a * 0.4 : a); s.tintC = U ? U.pal(col) : col; };
@@ -97,25 +97,26 @@ SH.enter = function (h, id, delay, o) { o = o || {}; const b = obj(h, id); b.ent
 SH.exit = function (g, h, id, o) { o = o || {}; const b = obj(h, id); b.exit = { t0: st(h).clock, h: o.h || 320 }; if (o.x != null) SH.burst(h, o.x, o.y, 16, { col: o.col || C.gold, sp: [100, 300], life: [0.3, 0.6] }); snd('exit'); return b; };
 
 // ───────── the reveal chain: beats that escalate → a frozen frame → the burst ─────────
-// charge: o { x, y, q final tier 0…3, beats (3 + q), id object to punch, t0, iv, mul, onBeat(i, tq, up), onReveal(), hit (hitstop, default on), reveal (default on), spin }
+// charge: o { x, y, q final tier 0…3, beats (3 + q), id object to punch, t0, iv, mul, onBeat(i, tq, up), onReveal(), hit (hitstop, default on), reveal (default on), spin, col,
+//          tiers [colours] — more steps than four (q then indexes it; beats and the burst scale to 0…3) }
 // the tier shown at beat i climbs to q; each beat is stronger than the last; returns the time until the reveal
 SH.charge = function (g, h, o) {
-  const s = st(h), q = cl(o.q | 0, 0, 3), n = o.beats || 3 + q, ts = []; let t = o.t0 == null ? 0.45 : o.t0, iv = o.iv || 0.5;
+  const s = st(h), TS = o.tiers, top = TS ? TS.length - 1 : 3, q = cl(o.q | 0, 0, top), n = o.beats || 3 + Math.round(q * 3 / Math.max(1, top)), ts = []; let t = o.t0 == null ? 0.45 : o.t0, iv = o.iv || 0.5;
   for (let i = 0; i < n; i++) { ts.push(t); iv *= o.mul || 0.82; t += iv; }
   const T = t + 0.15, x = o.x == null ? K.CX : o.x, y = o.y == null ? K.SY + 330 : o.y;
   s.charge = { t0: s.clock, T, x, y, q, tier: 0 }; s.cam.x = x; s.cam.y = y; snd('riser', T);
-  ts.forEach((tt, i) => later(h, tt, () => { const tq = Math.min(q, Math.floor(i * (q + 1) / n)), up = tq > (s.charge ? s.charge.tier : 0); if (s.charge) s.charge.tier = tq; SH.beat(g, h, x, y, i, tq, up, o.id); o.onBeat && o.onBeat(i, tq, up); }));
-  later(h, T, () => { s.charge = null; const go = () => { if (o.reveal !== false) SH.reveal(g, h, q, { x, y, id: o.id, spin: o.spin }); o.onReveal && o.onReveal(); }; if (o.hit !== false) SH.hitstop(h, 0.15, x, y, go); else go(); });
+  ts.forEach((tt, i) => later(h, tt, () => { const tq = Math.min(q, Math.floor(i * (q + 1) / n)), up = tq > (s.charge ? s.charge.tier : 0); if (s.charge) s.charge.tier = tq; SH.beat(g, h, x, y, i, tq, up, o.id, TS ? { col: TS[tq], q: Math.round(tq * 3 / Math.max(1, top)) } : null); o.onBeat && o.onBeat(i, tq, up); }));
+  later(h, T, () => { s.charge = null; const go = () => { if (o.reveal !== false) SH.reveal(g, h, TS ? Math.round(q * 3 / Math.max(1, top)) : q, { x, y, id: o.id, spin: o.spin, col: TS ? TS[q] : o.col }); o.onReveal && o.onReveal(); }; if (o.hit !== false) SH.hitstop(h, 0.15, x, y, go); else go(); });
   return T + (o.hit !== false ? 0.15 : 0);
 };
 // one beat: white flash, a punch, a shake that grows, the camera leans in, a ring and a burst in the tier's colour, a higher note;
 // a tier-up beat adds a whole-stage tint flash and a white ring
 SH.beat = function (g, h, x, y, i, tq, up, id, o) {
-  const rp = SH.tierRamp(tq); if (id != null) { const b = obj(h, id); b.k = 1.12; b.kv = 0; b.w = 0.8; }
+  const rp = o && o.col ? SH.ramp(o.col) : SH.tierRamp(tq); if (id != null) { const b = obj(h, id); b.k = 1.12; b.kv = 0; b.w = 0.8; }
   SH.shake(h, 3 + i * 2 + (up ? 8 : 0)); SH.zoom(h, 0.012 + (up ? 0.02 : 0), x, y);
   SH.ring(h, x, y, 12, 90 + i * 14, rp[2], { life: 0.45 }); SH.burst(h, x, y, 12 + i * 3, { ramp: rp, sp: [120, 320], life: [0.25, 0.55] });
   if (up) { SH.flash(h, rp[2], 0.3); SH.ring(h, x, y, 12, 220, C.white, { life: 0.5, delay: 0.05, w: 2 }); }
-  if (!(o && o.quiet)) snd('beat', { i, tier: tq, up }); if (g && g.fx) g.fx.kick(1 + i * 0.6 + (up ? 2 : 0));
+  if (!(o && o.quiet)) snd('beat', { i, tier: o && o.q != null ? o.q : tq, up }); if (g && g.fx) g.fx.kick(1 + i * 0.6 + (up ? 2 : 0));
 };
 // 卡帧：舞台停住、压到近黑、焦点一团白；到点再往下走
 SH.hitstop = function (h, dur, x, y, then) { const s = st(h); if (RM()) { then && then(); return; } s.hit = dur || 0.15; s.hitX = x == null ? K.CX : x; s.hitY = y == null ? K.SY + 330 : y; s.hitThen = then || null; snd('hit'); };
@@ -346,7 +347,7 @@ SH.draw = function (x, mg) {
   if (T && s.tLv > 0.02) {
     const beat = Math.max(0, 1 - s.beatT * 5), r = T.r * (1 + 0.05 * beat), a = s.tLv;
     if (T.lv >= 2 && !RM()) { const on = Math.floor(s.clock * 10) % 2; x.save(); x.globalAlpha = a; [[X0, Y0, W, 8], [X0, Y0 + H - 8, W, 8], [X0, Y0, 8, H], [X0 + W - 8, Y0, 8, H]].forEach(([a1, b1, w1, h1]) => K.R(x, a1, b1, w1, h1, on ? C.red : C.gold)); x.restore(); }
-    if (T.label && s.tense) { const q = eb(cl(T.t / 0.25, 0, 1)), ly = Math.max(Y0 + 150, T.y - r - 56); x.save(); x.translate(T.x, ly); x.scale(q * (1 + 0.06 * beat), q * (1 + 0.06 * beat)); K.sign(x, T.label, 0, 0, { kind: T.lv >= 2 ? 'red' : 'gold', size: 40, minW: 220 }); x.restore(); }
+    if (T.label && s.tense) { const q = eb(cl(T.t / 0.25, 0, 1)), up = T.y - r - 56, ly = up >= Y0 + 150 ? up : Math.min(Y0 + H - 90, T.y + r + 56); /* no room above the spotlight: the sign goes under it */ x.save(); x.translate(T.x, ly); x.scale(q * (1 + 0.06 * beat), q * (1 + 0.06 * beat)); K.sign(x, T.label, 0, 0, { kind: T.lv >= 2 ? 'red' : 'gold', size: 40, minW: 220 }); x.restore(); }
   }
   if (s.fever > 0 && !RM()) { const ph = s.feverT * 4, cols = [C.gold, C.magenta, C.teal, C.lime]; x.save(); x.globalAlpha = 0.55 + 0.25 * Math.sin(ph * Math.PI); for (let i = 0; i < 4; i++) { const c = cols[(i + Math.floor(ph)) % 4]; if (i === 0) K.R(x, X0, Y0, W, 12, c); if (i === 1) K.R(x, X0 + W - 12, Y0, 12, H, c); if (i === 2) K.R(x, X0, Y0 + H - 12, W, 12, c); if (i === 3) K.R(x, X0, Y0, 12, H, c); } x.restore(); }
   if (s.near) { const p = s.near.t / 0.9, w = Math.round(Math.sin(s.near.t * 40) * 2 * (1 - p)) * GRID; x.save(); x.globalAlpha = 1 - p; x.strokeStyle = U.pal(C.pink); x.lineWidth = GRID; x.strokeRect(Math.round((s.near.x - 70) / GRID) * GRID + w, Math.round((s.near.y - 60) / GRID) * GRID, 140, 120); x.restore(); }
