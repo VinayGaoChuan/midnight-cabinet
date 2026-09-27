@@ -94,7 +94,7 @@ G.view = function () {
   if (v.relOn) {
     const ready = now() - P.at > 500;
     v.rp = { title: '宗教 Lv' + P.lv, line: '选一条教义', cards: P.cards.map((c, i) => { const Bd = B[c.b], d = docOf(c);
-      return { img: M.iconURL ? M.iconURL(docIcon(d), 3) : '', n: '来自 · ' + Bd.n, c: (Q[Bd.q] || Q[0]).c, t: d ? d.t : '', op: ready ? 1 : 0.6, onPick: () => this.relTake(i) }; }) };
+      return { img: M.iconURL ? M.iconURL(docIcon(d), 3) : '', iw: 96, ih: 96, n: '来自 · ' + Bd.n, c: (Q[Bd.q] || Q[0]).c, t: d ? d.t : '', op: ready ? 1 : 0.6, onPick: () => this.relTake(i) }; }) };
   }
   return v;
 };

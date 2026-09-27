@@ -126,4 +126,5 @@ mc-q6.js
 mc-night.js
 mc-boons.js
 mc-q7.js
+mc-roster.js
 mc-opening.js

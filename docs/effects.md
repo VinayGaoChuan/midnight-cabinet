@@ -968,7 +968,7 @@
 | V023 | `Sfx.toggle` | 界面 | 0 |
 | V024 | `Sfx.whoosh` | 通用 | 25 |
 | V025 | `Sfx.sparkle` | 通用 | 4 |
-| V026 | `Sfx.up` | 通用 | 31 |
+| V026 | `Sfx.up` | 通用 | 33 |
 | V027 | `Sfx.mult` | 通用 | 4 |
 | V028 | `Sfx.heal` | 通用 | 12 |
 | V029 | `Sfx.boom` | 通用 | 23 |
@@ -986,13 +986,13 @@
 | V041 | `Sfx.cast` | 通用 | 3 |
 | V042 | `Sfx.bolt` | 通用 | 7 |
 | V043 | `Sfx.win` | 通用 | 0 |
-| V044 | `Sfx.fanfare` | 通用 | 14 |
-| V045 | `Sfx.lose` | 通用 | 10 |
+| V044 | `Sfx.fanfare` | 通用 | 15 |
+| V045 | `Sfx.lose` | 通用 | 9 |
 | V046 | `Sfx.die` | 通用 | 5 |
 | V047 | `Sfx.kill` | 通用 | 3 |
 | V048 | `Sfx.hit` | 通用 | 15 |
 | V049 | `Sfx.crit` | 通用 | 3 |
-| V050 | `Sfx.shoot` | 通用 | 5 |
+| V050 | `Sfx.shoot` | 通用 | 6 |
 | V051 | `Sfx.rip` | 通用 | 1 |
 | V052 | `Sfx.charge` | 通用 | 1 |
 | V053 | `Sfx.boing` | 通用 | 1 |

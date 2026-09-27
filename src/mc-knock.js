@@ -13,7 +13,8 @@
 //   shakes; a much stronger unit (two qualities above, an elite, a boss) adds a shock ring.
 //   · Death: the body goes down (or flies, if the blow was big), flashes red, lets out a wisp of its soul and fades out
 //     in dithered steps — no white silhouette.
-// Melee pushes along the blow, shots push a little, skills and crits harder, explosions push outwards from the blast.
+// Only skills and blasts throw (2026-09-26: ordinary attacks no longer push, launch or knock down — it looked messy);
+// skills push along the blow, crits harder, explosions outwards from the blast.
 // A thrown unit that crashes into its own side knocks it along; the edge of the field bounces it back.
 // Leaders and bosses are never moved; every attack a leader or a boss makes shakes the screen.
 // Units face what they are fighting (user: 「角色战斗的时候朝向不对，应该朝向自己攻击的目标」).
@@ -40,6 +41,7 @@ BP.kbImpact = function (src, tg, I, level) {
 };
 BP.knock = function (src, tg, dealt, o, from) {
   if (M.KB.off || !tg || immune(tg) || !(dealt > 0) || o.silent || o.reflect || o.noKb) return;
+  if (!o.skill && !from) return;   // only skills and blasts throw (user ruling 2026-09-26: 「去掉普通攻击的击退，击飞，击倒（保留技能的）」)
   const T = this.t, killed = !tg.alive;
   const fx = from ? from.x : src ? src.x : tg.x - M.faceOf(tg), fy = from ? from.y : src ? src.y : tg.y;
   let dx = tg.x - fx, dy = (tg.y - fy) * 0.5; const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;

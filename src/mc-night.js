@@ -6,7 +6,7 @@
 //    为探索服务，而探索带回战力，防守基地，要做好内外联系」 · 「只把单位带出，探索的时候不会再带入」
 //   「合成默认能合到稀有，史诗，传说，神话都需要局外的建筑的超限合成解锁。而且超限解锁建筑，应该是唯一的。例如法师塔，法师职业
 //    可以超限进化1次。这种建筑同一种只能建造一次，要想超限进化第二次，就需要建不同种类的类似建筑」
-// · The day: explore (or a visitor comes and takes the day, or rest) → the night: 混沌来袭 → the next day. Every night.
+// · The day: a visitor may come in the morning, then explore (or rest) → the night: 混沌来袭 → the next day. Every night.
 // · The garrison: every unit that comes home from an expedition stays at the base (it never goes out again). Three of a
 //   kind there evolve too. At night the garrison fights the raid in an ordinary battle; the leader stays on the roof (its
 //   skill still works). A night held: the fallen get up again. A night lost (the garrison beaten): three in ten of the
@@ -147,9 +147,9 @@ G.garEvo = function () {
 // ───────── the night ─────────
 // how strong a night is (power, the measure of the map's fights), by the day; calibrated with tools/prog.js (docs/design.md
 // §8.2): gentle while the garrison is two or three trips deep, then climbing with what evolving brings. The last night of
-// every five days is a 血月 (blood moon): 35% stronger, always with an elite, marked on the calendar. A lost night costs
+// every five days is a 血月 (blood moon): 25% stronger, always with an elite, marked on the calendar. A lost night costs
 // three in ten of the fallen (half made one loss snowball into the next: 2026-09-26 growth sims).
-M.NIGHT = { HIT: 0.6, LOSS: 0.3, T_MAX: 240, MOON: 1.35, CURVE: [[1, 390], [3, 1040], [5, 2080], [8, 4160], [10, 6000], [15, 11000], [20, 17000], [30, 28600]] };   // ×1.3 on 2026-09-26: with FEVER no longer stopping the fight, 49 nights in a row were held
+M.NIGHT = { HIT: 0.6, LOSS: 0.3, T_MAX: 240, MOON: 1.25, CURVE: [[1, 300], [2, 520], [3, 850], [4, 1150], [5, 1800], [8, 3900], [10, 5500], [15, 10500], [20, 16500], [30, 28000]] };   // 2026-09-26 on the base map: the battle-screen curve ×1.3 held 31 nights without a scratch, ×2.2 broke the main base by night 2–5
 M.bloodMoon = (d) => d > 0 && d % 5 === 0;
 M.nightBase = (day) => { const C = M.NIGHT.CURVE; if (day <= C[0][0]) return C[0][1]; for (let i = 1; i < C.length; i++) if (day <= C[i][0]) { const [d0, p0] = C[i - 1], [d1, p1] = C[i]; return p0 + (p1 - p0) * (day - d0) / (d1 - d0); } const L = C[C.length - 1]; return L[1] + (day - L[0]) * 900; };
 M.nightPower = (m) => { const d = Math.max(1, (m && m.day) || 1); return Math.round(M.nightBase(d) * (M.bloodMoon(d) ? M.NIGHT.MOON : 1) * (1 - ((m && m.raidWeak) || 0))); };
@@ -162,17 +162,18 @@ M.makeRaidCfg = function (m) {
   list.sort((a, b) => a.spawn - b.spawn);
   return { mode: 'hold', w: 1 + day * 0.4, type: 'raid', list, dur: 9999, budget: target, raid: 1, night: target };
 };
-const oCfg = M.makeBattleCfg;
-M.makeBattleCfg = function (run, node) { if (run && run.raid && node && node.type === 'raid') return M.makeRaidCfg(run.M); return oCfg.apply(this, arguments); };
-// an expedition-like frame for the battle: the leader (on the roof), the garrison, what the base gives the garrison
+// the garrison's modifiers as an expedition would have them: the leader's, the base's, the religion's, its vocation pairs
 // the field: the town outside the main base at night (the backdrop draws a town's roofs for a name with 小镇)
 const NIGHT_R = () => Object.assign({}, (M.WORLDS && M.WORLDS.town) || {}, { n: '小镇 · 混沌来袭', diff: 1, tut: false, final: false, loot: 1, bg: '#0c0a1c', road: '#2a2438', tile: '#16122a', light: '#ff8a6a', grade: ['#b0a0d0', '#0c0a1c'] });
 function raidRun(m) {
   const h = m.heroes[0], mods = M.heroMods(h, m), bm = M.baseMods(m);
   mods.unitHp = (mods.unitHp || 0) + (bm.garHp || 0); mods.unitAtk = (mods.unitAtk || 0) + (bm.defDmg || 0);
   if (m.rel && M.relDoc) (m.rel.picks || []).forEach(p => { const d = M.relDoc(p); if (d && d.run) Object.keys(d.run).forEach(k => { mods[k] = (mods[k] || 0) + d.run[k]; }); });
-  return { raid: true, M: m, hero: h, mods, regionKey: 'night', region: NIGHT_R(), len: { n: '混沌来袭', cols: 1 }, roster: garOf(m), legion: {}, runBuff: {}, items: [null, null, null], itemQ: [0, 0, 0], wallet: 0,
+  if (M.vocFromBase) M.vocFromBase(mods, m);   // 发展方向's vocation bonuses (mc-roster.js)
+  const run = { raid: true, M: m, hero: h, mods, regionKey: 'night', region: NIGHT_R(), len: { n: '混沌来袭', cols: 1 }, roster: garOf(m), legion: {}, runBuff: {}, items: [null, null, null], itemQ: [0, 0, 0], wallet: 0,
     loot: { supplies: 0, bp: [], exp: 0, faith: 0 }, startMult: 0, lootMul: 1, battles: 0, kills: 0, skillCd: 0, steps: 0, meta: { unlocked: [], perks: {} }, map: { nodes: [], cols: 1 }, vision: 2, lvl0: 1, lvlStep: 0.1, shop: [], lastP: 1, field: null };
+  if (M.synBind) M.synBind(run);   // the garrison's vocation pairs count too
+  return run;
 }
 M.raidRun = raidRun;
 M.garrisonPower = (m) => { if (!m || !m.heroes || !m.heroes.length || !garOf(m).length) return 0; const r = raidRun(m); r.hero = null; return M.powerOf(M.sideA(r)); };
@@ -185,10 +186,9 @@ G.passDay = function () {
   const m = this.meta;
   if (!m || this.raidPrep) return oPass.apply(this, arguments);
   if (nightDue(m)) { this.nightFall(); return []; }
-  const logs = oPass.apply(this, arguments);
-  // a visitor on the new day takes the day: after it, the night, then the next day
-  const k = M.eventOn(m, m.day); if (k && k !== 'raid') this.homeQueue([{ run: () => this.passDay(), until: () => !this.night }]);
-  return logs;
+  // a visitor comes in the morning and leaves the day as it was: the expedition still goes out, the night comes after it
+  // (user ruling 2026-09-26: 「事件结束后还是继续去探索，探索完，才进入晚上，事件不自动推进时间了」)
+  return oPass.apply(this, arguments);
 };
 G.restDay = function () { if (this.homeQ || this.night) return; this.closePanel && this.closePanel(); this.passDay(); };
 G.checkRaid = function () { return false; };   // the old every-five-days siege (M.Raid) is gone
@@ -197,76 +197,90 @@ G.nightFall = function () {
   const m = this.meta; if (!m || this.night) return;
   this.panel = null;
   const g = garOf(m); S.alarm && S.alarm();
-  this.night = { t: 0, day: m.day, ph: g.length ? 'dusk' : 'empty', at: 1.4 };
+  this.night = { t: 0, day: m.day, ph: 'dusk', at: 1.4 };
   const moon = M.bloodMoon(m.day);
-  this.banner && this.banner({ kind: 'win', text: moon ? '血月之夜！' : '混沌来袭！', col: '#ff5a4a', col2: '#6a0a0a', sub: g.length ? '第 ' + m.day + ' 天夜里 · 驻军 ' + g.length + ' 支迎敌' : '没有驻军：怪物直冲主基地', life: 1.6, y: 440 });
+  this.banner && this.banner({ kind: 'win', text: moon ? '血月之夜！' : '混沌来袭！', col: '#ff5a4a', col2: '#6a0a0a', sub: g.length ? '第 ' + m.day + ' 天夜里 · 驻军 ' + g.length + ' 支迎敌' : '没有驻军：只有领袖在屋顶', life: 1.6, y: 440 });
   if (this.bv && this.bv.home) this.bv.home();
   this.bump();
 };
-// the battle opens after the alarm, or (no garrison) the raid walks straight into the main base
+// the fight is on the base map (user ruling 2026-09-26: 「混沌来袭，是要在基地地图上战斗，不是切成局内的那种战斗方式」「英雄站在
+// 基地上进行远程攻击」): the town siege (mc-siege.js) with the garrison as the defenders in front of the main base and the
+// leader shooting from its roof; the monsters are the night's (makeRaidCfg), coming in from both ends of the town
+const DOOR_X = M.BASE_GEO.DOOR_X, MB = M.MAIN_BASE, Siege = M.Raid;
+const RANGED_V = { 射手: 1, 法师: 1, 牧师: 1, 祭司: 1, 召唤师: 1 };
+M.NightRaid = class extends Siege {
+  constructor(meta) {
+    super(meta);
+    this.night = 1; this.mbBows = []; this.bell = 0;
+    const run = raidRun(meta), md = run.mods;
+    garOf(meta).forEach((u, i) => {
+      const d = DB[u.type]; if (!d) return; const V = M.vocMods(md, d), ek = u.ek || 1, side = i % 2 ? 1 : -1, k = Math.floor(i / 2), ranged = d.ranged === 1 || !!RANGED_V[d.voc];
+      const hp = (d.hp + (u.bHp || 0)) * ek * (1 + (md.unitHp || 0) + V.hp), atk = (d.atk + (u.bAtk || 0)) * ek * (1 + (md.unitAtk || 0) + V.atk);
+      const home = DOOR_X + side * (MB.w / 2 + (ranged ? 50 : 150) + (k % 6) * 40);
+      this.ents.push({ side: 'A', guard: 1, gar: u.uid, sprite: u.type, s: 4, x: home, home, y: -18 - (k % 3) * 10, hp, max: hp, atk, cd: 100 / Math.max(20, (d.as || 100) * (1 + V.as)), range: ranged ? 320 : 70, spd: 170, ranged, t: Math.random() * 0.5, alive: true, face: -side });
+    });
+    const h = meta.heroes[0], H = h && M.HEROES[h.cls];
+    this.roof = h && H ? { x: DOOR_X, y: MB.top - 70, dmg: M.heroAtk(h, meta) * M.NIGHT.ROOF, cd: H.cd || 1, range: M.NIGHT.ROOF_R, t: 0.6 } : null;
+    const cfg = M.makeRaidCfg(meta);
+    this.list = cfg.list.map((x, i) => ({ t: 1 + x.spawn * 1.2, type: x.type, elite: x.elite, hpMul: x.hpMul, atkMul: x.atkMul, side: i % 2 ? 1 : -1 })).sort((a, b) => a.t - b.t);
+    this.spawnI = 0; this.total = this.list.length; this.target = cfg.night;
+  }
+  spawn(x) {
+    const d = DB[x.type]; if (!d) return; const k = x.elite ? 1.15 : 1, hp = d.hp * k * (x.hpMul || 1);
+    this.ents.push({ side: 'E', kind: x.type, sprite: x.type, s: x.elite ? 5 : 4, x: x.side < 0 ? this.edgeL - 420 - Math.random() * 80 : this.edgeR + 420 + Math.random() * 80, y: -18 - Math.random() * 16,
+      hp, max: hp, atk: d.atk * k * (x.atkMul || 1), cd: 100 / Math.max(20, d.as || 100), range: d.ranged === 1 ? 260 : 70, spd: 95 + Math.random() * 30, ranged: d.ranged === 1, t: Math.random(), alive: true, face: -x.side, elite: !!x.elite });
+  }
+  step(dt) {
+    super.step(dt);
+    const R = this.roof; if (!R || this.over) return;
+    R.t -= dt; if (R.t > 0) return;
+    const tg = this.ents.filter(o => o.alive && o.side === 'E' && Math.abs(o.x - R.x) <= R.range).sort((a, b) => Math.abs(a.x - DOOR_X) - Math.abs(b.x - DOOR_X))[0];
+    if (!tg) return; R.t = R.cd; R.fireT = this.t; this.proj.push({ k: 'bolt', x: R.x, y: R.y, tg, dmg: R.dmg, col: '#ffcf4a', speed: 1600 }); S.shoot && S.shoot();
+  }
+  drawHud(ctx) {
+    const U = M.UI, PP = M.PJ.PAL; if (!U) return; ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const left = this.total - this.spawnI + this.ents.filter(e => e.alive && e.side === 'E').length, gar = this.ents.filter(e => e.alive && e.side === 'A').length;
+    U.plate(ctx, 610, 110, 700, 104, { ring: PP.red });
+    U.text(ctx, (M.bloodMoon(this.meta.day) ? '血月之夜' : '混沌来袭') + ' · 第 ' + this.meta.day + ' 夜', 960, 146, U.T.title, PP.red, { outline: true });
+    U.text(ctx, '剩余敌人 ' + left + '　·　驻军 ' + gar + '　·　主基地 ' + Math.max(0, Math.round(this.portal.hp)) + ' / ' + this.portal.max, 960, 190, U.T.body, PP.cream);
+  }
+};
+// 午夜钟楼: a boss stands still for a moment at the start of an expedition's boss fight
+const oInitB = BP.init;
+BP.init = function (run) {
+  const r = oInitB.apply(this, arguments), st = run && run.M && !(run.region && run.region.tut) ? M.baseMods(run.M).bossStun || 0 : 0;
+  if (st) this.later((this.fightT0 || 0) + 0.05, () => this.ents.forEach(e => { if (e.alive && e.side === 'E' && e.boss) { e.stun = Math.max(e.stun || 0, st); this.float && this.float(e.x, e.y - 120, '钟声 · 停顿', '#ffcf4a', 28); } }));
+  return r;
+};
+// the leader's shot from the roof hits like a heavy crossbow; its reach covers the ground in front of the town
+Object.assign(M.NIGHT, { ROOF: 1.5, ROOF_R: 1000 });
+// monsters that reach the main base hit it at half strength: a night lost to a thin garrison hurts, it does not end the
+// game at once (2026-09-26 sims: the base fell in 40 s on night 2 with three units out)
+if (M.SIEGE_K) M.SIEGE_K.bldAtk = 0.5;
 G.nightTick = function (dt) {
   const N = this.night, m = this.meta; if (!N || !m) return;
   N.t += dt || 0;
-  if (N.ph === 'dusk' && N.t >= N.at && this.screen === 'base') { N.ph = 'fight'; this.run = raidRun(m); this.beginBattle({ type: 'raid', col: 0, id: -1, seg: 0, raid: 1 }); return; }
-  if (N.ph === 'empty' && N.t >= N.at) {
-    const dmg = Math.round(M.portalMax(m) * M.NIGHT.HIT); m.portal.hp = Math.max(0, m.portal.hp - dmg); m.lastRaid = m.day; m.raids = (m.raids || 0) + 1; m.raidWeak = 0; this.save();
-    this.banner && this.banner({ kind: 'win', text: '主基地受到冲击', col: '#ff4a4a', col2: '#3a0000', sub: '耐久 -' + dmg, life: 2.0, y: 440 }); S.lose && S.lose(); this.fx.kick && this.fx.kick(24); this.fx.flash && this.fx.flash('#ff2a2a', 0.3); this.pulse.portal = now();
-    N.ph = 'after'; N.at = N.t + 2.0; N.res = { won: false, dmg }; return;
-  }
+  if (N.ph === 'dusk' && N.t >= N.at && this.screen === 'base') { N.ph = 'fight'; this.panel = null; this.coachData = null; this.bv.raidCam && this.bv.raidCam(); this.raid = new M.NightRaid(m); this.go('raid'); return; }
   if (N.ph === 'after' && N.t >= N.at && this.screen === 'base') this.nightOver();
 };
 const oTick = G.tick;
 G.tick = function (dt) { const r = oTick.apply(this, arguments); if (this.night) this.nightTick(dt || 0); return r; };
-// the battle: the leader stays on the roof; it ends when the raid is beaten or the garrison has fallen
-const oInit = BP.init;
-BP.init = function (run, cfg) {
-  const r = oInit.apply(this, arguments);
-  if (run && run.raid) { this.ek = 1; this.raidNight = 1; }
-  else if (run && run.M && !(run.region && run.region.tut)) { const st = M.baseMods(run.M).bossStun || 0; if (st) this.later((this.fightT0 || 0) + 0.05, () => this.ents.forEach(e => { if (e.alive && e.side === 'E' && e.boss) { e.stun = Math.max(e.stun || 0, st); this.float && this.float(e.x, e.y - 120, '钟声 · 停顿', '#ffcf4a', 28); } })); }
-  return r;
-};
-const oHE = BP.heroEnter; BP.heroEnter = function () { if (this.run && this.run.raid) return; return oHE.apply(this, arguments); };
-const oStep = BP.step;
-BP.step = function (dt) {
-  const r = oStep.apply(this, arguments);
-  if (this.raidNight && !this.over && this.t > (this.entryEnd || 0) + 0.3) {
-    let army = 0, left = this.cfg.list.length - this.spawnI; for (const e of this.ents) { if (!e.alive) continue; if (e.side === 'A' && !e.isHero) army++; else if (e.side === 'E') left++; }
-    if (left === 0) { this.finish(); this.end('clear'); }
-    else if (army === 0) this.end('dead');
-    else if (this.t > M.NIGHT.T_MAX) this.end('time');
-  }
-  return r;
-};
-// the announcement says what this is
-const oBB = G.beginBattle;
-G.beginBattle = function (n) {
-  const r = oBB.apply(this, arguments), run = this.run, B0 = this.introBanner;
-  if (run && run.raid && B0) { B0.text = M.bloodMoon(run.M.day) ? '血月之夜' : '混沌来袭'; B0.col = '#ff5a4a'; B0.sub = '第 ' + run.M.day + ' 夜 · 驻军 ★' + M.garrisonPower(run.M) + ' · 敌军 ★' + ((this.cfg && this.cfg.night) || 0); }
-  return r;
-};
-// the end of the night: no settlement screen; back on the base, the verdict there
-const oSettle = G.startSettle;
-G.startSettle = function () {
-  const run = this.run; if (!(run && run.raid)) return oSettle.apply(this, arguments);
-  const b = this.battle, m = this.meta, N = this.night || (this.night = { t: 0, day: m.day }), won = b.over === 'clear';
-  const dead = new Set(b.deadUids || []), g = garOf(m), lost = won ? [] : g.filter(u => dead.has(u.uid) && rnd() < M.NIGHT.LOSS);
-  m.garrison = g.filter(u => !lost.includes(u)); m.lastRaid = m.day; m.raids = (m.raids || 0) + 1; m.raidWeak = 0; m.st = m.st || {};
-  let dmg = 0, sup = 0;
-  if (won) { m.st.raidsWon = (m.st.raidsWon || 0) + 1; sup = Math.round(30 + m.day * 10); m.supplies += sup; if (m.day >= 15 && this.prof) { (this.prof.stats || (this.prof.stats = {})).raid15 = 1; this.saveProfile && this.saveProfile(); } this.achCheck2 && this.achCheck2(); }   // 钟表匠 unlocks on the 15th night (mc-legacy.js)
-  else {
-    const cost = (x) => (DB[x] && DB[x].cost) || 20, total = b.cfg.list.reduce((a, s) => a + cost(s.type), 0) || 1;
-    const rest = b.ents.filter(e => e.alive && e.side === 'E').reduce((a, e) => a + cost(e.key) * cl(e.hp / Math.max(1, e.maxHp), 0, 1), 0) + b.cfg.list.slice(b.spawnI).reduce((a, s) => a + cost(s.type), 0);
-    dmg = Math.round(M.portalMax(m) * M.NIGHT.HIT * cl(rest / total, 0.15, 1)); m.portal.hp = Math.max(0, m.portal.hp - dmg);
-  }
-  const sh = Math.round((b.kills || 0) * 1.2); m.shards += sh;
-  N.res = { won, dmg, sup, sh, kills: b.kills || 0, fell: dead.size, lost: lost.length };
+// the end: the main base stood (the fallen garrison gets up again) or it fell (the game is over)
+const oRE = G.raidEnd;
+G.raidEnd = function () {
+  const r = this.raid; if (!(r && r.night)) return oRE.apply(this, arguments);
+  const m = this.meta, N = this.night || (this.night = { t: 0, day: m.day }), won = r.over === 'win';
+  r.done = true; m.portal.hp = Math.max(0, Math.round(r.portal.hp)); m.lastRaid = m.day; m.raids = (m.raids || 0) + 1; m.raidWeak = 0; m.st = m.st || {};
+  const fell = r.ents.filter(e => e.side === 'A' && e.gar && !e.alive).length;
+  let sup = 0; const sh = Math.round((r.kills || 0) * 1.2);
+  if (won) { m.st.raidsWon = (m.st.raidsWon || 0) + 1; sup = Math.round(30 + m.day * 10); m.supplies += sup; if (m.day >= 15 && this.prof) { (this.prof.stats || (this.prof.stats = {})).raid15 = 1; this.saveProfile && this.saveProfile(); } this.achCheck2 && this.achCheck2(); }
+  m.shards += sh;
+  N.res = { won, dmg: Math.round(r.portal.max - r.portal.hp), portal: +(Math.max(0, r.portal.hp) / Math.max(1, r.portal.max)).toFixed(2), sup, sh, kills: r.kills || 0, fell, secs: Math.round(r.t) };
   this.save();
-  try { M.T && M.T.ev('night', { day: m.day, won, kills: b.kills || 0, fell: dead.size, lost: lost.length, dmg, gar: m.garrison.length, secs: Math.round(b.t) }); } catch (e) {}
-  this.toBase();
-  if (won) { this.banner({ kind: 'win', text: '守住了！', col: '#ffd970', life: 2.2, y: 440, sub: '击退 ' + N.res.kills + ' 个敌人 · 物资 +' + sup + (sh ? ' · 灵魂碎片 +' + sh : '') }); S.fanfare && S.fanfare(); this.fx.confetti && this.fx.confetti(100); }
-  else { this.banner({ kind: 'win', text: '驻军败退', col: '#ff4a4a', col2: '#3a0000', life: 2.4, y: 440, sub: (lost.length ? '阵亡 ' + lost.length + ' 支 · ' : '') + '主基地耐久 -' + dmg }); S.lose && S.lose(); this.fx.kick && this.fx.kick(24); this.fx.flash && this.fx.flash('#ff2a2a', 0.3); this.pulse.portal = now(); }
-  N.ph = 'after'; N.at = N.t + 2.3;
-  this.bump();
+  try { M.T && M.T.ev('night', { day: m.day, won, kills: r.kills || 0, fell, gar: garOf(m).length, portal: N.res.portal, secs: N.res.secs }); } catch (e) {}
+  if (won) { this.banner({ kind: 'win', text: '守住了！', col: '#ffd970', life: 2.2, y: 440, sub: '击退 ' + (r.kills || 0) + ' 个敌人 · 物资 +' + sup + (sh ? ' · 灵魂碎片 +' + sh : '') }); S.fanfare && S.fanfare(); this.fx.confetti && this.fx.confetti(100); }
+  else { this.banner({ kind: 'win', text: '主基地被攻破', col: '#ff4a4a', col2: '#3a0000', life: 2.4, y: 440 }); S.lose && S.lose(); }
+  setTimeout(() => { if (this.raid !== r) return; this.raid = null; this.go('base'); this.bv.home(); N.ph = 'after'; N.at = N.t + 0.4; this.bump(); }, 2200);
 };
 G.nightOver = function () {
   const m = this.meta; this.night = null;
@@ -287,6 +301,9 @@ G.view = function () {
     const g = garOf(m);
     v.b.res.push({ img: M.iconURL ? M.iconURL('t_shield', 2) : M.spriteURL('sack', 4), v: this.tv('mgar', g.length), c: '#ffcf4a', fx: 'mgar', sc: this.ps('mgar'), hasSub: true, sub: '/' + M.GARRISON_CAP, tipOn: this.tipFn(() => this.tipFor('b-gar')) });
   }
+  // the garrison beside the leader's card (user ruling 2026-09-26: 「现在基地中有哪些部队，要跟英雄头像显示在一排」): one tile a kind, best first
+  if (v.b && m && m.tutDone) { const c = {}; garOf(m).forEach(u => { c[u.type] = (c[u.type] || 0) + 1; });
+    v.b.gar = Object.keys(c).sort((a, b) => DB[b].q - DB[a].q || c[b] - c[a]).slice(0, 16).map(k => ({ img: M.spriteURL(k, 3), c: Q[DB[k].q].c, n: c[k], nOn: c[k] > 1, tipOn: this.tipFn(() => { const t = M.unitTip ? M.unitTip(k, null, null) : { title: DB[k].n }; return Object.assign({}, t, { title: (t.title || DB[k].n) + (c[k] > 1 ? ' ×' + c[k] : ''), c: Q[DB[k].q].c }); }) })); }
   if (v.b && m) { v.b.raidTxt = M.bloodMoon(m.day) ? '今晚血月' : '今晚混沌来袭'; v.b.raidC = '#ff5a4a'; v.raidTip = this.tipFn(() => this.tipFor('b-raid')); }
   // the fight's own bar: what this night is and how many are still coming
   const b = this.battle; if (v.h && b && this.run && this.run.raid) { let left = b.cfg.list.length - b.spawnI; b.ents.forEach(e => { if (e.alive && e.side === 'E') left++; }); v.h.mode = '混沌来袭'; v.h.modeColor = '#ff5a4a'; v.h.goal = '击退怪物 · 还剩 ' + left + ' 个'; }
@@ -296,7 +313,7 @@ const oTip = G.tipFor;
 G.tipFor = function (key) {
   const m = this.meta;
   if (key === 'b-mode' && this.run && this.run.raid) return { title: '混沌来袭', c: '#ff6a5a', d: '击退所有怪物就守住了；驻军全灭，剩下的怪物打主基地。' };
-  if (key === 'b-raid' && m) return { title: M.bloodMoon(m.day) ? '今晚血月' : '混沌来袭', c: '#ff6a5a', d: M.bloodMoon(m.day) ? '每 5 天的最后一晚是血月：怪物强三成多，还带一个精英。' : '每天夜里怪物攻打主基地，驻军迎敌。', lines: [M.raidOddsLine(m), { t: '主基地耐久 ' + Math.round(m.portal.hp) + ' / ' + M.portalMax(m), c: '#e8dcc4' }] };
+  if (key === 'b-raid' && m) return { title: M.bloodMoon(m.day) ? '今晚血月' : '混沌来袭', c: '#ff6a5a', d: M.bloodMoon(m.day) ? '每 5 天的最后一晚是血月：怪物强两成多，还带一个精英。' : '每天夜里怪物攻打主基地，驻军迎敌。', lines: [M.raidOddsLine(m), { t: '主基地耐久 ' + Math.round(m.portal.hp) + ' / ' + M.portalMax(m), c: '#e8dcc4' }] };
   if (key === 'b-gar' && m) {
     const g = garOf(m), c = {}; g.forEach(u => { c[u.type] = (c[u.type] || 0) + 1; }); const ks = Object.keys(c).sort((a, b) => DB[b].q - DB[a].q || c[b] - c[a]);
     return { title: '驻军 ' + g.length + ' / ' + M.GARRISON_CAP + ' · ★' + M.garrisonPower(m), c: '#ffcf4a', d: g.length ? '出征带回来的部队，每天夜里守城。' : '出征回来的部队会留下守城。',

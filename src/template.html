@@ -959,6 +959,9 @@
                     <sc-if value="{{bh.dot}}"><div data-pj="bob" style="position:absolute;right:-9px;top:-9px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#07060f;background:#ffcf4a;box-shadow:0 0 0 3px #07060f">!</div></sc-if>
         </div>
       </sc-for>
+      <div data-fx="garrow" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;max-width:1180px">
+        <sc-for list="{{b.gar}}" as="bg" hint-placeholder-count="0"><div sc-camel-on-mouse-enter="{{bg.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" style="position:relative;width:64px;height:78px;box-sizing:border-box;border:3px solid {{bg.c}};background:#0d0b1e;box-shadow:0 0 0 3px #07060f;display:flex;align-items:flex-end;justify-content:center"><m-img src="{{bg.img}}" style="max-width:58px;max-height:70px"></m-img><sc-if value="{{bg.nOn}}"><div style="position:absolute;right:-8px;bottom:-8px;padding:0 5px;font-size:18px;color:#07060f;background:{{bg.c}};box-shadow:0 0 0 2px #07060f">×{{bg.n}}</div></sc-if></div></sc-for>
+      </div>
     </div>
   </div>
   <sc-if value="{{pickOn}}" hint-placeholder-val="{{false}}"><div data-g="pick" sc-camel-on-click="{{stop}}" style="position:absolute;inset:0;z-index:64;background:rgba(7,6,15,0.62)"><div sc-camel-on-click="{{pickCancel}}" data-pj="key dark" style="position:absolute;left:940px;top:984px;width:220px;height:66px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:30px;cursor:pointer">取消</div></div></sc-if>
@@ -983,7 +986,7 @@
           </div>
         </div>
         <sc-if value="{{pn.isWeapon}}"><div style="font-size:24px;color:#ff9aa8;line-height:1.4">{{pn.reachTxt}}</div></sc-if>
-        <sc-if value="{{pn.ruinOn}}" hint-placeholder-val="{{false}}"><div style="font-size:24px;color:#ff8a6a;line-height:1.4">{{pn.ruinTxt}}</div><div sc-camel-on-click="{{pn.onRepair}}" data-pj="key teal cta" style="padding:14px 0 20px;text-align:center;font-size:30px;opacity:{{pn.repairOp}}">{{pn.repairBtn}}</div></sc-if>
+        <sc-if value="{{pn.ruinOn}}" hint-placeholder-val="{{false}}"><div style="font-size:24px;color:{{pn.ruinC}};line-height:1.4">{{pn.ruinTxt}}</div><div sc-camel-on-click="{{pn.onRepair}}" data-pj="key teal cta" style="padding:14px 0 20px;text-align:center;font-size:30px;opacity:{{pn.repairOp}}">{{pn.repairBtn}}</div></sc-if>
         <sc-if value="{{pn.fortOn}}" hint-placeholder-val="{{false}}"><div data-tip="p-fort" style="font-size:22px;color:#a9a3c9;line-height:1.4">{{pn.fortTxt}}</div><sc-if value="{{pn.fortCan}}"><div sc-camel-on-click="{{pn.onFort}}" data-pj="key gold" style="padding:12px 0 18px;text-align:center;font-size:28px;opacity:{{pn.fortOp}}">{{pn.fortBtn}}</div></sc-if></sc-if>
         <sc-if value="{{pn.demoOn}}" hint-placeholder-val="{{false}}"><div sc-camel-on-click="{{pn.onDemo}}" data-pj="ring" style="--q:{{pn.demoC}};padding:10px 0;text-align:center;font-size:24px;color:{{pn.demoC}}" style-hover="translate:0 -3px" style-active="transform:translateY(4px)">{{pn.demoBtn}}</div></sc-if>
         <sc-if value="{{pn.isCore}}">
@@ -1261,10 +1264,8 @@
       <span data-pj="marquee" style="padding:8px 34px 12px;font-size:60px;line-height:1;background:#8c1f3a;box-shadow:0 -3px 0 0 #07060f,0 3px 0 0 #07060f,-3px 0 0 0 #07060f,3px 0 0 0 #07060f,inset 0 6px 0 0 #e8434f,inset 0 -6px 0 0 #4f2f22"><span style="display:inline-block;filter:drop-shadow(3px 0 0 #07060f) drop-shadow(-3px 0 0 #07060f) drop-shadow(0 -3px 0 #07060f) drop-shadow(0 6px 0 #07060f)"><mc-wave t="{{s.title}}" ramp="1"></mc-wave></span></span>
       <div data-fx="wallet" data-pj="ink" style="--q:#ffcf4a;display:flex;align-items:center;gap:14px;padding:10px 22px 10px 14px;transform:scale({{s.walSc}})"><i data-pj="coin bob" style="--s:42px"></i><mc-num v="{{s.wallet}}" style="font-size:48px;color:#ffcf4a"></mc-num></div><span style="font-size:26px;color:#fff3b0;text-shadow:3px 3px 0 #07060f;max-width:620px">{{s.sub}}</span>
       <div style="flex:1"></div>
-      <span style="font-size:22px;color:#a9a3c9;text-shadow:3px 3px 0 #07060f">已获战旗</span>
-      <div data-fx="banners" style="display:flex;gap:8px;transform:scale({{w.banSc}})">
-        <sc-if value="{{s.noBanner}}"><span style="font-size:22px;color:#6a6394">暂无</span></sc-if>
-        <sc-for list="{{w.banners}}" as="wb" hint-placeholder-count="0"><div sc-camel-on-mouse-enter="{{wb.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}"><mc-flag n="{{wb.n}}" style="width:48px;height:66px"></mc-flag></div></sc-for>
+      <div data-tip="s-syn" data-fx="banners" style="display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;max-width:980px">
+        <sc-for list="{{syn}}" as="sy" hint-placeholder-count="0"><div style="border:3px solid {{sy.color}};padding:2px 10px;font-size:22px;color:{{sy.color}};background:#07060f">{{sy.label}}</div></sc-for>
       </div>
     </div>
     <sc-if value="{{s.showU}}" hint-placeholder-val="{{true}}"><div data-pj="panel" style="position:absolute;left:{{s.uL}}px;top:196px;width:{{s.uW}}px;height:644px;box-sizing:border-box;padding:40px 24px 22px;display:flex;flex-direction:column;gap:14px">
@@ -1518,7 +1519,7 @@
   <div data-enter-rows="1" style="--rd:.12s;position:absolute;left:60px;right:60px;top:280px;display:flex;flex-wrap:wrap;justify-content:center;gap:28px 36px">
     <sc-for list="{{rp.cards}}" as="rc" hint-placeholder-count="2">
       <div data-pj="opt" sc-camel-on-click="{{rc.onPick}}" style="width:400px;box-sizing:border-box;padding:18px 20px 22px;display:flex;flex-direction:column;align-items:center;gap:10px;--q:{{rc.c}};opacity:{{rc.op}}">
-        <m-img src="{{rc.img}}" style="width:96px;height:96px"></m-img>
+        <m-img src="{{rc.img}}" style="width:{{rc.iw}}px;height:{{rc.ih}}px"></m-img>
         <div style="font-size:34px;line-height:46px;color:#ffe6a0;text-align:center;min-height:92px;text-wrap:balance;text-shadow:3px 3px 0 #07060f"><span data-pj="cur" style="font-size:24px;margin-right:8px">▶</span>{{rc.t}}</div>
         <div style="font-size:22px;color:{{rc.c}};text-shadow:2px 2px 0 #07060f">{{rc.n}}</div>
       </div>

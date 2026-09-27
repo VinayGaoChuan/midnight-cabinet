@@ -9,7 +9,7 @@ const M = window.MC, G = M.Game.prototype, S = M.Sfx, cl = (v, a, b) => Math.max
 // round day nodes with three small dots between (user ruling 2026-09-25): a passing day lights the dots one by one
 const DAYS = 10, CW = 52, GAP = 50, PITCH = CW + GAP, NDOT = 3, TLX = 560, TLY = 6, STEP_D = 1.5, EV_D = 2.3, BIG_D = 4.4;
 const EV = {
-  raid:     { n: '血月', ic: 'e_skull', c: '#e8434f', d: '每 5 天的最后一晚：混沌来袭的怪物强三成多，还带一个精英。' },
+  raid:     { n: '血月', ic: 'e_skull', c: '#e8434f', d: '每 5 天的最后一晚：混沌来袭的怪物强两成多，还带一个精英。' },
   merchant: { n: '流浪商人', ic: 't_coin', c: '#ffcf4a', d: '用物资或碎片，换随机的好东西。', w: 5 },
   star:     { n: '幸运之星', ic: 't_clover', c: '#9cff7a', d: '三选一：下一次出征的祝福。', w: 4 },
   recruit:  { n: '招募日', ic: 'f_recruit', c: '#7fb0ff', d: '下一次招募领袖免费，至少「稀有」。', w: 2 },

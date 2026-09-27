@@ -18,7 +18,7 @@ G.view = function () {
     const shop = this.screen === 'shop', top = shop ? 196 : 320, n = Math.max(1, (v.w.roster || []).length), cols = Math.min(2, n), rows = Math.ceil(n / 2);
     const fit = Math.min(1, (1080 - top - 44 - 24) / (rows * CARD));
     v.w.rosTop = top; v.w.rosFit = +(fit * (v.w.rosSc || 1)).toFixed(3);
-    if (v.s && shop) { const L = 24 + cols * 86 * fit + 24; v.s.uL = Math.max(40, Math.round(L)); v.s.uW = 1880 - v.s.uL; v.s.uCols = v.s.uW > 1300 ? 4 : 3; }
+    if (v.s && shop) { const L = 24 + cols * 86 * fit + 24; v.s.uL = Math.max(40, Math.round(L)); v.s.uW = 1880 - v.s.uL; v.s.uCols = v.s.uW > 1300 ? Math.max(3, Math.min(5, (this.run.shop.units || []).length)) : 3; }   // five cards a shop since 2026-09-26: one row
   }
   return v;
 };

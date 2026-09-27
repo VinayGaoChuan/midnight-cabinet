@@ -19,6 +19,8 @@ function botBase(g, M) {
   // 加固: supplies beyond a reserve for building go into the fighting line, the least reinforced first (walls and towers)
   if (M.fortUp) { const fights = cells.filter(([c, r, x]) => M.canFort(m, c, r)).sort((a, b2) => (a[2].fort | 0) - (b2[2].fort | 0) || (M.townRole(b2[2].b) === 'tower') - (M.townRole(a[2].b) === 'tower'));
     for (const [c, r, x] of fights) { const cost = M.fortCost(x.b, x.fort | 0); if (m.supplies - cost < 350) break; if (M.fortUp(m, c, r)) did++; } }
+  // 驻军升档 (mc-roster.js): every evolution building, once a day, while the shards last
+  if (g.garUp && M.garUpPick) cells.forEach(([c, r, x]) => { const Bd = x.b && B[x.b]; if (Bd && Bd.evoVoc && x.upDay !== m.day && M.garUpPick(m, Bd.evoVoc) && m.shards >= 60) { if (g.garUp(c, r)) did++; } });
   if (did) g.save();
   return did;
 }
@@ -31,7 +33,7 @@ function botShop(g, M) {
   const run = g.run; if (!run || !run.shop || !run.shop.units) return; let n = 0;
   while (n++ < 12) {
     const def = run.roster.filter(u => M.isDefVoc && M.isDefVoc(M.DB[u.type].voc)).length, wantDef = def < Math.ceil((run.roster.length + 1) / 3);
-    const c = run.shop.units.map((c, i) => ({ c, i })).filter(o => !o.c.sold && o.c.cost <= run.wallet && M.canAdd(run))
+    const c = run.shop.units.map((c, i) => ({ c, i })).filter(o => !o.c.sold && o.c.cost <= run.wallet && M.canAdd(run, o.c.type))
       .sort((a, b) => ((wantDef && M.isDefVoc(M.DB[b.c.type].voc) ? 1e6 : 0) + M.unitPower(b.c.type) / b.c.cost) - ((wantDef && M.isDefVoc(M.DB[a.c.type].voc) ? 1e6 : 0) + M.unitPower(a.c.type) / a.c.cost))[0];
     if (!c) {
       if (M.canAdd(run) || !run.roster.length) break;
@@ -71,6 +73,7 @@ window.__bot = async function (secs, opts = {}) {
         // the 发展方向 pick (mc-dirs.js): the first card, like a plain player who takes what looks good
         if (g.dirPick) { g.dirPick.at -= 1000; g.dirTake(opts.dirPick ? opts.dirPick(g, g.dirPick.ks) : g.dirPick.ks[0]); events++; for (let i = 0; i < 20; i++) g.tick(1 / 30); continue; }
         if (g.relPick) { g.relPick.at -= 1000; g.relTake(0); events++; for (let i = 0; i < 20; i++) g.tick(1 / 30); continue; }   // the religion rises (mc-religion.js): the first doctrine
+        if (g.bpPick) { g.bpPick.at -= 1000; g.bpTake(0); events++; for (let i = 0; i < 20; i++) g.tick(1 / 30); continue; }   // 图纸三选一 (mc-roster.js): the first card
         if (g.lvPick) { const h = g.meta.heroes.find(x => x.id === g.lvPick.id); for (let k = 0; h && k < 20 && M.talAny(h); k++) { const i = h.tree.findIndex((x, j) => M.talCan(h, j)); if (i < 0) break; g.takeTalent(h.id, i); talents++; } g.closePanel(); for (let i = 0; i < 10; i++) g.tick(1 / 30); continue; }
         if (g.homeQ || g.lvFx || g.tlFx || g.rite || g.expand || g.dirFx) { for (let i = 0; i < (opts.fast ? 120 : 40); i++) g.tick(1 / 30); await sleep(opts.fast ? 2 : 40); continue; }   // the return home plays in order: let it
         if (opts.base !== false && !g.panel && M.startBuild && botBase(g, M)) builds++;

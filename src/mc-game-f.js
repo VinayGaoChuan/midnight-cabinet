@@ -65,7 +65,7 @@ G.buy = function (zone, i) {
   const run = this.run, list = run.shop[zone], c = list && list[i]; if (!c || c.sold || this.reel) return;
   const id = zone + i;
   if (run.wallet < c.cost) { this.deny('积分不够', '#d0453c'); return; }
-  if (c.kind === 'unit' && !M.canAdd(run)) { this.deny('部队已满（' + M.ROSTER_CAP + '），先卖掉一个', '#d0453c'); return; }
+  if (c.kind === 'unit' && !M.canAdd(run, c.type)) { this.deny('队伍满了（' + (M.rosterCap ? M.rosterCap(run) : M.ROSTER_CAP) + '）', '#d0453c'); return; }
   if (c.kind === 'item' && run.items.indexOf(null) < 0) { this.deny('支援道具最多 3 个', '#d0453c'); return; }
   const from = this.fxPos('card' + id) || { x: 960, y: 400 };
   this.hold('wallet', run.wallet); run.wallet -= c.cost; this.release('wallet'); c.sold = true; c.soldAt = now();

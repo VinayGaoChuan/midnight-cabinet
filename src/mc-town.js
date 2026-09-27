@@ -439,7 +439,7 @@ G.panelView = function () {
   const v = oPV.apply(this, arguments), p = this.panel, m = this.meta, pn = v && v.pn; if (!pn || !p) return v;
   if (p.kind === 'room' && p.key !== 'core') {
     const x = M.cell(m, p.c, p.r), B = B_[p.key];
-    if (x && x.ruin) { const cost = M.repairCost(p.key), ok = m.supplies >= cost; Object.assign(pn, { ruinOn: true, ruinTxt: '地面上的建筑被毁了，修好之前不起作用。', repairBtn: '修复 · ' + cost + ' 物资 · 1 天', repairOp: ok ? 1 : 0.45, onRepair: () => { if (!ok) { this.toast('物资不足', '#ff8a8a'); return; } if (M.startRepair(m, p.c, p.r)) { M.Sfx.build && M.Sfx.build(); this.save(); this.closePanel(); this.toast(B.n + '：明天修好', '#ffe08a'); } } }); }
+    if (x && x.ruin) { const cost = M.repairCost(p.key), ok = m.supplies >= cost; Object.assign(pn, { ruinOn: true, ruinC: '#ff8a6a', ruinTxt: '地面上的建筑被毁了，修好之前不起作用。', repairBtn: '修复 · ' + cost + ' 物资 · 1 天', repairOp: ok ? 1 : 0.45, onRepair: () => { if (!ok) { this.toast('物资不足', '#ff8a8a'); return; } if (M.startRepair(m, p.c, p.r)) { M.Sfx.build && M.Sfx.build(); this.save(); this.closePanel(); this.toast(B.n + '：明天修好', '#ffe08a'); } } }); }
     const arm = this.demoArm && this.demoArm.k === p.c + ',' + p.r && now() - this.demoArm.at < 4000;
     if (M.canDemolish(m, p.c, p.r)) Object.assign(pn, { demoOn: true, demoBtn: arm ? '确认拆除（图纸收回）' : '拆除 · ' + M.DEMOLISH_COST + ' 物资 · 1 天', demoC: arm ? '#ff5a4a' : '#ff9aa8',
       onDemo: () => { if (!arm) { this.demoArm = { k: p.c + ',' + p.r, at: now() }; M.Sfx.click(); this.bump(); return; } if (m.supplies < M.DEMOLISH_COST) { this.toast('物资不足', '#ff8a8a'); return; } this.demoArm = null; if (M.startDemolish(m, p.c, p.r)) { M.Sfx.dig && M.Sfx.dig(); this.save(); this.closePanel(); this.toast(B.n + '：明天拆完', '#ff9aa8'); } } });

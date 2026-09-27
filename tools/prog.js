@@ -6,6 +6,8 @@
     const g = window.__mcg, M = window.MC, P = M.Game.prototype, fights = [], runs = [], raids = [], days = [], nights = [];
     const oBegin = P.beginBattle, oWin = P.runWin, oFail = P.runFail, oRE = P.raidEnd, oPass = P.passDay, oSettle = P.startSettle, oSR = P.startRaid, oNF = P.nightFall;
     // every night (mc-night.js): the garrison against the raid, and how it went
+    // …and how it went (mc-night.js keeps the result on this.night until the day turns)
+    const oNO = P.nightOver; if (oNO) P.nightOver = function () { try { const N = nights[nights.length - 1], res = this.night && this.night.res; if (N && res && N.res == null) Object.assign(N, { res: res.won ? 'clear' : 'dead', secs: res.secs, fell: res.fell, dmg: res.dmg, left: res.portal }); } catch (e) {} return oNO.apply(this, arguments); };
     if (oNF) P.nightFall = function () { const m = this.meta; try { nights.push({ day: m.day, gar: (m.garrison || []).length, gp: M.garrisonPower(m), np: M.nightPower(m), portal: +(m.portal.hp / M.portalMax(m)).toFixed(2) }); } catch (e) {} return oNF.apply(this, arguments); };
     // the town as the raid finds it (tools/raidsim.js replays raids on these)
     P.startRaid = function () { try { if (o.snaps) raids.push({ snap: JSON.stringify(this.meta), day: this.meta.day }); } catch (e) {} return oSR.apply(this, arguments); };
@@ -30,6 +32,6 @@
       return farmS[Math.floor(Math.random() * farmS.length)] || list[0];
     };
     try { const bot = await window.__bot(secs, { fast: 1, extract: 1, pickSt, useItems: 1 }); return JSON.stringify({ fights, runs, raids, days, nights, bot: { day: bot.day, core: bot.core, errs: bot.errs, viewErrs: bot.viewErrs, screen: bot.screen, games: bot.games } }); }
-    finally { P.beginBattle = oBegin; P.runWin = oWin; P.runFail = oFail; /* oF2 wraps the recorder's runFail and goes with it */ P.raidEnd = oRE; P.startSettle = oSettle; P.startRaid = oSR; if (oPass) P.passDay = oPass; if (oNF) P.nightFall = oNF; }
+    finally { P.beginBattle = oBegin; P.runWin = oWin; P.runFail = oFail; /* oF2 wraps the recorder's runFail and goes with it */ P.raidEnd = oRE; P.startSettle = oSettle; P.startRaid = oSR; if (oPass) P.passDay = oPass; if (oNF) P.nightFall = oNF; if (oNO) P.nightOver = oNO; }
   };
 })();

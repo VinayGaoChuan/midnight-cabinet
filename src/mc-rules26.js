@@ -59,7 +59,9 @@ const oBO = M.buildOptions;
 M.buildOptions = function (m) { const L = oBO.apply(this, arguments); return L.map(o => (M.bUnique(o.key) && M.bOwned(m, o.key) - ((m.inv && m.inv['bbp:' + o.key]) || 0) > 0 ? Object.assign({}, o, { why: o.why || '已经建了一座' }) : o)); };
 // the main base holds out longer now that the town, not the leader, defends it (1000 → 2400; old saves keep their share)
 M.PORTAL_BASE = 2400;
-M.portalMax = (m) => Math.round(M.PORTAL_BASE * (1 + (M.baseMods(m).portalHp || 0)));
+// …and grows with prosperity (user ruling 2026-09-26: 「基地生命值要随着繁荣度而增加，否则后面的敌人越来越强，摸一下基地就死」): +35% a level
+M.PORTAL_PROS = 0.35;
+M.portalMax = (m) => Math.round(M.PORTAL_BASE * (1 + (M.baseMods(m).portalHp || 0)) * (1 + M.PORTAL_PROS * Math.max(0, ((m && m.prosLv) || 1) - 1)));
 
 // ───────── prosperity (user ruling 2026-09-26) ─────────
 // every standing room adds by its quality (the better, the more; the numbers are never shown). Levels open the rings of
