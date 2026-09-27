@@ -40,9 +40,19 @@ mc-pxroom-t3.js
 mc-pxroom-base.js
 mc-pxroom-evo.js
 mc-pxroom-jobs.js
+mc-pxmarket.js
+mc-pxroom-mini-d.js
+mc-pxchest.js
+mc-pxroom-minib.js
+mc-pxroom-minib-pachinko.js
+mc-pxroom-minib-tree.js
+mc-pxroom-minib-eggs.js
+mc-pxroom-minib-tarot.js
+mc-pxroom-minib-dice.js
 mc-game-a.js
 mc-game-b.js
 mc-game-c.js
+mc-chest.js
 mc-game-d.js
 mc-game-e.js
 mc-game-f.js
@@ -54,7 +64,9 @@ mc-game-k.js
 mc-game-l.js
 mc-mini-a.js
 mc-show.js
+mc-minipx-a.js
 mc-mini-b.js
+mc-mini-c-px.js
 mc-mini-c.js
 mc-mini-d.js
 mc-game-m.js
@@ -138,4 +150,5 @@ mc-boons.js
 mc-q7.js
 mc-roster.js
 mc-opening.js
+mc-gacha.js
 mc-perf.js

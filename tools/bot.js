@@ -31,6 +31,8 @@ function botLeave(g, M) {
 }
 function botShop(g, M) {
   const run = g.run; if (!run || !run.shop || !run.shop.units) return; let n = 0;
+  // the free card pack of the trip (mc-gacha.js): take what it gives at once; army full and no merge: half its price
+  if (g.gachaPull && M.gaPrice && M.gaPrice(run) === 0) { g.gachaPull(); if (g.gaActive && g.gaActive()) g.gachaSkip(); if (g.replace && g.replace.zone === 'gacha') g.sellSel(); }
   while (n++ < 12) {
     const def = run.roster.filter(u => M.isDefVoc && M.isDefVoc(M.DB[u.type].voc)).length, wantDef = def < Math.ceil((run.roster.length + 1) / 3);
     const c = run.shop.units.map((c, i) => ({ c, i })).filter(o => !o.c.sold && o.c.cost <= run.wallet && M.canAdd(run, o.c.type))
@@ -87,7 +89,7 @@ window.__bot = async function (secs, opts = {}) {
       }
       else if (s === 'raid') { for (let i = 0; i < (opts.fast ? 240 : 60); i++) g.tick(1 / 30); }
       if (g.modal && g.modal.raidRes) g.modal.choices[0].fn();
-      else if (s === 'shop') { shops++; if (opts.buy !== false) botShop(g, M); g.leaveShop(); }
+      else if (s === 'shop') { shops++; if (g.gaActive && g.gaActive()) g.gachaSkip(); if (opts.buy !== false) botShop(g, M); g.leaveShop(); }
       else if (s === 'world') {
         if (g.mini && !g.reel) { const mg = g.mini; mg.botN = (mg.botN || 0) + 1; minis[mg.kind] = (minis[mg.kind] || 0) + 1; const bs = (mg.D.btns ? mg.D.btns.call(g, mg) : []) || []; const play = bs.filter(b => !b.dis && !b.leave), lv = bs.find(b => b.leave && !b.dis);
           if (mg.botN > 60) g.miniFinish('bot', '#fff'); else if (play.length && mg.botN < 30 && Math.random() < 0.7) play[Math.floor(Math.random() * play.length)].fn(); else if (lv && mg.botN > 6) lv.fn(); else if (mg.D.down) { if (!mg.holding) g.miniDown(mg.mx || 960, mg.my || 540, 'ptr'); else g.miniUp('ptr'); } for (let i = 0; i < 12; i++) g.tick(1 / 30); }

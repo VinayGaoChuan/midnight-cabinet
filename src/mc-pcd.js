@@ -1,5 +1,5 @@
 // ==== mc-pcd.js ====
-// 生成文件，不要手改：node tools/pcd-pack.mjs（源在 pcd/lib 和 pcd/chars，216 个角色模块）
+// 生成文件，不要手改：node tools/pcd-pack.mjs（源在 pcd/lib 和 pcd/chars，225 个角色模块）
 
 (function () {
 'use strict';
@@ -571,7 +571,8 @@ function audit() {
   }
   C.poseAt(IDLE, 0, 0); C.drawHero(); C.bakeHero(); const b = bboxOf(s);
   res.idle = { w: b.x1 - b.x0 + 1, h: b.y1 - b.y0 + 1, pixels: b.n };
-  if (res.idle.h < 12 || res.idle.h > 48) res.problems.push('待机高度 ' + res.idle.h + ' 格，超出 12–48');
+  const hMax = C.MAX_H || 48;   
+  if (res.idle.h < 12 || res.idle.h > hMax) res.problems.push('待机高度 ' + res.idle.h + ' 格，超出 12–' + hMax);
   res.ownColors = PAL.length - BASE_PAL; if (res.ownColors > 24) res.problems.push('专属色 ' + res.ownColors + ' 个，超过 24（和共用色接近的改用 near()）');
   if (C.deathKit) res.deathKit = C.deathKit;
   if (C.SFX) {   
@@ -6586,6 +6587,376 @@ PCD.define('BlackIronGuard', (E) => {
     deathKit: { mode: 'parts', at: T_BREAK },
     SFX: { body: 'armor', how: 'collapse', pal: 'metal', style: 'shield', w: 0.9 },
     poseAt, drawHero, bakeHero, onEnter, onTime, impactOn: () => {}, stepFX, fxReset, fxBack, fxMid, fxFront, hurtFx,
+  };
+});
+;
+
+PCD.define('BlackMarketDealer', (E) => {
+  const { parts, Sprite, bake, ease, clamp01, q12, f12of, gait, walkDemo, FXI, FXR, HY, DUMMY_X, INCOMING, B8,
+    IDLE, MOVE, ATTACK, CHARGE, CAST, RECOVER, HURT, DEATH, REVIVE, DEFAULT_DUR, K_SPIRAL, K_EMBER, K_RISE, K_DUST, K_PHYS,
+    spawn, spawnX, burst, releaseOrbit, shoot, ring, shake, flash, fx, hitDummy, dummyFx, put, scrX, floorGlow, shotFloorGlow, sfx } = E;
+  const RD = Math.round;
+  const R_EL = FXI.coin, EL = FXR[R_EL], R_BP = FXI.frost, BP = FXR[R_BP], R_SH = FXI.shadow;
+  const M = parts.mats(E, {
+    cloak: { r: [0, 52, 53, 54], band: 2 },                   
+    hood: [0, 52, 53, 54],                                    
+    face: [0, 0, 0, 52],                                      
+    eye: { r: [0, 14, 47, 51], flat: 1 },                     
+    eyeR: { r: [0, 56, 57, 58], flat: 1 },                    
+    teeth: { r: [20, 19, 14, 5], flat: 1 }, glint: { r: [22, 22, 21, 21], flat: 1 },
+    tunic: [0, 8, 20, 19], leather: [20, 19, 32, 33], pouch: [0, 20, 19, 32], gold: [20, 19, 14, 5], steel: [27, 28, 29, 30],
+    pants: [0, 8, 9, 10], boot: 'boot', skin: [20, 19, 16, 15],
+    paper: [0, 39, 40, 41], ink: { r: [39, 40, 41, 23], flat: 1 }, inkLit: { r: [39, 23, 22, 21], flat: 1 }, rod: 'wood', seal: 'crimson',
+  });
+  const BODY = { body: 'slim', leg: 12, torso: 11, head: 6, headW: 6, sw: 3, arm: 12, lw: 2, stride: 3, limb: 0.9, fall: 'front' };
+  const HX = 76, DUR = DEFAULT_DUR.slice(); DUR[IDLE] = 4.0;
+  const NI = RD(DUR[IDLE] * 12);                               
+  const hero = new Sprite(64, 50, 30, 45);
+  const LAMP = [-16, -40];                                    
+  const RIM = { rim: 0, rx: 0, ry: 0, rimR: [0, 3, 6, 8], rimRamp: [5, 14, 61], flash: 0, dq: 0, rimAll: 1, skip: new Uint8Array(256) };
+  for (const k of ['face', 'eye', 'eyeR', 'teeth', 'glint', 'skin', 'gold', 'steel', 'leather', 'pouch', 'paper', 'ink', 'inkLit', 'rod', 'seal', 'boot', 'pants']) { RIM.skip[M[k]] = 1; RIM.skip[M[k + 'D']] = 1; }
+  const LAMPLIT = new Uint8Array(256); for (const k of ['cloak', 'hood', 'tunic', 'pants', 'boot']) { LAMPLIT[M[k]] = 1; LAMPLIT[M[k + 'D']] = 1; }
+  const P = { hx: 0, hy: 0, bhx: 0, bhy: 0, lean: 0, head: 0, crouch: 0, bob: 0, nod: 0, tilt: 0, sc: 0, hm: 0, fing: 0,
+    step: 0, wup: 0, walk: 0, sway: 0, tph: 0, tip: 0, eye: 0, mouth: 0, gem: 0, glint: 0, rim: 0, flash: 0, bx: 0, drop: 0, sh: 0, dq: 0, st: 0,
+    beard: 0, lying: 0, lift: 0, gx: 0, gy: 0, flip: 0, mx: 0, k1: 0, k2: 0 };
+  const K = (hx, hy, bhx, bhy, lean, head, crouch) => ({ hx, hy, bhx, bhy, lean: lean || 0, head: head || 0, crouch: crouch || 0 });
+  const K_IDLE = K(6, -14, 5, -12);                           
+  const K_GRAB = K(6, -20, 3, -13);                           
+  const K_WIND = K(0, -31, 1, -13, -1, -1);                   
+  const K_SLAP = K(10, -15, 3, -13, 1, 1, 1);                 
+  const K_SHOW = K(10, -16, 3, -14, 1, 0);                    
+  const K_ROLL = K(8, -15, 5, -13, 0, 0);                     
+  const K_RUB = K(7, -12, 6, -11, 1, 1, 1);                   
+  const K_LAUGH = K(8, -25, 4, -12, -1, -1);                  
+  const K_HURT = K(5, -21, 2, -13, -1, -1);                   
+  const K_BOW = K(3, -19, -3, -13, 2, 1, 2);                  
+  const FIELDS = ['hx', 'hy', 'bhx', 'bhy', 'lean', 'head', 'crouch'];
+  const setK = (A, B, q) => E.mix(P, A, B, q, FIELDS);
+  const KEY1 = parts.keyer([['hx', -32, 31], ['hy', -48, 15], ['bhx', -32, 31], ['bhy', -48, 15], ['lean', -1, 2], ['head', -1, 1], ['crouch', 0, 7], ['bob', 0, 1],
+    ['nod', 0, 1], ['tilt', 0, 1], ['sc', 0, 7], ['hm', 0, 7], ['fing', 0, 3]]);
+  const KEY2 = parts.keyer([['step', -1, 1], ['wup', 0, 2], ['walk', 0, 1], ['sway', -2, 2], ['tph', 0, 3], ['tip', -1, 2], ['eye', 0, 7], ['mouth', 0, 3], ['gem', 0, 3], ['glint', 0, 1],
+    ['rim', 0, 3], ['flash', 0, 1], ['bx', -16, 15], ['drop', 0, 3], ['sh', 0, 48, 48], ['dq', 0, 48, 48], ['st', 0, 8], ['beard', -2, 2]]);
+  const T_SLAP = 3 / 12, T_SHOW = 4 / 12, T_DROP = INCOMING + 0.25, T_OUT = INCOMING + 2.4;
+  const CALM = [3, 1, 0, 0, 0, 0];                            
+  function poseAt(st, t, T) {
+    const tq = q12(t), fi = f12of(t);
+    P.st = st; P.bx = 0; P.step = 0; P.wup = 0; P.walk = 0; P.sway = 0; P.tph = 0; P.tip = 0; P.eye = 0; P.mouth = 0; P.gem = 0; P.glint = 0; P.rim = 1;
+    P.flash = 0; P.drop = 0; P.sh = 0; P.dq = 0; P.bob = 0; P.nod = 0; P.tilt = 0; P.sc = 0; P.hm = 0; P.fing = 0; P.flip = 0; P.mx = 0; P.beard = 0;
+    const idle = (tt) => {                                    
+      setK(K_IDLE, K_IDLE, 0); const i = ((f12of(tt) % NI) + NI) % NI, b = Math.floor(i / 6);
+      P.bob = b & 1; P.sway = [0, 1, 0, -1][b & 3]; P.beard = [0, 1, 0, -1][(b + 1) & 3]; P.tip = ((b + 1) & 2) ? 1 : 0; P.tph = (b >> 1) & 3;
+      P.fing = CALM[i % 6];
+      if (i === 14 || i === 16) P.eye = 1; else if (i === 15) P.eye = 2;                        
+      if (i === 28 || i === 29) P.glint = 1;                                                    
+      if (i >= 36 && i < 46) { P.fing = [3, 1, 0][(i - 36) % 3]; P.head = 1; }                  
+      if (i === 40) P.eye = 1; else if (i === 41) P.eye = 4;                                    
+    };
+    if (st === IDLE) idle(t);
+    else if (st === MOVE) {                                   
+      setK(K_IDLE, K_IDLE, 0); const f = gait(tq); parts.gait(P, f);
+      P.sway = f & 1 ? -2 : -1; P.tph = f; P.tip = f & 1 ? 2 : 1; P.beard = -P.beard;
+      const w = walkDemo(tq, 14, -1); P.mx = w.mx; P.flip = w.flip;
+    } else if (st === ATTACK) {                               
+      if (fi === 0) idle(0);
+      else if (fi === 1) { setK(K_GRAB, K_GRAB, 0); P.sc = 1; P.hm = 1; P.tip = 1; P.sway = 1; }
+      else if (fi === 2) { setK(K_WIND, K_WIND, 0); P.sc = 2; P.hm = 1; P.eye = 1; P.tip = 2; P.sway = 1; P.beard = 1; }
+      else if (fi === 3) { setK(K_SLAP, K_SLAP, 0); P.sc = 3; P.hm = 1; P.eye = 7; P.tip = -1; P.sway = -2; P.beard = -2; P.gem = 1; }
+      else if (fi <= 6) { setK(K_SLAP, K_SHOW, ease.out((fi - 3) / 3)); P.sc = 4; P.hm = 1; P.mouth = 1; P.tip = fi === 4 ? -1 : 0; P.sway = -1; P.gem = fi <= 5 ? 2 : 1; }
+      else if (fi === 7) { setK(K_SHOW, K_ROLL, 0.5); P.sc = 5; P.hm = 1; P.mouth = 1; P.gem = 1; }
+      else { setK(K_ROLL, K_ROLL, 0); P.sc = 6; P.hm = 1; P.sway = 1; }
+    } else if (st === CHARGE) {                               
+      const q = ease.inOut(clamp01(tq / 0.7)); setK(K_IDLE, K_RUB, q);
+      P.hm = q > 0.3 ? 3 : 0; P.fing = (fi >> 1) & 1; P.eye = 5; P.mouth = tq < 0.5 ? 0 : tq < 0.9 ? 1 : 2;
+      P.bob = tq > 0.5 ? fi & 1 : 0; P.tip = tq > 0.5 ? fi & 1 : 0; P.sway = tq > 0.9 ? ((fi & 1) ? -1 : 0) : 0; P.tph = (fi >> 2) & 3;
+      P.gem = tq < 0.45 ? 1 : ((fi & 1) ? 2 : 1); P.rim = 2; P.glint = P.mouth === 2 ? fi & 1 : 0;
+    } else if (st === CAST) {                                 
+      setK(K_RUB, K_LAUGH, fi === 0 ? 0.65 : 1); P.tilt = 1; P.hm = 2; P.eye = 5; P.mouth = (fi >> 1) & 1 ? 2 : 3; P.bob = fi & 1;
+      P.tip = 2; P.sway = -1; P.beard = -2; P.tph = fi & 3; P.gem = 3; P.rim = 3; P.glint = 1;
+    } else if (st === RECOVER) {                              
+      const q = ease.inOut(clamp01(tq / 0.6)); setK(K_LAUGH, K_IDLE, q);
+      P.tilt = q < 0.3 ? 1 : 0; P.hm = q < 0.5 ? 2 : 0; P.mouth = q < 0.3 ? 2 : q < 0.7 ? 1 : 0; P.eye = q < 0.3 ? 5 : 0;
+      P.bob = fi === 2 || fi === 5 ? 1 : 0; P.gem = q < 0.35 ? 2 : q < 0.75 ? 1 : 0; P.rim = q < 0.5 ? 2 : 1; P.tip = q < 0.5 ? 1 : 0; P.glint = q < 0.3 ? 1 : 0;
+    } else if (st === HURT) {                                 
+      const h = tq - INCOMING;
+      if (h < 0) idle(t);
+      else if (h < 0.2) { setK(K_HURT, K_HURT, 0); P.bx = -2; P.eye = 3; P.tip = -1; P.sway = 2; P.beard = 2; P.hm = 2; P.flash = h < 1 / 12 ? 1 : 0; P.rim = P.flash ? 0 : 1; }
+      else if (h < 0.35) { setK(K_HURT, K_IDLE, 0.5); P.bx = -1; P.eye = 3; P.sway = 1; P.beard = 1; P.hm = 2; }
+      else { setK(K_HURT, K_IDLE, ease.inOut(clamp01((h - 0.35) / 0.15))); P.eye = h < 0.42 ? 3 : 0; }
+    } else if (st === DEATH) {                                
+      const d = tq - INCOMING;
+      if (d < 0) idle(t);
+      else if (d < 0.3) { setK(K_HURT, K_HURT, 0); P.bx = -2; P.eye = 3; P.tip = -1; P.sway = 2; P.beard = 2; P.hm = 2; P.flash = d < 1 / 12 ? 1 : 0; P.rim = P.flash ? 0 : 1;
+        P.crouch = d < 0.15 ? 0 : 1; P.drop = d < 0.1 ? 0 : d < 0.2 ? 1 : 2; }
+      else if (d < 0.5) { setK(K_HURT, K_BOW, ease.inOut(clamp01((d - 0.3) / 0.2))); P.bx = -1; P.hm = 4; P.eye = 1; P.nod = d >= 0.42 ? 1 : 0; P.drop = 3; P.sway = 1; P.tip = 0; }
+      else {
+        setK(K_BOW, K_BOW, 0); P.bx = -1; P.hm = 4; P.nod = 1; P.drop = 3; P.tip = 1; P.eye = d < 1.1 ? 1 : 0;
+        if (d >= 1.1) P.sh = clamp01((d - 1.1) / 0.9);
+        if (d >= 2.08) P.eye = d < 2.17 ? 2 : d < 2.25 ? 7 : d < T_OUT - INCOMING ? 1 : 6;       
+        P.rim = d < T_OUT - INCOMING ? 1 : 0;
+      }
+    } else if (st === REVIVE) {                               
+      idle(0); P.bob = 0;
+      if (tq < 0.3) { P.sh = 1; P.eye = tq < 0.1 ? 6 : tq < 0.2 ? 1 : 0; }
+      else if (tq < 0.85) P.sh = 1 - (tq - 0.3) / 0.55;
+      else P.glint = 1;
+    }
+    P.hx = RD(P.hx); P.hy = RD(P.hy); P.bhx = RD(P.bhx); P.bhy = RD(P.bhy); P.lean = RD(P.lean); P.head = RD(P.head); P.crouch = RD(P.crouch);
+    if (P.hm === 0) { P.hx = P.bhx + 1; P.hy = P.bhy - 2; }                                      
+    else if (P.hm === 3) { P.hx = P.bhx + (P.fing & 1); P.hy = P.bhy - 2; }                      
+    P.hy += P.bob; P.bhy += P.bob;
+    if (P.eye === 2 || P.eye === 6) P.rim = 0;                                                     
+    const R = parts.rig(P, BODY), H = headBox(R);
+    if (P.sc === 3 || P.sc === 4) { P.gx = P.hx + 3 + P.bx; P.gy = P.hy + 7; }                   
+    else if (P.mouth || st === CHARGE || st === CAST) { P.gx = H.cx + 2 + P.bx; P.gy = H.ey + 2; }  
+    else { P.gx = H.cx + 2 + P.bx; P.gy = H.ey; }                                                
+    P.k1 = KEY1(P); P.k2 = KEY2(P);
+  }
+  const headBox = (R) => ({ cx: R.hx + P.nod - P.tilt, T: R.htop + P.nod, hy: R.hy + P.nod, ey: R.ey + P.nod - P.tilt });
+  let R = null;
+  const X = (x, y, m, t) => parts.px(E, R, x, y, m, t);
+  const RUN = (y, a, b, m, t) => parts.run(E, R, y, a, b, m, t);
+  const STRIP = [4, 1, 3, 0, 5, 2, 3, 1];                    
+  function strips(x0, x1, y, m, scale) {
+    for (let x = x0; x <= x1; x++) {
+      const g = Math.floor((x - RD(P.sway) + P.tph * 2 + 64) / 2), len = RD(STRIP[g & 7] * scale);
+      if (len === 0) { X(x, y, 0, 0); continue; }
+      for (let k = 1; k <= len; k++) X(x, y + k, m, k === len ? 2 : 0);
+    }
+  }
+  function backCape() {
+    E.part(); const top = R.yS - 1, bot = -5, n = bot - top, sw = P.sway; let L0 = 0, R0 = 0;
+    for (let y = top; y <= bot; y++) {
+      const t = (y - top) / n, e = parts.edges(R, Math.max(R.yS, Math.min(y, R.yHip)));
+      const L = RD(e[0] - 1 - 6 * Math.pow(t, 1.15) + sw * t * t - (P.walk ? t * 1.5 : 0)), Rr = e[0] + 3;
+      RUN(y, L, Rr, M.cloakD, 0); if (t > 0.3 && y < bot) { X(L + 2 + RD(t), y, M.cloakD, 2); if (t > 0.6) X(L + 5, y, M.cloakD, 2); }
+      if (y === bot) { L0 = L; R0 = Rr; }
+    }
+    strips(L0, R0, bot, M.cloakD, 1);
+  }
+  function bodyCloak() {
+    E.part(); const yS = R.yS, hem = -6, n = hem - yS, sw = P.sway; let L0 = 0, R0 = 0;
+    for (let y = yS; y <= hem; y++) {
+      const t = (y - yS) / n, e = parts.edges(R, Math.min(y, R.yHip)), s = sw * t * t;
+      const L = RD(e[0] - 1 - 2.5 * Math.pow(t, 1.1) + s), Rr = RD(e[1] + 1 + 1.2 * t + s * 0.5);
+      RUN(y, L, Rr, M.cloak, 0);
+      if (t > 0.45 && y < hem) { X(L + 2 + RD(t), y, M.cloak, 2); X(RD((L + Rr) / 2) + 1, y, M.cloak, 2); }
+      if (y >= yS + 2 && y <= R.yHip) { X(Rr - 1, y, M.tunic, 0); X(Rr, y, M.tunic, 0); }
+      if (y === R.yWaist) { X(Rr - 2, y, M.leather, 3); X(Rr - 1, y, M.leather, 4); X(Rr, y, M.gold, 3); }   
+      if (y === hem) { L0 = L; R0 = Rr; }
+    }
+    strips(L0, R0, hem, M.cloak, 0.8);
+  }
+  function purse(x, y) {
+    E.part(); const b = RD(P.beard * 0.5);
+    X(x, y, M.gold, 4); X(x + 1, y, M.gold, 2);
+    RUN(y + 1, x + b, x + 1 + b, M.pouch, 0);
+    RUN(y + 2, x - 1 + b, x + 2 + b, M.pouch, 0); RUN(y + 3, x - 1 + b, x + 2 + b, M.pouch, 0);
+    RUN(y + 4, x + b, x + 1 + b, M.pouch, 2); X(x - 1 + b, y + 2, M.pouch, 4);
+  }
+  const CROWN = [[-1, -3, 2], [-2, -3, 1], [-3, -4, 0], [-4, -4, -1], [-5, -5, -2], [-6, -6, -4]];
+  function hoodBack(H) {
+    E.part(); const cx = H.cx, T = H.T, m = M.hood, bk = P.tilt;
+    for (const [dy, a, b] of CROWN) { const s = dy <= -4 ? bk : 0; RUN(T + dy, cx + a - s, cx + b - s, m, 0); }
+    const ty = T - 6, tx = cx - 6 - bk;
+    if (P.tip < 0) { X(tx + 1, ty - 1, m, 0); X(tx + 2, ty - 1, m, 4); }                                  
+    else if (P.tip === 0) { X(tx - 1, ty, m, 0); X(tx - 1, ty + 1, m, 2); }                               
+    else if (P.tip === 1) { X(tx - 1, ty, m, 0); X(tx - 2, ty + 1, m, 2); }
+    else { X(tx - 1, ty, m, 0); X(tx - 2, ty, m, 0); X(tx - 3, ty - 1, m, 2); }                          
+    for (let y = T; y <= H.hy + 1; y++) RUN(y, cx - 4 - (y > H.ey ? 1 : 0), cx + 1, m, 0);
+    X(cx - 1, T - 2, m, 2); X(cx - 2, T - 3, m, 2); X(cx - 3, T + 2, m, 2); X(cx - 3, T + 3, m, 2);         
+    const y0 = R.yS;                                                                                       
+    for (let k = 0; k < 5; k++) { const y = y0 + k, e = parts.edges(R, y); RUN(y, e[0] - 2 - (k >= 2 ? 1 : 0), e[1] + (k < 3 ? 2 : 1), m, 0); }
+    { const y = y0 + 5, e = parts.edges(R, y); for (let x = e[0] - 3; x <= e[1]; x++) if (((x - RD(P.sway)) & 1) === 0) X(x, y, m, 2); }
+    X(parts.edges(R, y0 + 2)[0], y0 + 2, m, 2); X(parts.edges(R, y0 + 3)[0] - 1, y0 + 3, m, 2);
+  }
+  function headVoid(H) {
+    E.part(); const cx = H.cx, ey = H.ey, bot = H.hy + (P.mouth === 3 ? 1 : 0);
+    for (let y = H.T - P.tilt; y <= bot; y++) RUN(y, cx - 2, cx + 3, M.face, 0);
+    const a = cx + 1, b = cx + 3, e = P.eye;
+    if (e === 0) { X(a, ey, M.eye, 3); X(b, ey, M.eye, 4); }
+    else if (e === 1) { X(a, ey, M.eye, 2); X(b, ey, M.eye, 2); }
+    else if (e === 3) { X(a, ey - 1, M.eye, 4); X(a, ey, M.eye, 3); X(b, ey - 1, M.eye, 4); X(b, ey, M.eye, 4); }
+    else if (e === 4) { X(a, ey, M.eyeR, 3); X(b, ey, M.eyeR, 4); }
+    else if (e === 5) { X(a, ey, M.eye, 2); X(b, ey, M.eye, 3); X(b - 1, ey - 1, M.eye, 2); }
+    else if (e === 7) { X(a, ey, M.eye, 4); X(b, ey, M.eye, 4); }
+    const my = ey + 2, mo = P.mouth;
+    if (mo === 1) X(cx + 3, my, M.teeth, 3);
+    else if (mo >= 2) { X(cx + 1, my, M.teeth, 4); X(cx + 2, my, M.teeth, 3); X(cx + 3, my, M.teeth, 4); if (mo === 3) { X(cx, my, M.teeth, 3); X(cx + 2, my + 2, M.teeth, 3); X(cx + 3, my + 2, M.teeth, 2); } }
+    if (P.glint && mo >= 2) X(cx + 3, my, M.glint, 4);
+  }
+  function hoodFront(H) {
+    E.part(); const cx = H.cx, T = H.T - P.tilt, m = M.hood;
+    RUN(T, cx - 1, cx + 4, m, 0); X(cx + 4, T + 1, m, 0); X(cx + 5, T + 1, m, 3);
+    for (let y = H.T + 1; y <= H.hy + 1; y++) RUN(y, cx - 2, cx - 1, m, 0);
+    for (let y = T + 2; y <= H.hy - 1 + (P.mouth === 3 ? 1 : 0); y++) X(cx + 4, y, m, 0);
+  }
+  function rolledH(x0, y) {                                   
+    E.part(); X(x0, y, M.rod, 3); X(x0, y + 1, M.rod, 2); X(x0 + 10, y, M.rod, 3); X(x0 + 10, y + 1, M.rod, 2);
+    RUN(y, x0 + 1, x0 + 9, M.paper, 0); RUN(y + 1, x0 + 1, x0 + 9, M.paper, 0);
+    X(x0 + 8, y, M.seal, 4); X(x0 + 8, y + 1, M.seal, 3); X(x0 + 8, y + 2, M.seal, 2);
+  }
+  function rolledD(hx, hy) {                                  
+    E.part();
+    for (let k = -1; k <= 8; k++) { const cap = k === -1 || k === 8, m = cap ? M.rod : M.paper; X(hx + k, hy - k, m, cap ? 3 : 0); X(hx + k + 1, hy - k, m, cap ? 2 : 0); }
+    X(hx + 5, hy - 5, M.seal, 4); X(hx + 6, hy - 5, M.seal, 3);
+  }
+  function rolledBack(hx, hy) {                               
+    E.part(); X(hx - 9, hy, M.rod, 3); X(hx - 9, hy + 1, M.rod, 2); X(hx + 1, hy, M.rod, 3); X(hx + 1, hy + 1, M.rod, 2);
+    RUN(hy, hx - 8, hx, M.paper, 0); RUN(hy + 1, hx - 8, hx, M.paper, 0); X(hx - 6, hy, M.seal, 4); X(hx - 6, hy + 1, M.seal, 3);
+  }
+  const GLYPH = [[2, 2], [2, 3], [2, 4], [2, 5], [2, 6], [2, 7], [2, 8], [1, 6], [3, 6], [2, 9, 3],   
+    [4, 2], [5, 2], [6, 2], [4, 3], [6, 3], [4, 4], [5, 4], [6, 4],                                
+    [5, 6, 4], [5, 7], [5, 8], [4, 7], [6, 7], [4, 9], [6, 9],                                    
+    [1, 11], [3, 11], [4, 11], [6, 11]];                                                          
+  function sheet(hx, hy, L) {
+    E.part(); const lit = P.sc === 4 && P.gem >= 2, g = lit ? M.inkLit : M.ink;
+    RUN(hy, hx - 1, hx + 8, M.rod, 0); X(hx - 2, hy, M.rod, 3); X(hx + 9, hy, M.rod, 2);
+    for (let y = hy + 1; y <= hy + L; y++) RUN(y, hx, hx + 7, M.paper, 0);
+    for (const [c, r, tn] of GLYPH) if (r <= L) X(hx + c, hy + r, g, tn || (lit ? 3 : 4));
+    const yb = hy + L + 1; RUN(yb, hx - 1, hx + 8, M.rod, 0); X(hx - 2, yb, M.rod, 3); X(hx + 9, yb, M.rod, 2);
+    X(hx + 3, yb + 1, M.seal, 3); X(hx + 4, yb + 1, M.seal, 2); if (L >= 12) X(hx + 4, yb + 2, M.seal, 2);
+  }
+  function scroll() {
+    if (P.drop) {                                             
+      const DX = [0, 3, 6, 7][P.drop] - P.bx, DY = [0, -8, -3, -1][P.drop]; rolledH(DX, DY); return;
+    }
+    const s = P.sc;
+    if (s === 0) rolledH(P.bhx - 3, P.bhy);
+    else if (s === 1) rolledD(P.hx, P.hy);
+    else if (s === 2) rolledBack(P.hx, P.hy);
+    else if (s === 3 || s === 4) sheet(P.hx, P.hy, 12);
+    else if (s === 5) sheet(P.hx, P.hy, 5);
+    else if (s === 6) rolledH(P.hx - 3, P.hy);
+  }
+  function backHand() {
+    const x = P.bhx, y = P.bhy;
+    if (P.hm === 4) return;
+    E.part();
+    if (P.sc === 0 && !P.drop) { RUN(y - 1, x - 1, x, M.skin, 0); RUN(y, x - 1, x, M.skin, 0); RUN(y + 1, x - 1, x, M.skin, 2); X(x - 1, y - 1, M.skin, 4); X(x - 1, y, M.gold, P.glint ? 4 : 3); }
+    else { RUN(y - 1, x - 1, x, M.skin, 0); RUN(y, x - 1, x, M.skin, 0); X(x - 1, y - 1, M.skin, 4); X(x + 1, y, M.skin, 0); X(x + 1, y + 1, M.skin, 2); }
+  }
+  function frontHand() {
+    const x = P.hx, y = P.hy, m = M.skin, hm = P.hm; E.part();
+    X(x - 1, y - 1, m, 4); X(x, y - 1, m, 0); X(x - 1, y, m, 0); X(x, y, m, 0);
+    if (hm === 0 || hm === 3) {                               
+      const ua = hm === 0 ? P.fing & 1 : 0, ub = hm === 0 ? (P.fing >> 1) & 1 : 0;
+      X(x + 1, y - 1, m, 0); X(x + 2, y - 1, m, 0);
+      X(x + 1, y, m, 0); if (!ua) X(x + 1, y + 1, m, 2);
+      X(x + 3, y, m, 0); X(x + 4, y + 1 - ub, m, ub ? 0 : 2);
+      X(x + 1, y, M.gold, P.glint ? 4 : 3);                   
+    } else if (hm === 1) { X(x + 1, y - 1, m, 0); X(x + 1, y, m, 2); X(x, y - 1, M.gold, 3); }                                  
+    else if (hm === 2) {                                                                                                     
+      X(x - 1, y - 2, m, 0); X(x - 1, y - 3, m, 4); X(x + 1, y - 2, m, 0); X(x + 2, y - 3, m, 4); X(x + 1, y, m, 0); X(x + 2, y + 1, m, 3); X(x + 1, y - 2, M.gold, 3);
+    }
+    else { X(x + 1, y - 1, m, 0); X(x + 1, y, m, 2); X(x, y - 1, M.gold, 3); }                                               
+  }
+  let headCX = 0;
+  function drawHero() {
+    E.begin(hero, P.bx, 0); R = parts.rig(P, BODY); const H = headBox(R);
+    backCape();
+    parts.arm(E, R, P, { side: 'B', sleeve: 'loose', mat: M.cloakD, grip: 'none' });
+    parts.legs(E, R, P, { style: 'boot', mat: M.pants, matD: M.pantsD, boot: M.boot, bootD: M.bootD, bootH: 3 });
+    bodyCloak();
+    parts.pendant(E, R, P, { style: 'keys', mat: M.steel, trim: M.steel, x: parts.edges(R, R.yWaist)[1] - 3, y: R.yWaist + 1 });
+    purse(parts.edges(R, R.yWaist)[0], R.yWaist + 1);
+    hoodBack(H); headCX = H.cx; headVoid(H); hoodFront(H);
+    scroll();
+    backHand();
+    parts.arm(E, R, P, { sleeve: 'loose', mat: M.cloak, cuff: M.tunic, grip: 'none' });
+    frontHand();
+  }
+  function bakeHero() {
+    RIM.rim = P.rim; RIM.rx = P.gx + hero.ox; RIM.ry = P.gy + hero.oy; RIM.flash = P.flash; RIM.dq = P.dq; bake(hero, RIM);
+    const o = hero.out, Mt = hero.mat, w = hero.w, h = hero.h;
+    if (!P.flash) {                                           
+      const lx = LAMP[0] + hero.ox + P.bx, ly = LAMP[1] + hero.oy, cxb = headCX + hero.ox + P.bx - 1;
+      for (let y = 1; y < h; y++) for (let x = 3; x < w; x++) {
+        const i = y * w + x, m = Mt[i]; if (!m || !LAMPLIT[m] || o[i] === 255) continue;
+        const left = !Mt[i - 1] && !Mt[i - 2] && !Mt[i - 3], up = !Mt[i - w] && !Mt[i - w - 1] && x < cxb;
+        if (!left && !up) continue;
+        const d = Math.hypot(x - lx, y - ly); if (d < 19) o[i] = 46; else if (d < 31) o[i] = 45;
+      }
+    }
+    if (P.sh > 0) {                                           
+      let top = h, bot = -1; for (let i = 0; i < w * h; i++) if (o[i] !== 255) { const y = (i / w) | 0; if (y < top) top = y; if (y > bot) bot = y; }
+      const span = Math.max(1, bot - top), th = P.sh * 1.08;
+      for (let y = top; y <= bot; y++) for (let x = 0; x < w; x++) {
+        const i = y * w + x; if (o[i] === 255) continue; const m = Mt[i]; if (m === M.eye || m === M.eyeR) continue;
+        const v = B8[(y & 7) * 8 + (x & 7)] * 0.3 + (bot - y) / span * 0.7;
+        if (v < th) o[i] = 255; else if (v < th + 0.06) o[i] = 52;
+      }
+    }
+  }
+  let chargeAcc = 0, emberAcc = 0, smokeAcc = 0, lastStep = 0;
+  const wx = (x) => scrX(x);
+  function onEnter(s) {
+    if (s !== CAST) return;
+    const gx = wx(P.gx), gy = HY + P.gy;
+    releaseOrbit(40, 95, 0.3, 0.7); burst(gx, gy, 26, 60, 130, 0.25, 0.65, R_EL, 12); fx.cross(gx + 1, gy, 6, R_EL, 0.3); ring(gx, gy, 1, R_EL);
+    for (let i = 0; i < 4; i++) spawnX(K_PHYS, gx, gy, (i - 1.5) * 18 + 10, -70 - i * 12, 0.9, R_EL, { g: 260, floor: HY - 1 });   
+    shoot(2, gx + 2, gy, 120, DUMMY_X - 3, R_EL, 0, { trail: { every: 2, life: [0.12, 0.3] } });                                    
+    shake(0.28, 2); flash(0.05);
+  }
+  function onTime(s, t) {
+    if (s === ATTACK && t === T_SLAP) {                       
+      fx.slash(HX + 2, HY - 21, 12, -1.4, 2.1, R_BP, 0.17, 2, 2);
+      const fx0 = HX + K_SLAP.hx + 3, fy = HY - 1;
+      for (let i = 0; i < 6; i++) spawn(K_DUST, fx0 + (Math.random() - 0.5) * 10, fy, (Math.random() - 0.5) * 30, -6 - Math.random() * 10, 0.3 + Math.random() * 0.3, FXI.dust);
+      burst(fx0 + 1, HY - 9, 10, 30, 80, 0.2, 0.45, R_BP, 10); hitDummy(0, 1);
+      sfx('swing', { kind: 'smash', w: 0.3 }); sfx('hit', { mat: 'wood', w: 0.3 });
+    }
+    if (s === ATTACK && t === T_SHOW) fx.cross(HX + K_SHOW.hx + 4, HY + K_SHOW.hy + 6, 4, R_BP, 0.25);   
+    if (s === HURT && t === INCOMING) spawnX(K_PHYS, wx(-2), HY - 12, -30, -60, 0.8, R_EL, { g: 260, floor: HY - 1 });   
+    if (s === DEATH && t === T_DROP) { for (let i = 0; i < 4; i++) spawn(K_DUST, wx(8 + Math.random() * 6), HY - 1, (Math.random() - 0.5) * 20, -4 - Math.random() * 6, 0.3 + Math.random() * 0.2, FXI.dust); sfx('hit', { mat: 'wood', w: 0.2 }); }
+    if (s === DEATH && t === T_OUT) { const R0 = parts.rig(P, BODY), H = headBox(R0); for (const ex of [1, 3]) spawn(K_RISE, wx(H.cx + ex + P.bx), HY + H.ey, (Math.random() - 0.5) * 4, -10 - Math.random() * 6, 0.7, FXI.fire); }   
+  }
+  const EVENTS = [[], [], [T_SLAP, T_SHOW], [], [], [], [INCOMING], [T_DROP, T_OUT], []];
+  function impactOn(k, x, y) {
+    if (k !== 2) return;
+    burst(x, y, 30, 50, 130, 0.3, 0.7, R_EL, 14); ring(x, y, 1, R_EL); fx.cross(x, y, 6, R_EL, 0.3);
+    hitDummy(1, 1); dummyFx({ dur: 1.4, stun: 1 }); shake(0.12, 1); sfx('impact', { pal: 'coin', w: 0.6 });
+  }
+  function stepFX(dt, state, stT) {
+    const gx = wx(P.gx), gy = HY + P.gy;
+    if (state === CHARGE) { chargeAcc += dt * (20 + 30 * clamp01(stT / DUR[CHARGE])); while (chargeAcc >= 1) { chargeAcc -= 1; const r = 10 + Math.random() * 9, a = Math.random() * 6.2832; spawn(K_SPIRAL, gx, gy, (r - 3.5) / (0.3 + Math.random() * 0.35), 0, 9, R_EL, a, r, 4 + Math.random() * 3); } }
+    if (state === MOVE) {
+      if (P.step !== lastStep) { if (P.step !== 0) { sfx('step', { w: 0.3 }); spawn(K_DUST, wx(P.step > 0 ? 3 : -3), HY, (Math.random() - 0.5) * 12, -3 - Math.random() * 4, 0.25 + Math.random() * 0.15, FXI.dust); } lastStep = P.step; }
+      smokeAcc += dt * 14; while (smokeAcc >= 1) { smokeAcc -= 1; spawnX(K_DUST, wx(-8 - Math.random() * 4), HY - 1 - Math.random() * 3, (P.flip ? 1 : -1) * (8 + Math.random() * 10), -2 - Math.random() * 3, 0.4 + Math.random() * 0.3, R_SH, { age0: 0.3 }); }
+    }
+    if (state === IDLE) { smokeAcc += dt * 1.6; while (smokeAcc >= 1) { smokeAcc -= 1; spawnX(K_DUST, wx(-9 + Math.random() * 12), HY - 1, (Math.random() - 0.5) * 6, -2 - Math.random() * 3, 0.6 + Math.random() * 0.4, R_SH, { age0: 0.35 }); } }
+    if (state === RECOVER) { emberAcc += dt * 7; while (emberAcc >= 1) { emberAcc -= 1; spawn(K_EMBER, gx + RD(Math.random() * 2 - 1), gy - 1, Math.random() * 8 - 4, -7 - Math.random() * 8, 0.5 + Math.random() * 0.5, R_EL); } }
+    if (state === DEATH && stT > INCOMING + 1.1 && stT < INCOMING + 2.05) {   
+      smokeAcc += dt * 34; const q = clamp01((stT - INCOMING - 1.1) / 0.9), fy = HY - 1 - q * 34;
+      while (smokeAcc >= 1) { smokeAcc -= 1; spawn(K_RISE, wx(-8 + Math.random() * 16), fy + Math.random() * 3, (Math.random() - 0.5) * 6, -10 - Math.random() * 14, 0.6 + Math.random() * 0.6, R_SH); }
+    }
+  }
+  function fxReset() { chargeAcc = 0; emberAcc = 0; smokeAcc = 0; lastStep = 0; }
+  function fxBack(f12) {
+    if (P.sh < 1 && P.rim >= 2) floorGlow(wx(P.gx), P.rim, EL, f12);
+    if (P.sc === 4 && P.gem >= 2) floorGlow(wx(P.gx), 2, BP, f12);
+    shotFloorGlow(f12);
+  }
+  function fxFront(f12) {
+    if (P.sh >= 1 || P.mouth < 2 || P.gem < 2) return;       
+    const gx = wx(P.gx + 1), gy = HY + P.gy, L = P.gem === 3 ? 4 : 2 + (f12 & 1);
+    for (let r = 2; r <= L; r++) { const c = r <= 2 ? EL[0] : r <= 3 ? EL[1] : EL[2]; put(gx + r, gy, c); put(gx - r, gy, c); put(gx, gy - r, c); put(gx, gy + r, c); }
+  }
+  function drawShot(k, x, y, d, f12, Rr) {                    
+    if (k !== 2) return false;
+    const ph = (f12 >> 1) & 3;
+    if (ph === 0) { put(x, y - 1, Rr[1]); put(x - 1, y, Rr[1]); put(x, y, Rr[0]); put(x + 1, y, Rr[2]); put(x, y + 1, Rr[3]); put(x - 1, y - 1, Rr[2]); put(x + 1, y - 1, Rr[2]); put(x - 1, y + 1, Rr[2]); put(x + 1, y + 1, Rr[3]); }
+    else if (ph === 2) { put(x, y - 1, Rr[1]); put(x, y, Rr[0]); put(x, y + 1, Rr[2]); }
+    else { put(x, y - 1, Rr[1]); put(x, y, Rr[1]); put(x, y + 1, Rr[2]); put(x + d, y - 1, Rr[2]); put(x + d, y, Rr[2]); put(x + d, y + 1, Rr[3]); }
+    if (f12 & 1) put(x - d, y - 2, Rr[0]);
+    return true;
+  }
+  return {
+    name: '斗篷人', HX, R_EL, DUR, hero, P, GLOW_MATS: [M.eye, M.eyeR, M.glint, M.inkLit], HIT_POINT: [1, -18], EVENTS,
+    SFX: { body: 'flesh', how: 'dissolve', pal: 'coin', style: 'coin', w: 0.5 },
+    REVIVE: { dy: -26, ramp: R_SH },
+    SHEET: [[IDLE, [0, 1 / 12, 2 / 12, 6 / 12, 14 / 12, 15 / 12, 28 / 12, 36 / 12, 37 / 12, 40 / 12, 41 / 12]], [MOVE, [0, 1 / 6, 2 / 6, 3 / 6]], [ATTACK, null], [CHARGE, 'step2'], [CAST, null], [RECOVER, 'step2'], [HURT, 'hurt'],
+      [DEATH, [0.34, 0.45, 0.6, 0.9, 1.3, 1.5, 1.7, 1.9, 2.1, 2.3, 2.42, 2.5, 2.6, 2.75]], [REVIVE, [0.05, 0.25, 0.45, 0.65, 0.9]]],
+    poseAt, drawHero, bakeHero, onEnter, onTime, impactOn, stepFX, fxReset, fxBack, fxFront, drawShot,
   };
 });
 ;
@@ -29009,6 +29380,449 @@ PCD.define('Golem', (E) => {
 });
 ;
 
+PCD.define('GourdPeddler', (E) => {
+  const { parts, Sprite, bake, ease, clamp01, q12, f12of, gait, walkDemo, FXI, FXR, HY, INCOMING, B8,
+    IDLE, MOVE, ATTACK, CHARGE, CAST, RECOVER, HURT, DEATH, REVIVE, DEFAULT_DUR, K_SPIRAL, K_EMBER, K_RISE, K_DUST, K_BURST, K_PHYS,
+    spawn, spawnX, burst, releaseOrbit, ring, shake, flash, fx, hitDummy, put, scrX, floorGlow, sfx } = E;
+  const RD = Math.round, px = parts.px, run = parts.run, CL = (v, a, b) => (v < a ? a : v > b ? b : v);
+  const R_EL = FXI.coin, EL = FXR[R_EL], DUST = FXR[FXI.dust];
+  const R_CONF = E.fxRamp('confetti', [21, 58, 26, 13, 12]);
+  const LANT = [47, 46, 45];
+  const TEAL = ['#10262a', '#1f4a4c', '#356e6a', '#5a9a8c'];               
+  const M = parts.mats(E, {
+    jacket: { r: TEAL, band: 2 }, sleeve: TEAL, collar: 'bone', patch: 'leather', sash: 'gold',
+    pants: 'stone', wrap: 'bone',
+    skin: 'skinDark', hair: [0, 0, 27, 28], teeth: { r: 'white', flat: 1 }, eyeW: { r: [0, 18, 17, 21], flat: 1 }, ink: { r: 'ink', flat: 1 },
+    tooth: { r: [20, 14, 14, 5], flat: 1 }, toothHot: { r: [20, 5, 5, 21], flat: 1 },   
+    straw: [20, 19, '#c8953f', '#ecc978'], cord: 'crimson', bead: 'gold',               
+    pole: 'sand', bundle: 'blue',                                                        
+    paper: [20, 6, 5, 21], rib: 'wood', edge: 'crimson',                                 
+    motif: { r: [20, 19, 14, 5], flat: 1 }, motifHot: { r: [14, 5, 21, 21], flat: 1 },   
+    coin: 'gold',
+  });
+  const BODY = { body: 'slim', leg: 11, torso: 10, head: 8, headW: 8, sw: 3, arm: 12, lw: 2, stride: 4, neck: 1, hunch: 0, headX: 0, fall: 'back' };
+  const BOW_H = [0, 2, 3];                                                              
+  const HX = 72, DUR = DEFAULT_DUR.slice();
+  const hero = new Sprite(62, 60, 28, 54);
+  const RIMR_LAMP = [0, 58, 58, 58], RIMR_FAN = [0, 8, 16, 22], LAMP = [-30, -70];
+  const RIM = { rim: 0, rx: 0, ry: 0, rimR: RIMR_LAMP, rimRamp: LANT, flash: 0, dq: 0, skip: new Uint8Array(256) };
+  for (const k of ['skin', 'teeth', 'eyeW', 'ink', 'tooth', 'toothHot', 'motif', 'motifHot', 'hair', 'rib', 'pole', 'coin', 'bead', 'edge']) { RIM.skip[M[k]] = 1; RIM.skip[M[k + 'D']] = 1; }
+  const HAT_MATS = new Uint8Array(256); for (const k of ['straw', 'cord', 'bead']) { HAT_MATS[M[k]] = 1; HAT_MATS[M[k + 'D']] = 1; }
+  HAT_MATS[M.coin] = 1; HAT_MATS[M.coinD] = 1;                                           
+  const H_FIST = 0, H_RUB = 1, H_OPEN = 2, H_HOLD = 3, H_UP = 4;                          
+  const P = { hx: 0, hy: 0, bhx: 0, bhy: 0, lean: 0, head: 0, crouch: 0, bob: 0, bx: 0, lift: 0, step: 0, wup: 0, walk: 0, sway: 0, beard: 0,
+    gem: 0, glint: 0, rim: 0, eyes: 0, look: 0, mouth: 0, hF: 0, hB: 0, fan: 0, fanA: 0, tilt: 0, hatX: 0, hatY: 0, hatK: 0, poleY: 0, bund: 0, bow: 0,
+    coinK: 0, coinG: 0, flash: 0, dq: 0, dqb: 0, dqh: 0, dqa: 0, lying: 0, st: 0, gx: 0, gy: 0, flip: 0, mx: 0, k1: 0, k2: 0 };
+  const K = (hx, hy, bhx, bhy, lean, head, crouch) => ({ hx, hy, bhx, bhy, lean: lean || 0, head: head || 0, crouch: crouch || 0 });
+  const K_IDLE = K(6, -18, 5, -17);                    
+  const K_WIND = K(8, -28, 5, -14, -1);                
+  const K_SLAP = K(15, -15, 0, -13, 2, 0, 1);          
+  const K_SLAPH = K(14, -14, 1, -13, 1, 0, 1);
+  const K_DRAW = K(-2, -12, 5, -14);                   
+  const K_TWIRL = K(9, -21, 4, -14);                   
+  const K_FAN = K(4, -18, -4, -12, -1);                
+  const K_COCK = K(4, -25, -4, -13, -1);               
+  const K_SWEEP = K(13, -16, -7, -19, 2, 0, 1);        
+  const K_SNAP = K(11, -17, -3, -13, 1);               
+  const K_BOW = K(3, -17, -8, -15, 2);                 
+  const K_HURT = K(4, -19, 2, -20, -1, -1);            
+  const K_FIX = K(6, -15, -5, -30, 0, 0);              
+  const K_STAG = K(5, -26, 1, -25, -1, 0);             
+  const FIELDS = ['hx', 'hy', 'bhx', 'bhy', 'lean', 'head', 'crouch'];
+  const setK = (A, B, q) => E.mix(P, A, B, q, FIELDS);
+  const KEY = E.keyer([['hx', -8, 24], ['hy', -36, 0], ['bhx', -12, 16], ['bhy', -36, 0], ['lean', -1, 2], ['head', -1, 1], ['crouch', 0, 3], ['bob', 0, 1],
+    ['bx', -4, 4], ['lift', 0, 1], ['step', -1, 1], ['wup', 0, 2], ['sway', -2, 2], ['beard', -3, 3], ['gem', 0, 4], ['glint', 0, 1], ['rim', 0, 3],
+    ['eyes', 0, 2], ['look', 0, 1], ['mouth', 0, 4], ['hF', 0, 4], ['hB', 0, 4], ['fan', 0, 4], ['fanA', 0, 15], ['tilt', -2, 2], ['hatX', -3, 3], ['hatY', 0, 3],
+    ['hatK', 0, 19], ['poleY', 0, 1], ['bund', -1, 1], ['bow', 0, 2], ['coinK', 0, 5], ['coinG', 0, 6], ['dqa', 0, 49], ['flash', 0, 1], ['st', 0, 8]]);
+  const BEARD_IDLE = [0, 1, 0, -1], SWAY_IDLE = [0, 1, 0, -1];
+  const RUB = [[0, 0, 0, 0], [1, -1, -1, 1]];          
+  const FLIP = [[10, -15, 1], [11, -17, 2], [11, -17, 3], [11, -17, 4], [11, -16, 5], [8, -17, 0]];
+  const T_SLAP = 2 / 12, T_OPEN = 0.5, T_WHOOSH = 1 / 12, T_GUST = 3 / 12, T_SNAP = 1 / 12, T_POOF = INCOMING + 0.3;
+  const HAT_PATH = [null, [-2, -35, 0, -2], [-3, -36, 1, 0], [-4, -36, 2, 0], [-5, -35, 3, 0], [-5, -33, 0, 2], [-4, -31, 1, 0], [-3, -28, 2, 0], [-2, -25, 3, 0],
+    [-1, -22, 0, 2], [0, -19, 0, -2], [0, -16, 0, 2], [-1, -13, 0, -2], [-2, -10, 0, 1], [-3, -6, 0, -1], [-3, -3, 0, 1], [-3, 0, 0, 0], [-3, 0, 0, 1], [-3, 0, 0, -1], [-3, 0, 0, 0]];
+  const HAT_N = HAT_PATH.length - 1, HAT_LAND = 16, T_HATLAND = T_POOF + (HAT_LAND - 1) / 12;
+  const FRAD = [0, 6, 7, 7, 8], SPREAD = [0, 0, 0.44, 0.87, 1.31];                   
+  const TOOTH = [0, 6, 5, 0, 0];                                                        
+  function idle(tq, TT) {
+    setK(K_IDLE, K_IDLE, 0); const b = Math.floor(TT * 2.5 + 1e-6); P.bob = b & 1; P.beard = BEARD_IDLE[(b + 1) & 3]; P.sway = SWAY_IDLE[Math.floor(TT * 1.25 + 1e-6) & 3];
+    const lp = tq % DUR[IDLE], f = f12of(lp), rb = RUB[(f >> 1) & 1];
+    P.hF = H_RUB; P.hB = H_RUB; P.mouth = 1; P.rim = 1;
+    P.hx += rb[0]; P.hy += rb[1]; P.bhx += rb[2]; P.bhy += rb[3];                         
+    if ((f >= 6 && f <= 8) || (f >= 11 && f <= 13)) P.look = 1;                           
+    if (f >= 11 && f <= 13) P.head = -1;
+    if (f >= 18 && f <= 23) { const c = FLIP[f - 18]; P.hx = c[0]; P.hy = c[1]; P.coinK = c[2]; P.hF = H_FIST; P.bhx = K_IDLE.bhx; P.bhy = K_IDLE.bhy; P.hB = H_RUB; }
+    if (f >= 23 && f <= 26) { P.mouth = 2; P.eyes = 2; P.glint = f === 23 || f === 24 ? 1 : 0; }   
+  }
+  function poseAt(st, t, T) {
+    const tq = q12(t), f12 = f12of(T), TT = f12 / 12, f = f12of(tq);
+    P.st = st; P.bx = 0; P.lift = 0; P.step = 0; P.wup = 0; P.walk = 0; P.sway = 0; P.beard = 0; P.gem = 0; P.glint = 0; P.rim = 1; P.eyes = 0; P.look = 0; P.mouth = 1;
+    P.hF = H_RUB; P.hB = H_RUB; P.fan = 0; P.fanA = 0; P.tilt = 0; P.hatX = 0; P.hatY = 0; P.hatK = 0; P.poleY = 0; P.bund = 0; P.bow = 0; P.coinK = 0; P.coinG = 0;
+    P.flash = 0; P.dq = 0; P.dqb = 0; P.dqh = 0; P.bob = 0; P.flip = 0; P.mx = 0; P.lying = 0;
+    if (st === IDLE) idle(tq, TT);
+    else if (st === MOVE) {                                                              
+      setK(K_IDLE, K_IDLE, 0); const g = gait(tq); parts.gait(P, g); const s = P.step;
+      P.hx = 4 - 4 * s; P.hy = -12 + s; P.bhx = 2 + 5 * s; P.bhy = -12 - s; P.hF = H_FIST; P.hB = H_FIST;
+      P.lift = P.wup ? 1 : 0; P.poleY = P.wup ? 1 : 0; P.bund = [-1, 0, 1, 0][g]; P.head = g === 1 ? 1 : 0;
+      const w = walkDemo(tq, 14, -1); P.mx = w.mx; P.flip = w.flip;
+    } else if (st === ATTACK) {                                                          
+      if (tq < 0.12) { setK(K_IDLE, K_WIND, ease.out(tq / 0.12)); P.hF = f >= 1 ? H_UP : H_RUB; P.beard = 1; P.bund = -1; }
+      else if (tq < 0.2) { setK(K_SLAP, K_SLAP, 0); P.bx = 2; P.hF = H_OPEN; P.beard = -2; P.sway = -1; P.mouth = 2; P.eyes = 2; P.bund = 1; P.hB = H_FIST; }
+      else if (tq < 0.45) { setK(K_SLAP, K_SLAPH, ease.out((tq - 0.2) / 0.25)); P.bx = 1; P.hF = H_OPEN; P.beard = -1; P.mouth = 2; P.hB = H_FIST; }
+      else { setK(K_SLAPH, K_IDLE, ease.inOut(clamp01((tq - 0.45) / 0.3))); P.hF = tq < 0.6 ? H_OPEN : H_RUB; }
+    } else if (st === CHARGE) {                                                          
+      if (f < 2) { setK(K_IDLE, K_DRAW, f / 2); P.hF = H_FIST; }
+      else if (f < 6) { setK(K_DRAW, K_TWIRL, (f - 2) / 4); P.fan = 1; P.fanA = [8, 12, 0, 4][f - 2]; P.hF = H_HOLD; P.look = f & 1; }
+      else if (f < 8) { setK(K_TWIRL, K_FAN, (f - 5) / 3); P.fan = f === 6 ? 2 : 3; P.fanA = 2; P.hF = H_HOLD; P.gem = 1; P.rim = 2; P.hB = H_FIST; }
+      else {
+        setK(K_FAN, K_FAN, 0); P.fan = 4; P.fanA = (f >> 1) & 1; P.hF = H_HOLD; P.hB = H_FIST; P.rim = 2;
+        P.gem = tq < 0.9 ? 1 : ((f & 1) ? 2 : 1); P.look = tq < 0.9 ? ((f >> 2) & 1) : 0; P.mouth = 2;
+        if (tq >= 1.1) { P.eyes = 2; P.hx += (f & 1) ? 1 : -1; P.fanA = 0; P.beard = (f & 1) ? -1 : 0; }
+      }
+      if (f >= 6) { P.beard = P.beard || -1; P.sway = -1; }
+    } else if (st === CAST) {                                                            
+      if (f === 0) { setK(K_COCK, K_COCK, 0); P.fanA = 14; P.beard = 1; }
+      else { setK(K_SWEEP, K_SWEEP, 0); P.fanA = f < 4 ? 5 : 4; P.beard = -2; P.sway = -1; P.bund = 1; }
+      P.fan = 4; P.hF = H_HOLD; P.hB = H_OPEN; P.gem = 3; P.rim = 3; P.mouth = 2; P.eyes = 2; P.glint = f >= 1 && f <= 2 ? 1 : 0;
+    } else if (st === RECOVER) {                                                         
+      if (f === 0) { setK(K_SNAP, K_SNAP, 0); P.fan = 3; P.fanA = 4; P.gem = 2; P.rim = 2; P.mouth = 2; P.eyes = 2; }
+      else if (f === 1) { setK(K_SNAP, K_SNAP, 0); P.fan = 1; P.fanA = 3; P.gem = 0; P.mouth = 2; P.eyes = 2; }
+      else if (tq < 0.5) {
+        const q = ease.out(clamp01((tq - 2 / 12) / 0.17)); setK(K_SNAP, K_BOW, q); P.bow = q < 0.5 ? 1 : 2; P.fan = 1; P.fanA = 0;
+        P.eyes = 1; P.mouth = 1; P.tilt = P.bow === 2 ? 1 : 0; P.hB = H_OPEN; P.beard = 1;
+      } else {
+        const q = ease.inOut(clamp01((tq - 0.5) / 0.17)); setK(K_BOW, K_IDLE, q); P.bow = q < 0.5 ? 1 : 0; P.fan = q < 0.5 ? 1 : 0; P.fanA = 0;
+        P.hF = q < 0.5 ? H_HOLD : H_RUB; P.hB = q < 0.5 ? H_OPEN : H_RUB;
+      }
+      if (f >= 2 && P.fan) P.hF = H_HOLD;
+    } else if (st === HURT) {                                                            
+      const h = tq - INCOMING;
+      if (h < 0) idle(tq, TT);
+      else if (h < 1 / 12) { setK(K_HURT, K_HURT, 0); P.bx = -2; P.eyes = 1; P.mouth = 3; P.tilt = -2; P.hatX = -2; P.hatY = 2; P.beard = 2; P.sway = 1; P.flash = 1; P.rim = 0; P.hF = P.hB = H_UP; P.bund = 1; }
+      else if (h < 0.25) { setK(K_HURT, K_HURT, 0); P.bx = h < 0.17 ? -2 : -1; P.look = 1; P.mouth = 3; P.tilt = -2; P.hatX = -2; P.hatY = 1; P.beard = 1; P.hF = P.hB = H_UP; P.bund = 1; }
+      else if (h < 0.42) { setK(K_FIX, K_FIX, 0); P.bx = h < 0.34 ? -1 : 0; P.mouth = 0; P.tilt = h < 0.34 ? -1 : 0; P.hatX = h < 0.34 ? -1 : 0; P.hB = H_OPEN; P.hF = H_RUB; P.look = 0; }
+      else { setK(K_FIX, K_IDLE, ease.inOut(clamp01((h - 0.42) / 0.08))); P.hB = H_RUB; }
+    } else if (st === DEATH) {                                                           
+      const d = tq - INCOMING; P.rim = 0;
+      if (d < 0) idle(tq, TT);
+      else if (d < 1 / 12) { setK(K_HURT, K_HURT, 0); P.bx = -2; P.eyes = 1; P.mouth = 3; P.tilt = -2; P.hatX = -2; P.hatY = 2; P.beard = 2; P.sway = 1; P.flash = 1; P.hF = P.hB = H_UP; P.bund = 1; }
+      else {
+        setK(K_STAG, K_STAG, 0); P.bx = -2; P.crouch = d < 0.17 ? 0 : 1; P.mouth = 4; P.look = 1; P.tilt = -2; P.hatX = -2; P.hatY = 3; P.beard = 2; P.hF = P.hB = H_UP; P.bund = 1;
+        if (d >= 0.3) {
+          const k = f12of(d - 0.3);                                                      
+          P.hatK = CL(k + 1, 1, HAT_N); P.dqb = Math.min(1, (k + 1) / 3);
+          P.coinG = k < 2 ? 0 : k < 4 ? k - 1 : k < 15 ? 3 + ((k - 4) & 3) : 7;          
+          if (P.coinG === 7) P.coinG = 6;
+          if (d >= 1.85) P.dqh = clamp01((d - 1.85) / 0.5);
+        }
+      }
+    } else if (st === REVIVE) {
+      idle(tq, TT); P.bob = 0;
+      if (tq < 0.4) P.dq = 1; else if (tq < 0.85) P.dq = 1 - (tq - 0.4) / 0.45; else P.glint = 1;
+    }
+    const yo = P.bob + Math.min(3, RD(P.crouch));
+    P.hx = RD(P.hx); P.hy = RD(P.hy) + yo; P.bhx = RD(P.bhx); P.bhy = RD(P.bhy) + yo;
+    P.lean = RD(P.lean); P.head = RD(P.head); P.crouch = RD(P.crouch);
+    BODY.hunch = BOW_H[P.bow]; BODY.neck = P.bow >= 2 ? 0 : 1; BODY.headX = P.bow >= 2 ? 1 : 0;
+    if (P.fan >= 2) { const a = P.fanA * Math.PI / 8, r = FRAD[P.fan] - 3; P.gx = P.hx + RD(Math.sin(a) * r) + P.bx; P.gy = P.hy - RD(Math.cos(a) * r) - P.lift; }
+    else if (P.hatK) { const h = HAT_PATH[P.hatK]; P.gx = h[0] + P.bx; P.gy = h[1] - 2; }
+    else { const R = parts.rig(P, BODY); P.gx = R.hx0 + (TOOTH[P.mouth] || 5) + P.bx; P.gy = R.htop + 5 - P.lift; }
+    P.dqa = st === DEATH ? (P.dqh > 0 ? 25 + RD(P.dqh * 24) : RD(P.dqb * 24)) : RD(P.dq * 24);
+    KEY(P);
+  }
+  function sweep2(T, x0, y0, x1, y1, m, t) { const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) * 1.5)); for (let s = 0; s <= n; s++) { const q = s / n; parts.rect(E, T, RD(x0 + (x1 - x0) * q - 0.5), RD(y0 + (y1 - y0) * q - 0.5), 2, 2, m, t); } }
+  function carryPole(R) {
+    E.part(); const ox = R.sBx - 1, oy = R.yS + 1 + P.poleY;
+    parts.bar(14, ox, oy, -4, 13, 2, (k, j, X, Y) => px(E, R, X, Y, M.pole, (((k % 5) + 5) % 5) === 0 ? 2 : 0));
+    const tip = parts.cell(14, ox, oy, 13); bundle(R, tip[0], tip[1]);
+  }
+  const BUN = [[-3, 1], [-4, 1], [-4, 1], [-4, 0], [-3, -1]];
+  function bundle(R, tx, ty) {
+    E.part(); const m = M.bundle, s = P.bund, D = M.eyeW;
+    px(E, R, tx - 1, ty - 3, m, 4); px(E, R, tx + 1, ty - 3, m, 3); run(E, R, ty - 2, tx - 1, tx + 1, m, 0);   
+    for (let j = 0; j < 5; j++) { const o = j >= 2 ? s : 0; run(E, R, ty - 1 + j, tx + BUN[j][0] + o, tx + BUN[j][1] + o, m, 0); }
+    px(E, R, tx - 2, ty, D, 3); px(E, R, tx, ty + 1, D, 3); px(E, R, tx - 3 + s, ty + 2, D, 3); px(E, R, tx - 1 + s, ty + 3, D, 3);   
+  }
+  function longArm(R, B, hx, hy) {
+    const sx0 = B ? R.sBx : R.sFx, sy0 = B ? R.sBy : R.sFy; let sx = sx0, sy = sy0;
+    { const qx = hx - sx0, qy = hy - sy0, q = Math.hypot(qx, qy), reach = R.arm - 0.5; if (q > reach) { const k = (q - reach) / q; sx = sx0 + qx * k; sy = sy0 + qy * k; } }
+    const L1 = R.arm * 0.5, dx = hx - sx, dy = hy - sy, d = Math.hypot(dx, dy) || 1; let ex = sx + dx / 2, ey = sy + dy / 2;
+    if (d < R.arm - 0.5) { const h = Math.sqrt(Math.max(0, L1 * L1 - d * d / 4)), nx = -dy / d, ny = dx / d, s = (-nx + ny * 0.8) >= 0 ? 1 : -1; ex += nx * s * h; ey += ny * s * h; }
+    E.part(); const sl = B ? M.sleeveD : M.sleeve, sk = B ? M.skinD : M.skin, pt = B ? M.patchD : M.patch;
+    parts.sweep(E, R, sx, sy, ex, ey, 1, 0.9, sl, 0);
+    const fx = ex + (hx - ex) * 0.4, fy = ey + (hy - ey) * 0.4, ul = Math.hypot(hx - ex, hy - ey) || 1, wx = hx - (hx - ex) / ul * 1.2, wy = hy - (hy - ey) / ul * 1.2;
+    parts.sweep(E, R, ex, ey, fx, fy, 0.9, 0.9, sl, 0);
+    sweep2(R, fx, fy, wx, wy, sk, 0);
+    parts.brush(E, R, fx, fy, 0.9, sl, 4);                                                 
+    px(E, R, ex - 1, ey - 1, pt, 4); px(E, R, ex, ey - 1, pt, 3); px(E, R, ex - 1, ey, pt, 3); px(E, R, ex, ey, pt, 2);   
+    return { ex, ey };
+  }
+  function nimbleHand(R, x, y, st, B) {
+    E.part(); const m = B ? M.skinD : M.skin; x = RD(x); y = RD(y); const H = (dx, dy, t) => px(E, R, x + dx, y + dy, m, t);
+    if (st === H_OPEN) { H(-1, -1, 4); H(0, -1, 0); H(-1, 0, 0); H(0, 0, 0); H(1, -1, 4); H(2, -1, 3); H(1, 0, 0); H(2, 0, 0); H(3, 0, 3); H(-1, -2, 4); }
+    else if (st === H_UP) { H(-1, -1, 0); H(0, -1, 0); H(-1, 0, 0); H(0, 0, 0); H(-2, -2, 4); H(0, -2, 3); H(0, -3, 4); H(2, -2, 3); H(1, -2, 0); H(-1, -2, 0); }
+    else if (st === H_RUB) { H(-1, -1, 4); H(0, -1, 0); H(1, -1, 0); H(-1, 0, 0); H(0, 0, 0); H(1, 0, 2); H(2, -1, 3); }
+    else if (st === H_HOLD) { H(-1, -1, 0); H(0, -1, 0); H(-1, 0, 0); H(0, 0, 0); H(0, -2, 4); }
+    else { H(-1, -1, 4); H(0, -1, 0); H(-1, 0, 0); H(0, 0, 0); }
+  }
+  const HEAD_ROWS = [[1, 6], [0, 7], [0, 7], [0, 7], [0, 7], [1, 7], [2, 7], [3, 6]];
+  const MOUTH = [
+    [[5, 5, 'K'], [6, 5, 'K'], [7, 5, 'K'], [8, 4, 'K'], [4, 5, 'D']],                                                                              
+    [[2, 3, 'K'], [3, 4, 'K'], [4, 4, 'K'], [5, 4, 'K'], [6, 4, 'K'], [7, 4, 'K'], [8, 4, 'K'], [3, 5, 'K'], [4, 5, 'T'], [5, 5, 'T'], [6, 5, 'G'], [7, 5, 'T'], [4, 6, 'K'], [5, 6, 'K'], [6, 6, 'K'], [7, 6, 'D']],   
+    [[2, 3, 'K'], [3, 4, 'K'], [4, 4, 'K'], [5, 4, 'K'], [6, 4, 'K'], [7, 4, 'K'], [8, 4, 'K'], [8, 3, 'K'], [3, 5, 'K'], [4, 5, 'T'], [5, 5, 'G'], [6, 5, 'T'], [7, 5, 'T'],
+      [3, 6, 'K'], [4, 6, 'K'], [5, 6, 'T'], [6, 6, 'T'], [7, 6, 'T'], [4, 7, 'K'], [5, 7, 'K'], [6, 7, 'K']],                                    
+    [[4, 4, 'K'], [5, 4, 'K'], [6, 4, 'K'], [7, 4, 'K'], [3, 5, 'K'], [4, 5, 'T'], [5, 5, 'K'], [6, 5, 'T'], [7, 5, 'T'], [2, 6, 'K'], [3, 6, 'K'], [4, 6, 'K'], [5, 6, 'K'], [6, 6, 'K'], [7, 6, 'K'], [8, 5, 'K']],   
+    [[5, 4, 'D'], [6, 4, 'D'], [5, 5, 'K'], [6, 5, 'K'], [5, 6, 'K'], [6, 6, 'K']],                                                                  
+  ];
+  function peddlerHead(R) {
+    E.part(); const x0 = R.hx0, top = R.htop, S = M.skin, F = (c, r, m, t) => px(E, R, x0 + c, top + r, m, t);
+    for (let r = 0; r < 8; r++) run(E, R, top + r, x0 + HEAD_ROWS[r][0], x0 + HEAD_ROWS[r][1], S, 0);
+    run(E, R, top + 8, x0 + 2, x0 + 4, S, 2);                                              
+    for (let r = 1; r <= 4; r++) F(0, r, M.hair, r === 1 ? 3 : 0); F(1, 1, M.hair, 2);   
+    F(1, 3, S, 2); F(2, 4, S, 2);                                                           
+    F(8, 2, S, 4); F(8, 3, S, 3); F(9, 3, S, 2);                                            
+    F(2, 2, S, 4);                                                                          
+    if (P.eyes === 0) {
+      const bk = P.look === 1;
+      F(3, 2, bk ? M.ink : M.eyeW, 3); F(4, 2, bk ? M.eyeW : M.ink, 3);
+      F(6, 2, bk ? M.ink : M.eyeW, 3); F(7, 2, bk ? M.eyeW : M.ink, 3);
+      F(3, 1, S, 2); F(4, 1, S, 2); F(6, 1, S, 2); F(7, 1, S, 2);                           
+    } else if (P.eyes === 1) { F(3, 2, S, 1); F(4, 2, S, 1); F(6, 2, S, 1); F(7, 2, S, 1); F(4, 1, S, 2); F(6, 1, S, 2); }   
+    else { F(3, 2, S, 1); F(4, 2, S, 1); F(6, 2, S, 1); F(7, 2, S, 1); F(3, 1, S, 4); F(4, 3, S, 4); F(3, 3, S, 4); }      
+    for (const [c, r, k] of MOUTH[P.mouth]) {
+      if (k === 'K') F(c, r, S, 1); else if (k === 'T') F(c, r, M.teeth, 3); else if (k === 'D') F(c, r, S, 2);
+      else F(c, r, P.glint ? M.toothHot : M.tooth, 3);
+    }
+  }
+  function jacketDetail(R, tor) {
+    const LL = tor.rows[0], RR = tor.rows[1], y0 = tor.y0, hem = tor.hem, Lx = (y) => LL[CL(y, y0, hem) - y0], Rx = (y) => RR[CL(y, y0, hem) - y0], yW = R.yWaist;
+    px(E, R, Rx(y0) - 1, y0, M.collar, 4); px(E, R, Rx(y0) - 2, y0, M.collar, 3); px(E, R, Rx(y0 + 1) - 1, y0 + 1, M.collar, 3);   
+    parts.line(E, R, Rx(y0) - 3, y0, Rx(y0 + 4), y0 + 4, M.jacket, 4);                     
+    const bx = Lx(y0 + 4) + 1; px(E, R, bx, y0 + 4, M.patch, 4); px(E, R, bx + 1, y0 + 4, M.patch, 3); px(E, R, bx, y0 + 5, M.patch, 3); px(E, R, bx + 1, y0 + 5, M.patch, 2);   
+    for (let y = yW; y <= yW + 1; y++) run(E, R, y, Lx(y), Rx(y), M.sash, 0);
+    const kx = Rx(yW) - 1, s = P.sway;
+    px(E, R, kx, yW, M.sash, 4); px(E, R, kx + 1, yW, M.sash, 3); px(E, R, kx + 1, yW + 1, M.sash, 2);                          
+    for (let k = 0; k < 4; k++) { px(E, R, kx + 1 + RD(s * (k + 1) / 4), yW + 2 + k, M.sash, (k & 1) ? 2 : 3); if (k < 3) px(E, R, kx + RD(s * (k + 1) / 3), yW + 2 + k, M.sash, (k & 1) ? 3 : 2); }   
+    if (!P.fan) { const x = Lx(yW) + 1; for (let k = 0; k < 6; k++) px(E, R, x - (k >> 1), yW + 1 - k, k >= 5 ? M.edge : (k & 1) ? M.paper : M.rib, k >= 5 ? 3 : 0); }   
+  }
+  const KW = [10, 8, 6, 4, 2, 0];
+  function flatKasa(T, tilt, landed) {
+    E.part(); const m = M.straw, V = (u, v) => v + RD(tilt * u / 10);
+    for (let k = 0; k < 6; k++) { const w = KW[k]; for (let u = -w; u <= w; u++) px(E, T, u, V(u, -k), m, 0); }
+    px(E, T, -10, V(-10, 1), m, 0); px(E, T, 10, V(10, 1), m, 0);                          
+    for (const s of [-7, -3, 3, 7]) for (let k = 0; k < 4; k++) { const u = RD(s * (5 - k) / 5); px(E, T, u, V(u, -k), m, 2); }   
+    for (let k = 1; k <= 4; k++) px(E, T, -KW[k] + 1, V(-KW[k] + 1, -k), m, 4);            
+    px(E, T, 0, V(0, -6), M.cord, 3); px(E, T, 0, V(0, -5), M.cord, 0);                    
+    E.part();
+    if (landed) { px(E, T, 11, 0, M.bead, 4); px(E, T, 12, 0, M.cord, 3); px(E, T, 13, 0, M.cord, 2); return; }
+    const sw = CL(RD(-P.beard * 0.6), -2, 2), b0 = V(10, 2);
+    px(E, T, 10, b0, M.bead, 4);
+    for (let j = 1; j <= 3; j++) { const o = RD(sw * j / 3); px(E, T, 10 + o, b0 + j, M.cord, j === 1 ? 4 : 3); if (j === 3) px(E, T, 11 + o, b0 + j, M.cord, 2); }
+  }
+  const MOTIF = [[0, 3], [0, 4], [1, 3], [1, 4], [0, 2]];
+  function paperFan(R, x, y, open, dir, lv) {
+    E.part(); x = RD(x); y = RD(y);
+    if (open <= 1) { parts.bar(dir, x, y, 0, 6, 2, (k, j, X, Y) => px(E, R, X, Y, k >= 6 ? M.edge : j === 0 ? M.rib : M.paper, k >= 6 ? 3 : 0)); return; }
+    const a = dir * Math.PI / 8, half = SPREAD[open], Rr = FRAD[open];
+    for (let dy = -Rr; dy <= Rr; dy++) for (let dx = -Rr; dx <= Rr; dx++) {
+      const r = Math.hypot(dx, dy); if (r > Rr + 0.35 || r < 0.5) continue;
+      let rel = Math.atan2(dx, -dy) - a; rel = ((rel + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
+      if (Math.abs(rel) > half + 0.1) continue;
+      if (r > Rr - 0.8) px(E, R, x + dx, y + dy, M.edge, 0);
+      else if (r < 2.6) px(E, R, x + dx, y + dy, M.rib, 0);
+      else px(E, R, x + dx, y + dy, M.paper, (Math.floor((rel + half + 0.1) / 0.24) & 1) ? 3 : 4);
+    }
+    const cx = x + RD(Math.sin(a) * (Rr - 3)), cy = y - RD(Math.cos(a) * (Rr - 3)), g = MOTIF[lv], mm = g[0] ? M.motifHot : M.motif, t = g[1];
+    for (const [ddx, ddy] of [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]) px(E, R, cx + ddx, cy + ddy, mm, ddx < 0 && ddy < 0 ? Math.min(4, t + 1) : t);
+    px(E, R, cx, cy, mm, lv === 3 ? 4 : 1);                                                  
+    px(E, R, x, y, M.motif, 4);                                                             
+  }
+  const COIN = [null, [0, -2, 1], [0, -5, 0], [0, -8, 1], [0, -7, 0], [0, -4, 1]];
+  function flipCoin(R, hx, hy, k) {
+    E.part(); const c = COIN[k], x = hx + c[0], y = hy + c[1];
+    if (c[2]) { run(E, R, y - 1, x - 1, x + 1, M.coin, 0); run(E, R, y, x - 1, x + 1, M.coin, 0); run(E, R, y + 1, x - 1, x + 1, M.coin, 0); px(E, R, x, y, M.coin, 1); px(E, R, x - 1, y - 1, M.coin, 4); }
+    else run(E, R, y, x - 1, x + 1, M.coin, 3);
+  }
+  function groundCoin(g) {
+    E.part(); const F = parts.FREE, x = 6, C = M.coin;
+    if (g <= 2) { const y = g === 1 ? -7 : -3; run(E, F, y - 1, x - 1, x + 1, C, 0); run(E, F, y, x - 1, x + 1, C, 0); run(E, F, y + 1, x - 1, x + 1, C, 0); px(E, F, x, y, C, 1); return; }
+    if (g === 3) { for (let y = -2; y <= 0; y++) run(E, F, y, x - 1, x + 1, C, 0); px(E, F, x, -1, C, 1); px(E, F, x - 1, -2, C, 4); }
+    else if (g === 4) { for (let y = -2; y <= 0; y++) run(E, F, y, x, x + 1, C, 0); px(E, F, x, -2, C, 4); }
+    else if (g === 5) { for (let y = -2; y <= 0; y++) px(E, F, x, y, C, 3); }
+    else { run(E, F, 0, x - 1, x + 1, C, 3); px(E, F, x - 1, 0, C, 4); }
+  }
+  const HF = { r0: 0, tx: 0, ty: 0, rot: 0, ox: 0, oy: 0 };
+  function drawHero() {
+    E.begin(hero, P.bx, -P.lift);
+    BODY.hunch = BOW_H[P.bow]; BODY.neck = P.bow >= 2 ? 0 : 1; BODY.headX = P.bow >= 2 ? 1 : 0;
+    const R = parts.rig(P, BODY), gone = P.st === DEATH && P.dqb >= 1;
+    if (!gone) {
+      carryPole(R);
+      longArm(R, 1, P.bhx, P.bhy); nimbleHand(R, P.bhx, P.bhy, P.hB, 1);
+      parts.legs(E, R, P, { style: 'boot', mat: M.pants, matD: M.pantsD, boot: M.wrap, bootD: M.wrapD, bootH: 4 });
+      const tor = parts.torso(E, R, P, { style: 'tunic', mat: M.jacket, hem: R.yHip + 2, flare: 1 });
+      jacketDetail(R, tor);
+      peddlerHead(R);
+    }
+    if (P.hatK) { const h = HAT_PATH[P.hatK]; HF.r0 = h[2]; HF.tx = h[0]; HF.ty = h[1]; HF.rot = 0; HF.ox = 0; HF.oy = 0; flatKasa(HF, h[3], P.hatK >= HAT_LAND); }
+    else { HF.r0 = 0; HF.tx = R.hx + 1 + P.hatX; HF.ty = R.htop - 1 - P.hatY; HF.rot = R.rot; HF.ox = R.ox; HF.oy = R.oy; flatKasa(HF, P.tilt, 0); }
+    if (!gone) {
+      longArm(R, 0, P.hx, P.hy);
+      if (P.fan) paperFan(R, P.hx, P.hy, P.fan, P.fanA, P.gem);
+      nimbleHand(R, P.hx, P.hy, P.hF, 0);
+      if (P.coinK) flipCoin(R, P.hx, P.hy, P.coinK);
+    }
+    if (P.coinG) groundCoin(P.coinG);
+  }
+  const MAT_AT = (s, i) => { const m = s.mat[i]; if (m) return m; const w = s.w; return (s.mat[i + w] || s.mat[i + 1] || s.mat[i - 1] || s.mat[i - w] || 0); };
+  function dissolve(s, qb, qh) {
+    const w = s.w, h = s.h, o = s.out;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = y * w + x; if (o[i] === 255) continue; const q = HAT_MATS[MAT_AT(s, i)] ? qh : qb; if (q > 0 && B8[(y & 7) * 8 + (x & 7)] < q) o[i] = 255; }
+  }
+  function bakeHero() {
+    const fan = P.rim >= 2;
+    RIM.rim = P.rim; RIM.rimRamp = fan ? EL : LANT; RIM.rimR = fan ? RIMR_FAN : RIMR_LAMP;
+    RIM.rx = (fan ? P.gx : LAMP[0]) + hero.ox; RIM.ry = (fan ? P.gy : LAMP[1]) + hero.oy; RIM.flash = P.flash; RIM.dq = P.dq; bake(hero, RIM);
+    if (P.dqb > 0 || P.dqh > 0) dissolve(hero, P.dqb, P.dqh);
+  }
+  const NF = 14, FLX = new Float32Array(NF), FLT = new Float32Array(NF), FLS = new Uint8Array(NF);   
+  let gustT = 9, gustX = 0, gustY = 0, castT = 9, poofT = 9, poofX = 0, glT = 9, chargeAcc = 0, confAcc = 0, soulAcc = 0, sparkAcc = 0, lastStep = 0, lastF = -1, landed = 0;
+  const wx = (x) => scrX(x), wy = (y) => HY + y;
+  function onEnter(s) {
+    if (s !== CAST) return;
+    const gx = wx(P.gx), gy = wy(P.gy);                                                    
+    releaseOrbit(40, 90, 0.3, 0.7); ring(gx, gy, 1, R_EL); fx.cross(gx, gy, 6, R_EL, 0.25, 2); shake(0.28, 2); flash(0.05);
+  }
+  function confetti(x, y, n, vmin, vmax, up) {
+    for (let i = 0; i < n; i++) { const a = i / n * 6.2832 + Math.random() * 0.4, v = vmin + Math.random() * (vmax - vmin), gold = (i % 4) === 3;
+      spawnX(K_BURST, x, y, Math.cos(a) * v, Math.sin(a) * v * 0.8 - up, 0.55 + Math.random() * 0.5, gold ? R_EL : R_CONF, { sz: (i % 3) === 0 ? 2 : 1, age0: 0.08 }); }
+  }
+  function onTime(s, t) {
+    if (s === ATTACK && t === T_SLAP) {                                                    
+      fx.slash(wx(5), wy(-18), 11, 0.3, 1.8, R_EL, 0.17, 2, 2);
+      const x = wx(P.hx + P.bx + 3), y = wy(P.hy);
+      for (let i = 0; i < 6; i++) spawn(K_DUST, x - 1 + Math.random() * 3, y + 1, (Math.random() - 0.5) * 28, -6 - Math.random() * 10, 0.3 + Math.random() * 0.2, FXI.dust);
+      fx.cross(x, y, 3, FXI.impact, 0.12); burst(x, y, 5, 25, 60, 0.12, 0.25, FXI.impact, 6);
+      hitDummy(0); sfx('swing', { kind: 'smash', w: 0.25 }); sfx('hit', { mat: 'wood', w: 0.3 });
+    }
+    if (s === CHARGE && t === T_OPEN) {                                                    
+      const gx = wx(P.gx), gy = wy(P.gy); fx.cross(gx, gy, 4, R_EL, 0.2); burst(gx, gy, 6, 20, 50, 0.15, 0.35, R_EL, 8); sfx('swing', { kind: 'staff', w: 0.15 });
+    }
+    if (s === CAST && t === T_WHOOSH) {                                                    
+      const hx = wx(P.hx + P.bx), hy = wy(P.hy), a = P.fanA * Math.PI / 8, gx = hx + RD(Math.sin(a) * 10), gy = hy - RD(Math.cos(a) * 10), g = 230;   
+      fx.slash(hx, hy, 9, -0.9, 2.6, R_EL, 0.2, 2, 2); gustT = 0; gustX = gx + 3; gustY = gy; castT = 0; landed = 0;
+      for (let i = 0; i < NF; i++) {
+        const vx = -34 + 96 * (i / (NF - 1)) + (Math.random() - 0.5) * 10, vy = -(62 + Math.random() * 46), floor = HY - 1;
+        const tl = (-vy + Math.sqrt(vy * vy + 2 * g * (floor - gy))) / g; FLX[i] = gx + vx * tl; FLT[i] = tl; FLS[i] = 0;
+        spawnX(K_PHYS, gx, gy, vx, vy, tl + 0.05, R_EL, { g, floor, sz: 2, age0: 0.05 });
+      }
+      confetti(gx, gy, 30, 30, 90, 30); burst(gx, gy, 12, 40, 100, 0.2, 0.45, R_EL, 16);
+    }
+    if (s === CAST && t === T_GUST) {                                                      
+      const x = E.DUMMY_X - 2, y = HY - 16;
+      for (let i = 0; i < 8; i++) spawnX(K_PHYS, x, y, (Math.random() - 0.5) * 70, -40 - Math.random() * 50, 0.9, R_EL, { g: 260, floor: HY - 1, sz: (i & 1) + 1, age0: 0.05 });
+      confetti(x, y, 14, 20, 60, 20); ring(x, y, 1, R_EL); fx.cross(x, y - 2, 6, R_EL, 0.3); burst(x, y, 16, 40, 110, 0.2, 0.5, R_EL, 12);
+      hitDummy(1); shake(0.12, 1); sfx('impact', { pal: 'coin', w: 0.4 });
+    }
+    if (s === RECOVER && t === T_SNAP) {                                                   
+      const a = 3 * Math.PI / 8, x = wx(P.hx + P.bx + RD(Math.sin(a) * 6)), y = wy(P.hy - RD(Math.cos(a) * 6));
+      fx.cross(x, y, 3, R_EL, 0.15); burst(x, y, 4, 15, 40, 0.12, 0.25, R_EL, 4); sfx('hit', { mat: 'wood', w: 0.25 });
+    }
+    if (s === DEATH && t === T_POOF) {                                                     
+      poofT = 0; poofX = wx(P.bx);
+      for (let i = 0; i < 30; i++) { const a = Math.random() * 6.2832, v = 14 + Math.random() * 34; spawnX(K_DUST, poofX + Math.cos(a) * 4, HY - 16 + Math.sin(a) * 8, Math.cos(a) * v, Math.sin(a) * v * 0.7 - 8, 0.6 + Math.random() * 0.5, FXI.dust, { age0: 0.05 }); }
+      for (let i = 0; i < 5; i++) spawn(K_EMBER, poofX - 6 + Math.random() * 12, HY - 26 + Math.random() * 16, Math.random() * 8 - 4, -8 - Math.random() * 8, 0.5 + Math.random() * 0.3, R_EL);
+      shake(0.1, 1);
+    }
+    if (s === DEATH && t === T_HATLAND) {                                                  
+      const x = wx(HAT_PATH[HAT_LAND][0] + P.bx);
+      for (let i = 0; i < 7; i++) spawn(K_DUST, x - 8 + Math.random() * 16, HY - 1, (Math.random() - 0.5) * 20, -3 - Math.random() * 5, 0.35, FXI.dust);
+      sfx('fall', { w: 0.1 });
+    }
+  }
+  const EVENTS = [[], [], [T_SLAP], [T_OPEN], [T_WHOOSH, T_GUST], [T_SNAP], [], [T_POOF, T_HATLAND], []];
+  function stepFX(dt, state, stT) {
+    const gx = wx(P.gx), gy = wy(P.gy);
+    if (state === CHARGE && stT > 0.55) {                                                  
+      chargeAcc += dt * (16 + 30 * clamp01((stT - 0.55) / 0.85));
+      while (chargeAcc >= 1) { chargeAcc -= 1; const r = 11 + Math.random() * 9, a = Math.random() * 6.2832; spawn(K_SPIRAL, gx, gy, (r - 3.5) / (0.3 + Math.random() * 0.35), 0, 9, R_EL, a, r, 4 + Math.random() * 3); }
+    }
+    if (castT < 3) {                                                                       
+      castT += dt;
+      for (let i = 0; i < NF; i++) {
+        if (FLS[i] === 0 && castT >= FLT[i]) { FLS[i] = 1; spawnX(K_PHYS, FLX[i], HY - 1, (Math.random() - 0.5) * 8, -30, 0.26, R_EL, { g: 300, floor: HY - 1, age0: 0.05 }); burst(FLX[i], HY - 2, 3, 10, 25, 0.1, 0.2, R_EL, 6); if (!landed) { landed = 1; sfx('impact', { pal: 'coin', w: 0.2 }); } }
+      }
+      if (castT < 1.4 && castT > 0.2) {                                                    
+        confAcc += dt * 28;
+        while (confAcc >= 1) { confAcc -= 1; const gold = Math.random() < 0.28; spawnX(K_EMBER, HX - 22 + Math.random() * 56, HY - 50 + Math.random() * 14, (Math.random() - 0.5) * 6, 10 + Math.random() * 9, 1.0 + Math.random() * 0.6, gold ? R_EL : R_CONF, { age0: 0.12 }); }
+      }
+    }
+    if (state === MOVE && P.step !== lastStep) {                                           
+      if (P.step !== 0) { sfx('step', { w: 0.2 }); spawn(K_DUST, wx(P.step > 0 ? 5 : -4) + (Math.random() - 0.5) * 2, HY, (Math.random() - 0.5) * 12, -3 - Math.random() * 4, 0.28, FXI.dust); }
+      lastStep = P.step;
+    }
+    if (state === IDLE) {
+      const f = f12of(q12(stT) % DUR[IDLE]);
+      if (f !== lastF) {
+        if (f === 20) spawn(K_EMBER, wx(P.hx + P.bx), wy(P.hy - 11), Math.random() * 6 - 3, -6, 0.35, R_EL);   
+        if (f === 23) glT = 0;
+        lastF = f;
+      }
+      sparkAcc += dt * 0.9; while (sparkAcc >= 1) { sparkAcc -= 1; spawn(K_EMBER, wx(P.hx + P.bx) + RD(Math.random() * 2 - 1), wy(P.hy - 2), Math.random() * 6 - 3, -6 - Math.random() * 5, 0.45, R_EL); }   
+    }
+    if (state === DEATH && stT > INCOMING + 1.85 && stT < INCOMING + 2.35) {                
+      soulAcc += dt * 16; while (soulAcc >= 1) { soulAcc -= 1; const h = HAT_PATH[HAT_N]; spawn(K_RISE, wx(h[0] + P.bx) - 9 + Math.random() * 18, HY - 1 - Math.random() * 5, (Math.random() - 0.5) * 6, -12 - Math.random() * 12, 0.7 + Math.random() * 0.6, R_EL); }
+    }
+    gustT += dt; poofT += dt; glT += dt;
+  }
+  function fxReset() { gustT = 9; castT = 9; poofT = 9; glT = 9; chargeAcc = 0; confAcc = 0; soulAcc = 0; sparkAcc = 0; lastStep = 0; lastF = -1; landed = 0; FLS.fill(2); }
+  function fxBack(f12) { if (P.rim >= 2 && P.fan >= 2) floorGlow(wx(P.gx), P.rim, EL, f12); }
+  const BALLS = [[0, -17, 7], [-5, -9, 5], [5, -10, 5], [-2, -26, 5], [4, -23, 4], [-6, -19, 4], [2, -3, 4]];
+  function smoke(f12) {
+    const t = poofT, cx = poofX;
+    if (t < 0.9) {
+      const lv = t < 0.15 ? 0 : t < 0.35 ? 1 : t < 0.6 ? 2 : 3, cut = (t - 0.45) / 0.45;
+      for (const [dx, dy, r] of BALLS) {
+        const rr = r * (t < 0.1 ? 0.55 + t * 4.5 : 1 + (t - 0.1) * 0.3), bx = cx + dx - t * 6, by = HY + dy - t * 9, R = Math.ceil(rr);
+        for (let j = -R; j <= R; j++) for (let i = -R; i <= R; i++) {
+          if (i * i + j * j > rr * rr + 0.3) continue; const X = RD(bx + i), Y = RD(by + j);
+          if (cut > 0 && B8[(Y & 7) * 8 + (X & 7)] < cut) continue;
+          const l = Math.hypot(i + rr * 0.4, j + rr * 0.4) / rr, e = Math.hypot(i, j) / rr;
+          put(X, Y, DUST[Math.min(4, lv + (l < 0.6 ? 0 : e > 0.78 ? 2 : 1))]);
+        }
+      }
+    }
+    if (t > 0.12 && t < 1.5) {
+      const q = (t - 0.12) / 1.38, ccx = cx - 4 - q * 24, ccy = HY - 22 - q * 18, N = 26;
+      for (let k = 0; k < N; k++) {
+        if (q > 0.55 && ((k + f12) & 1)) continue;
+        const th = k * 0.45 - q * 3, rho = 0.8 + k * 0.3 * (1 + q * 0.5), X = RD(ccx + Math.cos(th) * rho + k * 0.35), Y = RD(ccy + Math.sin(th) * rho * 0.8 + k * 0.45);
+        put(X, Y, DUST[CL(Math.floor(q * 3.2) + (k > 17 ? 1 : 0), 0, 4)]);
+      }
+    }
+  }
+  function fxFront(f12) {
+    const gone = E.state === DEATH && P.dqb >= 1;
+    if (!gone && P.fan >= 2 && P.gem >= 2 && P.gem <= 3) {                                 
+      const gx = wx(P.gx), gy = wy(P.gy), L = P.gem === 3 ? 5 : 2 + (f12 & 1);
+      for (let r = 2; r <= L; r++) { const c = r <= 2 ? EL[0] : r <= 3 ? EL[1] : EL[2]; put(gx + r, gy, c); put(gx - r, gy, c); put(gx, gy - r, c); put(gx, gy + r, c); }
+    }
+    if (!gone && P.glint && P.fan < 2 && !P.hatK) {                                        
+      const x = wx(P.gx), y = wy(P.gy) - 1; put(x + 1, y - 1, EL[0]); put(x + 2, y - 2, EL[1]); put(x + 1, y - 2, EL[2]); put(x + 2, y - 1, EL[2]); put(x + 3, y - 3, EL[2]);
+    }
+    if (gustT < 0.3) {                                                                     
+      const q = gustT / 0.3, len = RD(4 + q * 16);
+      for (const [oy, o] of [[-4, 2], [0, 0], [4, 3]]) for (let k = 0; k < len; k++) { if (q > 0.5 && ((k + f12) % 3) === 0) continue; put(RD(gustX + o + q * 10 + k), gustY + oy + (k > len * 0.6 ? (oy > 0 ? 1 : oy < 0 ? -1 : 0) : 0), k > len - 3 ? EL[0] : k > len * 0.5 ? EL[1] : EL[2]); }
+    }
+    if (poofT < 1.5) smoke(f12);
+  }
+  return {
+    name: '货郎', HX, R_EL, DUR, hero, P, GLOW_MATS: [M.tooth, M.toothHot, M.motif, M.motifHot], HIT_POINT: [1, -18], EVENTS,
+    SFX: { body: 'flesh', how: 'dissolve', pal: 'coin', style: 'coin', w: 0.4 },
+    poseAt, drawHero, bakeHero, onEnter, onTime, stepFX, fxReset, fxBack, fxFront,
+  };
+});
+;
+
 PCD.define('GrayWolf', (E) => {
   const { Sprite, begin, bake, ease, clamp01, keys, q12, f12of, walkDemo, fxRamp, FXI, FXR, HY, DUMMY_X, INCOMING,
     IDLE, MOVE, ATTACK, CHARGE, CAST, RECOVER, HURT, DEATH, REVIVE, DEFAULT_DUR, K_SPIRAL, K_EMBER, K_RISE, K_DUST, K_BURST,
@@ -35072,6 +35886,377 @@ PCD.define('Landlord', (E) => {
 });
 ;
 
+PCD.define('LanternGirl', (E) => {
+  const { parts, Sprite, bake, ease, clamp01, q12, f12of, gait, walkDemo, fxRamp, FXI, FXR, HY, FLOOR, INCOMING, B8,
+    IDLE, MOVE, ATTACK, CHARGE, CAST, RECOVER, HURT, DEATH, REVIVE, DEFAULT_DUR, K_SPIRAL, K_EMBER, K_RISE, K_DUST, K_PHYS,
+    spawn, spawnX, burst, releaseOrbit, shoot, ring, shake, flash, fx, hitDummy, dummyFx, put, scrX, floorGlow, sfx, DUMMY_X } = E;
+  const RD = Math.round, PX = parts.px, RUN = parts.run, FL = (v) => Math.floor(v + 1e-6);
+  const R_EL = fxRamp('lanternGlow', [21, 51, 47, 14, 19]), EL = FXR[R_EL];
+  const R_SNOW = fxRamp('lostSnow', [21, 17, 60, 59, 3]);
+  const M = parts.mats(E, {
+    hood: 'crimson', cape: 'crimson', lining: { r: [11, 11, 12, 12], flat: 1 },
+    dress: { r: 'pale', band: 2 }, stock: 'white', boot: 'boot', skin: 'skin', hair: 'sand', bow: 'white', blush: { r: 'pink', flat: 1 }, ink: { r: 'ink', flat: 1 },
+    brass: 'gold',
+    glass: { r: [45, 46, 47, 51], flat: 1 },                          
+    flame: { r: [47, 51, 21, 21], flat: 1 },                          
+    dark: { r: [0, 27, 28, 29], flat: 1 },                            
+  });
+  const BODY = { body: 'child', leg: 6, torso: 6, head: 7, headW: 7, sw: 3, arm: 6, lw: 2, stride: 2, lift: 2 };
+  const HX = 34, DUR = DEFAULT_DUR.slice();
+  const hero = new Sprite(56, 44, 26, 38);
+  const RIM = { rim: 0, rx: 0, ry: 0, rimR: [0, 6, 13, 18], rimRamp: EL, flash: 0, dq: 0, skip: new Uint8Array(256) };
+  for (const k of ['brass', 'glass', 'flame', 'dark', 'skin', 'hair', 'ink', 'bow', 'blush', 'lining']) { RIM.skip[M[k]] = 1; RIM.skip[M[k + 'D']] = 1; }
+  const KEEP = new Uint8Array(256); for (const k of ['hood', 'hoodD', 'lining', 'brass', 'brassD', 'glass', 'flame', 'dark']) KEEP[M[k]] = 1;
+  const P = { hx: 0, hy: 0, bhx: 0, bhy: 0, lean: 0, head: 0, crouch: 0, bob: 0, bx: 0, step: 0, wup: 0, walk: 0, beard: 0, sway: 0, bend: 0,
+    tip: 0, lsw: 0, gem: 0, flk: 0, glint: 0, rim: 0, eyes: 0, look: 0, smile: 0, flash: 0, lift: 0, two: 0,
+    lfree: 0, lx: 0, ly: 0, hood: 0, hdx: 0, hdy: 0, dq: 0, dqi: 0, dqb: 0, dqbi: 0, dqe: 0, dqei: 0, st: 0, gx: 0, gy: 0, flip: 0, mx: 0, k1: 0, k2: 0 };
+  const K = (hx, hy, bhx, bhy, lean, head, crouch) => ({ hx, hy, bhx, bhy, lean: lean || 0, head: head || 0, crouch: crouch || 0 });
+  const K_IDLE = K(6, -12, -2, -5);                    
+  const K_TUCK = K(5, -12, -3, -6, -1, 0, 1);          
+  const K_RAISE = K(7, -15, -3, -7, 1);                
+  const K_HOLD = K(7, -14, -3, -6, 1);
+  const K_HUG = K(6, -13, 4, -8, 0, 0, 1);             
+  const K_BLAZE = K(7, -15, 5, -8, 1);                 
+  const K_HURT = K(5, -11, -3, -5, -1, -1, 1);         
+  const K_BOW = K(6, -13, 4, -8, 0, 0, 1);             
+  const K_LET = K(2, -5, -2, -4, 0, 0, 1);             
+  const FIELDS = ['hx', 'hy', 'bhx', 'bhy', 'lean', 'head', 'crouch'];
+  const setK = (A, B, q) => E.mix(P, A, B == null ? A : B, q || 0, FIELDS);
+  const KEY = E.keyer([['hx', -8, 16], ['hy', -24, 2], ['bhx', -10, 12], ['bhy', -24, 2], ['lean', -1, 1], ['head', -1, 1], ['crouch', 0, 4], ['bob', 0, 1],
+    ['bx', -4, 4], ['step', -1, 1], ['wup', 0, 2], ['walk', 0, 1], ['sway', -2, 2], ['bend', 0, 3], ['tip', -1, 3], ['lsw', -2, 2], ['gem', 0, 5], ['flk', 0, 3],
+    ['glint', 0, 1], ['rim', 0, 3], ['eyes', 0, 1], ['look', 0, 2], ['smile', 0, 1], ['flash', 0, 1], ['lift', 0, 2], ['two', 0, 1],
+    ['lfree', 0, 2], ['lx', -4, 16], ['ly', -16, 0], ['hood', 0, 6], ['hdx', -8, 8], ['hdy', -24, 0], ['dqi', 0, 16], ['dqbi', 0, 16], ['dqei', 0, 12], ['st', 0, 8]]);
+  const LSW = [0, 1, 0, -1], SWAY = [0, 1, 0, -1], FLK = [0, 0, 1, 1, 0, 0, 2, 2, 3, 3, 0, 0, 2, 2, 1, 1], PERS0 = 1.4, LOOK = [1, 2, 2, 2, 2, 2, 1];
+  const T_STRIKE = 2 / 12, T_REACH = 0.25;
+  const T_OUT = INCOMING + 0.47, T_LAND = INCOMING + 0.64, T_FADE = INCOMING + 0.72, T_GONE = INCOMING + 1.35, T_HLAND = T_GONE + 4 / 12, T_END = INCOMING + 2.3;
+  const HOOD_PATH = [[0, -20, -1], [1, -16, 3], [-1, -12, -1], [0, -9, 3]];
+  const LF = 5;                                          
+  function poseAt(st, t, T) {
+    const tq = q12(t), f12 = f12of(t);
+    P.st = st; P.bx = 0; P.step = 0; P.wup = 0; P.walk = 0; P.beard = 0; P.sway = 0; P.bend = 0; P.tip = 0; P.lsw = 0; P.gem = 0; P.flk = 0; P.glint = 0; P.rim = 1;
+    P.eyes = 0; P.look = 0; P.smile = 0; P.flash = 0; P.lift = 0; P.two = 0; P.lfree = 0; P.lx = 0; P.ly = 0; P.hood = 0; P.hdx = 0; P.hdy = 0;
+    P.dq = 0; P.dqb = 0; P.dqe = 0; P.bob = 0; P.flip = 0; P.mx = 0;
+    const idle = () => {
+      setK(K_IDLE); const lp = tq % DUR[IDLE], f = f12of(lp);
+      P.bob = FL(lp / 0.4) & 1; P.tip = (FL((lp - 1 / 12) / 0.4) & 1) ? 1 : 0;       
+      P.lsw = LSW[FL(lp / 0.3) & 3]; P.sway = SWAY[FL(lp / 0.6) & 3]; P.flk = FLK[f % FLK.length];
+      P.glint = f === 9 ? 1 : 0; if (f === 6) P.eyes = 1;                               
+      if (lp >= PERS0 - 1e-6 && lp < PERS0 + LOOK.length / 12) { const k = f12of(lp - PERS0); P.look = LOOK[Math.min(LOOK.length - 1, k)]; if (k === 0 || k === 6) P.tip = 1; }   
+    };
+    if (st === IDLE) idle();
+    else if (st === MOVE) {                                              
+      setK(K_IDLE); const f = gait(tq); parts.gait(P, f);
+      P.lift = P.wup ? 1 : 0; P.tip = P.step ? 1 : -1; P.lsw = [-1, 0, 1, 0][f]; P.bhx -= P.step; P.flk = f & 1 ? 1 : 2; P.bend = 1;
+      const w = walkDemo(tq, 12, 1); P.mx = w.mx; P.flip = w.flip;
+    } else if (st === ATTACK) {
+      if (tq < 0.12) { setK(K_IDLE, K_TUCK, ease.out(tq / 0.12)); P.gem = 1; P.lsw = 1; P.tip = 1; }
+      else if (tq < 0.2) { setK(K_RAISE); P.gem = 2; P.rim = 2; P.tip = 3; P.sway = -1; P.bend = 2; P.lsw = -1; P.flk = 3; }
+      else if (tq < 0.45) { setK(K_RAISE, K_HOLD, ease.out((tq - 0.2) / 0.25)); P.gem = 1; P.rim = 2; P.tip = -1; P.bend = 1; P.lsw = 1; P.flk = 3; }
+      else { setK(K_HOLD, K_IDLE, ease.inOut(clamp01((tq - 0.45) / 0.3))); P.lsw = tq < 0.6 ? -1 : 0; P.tip = tq < 0.6 ? 1 : 0; }
+    } else if (st === CHARGE) {                                          
+      const q = ease.inOut(clamp01(tq / 0.6)); setK(K_IDLE, K_HUG, q); P.two = tq >= 0.25 ? 1 : 0;
+      P.gem = tq < 0.45 ? 1 : (f12 & 1) ? 2 : 1; P.rim = 2; P.flk = f12 & 3; P.tip = tq > 1.1 ? ((f12 & 1) ? -1 : 0) : 0; P.lsw = tq < 0.25 ? 1 : 0;
+    } else if (st === CAST) {                                            
+      setK(K_HUG, K_BLAZE, ease.out(clamp01(tq / 0.12))); P.two = 1; P.gem = 3; P.rim = 3; P.tip = 3; P.sway = -1; P.bend = 2; P.flk = 3;
+    } else if (st === RECOVER) {                                         
+      const q = ease.inOut(clamp01(tq / 0.6)); setK(K_BLAZE, K_IDLE, q); P.two = q < 0.5 ? 1 : 0;
+      P.gem = q < 0.35 ? 2 : q < 0.75 ? 1 : 0; P.rim = q < 0.5 ? 2 : 1; P.bend = q < 0.3 ? 1 : 0; P.tip = q < 0.3 ? -1 : 0; P.smile = tq >= 0.2 ? 1 : 0; P.lsw = q > 0.55 && q < 0.9 ? 1 : 0;
+    } else if (st === HURT) {                                            
+      const h = tq - INCOMING;
+      if (h < 0) idle();
+      else if (h < 0.2) { setK(K_HURT); P.bx = -2; P.eyes = 1; P.flash = h < 1 / 12 ? 1 : 0; P.tip = 2; P.sway = 1; P.bend = 1; P.gem = 5; P.lsw = (f12 & 1) ? 2 : -2; P.rim = 0; }
+      else if (h < 0.35) { setK(K_HURT, K_IDLE, 0.5); P.bx = -1; P.eyes = 1; P.tip = 1; P.gem = 5; P.lsw = (f12 & 1) ? 1 : -1; P.rim = 0; }
+      else { setK(K_HURT, K_IDLE, ease.inOut(clamp01((h - 0.35) / 0.15))); P.gem = h < 0.42 ? 5 : 0; }
+    } else if (st === DEATH) {                                           
+      const d = tq - INCOMING; P.rim = 0;
+      if (d < 0) { idle(); P.rim = 1; }
+      else if (d < 0.3) { setK(K_HURT); P.bx = -2; P.eyes = 1; P.flash = d < 1 / 12 ? 1 : 0; P.tip = 2; P.sway = 1; P.bend = 1; P.gem = (f12 & 1) ? 5 : 0; P.lsw = (f12 & 1) ? 2 : -2; }
+      else if (d < 0.55) { setK(K_BOW); P.bx = -1; P.eyes = 1; P.tip = 1; P.two = 1; P.gem = d < 0.47 ? ((f12 & 1) ? 5 : 4) : 4; }
+      else {
+        setK(K_LET); P.bx = -1; P.eyes = 1; P.tip = 1; P.gem = 4;
+        if (d < 0.64) { P.lfree = 1; P.lx = 6; P.ly = -10; } else { P.lfree = 2; P.lx = 6; P.ly = -8; }
+        if (d >= 0.72) P.dqb = clamp01((d - 0.72) / 0.63);
+        if (d >= 1.35) {
+          const k = f12of(d - 1.35); P.hood = k < 4 ? k + 1 : k < 5 ? 5 : 6;
+          if (P.hood <= 4) { const h = HOOD_PATH[P.hood - 1]; P.hdx = h[0]; P.hdy = h[1]; P.tip = h[2]; } else { P.hdx = -3; P.hdy = 0; P.tip = 1; }
+        }
+        if (d >= 2.3) P.dqe = clamp01((d - 2.3) / 0.28);
+      }
+    } else if (st === REVIVE) {
+      idle(); P.bob = 0; P.look = 0;
+      if (tq < 0.4) P.dq = 1; else if (tq < 0.85) P.dq = 1 - (tq - 0.4) / 0.45; else P.glint = 1;
+      P.gem = tq > 0.85 ? 2 : tq > 0.6 ? 0 : 4;
+    }
+    const yo = P.bob + Math.min(3, RD(P.crouch));
+    P.hx = RD(P.hx); P.hy = RD(P.hy) + yo; P.bhx = RD(P.bhx); P.bhy = RD(P.bhy) + yo; P.lean = RD(P.lean); P.head = RD(P.head); P.crouch = RD(P.crouch);
+    if (P.lfree) { const f = parts.toSprite(lanternT(), 0, LF); P.gx = f[0] + P.bx; P.gy = f[1]; }
+    else { P.gx = P.hx + P.lsw + P.bx; P.gy = P.hy + 1 + LF - P.lift; }
+    P.dqi = RD(P.dq * 16); P.dqbi = RD(P.dqb * 16); P.dqei = RD(P.dqe * 12);
+    KEY(P);
+  }
+  const TIPS = [
+    [[-3, 0, 2], [-4, -1, 1], [-5, -2, -1], [-6, -2, -2]],             
+    [[-3, 0, 2], [-4, -2, 0], [-4, -3, -3], [-3, -4, -4]],             
+    [[-3, 0, 2], [-3, -2, -1], [-3, -3, -3], [-2, -4, -4]],            
+    [[-3, 0, 3], [-4, 2, 4], [-5, 4, 5], [-4, 6, 6]],                  
+    [[-3, 0, 2], [-3, -3, -1], [-3, -5, -4], [-3, -6, -6]],            
+  ];
+  function hoodTip(T, x0, top, s) { const C = TIPS[Math.max(-1, Math.min(3, s)) + 1]; for (const [dy, a, b] of C) RUN(E, T, top + dy, x0 + a, x0 + b, M.hood, 0); }
+  function hoodShell(T, x0, x1, top, bot, ey, tipS, front, hollow) {
+    const H = M.hood;
+    hoodTip(T, x0, top, tipS);
+    RUN(E, T, top - 2, x0 + 1, x1 - 1, H, 0); RUN(E, T, top - 1, x0 - 1, x1, H, 0); RUN(E, T, top, x0 - 1, x1 + (front ? 0 : 1), H, 0);
+    for (let y = top + 1; y <= bot; y++) RUN(E, T, y, x0 - 1 - (y > ey ? 1 : 0), x0 + (front ? 0 : 1), H, 0);
+    RUN(E, T, bot + 1, x0 - 2, x0 + 3, H, 0); RUN(E, T, bot + 2, x0 - 2, x0 + 2, H, 0);
+    if (front) for (let y = top + 1; y <= ey + 2; y++) PX(E, T, x1, y, H, 0);
+    PX(E, T, x0 - 1, ey + 2, H, 2); PX(E, T, x0, ey + 3, H, 2); PX(E, T, x0 + 1, top - 2, H, 4);                   
+    if (hollow) for (let y = top + 1; y <= bot; y++) RUN(E, T, y, x0 + 2, x1 - (y === bot ? 1 : 0), M.lining, y === top + 1 ? 1 : 2);
+  }
+  function hoodHead(R) {
+    const x0 = R.hx0, x1 = R.hx1, top = R.htop, bot = R.hy, ey = R.ey, S = M.skin, HR = M.hair, lk = P.look;
+    E.part();
+    hoodShell(R, x0, x1, top, bot, ey, P.tip, lk, 0);
+    const f0 = x0 + (lk ? 1 : 2), f1 = x1 - (lk ? 1 : 0);
+    for (let y = top + 1; y <= bot; y++) RUN(E, R, y, f0 + (y === bot ? 1 : 0), f1 - (y === bot ? 1 : 0), S, 0);
+    if (!lk) {                                                            
+      RUN(E, R, top + 1, f0, f1 - 1, HR, 0); PX(E, R, f0 + 1, top + 1, HR, 4); PX(E, R, f0, top + 2, HR, 0); PX(E, R, f0, top + 3, HR, 2);
+      if (P.eyes) { PX(E, R, x1 - 1, ey + 1, S, 1); PX(E, R, x1 - 2, ey + 1, S, 1); } else { PX(E, R, x1 - 1, ey, M.ink, 1); PX(E, R, x1 - 1, ey + 1, M.ink, 1); }
+      PX(E, R, x1 + 1, ey + 1, S, 3); PX(E, R, x1 - 2, ey + 2, M.blush, 3);
+      if (P.smile) PX(E, R, x1, ey + 2, S, 1); else PX(E, R, x1 - 1, bot, S, 1);
+    } else {                                                             
+      RUN(E, R, top + 1, f0, f1, HR, 0); PX(E, R, R.hx, top + 1, S, 3); PX(E, R, f0 + 1, top + 1, HR, 4);
+      const e = lk === 2 ? -1 : 0;
+      if (P.eyes) { PX(E, R, R.hx - 1, ey + 1, S, 1); PX(E, R, R.hx + 1, ey + 1, S, 1); }
+      else for (const x of [R.hx - 1 + e, R.hx + 1 + e]) { PX(E, R, x, ey, M.ink, 1); PX(E, R, x, ey + 1, M.ink, 1); }
+      PX(E, R, f0, ey + 2, M.blush, 3); PX(E, R, f1, ey + 2, M.blush, 3); PX(E, R, R.hx, bot, S, 1);
+    }
+    PX(E, R, x1 - 1, bot + 1, M.bow, 3); PX(E, R, x1, bot + 1, M.bow, 4); PX(E, R, x1 - 1, bot + 2, M.bow, 2); PX(E, R, x1 + 1, bot + 2, M.bow, 3);   
+  }
+  function capelet(R) {
+    E.part(); const m = M.cape, sway = P.sway || 0, bend = P.bend || 0, y0 = R.yS, n = 5;
+    let L = 0, Rr = 0;
+    for (let k = 0; k < n; k++) {
+      const y = y0 + k, t = k / (n - 1), e = parts.edges(R, Math.min(y, R.yHip));
+      L = RD(e[0] - 1 - t * t * 2.4 + sway * t * t - bend * t * t * 1.3); Rr = k < 2 ? e[1] + 1 : RD(e[1] + 0.6 + t);
+      RUN(E, R, y, L, Rr, m, 0);
+      if (k >= 2) { PX(E, R, L + 2, y, m, 2); if (k >= 3) PX(E, R, Rr - 2, y, m, 2); }
+    }
+    const yb = y0 + n - 1;
+    PX(E, R, L + 3, yb, m, 2); PX(E, R, L - 1, yb + (bend >= 2 ? 0 : 1), m, 0); PX(E, R, L, yb + 1, m, 2);          
+  }
+  const GLASS = [                                                        
+    [1, 3, 1, 2, 3, 2, 1, 2, 1],                                         
+    [2, 3, 2, 3, 3, 3, 2, 3, 2],                                         
+    [3, 4, 3, 4, 4, 4, 3, 4, 3],                                         
+    [4, 4, 4, 4, 4, 4, 4, 4, 4],                                         
+    [2, 2, 2, 2, 2, 2, 2, 2, 2],                                         
+    [1, 1, 1, 1, 2, 1, 1, 1, 1],                                         
+  ];
+  const FLAME = [[[0, 1]], [[-1, 1]], [[1, 1]], [[0, 1], [0, 0]]];        
+  function brassLantern(T, sw, lv, flk, glint) {
+    E.part(); const B = M.brass, o = sw;
+    PX(E, T, 0, 0, B, 3); PX(E, T, -1 + o, 1, B, 0); PX(E, T, 1 + o, 1, B, 0);                                    
+    RUN(E, T, 2, -1 + o, 1 + o, B, 3); PX(E, T, -1 + o, 2, B, 4);                                                   
+    RUN(E, T, 3, -2 + o, 2 + o, B, 3); PX(E, T, -2 + o, 3, B, 4); PX(E, T, 2 + o, 3, B, 2);                         
+    for (let r = 0; r < 3; r++) {
+      const y = 4 + r; PX(E, T, -2 + o, y, B, 3); PX(E, T, 2 + o, y, B, 2);                                         
+      for (let c = -1; c <= 1; c++) {
+        const tn = GLASS[lv][r * 3 + c + 1];
+        if (lv === 4) PX(E, T, c + o, y, M.dark, c + 1 === r ? 3 : tn);                                           
+        else if (lv === 3) PX(E, T, c + o, y, M.flame, (r === 0 || r === 2) && c !== 0 ? 2 : 3);
+        else PX(E, T, c + o, y, M.glass, tn);
+      }
+    }
+    RUN(E, T, 7, -2 + o, 2 + o, B, 3); PX(E, T, 2 + o, 7, B, 2); RUN(E, T, 8, -1 + o, 1 + o, B, 2);                
+    if (lv === 4) { PX(E, T, o, 6, M.dark, 1); return; }                                                            
+    if (lv === 3) return;
+    const core = lv === 5 ? 1 : glint || lv >= 1 ? 3 : 2, tipT = lv === 5 ? 0 : lv >= 2 ? 3 : lv === 1 ? 2 : 1;
+    PX(E, T, o, 6, M.flame, core);
+    if (tipT) for (const [dx, dy] of FLAME[flk & 3]) PX(E, T, o + dx, 4 + dy, M.flame, dy === 0 ? Math.max(1, tipT - 1) : tipT);
+  }
+  function lanternT() {
+    if (P.lfree) return { r0: 0, tx: P.lx, ty: P.ly, rot: 0, ox: 0, oy: 0 };
+    return { r0: 0, tx: P.hx, ty: P.hy + 1, rot: 0, ox: 0, oy: 0 };
+  }
+  function emptyHood(cx, cy, k, tipS) {
+    const T = parts.FREE, H = M.hood;
+    E.part();
+    if (k <= 4) { hoodShell(T, cx - 3, cx + 3, cy + 2, cy + 8, cy + 5, tipS, 0, 1); return; }
+    if (k === 5) {
+      RUN(E, T, -4, cx - 2, cx + 2, H, 0); RUN(E, T, -3, cx - 4, cx + 3, H, 0); RUN(E, T, -2, cx - 5, cx + 4, H, 0); RUN(E, T, -1, cx - 5, cx + 4, H, 0); RUN(E, T, 0, cx - 6, cx + 3, H, 0);
+      RUN(E, T, -2, cx - 1, cx + 2, M.lining, 1); RUN(E, T, -1, cx - 1, cx + 3, M.lining, 2);
+      RUN(E, T, -5, cx - 3, cx - 2, H, 0); PX(E, T, cx - 4, -6, H, 0); PX(E, T, cx - 5, -5, H, 0);
+      return;
+    }
+    RUN(E, T, -2, cx - 3, cx + 2, H, 0); RUN(E, T, -1, cx - 5, cx + 4, H, 0); RUN(E, T, 0, cx - 6, cx + 5, H, 0);
+    RUN(E, T, -1, cx, cx + 3, M.lining, 1); PX(E, T, cx - 2, -2, H, 4); PX(E, T, cx - 3, 0, H, 2);
+    PX(E, T, cx - 7, 0, H, 0); PX(E, T, cx - 8, 0, H, 0); PX(E, T, cx - 9, -1, H, 0);                              
+  }
+  function drawHero() {
+    E.begin(hero, P.bx, -P.lift);
+    if (P.st === DEATH && P.hood >= 1) { brassLantern(lanternT(), 0, 4, 0, 0); emptyHood(P.hdx, P.hdy, P.hood, P.tip); return; }
+    const R = parts.rig(P, BODY);
+    arm(R, { side: 'B', sleeve: 'tight', mat: M.dressD, hand: M.skinD, grip: P.two ? 'none' : 'fist', at: [P.bhx, P.bhy] });
+    parts.legs(E, R, P, { style: 'boot', mat: M.stock, matD: M.stockD, boot: M.boot, bootD: M.bootD, w: 2, bootH: 2 });
+    parts.torso(E, R, P, { style: 'dress', mat: M.dress, trim: M.stock, hem: R.yHip + 1, flare: 2, flareF: 1.5 });
+    capelet(R);
+    hoodHead(R);
+    brassLantern(lanternT(), P.lfree ? 0 : P.lsw, P.gem, P.flk, P.glint);
+    if (P.two) parts.hand(E, R, P, { side: 'B', at: [P.bhx, P.bhy], hand: M.skin });
+    arm(R, { side: 'F', sleeve: 'tight', mat: M.dress, hand: M.skin, at: [P.hx, P.hy] });
+  }
+  function arm(R, o) {
+    const B = o.side === 'B', dx = o.at[0] - (B ? R.sBx : R.sFx), dy = o.at[1] - (B ? R.sBy : R.sFy), d = Math.hypot(dx, dy) || 1;
+    const s = (dy / d + (dx / d) * 0.8) >= 0 ? 1 : -1;
+    return parts.arm(E, R, P, (dx / d) * s < -0.05 ? Object.assign({ elbow: 'out' }, o) : o);
+  }
+  const MAT_AT = (s, i) => { const m = s.mat[i]; if (m) return m; const w = s.w; return s.mat[i + w] || s.mat[i + 1] || s.mat[i - 1] || s.mat[i - w] || 0; };
+  function dissolve(s, qb, qe) {
+    const w = s.w, h = s.h, o = s.out; let top = h, bot = -1;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (o[y * w + x] !== 255) { if (y < top) top = y; if (y > bot) bot = y; }
+    const span = Math.max(1, bot - top);
+    for (let y = top; y <= bot; y++) for (let x = 0; x < w; x++) {
+      const i = y * w + x; if (o[i] === 255) continue; const keep = KEEP[MAT_AT(s, i)], b = B8[(y & 7) * 8 + (x & 7)] * 0.55;
+      if (keep) { if (qe > 0 && b + (y - top) / span * 0.45 < qe) o[i] = 255; }
+      else if (qb > 0 && b + (bot - y) / span * 0.45 < qb) o[i] = 255;
+    }
+  }
+  function bakeHero() {
+    RIM.rim = P.rim; RIM.rx = P.gx + hero.ox; RIM.ry = P.gy + hero.oy; RIM.flash = P.flash; RIM.dq = P.dq; bake(hero, RIM);
+    if (P.dqb > 0 || P.dqe > 0) dissolve(hero, P.dqb, P.dqe);
+  }
+  let coneT = 9, atkT = 9, ax0 = 0, swT = 9, castT = 9, cacheT = 9, smokeT = 9, chargeAcc = 0, snowAcc = 0, litAcc = 0, cacheAcc = 0, emberAcc = 0, riseAcc = 0, lastStep = 0;
+  const FPN = 10, fpX = new Float32Array(FPN), fpA = new Float32Array(FPN).fill(9), fpD = new Int8Array(FPN); let fpI = 0;
+  const SPD = 160, SW_V = 240, SW_END = 0.6;
+  const wx = (x) => scrX(x), wy = (y) => HY + y;
+  function addPrint(x, d) { fpX[fpI] = x; fpA[fpI] = 0; fpD[fpI] = d; fpI = (fpI + 1) % FPN; }
+  const printC = (a) => (a < 0.1 ? EL[1] : a < 0.4 ? EL[2] : a < 0.75 ? EL[3] : EL[4]);
+  function onEnter(s) {
+    if (s !== CAST) return;
+    const gx = wx(P.gx), gy = wy(P.gy);
+    releaseOrbit(40, 100, 0.3, 0.7); burst(gx, gy, 20, 40, 110, 0.25, 0.6, R_EL, 10); ring(gx, gy, 1, R_EL);
+    shake(0.28, 2); flash(0.05); swT = 0; castT = 0;
+  }
+  function onTime(s, t) {
+    const gx = wx(P.gx), gy = wy(P.gy), d = P.flip ? -1 : 1;
+    if (s === ATTACK && t === T_STRIKE) {                                
+      coneT = 0; atkT = 0; ax0 = gx + 12 * d;
+      shoot(1, ax0, gy + 1, SPD, DUMMY_X - 4, R_EL, 0, { trail: { every: 2, life: [0.08, 0.2], back: [4, 12] }, glow: -1 });
+      burst(gx, gy, 6, 20, 50, 0.12, 0.3, R_EL, 4);
+      sfx('swing', { kind: 'staff', w: 0.1 }); sfx('shoot', { proj: 'orb' });
+    }
+    if (s === CAST && t === T_REACH) {                                   
+      dummyFx({ dur: 1.1, outline: R_EL }); fx.cross(DUMMY_X, HY - 31, 4, R_EL, 0.35); burst(DUMMY_X, HY - 2, 12, 20, 60, 0.3, 0.7, R_EL, 30);
+      cacheT = 0; shake(0.12, 1); sfx('impact', { pal: 'holy', w: 0.15 });
+    }
+    if (s === HURT && t === INCOMING) {                                  
+      for (let i = 0; i < 4; i++) spawnX(K_PHYS, gx + (Math.random() - 0.5) * 3, gy + 2, (Math.random() - 0.5) * 30, -20 - Math.random() * 20, 0.5, R_EL, { g: 180, floor: HY });
+      for (let i = 0; i < 4; i++) spawn(K_DUST, wx(-2 + Math.random() * 6), HY, (Math.random() - 0.5) * 16, -3 - Math.random() * 4, 0.35, R_SNOW);
+    }
+    if (s === DEATH) {
+      if (t === T_OUT) { smokeT = 0; for (let i = 0; i < 3; i++) spawn(K_EMBER, gx, gy - 3, (Math.random() - 0.5) * 6, -8 - Math.random() * 6, 0.4, R_EL); }
+      if (t === T_LAND) { for (let i = 0; i < 6; i++) spawn(K_DUST, gx + (Math.random() - 0.5) * 6, HY, (Math.random() - 0.5) * 18, -4 - Math.random() * 5, 0.4, R_SNOW); sfx('fall', { w: 0.1 }); }
+      if (t === T_HLAND) for (let i = 0; i < 8; i++) spawn(K_DUST, wx(-4 + Math.random() * 8), HY, (Math.random() - 0.5) * 24, -3 - Math.random() * 5, 0.45, R_SNOW);
+      if (t === T_END) for (let i = 0; i < 10; i++) spawn(K_RISE, wx(-9 + Math.random() * 20), HY - 1 - Math.random() * 3, (Math.random() - 0.5) * 6, -10 - Math.random() * 12, 0.9 + Math.random() * 0.6, R_SNOW);
+    }
+  }
+  const EVENTS = [[], [], [T_STRIKE], [], [T_REACH], [], [INCOMING], [T_OUT, T_LAND, T_HLAND, T_END], []];
+  function impactOn(k, x, y) {
+    if (k !== 1) return;
+    burst(x, y, 10, 30, 80, 0.15, 0.35, R_EL, 6); fx.cross(x, y, 3, R_EL, 0.15); hitDummy(0); sfx('hit', { mat: 'magic', w: 0.1 });
+  }
+  function stepFX(dt, st, stT) {
+    const gx = wx(P.gx), gy = wy(P.gy);
+    if (st === MOVE && P.step !== lastStep) {                            
+      if (P.step !== 0) { const d = P.flip ? -1 : 1, x = wx(P.bx + 3); addPrint(x, d); sfx('step', { w: 0.1 }); spawn(K_DUST, x, HY, (Math.random() - 0.5) * 8, -2 - Math.random() * 3, 0.25, R_SNOW); }
+      lastStep = P.step;
+    }
+    if (st === CHARGE) {                                                 
+      chargeAcc += dt * (14 + 22 * clamp01(stT / 1.0));
+      while (chargeAcc >= 1) { chargeAcc -= 1; const r = 11 + Math.random() * 9, a = Math.random() * 6.2832; spawn(K_SPIRAL, gx, gy, (r - 3.5) / (0.35 + Math.random() * 0.3), 0, 9, R_EL, a, r, 5 + Math.random() * 3); }
+    }
+    if (st === CHARGE || st === CAST || st === RECOVER) {                
+      snowAcc += dt * 12;
+      while (snowAcc >= 1) { snowAcc -= 1; spawnX(K_EMBER, HX - 34 + Math.random() * 100, 4 + Math.random() * 44, (Math.random() - 0.5) * 4, 5 + Math.random() * 5, 1.6 + Math.random() * 0.8, R_SNOW, { age0: 0.18 }); }
+    }
+    if (swT < 0.45) {                                                    
+      litAcc += dt * 70; const r = 3 + SW_V * swT, cx = wx(0);
+      while (litAcc >= 1) { litAcc -= 1; const a = Math.PI + Math.random() * Math.PI, x = cx + Math.cos(a) * r * (0.9 + Math.random() * 0.1), y = HY - 8 + Math.sin(a) * r * 0.45; if (y > 3 && x > -2 && x < 130) spawnX(K_EMBER, x, y, (Math.random() - 0.5) * 4, 3 + Math.random() * 4, 0.9 + Math.random() * 0.6, R_EL, { age0: 0.1 }); }
+    }
+    if (cacheT < 1.0) { cacheAcc += dt * 18; while (cacheAcc >= 1) { cacheAcc -= 1; spawn(K_RISE, DUMMY_X - 7 + Math.random() * 14, HY - 1, (Math.random() - 0.5) * 4, -12 - Math.random() * 12, 0.6 + Math.random() * 0.5, R_EL); } }
+    if ((st === IDLE && P.gem !== 4) || st === RECOVER) {               
+      emberAcc += dt * (st === IDLE ? 1.4 : 6);
+      while (emberAcc >= 1) { emberAcc -= 1; spawn(K_EMBER, gx + RD(Math.random() * 2 - 1), gy - 4, Math.random() * 4 - 2, -6 - Math.random() * 5, 0.5 + Math.random() * 0.4, R_EL); }
+    }
+    if (st === DEATH) {
+      if (smokeT < 0.45) { riseAcc += dt * 9; while (riseAcc >= 1) { riseAcc -= 1; spawn(K_RISE, gx + (Math.random() - 0.5) * 2, gy - 4, (Math.random() - 0.5) * 3, -7 - Math.random() * 5, 0.8, FXI.dust); } }   
+      if (stT > T_FADE && stT < T_GONE) {                                 
+        const q = clamp01((stT - T_FADE) / (T_GONE - T_FADE)); riseAcc += dt * 34;
+        while (riseAcc >= 1) { riseAcc -= 1; spawn(K_RISE, wx(P.bx - 4 + Math.random() * 9), HY - 1 - q * 19 - Math.random() * 3, (Math.random() - 0.5) * 6, -10 - Math.random() * 14, 0.9 + Math.random() * 0.7, R_SNOW); }
+      }
+    }
+    coneT += dt; atkT += dt; swT += dt; castT += dt; cacheT += dt; smokeT += dt; for (let i = 0; i < FPN; i++) fpA[i] += dt;
+  }
+  function fxReset() { coneT = 9; atkT = 9; swT = 9; castT = 9; cacheT = 9; smokeT = 9; chargeAcc = 0; snowAcc = 0; litAcc = 0; cacheAcc = 0; emberAcc = 0; riseAcc = 0; lastStep = 0; fpA.fill(9); fpI = 0; }
+  function sweep(half, f12) {
+    const r = 3 + SW_V * swT, ry = Math.max(1, r * 0.2), cx = wx(0), n = Math.ceil(r * 4);
+    const c0 = swT < 1 / 12 ? EL[0] : swT < 0.25 ? EL[1] : swT < 0.42 ? EL[2] : EL[3], c1 = swT < 0.25 ? EL[2] : EL[3];
+    for (let k = 0; k < n; k++) {
+      const a = k / n * 6.2832, s = Math.sin(a); if (half === 0 ? s > 0 : s <= 0) continue;
+      if (swT > 0.3 && ((k + f12) & 1)) continue;
+      put(RD(cx + Math.cos(a) * r), RD(FLOOR + s * ry), c0);
+      if ((k & 1) === 0) put(RD(cx + Math.cos(a) * r * 0.82), RD(FLOOR + s * ry * 0.82), c1);
+    }
+  }
+  function fxBack(f12) {
+    const lit = !P.lfree && P.gem !== 4 && P.dq < 1;
+    if (lit && P.rim >= 2) floorGlow(wx(P.gx), P.rim, EL, f12);
+    else if (lit) { const x = wx(P.gx), hw = P.gem === 5 ? 2 : 3 + (P.flk === 3 ? 1 : 0); for (let dx = -hw; dx <= hw; dx++) { const a = Math.abs(dx); if (a <= 1) put(x + dx, FLOOR, EL[3]); else if (((x + dx) & 1) === 0) put(x + dx, FLOOR, EL[4]); } }   
+    for (let i = 0; i < FPN; i++) { const a = fpA[i]; if (a >= 1.1) continue; const x = RD(fpX[i]), c = printC(a); put(x, FLOOR, c); put(x + fpD[i], FLOOR, c); if (a < 0.4) put(x, FLOOR + 1, EL[3]); }   
+    if (atkT < 0.75) {                                                   
+      const x1 = DUMMY_X - 6;
+      for (let x = ax0 + 2, j = 0; x <= x1; x += 5, j++) { const a = atkT - (x - ax0) / SPD; if (a < 0 || a >= 0.55) continue; const c = printC(a * 2); put(x, FLOOR, c); put(x + 1, FLOOR, c); if (j & 1) put(x, FLOOR + 1, c); }
+    }
+    if (swT < SW_END) sweep(0, f12);
+  }
+  function fxFront(f12) {
+    const gx = wx(P.gx), gy = wy(P.gy), d = P.flip ? -1 : 1;
+    if ((P.gem === 2 || P.gem === 3) && !P.lfree && P.dq < 1) {          
+      const L = P.gem === 3 ? 7 : 4 + (f12 & 1);
+      for (let r = 4; r <= L; r++) { const c = r <= 4 ? EL[0] : r <= 5 ? EL[1] : EL[2]; put(gx + r, gy, c); put(gx - r, gy, c); put(gx, gy - r - 1, c); put(gx, gy + r + 2, c); }
+      if (P.gem === 3) for (let r = 3; r <= 5; r++) { const c = r <= 3 ? EL[1] : EL[2]; put(gx + r, gy - r, c); put(gx - r, gy - r, c); put(gx + r, gy + r, c); put(gx - r, gy + r, c); }
+    }
+    if (E.state === CHARGE && E.stT > 0.7 && P.dq < 1) {                 
+      const q = clamp01((E.stT - 0.7) / 0.7), r = 8 - 4 * q, n = 16;
+      for (let k = 0; k < n; k++) { if ((k + f12) & 1) continue; const a = k / n * 6.2832 + E.stT * 3; put(RD(gx + Math.cos(a) * r), RD(gy + Math.sin(a) * r), q > 0.6 ? EL[1] : EL[2]); }
+    }
+    if (coneT < 3 / 12) {                                                
+      const late = coneT >= 1 / 12;
+      for (let k = 1; k <= 14; k++) {
+        const cy = gy + k * 0.3, h = RD(k * 0.38);
+        for (let j = -h; j <= h; j++) { if (late && ((k + j + f12) & 1)) continue; const edge = Math.abs(j) === h && h > 0, c = late ? (edge ? EL[3] : EL[2]) : edge ? EL[2] : k < 5 ? EL[0] : EL[1]; put(gx + d * (3 + k), RD(cy + j), c); }
+      }
+    }
+    if (swT < SW_END) sweep(1, f12);
+  }
+  function drawShot(k, x, y, d, f12) {                                   
+    if (k !== 1) return false;
+    put(x, y, EL[0]); put(x + d, y, EL[0]); put(x - d, y, EL[1]); put(x + 2 * d, y, EL[1]);
+    put(x, y - 1, EL[1]); put(x + d, y - 1, EL[1]); put(x, y + 1, EL[1]); put(x + d, y + 1, EL[1]);
+    if (f12 & 1) { put(x - 2 * d, y, EL[2]); put(x, y - 2, EL[2]); put(x + d, y + 2, EL[2]); } else { put(x + d, y - 2, EL[2]); put(x, y + 2, EL[2]); }
+    return true;
+  }
+  const SHEET = [[IDLE, [0, 0.4, 0.8, 1.2, 1.4, 1.5, 1.8, 1.95]], [MOVE, [0, 1 / 6, 2 / 6, 3 / 6]], [ATTACK, null], [CHARGE, 'step2'], [CAST, null], [RECOVER, 'step2'], [HURT, 'hurt'],
+    [DEATH, [0.34, 0.6, 0.8, 0.95, 1.05, 1.25, 1.45, 1.65, 1.75, 1.85, 1.95, 2.05, 2.2, 2.7]], [REVIVE, [0.45, 0.55, 0.65, 0.75, 0.9]]];
+  return {
+    name: '迷路的孩子', HX, R_EL, DUR, hero, P, GLOW_MATS: [M.glass, M.flame], HIT_POINT: [1, -11], EVENTS, SHEET,
+    REVIVE: { dy: -11, ramp: R_SNOW },
+    SFX: { body: 'ghost', how: 'dissolve', pal: 'holy', style: 'nova', w: 0.15 },
+    poseAt, drawHero, bakeHero, onEnter, onTime, impactOn, stepFX, fxReset, fxBack, fxFront, drawShot,
+  };
+});
+;
+
 PCD.define('LeopardEmperorSavalon', (E) => {
   const { parts, Sprite, bake, ease, clamp01, q12, f12of, walkDemo, FXI, FXR, HY, DUMMY_X, INCOMING, ASTEP, copySprite, blitShape,
     IDLE, MOVE, ATTACK, CHARGE, CAST, RECOVER, HURT, DEATH, REVIVE, DEFAULT_DUR, K_EMBER, K_RISE, K_DUST, K_BURST, K_SPIRAL_PT,
@@ -39059,6 +40244,424 @@ PCD.define('MarshalOrfa', (E) => {
     name: '奥法元帅', HX, R_EL, DUR, hero, P, GLOW_MATS: [M.aegis], HIT_POINT, EVENTS, deathKit: { mode: 'burst', at: T_BURST }, REVIVE: { dy: -16, ramp: R_EL, big: 1 },
     SFX: { body: 'armor', how: 'explode', pal: 'arcane', style: 'nova', w: 1.0 },
     poseAt, drawHero, bakeHero, onEnter, onTime, hurtFx, stepFX, fxReset, fxBack, fxMid, fxFront,
+  };
+});
+;
+
+PCD.define('MidnightFiddler', (E) => {
+  const { parts, Sprite, bake, ease, clamp01, q12, f12of, gait, walkDemo, FXI, FXR, HY, FLOOR, INCOMING, B8, DT,
+    IDLE, MOVE, ATTACK, CHARGE, CAST, RECOVER, HURT, DEATH, REVIVE, DEFAULT_DUR, K_EMBER, K_RISE, K_DUST, K_SPIRAL,
+    spawn, burst, releaseOrbit, ring, shake, flash, fx, put, scrX, floorGlow, shotFloorGlow, shoot, sfx } = E;
+  const RD = Math.round, PX = parts.px, RUN = parts.run, CELL = parts.cell, CL = (v, a, b) => (v < a ? a : v > b ? b : v);
+  const R_EL = E.fxRamp('tune', [21, 51, 14, 61, 20]), EL = FXR[R_EL];
+  const R_PAPER = E.fxRamp('paper', [21, 17, 5, 6, 7]), R_MIST = FXI.dust;
+  const M = parts.mats(E, {
+    coat: { r: 'shadow', band: 2 }, sleeve: 'shadow', lining: 'crimson', cravat: 'crimson', strap: 'wood',
+    hat: 'wood', band: 'crimson', face: 'bone', hair: [0, 0, 52, 53], lace: 'white',
+    pants: 'stone', shoe: 'boot', brass: 'gold',
+    top: 'leather', neck: 'wood', str: { r: [18, 7, 6, 17], flat: 1 },
+    hole: { r: [0, 20, 61, 14], flat: 1 }, shine: { r: [61, 14, 5, 51], flat: 1 }, hot: { r: [14, 51, 21, 21], flat: 1 },
+  });
+  const tbl = (names, v) => { const t = new Uint8Array(256); for (const k of names) { t[M[k]] = v; if (M[k + 'D'] != null) t[M[k + 'D']] = v; } return t; };
+  const MAND = tbl(['top', 'neck', 'str', 'hole', 'shine', 'hot', 'brass'], 1);            
+  const HATM = tbl(['hat', 'band'], 1);                                                      
+  const LAMP = new Uint8Array(256);
+  for (const k of ['coat', 'sleeve', 'pants']) { LAMP[M[k]] = 32; LAMP[M[k + 'D']] = 32; }
+  for (const k of ['hat', 'band']) { LAMP[M[k]] = 33; LAMP[M[k + 'D']] = 33; }
+  LAMP[M.shoe] = LAMP[M.shoeD] = 19; LAMP[M.cravat] = LAMP[M.cravatD] = LAMP[M.lining] = LAMP[M.liningD] = 26;
+  const BODY = { body: 'slim', leg: 14, torso: 12, head: 8, headW: 5, sw: 3, arm: 13, lw: 2, stride: 5, lift: 1, neck: 1, fall: 'back' };
+  const HX = 34, DUR = DEFAULT_DUR.slice(); DUR[IDLE] = 3.0;                                
+  const hero = new Sprite(78, 72, 38, 67);
+  const RIM = { rim: 0, rx: 0, ry: 0, rimR: [0, 5, 9, 13], rimRamp: [51, 14, 61], rimAll: 1, flash: 0, dq: 0, skip: new Uint8Array(256) };
+  for (const k of ['face', 'hair', 'lace', 'sleeve', 'top', 'neck', 'str', 'hole', 'shine', 'hot', 'brass']) { RIM.skip[M[k]] = 1; RIM.skip[M[k + 'D']] = 1; }   
+  const P = { hx: 0, hy: 0, bhx: 0, bhy: 0, mcx: 0, mcy: 0, mdi: 2, fret: 6, lean: 0, head: 0, crouch: 0, bob: 0, bx: 0, step: 0, wup: 0, walk: 0, sway: 0, bend: 0, beard: 0,
+    tap: 0, gem: 0, glint: 0, rim: 0, flash: 0, str: 0, ripple: 0, hatL: 1, hatX: 0, hatY: 0, hr: 0, ht: 0, noHands: 0,
+    dq: 0, dqi: 0, dqb: 0, dqbi: 0, dqm: 0, dqmi: 0, dqh: 0, dqhi: 0, lift: 0, lying: 0, st: 0, gx: 0, gy: 0, flip: 0, mx: 0, k1: 0, k2: 0 };
+  const K = (hx, hy, mcx, mcy, lean, crouch, fret) => ({ hx, hy, mcx, mcy, lean, crouch, fret: fret == null ? 6 : fret });
+  const K_IDLE = K(6, -14, 6, -16, 0, 0);
+  const K_SUP = K(9, -21, 6, -16, -1, 0);        
+  const K_SDN = K(4, -10, 6, -16, 1, 1);         
+  const K_HOLD = K(4, -11, 6, -16, 1, 0);
+  const K_REACH = K(7, -33, 6, -16, 0, 0);       
+  const K_TIP = K(8, -36, 6, -16, 1, 0);         
+  const K_WIND = K(-5, -16, 6, -18, -1, 2, 7);   
+  const K_TOSS = K(5, -39, 6, -16, 1, 0);        
+  const K_FUP = K(9, -21, 6, -16, 1, 0), K_FDN = K(4, -10, 6, -16, 1, 1);   
+  const K_BOW = K(4, -21, 5, -14, 2, 3);         
+  const K_HURT = K(6, -20, 5, -17, -1, 1);       
+  const K_SAG = K(5, -12, 6, -14, 1, 2);         
+  const FIELDS = ['hx', 'hy', 'mcx', 'mcy', 'lean', 'crouch', 'fret'];
+  const setK = (A, B, q) => E.mix(P, A, B, q, FIELDS);
+  const KEY = E.keyer([['hx', -14, 22], ['hy', -48, 2], ['bhx', -6, 24], ['bhy', -38, -4], ['mcx', -2, 12], ['mcy', -26, -6], ['mdi', 1, 4],
+    ['lean', -1, 2], ['crouch', 0, 4], ['bob', 0, 1], ['bx', -6, 6], ['step', -1, 1], ['wup', 0, 2], ['sway', -2, 2], ['bend', 0, 3], ['tap', 0, 1],
+    ['gem', 0, 4], ['glint', 0, 1], ['rim', 0, 3], ['flash', 0, 1], ['str', 0, 2], ['ripple', 0, 3],
+    ['hatL', 0, 3], ['hatX', -28, 28], ['hatY', -62, 4], ['hr', 0, 3], ['ht', -2, 2], ['noHands', 0, 1],
+    ['dqi', 0, 12], ['dqbi', 0, 12], ['dqmi', 0, 12], ['dqhi', 0, 12], ['lift', 0, 1], ['st', 0, 8]]);
+  const T_STRIKE = 2 / 12, T_TIP = 4 / 12, T_CATCH = 5 / 12;
+  const T_POP = INCOMING + 0.1, T_HATLAND = INCOMING + 0.1 + 5 / 12, T_LAST = INCOMING + 1.75, T_OUT = INCOMING + 2.0;
+  const CAST_T = [1 / 12, 2 / 12, 3 / 12, 4 / 12, T_CATCH];
+  const HAT_TOSS = [[4, -43, 0, -1], [3, -48, 1, 0], [2, -51, 2, 0], [1, -50, 3, 0], [1, -44, 0, 0]];
+  const HAT_FALL = [[-2, -39, 0], [-5, -42, 3], [-8, -39, 3], [-10, -31, 2], [-12, -19, 2], [-13, -4, 2]];
+  const SW4 = [0, 1, 0, -1];
+  function poseAt(st, t, T) {
+    const tq = q12(t), f12 = f12of(T);
+    P.st = st; P.bx = 0; P.step = 0; P.wup = 0; P.walk = 0; P.sway = 0; P.bend = 0; P.beard = 0; P.bob = 0; P.tap = 0; P.lift = 0; P.lying = 0; P.head = 0;
+    P.gem = 0; P.glint = 0; P.rim = 0; P.flash = 0; P.str = 0; P.ripple = 0; P.mdi = 2; P.noHands = 0;
+    P.hatL = 1; P.hatX = 0; P.hatY = 0; P.hr = 0; P.ht = 0; P.dq = 0; P.dqb = 0; P.dqm = 0; P.dqh = 0; P.flip = 0; P.mx = 0;
+    let hatHand = 0;                                                    
+    const idle = () => {                                                 
+      setK(K_IDLE, K_IDLE, 0);
+      const lp = tq % DUR[IDLE], f = f12of(lp), b = Math.floor(f / 6), ph = f % 6;
+      P.bob = ph < 2 ? 1 : 0; P.lean = b & 1; P.tap = ph >= 4 ? 1 : 0; P.sway = SW4[Math.floor((f + 2) / 3) & 3];
+      if (f >= 19 && f <= 23) {                                          
+        const k = f - 19;
+        if (k <= 1) { setK(K_IDLE, K_SUP, k === 0 ? 0.6 : 1); P.lean = 0; P.gem = 1; }
+        else if (k === 2) { setK(K_SDN, K_SDN, 0); P.lean = 1; P.crouch = 0; P.str = 2; P.glint = 1; P.gem = 1; P.ht = 1; }
+        else if (k === 3) { setK(K_SDN, K_HOLD, 1); P.str = 1; P.ht = 1; }
+        else { setK(K_HOLD, K_IDLE, 0.6); P.str = 2; }
+      }
+    };
+    if (st === IDLE) idle();
+    else if (st === MOVE) {                                              
+      setK(K_IDLE, K_IDLE, 0); const f = gait(tq); parts.gait(P, f);
+      P.bob = 0; P.beard = 0; P.lift = P.wup ? 1 : 0; P.lean = 1; P.bend = P.wup ? 3 : 2; P.ht = P.wup ? 0 : 1;
+      const w = walkDemo(tq, 14, 1); P.mx = w.mx; P.flip = w.flip;
+    } else if (st === ATTACK) {
+      if (tq < T_STRIKE) { setK(K_IDLE, K_SUP, tq < 1 / 12 ? 0.6 : 1); P.gem = 1; P.ht = -1; }
+      else if (tq < 3 / 12) { setK(K_SDN, K_SDN, 0); P.gem = 2; P.rim = 2; P.str = 2; P.ht = 1; P.sway = -1; P.bend = 1; }
+      else if (tq < 0.45) { setK(K_SDN, K_HOLD, ease.out((tq - 3 / 12) / 0.2)); P.gem = 1; P.str = (f12 & 1) ? 2 : 1; P.ht = tq < 0.33 ? 1 : 0; }
+      else { setK(K_HOLD, K_IDLE, ease.inOut(clamp01((tq - 0.45) / 0.25))); P.str = tq < 0.55 ? 1 : 0; }
+    } else if (st === CHARGE) {
+      if (tq < 0.25) setK(K_IDLE, K_REACH, ease.inOut(tq / 0.25));
+      else if (tq < 0.5) { setK(K_REACH, K_TIP, ease.out(clamp01((tq - 0.25) / 0.17))); hatHand = 1; P.ht = 1; }
+      else if (tq < 0.8) { const q = ease.inOut((tq - 0.5) / 0.3); setK(K_TIP, K_WIND, q); hatHand = 1; P.ht = q < 0.5 ? 0 : -1; if (q >= 0.5) P.mdi = 1; }
+      else {
+        setK(K_WIND, K_WIND, 0); hatHand = 1; P.ht = -1; P.mdi = 1;
+        if (tq > 0.95) P.hy += (f12 & 1);                                
+        if (tq > 1.0) { P.bend = 1; P.sway = (f12 & 1) ? -1 : 0; }
+      }
+      P.gem = tq < 0.45 ? 1 : ((f12 & 1) ? 2 : 1); P.rim = tq < 0.2 ? 1 : 2;
+    } else if (st === CAST) {
+      const f = CL(f12of(tq), 0, 5);
+      if (f === 0) setK(K_TOSS, K_TOSS, 0); else if (f & 1) setK(K_FDN, K_FDN, 0); else setK(K_FUP, K_FUP, 0);
+      if (f < 5) { const h = HAT_TOSS[f]; P.hatL = 2; P.hatX = h[0]; P.hatY = h[1]; P.hr = h[2]; P.ht = h[3]; }
+      P.str = (f & 1) ? 2 : 1; P.gem = 3; P.rim = 3; P.bend = 1; P.sway = (f & 1) ? -1 : 1; if (f === 5) P.glint = 1;
+    } else if (st === RECOVER) {                                         
+      if (tq < 0.12) setK(K_FDN, K_FDN, 0);
+      else if (tq < 0.45) { const q = ease.out(clamp01((tq - 0.12) / 0.2)); setK(K_FDN, K_BOW, q); P.ht = q > 0.5 ? 2 : 1; if (q > 0.5) P.mdi = 3; }
+      else { const q = ease.inOut(clamp01((tq - 0.45) / 0.25)); setK(K_BOW, K_IDLE, q); P.ht = q < 0.4 ? 2 : q < 0.8 ? 1 : 0; if (q < 0.5) P.mdi = 3; }
+      const q = tq / DUR[RECOVER]; P.gem = q < 0.35 ? 2 : q < 0.75 ? 1 : 0; P.rim = q < 0.3 ? 2 : q < 0.6 ? 1 : 0; P.str = tq < 0.2 ? 1 : 0;
+    } else if (st === HURT) {
+      const h = tq - INCOMING;
+      if (h < 0) idle();
+      else if (h < 0.25) { setK(K_HURT, K_HURT, 0); P.mdi = 1; P.bx = -2; P.flash = h < 1 / 12 ? 1 : 0; P.ripple = h < 1 / 12 ? 1 : h < 2 / 12 ? 2 : 3; P.ht = -1; P.hatY = -1; P.str = 2; P.sway = 1; P.bend = 1; }
+      else if (h < 0.35) { setK(K_HURT, K_IDLE, 0.5); P.bx = -1; P.ripple = 1; P.ht = -1; P.str = 1; }
+      else setK(K_HURT, K_IDLE, ease.inOut(clamp01((h - 0.35) / 0.15)));
+    } else if (st === DEATH) {                                           
+      const d = tq - INCOMING;
+      if (d < 0) idle();
+      else if (d < 0.1) { setK(K_HURT, K_HURT, 0); P.mdi = 1; P.bx = -2; P.flash = d < 1 / 12 ? 1 : 0; P.ripple = 1; P.ht = -1; P.hatY = -3; P.str = 2; P.gem = 1; }
+      else {
+        const q = ease.out(clamp01((d - 0.1) / 0.3)); setK(K_HURT, K_SAG, q); P.bx = -2 + RD(q);
+        if (q > 0.5) P.mdi = 3; else P.mdi = 1;
+        const hf = Math.min(5, f12of(d - 0.1)), h = HAT_FALL[hf]; P.hatL = 3; P.hatX = h[0]; P.hatY = h[1]; P.hr = h[2];
+        if (d < 0.9) P.ripple = 1 + (f12 % 3);
+        P.dqb = clamp01((d - 0.55) / 0.95); if (P.dqb >= 0.9) P.noHands = 1;
+        if (d > 1.5) P.mcy += RD(3 * ease.inOut(clamp01((d - 1.5) / 0.6)));   
+        P.gem = d < 1.7 ? ((f12 % 4) === 0 ? 2 : 1) : d < 2.0 ? ((f12 & 1) ? 1 : 0) : d < 2.1 ? ((f12 & 1) ? 1 : 4) : 4;
+        P.dqh = clamp01((d - 1.7) / 0.4); P.dqm = clamp01((d - 2.1) / 0.45);
+        P.str = d < 0.3 ? 1 : 0;
+      }
+    } else if (st === REVIVE) {
+      idle(); P.bob = 0;
+      if (tq < 0.4) P.dq = 1; else if (tq < 0.85) P.dq = 1 - (tq - 0.4) / 0.45; else P.glint = 1;
+      P.gem = tq > 0.85 ? 2 : 0;
+    }
+    const yo = P.bob + Math.min(3, RD(P.crouch)), ls = RD(P.lean * 0.5);
+    P.lean = RD(P.lean); P.crouch = RD(P.crouch);
+    P.hx = RD(P.hx) + ls; P.hy = RD(P.hy) + yo; P.mcx = RD(P.mcx) + ls; P.mcy = RD(P.mcy) + yo;
+    const c = CELL(P.mdi, P.mcx, P.mcy, RD(P.fret)); P.bhx = c[0] + 1; P.bhy = c[1] + 1;
+    if (hatHand) { P.hatL = 2; P.hatX = P.hx - 7; P.hatY = P.hy - 1; P.hr = 0; }                             
+    P.gx = RD(P.mcx + DV[P.mdi][0]) + P.bx; P.gy = RD(P.mcy + DV[P.mdi][1]) - P.lift;                       
+    P.dqi = RD(P.dq * 12); P.dqbi = RD(P.dqb * 12); P.dqmi = RD(P.dqm * 12); P.dqhi = RD(P.dqh * 12);
+    KEY(P);
+  }
+  function coatTails(R) {
+    E.part();
+    const y0 = R.yWaist + 1, yb = -2, n = yb - y0, e = parts.edges(R, y0), x0 = e[0] + 1, sw = P.sway || 0, bd = P.bend || 0;
+    for (let y = y0; y <= yb; y++) {
+      const t = (y - y0) / n, L = RD(x0 - 1 - 6.5 * Math.pow(t, 1.25) - bd * t * t * 1.3 + sw * t * t);
+      const Rr = Math.min(x0 + 2, L + 2 + (yb - y) * 2);
+      RUN(E, R, y, L, Rr, M.coatD, 0);
+      if (Rr < x0 + 2) PX(E, R, Rr, y, M.lining, 3);                    
+      if (t > 0.3 && Rr - L > 4) PX(E, R, L + 2 + RD(t), y, M.coatD, 2);  
+    }
+  }
+  function blankHead(R) {
+    E.part();
+    const x0 = R.hx0, x1 = R.hx1, top = R.htop, bot = R.hy, ey = R.ey, rp = P.ripple;
+    for (let y = top; y <= bot; y++) {
+      let a = x0, b = x1; if (y === top || y === bot) { a++; b--; }
+      if (rp >= 2 && ((y + rp) & 1) && y > top && y < bot) b += 1;
+      RUN(E, R, y, a, b, M.face, 0);
+    }
+    RUN(E, R, bot + 1, x0 + 1, x0 + 2, M.face, 2);                      
+    for (let y = top + 1; y <= bot; y++) PX(E, R, x0, y, M.hair, 0);    
+    for (let y = ey; y <= bot + 1; y++) PX(E, R, x0 - 1, y, M.hair, y === bot + 1 ? 2 : 0);
+    PX(E, R, x0 + 1, top, M.hair, 0);
+    if (rp) {                                                            
+      const cx = x0 + 2.5, cy = ey + 1.5;
+      for (let y = ey; y <= bot; y++) for (let x = x0 + 1; x <= x1 + 1; x++) {
+        const d = Math.hypot(x - cx, (y - cy) * 0.8);
+        if (Math.abs(d - (rp - 0.3)) < 0.55) PX(E, R, x, y, M.face, 2); else if (rp >= 2 && d < 0.8) PX(E, R, x, y, M.face, 4);
+      }
+    }
+  }
+  const HF = { r0: 0, tx: 0, ty: 0, rot: 0, ox: 0, oy: 0 };
+  const hatFrame = (x, y, r0) => { HF.r0 = r0 & 3; HF.tx = RD(x); HF.ty = RD(y); return HF; };
+  function feltHat(T, tilt) {
+    E.part();
+    const m = M.hat, sh = (u) => RD(tilt * u / 7);
+    for (let u = -7; u <= 7; u++) PX(E, T, u, sh(u), m, u === 5 ? 4 : 0);                 
+    PX(E, T, -7, 1 + sh(-7), m, 0); PX(E, T, 7, 1 + sh(7), m, 3);                          
+    for (let u = -3; u <= 3; u++) PX(E, T, u, -1 + sh(u), M.band, u === -3 ? 4 : 0);        
+    for (let u = -3; u <= 3; u++) PX(E, T, u, -2 + sh(u), m, 0);
+    for (let u = -3; u <= 2; u++) PX(E, T, u, -3 + sh(u), m, 0);
+    for (let u = -2; u <= 1; u++) PX(E, T, u, -4 + sh(u), m, 0);
+    PX(E, T, 0, -4 + sh(0), m, 2);                                                           
+    PX(E, T, -2, -3 + sh(-2), m, 4); PX(E, T, 1, -2 + sh(1), m, 2);                          
+  }
+  const DV = [[0, -1], [1, -2], [1, -1], [2, -1], [1, 0]].map(([x, y]) => [x / Math.hypot(x, y), y / Math.hypot(x, y)]);
+  const MAJ = [1, 0.894, 0.707, 0.894, 1], BA = 4.6, BB = 3.6;
+  const N0 = MAJ.map((m) => Math.ceil((BA - 0.9) * m - 1e-6)), NL = MAJ.map((m) => RD(8.5 * m));
+  const HOLE = [[[M.hole, 3], [M.hole, 2], [M.hole, 2], [M.hole, 3]], [[M.hole, 4], [M.hole, 3], [M.hole, 3], [M.hole, 4]], [[M.shine, 4], [M.shine, 3], [M.shine, 3], [M.shine, 4]],
+    [[M.hot, 4], [M.hot, 2], [M.hot, 2], [M.hot, 4]], [[M.hole, 1], [M.hole, 1], [M.hole, 1], [M.hole, 1]]];
+  const VERT = [1, 1, 1, 0, 0];
+  function mandolin(T, cx, cy, di) {
+    E.part();
+    const ux = DV[di][0], uy = DV[di][1], vt = VERT[di], vib = P.str, H = HOLE[CL(P.gem, 0, 4)];
+    const hx0 = RD(cx + ux - 0.5), hy0 = RD(cy + uy - 0.5), sT = (k) => (vib ? (((k + vib) & 1) ? 4 : 2) : 2);
+    for (let dy = -6; dy <= 6; dy++) for (let dx = -6; dx <= 6; dx++) {
+      const u = dx * ux + dy * uy, v = -dx * uy + dy * ux, b = u > 0 ? BB * (1 - 0.3 * (u / BA) * (u / BA)) : BB;
+      if ((u * u) / (BA * BA) + (v * v) / (b * b) > 1) continue;
+      const x = cx + dx, y = cy + dy;
+      if (x >= hx0 && x <= hx0 + 1 && y >= hy0 && y <= hy0 + 1) { const h = H[(y - hy0) * 2 + (x - hx0)]; PX(E, T, x, y, h[0], h[1]); continue; }
+      if (Math.abs(u + 2.4) < 0.6 && Math.abs(v) < 1.9) PX(E, T, x, y, M.top, 1);                                
+      else if (u < -3.1 && Math.abs(v) < 1) PX(E, T, x, y, M.brass, v < 0 ? 4 : 3);                              
+      else if (Math.abs(v) < 0.5 && u > -2.4) PX(E, T, x, y, M.str, sT(RD(u)));                                  
+      else if (v > 1.2 && v < 2.7 && u > -1.7 && u < 0.9) PX(E, T, x, y, M.top, 2);                              
+      else PX(E, T, x, y, M.top, 0);
+    }
+    const at = (k, j, m, t) => { const c = CELL(di, cx, cy, k); PX(E, T, vt ? c[0] + j : c[0], vt ? c[1] : c[1] + j, m, t); };
+    const n0 = N0[di], n1 = n0 + NL[di] - 1;
+    for (let k = n0; k <= n1; k++) { at(k, 0, M.str, sT(k)); at(k, 1, M.neck, ((k - n0) & 1) ? 4 : 0); }
+    for (let k = n1 + 1; k <= n1 + 3; k++) { at(k, 0, M.brass, k === n1 + 3 ? 4 : 0); at(k, 1, M.brass, k === n1 + 3 ? 3 : 2); }
+    for (const k of [n1 + 1, n1 + 3]) { at(k, -1, M.brass, 4); at(k, 2, M.brass, 2); }
+    if (P.glint && P.gem !== 4) PX(E, T, hx0 - 1, hy0, M.hot, 4);
+  }
+  function drawHero() {
+    E.begin(hero, P.bx, -P.lift);
+    const R = parts.rig(P, BODY); if (P.tap) R.footFup = 1;
+    const hand = P.hatL === 2 && P.st === CHARGE;
+    if (P.hatL === 3) feltHat(hatFrame(P.hatX, P.hatY, P.hr), P.ht);
+    coatTails(R);
+    if (!P.noHands) parts.arm(E, R, P, { side: 'B', sleeve: 'loose', mat: M.sleeveD, grip: 'none', at: [P.bhx, P.bhy] });
+    parts.legs(E, R, P, { style: 'shoe', mat: M.pants, matD: M.pantsD, boot: M.shoe, bootD: M.shoeD, w: 2 });
+    parts.torso(E, R, P, { style: 'coat', mat: M.coat, hem: -5, flare: 3, flareF: 2, collar: M.cravat, buttons: M.brass, strap: M.strap });
+    blankHead(R);
+    if (P.hatL === 1) feltHat(hatFrame(R.hx + P.hatX, R.htop + 1 + P.hatY, P.hr), P.ht);
+    if (!P.noHands) parts.arm(E, R, P, { sleeve: 'loose', mat: M.sleeve, cuff: M.lace, cuffStyle: 'lace', grip: 'none', at: [P.hx, P.hy] });
+    mandolin(R, P.mcx, P.mcy, P.mdi);
+    if (!P.noHands) {
+      parts.hand(E, R, P, { side: 'B', at: [P.bhx, P.bhy], hand: M.face });
+      if (!hand) parts.hand(E, R, P, { at: [P.hx, P.hy], hand: M.face });
+    }
+    if (P.hatL === 2) feltHat(hatFrame(P.hatX, P.hatY, P.hr), P.ht);
+    if (hand && !P.noHands) parts.hand(E, R, P, { at: [P.hx, P.hy], hand: M.face });   
+  }
+  function lampRim(s) {
+    const w = s.w, h = s.h, mat = s.mat, o = s.out, yMax = -20 + P.bob + Math.min(3, P.crouch);
+    for (let y = 0; y < h; y++) {
+      const ly = y - s.oy + P.lift; if (ly > yMax) continue;
+      for (let x = 1; x < w; x++) { const i = y * w + x, m = mat[i]; if (!m || mat[i - 1] || o[i] === 255 || !LAMP[m]) continue; o[i] = LAMP[m]; }
+    }
+  }
+  const clsAt = (s, i) => { const m = s.mat[i] || s.mat[i + s.w] || s.mat[i + 1] || s.mat[i - 1] || s.mat[i - s.w] || 0; return MAND[m] ? 1 : HATM[m] && P.hatL === 3 ? 2 : 0; };
+  function dissolve(s) {
+    const w = s.w, h = s.h, o = s.out; let top = h, bot = -1;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = y * w + x; if (o[i] !== 255 && clsAt(s, i) === 0) { if (y < top) top = y; if (y > bot) bot = y; } }
+    const span = Math.max(1, bot - top);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = y * w + x; if (o[i] === 255) continue; const c = clsAt(s, i), b = B8[(y & 7) * 8 + (x & 7)];
+      if (c === 1) { if (P.dqm > 0 && b < P.dqm) o[i] = 255; }
+      else if (c === 2) { if (P.dqh > 0 && b < P.dqh) o[i] = 255; }
+      else if (P.dqb > 0 && b * 0.55 + CL((y - top) / span, 0, 1) * 0.45 < P.dqb) o[i] = 255;
+    }
+  }
+  function bakeHero() {
+    RIM.rim = P.rim; RIM.rx = P.gx + hero.ox; RIM.ry = P.gy + hero.oy; RIM.flash = P.flash; RIM.dq = P.dq; bake(hero, RIM);
+    if (!P.flash) lampRim(hero);
+    if (P.dqb > 0 || P.dqm > 0 || P.dqh > 0) dissolve(hero);
+  }
+  const GLYPH = [
+    [2, -4, 3, -3, 2, -3, 2, -2, 2, -1, 0, -1, 1, -1, 0, 0, 1, 0],                                            
+    [1, -4, 2, -4, 3, -4, 4, -4, 1, -3, 4, -3, 1, -2, 4, -2, 1, -1, 4, -1, 0, -1, 3, -1, 0, 0, 1, 0, 3, 0, 4, 0],   
+    [1, -3, 2, -2, 1, -2, 1, -1, 0, -1, 0, 0, 1, 0],                                                           
+    [0, 0, 1, 0], [0, 0, 0, 1], [0, 0],                                                                        
+  ];
+  const NN = 56, nOn = new Uint8Array(NN), nK = new Uint8Array(NN), nG = new Uint8Array(NN), nR = new Uint8Array(NN);
+  const nX = new Float32Array(NN), nY = new Float32Array(NN), nVX = new Float32Array(NN), nVY = new Float32Array(NN), nAge = new Float32Array(NN), nLife = new Float32Array(NN), nPh = new Float32Array(NN), nTX = new Float32Array(NN), nTY = new Float32Array(NN);
+  let nHead = 0;
+  function note(k, x, y, vx, vy, life, g, ramp, age0) {
+    let i = nHead; for (let n = 0; n < NN; n++) { const j = (nHead + n) % NN; if (!nOn[j]) { i = j; break; } }
+    nHead = (i + 1) % NN; nOn[i] = 1; nK[i] = k; nG[i] = g; nR[i] = ramp == null ? R_EL : ramp; nX[i] = x; nY[i] = y; nVX[i] = vx; nVY[i] = vy; nLife[i] = life; nAge[i] = (age0 || 0) * life; nPh[i] = Math.random() * 6.28; nTX[i] = x; nTY[i] = y; return i;
+  }
+  const DRAG_F = Math.exp(-2.2 * DT), DRAG_C = Math.exp(-3.5 * DT);
+  function stepNotes(dt) {
+    for (let i = 0; i < NN; i++) {
+      if (!nOn[i]) continue; nAge[i] += dt; if (nAge[i] >= nLife[i]) { nOn[i] = 0; continue; }
+      const k = nK[i];
+      if (k === 0) { nVX[i] *= DRAG_F; nVY[i] = nVY[i] * DRAG_F - 9 * dt; nX[i] += (nVX[i] + Math.sin(nAge[i] * 5 + nPh[i]) * 5) * dt; nY[i] += nVY[i] * dt; }
+      else if (k === 1) { nVX[i] *= DRAG_C; nVY[i] = nVY[i] * DRAG_C + 70 * dt; nX[i] += (nVX[i] + Math.sin(nAge[i] * 9 + nPh[i]) * 9) * dt; nY[i] += nVY[i] * dt; if (nY[i] > FLOOR - 1) { nY[i] = FLOOR - 1; nVX[i] = 0; nVY[i] = 0; } }
+      else if (k === 2) { const dx = nTX[i] - nX[i], dy = nTY[i] - nY[i], d = Math.hypot(dx, dy); if (d < 2) { nOn[i] = 0; continue; } const v = 16 + 70 * nAge[i]; nX[i] += (dx / d * v - dy / d * 12) * dt; nY[i] += (dy / d * v + dx / d * 12) * dt; }
+      else { nVY[i] += 80 * dt; nX[i] += nVX[i] * dt; nY[i] += nVY[i] * dt; if (nY[i] > FLOOR - 1) { nY[i] = FLOOR - 1; nVX[i] = 0; nVY[i] = 0; } }
+    }
+  }
+  function drawNotes(f12) {
+    for (let i = 0; i < NN; i++) {
+      if (!nOn[i]) continue; const R = FXR[nR[i]], k = nK[i];
+      let ci;
+      if (k === 2) { const d = Math.hypot(nTX[i] - nX[i], nTY[i] - nY[i]); ci = d < 5 ? 0 : d < 10 ? 1 : 2; }
+      else { const q = nAge[i] / nLife[i]; ci = q < 0.15 ? 0 : q < 0.35 ? 1 : q < 0.6 ? 2 : q < 0.82 ? 3 : 4; }
+      const g = k === 1 ? (nG[i] === 5 ? 5 : ((f12 + RD(nPh[i] * 2)) & 2) ? 3 : 4) : nG[i], G = GLYPH[g], x0 = RD(nX[i]), y0 = RD(nY[i]), c = R[ci];
+      for (let p = 0; p < G.length; p += 2) put(x0 + G[p], y0 + G[p + 1], c);
+      if (k !== 1 && ci <= 1 && g !== 5) put(x0, y0 - 1, R[0]);          
+    }
+  }
+  const AN = 6, aT = new Float32Array(AN).fill(9), aX = new Float32Array(AN), aY = new Float32Array(AN), aSp = new Float32Array(AN), aLife = new Float32Array(AN), aSpan = new Float32Array(AN);
+  function arc(x, y, sp, life, span, delay) { let o = 0; for (let k = 0; k < AN; k++) if (aT[k] - aLife[k] > aT[o] - aLife[o]) o = k; aT[o] = -(delay || 0); aX[o] = x; aY[o] = y; aSp[o] = sp; aLife[o] = life; aSpan[o] = span; }
+  function drawArcs(f12) {
+    for (let k = 0; k < AN; k++) {
+      const t = aT[k]; if (t < 0 || t >= aLife[k]) continue; const q = t / aLife[k], r = 3 + t * aSp[k], sp = aSpan[k], n = Math.max(3, Math.ceil(r * sp * 2));
+      const c = q < 0.2 ? EL[0] : q < 0.45 ? EL[1] : q < 0.7 ? EL[2] : EL[3];
+      for (let i = 0; i <= n; i++) { if (q > 0.5 && ((i + f12) & 1)) continue; const a = -sp + 2 * sp * i / n; put(RD(aX[k] + Math.cos(a) * r), RD(aY[k] + Math.sin(a) * r * 0.9), i === 0 || i === n ? EL[Math.min(4, 2 + (q > 0.5 ? 1 : 0))] : c); }
+    }
+  }
+  let smT = 9, smX = 0, smY0 = 0, smY1 = 0, shotX0 = 0, shotTX = 0, chargeAcc = 0, homeAcc = 0, emberAcc = 0, mistAcc = 0, noteAcc = 0, lastStep = 0, lastPers = -1;
+  const wx = (x) => scrX(x + P.bx), wy = (y) => HY + y - P.lift;
+  const hole = () => [scrX(P.gx), HY + P.gy];
+  function flingNotes(x, y, n, vmin, vmax, a0, a1, life) {
+    for (let i = 0; i < n; i++) { const a = a0 + (a1 - a0) * (n > 1 ? i / (n - 1) : Math.random()) + (Math.random() - 0.5) * 0.2, v = vmin + Math.random() * (vmax - vmin); note(0, x + Math.sin(a) * 3, y - Math.cos(a) * 3, Math.sin(a) * v, -Math.cos(a) * v, life + Math.random() * 0.4, (i % 3) === 1 ? 1 : (i & 1) ? 2 : 0); }
+  }
+  function confetti(x, y, n, vy0, vy1, vx) {
+    for (let i = 0; i < n; i++) note(1, x + (Math.random() - 0.5) * 6, y + (Math.random() - 0.5) * 3, (Math.random() - 0.5) * vx, vy0 + Math.random() * (vy1 - vy0), 1.4 + Math.random() * 0.8, (i % 4) === 3 ? 5 : 3, (i % 3) === 2 ? R_EL : R_PAPER);
+  }
+  function onEnter(s) {
+    if (s !== CAST) return;                                              
+    const h = hole();
+    releaseOrbit(40, 90, 0.3, 0.6);
+    burst(h[0], h[1], 24, 50, 120, 0.25, 0.6, R_EL, 14); ring(h[0], h[1], 1, R_EL);
+    for (let k = 0; k < 3; k++) arc(h[0] + 3, h[1], 95, 0.42, 0.95, k * 0.09);
+    flingNotes(h[0] + 1, h[1] - 2, 6, 55, 85, -0.5, 1.3, 1.5);
+    confetti(wx(P.hatX), wy(P.hatY + 1), 12, -55, -25, 60);
+    shake(0.28, 2); flash(0.05);
+  }
+  function onTime(s, t) {
+    if (s === ATTACK && t === T_STRIKE) {                                
+      const h = hole();
+      smT = 0; smX = wx(K_SDN.hx + 1); smY0 = wy(K_SUP.hy - 1); smY1 = wy(P.hy);
+      arc(h[0] + 3, h[1], 70, 0.25, 0.8, 0);
+      shotX0 = h[0] + 2; shotTX = shotX0 + 30; shoot(1, shotX0, h[1] - 3, 95, shotTX, R_EL, 0, { trail: false, glow: -1 });
+      note(0, h[0] - 1, h[1] - 3, -6, -30, 1.1, 0); note(0, h[0] + 2, h[1] - 4, 8, -24, 1.3, 2);
+      burst(h[0], h[1], 6, 25, 55, 0.12, 0.3, R_EL, 6);
+      sfx('swing', { kind: 'bow', w: 0.3 }); sfx('shoot', { proj: 'note' });
+    }
+    if (s === CHARGE && t === T_TIP) {                                   
+      const x = wx(P.hatX + 7), y = wy(P.hatY + 1); fx.cross(x, y, 3, R_EL, 0.25); burst(x, y, 4, 15, 35, 0.15, 0.3, R_EL, 4);
+    }
+    if (s === CAST) {
+      const i = CAST_T.indexOf(t), h = hole();
+      if (i >= 0 && i < 4) {                                             
+        flingNotes(h[0] + 1, h[1] - 2, 1, 45, 75, 0.1, 1.1, 1.3);
+        if (i & 1) arc(h[0] + 3, h[1], 80, 0.3, 0.85, 0);
+        burst(h[0], h[1], 3, 20, 50, 0.1, 0.25, R_EL, 4);
+        if (i === 3) confetti(wx(P.hatX), wy(P.hatY + 2), 10, -15, 5, 45);   
+      }
+      if (t === T_CATCH) {                                               
+        const R = parts.rig(P, BODY), x = wx(R.hx), y = wy(R.htop - 3);
+        ring(x, y, 0, R_EL); fx.cross(x, y - 2, 5, R_EL, 0.3); burst(x, y, 12, 30, 80, 0.2, 0.45, R_EL, 10);
+        flingNotes(x, y - 2, 3, 35, 55, -0.9, 0.9, 1.2);
+        shake(0.12, 1); sfx('impact', { pal: 'holy', w: 0.5 });
+      }
+    }
+    if (s === HURT && t === INCOMING) {                                  
+      const h = hole(); note(3, h[0], h[1] - 2, 10, -25, 0.9, 0, R_MIST, 0.3);
+    }
+    if (s === DEATH && t === T_HATLAND) {                                
+      const x = wx(P.hatX); for (let i = 0; i < 5; i++) spawn(K_DUST, x + (Math.random() - 0.5) * 12, HY - 1, (Math.random() - 0.5) * 22, -3 - Math.random() * 5, 0.35, FXI.dust);
+      sfx('fall', { w: 0.15 });
+    }
+    if (s === DEATH && t === T_LAST) { const h = hole(); note(0, h[0], h[1] - 2, 3, -14, 1.6, 0, R_EL, 0.1); burst(h[0], h[1], 4, 10, 25, 0.2, 0.4, R_EL, 4); }   
+    if (s === DEATH && t === T_OUT) { const h = hole(); burst(h[0], h[1], 6, 15, 35, 0.2, 0.5, R_EL, 6); }
+  }
+  const EVENTS = [[], [], [T_STRIKE], [T_TIP], CAST_T, [], [INCOMING], [T_HATLAND, T_LAST, T_OUT], []];
+  function impactOn(k, x, y) {
+    if (k !== 1) return;                                                 
+    const yy = y + arcY(x); burst(x, yy, 8, 20, 60, 0.15, 0.35, R_EL, 8); fx.cross(x, yy, 3, R_EL, 0.2);
+    note(0, x - 1, yy - 1, -10, -26, 0.9, 2); note(0, x + 1, yy - 1, 12, -20, 1.0, 2);
+  }
+  const arcY = (x) => { const p = clamp01((x - shotX0) / Math.max(1, shotTX - shotX0)); return -RD(9 * 4 * p * (1 - p)); };
+  function drawShot(k, x, y, d, f12) {
+    if (k !== 1) return false;                                           
+    for (let j = 2; j >= 1; j--) { const xx = x - d * j * 3; if ((xx - shotX0) * d < 0) continue; put(xx, y + arcY(xx), EL[j + 1]); }
+    const yy = y + arcY(x), G = GLYPH[0]; for (let p = 0; p < G.length; p += 2) put(x - 1 + G[p], yy + 1 + G[p + 1], EL[1]);
+    put(x - 1, yy, (f12 & 1) ? EL[0] : EL[1]);
+    return true;
+  }
+  function stepFX(dt, state, stT) {
+    const h = hole();
+    if (state === IDLE) {
+      emberAcc += dt * 0.8; while (emberAcc >= 1) { emberAcc -= 1; spawn(K_EMBER, h[0] + RD(Math.random() * 2 - 1), h[1] - 1, Math.random() * 6 - 3, -6 - Math.random() * 6, 0.6 + Math.random() * 0.5, R_EL); }
+      const f = f12of(q12(stT) % DUR[IDLE]);
+      if (f !== lastPers) { if (f === 21) note(0, h[0] + 3, h[1] - 7, 3, -12, 1.4, 2, R_EL, 0.4); lastPers = f; }   
+    } else lastPers = -1;
+    if (state === MOVE) {
+      if (P.step !== lastStep) { if (P.step !== 0) { sfx('step', { w: 0.1 }); for (let i = 0; i < 2; i++) spawn(K_RISE, scrX(-3 + Math.random() * 4), HY - 1, (Math.random() - 0.5) * 6, -4 - Math.random() * 4, 0.5 + Math.random() * 0.3, R_MIST); } lastStep = P.step; }
+      mistAcc += dt * 4; while (mistAcc >= 1) { mistAcc -= 1; spawn(K_RISE, scrX(-6 + Math.random() * 8), HY - 3, (Math.random() - 0.5) * 4 - 6, -3 - Math.random() * 3, 0.5 + Math.random() * 0.3, R_MIST); }
+    }
+    if (state === CHARGE) {                                              
+      chargeAcc += dt * (14 + 26 * clamp01(stT / DUR[CHARGE])); while (chargeAcc >= 1) { chargeAcc -= 1; const r = 11 + Math.random() * 8, a = Math.random() * 6.2832; spawn(K_SPIRAL, h[0], h[1], (r - 3.5) / (0.35 + Math.random() * 0.3), 0, 9, R_EL, a, r, 4 + Math.random() * 3); }
+      if (stT > 0.9) { homeAcc += dt * 7; while (homeAcc >= 1) { homeAcc -= 1; const a = -Math.PI * (0.1 + Math.random() * 0.8), r = 14 + Math.random() * 5, i = note(2, h[0] + Math.cos(a) * r, h[1] + Math.sin(a) * r * 0.8, 0, 0, 1.2, 2); nTX[i] = h[0]; nTY[i] = h[1]; } }
+    }
+    if (state === RECOVER) { emberAcc += dt * 5; while (emberAcc >= 1) { emberAcc -= 1; spawn(K_EMBER, h[0], h[1] - 1, Math.random() * 6 - 3, -7 - Math.random() * 6, 0.6, R_EL); } }
+    if (state === DEATH) {
+      const d = stT - INCOMING;
+      if (d > 0.55 && d < 1.55) {                                        
+        const yf = -40 + 40 * clamp01((d - 0.55) / 0.95);
+        mistAcc += dt * 34; while (mistAcc >= 1) { mistAcc -= 1; spawn(K_RISE, wx(-6 + Math.random() * 13), wy(yf + Math.random() * 4), (Math.random() - 0.5) * 8, -10 - Math.random() * 12, 0.7 + Math.random() * 0.6, R_MIST); }
+        noteAcc += dt * 4; while (noteAcc >= 1) { noteAcc -= 1; note(0, wx(-4 + Math.random() * 9), wy(yf + 2), (Math.random() - 0.5) * 12, -14 - Math.random() * 10, 1.3 + Math.random() * 0.5, (Math.random() * 3) | 0); }
+      }
+      if (d > 2.1 && d < 2.5) { mistAcc += dt * 14; while (mistAcc >= 1) { mistAcc -= 1; spawn(K_RISE, h[0] - 3 + Math.random() * 12, h[1] - 6 + Math.random() * 8, (Math.random() - 0.5) * 6, -8 - Math.random() * 8, 0.6 + Math.random() * 0.4, R_EL); } }
+    }
+    stepNotes(dt);
+    smT += dt; for (let k = 0; k < AN; k++) aT[k] += dt;
+  }
+  function fxReset() { smT = 9; chargeAcc = 0; homeAcc = 0; emberAcc = 0; mistAcc = 0; noteAcc = 0; lastStep = 0; lastPers = -1; nOn.fill(0); aT.fill(9); }
+  function fxBack(f12) { if (P.dqm < 1 && P.gem !== 4) floorGlow(scrX(P.gx), P.rim, EL, f12); shotFloorGlow(f12); }
+  function fxFront(f12) {
+    const h = hole();
+    if (P.gem >= 2 && P.gem <= 3 && P.dqm < 1) { const L = P.gem === 3 ? 5 : 2 + (f12 & 1); for (let r = 2; r <= L; r++) { const c = r <= 2 ? EL[0] : r <= 3 ? EL[1] : EL[2]; put(h[0] + r, h[1], c); put(h[0] - r, h[1], c); put(h[0], h[1] - r, c); put(h[0], h[1] + r, c); } }
+    if (smT < 2 / 12) {                                                  
+      const first = smT < 1 / 12;
+      for (let y = smY0; y <= smY1; y++) { if (!first && (y & 1)) continue; put(smX, y, first ? (y === smY1 ? EL[0] : EL[1]) : EL[3]); if (first) put(smX + 1, y, EL[2]); }
+    }
+    drawArcs(f12); drawNotes(f12);
+  }
+  return {
+    name: '流浪乐师', HX, R_EL, DUR, hero, P, GLOW_MATS: [M.hole, M.shine, M.hot], HIT_POINT: [1, -22], EVENTS,
+    REVIVE: { ramp: 'holy', dy: -18 },
+    SFX: { body: 'ghost', how: 'dissolve', pal: 'holy', style: 'buff', w: 0.3 },
+    poseAt, drawHero, bakeHero, onEnter, onTime, impactOn, stepFX, fxReset, fxBack, fxFront, drawShot,
   };
 });
 ;
@@ -43201,6 +44804,458 @@ PCD.define('Pincer', (E) => {
     REVIVE: { dy: -8, ramp: 'water' },
     SFX: { body: 'armor', how: 'topple', pal: 'water', style: 'shield', w: 0.5 },
     poseAt, drawHero, bakeHero, onEnter, onTime, stepFX, fxReset, fxBack, fxFront,
+  };
+});
+;
+
+PCD.define('PitCoach', (E) => {
+  const { parts, Sprite, bake, ease, clamp01, q12, f12of, walkDemo, FXI, FXR, HY, DUMMY_X, INCOMING,
+    IDLE, MOVE, ATTACK, CHARGE, CAST, RECOVER, HURT, DEATH, REVIVE, DEFAULT_DUR, K_RISE, K_DUST, K_SPIRAL_PT, K_EMBER, K_PHYS,
+    spawn, spawnX, burst, shake, flash, fx, ring, shoot, hitDummy, dummyFx, put, scrX, sfx } = E;
+  const RD = Math.round, PX = parts.px, FREE = parts.FREE;
+  const R_EL = FXI.steel, EL = FXR[R_EL], SMOKE = FXI.dust, SWEAT = FXI.water, FIRE = FXI.fire, SM = FXR[SMOKE];
+  const M = parts.mats(E, {
+    skin: [20, '#7c3f22', '#b0643a', '#dc9562'],       
+    vest: 'bone',                                     
+    pants: [0, '#241b17', '#3a2b23', '#57412f'],       
+    stripe: 'leather',                                
+    boot: 'wood',                                     
+    wrap: 'white',                                    
+    hair: [0, '#1e1719', '#352b2e', '#4e4245'],        
+    grey: 'bone',                                     
+    towel: 'crimson',                                 
+    tstripe: 'white',                                 
+    tattoo: 'pale',                                   
+    metal: 'steel',                                   
+    cigar: 'wood',                                    
+    band: 'gold',                                     
+    ash: { r: 'white', flat: 1 },                     
+    ember: { r: [44, 46, 47, 51], flat: 1 },          
+    ink: { r: 'ink', flat: 1 },
+  });
+  const BODY = { body: 'heroic', leg: 12, torso: 12, head: 8, headW: 7, neck: 1, sw: 7, arm: 11, lw: 4, limb: 1.5, belly: 1, stride: 3, lift: 2, fall: 'back' };
+  const HX = 40, DUR = DEFAULT_DUR.slice(); DUR[IDLE] = 3.0;
+  const hero = new Sprite(96, 64, 48, 60);
+  const RIM = { rim: 0, rx: 0, ry: 0, rimR: [0, 5, 8, 11], rimRamp: FXR[FIRE], flash: 0, dq: 0, skip: new Uint8Array(256) };
+  for (const k of ['skin', 'wrap', 'metal', 'cigar', 'band', 'ash', 'ember', 'ink', 'tattoo', 'stripe', 'towel', 'tstripe', 'grey']) { RIM.skip[M[k]] = 1; RIM.skip[M[k + 'D']] = 1; }
+  const P = { hx: 0, hy: 0, bhx: 0, bhy: 0, lean: 0, head: 0, hdy: 0, crouch: 0, bob: 0, bx: 0, step: 0, wup: 0, walk: 0, beard: 0, sway: 0,
+    gem: 0, rim: 0, eyes: 0, flash: 0, lying: 0, lift: 0, mouth: 0, fg: 0, bg: 0, bm: 1, cg: 0, cgX: 0, cgY: 0, cgD: 3, tw: 0, twX: 0, twY: 0, twF: 0, wh: 0,
+    dq: 0, dq48: 0, st: 0, gx: 0, gy: 0, flip: 0, mx: 0, k1: 0, k2: 0,
+    mX: 0, mY: 0, wX: 0, wY: 0, fX: 0, fY: 0, tX: 0, tY: 0 };                  
+  const K = (hx, hy, bhx, bhy, lean, head, crouch) => ({ hx, hy, bhx, bhy, lean, head, crouch });
+  const K_IDLE = K(9, -19, 8, -16, 0, 0, 0);       
+  const K_WIND = K(3, -14, 8, -16, -1, 0, 1);       
+  const K_PUMP = K(14, -31, 8, -16, 1, 1, 0);       
+  const K_PUMP2 = K(13, -30, 8, -16, 1, 1, 0);
+  const K_CHG = K(8, -27, -9, -31, -1, -1, 0);      
+  const K_BLAST = K(8, -27, -8, -32, -1, -1, 0);    
+  const K_CLAPA = K(12, -20, 8, -20, 0, 0, 0);      
+  const K_CLAP = K(11, -20, 10, -20, 0, 0, 0);       
+  const K_THUMB = K(12, -20, 8, -16, 0, 1, 0);      
+  const K_PALM = K(5, -30, 8, -17, -1, 1, 1);       
+  const K_WALK = K(6, -13, -7, -13, 0, 0, 0);
+  const K_FLAIL1 = K(9, -30, -7, -31, -1, -1, 0);   
+  const K_FLAIL2 = K(12, -26, -8, -27, -1, -1, 1);
+  const K_LIE = K(10, -24, -6, -16, 0, 0, 0);       
+  const K_LIE2 = K(6, -15, -6, -16, 0, 0, 0);       
+  const FIELDS = ['hx', 'hy', 'bhx', 'bhy', 'lean', 'head', 'crouch'];
+  const setK = (A, B, q) => E.mix(P, A, B || A, q || 0, FIELDS);
+  const KEY = E.keyer([['hx', -8, 16], ['hy', -40, 0], ['bhx', -12, 12], ['bhy', -40, 0], ['lean', -1, 2], ['head', -1, 1], ['hdy', 0, 1], ['crouch', 0, 3], ['bob', -1, 1],
+    ['step', -1, 1], ['wup', 0, 2], ['walk', 0, 1], ['beard', -3, 3], ['sway', -2, 2], ['gem', 0, 4], ['rim', 0, 3], ['eyes', 0, 1], ['flash', 0, 1], ['lying', 0, 1], ['lift', 0, 3],
+    ['mouth', 0, 4], ['fg', 0, 6], ['bg', 0, 6], ['bm', 0, 1], ['cg', 0, 3], ['cgD', 0, 15], ['tw', 0, 2], ['twF', 0, 3], ['wh', 0, 1], ['st', 0, 8],
+    ['cgX', -24, 32], ['cgY', -56, 1], ['twX', -32, 16], ['twY', -60, 0], ['dq48', 0, 48], ['bx', -6, 4]]);
+  const BEARD_IDLE = [0, 1, 0, -1], SWAY_IDLE = [0, 1, 0, -1];
+  const WALK_LEAN = [1, 0, 1, 0];
+  const T_PUFF = 0.75, T_RING1 = 1.0, T_RING2 = 1.0 + 2 / 12, T_NECK = 2.0, T_CRACK = 2.0 + 4 / 12;
+  const NECK = [[1, 1], [0, 1], [-1, 1], [-1, 0], [0, 0], [1, 0]];            
+  const T_STRIKE = 2 / 12;
+  const T_TICK = [0.3333, 0.75, 1.0833];                                        
+  const T_ARC2 = 1 / 12, T_ARC3 = 2 / 12, T_HIT = 0.3;                           
+  const T_CATCH = 1 / 12, T_CLAP1 = 2 / 12, T_CLAP2 = 4 / 12, T_THUMB = 5 / 12;  
+  const D_CIG = 0.47, D_LAND = 0.66, D_TOWEL = 0.9;                              
+  function rigOf() {
+    const R = parts.rig(P, BODY);
+    if (P.hdy && !R.lie) { R.hy += P.hdy; R.htop += P.hdy; R.ey += P.hdy; }
+    R.my = Math.min(R.hy, R.ey + 3);                                             
+    return R;
+  }
+  function cigarRoot(R) {
+    const x = R.hx1 + 1, y = R.my;
+    if (P.cg === 1) return [x, y - 1, 2];
+    if (P.mouth === 1) return [x, y + 1, 4];
+    if (P.mouth === 2) return [x, y + 2, 5];
+    return [x, y, P.cgD];
+  }
+  const cellOf = (di, x, y, k) => parts.cell(di, x, y, k);
+  function freeRoot() { const c = cellOf(P.cgD, 0, 0, 2); return [P.cgX - c[0], P.cgY - c[1]]; }
+  function hand(T, a, g, far, fingers) {
+    const w = far ? M.wrapD : M.wrap, sk = M.skin, hx = a.hx, hy = a.hy;
+    const dx = a.hx - a.ex, dy = a.hy - a.ey, l = Math.hypot(dx, dy) || 1, ux = dx / l, uy = dy / l;
+    E.part();
+    parts.sweep(E, T, a.wx - ux * 0.8, a.wy - uy * 0.8, a.wx, a.wy, 1.1, 1.1, w, 0);             
+    if (g === 1) {                                                                                 
+      parts.rect(E, T, hx - 1, hy, 2, 2, w, 0); parts.rect(E, T, hx - 1, hy - 2, 2, 2, sk, 0); PX(E, T, hx - 1, hy - 2, sk, 4); PX(E, T, hx + 1, hy, sk, 3);
+    } else if (g === 2) {                                                                          
+      parts.rect(E, T, hx - 1, hy - 1, 3, 3, w, 0); PX(E, T, hx - 1, hy - 1, w, 4);
+      PX(E, T, hx, hy - 2, sk, 3); PX(E, T, hx, hy - 3, sk, 3); PX(E, T, hx, hy - 4, sk, 4); PX(E, T, hx + 1, hy + 1, sk, 2); PX(E, T, hx + 1, hy, sk, 2);
+    } else if (g === 3) {                                                                          
+      parts.rect(E, T, hx - 1, hy - 1, 3, 2, w, 0); PX(E, T, hx - 1, hy - 1, w, 4); PX(E, T, hx - 2, hy - 1, sk, 3);
+    } else if (g === 4) {                                                                          
+      parts.rect(E, T, hx - 1, hy - 1, 2, 2, w, 0);
+      PX(E, T, hx - 2, hy - 2, sk, 3); PX(E, T, hx - 1, hy - 3, sk, 4); PX(E, T, hx + 1, hy - 3, sk, 4); PX(E, T, hx + 2, hy - 2, sk, 3); PX(E, T, hx + 1, hy - 2, sk, 3); PX(E, T, hx - 1, hy - 2, sk, 3);
+    } else if (g === 5) {                                                                          
+      parts.rect(E, T, hx - 1, hy, 3, 2, w, 0); PX(E, T, hx - 1, hy, w, 4);
+      parts.run(E, T, hy - 1, hx - 2, hx, sk, 0); parts.run(E, T, hy - 2, hx - 3, hx - 1, sk, 0); PX(E, T, hx - 3, hy - 2, sk, 4);
+    } else if (g === 6) {                                                                          
+      parts.rect(E, T, hx - 1, hy, 3, 2, w, 0); PX(E, T, hx - 1, hy, w, 4);
+      const n = fingers || 1, F = (pts) => { for (const q of pts) PX(E, T, hx + q[0], hy + q[1], sk, q[2]); };
+      if (n >= 2) { F([[-1, -1, 3], [-2, -2, 4], [-2, -3, 4]]); F([[1, -1, 3], [2, -2, 3], [2, -3, 4]]); }
+      if (n !== 2) F([[0, -1, 3], [0, -2, 3], [0, -3, 4], [0, -4, 4]]);
+      if (n === 2) PX(E, T, hx, hy - 1, w, 3);
+      if (n === 1) { PX(E, T, hx - 1, hy - 1, w, 3); PX(E, T, hx + 1, hy - 1, w, 2); }
+    } else {                                                                                       
+      parts.rect(E, T, hx - 1, hy - 1, 3, 3, w, 0); PX(E, T, hx - 1, hy - 1, w, 4); PX(E, T, hx + 1, hy + 1, sk, 2);
+    }
+  }
+  const BOOT_H = 4;
+  function pantLeg(R, hipX, footX, up, kn, far) {
+    const pm = far ? M.pantsD : M.pants, bm = far ? M.bootD : M.boot, yb = -up, h0 = R.yHip + 1, n = Math.max(1, yb - h0);
+    let c = footX;
+    for (let y = h0; y <= yb; y++) {
+      const t = (y - h0) / n; c = RD(hipX + (footX - hipX) * t + kn * Math.sin(t * Math.PI));
+      const boot = y > yb - BOOT_H, cuff = y === yb - BOOT_H;
+      let a = c - 2, z = c + 1;
+      if (!boot) { if (t > 0.12 && t < 0.55) a -= 1; if (t > 0.3 && t < 0.72) z += 1; if (cuff) { a -= 1; z += 1; } }
+      parts.run(E, R, y, a, z, boot ? bm : pm, 0);
+      if (!boot && !far && y > h0 && !cuff) PX(E, R, c, y, M.stripe, y === h0 + 1 ? 4 : 3);
+      if (!boot && !cuff && t > 0.3 && t < 0.72) PX(E, R, z - 1, y, pm, 2);                         
+      if (boot && y === yb - BOOT_H + 1) PX(E, R, z, y, bm, 4);                                   
+      if (boot && y === yb - 1) PX(E, R, z, y, bm, 4);                                            
+      if (y === yb) { const toe = far ? 1 : 2; for (let i = 1; i <= toe; i++) PX(E, R, z + i, y, bm, i === toe ? 3 : 0); PX(E, R, a, y, bm, 1); }
+    }
+    return c;
+  }
+  function legs(R) {
+    const kn = R.cr * 0.9;
+    E.part(); pantLeg(R, R.legBx, R.footBx, R.footBup, kn + (R.footBup ? 0.8 : 0), 1);
+    E.part(); pantLeg(R, R.legFx, R.footFx, R.footFup, kn + (R.footFup ? 0.8 : 0), 0);
+  }
+  function singlet(R) {
+    const yS = R.yS, yH = R.yHip, m = M.vest;
+    E.part();
+    let fr = 0;
+    for (let y = yS + 1; y <= yH; y++) {
+      const e = parts.edges(R, Math.min(y, yH - 1)); let L = e[0], Rr = e[1]; const k = y - yS;
+      if (k === 1) Rr = L + 3; else if (k === 2) Rr -= 4; else if (k === 3) Rr -= 2;
+      if (y >= yH - 1) Rr += 1;
+      parts.run(E, R, y, L, Rr, m, 0); if (y === yH) fr = Rr;
+    }
+    const e5 = parts.edges(R, yS + 6), e7 = parts.edges(R, yS + 8);
+    PX(E, R, e5[1] - 2, yS + 6, m, 2); PX(E, R, e5[1] - 3, yS + 7, m, 2); PX(E, R, e5[1] - 2, yS + 7, m, 2);   
+    PX(E, R, e7[0] + 2, yS + 4, m, 2); PX(E, R, e7[0] + 3, yS + 5, m, 2);                                          
+    for (let x = parts.edges(R, yH - 1)[0] + 1; x < fr - 1; x += 3) PX(E, R, x, yH, m, 2);                        
+    const sw = RD((P.beard || 0) * 0.5);
+    PX(E, R, fr - 2, yH + 1, m, 3); PX(E, R, fr - 2 + sw, yH + 2, m, 4);                                          
+  }
+  function towelBack(R) {
+    const yS = R.yS, bk = parts.edges(R, yS + 1)[0], b = RD(P.beard || 0), sw = RD(P.sway || 0), m = M.towel;
+    E.part();
+    parts.run(E, R, yS - 1, bk + 1, R.hx + 1, m, 0);
+    parts.run(E, R, yS, bk - 1, R.hx + 2, m, 0);
+    const L = 9;
+    let xe = 0;
+    for (let k = 1; k <= L; k++) {
+      const q = k / L, x = bk - 2 + RD(-b * q * q * 0.9 + sw * q * 0.6) + (k === 1 ? 1 : 0), y = yS + k, str = k === L - 2 || k === L - 1;
+      parts.run(E, R, y, x, x + 2, str && k === L - 2 ? M.tstripe : m, str && k === L - 2 ? 3 : 0);
+      if (k > 1 && k < L - 2 && (k & 1)) PX(E, R, x + 1, y, m, 2);                                  
+      xe = x;
+    }
+    PX(E, R, xe, yS + L + 1, M.tstripe, 2); PX(E, R, xe + 2, yS + L + 1, M.tstripe, 2);             
+  }
+  function towelFront(R) {
+    const x = R.sFx, y = R.sFy, m = M.towel, sw = RD((P.beard || 0) * 0.4);
+    E.part();
+    parts.run(E, R, y - 3, x, x + 1, m, 0);
+    parts.run(E, R, y - 2, x - 1, x + 2, m, 0);
+    for (let k = -1; k <= 1; k++) parts.run(E, R, y + k, x + 1, x + 2, m, k === 1 ? 2 : 0);
+    parts.run(E, R, y + 2, x + 1 + sw, x + 2 + sw, M.tstripe, 3);
+    PX(E, R, x + 1 + sw, y + 3, M.tstripe, 2); PX(E, R, x + 2 + sw, y + 3, m, 2);
+  }
+  const TW = [
+    ['.LLLLLL.', 'RRRRRRRR', 'Rr....rR', 'W......W', 'R......R'],     
+    ['....LR', '..LRRr', '.RRrW.', 'RRr...', 'Wr....'],                
+    ['W......W', 'R......R', 'RL....Rr', 'RRRRRRRr', '.rrrrrr.'],     
+    ['.LR.', 'LRRr', 'RRWr', 'RRrr', '.Rr.'],                          
+    ['.LLLLLL.', 'RRRRRRRR', 'RRRWWRRR', 'RrrrrrrR', 'r.r..r.r'],     
+  ];
+  function towelStamp(cx, cy, f) {
+    const S = TW[f], h = S.length, w = S[0].length, x0 = RD(cx) - (w >> 1), y0 = RD(cy) - (h >> 1);
+    E.part();
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+      const ch = S[j][i]; if (ch === '.') continue;
+      PX(E, FREE, x0 + i, y0 + j, ch === 'W' ? M.tstripe : M.towel, ch === 'W' ? 3 : ch === 'r' ? 2 : ch === 'L' ? 4 : 0);
+    }
+  }
+  function cigar(T, x0, y0, di) {
+    E.part();
+    const g = P.gem;
+    parts.bar(di, x0, y0, 0, 4, 1, (k, j, X, Y) => {
+      if (k === 4) { if (g === 4) PX(E, T, X, Y, M.ash, 2); else PX(E, T, X, Y, M.ember, g === 0 ? 2 : g === 1 ? 3 : 4); }
+      else if (k === 3 && g >= 2 && g < 4) PX(E, T, X, Y, M.ember, g === 3 ? 3 : 2);
+      else PX(E, T, X, Y, k === 1 ? M.band : M.cigar, k === 1 ? 3 : k === 0 ? 2 : 0);
+    });
+    if (g === 3) { const c = cellOf(di, x0, y0, 5); PX(E, T, c[0], c[1] - 1, M.ember, 2); }
+  }
+  function whistle(R) {
+    E.part();
+    const n0x = R.hx - 2, n0y = R.hy + 1, sw = RD((P.beard || 0) * 0.4);
+    if (P.wh) {
+      const x = R.hx1 + 1, y = R.my;
+      parts.line(E, R, n0x, n0y + 1, x + 1, y + 2, M.stripe, 2);
+      PX(E, R, x, y, M.metal, 2); PX(E, R, x + 1, y, M.metal, 3); PX(E, R, x + 2, y, M.metal, 4); PX(E, R, x + 2, y - 1, M.metal, 3); PX(E, R, x + 3, y - 1, M.metal, 2);
+    } else {
+      const x = R.hx + 3 + sw, y = R.yS + 3;
+      parts.line(E, R, n0x, n0y, x - 1, y - 1, M.stripe, 2);
+      PX(E, R, x, y, M.metal, 4); PX(E, R, x + 1, y, M.metal, 3); PX(E, R, x, y + 1, M.metal, 3); PX(E, R, x + 1, y + 1, M.metal, 2); PX(E, R, x + 1, y + 2, M.metal, 2);
+    }
+  }
+  function headDraw(R) {
+    parts.head(E, R, P, { mat: M.skin, face: 'square', age: 'rugged', eye: M.ink, brow: M.hair, browStyle: 2, nose: 'big', mouth: 'none', ear: 'dot' });
+    parts.hair(E, R, P, { style: 'short', mat: M.hair });
+    PX(E, R, R.hx0, R.ey - 1, M.grey, 2); PX(E, R, R.hx0, R.ey, M.grey, 3);                                        
+    parts.beard(E, R, P, { style: 'full', mat: M.hair });
+    PX(E, R, R.hx1 - 1, R.ey + 2, M.grey, 3); PX(E, R, R.hx1, R.ey + 2, M.grey, 4);                               
+    if (P.mouth !== 3) { PX(E, R, R.hx1 + 1, R.ey + 1, M.skin, 3); PX(E, R, R.hx1 + 1, R.ey + 2, M.skin, 2); }        
+    const x1 = R.hx1, my = R.my, D = (x, y) => PX(E, R, x, y, M.ink, 1);
+    if (P.mouth === 1) { D(x1, my); D(x1 + 1, my); }                                                
+    else if (P.mouth === 2) {                                                                      
+      D(x1 - 1, my); D(x1, my + 1); D(x1 + 1, my + 1); D(x1 - 1, my + 1); PX(E, R, x1, my, M.wrap, 3); D(x1 + 1, my);
+      parts.run(E, R, R.hy + 3, R.hx0 + 3, x1, M.hair, 0);
+    } else if (P.mouth === 3) {                                                                    
+      PX(E, R, x1 + 2, my - 1, M.hair, 4); PX(E, R, x1 + 1, my + 1, M.hair, 0); PX(E, R, x1 + 2, my + 1, M.hair, 0); PX(E, R, x1 + 1, my + 2, M.hair, 0);
+    } else if (P.mouth === 4) { PX(E, R, x1 - 1, my, M.wrap, 3); PX(E, R, x1, my, M.wrap, 4); }     
+    else D(x1, my);
+  }
+  function foldForearm(R) {
+    const sx = R.lean + 1, sy = R.yS + 6, hx = P.bhx, hy = P.bhy, dx = hx - sx, dy = hy - sy, l = Math.hypot(dx, dy) || 1, wx = hx - dx / l * 1.2, wy = hy - dy / l * 1.2;
+    E.part(); parts.sweep(E, R, sx, sy, wx, wy, 1.6, 1.5, M.skinD, 0);
+    return { hx, hy, ex: sx, ey: sy, wx, wy };
+  }
+  function frontArm(R) {
+    const a = parts.arm(E, R, P, { side: 'F', sleeve: 'bare', mat: M.skin, grip: 'none', at: [P.hx, P.hy] });
+    const tx = RD((R.sFx + a.ex) / 2), ty = RD((R.sFy + a.ey) / 2);                               
+    PX(E, R, tx, ty, M.tattoo, 2); PX(E, R, tx - 1, ty + 1, M.tattoo, 3); PX(E, R, tx, ty + 1, M.tattoo, 2); PX(E, R, tx + 1, ty + 1, M.tattoo, 3);
+    return a;
+  }
+  function drawHero() {
+    E.begin(hero, P.bx, -P.lift);
+    const R = rigOf();
+    if (P.bm === 0) { const a = parts.arm(E, R, P, { side: 'B', sleeve: 'bare', mat: M.skinD, grip: 'none', at: [P.bhx, P.bhy] }); hand(R, a, bgOf(), 1, P.bg); }
+    legs(R);
+    parts.torso(E, R, P, { style: 'bare', mat: M.skin });
+    parts.run(E, R, R.yS - 1, R.hx - 3, R.hx + 1, M.skin, 0);                                        
+    singlet(R);
+    if (P.tw === 0 && !R.lie) towelBack(R);
+    if (P.bm === 1) { const a = foldForearm(R); hand(R, a, bgOf(), 1, P.bg); }
+    headDraw(R);
+    if (P.cg <= 1 && !R.lie) { const c = cigarRoot(R); cigar(R, c[0], c[1], c[2]); }
+    if (!R.lie) whistle(R);
+    const a = frontArm(R);
+    if (P.tw === 0 && !R.lie) towelFront(R);
+    hand(R, a, P.fg, 0, 0);
+    if (P.tw === 2) { const f = parts.toSprite(R, R.hx1, R.ey + 1); towelStamp(f[0], f[1] - 1, 4); }
+    if (P.cg === 2) { const r = freeRoot(); cigar(FREE, r[0] - P.bx, r[1] + P.lift, P.cgD); }
+    if (P.tw === 1) towelStamp(P.twX - P.bx, P.twY + P.lift, P.twF);
+  }
+  function bgOf() { const b = P.bg; return b >= 1 && b <= 3 ? 6 : b === 4 ? 1 : b === 6 ? 4 : 0; }
+  function bakeHero() { RIM.rim = P.rim; RIM.rx = P.gx + hero.ox; RIM.ry = P.gy + hero.oy; RIM.flash = P.flash; RIM.dq = P.dq; bake(hero, RIM); }
+  const arcY = (t, T, y0, y1, H) => { const q = clamp01(t / T); return y0 + (y1 - y0) * q - 4 * H * q * (1 - q); };
+  const TOWEL_HOME = [-3, -26], TOWEL_UP = [-9, -29], CIG_UP = [6, -30], CIG_HOME = [6, -28];
+  const FACE_LIE = (() => { const R = parts.rig({ lying: 1 }, BODY); return parts.toSprite(R, R.hx1, R.ey + 1); })();
+  function poseAt(st, t, T) {
+    const tq = q12(t), f12 = f12of(T), TT = f12 / 12, fr = f12of(t);
+    P.st = st; P.bx = 0; P.step = 0; P.wup = 0; P.walk = 0; P.beard = 0; P.sway = 0; P.gem = 0; P.rim = 1; P.eyes = 0; P.flash = 0; P.lying = 0; P.lift = 0;
+    P.mouth = 0; P.fg = 0; P.bg = 0; P.bm = 1; P.cg = 0; P.cgX = 0; P.cgY = 0; P.cgD = 3; P.tw = 0; P.twX = 0; P.twY = 0; P.twF = 0; P.wh = 0;
+    P.dq = 0; P.bob = 0; P.hdy = 0; P.flip = 0; P.mx = 0;
+    const idle = () => {
+      setK(K_IDLE); const b = Math.floor(TT * 2.5 + 1e-6); P.bob = b & 1; P.beard = BEARD_IDLE[(b + 1) & 3]; P.sway = SWAY_IDLE[Math.floor(TT * 1.25 + 1e-6) & 3];
+      const lp = tq % DUR[IDLE];
+      if (lp >= T_PUFF - 1e-6 && lp < T_RING1 - 1e-6) { P.gem = lp < T_PUFF + 1 / 12 - 1e-6 ? 1 : 2; P.rim = P.gem; P.bob = 0; P.head = -1; P.eyes = lp >= T_PUFF + 2 / 12 - 1e-6 ? 1 : 0; }   
+      else if (lp >= T_RING1 - 1e-6 && lp < T_RING1 + 4 / 12 - 1e-6) { P.mouth = 1; P.gem = lp < T_RING1 + 2 / 12 ? 1 : 0; }                                                  
+      else if (lp >= T_NECK - 1e-6 && lp < T_NECK + 6 / 12 - 1e-6) { const i = Math.min(5, f12of(lp - T_NECK)); P.head = NECK[i][0]; P.hdy = NECK[i][1]; P.eyes = i === 3 || i === 4 ? 1 : 0; }
+    };
+    if (st === IDLE) idle();
+    else if (st === MOVE) {                                               
+      setK(K_WALK); const f = E.gait(tq); parts.gait(P, f); P.bm = 0; P.lean = WALK_LEAN[f];
+      P.hx = K_WALK.hx + P.step * 3; P.hy = K_WALK.hy - (P.step > 0 ? 1 : 0); P.bhx = K_WALK.bhx - P.step * 3; P.bhy = K_WALK.bhy - (P.step < 0 ? 1 : 0);
+      const w = walkDemo(tq, 14, 1); P.mx = w.mx; P.flip = w.flip;
+    } else if (st === ATTACK) {                                           
+      if (fr === 0) { setK(K_IDLE, K_WIND, 0.5); P.mouth = 4; }
+      else if (fr === 1) { setK(K_WIND); P.mouth = 4; P.eyes = 1; P.beard = 1; }
+      else if (fr === 2) { setK(K_PUMP); P.bx = 1; P.mouth = 2; P.beard = -2; P.sway = -1; P.gem = 1; P.rim = 1; }
+      else if (fr < 5) { setK(K_PUMP2); P.bx = 1; P.mouth = 2; P.beard = -1; P.gem = 1; }
+      else { const q = clamp01((tq - 5 / 12) / 0.33); setK(K_PUMP2, K_IDLE, ease.inOut(q)); P.bx = q < 0.5 ? 1 : 0; P.mouth = q < 0.3 ? 2 : 0; P.beard = q < 0.5 ? -1 : 0; }
+    } else if (st === CHARGE) {                                           
+      const q = ease.inOut(clamp01(tq / 0.5)); setK(K_IDLE, K_CHG, q);
+      if (fr >= 2) P.bm = 0; else setK(K_IDLE, K_CHG, q * 0.6);
+      P.bg = tq < T_TICK[0] - 1e-6 ? 0 : tq < T_TICK[1] - 1e-6 ? 3 : tq < T_TICK[2] - 1e-6 ? 2 : 1;
+      if (tq >= 0.25 - 1e-6) { P.wh = 1; P.fg = 3; P.mouth = 3; P.cg = 1; }
+      if (tq >= 0.5 - 1e-6) P.bob = -1;
+      P.gem = tq < 0.45 ? 1 : ((f12 & 1) ? 2 : 1); P.rim = 2;
+      P.beard = q > 0.9 && (f12 & 1) ? -1 : 0; P.sway = q > 0.4 ? ((f12 & 1) ? -1 : 0) : 0;
+    } else if (st === CAST || st === RECOVER) {
+      const ft = (st === CAST ? 0 : DUR[CAST]) + tq;                        
+      const TT_TW = 0.66, TT_CG = 0.5833;
+      if (ft < TT_TW - 1e-6) { P.tw = 1; P.twX = RD(TOWEL_UP[0] + (TOWEL_HOME[0] - TOWEL_UP[0]) * ft / TT_TW - 3 * Math.sin(Math.PI * ft / TT_TW)); P.twY = RD(arcY(ft, TT_TW, TOWEL_UP[1], TOWEL_HOME[1], 20)); P.twF = [2, 1, 3, 0][f12of(ft) & 3]; }
+      if (ft < TT_CG - 1e-6) { P.cg = 2; P.cgX = RD(CIG_UP[0] + 5 * Math.sin(Math.PI * ft / TT_CG)); P.cgY = RD(arcY(ft, TT_CG, CIG_UP[1], CIG_HOME[1], 16)); P.cgD = (2 + 3 * f12of(ft)) & 15; }
+      if (st === CAST) {                                                  
+        setK(K_CHG, K_BLAST, fr ? 1 : 0.5); P.bm = 0; P.bg = 5; P.fg = 3; P.wh = 1; P.mouth = 3; P.eyes = 1; P.bob = -1; P.lift = fr < 3 ? 1 : 0;
+        P.gem = 3; P.rim = 0; P.beard = -2; P.sway = -1;
+      } else {                                                            
+        P.gem = fr < 2 ? 2 : fr < 5 ? 1 : 0; P.rim = fr < 1 ? 0 : 1;
+        if (fr === 0) { setK(K_BLAST, K_CLAPA, 0.5); P.bm = 0; P.bg = 4; P.fg = 1; P.mouth = 4; }
+        else if (fr === 1 || fr === 3) { setK(K_CLAPA); P.fg = 1; P.bg = 4; P.mouth = 4; }
+        else if (fr === 2 || fr === 4) { setK(K_CLAP); P.fg = 1; P.bg = 4; P.mouth = 4; P.eyes = 1; }
+        else { setK(K_THUMB); P.fg = 2; P.bg = 0; P.mouth = 4; P.eyes = 1; }
+        if (fr === 2) { P.beard = 2; P.sway = 1; } else if (fr === 3) { P.beard = -1; }
+      }
+    } else if (st === HURT) {                                             
+      const h = tq - INCOMING;
+      if (h < 0) idle();
+      else if (h < 0.2) { setK(K_PALM); P.bx = -2; P.eyes = 1; P.hdy = 1; P.fg = 5; P.mouth = 4; P.cgD = 5; P.beard = 2; P.sway = 1; P.flash = h < 1 / 12 ? 1 : 0; P.rim = 0; }
+      else if (h < 0.35) { setK(K_PALM, K_IDLE, 0.3); P.bx = -1; P.eyes = 1; P.hdy = 1; P.fg = 5; P.cgD = 5; P.beard = 1; P.rim = 0; }
+      else setK(K_PALM, K_IDLE, ease.inOut(clamp01((h - 0.35) / 0.15)));
+    } else if (st === DEATH) {                                            
+      const d = tq - INCOMING; P.rim = 0;
+      if (d < 0) { idle(); P.rim = 1; }
+      else {
+        P.cg = 2;
+        if (d < D_CIG - 1e-6) { P.cgX = RD(CIG_HOME[0] + (24 - CIG_HOME[0]) * d / D_CIG); P.cgY = RD(arcY(d, D_CIG, CIG_HOME[1], 0, 14)); P.cgD = (5 + 3 * f12of(d)) & 15; P.gem = 3; }
+        else { P.cgX = 24; P.cgY = 0; P.cgD = 4; P.gem = d < 1.3 ? ((f12 % 3) === 0 ? 1 : 0) : 4; }
+        if (d < D_TOWEL - 1e-6) { P.tw = 1; const q = d / D_TOWEL; P.twX = RD(TOWEL_HOME[0] - 2 + (FACE_LIE[0] - 4 - TOWEL_HOME[0] + 2) * q); P.twY = RD(arcY(d, D_TOWEL, TOWEL_HOME[1], FACE_LIE[1] - 1, 18)); P.twF = [2, 1, 3, 0][f12of(d) & 3]; }
+        else P.tw = 2;
+        if (d < 0.3) { const k = f12of(d) & 1; setK(k ? K_FLAIL2 : K_FLAIL1); P.bm = 0; P.fg = 4; P.bg = 6; P.bx = d < 0.15 ? -2 : -3; P.eyes = 1; P.mouth = 2; P.beard = 2; P.sway = 1; P.flash = d < 1 / 12 ? 1 : 0; }
+        else if (d < 0.5) { setK(K_FLAIL2); P.bm = 0; P.fg = 4; P.bg = 6; P.bx = -4; P.lean = -1; P.crouch = 2; P.eyes = 1; P.mouth = 2; P.beard = 2; }
+        else {
+          setK(d < 1.25 ? K_LIE : K_LIE2); P.bm = 0; P.bg = 0; P.fg = d < 1.25 ? 4 : 1; P.lying = 1; P.bx = -4; P.eyes = 1; P.lift = d < 0.58 ? 3 : d < D_LAND ? 1 : 0;
+          if (d >= 1.0 && d < 1.25 && (f12 & 1)) P.hy += 1;                   
+          if (d >= 1.6) P.dq = clamp01((d - 1.6) / 0.8);
+        }
+      }
+    } else if (st === REVIVE) {
+      idle(); P.bob = 0;
+      if (tq < 0.4) P.dq = 1; else if (tq < 0.85) P.dq = 1 - (tq - 0.4) / 0.45;
+    }
+    const yo = P.lying ? 0 : P.bob + Math.min(3, RD(P.crouch));
+    P.hx = RD(P.hx); P.hy = RD(P.hy) + yo; P.bhx = RD(P.bhx); P.bhy = RD(P.bhy) + yo;
+    P.lean = RD(P.lean); P.head = RD(P.head); P.crouch = RD(P.crouch); P.dq48 = RD(P.dq * 48);
+    const R = rigOf(), off = (p) => [p[0] + P.bx, p[1] - P.lift];
+    let g;
+    if (P.cg === 2) { const r = freeRoot(); g = cellOf(P.cgD, r[0], r[1], 4); }
+    else { const c = cigarRoot(R), e = cellOf(c[2], c[0], c[1], 4); g = off(parts.toSprite(R, e[0], e[1])); }
+    P.gx = g[0]; P.gy = g[1];
+    const m = off(parts.toSprite(R, R.hx1 + 1, R.my)); P.mX = m[0]; P.mY = m[1];
+    const w = off(parts.toSprite(R, R.hx1 + 4, R.my - 1)); P.wX = w[0]; P.wY = w[1];
+    const fp = off(parts.toSprite(R, P.hx + 1, P.hy - 1)); P.fX = fp[0]; P.fY = fp[1];
+    const tp = off(parts.toSprite(R, P.bhx, P.bhy - 4)); P.tX = tp[0]; P.tY = tp[1];
+    KEY(P);
+  }
+  const SRN = 6, srT = new Float32Array(SRN).fill(9), srX = new Float32Array(SRN), srY = new Float32Array(SRN), srR = new Float32Array(SRN), SR_LIFE = 1.3;
+  function smokeRing(x, y, r0) { let o = 0; for (let k = 0; k < SRN; k++) if (srT[k] > srT[o]) o = k; srT[o] = 0; srX[o] = x; srY[o] = y; srR[o] = r0; }
+  const ARN = 4, arT = new Float32Array(ARN).fill(9), arX = new Float32Array(ARN), arY = new Float32Array(ARN), AR_LIFE = 0.42, AR_V = 150;
+  function soundArc(x, y) { let o = 0; for (let k = 0; k < ARN; k++) if (arT[k] > arT[o]) o = k; arT[o] = 0; arX[o] = x; arY[o] = y; }
+  let tickT = 9, tickX = 0, tickY = 0, wispAcc = 0, chargeAcc = 0, soulAcc = 0, trailAcc = 0, lastStep = 0;
+  const W = (p) => scrX(p), Hy = (p) => HY + p;
+  function onEnter(s) {
+    if (s === CAST) {                                                    
+      const x = W(P.wX), y = Hy(P.wY);
+      soundArc(x, y); ring(x, y, 1, R_EL); burst(x, y, 20, 50, 130, 0.25, 0.6, R_EL, 8); fx.cross(x + 1, y, 6, 'steel', 0.25, 2);
+      burst(W(P.gx), Hy(P.gy), 6, 20, 60, 0.2, 0.4, FIRE, 20);
+      shake(0.28, 2); flash(0.05);
+    }
+  }
+  function onTime(s, t) {
+    if (s === IDLE && (t === T_RING1 || t === T_RING2)) smokeRing(W(P.mX) + 1, Hy(P.mY), t === T_RING1 ? 1 : 1.6);
+    if (s === IDLE && t === T_CRACK) { const x = W(-1), y = Hy(-25); for (let i = 0; i < 2; i++) spawn(K_EMBER, x + i, y, (i ? 12 : -12), -18, 0.18, FXI.impact); }
+    if (s === ATTACK && t === T_STRIKE) {                                
+      const sx = W(4), sy = Hy(-22);
+      fx.slash(sx, sy, 11, 3.55, 0.8, R_EL, 0.17, 2, 2);
+      fx.cross(W(P.fX) + 1, Hy(P.fY) - 1, 3, 'steel', 0.15, 2);
+      for (let i = 0; i < 6; i++) spawnX(K_PHYS, W(-2 + Math.random() * 4), Hy(-32 + Math.random() * 3), -25 - Math.random() * 45, -45 - Math.random() * 40, 0.6 + Math.random() * 0.3, SWEAT, { g: 260, floor: HY });
+      shoot(1, W(P.mX) + 3, Hy(P.mY), 150, DUMMY_X - 5, R_EL, 0, { trail: false, glow: -1 });
+      sfx('swing', { kind: 'smash', w: 0.8 });
+    }
+    if (s === CHARGE && T_TICK.includes(t)) {                            
+      tickT = 0; tickX = W(P.tX); tickY = Hy(P.tY); fx.cross(tickX, tickY, 3, 'steel', 0.15, 2); burst(tickX, tickY, 4, 20, 45, 0.12, 0.25, R_EL, 6);
+    }
+    if (s === CAST && (t === T_ARC2 || t === T_ARC3)) soundArc(W(P.wX), Hy(P.wY));
+    if (s === CAST && t === T_HIT) {                                     
+      burst(DUMMY_X - 4, HY - 22, 18, 40, 120, 0.25, 0.55, R_EL, 10); hitDummy(1); dummyFx({ dur: 1.1, stun: 1 }); shake(0.12, 1);
+      sfx('impact', { pal: 'metal', w: 0.8 });
+    }
+    if (s === RECOVER && t === T_CATCH) burst(W(P.gx), Hy(P.gy), 4, 15, 40, 0.15, 0.3, FIRE, 10);   
+    if (s === RECOVER && (t === T_CLAP1 || t === T_CLAP2)) {             
+      const x = W(P.fX) - 1, y = Hy(P.fY) - 1; burst(x, y, 5, 20, 50, 0.1, 0.22, FXI.impact, 6); sfx('hit', { mat: 'flesh', w: 0.5 });
+      if (t === T_CLAP1) for (let i = 0; i < 3; i++) spawn(K_DUST, W(-4 + Math.random() * 6), Hy(-25), (Math.random() - 0.5) * 16, -6 - Math.random() * 6, 0.3, SMOKE);   
+    }
+    if (s === RECOVER && t === T_THUMB) fx.cross(W(P.fX) - 1, Hy(P.fY) - 3, 3, 'steel', 0.2, 2);      
+    if (s === DEATH && t === INCOMING + D_CIG) { burst(W(24), HY - 1, 5, 15, 40, 0.15, 0.3, FIRE, 12); for (let i = 0; i < 2; i++) spawn(K_DUST, W(24 + i * 2), HY - 1, (Math.random() - 0.5) * 14, -5, 0.3, FXI.dust); }
+    if (s === DEATH && t === INCOMING + D_LAND) {
+      for (let i = 0; i < 16; i++) spawn(K_DUST, W(-28 + Math.random() * 34), HY - 1, (Math.random() - 0.5) * 30, -8 - Math.random() * 14, 0.4 + Math.random() * 0.4, FXI.dust);
+      shake(0.1, 1); sfx('fall', { w: 0.9 });
+    }
+    if (s === DEATH && t === INCOMING + D_TOWEL) for (let i = 0; i < 4; i++) spawn(K_DUST, W(FACE_LIE[0] - 4 + Math.random() * 8), Hy(FACE_LIE[1] - 2), (Math.random() - 0.5) * 16, -6 - Math.random() * 6, 0.35, FXI.dust);
+  }
+  const EVENTS = [[T_RING1, T_RING2, T_CRACK], [], [T_STRIKE], T_TICK, [T_ARC2, T_ARC3, T_HIT], [T_CATCH, T_CLAP1, T_CLAP2, T_THUMB], [], [INCOMING + D_CIG, INCOMING + D_LAND, INCOMING + D_TOWEL], []];
+  function impactOn(k, x, y) {
+    if (k === 1) { burst(x, y, 8, 30, 70, 0.15, 0.35, R_EL, 6); hitDummy(0); sfx('hit', { mat: 'flesh', w: 0.4 }); }
+  }
+  function stepFX(dt, state, stT) {
+    const gx = W(P.gx), gy = Hy(P.gy);
+    if (state === IDLE || state === HURT || (state === ATTACK && stT > 0.4) || state === MOVE) {   
+      wispAcc += dt * (state === MOVE ? 4 : 2.6); while (wispAcc >= 1) { wispAcc -= 1; spawnX(K_RISE, gx, gy - 1, (Math.random() - 0.3) * 4, -9 - Math.random() * 5, 0.9 + Math.random() * 0.5, SMOKE, { age0: 0.15 }); }
+    }
+    if (state === MOVE && P.step !== lastStep) {                          
+      if (P.step !== 0) { sfx('step', { w: 0.8 }); const fx0 = P.step > 0 ? 6 : -4; for (let i = 0; i < 3; i++) spawn(K_DUST, W(fx0 + (Math.random() - 0.5) * 4), HY, (Math.random() - 0.5) * 18, -4 - Math.random() * 6, 0.3 + Math.random() * 0.2, FXI.dust); }
+      lastStep = P.step;
+    }
+    if (state === CHARGE && stT > 0.3) {                                  
+      chargeAcc += dt * (12 + 20 * clamp01(stT / DUR[CHARGE]));
+      const tx = W(P.wX), ty = Hy(P.wY);
+      while (chargeAcc >= 1) { chargeAcc -= 1; spawnX(K_SPIRAL_PT, tx, ty, 0, 0, 9, R_EL, { a: Math.random() * 6.28, r: 10 + Math.random() * 8, w: 4, tx, ty }); }
+    }
+    if ((state === CAST || state === RECOVER) && P.cg === 2) { trailAcc += dt * 30; while (trailAcc >= 1) { trailAcc -= 1; spawn(K_EMBER, gx, gy, (Math.random() - 0.5) * 10, 4 + Math.random() * 6, 0.25, FIRE); } }
+    if (state === DEATH && stT > INCOMING + D_CIG && stT < INCOMING + 1.5) { wispAcc += dt * 5; while (wispAcc >= 1) { wispAcc -= 1; spawnX(K_RISE, gx, gy - 1, (Math.random() - 0.5) * 3, -8 - Math.random() * 4, 0.8, SMOKE, { age0: 0.1 }); } }
+    if (state === DEATH && stT > INCOMING + 1.6 && stT < INCOMING + 2.4) { soulAcc += dt * 28; while (soulAcc >= 1) { soulAcc -= 1; spawn(K_RISE, HX - 26 + Math.random() * 32, HY - 1 - Math.random() * 7, (Math.random() - 0.5) * 6, -14 - Math.random() * 16, 0.8 + Math.random() * 0.8, FXI.soul); } }
+    for (let k = 0; k < SRN; k++) if (srT[k] < SR_LIFE) { srT[k] += dt; srY[k] -= (8 + srT[k] * 4) * dt; srX[k] += 5 * dt; }
+    for (let k = 0; k < ARN; k++) if (arT[k] < AR_LIFE) arT[k] += dt;
+    tickT += dt;
+  }
+  function fxReset() { srT.fill(9); arT.fill(9); tickT = 9; wispAcc = 0; chargeAcc = 0; soulAcc = 0; trailAcc = 0; lastStep = 0; }
+  function fxFront(f12) {
+    for (let k = 0; k < SRN; k++) {                                       
+      const t = srT[k]; if (t >= SR_LIFE) continue; const q = t / SR_LIFE, rx = srR[k] + t * 2.2, ry = Math.max(0.6, rx * 0.55), n = Math.max(4, Math.ceil(rx * 6));
+      const c = SM[q < 0.15 ? 0 : q < 0.35 ? 1 : q < 0.6 ? 2 : q < 0.82 ? 3 : 4];
+      for (let i = 0; i < n; i++) { if (q > 0.5 && ((i + f12) & 1)) continue; const a = i / n * 6.2832 + Math.sin(t * 3) * 0.3; put(RD(srX[k] + Math.cos(a) * rx), RD(srY[k] + Math.sin(a) * ry), c); }
+    }
+    for (let k = 0; k < ARN; k++) {                                       
+      const t = arT[k]; if (t >= AR_LIFE) continue; const q = t / AR_LIFE, r = 3 + t * AR_V, n = Math.ceil(r * 2.2);
+      const c = q < 0.12 ? EL[0] : q < 0.3 ? EL[1] : q < 0.6 ? EL[2] : EL[3];
+      for (let i = 0; i <= n; i++) { if (q > 0.45 && ((i + f12) & 1)) continue; const a = -0.95 + 1.9 * i / n; put(RD(arX[k] + Math.cos(a) * r), RD(arY[k] + Math.sin(a) * r * 0.9), c); if (q < 0.3) put(RD(arX[k] + Math.cos(a) * (r - 1)), RD(arY[k] + Math.sin(a) * (r - 1) * 0.9), EL[Math.min(4, 2 + (q > 0.15 ? 1 : 0))]); }
+    }
+  }
+  function drawShot(k, x, y, d, f12, Rr) {
+    if (k !== 1) return false;
+    for (let j = 0; j < 3; j++) { const r = 2 + j, cx = x - 3 - j * 2 * d, c = Rr[Math.min(4, j + ((f12 & 1) ? 1 : 0))]; for (let i = -2; i <= 2; i++) { const a = i * 0.45; put(RD(cx + d * Math.cos(a) * r), RD(y + Math.sin(a) * r), c); } }
+    return true;
+  }
+  const SHEET = [[IDLE, [0, 0.4, 0.75, 0.9167, 1.0, 1.1667, 2.0, 2.1667, 2.25, 2.3333]], [MOVE, [0, 1 / 6, 2 / 6, 3 / 6]], [ATTACK, null], [CHARGE, 'step2'], [CAST, null], [RECOVER, null], [HURT, 'hurt'],
+    [DEATH, [0.34, 0.42, 0.6, 0.72, 0.8, 0.9, 1.0, 1.25, 1.5, 1.95, 2.15, 2.35]], [REVIVE, [0.45, 0.55, 0.65, 0.75, 0.9]]];
+  return {
+    name: '拳馆教练', HX, R_EL, DUR, hero, P, GLOW_MATS: [M.ember], HIT_POINT: [1, -18], EVENTS, SHEET,
+    REVIVE: { dy: -16 },
+    SFX: { body: 'flesh', how: 'topple', pal: 'metal', style: 'buff', w: 0.8 },
+    poseAt, drawHero, bakeHero, onEnter, onTime, impactOn, stepFX, fxReset, fxFront, drawShot,
   };
 });
 ;
@@ -47945,6 +50000,426 @@ PCD.define('ShadowKnightReplicator', (E) => {
     SFX: { body: 'ghost', how: 'collapse', pal: 'shadow', style: 'shadow', w: 0.6 },
     REVIVE: { dy: -10, ramp: R_EL },
     poseAt, drawHero, bakeHero, onEnter, onTime, impactOn: () => {}, stepFX, fxReset, fxBack, fxMid, fxFront,
+  };
+});
+;
+
+PCD.define('ShadowSeamstress', (E) => {
+  const { parts, Sprite, bake, ease, clamp01, q12, f12of, gait, walkDemo, fxRamp, FXI, FXR, HY, FLOOR, INCOMING,
+    IDLE, MOVE, ATTACK, CHARGE, CAST, RECOVER, HURT, DEATH, REVIVE, DEFAULT_DUR, K_RISE, K_PHYS, K_SPIRAL, K_EMBER, K_DUST,
+    spawn, spawnX, burst, releaseOrbit, ring, shake, flash, fx, hitDummy, dummyFx, put, scrX, floorGlow, sfx } = E;
+  const RD = Math.round, px = parts.px, run = parts.run, CL = (v, a, b) => (v < a ? a : v > b ? b : v);
+  const R_EL = fxRamp('thread', [21, 43, 24, 42, 25]), EL = FXR[R_EL];
+  const LAMP = [21, 47, 33, 16, 20];
+  const PLUM = [52, 53, 54, 60];                                         
+  const M = parts.mats(E, {
+    dress: PLUM, sleeve: PLUM, shawl: 'moss', cuff: 'bone', scrap: 'pale',
+    skin: 'skin', hair: 'white', stock: [0, 27, 27, 28], shoe: [0, 27, 28, 29],
+    brass: { r: 'gold', flat: 1 }, ink: { r: 'ink', flat: 1 }, lens: { r: [8, 59, 60, 21], flat: 1 },
+    blade: [27, 29, 30, 31], grip: [27, 28, 29, 30], pin: { r: [27, 29, 30, 31], flat: 1 },
+    thr: { r: [42, 42, 24, 43], flat: 1 }, thrHot: { r: [42, 43, 21, 21], flat: 1 }, thrDim: { r: [52, 52, 42, 42], flat: 1 },
+    cush: 'crimson',
+  });
+  const BODY = { body: 'hunched', leg: 6, torso: 8, head: 6, headW: 6, hunch: 4, sw: 3, arm: 7, lw: 2, stride: 2, lift: 1, fall: 'front' };
+  const HX = 34, DUR = DEFAULT_DUR.slice();
+  const hero = new Sprite(56, 44, 26, 38);
+  const RIM = { rim: 0, rx: 0, ry: 0, rimR: [0, 30, 16, 22], rimRamp: LAMP, flash: 0, dq: 0, skip: new Uint8Array(256) };
+  for (const k of ['skin', 'pin', 'thr', 'thrHot', 'thrDim', 'brass', 'ink', 'lens', 'grip', 'scrap', 'blade']) { RIM.skip[M[k]] = 1; RIM.skip[M[k + 'D']] = 1; }
+  const THR = [[M.thr, 3], [M.thr, 4], [M.thrHot, 3], [M.thrHot, 3], [M.thrDim, 3]];   
+  const THC = [[EL[2], EL[1]], [EL[1], EL[1]], [EL[1], EL[0]], [EL[0], EL[0]], [EL[3], EL[3]]];   
+  const P = { hx: 0, hy: 0, bhx: 0, bhy: 0, nd: 0, sd: 0, so: 0, thr: 0, scrap: 1, lean: 0, head: 0, hdn: 0, crouch: 0, bob: 0, bx: 0, jump: 0,
+    step: 0, wup: 0, walk: 0, sway: 0, beard: 0, eyes: 0, flash: 0, glint: 0, gl: 0, gem: 0, rim: 0, rv: 0, pinT: 0, pat: 0, armUp: 0,
+    cut: 0, heap: 0, pc: 0, drop: 0, shY: 0, gls: 0, dq: 0, dqi: 0, lying: 0, lift: 0, st: 0, gx: 0, gy: 0, flip: 0, mx: 0, k1: 0, k2: 0 };
+  const K = (hx, hy, bhx, bhy, lean, head, crouch) => ({ hx, hy, bhx, bhy, lean: lean || 0, head: head || 0, crouch: crouch || 0 });
+  const K_IDLE = K(13, -10, 8, -5);
+  const K_WIND = K(9, -12, 8, -5, -1, 0);                  
+  const K_STAB = K(16, -9, 8, -5, 1, 1);                   
+  const K_HOLD = K(15, -9, 8, -5, 1, 0);
+  const K_RAISE = K(12, -7, 15, -15, -1, -1);              
+  const K_SNIP = K(11, -7, 16, -13, 1, 1);                 
+  const K_PAT = K(3, -18, 8, -5, 0, 0);                    
+  const K_HURT = K(11, -14, 7, -7, -1, -1);
+  const K_SAG = K(9, -5, 6, -3, 1, 1, 2);                  
+  const FIELDS = ['hx', 'hy', 'bhx', 'bhy', 'lean', 'head', 'crouch'];
+  const setK = (A, B, q) => E.mix(P, A, B, q, FIELDS);
+  const KEY = E.keyer([['hx', -8, 24], ['hy', -26, 2], ['bhx', -8, 24], ['bhy', -26, 2], ['nd', 0, 7], ['sd', 0, 7], ['so', 0, 2], ['scrap', 0, 1],
+    ['lean', -1, 2], ['head', -1, 1], ['hdn', 0, 1], ['crouch', 0, 3], ['bob', 0, 1], ['bx', -8, 8], ['jump', 0, 2], ['step', -1, 1], ['wup', 0, 2], ['walk', 0, 1],
+    ['sway', -2, 2], ['beard', -2, 2], ['eyes', 0, 1], ['flash', 0, 1], ['glint', 0, 2], ['gl', 0, 2], ['gem', 0, 4], ['rim', 0, 3], ['rv', 0, 1], ['pinT', 0, 1], ['pat', 0, 1], ['armUp', 0, 1],
+    ['cut', 0, 22], ['heap', 0, 5], ['pc', 0, 3], ['drop', 0, 1], ['shY', -6, 0], ['gls', 0, 3], ['dqi', 0, 24], ['st', 0, 8]]);
+  const FRINGE = [0, 1, 0, -1], SWAY_IDLE = [0, 1, 0, -1];
+  const STITCH = [[13, -10, 5, 3], [13, -12, 1, 2], [14, -14, 2, 2], [13, -12, 6, 3]];
+  const PULL = [[15, -15, 2], [16, -17, 2], [16, -17, 2], [15, -14, 1]];           
+  const T_STAB = 2 / 12, T_PAT1 = 0.33, T_DROP = INCOMING + 0.34, T_GLS = INCOMING + 0.72, T_PC = INCOMING + 1.42, T_GLEAM = INCOMING + 1.8;
+  const CUT0 = INCOMING + 0.45, CUT1 = INCOMING + 1.2, DQ0 = INCOMING + 2.1, DQ1 = INCOMING + 2.55, CUT_ROWS = 22, TOP_Y = -22;
+  function poseAt(st, t, T) {
+    const tq = q12(t), f12 = f12of(T), TT = f12 / 12;
+    P.st = st; P.bx = 0; P.jump = 0; P.step = 0; P.wup = 0; P.walk = 0; P.sway = 0; P.beard = 0; P.eyes = 0; P.flash = 0; P.glint = 0; P.gl = 0; P.gem = 0; P.rim = 1;
+    P.pinT = 0; P.pat = 0; P.armUp = 0; P.rv = 0; P.cut = 0; P.heap = 0; P.pc = 0; P.drop = 0; P.shY = 0; P.gls = 0; P.dq = 0; P.bob = 0; P.flip = 0; P.mx = 0;
+    P.nd = 6; P.sd = 0; P.so = 0; P.thr = 3; P.scrap = 1; P.hdn = 1;
+    const idle = () => {
+      setK(K_IDLE, K_IDLE, 0); const b = Math.floor(TT * 2.5 + 1e-6); P.bob = b & 1; P.beard = FRINGE[(b + 1) & 3]; P.sway = SWAY_IDLE[Math.floor(TT * 1.25 + 1e-6) & 3];
+      const f = f12of(tq % DUR[IDLE]);
+      if (f < 12 || (f >= 16 && f < 20)) { const c = STITCH[f & 3]; P.hx = c[0]; P.hy = c[1]; P.nd = c[2]; P.thr = c[3]; }            
+      else if (f < 16) { const c = PULL[f - 12]; P.hx = c[0]; P.hy = c[1]; P.nd = c[2]; P.thr = 2; P.beard = -1; }                    
+      else { P.hx = 13; P.hy = -10; P.nd = 5; P.thr = 3; if (f >= 21 && f < 25) { P.hdn = 0; P.glint = f === 22 ? 2 : f === 23 ? 1 : 0; } }   
+    };
+    if (st === IDLE) idle();
+    else if (st === MOVE) {                                            
+      setK(K_IDLE, K_IDLE, 0); parts.gait(P, gait(tq));
+      P.hx = 12; P.hy = -9; P.sway = -P.step * 2 || P.sway; P.beard = -P.step; P.thr = 3; P.nd = 5; P.hdn = P.step !== 0 ? 1 : 0;   
+      const w = walkDemo(tq, 8, 1); P.mx = w.mx; P.flip = w.flip;
+    } else if (st === ATTACK) {
+      P.nd = 0; P.hdn = 0; P.thr = 3;
+      if (tq < 0.12) { setK(K_IDLE, K_WIND, ease.out(tq / 0.12)); P.gem = 1; }
+      else if (tq < 0.2) { setK(K_STAB, K_STAB, 0); P.gem = 2; P.beard = -1; P.sway = -1; P.thr = 0; }
+      else if (tq < 0.45) { setK(K_STAB, K_HOLD, ease.out((tq - 0.2) / 0.25)); P.gem = 1; P.beard = -1; P.thr = 0; }
+      else { setK(K_HOLD, K_IDLE, ease.inOut(clamp01((tq - 0.45) / 0.3))); if (tq >= 0.6) { P.nd = 5; P.hdn = 1; } }
+    } else if (st === CHARGE) {                                        
+      const q = ease.inOut(clamp01(tq / 0.5)); setK(K_IDLE, K_RAISE, q);
+      P.sd = q < 0.35 ? 0 : q < 0.7 ? 1 : 2; P.so = tq < 0.4 ? 0 : tq < 0.8 ? 1 : 2; P.scrap = q < 0.3 ? 1 : 0; P.hdn = 0;
+      P.nd = 2; P.thr = 0; P.gem = tq < 0.45 ? 1 : ((f12 & 1) ? 2 : 1); P.rim = 2; P.rv = 1; P.beard = -1; P.sway = tq > 1.1 ? ((f12 & 1) ? 1 : -1) : 0;
+    } else if (st === CAST) {                                          
+      setK(K_RAISE, K_SNIP, ease.out(clamp01(tq / 0.12))); P.sd = 1; P.so = 0; P.scrap = 0; P.hdn = 0;
+      P.nd = 2; P.thr = 0; P.gem = 3; P.rim = 3; P.rv = 1; P.beard = 2; P.sway = -1;
+    } else if (st === RECOVER) {                                       
+      P.hdn = 0; P.nd = 2; P.thr = 1; P.gem = tq < 0.25 ? 2 : tq < 0.5 ? 1 : 0; P.rim = tq < 0.25 ? 2 : 1; P.rv = tq < 0.25 ? 1 : 0;
+      if (tq < 0.25) { const q = ease.inOut(tq / 0.25); setK(K_SNIP, K_IDLE, q); P.sd = q < 0.5 ? 1 : 0; P.scrap = q > 0.6 ? 1 : 0; P.hx = RD(K_SNIP.hx + (K_PAT.hx - K_SNIP.hx) * q); P.hy = RD(K_SNIP.hy + (K_PAT.hy + 2 - K_SNIP.hy) * q); P.armUp = q > 0.4 ? 1 : 0; }
+      else if (tq < 0.58) { setK(K_IDLE, K_IDLE, 0); const k = f12of(tq - 0.25); P.hx = K_PAT.hx; P.hy = K_PAT.hy + ((k & 1) ? 1 : 0); P.pat = (k & 1) ? 1 : 0; P.armUp = 1; P.eyes = (k & 1) ? 1 : 0; }
+      else { const q = ease.inOut(clamp01((tq - 0.58) / 0.12)); setK(K_PAT, K_IDLE, q); P.armUp = q < 0.5 ? 1 : 0; P.hdn = q < 0.5 ? 0 : 1; P.nd = q < 0.5 ? 2 : 5; }
+    } else if (st === HURT) {                                          
+      const h = tq - INCOMING;
+      if (h < 0) idle();
+      else if (h < 0.2) { setK(K_HURT, K_HURT, 0); P.bx = -2; P.jump = h < 2 / 12 ? 1 : 0; P.eyes = 1; P.gl = 2; P.pinT = 1; P.beard = 2; P.sway = 1; P.flash = h < 1 / 12 ? 1 : 0; P.rim = 0; P.nd = 3; P.thr = 4; P.so = 1; P.hdn = 0; }
+      else if (h < 0.35) { setK(K_HURT, K_IDLE, 0.5); P.bx = -1; P.gl = 2; P.beard = 1; P.rim = 0; P.nd = 3; P.thr = 3; P.hdn = 0; }
+      else { const q = ease.inOut(clamp01((h - 0.35) / 0.15)); setK(K_HURT, K_IDLE, q); P.hx = RD(11 + (K_IDLE.hx - 11) * q); P.hy = RD(-12 + (K_IDLE.hy + 12) * q); P.gl = q < 0.5 ? 1 : 0; P.nd = q < 0.5 ? 1 : 5; P.thr = 3; P.hdn = q < 0.5 ? 0 : 1; }
+    } else if (st === DEATH) {                                         
+      const d = tq - INCOMING; P.rim = 0; P.thr = 3;
+      if (d < 0) { idle(); P.rim = 1; }
+      else if (d < 0.25) { setK(K_HURT, K_HURT, 0); P.bx = -2; P.jump = d < 2 / 12 ? 1 : 0; P.eyes = 1; P.gl = 2; P.pinT = 1; P.beard = 2; P.sway = 1; P.flash = d < 1 / 12 ? 1 : 0; P.crouch = 1; P.nd = 3; P.thr = 4; P.hdn = 0; P.gem = (f12 & 1) ? 1 : 0; }
+      else {
+        setK(K_SAG, K_SAG, 0); P.bx = -1; P.eyes = 1; P.gl = 2; P.hdn = 1; P.nd = 6; P.scrap = 0; P.thr = 0; P.gem = d < 0.9 ? ((f12 & 1) ? 1 : 4) : 4;
+        P.drop = d >= T_DROP - INCOMING ? 1 : 0; P.shY = P.drop ? Math.max(0, 2 - f12of(d - (T_DROP - INCOMING))) * -2 : 0;
+        const c = clamp01((d - (CUT0 - INCOMING)) / (CUT1 - CUT0)); P.cut = RD(Math.pow(c, 0.6) * CUT_ROWS);   
+        P.heap = d < CUT0 - INCOMING ? 0 : Math.min(5, 1 + Math.floor(c * 5 + 1e-6));
+        P.gls = d < T_GLS - INCOMING ? 0 : Math.min(3, 1 + f12of(d - (T_GLS - INCOMING)));
+        if (d >= T_PC - INCOMING - 0.17) { P.heap = 5; P.pc = d < T_PC - INCOMING - 1 / 12 ? 1 : d < T_PC - INCOMING ? 2 : 3; }
+        if (d >= T_GLEAM - INCOMING && d < T_GLEAM - INCOMING + 2 / 12) P.glint = 1;
+        if (d >= DQ0 - INCOMING) P.dq = clamp01((d - (DQ0 - INCOMING)) / (DQ1 - DQ0));
+      }
+    } else if (st === REVIVE) {
+      idle(); P.bob = 0;
+      if (tq < 0.4) P.dq = 1; else if (tq < 0.85) P.dq = 1 - (tq - 0.4) / 0.45; else P.glint = 1;
+      P.gem = tq > 0.85 ? 2 : 0;
+    }
+    P.hx = RD(P.hx); P.hy = RD(P.hy) + P.bob; P.bhx = RD(P.bhx); P.bhy = RD(P.bhy) + P.bob;
+    P.lean = RD(P.lean); P.head = RD(P.head); P.crouch = RD(P.crouch); P.dqi = RD(P.dq * 24);
+    if (P.crouch) { P.hy += Math.min(2, P.crouch); P.bhy += Math.min(2, P.crouch); }
+    const f = focus(); P.gx = f[0] + P.bx; P.gy = f[1] - P.jump;
+    KEY(P);
+  }
+  function focus() {
+    if (P.st === CHARGE || P.st === CAST || (P.st === RECOVER && P.gem >= 2)) { const d = DIRS[P.sd]; return [P.bhx + d[0] * 5, P.bhy + d[1] * 5]; }
+    if (P.st === DEATH && P.pc) return [0, -5];
+    const d = DIRS[P.nd]; return [P.hx + d[0] * 3, P.hy + d[1] * 3];
+  }
+  const needleEye = () => { const d = DIRS[P.nd]; return [P.hx - d[0] * 2 + P.bx, P.hy - d[1] * 2 - P.jump]; };
+  const stitchPt = () => [P.bhx + 4 + P.bx, P.bhy - 3 - P.jump];
+  const DIRS = [[1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1], [0, 1], [1, 1]];   
+  const frameAt = (r0, x, y) => ({ r0, tx: x, ty: y, rot: 0, ox: 0, oy: 0 });
+  const ringPts = (cx, cy) => [[cx - 1, cy - 1], [cx, cy - 1], [cx + 1, cy - 1], [cx - 1, cy], [cx + 1, cy], [cx - 1, cy + 1], [cx, cy + 1], [cx + 1, cy + 1]];
+  const K3 = (a, c) => a.map((p) => [p[0], p[1], c]);
+  const SH = {
+    H: [
+      [...K3(ringPts(-3, -2), 'k'), ...K3(ringPts(-2, 2), 'k'), [1, -1, 'p'],
+        [2, -1, 'B'], [3, -1, 'B'], [4, -1, 'B'], [5, -1, 'b'], [6, -1, 'b'], [1, 0, 'b'], [2, 0, 'b'], [3, 0, 'd'], [4, 0, 'd'], [5, 0, 'd'], [6, 0, 'd'], [7, 0, 'b'], [8, 0, 'e']],
+      [...K3(ringPts(-3, -3), 'k'), ...K3(ringPts(-2, 3), 'k'), [1, -1, 'p'],
+        [2, -1, 'B'], [2, -2, 'B'], [3, -2, 'B'], [4, -2, 'b'], [5, -3, 'b'], [6, -3, 'b'], [7, -4, 'e'],
+        [1, 0, 'b'], [2, 0, 'd'], [3, 1, 'd'], [4, 1, 'd'], [5, 2, 'd'], [6, 2, 'b'], [7, 3, 'e']],
+      [...K3(ringPts(-3, -3), 'k'), ...K3(ringPts(-2, 3), 'k'), [1, -1, 'p'],
+        [2, -1, 'b'], [2, -2, 'B'], [3, -3, 'B'], [3, -2, 'b'], [4, -4, 'B'], [4, -3, 'b'], [5, -5, 'b'], [6, -6, 'e'],
+        [1, 0, 'b'], [2, 1, 'd'], [3, 1, 'd'], [3, 2, 'd'], [4, 3, 'd'], [4, 2, 'b'], [5, 4, 'b'], [6, 5, 'e']],
+    ],
+    D: [
+      [...K3(ringPts(-3, 1), 'k'), ...K3(ringPts(-1, 3), 'k'), [1, -1, 'p'],
+        [2, -2, 'b'], [3, -3, 'b'], [4, -4, 'b'], [5, -5, 'b'], [6, -6, 'b'], [7, -7, 'e'], [2, -1, 'd'], [3, -2, 'd'], [4, -3, 'd'], [5, -4, 'd'], [1, -2, 'B'], [2, -3, 'B'], [3, -4, 'B'], [4, -5, 'B']],
+      [...K3(ringPts(-3, 0), 'k'), ...K3(ringPts(0, 3), 'k'), [1, -1, 'p'],
+        [1, -2, 'B'], [1, -3, 'B'], [2, -3, 'b'], [2, -4, 'B'], [2, -5, 'b'], [3, -6, 'b'], [3, -7, 'e'],
+        [2, -1, 'b'], [3, -1, 'd'], [3, -2, 'b'], [4, -2, 'd'], [5, -2, 'd'], [6, -3, 'b'], [7, -3, 'e']],
+    ],
+  };
+  const R0 = [0, 0, 3, 3, 2, 2, 1, 1];
+  function shears(x, y, d, open, glow) {
+    const T = frameAt(R0[d], x, y), set = (d & 1) ? SH.D[open ? 1 : 0] : SH.H[open];
+    E.part(); for (const [a, b, c] of set) if (c === 'k') px(E, T, a, b, M.grip, 0);
+    E.part();
+    for (const [a, b, c] of set) {
+      if (c === 'k') continue;
+      if (c === 'p') px(E, T, a, b, M.brass, 4);
+      else if (c === 'B') { if (glow) px(E, T, a, b, THR[glow][0], THR[glow][1]); else px(E, T, a, b, M.blade, 4); }
+      else px(E, T, a, b, M.blade, c === 'd' ? 2 : c === 'e' ? 4 : 0);
+    }
+  }
+  function floorShears(x) {
+    const T = parts.FREE; E.part();
+    for (const p of ringPts(x - 5, -1)) px(E, T, p[0], p[1], M.grip, 0); for (const p of ringPts(x - 2, -1)) px(E, T, p[0], p[1], M.grip, 0);
+    E.part(); px(E, T, x, -1, M.brass, 4); run(E, T, -1, x + 1, x + 5, M.blade, 4); run(E, T, 0, x, x + 7, M.blade, 0); px(E, T, x + 7, 0, M.blade, 4);
+  }
+  function needle(T, x, y, d, lv) {
+    const [dx, dy] = DIRS[d]; E.part();
+    px(E, T, x - dx * 2, y - dy * 2, THR[lv][0], THR[lv][1]); for (let k = -1; k <= 2; k++) px(E, T, x + dx * k, y + dy * k, M.pin, 3); px(E, T, x + dx * 3, y + dy * 3, M.pin, 4);
+  }
+  function knitShawl(R) {
+    E.part(); const T = R, m = M.shawl, yS = R.yS, tip = yS + 6, b = RD(P.beard || 0);
+    let backMin = 99; const rows = [];
+    for (let y = yS - 1; y <= tip; y++) {
+      const e = parts.edges(R, CL(y, yS, R.yHip)); let L = e[0] - 1; backMin = Math.min(backMin, L); if (y > yS + 1) L = backMin;
+      let Rr;
+      if (y === yS - 1) { L = e[0]; Rr = R.hx0 - 1; }
+      else if (y <= yS + 2) Rr = e[1] + 1;
+      else Rr = RD(L + (e[1] + 1 - L) * (tip - y) / (tip - yS - 2));                                                     
+      if (y === tip) Rr = L + 1;
+      run(E, T, y, L, Rr, m, 0); rows.push([y, L, Rr]);
+      if (y > yS) for (let x = L + 2; x < Rr; x++) if (((x - L) % 3) === 2) px(E, T, x, y, m, 2);                         
+    }
+    for (const [y, L, Rr] of rows) if (y === yS) for (let x = L + 1; x <= Rr - 1; x++) if (((x - L) & 1) === 1) px(E, T, x, y, m, 4);   
+    for (let y = yS + 1; y <= yS + 5; y++) { const e = parts.edges(R, y); px(E, T, e[1], y, m, 0); px(E, T, e[1] + 1, y, m, y === yS + 5 ? 2 : 0); }   
+    const tx = backMin;                                                                                               
+    px(E, T, tx - 1 + (b < 0 ? -1 : 0), tip + 1, m, 3); px(E, T, tx - 1 + b, tip + 2, m, 2);
+    px(E, T, tx, tip + 1, m, 3); px(E, T, tx + (b > 0 ? 1 : 0), tip + 2, m, 3); px(E, T, tx + b, tip + 3, m, 2);
+    px(E, T, tx + 1, tip + 1, m, 2); px(E, T, tx + 2 + (b > 0 ? 1 : 0), tip + 2, m, 2);
+  }
+  function headGlasses(R) {
+    const h = parts.head(E, R, P, { mat: M.skin, face: 'round', age: 'old', eye: M.ink, nose: 'big', mouth: 'line', ear: 'dot', brow: M.hair });
+    if (P.gls) return;                                                                                                
+    const T = R, cx = h.eye[0] + (P.gl ? 1 : 0), cy = h.ey + (P.gl ? 1 : 0), tilt = P.gl === 2 ? 1 : 0;
+    px(E, T, cx, cy - 1 + tilt, M.brass, P.glint ? 4 : 3); px(E, T, cx - 1, cy - tilt, M.brass, 3); px(E, T, cx + 1, cy, M.brass, 3); px(E, T, cx, cy + 1, M.brass, 3);
+    px(E, T, cx, cy, P.glint ? M.lens : (P.gl || P.eyes ? M.lens : M.ink), P.glint ? 4 : P.gl || P.eyes ? 3 : 1);   
+    if (P.gl && !P.eyes) px(E, T, h.eye[0], h.ey, M.ink, 1);                                                           
+    px(E, T, cx - 2, cy - tilt, M.brass, 2);                                                                          
+  }
+  function hairBun(R) {
+    parts.hair(E, R, P, { style: 'short', mat: M.hair });
+    const T = R, x0 = R.hx0, top = R.htop, sq = P.pat ? 1 : 0, m = M.hair;
+    run(E, T, top - 2, x0 - 2, x0 + 2, m, 0); run(E, T, top - 3 + sq, x0 - 2, x0 + 2, m, 0); if (!sq) run(E, T, top - 4, x0 - 1, x0 + 1, m, 0);
+    px(E, T, x0 - 3, top - 2 + sq, m, 0); px(E, T, x0 + 3, top - 2, m, 0);
+    px(E, T, x0, top - 3 + sq, m, 2); px(E, T, x0 + 1, top - 2, m, 2); px(E, T, x0 - 1, top - 2, m, 2);                  
+    px(E, T, x0 - 1, top - 4 + sq, m, 4);
+  }
+  function hairPins(R) {
+    E.part(); const T = R, x0 = R.hx0, top = R.htop + (P.pat ? 1 : 0), b = RD(P.beard || 0), tl = P.pinT;
+    for (let k = 0; k < 6; k++) px(E, T, x0 - 1 - (k >> 1) - (tl && k >= 4 ? 1 : 0), top - 3 - k, M.pin, k === 5 ? 2 : 3);           
+    for (let k = 0; k < 5; k++) px(E, T, x0 + 1 + (k >> 1) - (tl && k >= 3 ? 1 : 0), top - 3 - k, M.pin, 3);                      
+    px(E, T, x0 + 3 - tl, top - 8, M.brass, 4);                                                                      
+    const ex = x0 - 3 - tl, ey = top - 8, lv = P.st === DEATH && P.gem === 4 ? 4 : 0;                                   
+    E.part(); px(E, T, ex - 1, ey + 1, THR[lv][0], THR[lv][1]); px(E, T, ex - 1 - (b < 0 ? 1 : 0), ey + 2, THR[lv][0], THR[lv][1]); px(E, T, ex - 1 + (b > 0 ? 1 : 0) - (b < 0 ? 1 : 0), ey + 3, THR[lv][0], THR[lv][1]);
+  }
+  function scrap(bx, by) {
+    E.part(); const T = parts.FREE;
+    run(E, T, by - 3, bx, bx + 3, M.scrap, 0); run(E, T, by - 2, bx - 1, bx + 3, M.scrap, 0); run(E, T, by - 1, bx - 1, bx + 2, M.scrap, 0); px(E, T, bx + 3, by, M.scrap, 2);
+    px(E, T, bx, by - 2, M.thr, 3); px(E, T, bx + 2, by - 2, M.thr, 3);
+  }
+  const YARN = [M.dress, M.shawl, M.hair, M.dress, M.cuff, M.shawl];
+  function yarnHeap(n, churn) {
+    if (!n) return; E.part(); const T = parts.FREE, w = 4 + n, h = Math.min(5, 1 + n);
+    for (let j = 0; j < h; j++) {
+      const y = -j, hw = RD(w - j * (w / h) * 0.9);
+      for (let x = -hw; x <= hw; x++) { const band = Math.floor((x + 12 + 2 * Math.sin((j + churn) * 1.7 + x * 0.5)) / 2.2) + j * 2 + churn; const mm = YARN[((band % 6) + 6) % 6]; px(E, T, x, y, mm, ((x + j + churn) & 3) === 0 ? 2 : ((x - j) & 3) === 1 ? 4 : 3); }
+    }
+    for (const [x, c] of [[-2, 0], [1, 1], [3, 2]]) if (Math.abs(x) < w - 1) { const y = -h; px(E, T, x + churn % 2, y, YARN[c], 3); px(E, T, x + 1 + churn % 2, y - (n > 3 ? 1 : 0), YARN[c], 4); }
+  }
+  function pincushion(stage) {
+    const T = parts.FREE;
+    if (stage === 1) { E.part(); for (let y = -4; y <= 0; y++) { const hw = y === -4 ? 2 : y === 0 ? 3 : 4; for (let x = -hw; x <= hw; x++) px(E, T, x, y, YARN[((x + y * 2 + 12) >> 1) % 6], ((x + y) & 1) ? 3 : 2); } return; }
+    E.part(); const c = M.cush;
+    run(E, T, -5, -2, 2, c, 0); run(E, T, -4, -3, 3, c, 0); for (let y = -3; y <= -1; y++) run(E, T, y, -4, 4, c, 0); run(E, T, 0, -3, 3, c, 0);
+    for (let y = -4; y <= 0; y++) { px(E, T, y === -4 || y === 0 ? -1 : -2, y, c, 2); px(E, T, y === -4 || y === 0 ? 1 : 2, y, c, 2); }   
+    px(E, T, -3, -4, c, 4); px(E, T, -2, -5, c, 4); px(E, T, -3, -3, c, 4);
+    const lv = P.dq > 0 ? 4 : 0; for (let x = -4; x <= 4; x++) if ((x & 1) === 0) px(E, T, x, -2, THR[lv][0], THR[lv][1]);   
+    E.part(); px(E, T, -1, -6, M.shawl, 0); px(E, T, 0, -6, M.shawl, 0); px(E, T, 1, -6, M.shawl, 0); px(E, T, 0, -7, M.shawl, 3); px(E, T, -2, -5, M.shawl, 2); px(E, T, 2, -5, M.shawl, 2);   
+    E.part(); const g = P.glint;
+    for (let k = 0; k < 5; k++) px(E, T, -3 - (k >> 1), -5 - k, M.pin, k === 4 ? (g ? 4 : 2) : 3);                    
+    for (let k = 0; k < 4; k++) px(E, T, 2 + (k >> 1), -5 - k, M.pin, g && k === 3 ? 4 : 3); px(E, T, 3, -9, M.brass, 4);   
+    px(E, T, -4, -1, M.brass, 4); px(E, T, 3, -3, M.brass, 4);                                                        
+  }
+  function floorGlasses(x, n) {
+    E.part(); const T = parts.FREE, y = n >= 3 ? -1 : -1 - (3 - n) * 3;
+    px(E, T, x, y - 1, M.brass, 4); px(E, T, x - 1, y, M.brass, 3); px(E, T, x + 1, y, M.brass, 3); px(E, T, x, y + 1, M.brass, 3); px(E, T, x, y, M.lens, 3); px(E, T, x - 2, y + 1, M.brass, 2);
+  }
+  function cutTop(yc) {
+    const s = hero, w = s.w, sy = yc + s.oy;
+    for (let y = 0; y < s.h; y++) for (let x = 0; x < w; x++) { const j = ((x * 7 + 3) % 5 === 0) ? -1 : ((x * 3) % 4 === 1) ? 1 : 0; if (y < sy + j) s.mat[y * w + x] = 0; }
+  }
+  function drawHero() {
+    E.begin(hero, P.bx, -P.jump);
+    if (P.st === DEATH && P.pc >= 1) { endScene(); return; }
+    const R = parts.rig(P, BODY);
+    if (P.hdn) { R.hx += 1; R.hx0 += 1; R.hx1 += 1; R.hy += 1; R.htop += 1; R.ey += 1; }
+    const lv = P.gem;
+    parts.arm(E, R, P, { side: 'B', sleeve: 'loose', mat: M.sleeveD, cuff: M.cuffD, grip: 'none', at: [P.bhx, P.bhy] });
+    parts.legs(E, R, P, { style: 'shoe', mat: M.stock, matD: M.stockD, boot: M.shoe, bootD: M.shoeD, w: 2 });
+    parts.torso(E, R, P, { style: 'robe', mat: M.dress, hem: -2, flare: 2.5, flareF: 1.5 });
+    if (!P.armUp) parts.arm(E, R, P, { sleeve: 'loose', mat: M.sleeve, cuff: M.cuff, grip: 'none', at: [P.hx, P.hy] });
+    knitShawl(R);
+    headGlasses(R);
+    hairBun(R);
+    hairPins(R);
+    if (!P.drop) shears(P.bhx, P.bhy, P.sd, P.so, P.st === CHARGE || P.st === CAST || (P.st === RECOVER && lv >= 2) ? Math.max(1, lv) : 0);
+    needle(R, P.hx, P.hy, P.nd, lv);                                                                     
+    if (P.scrap) scrap(P.bhx + 1, P.bhy - 1);
+    parts.hand(E, R, P, { side: 'B', at: [P.bhx, P.bhy], hand: M.skinD });
+    if (P.armUp) parts.arm(E, R, P, { sleeve: 'loose', mat: M.sleeve, cuff: M.cuff, grip: 'none', at: [P.hx, P.hy], elbow: P.st === RECOVER ? 'out' : undefined });   
+    parts.hand(E, R, P, { at: [P.hx, P.hy], hand: M.skin });
+    if (P.st === DEATH) {
+      if (P.cut) cutTop(TOP_Y + P.cut);
+      yarnHeap(P.heap, 0);
+      if (P.drop) { if (P.shY) shears(14, -3 + P.shY, 0, 0, 0); else floorShears(16); }
+      if (P.gls) floorGlasses(8, P.gls);
+    }
+  }
+  function endScene() {                                                  
+    if (P.pc === 1) { yarnHeap(5, 1); pincushion(1); } else pincushion(2);
+    floorShears(16); floorGlasses(8, 3);
+  }
+  function bakeHero() {
+    if (P.rv) { RIM.rimRamp = EL; RIM.rimR = [0, 8, 16, 22]; RIM.rx = P.gx + hero.ox; RIM.ry = P.gy + hero.oy; }
+    else { RIM.rimRamp = LAMP; RIM.rimR = [0, 30, 30, 30]; RIM.rx = hero.ox + 26 + P.bx; RIM.ry = hero.oy - 24; }
+    RIM.rim = P.rim; RIM.flash = P.flash; RIM.dq = P.dq; bake(hero, RIM);
+  }
+  const wx = (x) => scrX(x), wy = (y) => HY + y;
+  let tautT = 9, tX0 = 0, tY0 = 0, tX1 = 0, tY1 = 0, castT = 9, snX = 0, snY = 0, hitDone = 1, chargeAcc = 0, emberAcc = 0, soulAcc = 0, lastStep = 0, xT = 9, xX = 0, xY = 0;
+  const bodyC = () => [wx(2), wy(-10)];
+  function onEnter(s) {
+    if (s === CAST) {
+      castT = 0; hitDone = 0; const d = DIRS[1]; snX = wx(K_SNIP.bhx + d[0] * 6); snY = wy(K_SNIP.bhy + d[1] * 6);
+      releaseOrbit(40, 110, 0.3, 0.7); burst(snX, snY, 22, 40, 120, 0.25, 0.6, R_EL, 10); fx.cross(snX, snY, 7, R_EL, 0.25, 2);
+      for (let i = 0; i < 4; i++) spawnX(K_PHYS, snX, snY, (Math.random() - 0.3) * 50, -30 - Math.random() * 30, 0.8, R_EL, { g: 180, floor: FLOOR, age0: 0.15 });   
+      shake(0.28, 2); flash(0.05);
+    }
+  }
+  function onTime(s, t) {
+    if (s === ATTACK && t === T_STAB) {                                   
+      const f = focus(); tX0 = wx(f[0] + 1); tY0 = wy(f[1]); tX1 = E.DUMMY_X - 3; tY1 = HY - 15; tautT = 0;
+      burst(tX0, tY0, 5, 20, 50, 0.12, 0.25, R_EL, 0); burst(tX1, tY1, 8, 30, 80, 0.15, 0.35, R_EL, 10); xT = 0; xX = tX1; xY = tY1;
+      hitDummy(0); sfx('swing', { kind: 'thrust', w: 0.15 }); sfx('hit', { mat: 'magic', w: 0.15 });
+    }
+    if (s === CHARGE && t === 0.3) fx.circle(wx(2), FLOOR + 1, 15, 3, R_EL, DUR[CHARGE] - 0.3 + 0.2, 1, 0);
+    if (s === RECOVER && t === T_PAT1) for (let i = 0; i < 3; i++) spawn(K_DUST, wx(K_PAT.hx - 1 + i), wy(K_PAT.hy - 1), (i - 1) * 8, -6 - Math.random() * 4, 0.3, FXI.dust);   
+    if (s === DEATH && t === T_DROP) { for (let i = 0; i < 5; i++) spawn(K_DUST, wx(16 + Math.random() * 6), HY - 1, (Math.random() - 0.5) * 20, -4 - Math.random() * 5, 0.3, FXI.dust); burst(wx(19), HY - 2, 4, 20, 40, 0.1, 0.2, FXI.steel, 4); }
+    if (s === DEATH && t === T_PC) {                                      
+      burst(wx(0), HY - 4, 16, 30, 70, 0.25, 0.55, R_EL, 12); ring(wx(0), HY - 4, 0, R_EL);
+      for (let i = 0; i < 8; i++) spawn(K_DUST, wx(-6 + Math.random() * 12), HY - 1, (Math.random() - 0.5) * 24, -4 - Math.random() * 6, 0.35, FXI.dust);
+      shake(0.1, 1); sfx('fall', { w: 0.1 });
+    }
+  }
+  const EVENTS = [[], [], [T_STAB], [0.3], [], [T_PAT1], [], [T_DROP, T_PC], []];
+  function impactOn() {}
+  function stepFX(dt, state, stT) {
+    const gx = wx(P.gx), gy = wy(P.gy);
+    if (state === CHARGE && stT > 0.2) {                                  
+      chargeAcc += dt * (18 + 30 * clamp01(stT / DUR[CHARGE]));
+      while (chargeAcc >= 1) { chargeAcc -= 1; const r = 12 + Math.random() * 10, a = Math.random() * 6.2832; spawn(K_SPIRAL, gx, gy, (r - 3.5) / (0.3 + Math.random() * 0.35), 0, 9, R_EL, a, r, 4 + Math.random() * 3); }
+    }
+    if (state === CAST && !hitDone) {                                     
+      const r = ringR(castT), dd = E.DUMMY_X - 5 - wx(2);
+      if (r >= dd) {
+        hitDone = 1; const x = E.DUMMY_X, y = HY - 15;
+        burst(x, y, 24, 50, 130, 0.25, 0.6, R_EL, 14); ring(x, y, 1, R_EL); fx.cross(x, y, 6, R_EL, 0.3, 2); xT = -0.2; xX = x; xY = y;
+        hitDummy(1); dummyFx({ dur: 0.9, outline: R_EL }); shake(0.12, 1); sfx('impact', { pal: 'arcane', w: 0.2 });
+      }
+    }
+    if (state === MOVE && P.step !== lastStep) { if (P.step !== 0) { sfx('step', { w: 0.1 }); if (Math.random() < 0.5) spawn(K_DUST, wx(P.step > 0 ? 3 : -3), HY, (Math.random() - 0.5) * 10, -3, 0.25, FXI.dust); } lastStep = P.step; }
+    if (state === IDLE) {                                                  
+      emberAcc += dt * 1.4; while (emberAcc >= 1) { emberAcc -= 1; spawn(K_EMBER, gx, gy - 1, Math.random() * 6 - 3, -5 - Math.random() * 6, 0.6 + Math.random() * 0.4, R_EL); }
+    }
+    if (state === RECOVER) { emberAcc += dt * 7; while (emberAcc >= 1) { emberAcc -= 1; spawn(K_EMBER, gx, gy - 1, Math.random() * 6 - 3, -6 - Math.random() * 6, 0.6, R_EL); } }
+    if (state === DEATH && stT > CUT0 && stT < CUT1) {                     
+      emberAcc += dt * 14; while (emberAcc >= 1) { emberAcc -= 1; spawn(K_EMBER, wx(-5 + Math.random() * 11), wy(TOP_Y + P.cut + 1), Math.random() * 8 - 4, -6 - Math.random() * 8, 0.5 + Math.random() * 0.4, R_EL); }
+    }
+    if (state === DEATH && stT > DQ0 - 0.05 && stT < DQ1 + 0.1) {         
+      soulAcc += dt * 32; while (soulAcc >= 1) { soulAcc -= 1; spawn(K_RISE, wx(-5 + Math.random() * 10), HY - 1 - Math.random() * 8, (Math.random() - 0.5) * 6, -12 - Math.random() * 14, 0.8 + Math.random() * 0.7, R_EL); }
+    }
+    tautT += dt; castT += dt; xT += dt;
+  }
+  const ringR = (t) => 5 + 200 * t;
+  function fxReset() { tautT = 9; castT = 9; hitDone = 1; chargeAcc = 0; emberAcc = 0; soulAcc = 0; lastStep = 0; xT = 9; }
+  function orbitThreads(f12, back) {
+    const q = clamp01(E.stT / DUR[CHARGE]), r = 22 - 12 * ease.inOut(q), c = bodyC();
+    for (let s = 0; s < 3; s++) {
+      const a0 = E.stT * (3.2 + q * 3) + s * 2.094;
+      for (let k = 0; k < 14; k++) {
+        const a = a0 - k * 0.09, sn = Math.sin(a); if ((sn < 0) !== !!back) continue; if (k > 9 && ((k + f12) & 1)) continue;
+        put(RD(c[0] + Math.cos(a) * r), RD(c[1] + sn * r * 0.42 - (s - 1) * 4), k === 0 ? EL[0] : k < 4 ? EL[1] : k < 9 ? EL[2] : EL[3]);
+      }
+    }
+  }
+  function castRing(f12, back) {
+    const t = castT, r = ringR(t); if (t > 0.5 || E.state !== CAST) return;
+    const c = bodyC(), amp = 3 * Math.max(0, 1 - t / 0.22), col = t < 1 / 12 ? EL[0] : t < 0.15 ? EL[1] : t < 0.3 ? EL[2] : EL[3], n = Math.ceil(r * 5);
+    for (let k = 0; k < n; k++) {
+      const a = k / n * 6.2832, sn = Math.sin(a); if ((sn < 0) !== !!back) continue; if (t > 0.3 && ((k + f12) % 3) === 0) continue;
+      const rr = r + amp * Math.sin(a * 9 + t * 40), x = RD(c[0] + Math.cos(a) * rr), y = RD(c[1] + sn * rr * 0.34);
+      put(x, y, col);
+      if ((k % 10) === 0 && t < 0.3) { put(x, y - 1, EL[1]); put(x, y + 1, EL[1]); }
+    }
+  }
+  function threadFx() {
+    if (!P.thr || P.dq >= 1) return; const a = needleEye(), C = THC[P.gem], ax = wx(a[0]), ay = wy(a[1]);
+    if (P.thr === 1) { put(wx(a[0] - 1), ay + 1, C[0]); put(wx(a[0] - 2), ay + 1, C[0]); put(wx(a[0] - 3), ay + 2, C[0]); return; }
+    if (P.thr === 4) { for (let k = 1; k <= 7; k++) put(wx(a[0] + 1 + k), ay + ((k >> 1) & 1 ? 1 : -1) + (k > 4 ? 1 : 0), k < 3 ? C[1] : C[0]); return; }
+    const b = stitchPt(), bx = wx(b[0]), by = wy(b[1]), n = Math.max(2, Math.ceil(Math.hypot(bx - ax, by - ay))), sag = P.thr === 3 ? Math.min(3, n * 0.4) : 0;
+    for (let k = 1; k <= n; k++) { const q = k / n; put(RD(ax + (bx - ax) * q), RD(ay + (by - ay) * q + sag * 4 * q * (1 - q)), k < 3 ? C[1] : C[0]); }
+  }
+  function fxBack(f12) {
+    if (E.state === CHARGE || E.state === CAST || E.state === RECOVER) floorGlow(wx(P.gx), P.rim, EL, f12);
+    if (E.state === CHARGE) orbitThreads(f12, 1);
+    castRing(f12, 1);
+  }
+  function fxFront(f12) {
+    if (E.state === CHARGE) orbitThreads(f12, 0);
+    castRing(f12, 0);
+    threadFx();
+    const gx = wx(P.gx), gy = wy(P.gy);
+    if (P.gem >= 2 && P.gem <= 3 && P.dq < 1 && E.state !== DEATH) { const L = P.gem === 3 ? 5 : 2 + (f12 & 1); for (let r = 2; r <= L; r++) { const c = r <= 2 ? EL[0] : r <= 3 ? EL[1] : EL[2]; put(gx + r, gy, c); put(gx - r, gy, c); put(gx, gy - r, c); put(gx, gy + r, c); } }
+    if (P.glint === 2 && E.state === IDLE) { const f = headEye(); put(f[0] + 2, f[1] - 2, 21); put(f[0] + 3, f[1] - 3, 5); put(f[0] + 3, f[1] - 1, 5); put(f[0] + 1, f[1] - 3, 5); }   
+    if (tautT < 4 / 12) {                                                 
+      const k = f12of(tautT), sag = k >= 2 ? k - 1 : 0, n = Math.max(1, Math.abs(tX1 - tX0));
+      for (let i = 0; i <= n; i++) { const q = i / n; if (k >= 2 && ((i + f12) % 3) === 0) continue; const x = RD(tX0 + (tX1 - tX0) * q), y = RD(tY0 + (tY1 - tY0) * q + sag * 4 * q * (1 - q)); put(x, y, k === 0 ? (i % 3 ? EL[0] : EL[1]) : k === 1 ? EL[1] : EL[2]); }
+      if (k < 2) { put(tX0, tY0 - 1, EL[k]); put(tX0, tY0 + 1, EL[k]); put(tX0 + 1, tY0, EL[0]); }
+    }
+    if (xT >= 0 && xT < 0.5) {                                            
+      const L = xT < 0.3 ? 3 : 2, c = xT < 0.1 ? EL[0] : xT < 0.3 ? EL[1] : EL[2];
+      for (let r = -L; r <= L; r++) { if (xT > 0.3 && (r & 1)) continue; put(xX + r, xY + r, c); put(xX + r, xY - r, c); }
+    }
+    if (E.state === CAST && castT < 2 / 12) {                             
+      const c = castT < 1 / 12 ? EL[0] : EL[1];
+      for (let r = 1; r <= 4; r++) { put(snX + r, snY + r, c); put(snX - r, snY - r, c); put(snX + r, snY - r, c); put(snX - r, snY + r, c); }
+    }
+    if (E.state === DEATH && P.cut > 0 && P.cut < CUT_ROWS && !P.pc) strands(f12);
+  }
+  const BASE = new Map([[M.dress, 54], [M.sleeve, 54], [M.sleeveD, 53], [M.shawl, 36], [M.shawlD, 35], [M.hair, 17], [M.skin, 17], [M.skinD, 18], [M.cuff, 6], [M.cuffD, 7], [M.stock, 28], [M.shoe, 28]]);
+  function strands(f12) {
+    const s = hero, yc = TOP_Y + P.cut, sy0 = yc + s.oy, heapW = 4 + P.heap;
+    const colAt = (sx) => { for (let dy = 0; dy <= 4; dy++) { const sy = sy0 + dy; if (sy < 0 || sy >= s.h) continue; const m = s.mat[sy * s.w + sx]; if (BASE.has(m)) return BASE.get(m); } return -1; };
+    let xL = -1, xR = -1;
+    for (let dy = 0; dy <= 2 && xL < 0; dy++) { const sy = sy0 + dy; if (sy < 0 || sy >= s.h) continue; for (let sx = 0; sx < s.w; sx++) if (BASE.has(s.mat[sy * s.w + sx])) { if (xL < 0) xL = sx; xR = sx; } }
+    if (xL < 0) return;
+    const lx = (sx) => sx - s.ox;
+    for (const [sx, dir, tx] of [[xL, -1, -heapW], [xR, 1, heapW]]) {
+      const c = colAt(sx); if (c < 0) continue; const x0 = lx(sx) + dir, n = Math.max(1, -1 - yc);
+      for (let k = 0; k <= n; k++) { const q = k / n, y = yc + k, x = RD(x0 + (tx - x0) * q * q + dir * 2 * Math.sin(Math.PI * q) + (((k + f12) >> 1) & 1 ? 0.4 : -0.4)); if (((k + f12) % 7) === 6) continue; put(wx(x), wy(y), c); }
+    }
+    for (let i = 0; i < 3; i++) {
+      const sx = xL + 1 + ((i * 5 + f12 * 3) % Math.max(1, xR - xL - 1)), c = colAt(sx); if (c < 0) continue; const x = lx(sx), h = 1 + ((i + f12) & 1);
+      put(wx(x), wy(yc - 1), c); put(wx(x + 1), wy(yc - 1 - h), c); put(wx(x + 2), wy(yc - 1), c); if (h > 1) { put(wx(x), wy(yc - 2), c); put(wx(x + 2), wy(yc - 2), c); }
+    }
+  }
+  function headEye() { const R = parts.rig(P, BODY); return [wx(R.hx1 - 1 + (P.hdn ? 1 : 0) + P.bx), wy(R.ey + (P.hdn ? 1 : 0) - P.jump)]; }
+  return {
+    name: '裁缝老太', HX, R_EL, DUR, hero, P, GLOW_MATS: [M.thr, M.thrHot], HIT_POINT: [4, -10], EVENTS, REVIVE: { dy: -10, ramp: R_EL },
+    SFX: { body: 'flesh', how: 'dissolve', pal: 'arcane', style: 'blade', w: 0.2 },
+    SHEET: [[IDLE, [0, 1 / 12, 2 / 12, 3 / 12, 13 / 12, 21 / 12, 22 / 12]], [MOVE, [0, 1 / 6, 2 / 6, 3 / 6]], [ATTACK, null], [CHARGE, 'step2'], [CAST, null], [RECOVER, 'step2'], [HURT, 'hurt'],
+      [DEATH, [0.34, 0.5, 0.7, 0.85, 1.0, 1.2, 1.4, 1.58, 1.66, 1.75, 2.2, 2.5, 2.7]], [REVIVE, [0.45, 0.55, 0.65, 0.75, 0.9]]],
+    poseAt, drawHero, bakeHero, onEnter, onTime, impactOn, stepFX, fxReset, fxBack, fxFront,
   };
 });
 ;
@@ -64685,6 +67160,431 @@ PCD.define('cremator', (E) => {
 });
 ;
 
+PCD.define('croupier', (E) => {
+  const { parts, Sprite, bake, ease, clamp01, q12, f12of, gait, walkDemo, FXI, FXR, HY, DUMMY_X, INCOMING, fxRamp,
+    IDLE, MOVE, ATTACK, CHARGE, CAST, RECOVER, HURT, DEATH, REVIVE, DEFAULT_DUR, K_SPIRAL_PT, K_RISE, K_EMBER, K_TRAIL, K_DUST, K_PHYS, K_BURST,
+    spawn, spawnX, burst, releaseOrbit, shoot, ring, shake, flash, fx, hitDummy, dummyFx, put, scrX, floorGlow, shotFloorGlow, death, copySprite, blitShape, sfx } = E;
+  const RD = Math.round, PX = parts.px;
+  const R_IV = fxRamp('ivory', ['#ffffff', '#ebe9e1', '#cdc5a3', '#8d8670', '#524b6a']), IV = FXR[R_IV];
+  const R_EL = FXI.coin, EL = FXR[R_EL], FR = FXR[FXI.frost];
+  const NV = ['#0e0e1a', '#1a1b2c', '#30375a'];                       
+  const M = parts.mats(E, {
+    coat: [0, NV[0], NV[1], NV[2]], lapel: [0, NV[1], NV[2], '#4b5684'], sleeve: [0, NV[1], NV[2], '#4b5684'],   
+    pants: [0, NV[0], NV[0], NV[1]], shoe: [0, NV[0], NV[1], 59], hat: [0, NV[0], NV[1], NV[2]],
+    band: 'crimson', tie: 'crimson', gold: 'gold', shirt: [8, 18, 17, 21], face: [9, 18, 17, 21], glove: [8, 17, 21, 21], ivory: [7, 6, 17, 21],
+    void: { r: 'ink', flat: 1 }, glow: { r: [23, 22, 22, 21], flat: 1 },
+  });
+  const BODY = { body: 'slim', leg: 19, torso: 16, head: 9, headW: 6, sw: 3, arm: 17, lw: 2, stride: 3, neck: 2, lift: 1, fall: 'back' };
+  const HX = 50, DUR = DEFAULT_DUR.slice(); DUR[DEATH] = 3.4;
+  const hero = new Sprite(84, 72, 51, 68), ghA = new Sprite(84, 72, 51, 68), ghB = new Sprite(84, 72, 51, 68);
+  const WAIST = -21, WCX = 14, WCY = -24, WRX = 7, WRY = 2;             
+  const HIT_POINT = [2, -30];
+  const SKIP = new Uint8Array(256), SKIP_D = new Uint8Array(256);
+  for (const k of ['face', 'glove', 'ivory', 'void', 'glow', 'shirt', 'tie', 'gold', 'pants', 'shoe']) { SKIP[M[k]] = 1; SKIP[M[k + 'D']] = 1; }
+  for (const k of ['face', 'glove', 'ivory', 'void', 'glow', 'gold', 'pants', 'shoe']) { SKIP_D[M[k]] = 1; SKIP_D[M[k + 'D']] = 1; }   
+  const RIM = { rim: 0, rx: 0, ry: 0, rimR: [0, 7, 14, 20], rimRamp: IV, rimAll: 0, flash: 0, dq: 0, skip: SKIP };
+  const RR = [0, 6, 10, 14], RR_D = [0, 7, 9, 11];
+  const P = { hx: 0, hy: 0, bhx: 0, bhy: 0, lean: 0, head: 0, crouch: 0, bob: 0, step: 0, wup: 0, walk: 0, sway: 0, bend: 0,
+    look: 0, tilt: 0, tap: 0, hm: 0, bm: 0, crack: 0, grin: 0, glow: 0, ball: 0, tie: 0, smear: 0, glint: 0,
+    hatM: 0, hatX: 0, hatY: 0, hatR: 0, hatJ: 0, rim: 0, rimK: 0, flash: 0, lying: 0, lift: 0, dq: 0, dqk: 0, bx: 0, gx: 0, gy: 0, flip: 0, mx: 0, k1: 0, k2: 0 };
+  const K = (hx, hy, bhx, bhy, lean, head) => ({ hx, hy, bhx, bhy, lean: lean || 0, head: head || 0 });
+  const K_IDLE = K(14, -24, 14, -24);                                
+  const K_WIND = K(5, -29, 14, -24, -1);                                
+  const K_FLICK = K(14, -28, 14, -24, 1);                               
+  const K_FOLLOW = K(16, -28, 14, -24, 1);
+  const K_REACH = K(18, -26, -1, -22, 2, 1);                         
+  const K_SWEEP = K(11, -24, -1, -22, 2, 1);                            
+  const K_SWEPT = K(4, -26, -1, -22, 1);                                
+  const K_SETTLE = K(5, -26, -1, -22, 1);
+  const K_TIE = K(6, -36, 14, -24);                                   
+  const K_HURT = K(11, -27, 6, -26, -1);
+  const K_STIFF = K(10, -28, 6, -27);
+  const K_RAPT = K(11, -32, -10, -31, -2);                               
+  const K_ARCH = K(11, -35, -13, -36, -3);
+  const K_LIE = K(12, -31, 3, -19);                                    
+  const K_GLIDE = K(3, -17, -2, -17, 1);                               
+  const FIELDS = ['hx', 'hy', 'bhx', 'bhy', 'lean', 'head'];
+  const setK = (A, B, q) => E.mix(P, A, B, q, FIELDS);
+  const TAP = []; for (let i = 0; i < 30; i++) TAP.push(0); TAP[8] = 1; TAP[9] = 2; TAP[10] = 3; TAP[12] = 1; TAP[13] = 2; TAP[14] = 3;
+  const SWAY_IDLE = [0, 1, 0, -1];
+  const T_FLICK = 2 / 12, T_REL = 1 / 12, T_ROLL = 2 / 12;
+  const D_GRIN = 0.42, D_POP = 0.5, D_FALL = 0.95, D_LAND = 1.2, D_SHAT = 1.95;
+  const KEY = E.keyer([['hx', -40, 30], ['hy', -60, 4], ['bhx', -40, 30], ['bhy', -60, 4], ['lean', -3, 3], ['head', -1, 1], ['bob', 0, 1], ['look', 0, 1], ['tilt', -1, 1],
+    ['tap', 0, 3], ['hm', 0, 7], ['bm', 0, 7], ['step', -1, 1], ['wup', 0, 2], ['walk', 0, 1], ['sway', -2, 2], ['bend', 0, 3], ['crack', 0, 4], ['grin', 0, 3], ['glow', 0, 2],
+    ['ball', 0, 1], ['tie', 0, 1], ['smear', 0, 2], ['hatM', 0, 1], ['hatX', -55, 30], ['hatY', -70, 4], ['hatR', 0, 3], ['hatJ', 0, 3], ['rim', 0, 3], ['rimK', 0, 3],
+    ['flash', 0, 1], ['lying', 0, 1], ['lift', 0, 4], ['dqk', 0, 48], ['bx', -4, 4]]);
+  const HAT_VX1 = -20, HAT_VX2 = -40, HAT_VY = -50, HAT_G1 = 125, HAT_G2 = 260;
+  const HAT_T1 = -HAT_VY / HAT_G1;                                    
+  const HAT_TL = HAT_T1 + Math.sqrt(2 * (-HAT0Y() - HAT_VY * HAT_T1 - 0.5 * HAT_G1 * HAT_T1 * HAT_T1) / HAT_G2);   
+  function HAT0Y() { return -46; }
+  function hatAt(d, x0, y0) {
+    const s = Math.min(d - D_POP, HAT_TL); if (s <= HAT_T1) return [x0 + HAT_VX1 * s, y0 + HAT_VY * s + 0.5 * HAT_G1 * s * s, s];
+    const yA = y0 + HAT_VY * HAT_T1 + 0.5 * HAT_G1 * HAT_T1 * HAT_T1, u = s - HAT_T1; return [x0 + HAT_VX1 * HAT_T1 + HAT_VX2 * u, yA + 0.5 * HAT_G2 * u * u, s];
+  }
+  const HAT0 = [0, -46];                                              
+  function poseAt(st, t, T) {
+    const tq = q12(t), f12 = f12of(T);
+    P.bx = 0; P.crouch = 0; P.bob = 0; P.step = 0; P.wup = 0; P.walk = 0; P.sway = 0; P.bend = 0; P.look = 0; P.tilt = 0; P.tap = 0; P.hm = 0; P.bm = 0;
+    P.crack = 0; P.grin = 0; P.glow = 0; P.ball = 0; P.tie = 0; P.smear = 0; P.glint = 0; P.hatM = 0; P.hatX = 0; P.hatY = 0; P.hatR = 0; P.hatJ = 0;
+    P.rim = 0; P.rimK = 0; P.flash = 0; P.lying = 0; P.lift = 0; P.dq = 0; P.flip = 0; P.mx = 0;
+    let focusFace = 0;
+    const idle = () => {
+      setK(K_IDLE, K_IDLE, 0); const lp = tq % DUR[IDLE], fi = f12of(lp);
+      P.bob = Math.floor(lp * 2.5 + 1e-6) & 1; P.sway = SWAY_IDLE[(Math.floor(lp * 1.25 + 1e-6) + 1) & 3];
+      P.tap = TAP[fi] || 0;
+      if (fi >= 18 && fi <= 26) { P.look = 1; P.tilt = fi >= 19 && fi <= 25 ? 1 : 0; }
+      if (fi === 4 || fi === 5) P.glint = 1;
+    };
+    if (st === IDLE) idle();
+    else if (st === MOVE) {                                            
+      setK(K_GLIDE, K_GLIDE, 0); const f = gait(tq);
+      P.walk = 1; P.step = [1, 0, -1, 0][f]; P.wup = [0, 2, 0, 1][f]; P.bend = 2; P.sway = [0, -1, 0, 1][f]; P.hm = 4; P.bm = 4;
+      const w = walkDemo(tq, 14, 1); P.mx = w.mx; P.flip = w.flip;
+    } else if (st === ATTACK) {
+      if (tq < 0.12) { setK(K_IDLE, K_WIND, ease.out(tq / 0.12)); P.hm = 1; P.ball = 1; P.rim = 1; P.rimK = 1; P.sway = 1; }
+      else if (tq < 0.2) { setK(K_FLICK, K_FLICK, 0); P.hm = 2; P.rim = 2; P.rimK = 1; P.sway = -1; P.bend = 1; }
+      else if (tq < 0.45) { setK(K_FLICK, K_FOLLOW, ease.out((tq - 0.2) / 0.25)); P.hm = 7; P.rim = 1; P.rimK = 1; P.sway = -1; }
+      else { setK(K_FOLLOW, K_IDLE, ease.inOut(clamp01((tq - 0.45) / 0.3))); P.hm = tq < 0.6 ? 7 : 0; }
+    } else if (st === CHARGE) {
+      const q = ease.inOut(clamp01(tq / 0.7)); setK(K_IDLE, K_REACH, q);
+      P.hm = q > 0.8 ? 3 : 7; P.bm = q > 0.5 ? 4 : 0; P.bend = RD(q * 2); P.sway = q > 0.9 ? ((f12 & 1) ? -1 : 0) : 0;   
+      P.rim = tq < 0.35 ? 1 : 2; P.rimK = 2;
+    } else if (st === CAST) {                                          
+      P.bm = 4; if (tq < T_REL) { setK(K_REACH, K_REACH, 0); P.hm = 3; P.rim = 2; P.rimK = 2; P.bend = 2; }
+      else if (tq < 2 / 12) { setK(K_SWEEP, K_SWEEP, 0); P.hm = 3; P.smear = 1; P.rim = 3; P.rimK = 2; P.bend = 3; P.sway = -2; }
+      else if (tq < 3 / 12) { setK(K_SWEPT, K_SWEPT, 0); P.hm = 7; P.smear = 2; P.rim = 3; P.rimK = 2; P.bend = 3; P.sway = -1; }
+      else { setK(K_SWEPT, K_SETTLE, ease.out(clamp01((tq - 0.25) / 0.2))); P.hm = 7; P.rim = 2; P.rimK = 2; P.bend = 2; }
+    } else if (st === RECOVER) {                                       
+      if (tq < 0.2) { setK(K_SETTLE, K_TIE, ease.inOut(tq / 0.2)); P.hm = 7; P.bm = tq < 0.1 ? 4 : 0; P.rim = 1; P.rimK = 2; P.bend = 1; }
+      else if (tq < 0.45) { setK(K_TIE, K_TIE, 0); P.hm = 5; P.tie = tq >= 0.25 && tq < 0.34 ? 1 : 0; P.hx += P.tie; }
+      else { setK(K_TIE, K_IDLE, ease.inOut(clamp01((tq - 0.45) / 0.25))); P.hm = tq < 0.62 ? 7 : 0; }
+    } else if (st === HURT) {                                          
+      const h = tq - INCOMING;
+      if (h < 0) idle();
+      else if (h < 0.25) { const j = f12of(h); setK(K_HURT, K_HURT, 0); P.bx = [-2, -1, -2][j]; P.hm = 6; P.bm = 6; P.flash = j === 0 ? 1 : 0; P.crack = j < 2 ? 1 : 0; P.hatJ = [1, 3, 2][j]; P.sway = 1; }
+      else if (h < 0.38) { setK(K_HURT, K_IDLE, 0.5); P.bx = -1; P.hm = 7; P.bm = 7; P.sway = 1; }
+      else setK(K_HURT, K_IDLE, ease.inOut(clamp01((h - 0.38) / 0.12)));
+    } else if (st === DEATH) {                                         
+      const d = tq - INCOMING;
+      if (d < 0) idle();
+      else {
+        focusFace = 1; P.hm = 6; P.bm = 6;
+        if (d < 1 / 12) { setK(K_STIFF, K_STIFF, 0); P.bx = -2; P.flash = 1; P.crack = 1; P.hatJ = 1; }
+        else if (d < 0.25) { setK(K_STIFF, K_STIFF, 0); P.bx = (f12 & 1) ? -1 : -2; P.crack = 2; P.hatJ = (f12 & 1) ? 1 : 0; P.sway = 1; }
+        else if (d < D_GRIN) { setK(K_STIFF, K_RAPT, 0.3); P.bx = -1; P.crack = 3; P.look = d >= 0.33 ? 1 : 0; }
+        else if (d < D_FALL) {
+          const q = clamp01((d - D_GRIN) / 0.33); setK(K_STIFF, K_RAPT, 0.3 + 0.7 * ease.out(q)); if (d >= 0.75) setK(K_ARCH, K_ARCH, 0);
+          P.bx = -1; P.look = 1; P.crack = d < 0.6 ? 3 : 4; P.grin = d < D_POP ? 1 : d < 0.6 ? 2 : 3; P.glow = d < D_POP ? 1 : d < 0.6 ? ((f12 & 1) ? 2 : 1) : 2;
+          P.tilt = d >= 0.66 ? 1 : 0; P.bend = 1; P.sway = -1; if (d >= 0.6) { P.rim = 1; P.rimK = 3; }   
+        } else {
+          setK(K_LIE, K_LIE, 0); P.lying = 1; P.crack = 4; P.grin = 3; P.hm = 6; P.bm = 4;
+          P.lift = d < 1.05 ? 2 : d < D_LAND ? 1 : 0;   
+          P.glow = d < 1.35 ? 2 : d < 1.5 ? ((f12 % 3) ? 1 : 0) : 0;
+          if (d >= D_SHAT) P.dq = 1;
+        }
+        if (d >= D_POP) {                                              
+          const h = hatAt(d, HAT0[0] - 1, HAT0[1]); P.hatM = 1; P.hatX = RD(h[0]); P.hatY = Math.min(0, RD(h[1]));
+          P.hatR = h[2] < 0.12 ? 0 : h[2] < 0.45 ? 1 : h[2] < 0.7 ? 2 : 3;
+          if (P.hatY >= -1) { P.hatY = 0; P.hatR = 2; }
+        }
+      }
+    } else if (st === REVIVE) {
+      idle(); P.bob = 0;
+      if (tq < 0.4) P.dq = 1; else if (tq < 0.85) P.dq = 1 - (tq - 0.4) / 0.45;
+    }
+    P.hx = RD(P.hx); P.hy = RD(P.hy); P.bhx = RD(P.bhx); P.bhy = RD(P.bhy); P.lean = RD(P.lean); P.head = RD(P.head);
+    P.dqk = RD(P.dq * 48);
+    const R = parts.rig(P, BODY);
+    if (focusFace) { const f = parts.toSprite(R, R.hx, R.ey + 2); P.gx = f[0] + P.bx; P.gy = f[1] - P.lift; }
+    else if (st === CHARGE || st === CAST) { P.gx = P.hx + 5 + P.bx; P.gy = P.hy + 1; }
+    else { P.gx = P.hx + 3 + P.bx; P.gy = P.hy - 1; }
+    KEY(P);
+  }
+  function grid(rows) {
+    let ox = 0, oy = 0; rows.forEach((r, j) => { const i = r.indexOf('o'); if (i >= 0) { ox = i; oy = j; } });
+    const o = []; rows.forEach((r, j) => { for (let i = 0; i < r.length; i++) { const c = r[i] === 'o' ? 'p' : r[i]; if (c !== '.') o.push([i - ox, j - oy, c]); } }); return o;
+  }
+  const SHAPES = [
+    grid(['..ppp....', '.pppppppp', '.op.0.1.2', '.pp.0.1.2', '.pp.0.1.2']),                 
+    grid(['.1bb2', '.1bb2', 'ppp.2', 'pop00', 'ppp..']),                                      
+    grid(['......2', '.....2.', '.pp.2..', 'pop11111', 'ppp.0..', '.....0.', '......0']),     
+    grid(['..ppp....', '.pppppppp', '.op.0.1.2', '....0.1.2', '....0.1..']),                 
+    grid(['ppp..', 'pop..', 'pppp.', '2.1.0', '2.1.0', '2.1..', '..1..']),                    
+    grid(['.11pp', '..pop', '.00pp']),                                                        
+    grid(['.2....', '.2.1..', '.2.1.0', '.pp.0.', 'ppp0..', 'pop...']),                       
+    grid(['..ppp....', '.pppppppp', '.op.0.1.2', '....0.1.2']),                               
+  ];
+  const TAPUP = [[0, 0, 0], [1, 1, 1], [0, 1, 1], [0, 0, 1]];         
+  function glove(R, hx, hy, mode, far, tap) {
+    const gm = far ? M.gloveD : M.glove, fm = [gm, gm, M.gloveD], S = SHAPES[mode] || SHAPES[7], up = mode === 0 ? TAPUP[tap || 0] : [0, 0, 0];
+    E.part(); for (const [x, y, c] of S) if (c === 'p') PX(E, R, hx + x, hy + y, gm, 0);
+    for (const k of ['2', '1', '0']) { E.part(); for (const [x, y, c] of S) if (c === k && !(up[+k] && y === 2)) PX(E, R, hx + x, hy + y, fm[+k], 0); }
+    if (P.ball && !far && mode === 1) { E.part(); let n = 0; for (const [x, y, c] of S) if (c === 'b') { PX(E, R, hx + x, hy + y, M.ivory, n === 0 ? 4 : n === 3 ? 2 : 3); n++; } }
+  }
+  function tailRows(R, far, cb) {
+    const bend = RD(P.bend), sway = RD(P.sway), y0 = WAIST, y1 = -8 - (far ? 1 : 0), n = y1 - y0;
+    for (let y = y0; y <= y1; y++) {
+      const t = (y - y0) / n, e = parts.edges(R, Math.min(y, R.yHip));
+      const back = e[0] + 1 - (far ? 1 : 0) - RD(bend * t * t * 1.6) + RD(sway * t * t), w = Math.max(1, RD(4 - 3 * t));
+      cb(y, back, back + w - 1, t);
+    }
+  }
+  function coat(R) {
+    const yS = R.yS;
+    E.part();
+    for (let y = yS; y <= WAIST; y++) {
+      const e = parts.edges(R, y); let L = e[0], Rr = e[1];
+      if (y === yS) { L = e[0] - 1; }                                  
+      if (y >= yS + 2 && y <= yS + 8) Rr += 1;                         
+      if (y >= WAIST - 4) L += 1;                                      
+      for (let x = L; x <= Rr; x++) PX(E, R, x, y, M.coat, 0);
+      if (y > yS && y <= WAIST - 2) PX(E, R, Rr + 1, y, M.shirt, y === yS + 1 ? 4 : 0);   
+      if (y <= yS + 7) { PX(E, R, Rr, y, M.lapel, y <= yS + 2 ? 4 : 0); if (y <= yS + 2) PX(E, R, Rr - 1, y, M.lapel, 0); }   
+      if (y === yS + 3) PX(E, R, Rr - 1, y, M.coat, 1);               
+      if (y >= yS + 3 && y <= WAIST - 1) PX(E, R, L + 1, y, M.coat, 2); 
+    }
+    { const e = parts.edges(R, WAIST - 1), Rr = e[1];                  
+      PX(E, R, Rr + 1, WAIST - 1, M.shirt, 0); PX(E, R, Rr, WAIST - 1, M.shirt, 0);
+      PX(E, R, Rr, WAIST - 3, M.gold, 4); PX(E, R, Rr - 1, WAIST - 2, M.gold, 3); PX(E, R, Rr - 2, WAIST - 2, M.gold, 3); PX(E, R, Rr - 3, WAIST - 3, M.gold, 2); PX(E, R, Rr - 3, WAIST - 4, M.gold, 4); }
+    for (let y = WAIST + 1; y <= R.yHip; y++) { const e = parts.edges(R, y); for (let x = e[0] + 1; x <= e[1]; x++) PX(E, R, x, y, M.pants, 0); }   
+    tailRows(R, 0, (y, a, b, t) => { for (let x = a; x <= b; x++) PX(E, R, x, y, M.coat, x === b && t > 0.1 ? 2 : 0); });   
+  }
+  function neckCollar(R) {                                             
+    E.part();
+    for (let y = R.hy + 1; y <= R.yS; y++) for (let x = R.hx - 1; x <= R.hx + 1; x++) PX(E, R, x, y, M.shirt, 0);
+    PX(E, R, R.hx + 2, R.hy + 1, M.shirt, 4);
+  }
+  function bowTie(R) {                                                 
+    E.part(); const x = R.hx + 2, y = R.yS - 1, s = P.tie;
+    PX(E, R, x + s, y, M.tie, 4); PX(E, R, x + 1 + s, y, M.tie, 3); PX(E, R, x, y + 1, M.tie, 2); PX(E, R, x, y + 2, M.tie, 3); PX(E, R, x + 1 - s, y + 2, M.tie, 2);
+  }
+  const CR_P = [[[0, 3], [-1, 4], [-1, 5]], [[-1, 4], [-2, 3], [-3, 3]], [[0, 3], [0, 2], [-1, 1]], [[-3, 3], [-4, 2], [-4, 1]]];
+  const CR_F = [[[2, 2], [1, 3], [1, 4], [0, 5]], [[1, 4], [2, 5]], [[2, 2], [2, 1], [1, 0]]];   
+  const GRIN_F = [null,
+    [[-3, 1, 'V'], [3, 1, 'V'], [-2, 2, 'V'], [-1, 2, 'V'], [0, 2, 'V'], [1, 2, 'V'], [2, 2, 'V']],
+    [[-3, 1, 'V'], [3, 1, 'V'], [-2, 2, 'V'], [-1, 2, 'V'], [0, 2, 'G'], [1, 2, 'V'], [2, 2, 'V'], [-1, 3, 'V'], [0, 3, 'V'], [1, 3, 'V']],
+    [[-3, 0, 'V'], [3, 0, 'V'], [-3, 1, 'V'], [-2, 1, 'V'], [2, 1, 'V'], [3, 1, 'V'], [-2, 2, 'V'], [-1, 2, 'G'], [0, 2, 'C'], [1, 2, 'G'], [2, 2, 'V'], [-1, 3, 'V'], [0, 3, 'V'], [1, 3, 'V']]];
+  const GRIN_P = [null,
+    [[1, 2, 'V'], [0, 2, 'V'], [-1, 2, 'V'], [-2, 1, 'V'], [-3, 1, 'V']],
+    [[1, 2, 'V'], [0, 2, 'G'], [-1, 2, 'V'], [-2, 1, 'V'], [-3, 1, 'V'], [0, 3, 'V'], [1, 3, 'V']],
+    [[-4, 0, 'V'], [-3, 1, 'V'], [-2, 1, 'V'], [-2, 2, 'V'], [-1, 2, 'G'], [0, 2, 'C'], [1, 2, 'V'], [-1, 3, 'V'], [0, 3, 'V'], [1, 3, 'V']]];
+  function head(R) {
+    E.part();
+    const top = R.htop, bot = R.hy, ey = R.ey, tl = R.lie ? 0 : P.tilt, fr = P.look && !R.lie, y0 = P.hatM ? top : top + 2 - (P.hatJ || 0);   
+    const F = (x, y, m, t) => { if (y >= y0) PX(E, R, x + (tl && y < ey ? -tl : 0), y, m, t); };
+    const cm = P.crack === 1 ? M.glow : M.face, ct = P.crack === 1 ? 4 : P.crack >= 2 ? 1 : 2, nCr = P.crack <= 1 ? 1 : P.crack === 2 ? 2 : fr ? 3 : 4;
+    const mouth = (G, ox) => { if (!P.grin) return; for (const [dx, dy, k] of G[P.grin]) { const x = ox + dx, y = ey + dy; if (k === 'V' || !P.glow) F(x, y, M.void, 0); else F(x, y, M.glow, k === 'C' && P.glow === 2 ? 4 : 3); } };
+    if (!fr) {                                                          
+      const x0 = R.hx0, x1 = R.hx1;
+      for (let y = top; y <= bot; y++) {
+        let a = x0, b = x1;
+        if (y === top) { a++; b--; }
+        if (y >= ey - 1 && y <= ey + 2) b++;
+        if (y === bot - 1) a++;
+        if (y === bot) a += 2;
+        for (let x = a; x <= b; x++) F(x, y, M.face, 0);
+      }
+      F(x1, ey - 2, M.face, 4);
+      for (let i = 0; i < nCr; i++) for (const [dx, dy] of CR_P[i]) F(x1 + dx, top + dy, cm, ct);
+      mouth(GRIN_P, x1);
+    } else {                                                            
+      const c = R.hx;
+      for (let y = top; y <= bot; y++) {
+        let a = c - 3, b = c + 3;
+        if (y === top || y === bot - 1) { a++; b--; }
+        if (y === bot) { a += 2; b -= 2; }
+        for (let x = a; x <= b; x++) F(x, y, M.face, 0);
+      }
+      F(c - 2, top + 2, M.face, 4); F(c - 2, top + 3, M.face, 4);
+      for (let i = 0; i < nCr; i++) for (const [dx, dy] of CR_F[i]) F(c + dx, top + dy, cm, ct);
+      mouth(GRIN_F, c);
+    }
+  }
+  function hat(T, sh) {
+    E.part();
+    const hp = (u, v, m, t) => PX(E, T, u - (sh ? Math.floor(-v * sh / 9 + 0.5) : 0), v, m, t);
+    for (let u = -4; u <= 5; u++) hp(u, 0, M.hat, 0);
+    hp(-5, -1, M.hat, 4); hp(6, -1, M.hat, 3);                         
+    for (let v = -1; v >= -9; v--) {
+      const fl = v <= -8 ? 1 : 0;
+      for (let u = -2 - fl; u <= 3 + fl; u++) hp(u, v, v >= -2 ? M.band : M.hat, v === -9 ? 4 : 0);
+      if (v <= -3 && v >= -8) hp(-1, v, M.hat, 4);                    
+    }
+  }
+  function hatOnHead(R) {
+    const T = { r0: 0, tx: R.hx, ty: R.htop + 1 - (P.hatJ || 0), rot: R.rot, ox: R.ox, oy: R.oy };
+    hat(T, R.lie ? 0 : P.tilt);
+  }
+  function hatFree() {
+    const r = P.hatR, T = { r0: r === 2 ? 3 : r === 3 ? 2 : 0, tx: P.hatX - P.bx, ty: P.hatY + P.lift + (r === 2 ? -5 : r === 3 ? -9 : 0), rot: 0, ox: 0, oy: 0 };   
+    hat(T, r === 1 ? 3 : 0);
+  }
+  function smear(R) {
+    E.part(); const a0 = P.smear === 1 ? 0 : Math.PI * 0.5, a1 = P.smear === 1 ? Math.PI * 0.5 : Math.PI;
+    for (let k = 0; k <= 12; k++) {
+      const a = a0 + (a1 - a0) * k / 12, x = WCX + Math.cos(a) * WRX, y = WCY - 1 + Math.sin(a) * (WRY + 1);
+      if (P.smear === 2 && (k & 1)) continue;
+      PX(E, R, x, y, M.sleeve, 4); PX(E, R, x, y + 1, M.gold, P.smear === 1 ? 4 : 3);
+      if (P.smear === 1) PX(E, R, x, y - 1, M.sleeve, 4);
+    }
+  }
+  let cuffF = [0, 0], armOnly = 0;                                     
+  function drawHero() {
+    E.begin(hero, P.bx, -P.lift);
+    const R = parts.rig(P, BODY);
+    if (armOnly) { parts.arm(E, R, P, { side: 'F', sleeve: 'tight', mat: M.sleeve, cuff: M.shirt, grip: 'none' }); glove(R, P.hx, P.hy, P.hm, 0, 0); return; }
+    E.part(); tailRows(R, 1, (y, a, b) => { for (let x = a; x <= b; x++) PX(E, R, x, y, M.coatD, 0); });
+    const aB = parts.arm(E, R, P, { side: 'B', sleeve: 'tight', mat: M.sleeveD, cuff: M.shirtD, grip: 'none' });
+    if (!(P.bhx === P.hx && P.bhy === P.hy)) glove(R, P.bhx, P.bhy, P.bm, 1, 0);   
+    parts.legs(E, R, P, { style: 'shoe', mat: M.pants, matD: M.pantsD, boot: M.shoe, bootD: M.shoeD, w: 2, bootH: 2 });
+    coat(R);
+    neckCollar(R);
+    if (!P.hatM) hatOnHead(R);
+    head(R);
+    bowTie(R);
+    if (P.smear) smear(R);
+    const aF = parts.arm(E, R, P, { side: 'F', sleeve: 'tight', mat: M.sleeve, cuff: M.shirt, grip: 'none' });
+    PX(E, R, aF.wx, aF.wy, M.gold, 4); cuffF = [aF.wx, aF.wy];          
+    glove(R, P.hx, P.hy, P.hm, 0, P.tap);
+    if (P.hatM) hatFree();
+    return aB;
+  }
+  function bakeHero() {
+    const k = P.rimK; RIM.rim = P.rim; RIM.rimRamp = k === 1 ? IV : k === 2 ? EL : FR; RIM.rimAll = k === 3 ? 1 : 0; RIM.rimR = k === 3 ? RR_D : RR; RIM.skip = k === 3 ? SKIP_D : SKIP;
+    RIM.rx = P.gx + hero.ox; RIM.ry = P.gy + hero.oy; RIM.flash = P.flash; RIM.dq = P.dq; bake(hero, RIM);
+  }
+  let flT = 9, flX = 0, flY = 0, arcT = 9;                            
+  let bOn = 0, bX = 0, bY = 0, bVX = 0, bVY = 0, bTX = 0;             
+  const B_G = 240;
+  let swT = 9, ghT = 9, spin = 0, spinV = 0, chargeAcc = 0, emberAcc = 0, coldAcc = 0, soulAcc = 0, lastStep = 0;
+  function snap(dst, st, t) { armOnly = 1; poseAt(st, t, t); drawHero(); bakeHero(); armOnly = 0; copySprite(dst, hero); hero.k1 = hero.k2 = -1; }
+  const wheelX = (a, rx) => scrX(WCX + Math.cos(a) * (rx || WRX)), wheelY = (a, ry) => HY + WCY + Math.sin(a) * (ry || WRY);
+  function onEnter(s) {
+    if (s === CAST) { snap(ghA, CHARGE, DUR[CHARGE] - 0.01); snap(ghB, CAST, 1.5 / 12); poseAt(CAST, 0, E.simT); }
+  }
+  function onTime(s, t) {
+    if (s === ATTACK && t === T_FLICK) {
+      flT = 0; arcT = 0; flX = scrX(P.hx + 8 + P.bx); flY = HY + P.hy;
+      const x0 = flX, y0 = flY, ty = HY - 17; bTX = DUMMY_X - 3; const T = Math.max(0.2, (bTX - x0) / 150);
+      bVX = (bTX - x0) / T; bVY = (ty - y0) / T - 0.5 * B_G * T; bOn = 1; bX = x0; bY = y0;
+      burst(x0, y0, 5, 20, 50, 0.1, 0.22, R_IV, 4);
+      sfx('swing', { kind: 'throw', w: 0.2 }); sfx('shoot', { proj: 'stone' });
+    }
+    if (s === CAST && t === T_REL) {                                   
+      const gx = wheelX(0), gy = wheelY(0);
+      releaseOrbit(40, 90, 0.3, 0.6, { pts: 1 }); burst(wheelX(Math.PI / 2), wheelY(Math.PI / 2), 20, 50, 120, 0.25, 0.6, R_EL, 8);
+      swT = 0; ghT = 0; spinV = 36; shake(0.28, 2); flash(0.05); void gx; void gy;
+    }
+    if (s === CAST && t === T_ROLL) {                                  
+      const x = wheelX(0) + 3, y = wheelY(0);
+      shoot(2, x, y, 150, DUMMY_X - 5, R_EL, (HY - 16 - y) * 150 / Math.max(10, DUMMY_X - 5 - x), { trail: { every: 2, life: [0.12, 0.25], back: [10, 25] } });
+      for (let i = 0; i < 6; i++) spawn(K_BURST, x, y + (Math.random() * 4 - 2), 60 + Math.random() * 60, -10 - Math.random() * 30, 0.2 + Math.random() * 0.2, R_EL);
+    }
+    if (s === DEATH) {
+      const fx0 = scrX(P.gx), fy0 = HY + P.gy;
+      if (t === INCOMING + D_GRIN) { burst(fx0 - 4, fy0 - 1, 5, 20, 50, 0.2, 0.45, FXI.frost, 8); burst(fx0 + 4, fy0 - 1, 5, 20, 50, 0.2, 0.45, FXI.frost, 8); }
+      if (t === INCOMING + D_POP) burst(scrX(HAT0[0] - 1), HY + HAT0[1], 8, 30, 70, 0.15, 0.35, R_IV, 10);
+      if (t === INCOMING + D_LAND) {
+        for (let i = 0; i < 16; i++) { const x = HX - 34 + Math.random() * 50; spawn(K_DUST, x, HY - 1, (Math.random() - 0.5) * 30, -8 - Math.random() * 14, 0.4 + Math.random() * 0.4, FXI.dust); }
+        shake(0.1, 1); sfx('fall', { w: 0.3 });
+      }
+      if (t === INCOMING + D_SHAT) {                                   
+        poseAt(DEATH, INCOMING + D_SHAT - 0.02, E.simT); drawHero(); bakeHero();
+        death.start('chunks', { chunk: 3, power: 0.55, fromX: -12, fromY: 2, fadeAt: 0.6, fadeDur: 0.5 });
+        hero.k1 = hero.k2 = -1;
+        for (let i = 0; i < 22; i++) { const x = HX - 32 + Math.random() * 44; spawnX(K_PHYS, x, HY - 2 - Math.random() * 5, (Math.random() - 0.5) * 70, -40 - Math.random() * 70, 0.8 + Math.random() * 0.6, R_IV, { g: 300, floor: HY - 1 }); }
+        for (let i = 0; i < 14; i++) spawn(K_RISE, HX - 30 + Math.random() * 40, HY - 2 - Math.random() * 6, (Math.random() - 0.5) * 6, -14 - Math.random() * 16, 0.8 + Math.random() * 0.8, FXI.frost);
+        shake(0.1, 1); sfx('hit', { mat: 'stone', w: 0.5 });
+      }
+    }
+  }
+  const EVENTS = [[], [], [T_FLICK], [], [T_REL, T_ROLL], [], [], [INCOMING + D_GRIN, INCOMING + D_POP, INCOMING + D_LAND, INCOMING + D_SHAT], []];
+  function impactOn(k, x, y) {
+    if (k === 2) {
+      burst(x, y, 36, 60, 150, 0.3, 0.7, R_EL, 16); ring(x, y, 1, R_EL); fx.cross(x, y, 7, R_EL, 0.3);
+      hitDummy(1, 1); shake(0.12, 1); E.dummyFx({ stun: 1, dur: 1.4 }); sfx('impact', { pal: 'coin', w: 0.3 });
+    }
+  }
+  function hurtFx(s) {
+    const hx = HX + HIT_POINT[0] - 1, hy = HY + HIT_POINT[1], fx0 = HX + 3, fy0 = HY - 42;
+    burst(hx, hy, s === DEATH ? 14 : 10, 50, 120, 0.2, 0.45, FXI.impact, 18);
+    for (let i = 0; i < (s === DEATH ? 8 : 4); i++) spawnX(K_PHYS, fx0 + Math.random() * 2, fy0 + Math.random() * 3, 20 + Math.random() * 40, -40 - Math.random() * 40, 0.7 + Math.random() * 0.4, R_IV, { g: 260, floor: HY - 1 });
+    shake(0.16, s === DEATH ? 2 : 1); if (s === DEATH) flash(0.04);
+    return true;
+  }
+  function stepFX(dt, state, stT) {
+    if (state === MOVE && P.step !== lastStep) { if (P.step !== 0) sfx('step', { w: 0.1 }); lastStep = P.step; }
+    if (state === CHARGE && stT > 0.25) {                              
+      const gx = wheelX(0), gy = wheelY(0);
+      chargeAcc += dt * (18 + 30 * clamp01(stT / DUR[CHARGE])); while (chargeAcc >= 1) { chargeAcc -= 1; const r = 10 + Math.random() * 9; spawn(K_SPIRAL_PT, gx, gy, (r - 2) / (0.35 + Math.random() * 0.3), 0, 9, R_EL, Math.random() * 6.2832, r, 4 + Math.random() * 3); }
+    }
+    if (state === RECOVER && stT < 0.5) { emberAcc += dt * 12; while (emberAcc >= 1) { emberAcc -= 1; const a = Math.random() * 6.2832; spawn(K_EMBER, wheelX(a), wheelY(a), Math.random() * 6 - 3, -6 - Math.random() * 8, 0.5 + Math.random() * 0.5, R_EL); } }
+    if (state === DEATH && stT > INCOMING + D_GRIN && stT < INCOMING + 1.5) { coldAcc += dt * 7; while (coldAcc >= 1) { coldAcc -= 1; const sd = Math.random() < 0.5 ? -1 : 1; spawn(K_EMBER, scrX(P.gx + sd * 4), HY + P.gy - 2, sd * (4 + Math.random() * 6), -8 - Math.random() * 8, 0.4 + Math.random() * 0.4, FXI.frost); } }   
+    if (state === DEATH && stT > INCOMING + D_SHAT && stT < INCOMING + 2.8) { soulAcc += dt * 18; while (soulAcc >= 1) { soulAcc -= 1; spawn(K_RISE, HX - 30 + Math.random() * 40, HY - 1 - Math.random() * 5, (Math.random() - 0.5) * 6, -12 - Math.random() * 14, 0.8 + Math.random() * 0.7, FXI.frost); } }
+    if (bOn) {                                                         
+      bVY += B_G * dt; bX += bVX * dt; bY += bVY * dt;
+      spawn(K_TRAIL, bX - 1, bY + (Math.random() - 0.5), -bVX * 0.12, -bVY * 0.12, 0.07 + Math.random() * 0.07, R_IV);
+      if (bX >= bTX) {
+        bOn = 0; burst(bX, bY, 7, 30, 70, 0.1, 0.25, R_IV, 8); fx.cross(bX, bY, 3, R_IV, 0.12); hitDummy(0, 1); sfx('hit', { mat: 'stone', w: 0.2 });
+        spawnX(K_PHYS, bX - 1, bY, -35, -70, 0.9, R_IV, { g: 300, floor: HY - 1, sz: 2 });
+      }
+    }
+    flT += dt; arcT += dt; swT += dt; ghT += dt; spin += spinV * dt; spinV *= Math.pow(0.25, dt);
+  }
+  function fxReset() { flT = 9; arcT = 9; bOn = 0; swT = 9; ghT = 9; spin = 0; spinV = 0; chargeAcc = 0; emberAcc = 0; coldAcc = 0; soulAcc = 0; lastStep = 0; }
+  function wheel(back, f12) {
+    const st = E.state, t = E.stT; if (st !== CHARGE && st !== CAST && st !== RECOVER) return;
+    const N = 32, lit = st === CHARGE ? Math.floor(clamp01((t - 0.2) / 1.0) * N) : N, fade = st === RECOVER ? clamp01((t - 0.2) / 0.45) : 0;
+    if (fade >= 1) return;
+    for (let k = 0; k < N; k++) {
+      const a = -k / N * 6.2832, s = Math.sin(a); if (back ? s >= 0 : s < 0) continue;
+      const x = RD(wheelX(a)), y = RD(wheelY(a));
+      let c = -1;
+      if (st === CHARGE) { if (k < lit) c = k >= lit - 2 ? ((f12 & 1) ? EL[0] : EL[1]) : EL[2]; else if (t > 0.12) c = EL[4]; }   
+      else { c = fade > 0.5 ? ((k + f12) & 1 ? -1 : EL[4]) : fade > 0.2 ? EL[3] : EL[2]; const ph = (((k / N * 6.2832 - spin) % 2.0944) + 2.0944) % 2.0944; if (ph < 0.4 && fade < 0.6) c = st === CAST ? EL[0] : EL[1]; }
+      if (c >= 0) put(x, y, c);
+    }
+  }
+  function fxBack(f12) {
+    const st = E.state;
+    if ((st === CHARGE || st === CAST) && P.rim >= 2) floorGlow(RD(wheelX(0)) - 4, P.rim, EL, f12);
+    wheel(1, f12); shotFloorGlow(f12);
+  }
+  function fxMid(f12) {                                                
+    if (ghT < 0.3) { const q = ghT / 0.3; blitShape(ghA, HX + P.mx, HY, P.flip, EL[3], 0.15 + q * 0.85); if (ghT > 1 / 12) blitShape(ghB, HX + P.mx, HY, P.flip, EL[2], 0.1 + q * 0.9); }
+  }
+  function fxFront(f12) {
+    wheel(0, f12);
+    if (swT < 0.4) {                                                   
+      const q = swT, a1 = q < 1 / 12 ? Math.PI * 0.5 : Math.PI, c0 = q < 1 / 12 ? EL[0] : q < 2 / 12 ? EL[1] : q < 0.25 ? EL[2] : EL[3];
+      const n = 26; for (let k = 0; k <= n; k++) { const a = a1 * k / n; if (q > 0.25 && (k & 1)) continue; const x = RD(wheelX(a, WRX + 2)), y = RD(wheelY(a, WRY + 2)); put(x, y, c0); if (q < 2 / 12) put(x, y + 1, q < 1 / 12 ? EL[1] : EL[2]); }
+    }
+    if (arcT < 2 / 12) {                                               
+      const c = arcT < 1 / 12 ? IV[1] : IV[2];
+      for (let k = 0; k <= 10; k++) { if (arcT >= 1 / 12 && (k & 1)) continue; const s = k / 10, x = RD(scrX(K_WIND.hx + 1 + (K_FLICK.hx + 6 - K_WIND.hx) * s)), y = RD(HY + K_WIND.hy - 4 + (K_FLICK.hy + 4 - K_WIND.hy) * s - Math.sin(s * Math.PI) * 4); put(x, y, c); }
+    }
+    if (flT < 2 / 12) { const c = flT < 1 / 12 ? IV[0] : IV[1]; put(flX, flY, IV[0]); for (let r = 1; r <= 2; r++) { const cc = r === 1 ? c : IV[2]; put(flX + r, flY, cc); put(flX - r, flY, cc); put(flX, flY - r, cc); put(flX, flY + r, cc); } }
+    if (bOn) { const x = RD(bX), y = RD(bY); put(x, y, IV[0]); put(x + 1, y, IV[1]); put(x, y + 1, IV[1]); put(x + 1, y + 1, IV[2]); }
+    if (P.glint && !P.lying) { const x = scrX(cuffF[0] + P.bx), y = HY + cuffF[1]; put(x, y - 1, EL[0]); put(x, y - 2, EL[1]); put(x - 1, y - 1, EL[1]); put(x + 1, y - 1, EL[1]); put(x, y - 3, EL[2]); }
+  }
+  const SPOKE = [[1, 0], [1, 1], [0, 1], [-1, 1]];
+  function drawShot(k, x, y, d, f12, R) {
+    if (k !== 2) return false;
+    for (let i = 0; i < 16; i++) { const a = i / 16 * 6.2832; put(RD(x + Math.cos(a) * 3.4), RD(y + Math.sin(a) * 3.4), (i + f12) % 4 === 0 ? R[1] : R[2]); }
+    const s = SPOKE[f12 & 3]; for (let r = 1; r <= 2; r++) { put(x + s[0] * r, y + s[1] * r, R[1]); put(x - s[0] * r, y - s[1] * r, R[1]); }
+    put(x, y, R[0]); return true;
+  }
+  return {
+    name: '荷官', HX, R_EL, DUR, hero, P, GLOW_MATS: [M.glow], HIT_POINT, EVENTS, MAX_H: 60,
+    deathKit: { mode: 'chunks', at: INCOMING + D_SHAT },
+    SFX: { body: 'stone', how: 'shatter', pal: 'coin', style: 'coin', w: 0.3 },
+    SHEET: [[IDLE, [0, 0.4, 0.67, 0.75, 0.83, 0.92, 1.0, 1.5, 1.6, 2.2]], [MOVE, [0, 1 / 6, 2 / 6, 3 / 6]], [ATTACK, null], [CHARGE, 'step2'], [CAST, null], [RECOVER, null], [HURT, 'hurt'],
+      [DEATH, [0.3, 0.38, 0.58, 0.67, 0.75, 0.83, 0.92, 1.0, 1.08, 1.17, 1.25, 1.33, 1.5, 1.8, 2.2]], [REVIVE, [0.45, 0.55, 0.65, 0.75, 0.9]]],
+    poseAt, drawHero, bakeHero, onEnter, onTime, impactOn, hurtFx, stepFX, fxReset, fxBack, fxMid, fxFront, drawShot,
+  };
+});
+;
+
 PCD.define('militia', (E) => {
   const { parts, Sprite, bake, ease, clamp01, q12, f12of, walkDemo, FXI, FXR, HY, DUMMY_X, INCOMING, ASTEP, fxRamp,
     IDLE, MOVE, ATTACK, CHARGE, CAST, RECOVER, HURT, DEATH, REVIVE, DEFAULT_DUR, K_RISE, K_DUST, K_BURST, K_PHYS,
@@ -65384,6 +68284,810 @@ PCD.define('nun', (E) => {
     name: '驱魔修女', HX, R_EL, DUR, hero, P, GLOW_MATS: [M_STONE, M_SGLOW], HIT_POINT: [1, -10], EVENTS,
     SFX: { body: 'flesh', how: 'topple', pal: 'holy', style: 'heal', w: 0.6 },
     poseAt, drawHero, bakeHero, onEnter, onTime, impactOn, stepFX, fxReset, fxBack, fxMid, fxFront, drawShot, offField,
+  };
+});
+;
+
+PCD.define('teller', (E) => {
+  const { defMat, Sprite, begin, part, sp, run, rect, brush, bake, ease, clamp01, q12, f12of, gait, FXI, FXR, fxRamp, HY, INCOMING,
+    IDLE, MOVE, ATTACK, CHARGE, CAST, RECOVER, HURT, DEATH, REVIVE, DEFAULT_DUR, K_SPIRAL_PT, K_EMBER, K_RISE,
+    spawn, spawnX, burst, releaseOrbit, ring, shake, flash, scrX, sfx, bayer } = E;
+  const R_EL = fxRamp('star', [21, 43, 24, 25, 3]), EL = FXR[R_EL];            
+  const R_SMOKE = fxRamp('smoke', [18, 54, 10, 53, 52]);                        
+  const M_SCARF = defMat([52, 53, 42, 54], 2), M_TAIL = defMat([52, 53, 53, 42], 1), M_SLEEVE = defMat([52, 53, 53, 42], 1), M_DRESS = defMat([52, 53, 53, 42], 1);
+  const M_SHAWL = defMat('crimson', 2), M_GOLD = defMat('gold', 1), M_COIN = defMat('gold', 1, 1), M_DROP = defMat('gold', 1, 1);
+  const M_BLIND = defMat('bone', 1), M_SKIN = defMat([20, 19, 16, 33], 1), M_IRIS = defMat([25, 25, 24, 43], 1, 1), M_EGLOW = defMat([24, 43, 21, 21], 1, 1);
+  const M_CARD = defMat([0, 39, 39, 40], 1), M_EDGE = defMat([7, 6, 17, 21], 1, 1);
+  const M_FX = defMat([255, 24, 43, 21], 1, 1);                                 
+  const DUR = DEFAULT_DUR.slice(); DUR[IDLE] = 2.5; DUR[MOVE] = 4 / 3;          
+  const HX = 60, X0 = 150, Y0 = 126;
+  const hero = new Sprite(132, 112, 66, 106);                                   
+  const RIM = { rim: 0, rx: 0, ry: 0, rimR: [0, 8, 16, 24], rimRamp: EL, flash: 0, dq: 0, rimAll: 1, skip: new Uint8Array(64) };
+  for (const m of [M_EGLOW, M_IRIS, M_GOLD, M_COIN, M_DROP, M_SKIN, M_BLIND, M_CARD, M_EDGE, M_SLEEVE]) RIM.skip[m] = 1;
+  const TAU = Math.PI * 2;
+  const H_HANG = 0, H_UP = 1, H_DECK = 2, H_FLICK = 3, H_SPLAY = 4, H_PRAY = 5;
+  const P = { st: 0, hxo: 0, hyo: 0, sho: 0, lx: 0, ly: 0, rx: 0, ry: 0, lex: 0, ley: 0, rex: 0, rey: 0, ls: 0, rs: 0,
+    eye: 0, iris: 0, mouth: 0, brow: 0, cph: 0, camp: 0, cdir: 0, tail: 0, ear: 0, thr: 0, tw: 0, cth: 0, arc: 0, deck: 0, dust: 0,
+    drop: -1, smoke: -1, gone: 0, wink: 0, glint: 0, rim: 0, flash: 0, dq: 0, gx: 0, gy: 0, mx: 0, flip: 0, k1: 0, k2: 0 };
+  const K_IDLE = { hxo: 0, hyo: 0, sho: 0, lx: 112, ly: 65, rx: 188, ry: 65, lex: 127, ley: 70, rex: 173, rey: 70 };
+  const K_PEEK_L = { hxo: -2, hyo: 2, sho: 1, lx: 106, ly: 67, rx: 187, ry: 64, lex: 126, ley: 70, rex: 173, rey: 69 };
+  const K_PEEK_C = { hxo: 0, hyo: 3, sho: 1, lx: 113, ly: 67, rx: 187, ry: 67, lex: 127, ley: 70, rex: 173, rey: 70 };
+  const K_PEEK_R = { hxo: 2, hyo: 2, sho: 1, lx: 113, ly: 64, rx: 194, ry: 67, lex: 127, ley: 69, rex: 174, rey: 70 };
+  const K_GATHER = { hxo: 0, hyo: 1, sho: 0, lx: 135, ly: 69, rx: 165, ry: 69, lex: 127, ley: 70, rex: 173, rey: 70 };
+  const K_SHUF = { hxo: 0, hyo: 1, sho: 0, lx: 143, ly: 69, rx: 157, ry: 69, lex: 128, ley: 70, rex: 172, rey: 70 };
+  const K_FLICK = { hxo: -1, hyo: 0, sho: 0, lx: 108, ly: 64, rx: 157, ry: 69, lex: 126, ley: 69, rex: 172, rey: 70 };
+  const K_FOLLOW = { hxo: -1, hyo: 0, sho: 0, lx: 106, ly: 66, rx: 158, ry: 69, lex: 126, ley: 69, rex: 172, rey: 70 };
+  const K_HOLDA = { hxo: 0, hyo: 0, sho: 0, lx: 108, ly: 66, rx: 160, ry: 69, lex: 126, ley: 70, rex: 172, rey: 70 };
+  const K_CHARGE = { hxo: 0, hyo: -1, sho: -1, lx: 126, ly: 44, rx: 174, ry: 44, lex: 128, ley: 59, rex: 172, rey: 59 };
+  const K_CAST = { hxo: 0, hyo: 1, sho: 0, lx: 106, ly: 64, rx: 194, ry: 64, lex: 125, ley: 69, rex: 175, rey: 69 };
+  const K_RECOIL = { hxo: 0, hyo: -3, sho: -2, lx: 122, ly: 54, rx: 178, ry: 54, lex: 128, ley: 64, rex: 172, rey: 64 };
+  const K_PRAY = { hxo: 0, hyo: 1, sho: 0, lx: 148, ly: 66, rx: 152, ry: 66, lex: 129, ley: 70, rex: 171, rey: 70 };
+  const K_BOW = { hxo: 0, hyo: 3, sho: 1, lx: 148, ly: 67, rx: 152, ry: 67, lex: 129, ley: 71, rex: 171, rey: 71 };
+  const FIELDS = ['hxo', 'hyo', 'sho', 'lx', 'ly', 'rx', 'ry', 'lex', 'ley', 'rex', 'rey'];
+  const mixPose = (A, B, q) => E.mix(P, A, B, q, FIELDS);
+  const T_FLICK = 2 / 12, T_SLAP = 4 / 12, T_LAND = INCOMING + 0.66;
+  function idle(fr) {   
+    mixPose(K_IDLE, K_IDLE, 0);
+    const th = fr / 30 * TAU, b = Math.floor(fr / 5) & 1;
+    P.lx = K_IDLE.lx - 3 * Math.sin(th); P.ly = K_IDLE.ly - 2 + 2 * Math.cos(th);            
+    P.rx = K_IDLE.rx + 3 * Math.sin(th); P.ry = P.ly;
+    P.hyo += b; P.sho += b;                                                                  
+    P.cph = fr; P.camp = 0.9; P.tail = Math.round(Math.sin(TAU * fr / 15 + 2) * 1.4); P.ear = Math.round(Math.sin(TAU * fr / 10 + 2.2) * 0.8);
+    if (fr === 22 || fr === 23) P.eye = 1;
+    P.glint = fr === 8 ? 1 : fr === 9 ? 2 : fr === 16 ? 3 : fr === 17 ? 4 : 0;               
+  }
+  function poseAt(st, t) {
+    const tq = q12(t), f = f12of(t);
+    P.st = st; P.ls = P.rs = H_HANG; P.eye = 0; P.iris = 0; P.mouth = 0; P.brow = 0; P.cph = 0; P.camp = 0; P.cdir = 0; P.tail = 0; P.ear = 0;
+    P.glint = 0; P.thr = 0; P.tw = 0; P.cth = 0; P.arc = 0; P.deck = 0; P.dust = 0; P.drop = -1; P.smoke = -1; P.gone = 0; P.wink = 0; P.rim = 0; P.flash = 0; P.dq = 0; P.mx = 0; P.flip = 0;
+    if (st === IDLE) idle(f % 30);
+    else if (st === MOVE) {   
+      const g = gait(tq), K = [K_PEEK_L, K_PEEK_C, K_PEEK_R, K_PEEK_C][g];
+      mixPose(K, K, 0); P.iris = [-1, 0, 1, 0][g]; P.cdir = [1, -1, -1, 1][g]; P.tail = [1, -1, -1, 1][g]; P.ear = P.cdir; P.camp = 0.4; P.cph = g * 4;
+    } else if (st === ATTACK) {   
+      if (f === 0) { mixPose(K_GATHER, K_GATHER, 0); P.ls = P.rs = H_DECK; P.deck = 1; }
+      else if (f === 1) { mixPose(K_SHUF, K_SHUF, 0); P.ls = P.rs = H_DECK; P.deck = 2; P.cdir = -1; }
+      else if (f === 2) { mixPose(K_FLICK, K_FLICK, 0); P.ls = H_FLICK; P.rs = H_DECK; P.deck = 3; P.arc = 1; P.cdir = 1; P.tail = 1; P.ear = 1; }
+      else if (f === 3) { mixPose(K_FOLLOW, K_FOLLOW, 0); P.ls = H_FLICK; P.rs = H_DECK; P.deck = 3; P.arc = 2; P.cdir = 1; P.ear = 1; }
+      else if (f <= 5) { mixPose(K_HOLDA, K_HOLDA, 0); P.rs = H_DECK; P.deck = 3; P.camp = 0.9; P.cph = f * 3; }
+      else { mixPose(K_HOLDA, K_IDLE, ease.inOut(clamp01((tq - 5 / 12) / (4 / 12)))); P.camp = 0.9; P.cph = f * 3; }
+      P.mouth = f >= 2 && f <= 4 ? 1 : 0;
+    } else if (st === CHARGE) {   
+      const q = ease.inOut(clamp01(tq / 0.7)); mixPose(K_IDLE, K_CHARGE, q);
+      if (q > 0.45) P.ls = P.rs = H_UP;
+      P.eye = tq < 0.2 ? 0 : tq < 0.45 ? 2 : tq < 0.7 ? 3 : (f & 1 ? 4 : 3);
+      P.thr = tq >= 0.8 ? 2 : tq >= 0.5 ? 1 : 0; P.tw = f & 3;
+      P.rim = tq < 0.45 ? 1 : 2; P.tail = 2; P.ear = q > 0.5 ? -1 : 0; P.brow = q > 0.5 ? 1 : 0;
+      if (f >= 12) P.cdir = f & 1 ? 1 : -1;                                                  
+    } else if (st === CAST) {   
+      mixPose(K_CHARGE, K_CAST, f === 0 ? 0.6 : 1); P.ls = P.rs = f === 0 ? H_UP : H_SPLAY;
+      P.eye = 5; P.rim = 3; P.cth = f + 1; P.tail = -2; P.ear = 1; P.camp = 1.4; P.cph = f * 5; P.brow = 1;
+    } else if (st === RECOVER) {
+      const q = ease.inOut(clamp01(tq / 0.6)); mixPose(K_CAST, K_IDLE, q);
+      if (q < 0.4) P.ls = P.rs = H_SPLAY;
+      P.eye = q < 0.3 ? 4 : q < 0.6 ? 3 : q < 0.85 ? 2 : 0; P.rim = q < 0.5 ? 2 : q < 0.85 ? 1 : 0; P.tail = -Math.round((1 - q) * 2); P.camp = 0.9 * (1 - q); P.cph = f * 4; P.mouth = q > 0.35 ? 1 : 0;   
+    } else if (st === HURT) {   
+      const h = tq - INCOMING;
+      if (h < 0) idle(f % 30);
+      else if (h < 0.2) { mixPose(K_RECOIL, K_RECOIL, 0); P.flash = h < 1 / 12 ? 1 : 0; P.ls = P.rs = H_UP; P.mouth = 2; P.brow = 1; P.eye = 2; P.tail = 2; P.ear = 1; P.cdir = -1; P.dust = h < 1 / 12 ? 0 : h < 0.15 ? 1 : 2; }
+      else if (h < 0.35) { mixPose(K_RECOIL, K_IDLE, 0.5); P.ls = P.rs = H_UP; P.mouth = 2; P.brow = 1; P.eye = 2; P.tail = 1; P.ear = -1; P.dust = 3; P.camp = 1; P.cph = 7; }
+      else { mixPose(K_RECOIL, K_IDLE, ease.inOut(clamp01((h - 0.35) / 0.15))); P.tail = -1; P.camp = 0.9; P.cph = 12; }
+    } else if (st === DEATH) {   
+      const d = tq - INCOMING;
+      if (d < 0) idle(f % 30);
+      else {
+        if (d < 0.2) mixPose(K_PRAY, K_PRAY, 0); else mixPose(K_PRAY, K_BOW, ease.out(clamp01((d - 0.2) / 0.25)));
+        P.ls = P.rs = H_PRAY; P.flash = d < 1 / 12 ? 1 : 0;
+        P.eye = d < 0.8 ? 1 : d < 0.97 ? 3 : 6; P.tail = d < 0.45 ? 1 : 0; P.ear = d < 0.45 ? 1 : 0;
+        if (d >= 0.25) P.drop = d - 0.25;
+        if (d >= 1.3) P.smoke = clamp01((d - 1.3) / 1.1);
+        if (d >= 2.4) P.gone = 1;
+        if (d >= 2.15) P.wink = d - 2.15;
+      }
+    } else if (st === REVIVE) {
+      idle(0);
+      if (tq < 0.4) P.dq = 1; else if (tq < 0.85) P.dq = 1 - (tq - 0.4) / 0.45; else P.eye = 3;
+    }
+    for (const k of FIELDS) P[k] = Math.round(P[k]);
+    P.gx = P.hxo; P.gy = 46 + P.hyo - Y0;                                                   
+    P.k1 = st * 4096 + Math.min(4095, f); P.k2 = 0;                                          
+  }
+  let DX = 0, DY = 0;
+  const FACE_W = [7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 6, 5, 4, 3, 2];                            
+  const faceHalf = (r) => (r < 0 ? 7 : r > 14 ? -1 : FACE_W[r]);
+  const DOME = [4, 6, 8, 9, 10, 11, 11, 12, 12, 12];                                       
+  const shoulderY = (dx) => { const a = Math.abs(dx); return a <= 9 ? 52 : 52 + Math.round(Math.pow(Math.min(1, (a - 9) / 14), 1.6) * 12); };   
+  const hemY = (dx) => 72 - Math.round(5 * Math.pow(Math.min(23, Math.abs(dx)) / 23, 1.4));   
+  const cr = (v) => (v > 1 ? 1 : v < -1 ? -1 : Math.round(v));
+  const coinOff = (k) => cr(P.camp * Math.sin(TAU * P.cph / 30 + k * 0.6) + P.cdir);
+  function drawTails(cx, oy) {   
+    part();
+    for (let k = 0; k < 2; k++) {
+      const len = k ? 11 : 14;
+      for (let i = 0; i <= len; i++) { const q = i / len, x = cx + 14 - k * 2 + i * (0.5 + k * 0.1) + Math.round(q * q * P.tail * 1.6), y = 40 + oy + i + k; sp(x, y, M_TAIL, 0); sp(x + 1, y, M_TAIL, 0); }
+      sp(cx + 14 - k * 2 + len * (0.5 + k * 0.1) + Math.round(P.tail * 1.6) + 1, 41 + oy + len + k, M_GOLD, 4);   
+    }
+  }
+  function drawShawl(s) {   
+    part();
+    for (let dx = -23; dx <= 23; dx++) for (let y = shoulderY(dx); y <= hemY(dx); y++) sp(X0 + dx, y + s, M_SHAWL, 0);
+    for (let y = 56; y <= 62; y++) { const w = Math.round((62 - y) * 0.5); run(y + s, X0 - w, X0 + w, M_DRESS, 0); }
+    rect(X0 - 1, 62 + s, 2, 2, M_GOLD, 0);
+    for (const [x0, y0, x1, y1] of [[-6, 58, -11, 71], [6, 58, 11, 71], [-14, 57, -19, 68], [14, 57, 19, 68]]) {
+      const n = y1 - y0; for (let i = 0; i <= n; i++) { const dx = Math.round(x0 + (x1 - x0) * i / n), y = y0 + i; if (y < hemY(dx) - 1) sp(X0 + dx, y + s, M_SHAWL, 2); }
+    }
+    for (let dx = -22; dx <= 22; dx += 2) sp(X0 + dx, hemY(dx) - 1 + s, M_GOLD, 3);
+    for (const [dx, y] of [[-17, 62], [-9, 65], [-3, 68], [4, 66], [12, 64], [18, 63], [-12, 59], [9, 60]]) sp(X0 + dx, y + s, M_GOLD, 4);
+  }
+  function drawCoins(s) {   
+    part();
+    for (let k = -5; k <= 5; k++) { const dx = k * 4, x = X0 + dx - 1 + coinOff(k), y = hemY(dx) + 1 + s; coin(x, y, M_COIN); }
+  }
+  function coin(x, y, m) { sp(x, y, m, 4); sp(x + 1, y, m, 3); sp(x, y + 1, m, 3); sp(x + 1, y + 1, m, 2); }
+  function drawFace(cx, oy) {   
+    part();
+    for (let r = 0; r < 15; r++) run(41 + r + oy, cx - FACE_W[r], cx + FACE_W[r], M_SKIN, 0);
+    run(56 + oy, cx - 2, cx + 2, M_SKIN, 2); run(57 + oy, cx - 1, cx + 1, M_SKIN, 2);
+    const y = (r) => r + oy, S = (x, r, t) => sp(x, y(r), M_SKIN, t);
+    S(cx - 5, 48, 4); S(cx - 4, 48, 4); S(cx + 4, 48, 3); S(cx + 5, 48, 3);                 
+    S(cx - 6, 50, 2); S(cx - 5, 51, 2); S(cx + 6, 50, 2); S(cx + 5, 51, 2);                 
+    S(cx - 3, 51, 2); S(cx + 3, 51, 2);                                                    
+    S(cx, 48, 4); S(cx, 49, 4); S(cx + 1, 48, 2); S(cx + 1, 49, 2); S(cx, 50, 3); S(cx + 1, 50, 2); S(cx - 1, 50, 1); S(cx + 2, 50, 1); S(cx, 51, 2);   
+    if (P.mouth === 1) { run(y(52), cx - 3, cx + 3, M_SKIN, 1); S(cx - 4, 51, 1); S(cx + 4, 51, 1); sp(cx + 1, y(52), M_GOLD, 4); run(y(53), cx - 2, cx + 2, M_SKIN, 4); }   
+    else if (P.mouth === 2) { run(y(52), cx - 1, cx + 1, M_SKIN, 1); run(y(53), cx - 1, cx + 1, M_SKIN, 1); S(cx, 54, 4); }                                          
+    else { run(y(52), cx - 2, cx + 2, M_SKIN, 1); run(y(53), cx - 1, cx + 1, M_SKIN, 4); S(cx - 1, 54, 4); }                                                         
+    const by = P.brow ? 42 : 43; run(y(by), cx - 5, cx - 3, M_SKIN, 1); run(y(by), cx + 3, cx + 5, M_SKIN, 1); if (P.brow) { S(cx - 6, 43, 1); S(cx + 6, 43, 1); }
+    for (let r = 44; r <= 47; r++) run(y(r), cx - 7, cx + 7, M_BLIND, 0);                  
+    drawEye(cx, oy);
+  }
+  function drawEye(cx, oy) {   
+    const G = (x, r, t) => sp(x, r + oy, M_GOLD, t), e = P.eye, i = P.iris;
+    if (e === 1 || e === 6) { const t = e === 6 ? 2 : 3; for (let x = cx - 3; x <= cx + 3; x++) G(x, 46, t); for (let x = cx - 2; x <= cx + 2; x += 2) G(x, 47, e === 6 ? 1 : 2); return; }
+    if (e === 0) {
+      for (let x = cx - 2; x <= cx + 2; x += 2) G(x, 44, 2);
+      for (let x = cx - 2; x <= cx + 2; x++) G(x, 45, 3); G(cx - 3, 46, 3); G(cx + 3, 46, 3); for (let x = cx - 2; x <= cx + 2; x++) G(x, 47, 2);
+      sp(cx - 2, 46 + oy, M_BLIND, 4); sp(cx + 2, 46 + oy, M_BLIND, 4);
+      sp(cx - 1 + i, 46 + oy, M_IRIS, 4); sp(cx + i, 46 + oy, M_IRIS, 2); sp(cx + 1 + i, 46 + oy, M_IRIS, 3);
+      return;
+    }
+    const lid = e >= 3 ? 4 : 3;
+    for (let x = cx - 2; x <= cx + 2; x++) { G(x, 44, lid); G(x, 47, e >= 3 ? 3 : 2); }
+    for (const r of [45, 46]) { G(cx - 3, r, lid); G(cx + 3, r, lid); sp(cx - 2, r + oy, e >= 4 ? M_EGLOW : M_BLIND, e >= 4 ? 2 : 4); sp(cx + 2, r + oy, e >= 4 ? M_EGLOW : M_BLIND, e >= 4 ? 2 : 4); }
+    if (e === 2) { for (let x = -1; x <= 1; x++) sp(cx + x + i, 45 + oy, M_IRIS, 3); sp(cx - 1 + i, 46 + oy, M_IRIS, 4); sp(cx + i, 46 + oy, M_IRIS, 2); sp(cx + 1 + i, 46 + oy, M_IRIS, 3); }
+    else if (e === 3) { for (let x = -1; x <= 1; x++) sp(cx + x, 45 + oy, M_EGLOW, 2); sp(cx - 1, 46 + oy, M_EGLOW, 2); sp(cx, 46 + oy, M_EGLOW, 3); sp(cx + 1, 46 + oy, M_EGLOW, 2); }
+    else { for (let x = -1; x <= 1; x++) { sp(cx + x, 45 + oy, M_EGLOW, 3); sp(cx + x, 46 + oy, M_EGLOW, 3); } }
+  }
+  function drawScarf(cx, oy) {   
+    part();
+    for (let r = 0; r < DOME.length; r++) run(31 + r + oy, cx - DOME[r], cx + DOME[r], M_SCARF, 0);
+    for (let yy = 41; yy <= 57; yy++) {
+      const fh = yy <= 55 ? faceHalf(yy - 41) : 8, out = yy < 50 ? 12 : yy < 54 ? 13 : 14;
+      run(yy + oy, cx - out, cx - fh - 1, M_SCARF, 0); run(yy + oy, cx + fh + 1, cx + out, M_SCARF, 0);
+    }
+    const K = [[35, 11, 13], [36, 11, 15], [37, 12, 16], [38, 12, 16], [39, 12, 15], [40, 13, 14]];   
+    for (const [r, a, b] of K) run(r + oy, cx + a, cx + b, M_SCARF, 0);
+    for (let r = 36; r <= 39; r++) sp(cx + 14, r + oy, M_SCARF, 2); sp(cx + 12, 36 + oy, M_SCARF, 4);
+    for (const [x, r] of [[-5, 33], [-6, 34], [-7, 35], [-7, 36], [-8, 37], [-8, 38], [4, 32], [5, 33], [6, 34], [6, 35], [7, 36]]) sp(cx + x, r + oy, M_SCARF, 2);   
+    for (let r = 43; r <= 55; r++) { const d = Math.floor((r - 43) / 6); sp(cx - 10 - d, r + oy, M_SCARF, 2); sp(cx + 10 + d, r + oy, M_SCARF, 2); }                   
+    sp(cx - 2, 32 + oy, M_SCARF, 4); sp(cx - 1, 32 + oy, M_SCARF, 4); sp(cx - 3, 33 + oy, M_SCARF, 4); sp(cx - 4, 33 + oy, M_SCARF, 4);
+    for (let x = cx - 11; x <= cx + 11; x++) sp(x, 40 + oy, M_GOLD, (x - cx + 12) % 3 === 0 ? 4 : 3);   
+    for (const d of [-6, -3, 3, 6]) sp(cx + d, 41 + oy, M_GOLD, 3); sp(cx, 41 + oy, M_GOLD, 4); sp(cx, 42 + oy, M_GOLD, 3);   
+    for (let x = cx - 14; x <= cx - 9; x += 2) sp(x, 58 + oy, M_GOLD, x === cx - 12 ? 4 : 3);
+    for (let x = cx + 9; x <= cx + 14; x += 2) sp(x, 58 + oy, M_GOLD, x === cx + 11 ? 4 : 3);
+  }
+  function drawHoop(x, yTop, sw) {   
+    part();
+    run(yTop, x - 1, x + 1, M_GOLD, 0);
+    for (let k = 1; k <= 4; k++) { const o = k >= 3 ? sw : 0; sp(x - 2 + o, yTop + k, M_GOLD, 0); sp(x + 2 + o, yTop + k, M_GOLD, 0); }
+    run(yTop + 5, x - 1 + sw, x + 1 + sw, M_GOLD, 0);
+    sp(x + sw, yTop + 6, M_GOLD, 4); sp(x + sw, yTop + 7, M_GOLD, 3);
+  }
+  function seg(x0, y0, x1, y1, r0, r1, m) { const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0))); for (let i = 0; i <= n; i++) { const q = i / n; brush(x0 + (x1 - x0) * q, y0 + (y1 - y0) * q, r0 + (r1 - r0) * q, m, 0); } }
+  function drawArm(side, sx, sy, ex, ey, wx, wy, style) {   
+    part();
+    seg(sx, sy, ex, ey, 1.4, 1.4, M_SLEEVE);
+    const L = Math.hypot(wx - ex, wy - ey) || 1, ux = (wx - ex) / L, uy = (wy - ey) / L, mx = ex + ux * L * 0.55, my = ey + uy * L * 0.55;
+    seg(ex, ey, mx, my, 1.3, 1.2, M_SLEEVE); seg(mx, my, wx - ux * 1.5, wy - uy * 1.5, 1.3, 2.0, M_SLEEVE);
+    if (Math.abs(uy) < 0.7) for (let i = 1; i <= 4; i++) { const x = Math.round(wx - ux * (1.5 + i)), y = Math.round(wy - uy * (1.5 + i)); sp(x, y + 2, M_SLEEVE, 0); if (i <= 2) sp(x, y + 3, M_SLEEVE, 0); }   
+    for (let k = -2; k <= 2; k++) sp(Math.round(wx - ux * 1.5 - uy * k), Math.round(wy - uy * 1.5 + ux * k), M_GOLD, 0);
+    if (style === H_PRAY) return;
+    if (style === H_DECK) drawStack(side, wx, wy);
+    part(); drawHand(side, wx, wy, style);
+  }
+  function drawStack(side, wx, wy) {   
+    part();
+    const full = P.deck === 3 && side === 1, w = 5, h = full ? 7 : 6, x0 = wx + (side < 0 ? -3 : -1), y0 = wy - h;
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { const edge = i === 0 || j === 0 || i === w - 1 || j === 4; sp(x0 + i, y0 + j, j > 4 ? M_EDGE : edge ? M_GOLD : M_CARD, j > 4 ? (j === h - 1 ? 2 : 3) : 0); }
+    sp(x0 + 2, y0 + 2, M_GOLD, 4);
+  }
+  const HAND = {
+    [H_HANG]: { back: [1, -1, 5, 3], f: [[1, 2, 5], [3, 2, 7], [5, 2, 5]], bend: [], thumb: [[0, 2], [-1, 3], [-1, 4]], ring: [[1, 4], [3, 5]] },
+    [H_SPLAY]: { back: [1, -1, 5, 3], f: [[1, 2, 5]], bend: [[3, 2], [3, 3], [4, 4], [4, 5], [5, 6], [5, 7], [6, 1], [7, 2], [8, 3], [9, 4]], thumb: [[0, 2], [-1, 3], [-2, 4], [-3, 5]], ring: [[1, 4]] },
+  };
+  function drawHand(side, wx, wy, style) {
+    const s = side, H = (ox, oy, m, t) => sp(wx + s * ox, wy + oy, m || M_SKIN, t || 0);
+    if (style === H_HANG || style === H_SPLAY) {   
+      const d = HAND[style], [bx, by, bw, bh] = d.back;
+      for (let j = 0; j < bh; j++) for (let i = 0; i < bw; i++) H(bx + i, by + j);
+      for (let i = 0; i < bw; i += 2) H(bx + i, by + bh - 1, M_SKIN, 4);                    
+      for (const [ox, oy, n] of d.f) for (let k = 0; k < n; k++) H(ox, oy + k, M_SKIN, k === n - 1 ? 4 : 3);
+      for (const [ox, oy] of d.bend) H(ox, oy, M_SKIN, 3);
+      for (const [ox, oy] of d.thumb) H(ox, oy, M_SKIN, 3);
+      for (const [ox, oy] of d.ring) H(ox, oy, M_GOLD, 4);
+    } else if (style === H_UP) {   
+      for (let j = -4; j <= -1; j++) for (let i = -1; i <= 3; i++) H(i, j);
+      for (let k = 5; k <= 9; k++) H(-1, -k, M_SKIN, k === 9 ? 4 : 3);
+      for (let k = 5; k <= 10; k++) H(1, -k, M_SKIN, k === 10 ? 4 : 3);
+      H(3, -5, M_SKIN, 3); H(3, -6, M_SKIN, 3); H(4, -7, M_SKIN, 3); H(4, -8, M_SKIN, 3); H(5, -9, M_SKIN, 4);
+      H(-2, -2, M_SKIN, 3); H(-3, -3, M_SKIN, 3); H(-4, -4, M_SKIN, 3); H(-4, -5, M_SKIN, 4);
+      H(1, -7, M_GOLD, 4); H(0, -3, M_SKIN, 4);
+    } else if (style === H_FLICK) {   
+      for (let j = -1; j <= 1; j++) for (let i = 1; i <= 3; i++) H(i, j);
+      for (let k = 4; k <= 9; k++) H(k, -1, M_SKIN, k === 9 ? 4 : 3);
+      for (let k = 4; k <= 8; k++) H(k, 1, M_SKIN, k === 8 ? 4 : 3);
+      H(3, -2, M_SKIN, 3); H(4, -3, M_SKIN, 3); H(4, -4, M_SKIN, 4); H(6, 1, M_GOLD, 4);
+    } else if (style === H_DECK) {   
+      for (let j = 0; j <= 1; j++) for (let i = -1; i <= 3; i++) H(i, j);
+      H(4, -1, M_SKIN, 3); H(4, -2, M_SKIN, 3); H(4, -3, M_SKIN, 4); H(-1, -2, M_SKIN, 3); H(-1, -3, M_SKIN, 4); H(4, 0, M_GOLD, 4);
+    }
+  }
+  function drawPray(s) {   
+    const y0 = 59 + (P.hyo > 1 ? 1 : 0) + s;
+    part(); for (let y = y0; y <= y0 + 7; y++) run(y, X0 - 2, X0 - 1, M_SKIN, 0); sp(X0 - 1, y0 - 1, M_SKIN, 4); sp(X0 - 2, y0 + 4, M_GOLD, 4);
+    part(); for (let y = y0; y <= y0 + 7; y++) run(y, X0, X0 + 1, M_SKIN, 0); sp(X0, y0 - 1, M_SKIN, 4);
+  }
+  function drawBridge() {   
+    part();
+    for (let x = P.lx + 1; x <= P.rx - 1; x++) { const u = (x - P.lx) / (P.rx - P.lx), yy = Math.round(P.ly - 7 - 4 * Math.sin(u * Math.PI)); sp(x, yy, M_GOLD, 4); sp(x, yy + 1, M_CARD, 0); }
+  }
+  const DROP = []; for (let k = -5; k <= 5; k++) DROP.push({ k, x: X0 + k * 4 - 1, y: 0, vx: k * 4 * 1.7, vy: -22 + ((k * 7 + 11) % 5) * 5, g: 700, ground: Y0 + ((k + 5) % 3), wink: 0.05 + ((k * 5 + 55) % 11) * 0.025 });
+  for (const c of DROP) c.y = hemY(c.k * 4) + 1;
+  function coinAt(c, t) {   
+    const tl = (-c.vy + Math.sqrt(c.vy * c.vy + 2 * c.g * (c.ground - c.y))) / c.g;
+    if (t < tl) return [c.x + c.vx * t, c.y + c.vy * t + 0.5 * c.g * t * t, 0];
+    const xl = c.x + c.vx * tl + Math.sign(c.vx) * Math.min(2, (t - tl) * 12);
+    return [xl, c.ground - (t - tl < 0.1 ? 1 : 0), t - tl >= 0.1 ? 1 : 0];
+  }
+  function drawDropped() {
+    for (const c of DROP) {
+      if (P.wink > c.wink + 1 / 12) continue;
+      part(); const [x, y, flat] = coinAt(c, P.drop), X = Math.round(x), Y = Math.round(y);
+      if (flat) { sp(X - 1, Y, M_DROP, 3); sp(X, Y, M_DROP, 4); sp(X + 1, Y, M_DROP, 2); } else coin(X, Y - 1, M_DROP);
+    }
+  }
+  function drawHero() {
+    DX = -X0; DY = -Y0; begin(hero, DX, DY);
+    if (P.gone) { if (P.drop >= 0) drawDropped(); return; }
+    const cx = X0 + P.hxo, oy = P.hyo, s = P.sho, lf = P.lx > 131 && P.ly > 56, rf = P.rx < 169 && P.ry > 56;
+    const armL = () => drawArm(-1, 135, 60 + s, P.lex, P.ley + s, P.lx, P.ly, P.ls), armR = () => drawArm(1, 165, 60 + s, P.rex, P.rey + s, P.rx, P.ry, P.rs);
+    drawTails(cx, oy);
+    if (!lf) armL(); if (!rf) armR();
+    drawShawl(s);
+    drawFace(cx, oy);
+    drawScarf(cx, oy);
+    drawHoop(cx - 13, 51 + oy, P.ear); drawHoop(cx + 13, 51 + oy, P.ear);
+    if (P.drop < 0) drawCoins(s);
+    if (lf) armL(); if (rf) armR();
+    if (P.ls === H_PRAY) drawPray(s);
+    if (P.deck === 2) drawBridge();
+    if (P.drop >= 0) drawDropped();
+  }
+  const idx = (x, y) => { const lx = Math.round(x) + DX + hero.ox, ly = Math.round(y) + DY + hero.oy; return lx < 1 || ly < 1 || lx >= hero.w - 1 || ly >= hero.h - 1 ? -1 : ly * hero.w + lx; };
+  function put2(x, y, c) { const i = idx(x, y); if (i < 0) return; hero.out[i] = c; hero.mat[i] = M_FX; }
+  function put2e(x, y, c) { const i = idx(x, y); if (i < 0 || (hero.mat[i] && hero.mat[i] !== M_FX)) return; hero.out[i] = c; hero.mat[i] = M_FX; }   
+  function star4(x, y, L, c0, c1, c2) { put2(x, y, c0); for (let r = 1; r <= L; r++) { const c = r === 1 ? c1 : c2; put2(x + r, y, c); put2(x - r, y, c); put2(x, y + r, c); put2(x, y - r, c); } }
+  const tipUp = (s, wx, wy) => [[wx - s, wy - 9], [wx + s, wy - 10], [wx + s * 5, wy - 9], [wx - s * 4, wy - 5]];     
+  const tipSplay = (s, wx, wy) => [[wx + s, wy + 6], [wx + s * 5, wy + 7], [wx + s * 9, wy + 4], [wx - s * 3, wy + 5]];
+  function lineFx(x0, y0, x1, y1, fn, only) { const n = Math.max(1, Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)))); for (let i = 0; i <= n; i++) { const q = i / n, c = fn(i, n, q); if (c >= 0) (only ? put2e : put2)(x0 + (x1 - x0) * q, y0 + (y1 - y0) * q, c); } }
+  const CAST_TO = [[90, 74], [103, 75], [141, 74], [210, 74], [197, 75], [159, 74]];      
+  function overlayFx() {
+    const cx = X0 + P.hxo, oy = P.hyo;
+    if (P.thr) {   
+      for (const [s, wx, wy] of [[-1, P.lx, P.ly], [1, P.rx, P.ry]]) {
+        const T = tipUp(s, wx, wy), tw = (P.tw + (s > 0 ? 2 : 0)) & 3, c = (j) => ((j + tw) % 4 === 0 ? EL[0] : EL[1 + ((j + tw) & 1)]);
+        lineFx(T[3][0], T[3][1], T[2][0], T[2][1], (j) => c(j), 1);
+        if (P.thr >= 2) { lineFx(T[0][0], T[0][1], T[2][0], T[2][1] + 3, (j) => c(j + 1), 1); lineFx(T[3][0], T[3][1] - 2, T[1][0], T[1][1] + 3, (j) => c(j + 2), 1); }
+      }
+      if (P.thr >= 2) {
+        const a = tipUp(-1, P.lx, P.ly)[1], b = tipUp(1, P.rx, P.ry)[1], H = a[1] - 24;
+        let px = a[0], py = a[1];
+        for (let x = a[0]; x <= b[0]; x++) {
+          const u = (x - a[0]) / (b[0] - a[0]), y = Math.round(a[1] + (b[1] - a[1]) * u - H * 4 * u * (1 - u)), j = x - a[0], v = (j + P.tw * 3) % 12;
+          const c = v === 0 ? EL[0] : v === 1 || v === 11 ? EL[1] : v === 6 ? -1 : EL[1 + ((j >> 2) & 1)];
+          if (c >= 0) lineFx(px, py, x, y, () => c); px = x; py = y;
+        }
+      }
+    }
+    if (P.cth && P.cth <= 5) {   
+      const k = P.cth;
+      for (const [s, wx, wy] of [[-1, P.lx, P.ly], [1, P.rx, P.ry]]) {
+        const tips = P.ls === H_UP ? tipUp(s, wx, wy) : tipSplay(s, wx, wy), T = s < 0 ? CAST_TO.slice(0, 3) : CAST_TO.slice(3);
+        for (const [from, to] of [[tips[2], T[0]], [tips[1], T[1]], [tips[3], T[2]]]) {
+          lineFx(from[0], from[1], to[0], to[1], (i, n, q) => {
+            if (k === 1) return i === n ? EL[0] : (i & 1 ? EL[1] : EL[0]);
+            if (k === 2) return EL[1];
+            if (k === 3) return i & 1 ? -1 : EL[2];
+            if (k === 4) return q < 0.5 || i % 3 ? -1 : EL[2];
+            return q < 0.8 || i & 1 ? -1 : EL[3];
+          });
+          if (k <= 4) { const L = [0, 2, 3, 2, 1][k]; star4(to[0], to[1], L, k <= 2 ? EL[0] : EL[1], k <= 2 ? EL[1] : EL[2], EL[2]); }
+        }
+      }
+    }
+    if (P.arc) {   
+      const C = FXR[FXI.coin], P0 = [148, 63], P1 = [127, 49], P2 = [99, 62];
+      for (let i = 0; i <= 90; i++) {
+        const u = i / 90, a = (1 - u) * (1 - u), b = 2 * u * (1 - u), c = u * u, x = a * P0[0] + b * P1[0] + c * P2[0], y = a * P0[1] + b * P1[1] + c * P2[1];
+        if (P.arc === 1) { put2(x, y, u > 0.25 ? C[0] : C[1]); put2(x, y - 1, C[1]); put2(x, y + 1, u > 0.5 ? C[2] : C[3]); }
+        else if ((Math.round(x) & 1) && u > 0.35) put2(x, y, u > 0.7 ? C[2] : C[3]);
+      }
+      if (P.arc === 1) { put2(96, 59, C[1]); put2(94, 63, C[2]); put2(97, 67, C[0]); put2(93, 60, C[2]); }
+      else { put2(93, 57, C[2]); put2(91, 62, C[3]); put2(94, 68, C[2]); }
+    }
+    if (P.dust) {   
+      const hx = cx, hy = 44 + oy, r = 10 + P.dust * 3;
+      for (const a of [-2.6, -0.45, -1.95, -1.15]) { const x = hx + Math.cos(a) * r * 1.2, y = hy + Math.sin(a) * r; if (P.dust === 1) star4(Math.round(x), Math.round(y), 1, EL[0], EL[1], EL[1]); else if (P.dust === 2) star4(Math.round(x), Math.round(y), 1, EL[1], EL[2], EL[2]); else put2(x, y, EL[2]); }
+    }
+    if (P.glint) {   
+      const [x, y] = P.glint <= 2 ? [P.lx - 3, P.ly + 5] : [cx + 13 + P.ear, 58 + oy];
+      if (P.glint & 1) star4(x, y, 1, EL[0], EL[1], EL[1]); else put2(x, y, EL[1]);
+    }
+    if (P.wink) for (const c of DROP) { const d = P.wink - c.wink; if (d >= 0 && d < 2 / 12) { const [x, y] = coinAt(c, P.drop); star4(Math.round(x), Math.round(y) - 1, d < 1 / 12 ? 2 : 1, EL[0], EL[1], EL[2]); } }
+  }
+  const SM = FXR[R_SMOKE], SRC = new Uint8Array(hero.w * hero.h), SRCM = new Uint8Array(hero.w * hero.h);
+  function smokePass(q) {
+    const o = hero.out, m = hero.mat, w = hero.w, top = 26 - 20, bot = 80 - 20, F = q * 1.35 - 0.12;
+    SRC.set(o); SRCM.set(m);
+    for (let y = top; y <= bot; y++) for (let x = 0; x < w; x++) {
+      const i = y * w + x; if (SRC[i] === 255 || SRCM[i] === M_DROP) continue;
+      const v = E.hash(x, y) * 0.25 + (bot - y) / (bot - top) * 0.75; if (v >= F) continue;
+      o[i] = 255; m[i] = 0;
+      const e = F - v; if (e > 0.34 || E.hash(x + 7, y * 3) > 0.9 - e * 1.6) continue;
+      const ny = y - Math.round(e * 40), nx = x + Math.round(Math.sin(ny * 0.4 + x * 0.25) * e * 7); if (ny < 3 || nx < 1 || nx >= w - 2) continue;
+      const j = ny * w + nx, c = e < 0.07 ? SM[0] : e < 0.16 ? SM[1] : e < 0.25 ? SM[2] : SM[3]; o[j] = c; m[j] = M_FX;
+      if (e < 0.16 && ((x + y) & 1)) { o[j + 1] = c; m[j + 1] = M_FX; }                   
+    }
+    const fy = 80 - Math.min(1.15, F / 0.75) * 54, t = q * 2.2;
+    for (let k = 0; k < 5; k++) {
+      const x0 = X0 - 14 + k * 7 + ((k * 3) % 4), len = 5 + (k % 3) * 3, base = fy - 4 - (k & 1) * 2 - q * 8;
+      for (let j = 0; j < len; j++) { const y = base - j, x = x0 + Math.round(Math.sin(y * 0.45 + k * 1.7 + t * 4) * 1.6); if (j > len * 0.5 && ((x + y) & 1)) continue; if (y < 24) continue; put2(x, y, j < len * 0.4 ? SM[0] : SM[2]); }
+    }
+  }
+  function bakeHero() {
+    RIM.rim = P.rim; RIM.rx = P.gx + hero.ox; RIM.ry = P.gy + hero.oy; RIM.flash = P.flash; RIM.dq = P.dq; bake(hero, RIM);
+    if (P.smoke >= 0 && !P.gone) smokePass(P.smoke);
+    else if (P.gone && P.smoke >= 0) { const q = P.wink; for (let k = 0; k < 3; k++) { const x = X0 - 6 + k * 6, y0 = 30 - q * 14 - k * 2; for (let j = 0; j < 6; j++) { const y = y0 - j, x1 = x + Math.round(Math.sin(y * 0.5 + k * 2 + q * 8) * 1.5); if (y >= 24 && !((x1 + y + k) & 1) && q < 0.35) put2(x1, y, j < 3 ? SM[2] : SM[3]); } } }
+    if (!P.flash) overlayFx();
+  }
+  const SX = (x) => scrX(x - X0), SY = (y) => HY + y - Y0;
+  let chargeAcc = 0, moteAcc = 0, smokeAcc = 0;
+  function onEnter(s) {
+    if (s === CAST) {
+      releaseOrbit(40, 90, 0.3, 0.6, { pts: 1, ramp: R_EL });
+      for (const [x, y] of CAST_TO) burst(SX(x), SY(y), 8, 30, 70, 0.2, 0.45, R_EL, 8);
+      ring(SX(150), SY(66), 1, R_EL); shake(0.28, 2); flash(0.05);
+    }
+  }
+  function onTime(s, t) {
+    if (s === ATTACK && t === T_FLICK) { burst(SX(100), SY(64), 6, 20, 50, 0.15, 0.3, FXI.coin, 6); sfx('swing', { kind: 'throw', w: 0.2 }); }
+    if (s === ATTACK && t === T_SLAP) sfx('hit', { mat: 'wood', w: 0.1 });
+    if (s === CAST && t === 1 / 12) sfx('impact', { pal: 'arcane', w: 0.2 });
+    if (s === DEATH && t === T_LAND) { for (const c of DROP) { const [x, y] = coinAt(c, 0.5); burst(SX(x), SY(y), 2, 10, 25, 0.15, 0.3, FXI.coin, 10); } sfx('hit', { mat: 'metal', w: 0.1 }); }
+  }
+  const EVENTS = [[], [], [T_FLICK, T_SLAP], [], [1 / 12], [], [], [T_LAND], []];
+  function hurtFx(s) {   
+    const x = SX(X0), y = SY(60); burst(x, y, s === DEATH ? 10 : 12, 25, 60, 0.3, 0.6, R_EL, 12); if (s === HURT) shake(0.12, 1); return true;
+  }
+  function stepFX(dt, state, stT) {
+    if (state === CHARGE) {
+      chargeAcc += dt * (18 + 30 * clamp01(stT / DUR[CHARGE]));
+      while (chargeAcc >= 1) { chargeAcc -= 1; const side = Math.random() < 0.5 ? -1 : 1, wx = side < 0 ? P.lx : P.rx, wy = (side < 0 ? P.ly : P.ry) - 6, r = 10 + Math.random() * 8, a = Math.random() * TAU;
+        spawnX(K_SPIRAL_PT, SX(wx), SY(wy), (r - 3) / (0.3 + Math.random() * 0.3), 0, 9, R_EL, { a, r, w: side * (4 + Math.random() * 3), tx: SX(wx), ty: SY(wy), orbitR: 2.5 }); }
+    }
+    if (state === IDLE || state === RECOVER) {
+      moteAcc += dt * (state === IDLE ? 1.4 : 5);
+      while (moteAcc >= 1) { moteAcc -= 1; const side = Math.random() < 0.5 ? -1 : 1, wx = side < 0 ? P.lx : P.rx, wy = side < 0 ? P.ly : P.ry; spawn(K_EMBER, SX(wx + side * 3), SY(wy + 5), Math.random() * 6 - 3, -5 - Math.random() * 6, 0.6 + Math.random() * 0.6, R_EL); }
+    }
+    if (state === DEATH && P.smoke > 0 && P.smoke < 1) {
+      smokeAcc += dt * 26;
+      while (smokeAcc >= 1) { smokeAcc -= 1; const y = 78 - P.smoke * 50; spawn(K_RISE, SX(X0 - 16 + Math.random() * 32), SY(y), (Math.random() - 0.5) * 6, -10 - Math.random() * 12, 0.7 + Math.random() * 0.7, R_SMOKE); }
+    }
+  }
+  function fxReset() { chargeAcc = 0; moteAcc = 0; smokeAcc = 0; }
+  return {
+    name: '占卜师', HX, R_EL, DUR, hero, P, GLOW_MATS: [M_EGLOW, M_FX], HIT_POINT: [0, -60], EVENTS,
+    REVIVE: { dy: -60, ramp: R_EL },
+    SHEET: [[IDLE, [0, 5 / 12, 10 / 12, 15 / 12, 20 / 12, 22 / 12, 25 / 12]], [MOVE, [0, 2 / 12, 4 / 12, 6 / 12]], [ATTACK, null], [CHARGE, 'step2'], [CAST, null], [RECOVER, 'step2'], [HURT, 'hurt'],
+      [DEATH, [4 / 12, 5 / 12, 8 / 12, 10 / 12, 12 / 12, 14 / 12, 17 / 12, 21 / 12, 24 / 12, 27 / 12, 30 / 12, 32 / 12, 34 / 12]], [REVIVE, [0.45, 0.6, 0.75, 0.9]]],
+    SFX: { body: 'flesh', how: 'dissolve', pal: 'arcane', style: 'beam', w: 0.2, hover: 1 },
+    poseAt, drawHero, bakeHero, onEnter, onTime, hurtFx, stepFX, fxReset,
+  };
+});
+;
+
+PCD.define('tophat', (E) => {
+  const { defMat, Sprite, begin, part, sp, run, bake, ease, clamp01, q12, f12of, keyer, fxRamp, FXI, FXR, HY, INCOMING, B8,
+    IDLE, MOVE, ATTACK, CHARGE, CAST, RECOVER, HURT, DEATH, REVIVE, DEFAULT_DUR, K_SPIRAL, K_SPIRAL_PT, K_RISE, K_DUST, K_EMBER, K_PHYS,
+    spawn, spawnX, burst, releaseOrbit, ring, shake, flash, fx, put, scrX, sfx } = E;
+  const M_BODY = defMat([0, 0, 52, 53], 2);             
+  const M_WISP = defMat([0, 53, 42, 54], 1);            
+  const M_HAT = defMat([0, 8, 9, 10], 1);               
+  const M_BAND = defMat('crimson', 1);                  
+  const M_CARD = defMat('bone', 1);                     
+  const M_PIP = defMat([55, 56, 57, 57], 1, 1);         
+  const M_GLOVE = defMat('white', 1), M_CUFF = defMat('white', 1);
+  const M_GLOVE2 = defMat('white', 1), M_CUFF2 = defMat('white', 1);   
+  const M_EYE = defMat([55, 56, 57, 58], 1, 1);         
+  const M_EYEHOT = defMat([57, 58, 21, 21], 1, 1);      
+  const M_TEETH = defMat([8, 7, 6, 17], 1, 1);          
+  const M_COIN = defMat('gold', 1);
+  const R_EL = fxRamp('inkshade', [43, 24, 25, 2, 0]), EL = FXR[R_EL];   
+  const RIMR = [43, 24, 42, 25, 0];                                        
+  const HX = 64, DUR = DEFAULT_DUR.slice();
+  const hero = new Sprite(72, 60, 36, 52);
+  const RIM = { rim: 1, rx: 0, ry: 0, rimR: [0, 30, 12, 18], rimRamp: RIMR, flash: 0, dq: 0, rimAll: 0, skip: new Uint8Array(64) };
+  for (const m of [M_GLOVE, M_CUFF, M_GLOVE2, M_CUFF2, M_EYE, M_EYEHOT, M_TEETH, M_CARD, M_PIP, M_COIN]) RIM.skip[m] = 1;
+  const KEEP = new Uint8Array(64); for (const m of [M_HAT, M_BAND, M_CARD, M_PIP, M_EYE, M_EYEHOT]) KEEP[m] = 1;   
+  const SNAP = new Uint8Array(64); for (const m of [M_GLOVE, M_CUFF, M_GLOVE2, M_CUFF2, M_TEETH, M_COIN]) SNAP[m] = 1;   
+  const P = { by: 0, bx: 0, lean: 0, hd: 0, lx: -19, ly: -12, rx: 19, ry: -12, lg: 0, rg: 0, lb: 4, rb: 4, drum: 0, coin: 0,
+    eyes: 0, ex: 0, ey: 0, grin: 0, hatX: 0, hatY: 0, hatT: 1, hatS: 0, hatSq: 0, hatOff: 0, wisp: 0, wm: 0, dq: 0, flash: 0, rim: 1, cup: 0, st: 0,
+    gx: 0, gy: 0, mx: 0, flip: 0, k1: 0, k2: 0 };
+  const KEY = keyer([['by', -6, 4], ['bx', -3, 3], ['lean', 0, 3], ['hd', -2, 2], ['lx', -32, 8], ['ly', -44, 4], ['rx', -8, 32], ['ry', -44, 4],
+    ['lg', 0, 5], ['rg', 0, 5], ['lb', -8, 8], ['rb', -8, 8], ['drum', 0, 4], ['coin', 0, 8],
+    ['eyes', 0, 9], ['ex', -1, 1], ['ey', -3, 1], ['grin', 0, 1], ['hatX', -16, 16], ['hatY', -2, 30], ['hatT', -1, 1], ['hatS', 0, 8], ['hatSq', 0, 1], ['hatOff', 0, 1],
+    ['wisp', 0, 15], ['wm', 0, 3], ['dq', 0, 48, 48], ['flash', 0, 1], ['rim', 0, 3], ['cup', 0, 1], ['st', 0, 8]]);
+  const FIELDS = ['by', 'bx', 'lean', 'hd', 'lx', 'ly', 'rx', 'ry', 'lb', 'rb', 'hatX', 'hatY'];
+  const K_IDLE = { by: 0, bx: 0, lean: 0, hd: 0, lx: -19, ly: -12, rx: 19, ry: -12, lb: 4, rb: 4, hatX: 0, hatY: 0 };
+  const K_COIN = { ...K_IDLE, lx: -15, ly: -21, lb: 2 };                                              
+  const K_LEAN = { ...K_IDLE, lean: 2, lx: -13, ly: -12, rx: 13, ry: -12, lb: 7, rb: 7 };             
+  const F0 = [-12, -17], MOUTH = (x, y) => [x, y + 9], SLAM_AT = [-13, 11];
+  const K_GRIP = { ...K_IDLE, by: -1, lx: F0[0] - 12, ly: F0[1], rx: F0[0] + 12, ry: F0[1], lb: 3, rb: -5 };
+  const K_SLAM = { ...K_IDLE, by: 1, lean: 2, lx: -18, ly: -12, rx: -8, ry: -12, lb: 5, rb: -3 };
+  const K_LIFT = { ...K_IDLE, by: -1, lx: -13, ly: -20, rx: 19, ry: -12, lb: 3, rb: 4 };
+  const K_BACK = { ...K_IDLE, by: -1, hd: 1 };
+  const K_RECOIL = { ...K_IDLE, by: -2, bx: 1, lx: -23, ly: -27, rx: 23, ry: -27, lb: 5, rb: 5 };
+  const K_SLUMP = { ...K_IDLE, by: 1, lean: 1, lx: -17, ly: -12, rx: 17, ry: -12, lb: 5, rb: 5 };
+  const K_TIP = { ...K_SLUMP, lean: 1, hd: -1, lx: -12, ly: -36, lb: 5, hatY: 4, hatX: -1 };
+  const setK = (A, B, q) => E.mix(P, A, B, q, FIELDS);
+  const track = (tq, tr) => E.keys(tq, tr, P, FIELDS);
+  const T_SLAM = 4 / 12;                                                   
+  const SHAKE = [[0, 0], [-2, -2], [0, -1], [2, 1], [0, 1]];               
+  function poseAt(st, t, T) {
+    const tq = q12(t), f = f12of(t), f12 = f12of(T), TT = f12 / 12;
+    P.st = st; P.lg = 0; P.rg = 0; P.drum = 0; P.coin = 0; P.eyes = 0; P.ex = 0; P.ey = 0; P.grin = 0; P.hatT = 1; P.hatS = 0; P.hatSq = 0; P.hatOff = 0;
+    P.wm = 0; P.dq = 0; P.flash = 0; P.rim = 1; P.mx = 0; P.flip = 0;
+    P.wisp = Math.floor(TT * 6) & 15;
+    let fx0 = null;                                                        
+    const breathe = () => { P.by += (Math.floor(TT * 2.5) & 1) ? -1 : 0; };
+    const idle = (lp) => {
+      setK(K_IDLE, K_IDLE, 0); breathe();
+      if (lp < 0.67) P.drum = 1 + (f12of(lp) & 3);
+      if (lp >= 0.83 && lp < 2.25) {
+        const q = lp < 1.0 ? ease.out((lp - 0.83) / 0.17) : lp > 2.08 ? 1 - ease.inOut((lp - 2.08) / 0.17) : 1;
+        setK(K_IDLE, K_COIN, q); breathe(); P.lg = q > 0.5 ? 4 : 0;
+        if (lp >= 1.0 && lp < 2.08) { P.coin = 1 + Math.min(7, f12of(lp - 1.0)); P.ex = P.coin <= 5 ? -1 : 0; P.ey = -1; }
+      }
+      if (lp >= 2.08 && lp < 2.17) P.eyes = 5;
+    };
+    if (st === IDLE) idle(tq % DUR[IDLE]);
+    else if (st === MOVE) {
+      const g = E.gait(tq); setK(K_LEAN, K_LEAN, 0); P.by = [0, -1, -2, -1][g]; P.ly += [0, 0, -1, 0][g]; P.ry += [0, -1, 0, 0][g]; P.lb = 7 - (g & 1); P.rb = 6 + (g & 1);
+      P.eyes = 9; P.ey = 1; P.wisp = (g * 3 + Math.floor(tq * 2)) & 15; P.wm = 1; P.hatT = 0;
+    } else if (st === ATTACK) {
+      if (f === 0) { setK(K_IDLE, K_GRIP, 0.45); P.eyes = 9; }
+      else if (f === 1) { setK(K_GRIP, K_GRIP, 0); P.lg = 1; P.rg = 1; fx0 = MOUTH(F0[0], F0[1]); }
+      else if (f === 2 || f === 3) { const s = SHAKE[f === 2 ? 1 : 3]; setK(K_GRIP, K_GRIP, 0); P.lx += s[0]; P.rx += s[0]; P.ly += s[1]; P.ry += s[1]; P.bx = s[0] > 0 ? 1 : 0; P.lg = 1; P.rg = 1; fx0 = MOUTH(F0[0] + s[0], F0[1] + s[1]); P.eyes = 1; P.wm = 1; }
+      else if (f === 4) { setK(K_SLAM, K_SLAM, 0); P.lg = 2; P.rg = 2; P.eyes = 2; P.hatY = 1; P.rim = 2; fx0 = SLAM_AT; }
+      else if (f === 5) { setK(K_SLAM, K_SLAM, 0); P.lean = 1; P.lg = 2; P.rg = 2; P.eyes = 1; fx0 = SLAM_AT; }
+      else { const q = ease.out(clamp01((tq - 0.5) / 0.17)); setK(K_SLAM, K_BACK, q); P.lg = q < 0.5 ? 2 : 0; P.rg = P.lg; P.grin = 1; P.eyes = 4; P.by += f === 7 ? -1 : 0; P.hatY = f === 7 ? 1 : 0; }
+    } else if (st === CHARGE) {
+      const q = ease.inOut(clamp01(tq / 0.33)); setK(K_IDLE, K_GRIP, q); P.lg = q > 0.4 ? 1 : 0; P.rg = P.lg; P.rim = 2; P.eyes = 9;
+      if (f >= 4) {
+        const k = f < 8 ? (f >> 0) % 4 + 1 : f < 12 ? ((f & 1) ? 1 : 3) : ((f & 1) ? 1 : 3), amp = f < 12 ? 1 : 1.5, s = SHAKE[k];
+        P.lx += s[0] * amp; P.rx += s[0] * amp; P.ly += s[1] * amp; P.ry += s[1] * amp; P.bx = s[0] > 0 ? 1 : s[0] < 0 ? -1 : 0;
+        fx0 = MOUTH(F0[0] + s[0] * amp, F0[1] + s[1] * amp);
+        P.eyes = f < 8 ? 9 : (f12 & 1) ? 1 : 9; if (f >= 12) { P.eyes = (f12 & 1) ? 1 : 0; P.hatY = (f & 1); P.hatT = (f & 1) ? 0 : 1; }
+        P.wm = f < 8 ? 1 : 2; P.wisp = (f * (f < 8 ? 2 : f < 12 ? 3 : 4)) & 15;
+      } else fx0 = q > 0.4 ? MOUTH(F0[0], F0[1]) : null;
+    } else if (st === CAST) {
+      setK(K_SLAM, K_SLAM, 0); P.lg = 2; P.rg = 2; fx0 = SLAM_AT; P.rim = 3; P.wm = 2;
+      if (f <= 1) { P.lean = 3; P.by = 2; P.eyes = 2; P.hatY = f === 0 ? 2 : 3; P.hatT = 0; }
+      else { P.lean = f < 4 ? 2 : 1; P.by = 1; P.eyes = 1; P.hatY = f === 2 ? 1 : 0; P.rim = 2; }
+    } else if (st === RECOVER) {
+      if (f <= 1) { setK(K_SLAM, K_SLAM, 0); P.lean = 1; P.lg = 2; P.rg = 2; P.eyes = 1; fx0 = SLAM_AT; P.rim = 2; }
+      else if (f === 2) { setK(K_SLAM, K_LIFT, 0); P.lx = -13; P.ly = -13; P.rx = 15; P.lean = 1; P.lg = 0; P.rg = 0; P.eyes = 9; P.ey = 1; fx0 = SLAM_AT; }
+      else if (f === 3) { setK(K_LIFT, K_LIFT, 0); P.ly = -18; P.eyes = 0; P.ey = 1; fx0 = [-13, 11 - 5]; }
+      else { const up = (f & 1) ? 0 : 1; setK(K_LIFT, K_LIFT, 0); P.ly -= up; P.grin = 1; P.eyes = 4; P.hd = 1; P.by -= up; P.hatY = up; fx0 = [-13, 11 - 7 - up]; }
+    } else if (st === HURT) {
+      const h = tq - INCOMING;
+      if (h < 0) idle(tq % DUR[IDLE]);
+      else if (h < 1 / 12) { setK(K_RECOIL, K_RECOIL, 0); P.lg = 3; P.rg = 3; P.eyes = 3; P.flash = 1; P.hatY = 3; P.hatT = 0; P.rim = 0; P.wm = 2; }
+      else if (h < 2 / 12) { setK(K_RECOIL, K_RECOIL, 0); P.lg = 3; P.rg = 3; P.eyes = 3; P.hatY = 6; P.hatT = -1; P.rim = 0; P.wm = 2; }
+      else if (h < 3 / 12) { setK(K_RECOIL, K_IDLE, 0.4); P.lg = 3; P.rg = 3; P.eyes = 3; P.hatY = 3; P.hatT = 0; P.wm = 1; }
+      else if (h < 4 / 12) { setK(K_RECOIL, K_IDLE, 0.7); P.eyes = 3; P.hatY = 0; P.hatSq = 1; P.hatT = 1; }
+      else { setK(K_RECOIL, K_IDLE, 0.7 + 0.3 * ease.out(clamp01((h - 4 / 12) / 0.12))); P.eyes = h < 5 / 12 ? 5 : 0; }
+    } else if (st === DEATH) {
+      const d = tq - INCOMING;
+      if (d < 0) idle(tq % DUR[IDLE]);
+      else if (d < 2 / 12) { setK(K_RECOIL, K_RECOIL, 0); P.lg = 3; P.rg = 3; P.eyes = 3; P.flash = d < 1 / 12 ? 1 : 0; P.hatY = d < 1 / 12 ? 2 : 3; P.hatT = 0; P.rim = 0; P.wm = 2; }
+      else if (d < 3 / 12) { setK(K_RECOIL, K_SLUMP, 0.6); P.eyes = 6; P.hatY = 0; P.hatSq = 1; }
+      else if (d < 4 / 12) { setK(K_SLUMP, K_SLUMP, 0); P.eyes = 5; P.hatT = 0; }
+      else if (d < 7 / 12) {                                                   
+        const q = ease.out(clamp01((d - 4 / 12) / (2 / 12))); setK(K_SLUMP, K_TIP, q); P.lg = 5; P.eyes = 5; P.hatT = -1; if (d >= 6 / 12) P.lean = 2;
+      } else {
+        setK(K_TIP, K_TIP, 0); P.lg = 5; P.hatT = -1; P.wm = 3;
+        const dd = d - 7 / 12; P.dq = clamp01(dd / 0.75); P.by = -Math.round(P.dq * 3); P.rim = 0;
+        P.eyes = dd < 0.55 ? 0 : dd < 0.72 ? 6 : dd < 0.8 ? 7 : 8; P.ey = -Math.min(3, Math.round(dd * 4));   
+        const tFall = 0.5;                                                     
+        if (dd >= tFall) {
+          P.hatOff = 1; P.hatX = -7; P.hatT = 0; const fall = dd - tFall;
+          if (fall < 2 / 12) P.hatY = fall < 1 / 12 ? 16 : 7;                  
+          else { P.hatY = 0; const sp2 = f12of(fall - 2 / 12); P.hatS = sp2 < 8 ? sp2 + 1 : 0; P.hatSq = sp2 === 0 ? 1 : 0; P.hatT = sp2 < 8 ? [0, 1, 0, -1, 0, 1, 0, -1][sp2] : 0; }
+        }
+      }
+    } else if (st === REVIVE) {
+      setK(K_IDLE, K_IDLE, 0); P.dq = tq < 0.3 ? 1 : clamp01(1 - (tq - 0.3) / 0.45); P.wm = 3; P.eyes = tq < 0.55 ? 8 : 0;
+      if (tq < 0.7) { P.hatOff = 1; P.hatX = -7; P.hatY = tq < 0.6 ? 0 : 6; } else if (tq < 0.8) { P.hatY = 3; P.hatT = 0; }
+    }
+    for (const k of FIELDS) P[k] = Math.round(P[k]);
+    P.lean = Math.max(0, Math.min(3, P.lean));
+    P.cup = fx0 ? 1 : 0; if (P.cup < 1 && P.rim >= 2) P.rim = 1;
+    if (fx0) { P.gx = Math.round(fx0[0]); P.gy = Math.round(fx0[1]); } else { P.gx = P.bx + P.hd; P.gy = -23 + P.by + P.lean; }   
+    KEY(P);
+  }
+  const GLOVES = {   
+    0: { w: ['..CCCC..', '.cccccc.', '.gGgggg.', 'gGgsgsgg', 'ggsgsgsg', 'gggggggg', 'g.g.g.g.'], o: [3, 4] },           
+    1: { w: ['.c.gg...', 'CcgGggg.', 'Ccgkgkgg', 'Ccgsgsgg', 'Ccgggggg', '.c.ggg..'], o: [3, 3] },                     
+    2: { w: ['...CCC...', '..ccccc..', '.ggGgggg.', 'gGgsgsggg', 'gggggggggg'.slice(0, 9), 'g.g.g.g.g'], o: [4, 3] },  
+    3: { w: ['.g.g.g..', '.g.g.g.g', 'gggggggg', 'gGgggggg', '.gsgsgg.', '.cccccc.', '..CCCC..'], o: [4, 3] },          
+    4: { w: ['.kgkgkg.', 'gGgggggg', 'gsgsgsgg', 'gggggggg', '.gggggg.', '..cccc..', '..CCCC..'], o: [4, 2] },          
+    5: { w: ['..gGg...', '.gkgkg..', 'Cgsgsgg.', 'Ccggggg.', '.ccgg...'], o: [3, 2] },                                   
+  };
+  const FINGERS = [0, 2, 4, 6];   
+  function drawGlove(cx, cy, type, side, drum) {
+    const G = GLOVES[type], rows = G.w, W = rows[0].length, o = G.o;
+    const at = (c, r) => [side < 0 ? cx + (c - o[0]) : cx - (c - o[0]), cy + (r - o[1])];
+    part();
+    for (let r = 0; r < rows.length; r++) for (let c = 0; c < W; c++) { const ch = rows[r][c]; if (ch !== 'C' && ch !== 'c') continue; const [x, y] = at(c, r); sp(x, y, side < 0 ? M_CUFF2 : M_CUFF, ch === 'C' ? 4 : 0); }
+    part();
+    for (let r = 0; r < rows.length; r++) for (let c = 0; c < W; c++) {
+      const ch = rows[r][c]; if (ch === '.' || ch === 'C' || ch === 'c') continue;
+      let tone = ch === 'G' || ch === 'k' ? 4 : ch === 's' ? 2 : 0;
+      if (type === 0 && drum && c === FINGERS[drum - 1]) { if (r === rows.length - 1) continue; if (r === rows.length - 2) tone = 4; }
+      const [x, y] = at(c, r); sp(x, y, side < 0 ? M_GLOVE2 : M_GLOVE, tone);
+    }
+  }
+  function wristOf(type, cx, cy, side) {
+    const o = type === 1 || type === 5 ? [-4, 0] : type === 3 || type === 4 ? [0, 4] : [-1, -4];
+    return [cx + (side < 0 ? o[0] : -o[0]), cy + o[1]];
+  }
+  function drawArm(sx, sy, wx, wy, bend, side) {
+    const dx = wx - sx, dy = wy - sy, l = Math.hypot(dx, dy) || 1;
+    let nx = dy / l, ny = -dx / l; if (side < 0 ? nx + ny > 0 : nx - ny < 0) { nx = -nx; ny = -ny; }
+    const cx = (sx + wx) / 2 + nx * bend, cy = (sy + wy) / 2 + ny * bend;
+    part();
+    const N = Math.max(10, Math.ceil(l * 1.6));
+    for (let i = 0; i <= N; i++) { const t = i / N, a = (1 - t) * (1 - t), b = 2 * (1 - t) * t, c = t * t, x = Math.round(a * sx + b * cx + c * wx - 0.5), y = Math.round(a * sy + b * cy + c * wy - 0.5);
+      sp(x, y, M_BODY, 0); sp(x + 1, y, M_BODY, 0); sp(x, y + 1, M_BODY, 0); sp(x + 1, y + 1, M_BODY, 0); }
+  }
+  function drawWisp(x0, y0, side, len, ph, amp) {
+    let px = x0, py = y0;
+    for (let k = 0; k <= len; k++) {
+      px = Math.round(x0 + side * (k * 0.45 + amp * Math.sin(k * 0.8 - ph))); py = y0 - k;
+      sp(px, py, M_WISP, 0); if (k < len * 0.6) sp(px + side, py, M_WISP, 0);
+    }
+    sp(px - side, py - 1, M_WISP, 0); sp(px - side * 2, py, M_WISP, 0);
+  }
+  const TORSO = [5, 7, 8, 8, 7, 7, 7, 6, 6, 6, 6, 5, 5, 5, 5, 5, 5, 5, 5];   
+  function drawBody(bx, by, lean, hd, ph, wm) {
+    part();
+    const hcx = bx + hd, hcy = -23 + by + lean;
+    for (let y = hcy - 6; y <= hcy + 4; y++) { const q = (y - hcy + 0.5) / 5.5, w = Math.round(4.9 * Math.sqrt(Math.max(0, 1 - q * q))); if (w > 0) run(y, hcx - w, hcx + w, M_BODY, 0); }
+    run(hcy + 5, bx - 2, bx + 2, M_BODY, 0);                                          
+    const yS = -17 + by;
+    for (let y = hcy + 6; y < yS; y++) run(y, bx - 2, bx + 2, M_BODY, 0);
+    for (let y = yS; y <= 0; y++) {
+      const k = y - yS, base = TORSO[Math.min(TORSO.length - 1, k)];
+      const wob = y > -11 ? Math.round(Math.sin(y * 0.9 + ph * 0.8)) : wm >= 2 ? Math.round(Math.sin(y * 0.9 + ph * 0.8) * 0.8) : 0;
+      run(y, bx - base + Math.min(0, wob), bx + base + Math.max(0, wob), M_BODY, 0);
+    }
+    return { hcx, hcy };
+  }
+  const CROWN = [
+    '..ttttttttt..',   
+    '.TTTTTddTTTT.',   
+    '.hhhhhkhhhhh.',   
+    '..hshhkhhhh..',   
+    '..hshhkhhhh..',   
+    '..hshhhhhhh..',   
+    '..hshhhhhhh..',   
+    '..hhhhhhhhh..',   
+    '..hhhhhhhhh..',   
+    '..BBBBBBBBB..',   
+    '..bbbbbbbbb..',   
+  ];
+  const CROWN_X0 = -6;   
+  function drawHat(cx, cy, t, spin, sq, lean) {
+    const sh = (dy) => Math.round(t * -dy / 4), bdy = (x) => Math.round(t * x / 11);
+    const ph = spin ? (spin - 1) & 3 : 0;                                       
+    const narrow = spin && (ph === 1 || ph === 3), wB = sq ? 11 : 10;
+    const rows = CROWN.slice(sq || lean ? 1 : 0);                                 
+    const ytop = -2 - (rows.length - 1);
+    part();
+    for (let x = -wB + 1; x <= wB - 1; x++) sp(cx + x, cy - 1 + bdy(x), M_HAT, 3);
+    for (const s of [-1, 1]) { sp(cx + s * wB, cy - 1 + bdy(s * wB), M_HAT, s < 0 ? 4 : 3); sp(cx + s * wB, cy - 2 + bdy(s * wB), M_HAT, s < 0 ? 4 : 2); }
+    part();
+    for (let r = 0; r < rows.length; r++) {
+      const y = ytop + r, row = rows[r], dy = y;                               
+      for (let c = 0; c < row.length; c++) {
+        const ch = row[c]; if (ch === '.' || ch === 'B' || ch === 'b') continue;
+        let x = CROWN_X0 + c; if (narrow && (x <= -4 || x >= 4) && ch !== 'T' && ch !== 't') continue;
+        const tone = ch === 'T' ? 4 : ch === 't' ? 3 : ch === 'd' || ch === 'k' ? 2 : ch === 's' ? (narrow ? 0 : 4) : 0;
+        sp(cx + x + sh(dy), cy + dy, M_HAT, tone);
+      }
+    }
+    part();
+    for (let r = rows.length - 2; r < rows.length; r++) { const y = ytop + r, row = rows[r]; for (let c = 0; c < row.length; c++) { const ch = row[c]; if (ch !== 'B' && ch !== 'b') continue; const x = CROWN_X0 + c; if (narrow && (x <= -4 || x >= 4)) continue; sp(cx + x + sh(y), cy + y, M_BAND, ch === 'B' ? 4 : 0); } }
+    if (ph !== 2) {
+      const pos = ph === 0 ? -1 : ph === 1 ? 1 : 0;
+      part();
+      for (let j = 0; j < 7; j++) {
+        const y = -3 - j, lean2 = pos === 0 ? 0 : pos * (j >> 1), x0 = cx + sh(y) + (pos < 0 ? -4 : pos > 0 ? 2 : -1) + lean2 - (pos < 0 && j > 0 ? 0 : 0);
+        for (let i = 0; i < 3; i++) sp(x0 + i, cy + y, M_CARD, j === 6 ? 4 : i === 0 ? 4 : 0);
+        if (j === 3 || j === 4) sp(x0 + 1, cy + y, M_PIP, j === 3 ? 3 : 2);
+      }
+    }
+    part();
+    const tear = ph === 0 ? 4 : ph === 1 ? 8 : ph === 3 ? -3 : 99;
+    for (let x = -wB + 1; x <= wB - 1; x++) sp(cx + x, cy + bdy(x), M_HAT, x < -wB + 3 ? 4 : 3);
+    for (let x = -wB + 2; x <= wB - 2; x++) { if (x === tear || x === tear + 1) continue; sp(cx + x, cy + 1 + bdy(x), M_HAT, 2); }
+    if (tear < 99 && tear + 1 <= wB - 2) { sp(cx + tear, cy + 2 + bdy(tear), M_HAT, 2); }
+  }
+  const EYE = {   
+    0: [[0, 0, 0], [2, 3, 0], [0, 4, 3]],   
+    1: [[0, 0, 0], [3, 4, 0], [0, 4, 4]],   
+    2: [[0, 3, 0], [3, 9, 4], [0, 4, 9]],   
+    3: [[2, 3, 2], [3, 4, 3], [2, 3, 2]],   
+    4: [[0, 0, 0], [0, 3, 0], [3, 0, 3]],   
+    5: [[0, 0, 0], [0, 0, 0], [2, 2, 2]],   
+    6: [[0, 0, 0], [0, 0, 0], [0, 3, 2]],   
+    7: [[0, 0, 0], [0, 0, 0], [0, 2, 0]],   
+    8: null,                                
+    9: [[0, 0, 0], [0, 0, 0], [2, 4, 3]],   
+  };
+  function drawEyes(hcx, hcy, id, ex, ey) {
+    const m = EYE[id]; if (!m) return; part();
+    for (const side of [-1, 1]) for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
+      const v = m[r][c]; if (!v) continue; const x = hcx + ex + side * (4 - c), y = hcy - 2 + r + ey;
+      if (v === 9) sp(x, y, M_EYEHOT, 3); else sp(x, y, M_EYE, v);
+    }
+  }
+  function drawGrin(hcx, hcy) {
+    part();
+    const y = hcy + 2;
+    for (let x = -4; x <= 4; x++) sp(hcx + x, y, M_TEETH, (x & 1) ? 3 : 4);
+    for (let x = -3; x <= 3; x++) sp(hcx + x, y + 1, M_TEETH, (x & 1) ? 2 : 3);
+    sp(hcx - 5, y - 1, M_EYE, 2); sp(hcx + 5, y - 1, M_EYE, 2);
+  }
+  const COIN = [null, [-3, -1, 1], [-1, -1, 0], [1, -1, 1], [3, -1, 0], [3, -2, 1], [1, -4, 0], [-1, -5, 1], [-3, -3, 0]];   
+  function drawCoin(cx, cy, k) {
+    const c = COIN[k]; if (!c) return; part();
+    const x = cx + c[0], y = cy - 3 + c[1];
+    if (c[2]) { run(y, x - 1, x + 1, M_COIN, 0); run(y + 1, x - 1, x + 1, M_COIN, 0); sp(x - 1, y, M_COIN, 4); }
+    else { sp(x, y, M_COIN, 4); sp(x, y + 1, M_COIN, 2); }
+  }
+  function drawHero() {
+    begin(hero, 0, 0);
+    const ph = P.wisp * 0.785, bx = P.bx, by = P.by;
+    if (!P.hatOff || P.dq < 1) {
+      part();
+      const L = P.wm >= 2 ? 6 : P.wm === 1 ? 5 : 4, A = P.wm >= 2 ? 1.5 : 1;
+      drawWisp(bx - 9, -15 + by, -1, L, ph, A); drawWisp(bx + 9, -15 + by, 1, L - 1, ph + 2.1, A);
+      if (P.wm >= 1) { drawWisp(bx - 4, -19 + by + P.lean, -1, L - 1, ph + 1.3, A); drawWisp(bx + 4, -19 + by + P.lean, 1, L - 2, ph + 3.4, A); }
+      if (P.wm >= 2) { drawWisp(bx - 5, -6 + by, -1, 4, ph + 1, 1.3); drawWisp(bx + 5, -6 + by, 1, 4, ph + 3, 1.3); }
+      if (P.wm === 3) { for (let i = 0; i < 3; i++) drawWisp(bx - 6 + i * 6, -14 + by - i * 2 - Math.round(P.dq * 10), i === 1 ? 1 : -1, 5, ph + i * 1.7, 1.4); }
+      const H = drawBody(bx, by, P.lean, P.hd, P.wisp, P.wm);
+      if (!P.hatOff) drawHat(H.hcx + P.hatX, H.hcy - 5 - P.hatY, P.hatT, P.hatS, P.hatSq, P.lean >= 2 ? 1 : 0);
+      drawEyes(H.hcx, H.hcy, P.eyes, P.ex, P.ey);
+      if (P.grin) drawGrin(H.hcx, H.hcy);
+      const lw = wristOf(P.lg, P.lx, P.ly, -1), rw = wristOf(P.rg, P.rx, P.ry, 1);
+      drawArm(bx - 6, -16 + by, lw[0], lw[1], P.lb, -1);
+      drawArm(bx + 6, -16 + by, rw[0], rw[1], P.rb, 1);
+      if (!(P.st === DEATH && P.hatOff)) drawGlove(P.lx, P.ly, P.lg, -1, 0);
+      drawGlove(P.rx, P.ry, P.rg, 1, P.drum);
+      if (P.coin) drawCoin(P.lx, P.ly, P.coin);
+    } else drawEyes(bx, -23 + by, P.eyes, P.ex, P.ey);
+    if (P.hatOff) drawHat(P.hatX, -11 - P.hatY, P.hatT, P.hatS, P.hatSq, 0);
+  }
+  function dissolve(q) {
+    const holdL = P.st === DEATH && !P.hatOff && P.lg === 5;
+    const s = hero, w = s.w, h = s.h, M = s.mat, out = s.out, top = s.oy - 36, span = 36;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = y * w + x; if (out[i] === 255) continue;
+      let m = M[i]; if (!m) m = (y + 1 < h && M[i + w]) || (x + 1 < w && M[i + 1]) || (x > 0 && M[i - 1]) || (y > 0 && M[i - w]) || 0;
+      if (KEEP[m] || (holdL && (m === M_GLOVE2 || m === M_CUFF2))) continue;
+      const up = 1 - clamp01((y - top) / span);
+      if (SNAP[m] ? up * 0.92 + B8[(y & 7) * 8 + (x & 7)] * 0.08 < q * 1.05 - 0.12 : B8[(y & 7) * 8 + (x & 7)] * 0.45 + up * 0.55 < q * 1.05) out[i] = 255;
+    }
+  }
+  function bakeHero() {
+    const cup = P.rim >= 2 && P.cup;
+    RIM.rim = P.rim; RIM.rimAll = cup ? 1 : 0; RIM.rx = cup ? hero.ox + P.gx : hero.ox - 22; RIM.ry = cup ? hero.oy + P.gy - 9 : hero.oy - 42;
+    RIM.flash = P.flash; bake(hero, RIM);
+    if (P.dq > 0) dissolve(P.dq);
+  }
+  let chargeAcc = 0, smokeAcc = 0, lastSpin = 0, trailT = 9, trailX = 0, trailY = 0, jolt = 0;
+  const SLAM_X = -13, SLAM_Y = -10;                                                 
+  function inkSplash(n, big) {
+    const x = scrX(SLAM_X), y = HY + SLAM_Y;
+    for (let i = 0; i < n; i++) { const s = i & 1 ? 1 : -1, v = (big ? 50 : 30) + Math.random() * (big ? 70 : 40); spawnX(K_PHYS, x + s * (2 + Math.random() * 6), y - 1, s * v, -(20 + Math.random() * (big ? 40 : 20)), 0.3 + Math.random() * 0.35, R_EL, { g: 160, floor: y, dragX: 0.2 }); }
+  }
+  function onEnter(s) {
+    const x = scrX(SLAM_X), y = HY + SLAM_Y;
+    if (s === CAST) {
+      releaseOrbit(40, 90, 0.35, 0.7, { up: 8, pts: 1 }); burst(x, y - 3, 30, 60, 130, 0.3, 0.7, R_EL, 14); inkSplash(12, 1);
+      ring(x, y - 1, 1, R_EL); fx.cloud(x, y - 5, 7, R_EL, 0.6, 2); shake(0.28, 2); flash(0.05);
+      trailT = 0; trailX = scrX(P.bx); trailY = HY - 26;
+      sfx('impact', { pal: 'shadow', w: 0.5 });
+    }
+    if (s === RECOVER) jolt = 0;
+  }
+  function onTime(s, t) {
+    const x = scrX(SLAM_X), y = HY + SLAM_Y;
+    if (s === ATTACK && Math.abs(t - T_SLAM) < 1e-6) { ring(x, y - 1, 0, R_EL); burst(x, y - 2, 10, 30, 70, 0.2, 0.4, R_EL, 6); inkSplash(6, 0); shake(0.1, 1); sfx('swing', { kind: 'smash', w: 0.4 }); sfx('hit', { mat: 'wood', w: 0.4 }); }
+    if (s === ATTACK && (Math.abs(t - 2 / 12) < 1e-6 || Math.abs(t - 3 / 12) < 1e-6)) sfx('rattle', { rate: 1 });
+    if (s === ATTACK && Math.abs(t - 6 / 12) < 1e-6) sfx('laugh', { n: 2, voice: 'bassoon' });
+    if (s === CHARGE && [4 / 12, 8 / 12, 12 / 12].some((v) => Math.abs(t - v) < 1e-6)) sfx('rattle', { rate: t < 0.5 ? 1 : t < 0.9 ? 2 : 3 });
+    if (s === CAST && Math.abs(t - 1 / 12) < 1e-6) { shake(0.12, 1); jolt = 0.12; for (let i = 0; i < 6; i++) spawn(K_DUST, x - 8 + Math.random() * 16, y, (Math.random() - 0.5) * 20, -6 - Math.random() * 8, 0.3 + Math.random() * 0.2, FXI.dust); }
+    if (s === RECOVER && Math.abs(t - 4 / 12) < 1e-6) sfx('laugh', { n: 2, voice: 'bassoon' });
+    if (s === DEATH && Math.abs(t - T_LETGO) < 1e-6) burst(scrX(-12), HY - 35, 14, 20, 50, 0.3, 0.6, R_EL, 10);   
+    if (s === DEATH && Math.abs(t - T_HATLAND) < 1e-6) {
+      const hx = scrX(-7), hy = HY - 10; for (let i = 0; i < 6; i++) spawn(K_DUST, hx - 6 + Math.random() * 12, hy, (Math.random() - 0.5) * 24, -4 - Math.random() * 8, 0.3 + Math.random() * 0.3, FXI.dust); shake(0.08, 1); sfx('fall', { w: 0.15 });
+    }
+  }
+  const T_LETGO = INCOMING + 7 / 12 + 0.5, T_HATLAND = T_LETGO + 2 / 12;
+  const EVENTS = [[], [], [2 / 12, 3 / 12, T_SLAM, 6 / 12], [4 / 12, 8 / 12, 12 / 12], [1 / 12], [4 / 12], [], [T_LETGO, T_HATLAND], []];
+  function hurtFx(s) {
+    const x = scrX(P.bx), y = HY - 20;
+    burst(x, y, s === DEATH ? 22 : 14, 30, 80, 0.3, 0.6, R_EL, 22); burst(x, y - 6, 4, 20, 50, 0.15, 0.3, FXI.blood, 8);
+    trailT = 0; trailX = scrX(0); trailY = HY - 24; shake(0.16, s === DEATH ? 2 : 1); if (s === DEATH) flash(0.04); return true;
+  }
+  function stepFX(dt, state, stT) {
+    const gx = scrX(P.gx), gy = HY + P.gy;
+    if (state === CHARGE) {   
+      const q = clamp01(stT / DUR[CHARGE]); chargeAcc += dt * (14 + 46 * q);
+      const cx = scrX(F0[0]), cy = HY + F0[1];   
+      while (chargeAcc >= 1) { chargeAcc -= 1; const r = 12 + Math.random() * 9, a = Math.random() * 6.2832; spawnX(K_SPIRAL_PT, cx, cy, (r - 3.5) / (0.9 - 0.45 * q + Math.random() * 0.3), 0, 1.6, R_EL, { a, r, w: 5 + 10 * q, tx: cx, ty: cy, squash: 0.7 }); }
+    }
+    if (state === IDLE || state === MOVE || state === RECOVER) {   
+      smokeAcc += dt * (state === RECOVER ? 6 : 1.6);
+      while (smokeAcc >= 1) { smokeAcc -= 1; const s = Math.random() < 0.5 ? -1 : 1; spawnX(K_EMBER, scrX(P.bx + s * (8 + Math.random() * 3)), HY - 20 + P.by, s * 3, -6 - Math.random() * 5, 0.9 + Math.random() * 0.6, R_EL, { age0: 0.36 }); }
+      if (state === RECOVER && stT < 0.5 && Math.random() < dt * 12) spawnX(K_EMBER, scrX(SLAM_X - 4 + Math.random() * 8), HY + SLAM_Y - 2, 0, -8 - Math.random() * 6, 0.8, R_EL, { age0: 0.3 });
+    }
+    if (state === DEATH) {   
+      const d = stT - INCOMING - 7 / 12;
+      if (d > 0 && d < 0.85) { smokeAcc += dt * 50; const yF = HY - 10 - Math.round(clamp01(d / 0.75) * 26); while (smokeAcc >= 1) { smokeAcc -= 1; spawnX(K_RISE, scrX(P.bx - 9 + Math.random() * 18), yF - Math.random() * 3, (Math.random() - 0.5) * 8, -10 - Math.random() * 14, 0.7 + Math.random() * 0.7, R_EL, { age0: 0.18 }); } }
+    }
+    if (state === DEATH && P.hatS !== lastSpin) { if (P.hatS && (P.hatS & 1) === 1) { spawn(K_DUST, scrX(-7 + (Math.random() < 0.5 ? -9 : 9)), HY - 10, (Math.random() - 0.5) * 10, -3, 0.25, FXI.dust); } lastSpin = P.hatS; }
+    trailT += dt; if (jolt > 0) jolt -= dt;
+  }
+  function fxReset() { chargeAcc = 0; smokeAcc = 0; lastSpin = 0; trailT = 9; jolt = 0; }
+  function fxFront(f12) {
+    if (trailT < 2 / 12) { const c = trailT < 1 / 12 ? 57 : 56; for (const s of [-1, 1]) for (let k = 0; k < 3; k++) put(trailX + s * (3 + k), trailY + 2 + k, c); }
+    if (!E.game) {
+      const y0 = HY - 9 + (jolt > 0 ? 1 : 0);
+      for (let x = 0; x < E.W; x++) {
+        put(x, y0, 33); put(x, y0 + 1, 32); put(x, y0 + 2, 19); put(x, y0 + 3, 19); put(x, y0 + 4, 20); if ((x & 7) === 3) put(x, y0 + 2, 14);
+        for (let y = y0 + 5; y < E.H; y++) put(x, y, ((x + y) & 3) === 0 ? 34 : 35);
+      }
+    }
+  }
+  return {
+    name: '戴高帽的影子', HX, R_EL, DUR, hero, P, GLOW_MATS: [M_EYE, M_EYEHOT], HIT_POINT: [0, -22], EVENTS,
+    SFX: { body: 'ghost', how: 'dissolve', pal: 'shadow', style: 'shadow', w: 0.4, hover: 1, voice: 'bassoon heh-heh + dice rattling in a leather cup' },
+    SHEET: [[IDLE, [0, 0.25, 0.42, 0.5, 1.0, 1.17, 1.33, 1.5, 1.67, 1.83, 2.0, 2.17]], [MOVE, [0, 1 / 6, 2 / 6, 3 / 6]], [ATTACK, null], [CHARGE, null], [CAST, null], [RECOVER, null], [HURT, 'hurt'],
+      [DEATH, [0.34, 0.42, 0.5, 0.67, 0.75, 0.83, 1.0, 1.17, 1.33, 1.42, 1.5, 1.58, 1.67, 1.75, 1.83, 2.0, 2.5]], [REVIVE, [0.3, 0.5, 0.7, 0.9]]],
+    poseAt, drawHero, bakeHero, onEnter, onTime, hurtFx, stepFX, fxReset, fxFront,
   };
 });
 ;

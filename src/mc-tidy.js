@@ -33,7 +33,7 @@ G.tick = function (dt) {
   const r = oTick.apply(this, arguments), run = this.run;
   if (this.screen === 'shop' && run && run.shop && !this.reel && !this.settle) {
     const cards = [].concat(run.shop.units || [], run.shop.banners || [], run.shop.items || []), empty = cards.length > 0 && cards.every(c => c.sold);
-    const stuck = empty && run.wallet < M.refreshCost(run);
+    const stuck = empty && run.wallet < M.refreshCost(run) && !(M.gaBusy && M.gaBusy(this));   // a card pack still to draw, playing or waiting (mc-gacha.js)
     if (!stuck) this._soldOutAt = 0;
     else if (!this._soldOutAt) { this._soldOutAt = now(); this.toast('都买完了', '#ffe08a'); }
     else if (now() - this._soldOutAt > 1100) { this._soldOutAt = 0; this.leaveShop(); }

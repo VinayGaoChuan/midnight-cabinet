@@ -333,7 +333,7 @@ const PANARG = { proj: 1, atk: 1 };
 const STAGE = { battleIntro: 1.5, victory: 2, endScreen: 2.4, levelUp: 3.2, recruit: 3.4, leaderDown: 2.6, chaos: 2.4, tlEvent: 1.2, nfTitle: 1.6, raidWin: 2.4, portalCollapse: 3, cutin: 1.4, bossDrop: 1.2, launch: 1.4, fanfare: 1.2, win: 1, lose: 1.6, worldTheme: 2, steleHit: 1, chest: 1.2, settleTotal: 1 };
 const STAGE_MINI = { win3: 1.8, win4: 3.4, fever: 1.4 };
 const STAGE_GAME = { 'arena.ko': 1.4, 'statue.wake': 1.8 };
-const STAGE_BEAT = { lv: { in: 3.2 }, rc: { in: 3.4 }, vic: { flash: 1.8 }, tear: { in: 2.4 } };
+const STAGE_BEAT = { lv: { in: 3.2 }, rc: { in: 3.4 }, vic: { flash: 1.8 }, tear: { in: 2.4 }, ga: { press: 3, boom: 3 } };
 const DIR = S.dir = { stage: 0, recent: {}, vi: {}, last: {}, inside: 0, q: [], qOn: false, pq: [], pqOn: false, payRank: 0, payUntil: 0, lastAtk: 0, lastCombat: 0, stats: {}, introUntil: 0, lastSkill: 0, lastLeg: 0, soft: {} };
 let VARI = 0;
 // 变体：同一个名字连着响时轮换 0 / 1 / 2，不连续两次同一个
@@ -575,7 +575,7 @@ let lvG = null;
 // 游戏里逐拍调用 S.rc(拍, 参数)；S.recruit(品质) 是整段
 let rcG = null;
 // 领袖阵亡 · 卡片裂开：in 在卡片飞出来时（低沉的小调 + 钟声），rip 在卡片裂成两半时；中间的心跳由游戏按拍调用 heart
-reg('演出', ['battleIntro', 'introOut', 'vic', 'victory', 'endScreen', 'lv', 'levelUp', 'rc', 'recruit', 'reveal', 'tear', 'leaderDown']);
+reg('演出', ['battleIntro', 'introOut', 'vic', 'victory', 'endScreen', 'lv', 'levelUp', 'rc', 'recruit', 'reveal', 'tear', 'leaderDown', 'ga']);
 
 // ═════════ 宝箱与转盘 ═════════
 def('chestShake', 1, (t, k) => { const n = 3 + (k | 0); for (let i = 0; i < n; i++) { nz(t + i * .09, .04, 'bandpass', 700 * V(.2), 2, .08); thud(t + i * .09, 150, 90, .05, .08); } }, 80);
@@ -867,31 +867,106 @@ const MINI = {
   roulette: { spin: (t) => whoosh(t, .6, 400, 1600, .06), click: (t) => { nz(t, .01, 'bandpass', 3800 * [1, .9, 1.1][VARI], 3, .06); if (Math.random() < .3) tone(t, 'sine', 5200, .02, .01); }, bet: (t) => { for (let i = 0; i < 3; i++) nz(t + i * .05, .02, 'bandpass', 2600, 2, .08); }, gold: (t) => { win(t, 1); coins(t + .3, 10, .03); }, win: (t) => win(t), skull: (t) => { S.hitAt(0, 1.5); S.lose(); }, miss: (t) => S.reelStop() },
   fruit: { gogo: (t) => { ring(t, 1760, 2.4, .1, { parts: [[1, 1], [2.01, .45], [3, .2], [4.2, .1]], rev: .6 }); tone(t, 'sine', 3520, 1.6, .02, { a: .02, vib: [6, 12, .3] }); }, lever: (t) => S.lever(), spin: (t) => { for (let i = 0; i < 20; i++) nz(t + i * .045, .012, 'bandpass', 2400, 3, .05); tone(t, 'sawtooth', 90, .9, .015, { lp: 500 }); }, stop: (t, i) => { S.reelStop(); tone(t, 'p25', hz(5 + (i | 0) * 2), .08, .04, { crush: 1 }); }, jackpot: (t) => { fanfare(t, 1); coinRun(t + .3, 8, .045); }, win: (t) => S.up(2), skulls: (t) => { S.hitAt(0, 1.5); S.lose(); }, nomatch: (t) => sad(t) },
   claw: { move: (t) => tone(t, 'sawtooth', 110, .35, .02, { to: 130, lp: 700, vib: [30, 20, .01] }), drop: (t) => tone(t, 'sawtooth', 160, .6, .02, { to: 80, lp: 600 }), grab: (t) => { ring(t, 900, .2, .06, { parts: [[1, 1], [2.3, .4]] }); thud(t, 180, 100, .06, .1); }, lift: (t) => tone(t, 'sawtooth', 80, .6, .02, { to: 170, lp: 700 }), prize: (t) => { win(t, 1); S.pop(); }, slip: (t) => { tone(t, 'sine', 600, .4, .06, { to: 150 }); thud(t + .4, 130, 70, .1, .12); }, empty: (t) => { ring(t, 800, .15, .04); sad(t + .15); }, bounce: (t) => S.pop() },
-  pachinko: { launch: (t) => { S.boing(); nz(t + .1, .3, 'bandpass', 1800, 1.5, .03, { to: 900 }); }, peg: (t, row) => { const r = row | 0; ring(t, mtof(deg(14 - r, 0)), .18, .04, { parts: [[1, 1], [2.9, .3]], pan: rnd(-.6, .6) }); }, slot: (t) => { S.land(2); }, edge: (t) => { S.up(3); coins(t + .2, 8, .03); } },
-  tree: { curse: (t) => { fm(t, hz(-4, -1), .45, .06, { r: 1.414, i: 3, itau: .2, rev: .4 }); tone(t, 'sine', hz(1, 0) * 1.06, .3, .025, { vib: [9, 60, .02] }); nz(t, .25, 'bandpass', 900, 4, .04); }, pick: (t) => { nz(t, .25, 'highpass', 3000, .5, .06, { a: .05 }); nz(t + .2, .03, 'bandpass', 1400, 2, .1); bell(t + .25, deg(9), .6, .07); }, water: (t) => { nz(t, .5, 'bandpass', 1200, 1, .06, { to: 500 }); arp(t + .3, [deg(5), deg(7), deg(9)], .08, (tt, m) => bell(tt, m, .6, .05)); }, cut: (t) => { thud(t, 160, 90, .1, .2); nz(t, .08, 'bandpass', 900, 1.5, .12); S.creak(); }, grow: (t) => arp(t, [deg(0), deg(2), deg(4), deg(7), deg(9)], .1, (tt, m) => bell(tt, m, .7, .05)), fruit: (t) => S.up(2) },
-  tarot: { lift: (t) => { whoosh(t, .35, 400, 1600, .04, { peak: .7 }); tone(t, 'sine', hz(5), .6, .03, { to: hz(9), slide: .4, a: .1, rev: .6 }); }, shuffle: (t) => { for (let i = 0; i < 12; i++) nz(t + i * .03, .025, 'bandpass', 3500 * V(.2), 1.5, .05); }, flip: (t) => { nz(t, .05, 'bandpass', 3000, 1.2, .08); whoosh(t, .15, 1200, 3500, .03); }, good: (t) => { arp(t, [deg(0), deg(2), deg(4), deg(7)].map(m => m + 12), .08, (tt, m) => bell(tt, m, 1, .08)); S.sparkle(); }, bad: (t) => { bell(t, 62, 1.2, .09); bell(t + .02, 63, 1.2, .07); padc(t, [50, 51, 56], 1.5, .02, { lp: 700 }); } },
+  // 弹珠台: balls pouring into the tray, the rail's rush, the reach siren, the tulip snapping, the payout cascade, the out-hole, power down
+  pachinko: { pour: (t, n) => { for (let i = 0; i < Math.min(14, (n | 0) + 4); i++) { const tt = t + i * .035 + rnd(0, .02); ring(tt, 2400 * rnd(.9, 1.2), .08, .03, { parts: [[1, 1], [2.7, .4]], pan: rnd(-.4, .4) }); } nz(t, .4, 'bandpass', 3000, 1.2, .03); },
+    reach: (t) => { tone(t, 'square', hz(5), .12, .03, { to: hz(9), slide: .1, lp: 2400 }); tone(t + .14, 'square', hz(9), .18, .03, { lp: 2400 }); },
+    tulip: (t) => { nz(t, .03, 'bandpass', 2600, 2, .1); thud(t, 260, 120, .06, .1); nz(t + .12, .025, 'bandpass', 2200, 2, .08); },
+    payout: (t) => { for (let i = 0; i < 26; i++) ring(t + i * .03 + rnd(0, .02), 2200 * rnd(.85, 1.25), .07, .028, { parts: [[1, 1], [2.7, .4]], pan: rnd(-.6, .6) }); },
+    out: (t) => { thud(t, 150, 80, .1, .1); nz(t, .05, 'lowpass', 600, 1, .05); },
+    off: (t) => { tone(t, 'square', 440, .5, .03, { to: 60, slide: .45, lp: 1200 }); nz(t + .1, .3, 'bandpass', 1200, 2, .02, { to: 300 }); },
+    launch: (t) => { S.boing(); nz(t + .1, .3, 'bandpass', 1800, 1.5, .03, { to: 900 }); }, peg: (t, row) => { const r = row | 0; ring(t, mtof(deg(14 - r, 0)), .18, .04, { parts: [[1, 1], [2.9, .3]], pan: rnd(-.6, .6) }); }, slot: (t) => { S.land(2); }, edge: (t) => { S.up(3); coins(t + .2, 8, .03); } },
+  // 世界树: ripening steps up a marimba, the stem snaps, the fruit lands juicy, an epic fruit rings the gold veins, a wind chime per fruit
+  tree: { ripe: (t, i) => { const m = deg(5 + (i | 0) * 2); tone(t, 'triangle', mtof(m), .18, .05, { rev: .3 }); tone(t, 'sine', mtof(m + 12), .1, .02); },
+    snap: (t) => { nz(t, .02, 'bandpass', 2600, 3, .14); nz(t + .015, .05, 'bandpass', 900, 2, .08); },
+    splat: (t) => { thud(t, 180, 70, .12, .16); nz(t, .18, 'lowpass', 1400, 1, .08, { to: 400 }); blip(t + .03, 520, .05); blip(t + .08, 700, .04); },
+    bloom: (t) => { arp(t, [deg(4), deg(7), deg(9), deg(11), deg(14)], .07, (tt, m) => bell(tt, m, 1.1, .05, { rev: .5 })); nz(t, .8, 'highpass', 5000, .5, .02, { a: .2 }); },
+    chime: (t, k) => { const m = deg(7 + ((k | 0) % 7)); bell(t, m, .9, .035, { rev: .5 }); bell(t + .09, m + 7, .6, .02, { rev: .5 }); },
+    swing: (t) => whoosh(t, .45, 300, 1400, .05),
+    rustle: (t) => nz(t, .35, 'highpass', 3500, .6, .03, { a: .05 }),
+    curse: (t) => { fm(t, hz(-4, -1), .45, .06, { r: 1.414, i: 3, itau: .2, rev: .4 }); tone(t, 'sine', hz(1, 0) * 1.06, .3, .025, { vib: [9, 60, .02] }); nz(t, .25, 'bandpass', 900, 4, .04); }, pick: (t) => { nz(t, .25, 'highpass', 3000, .5, .06, { a: .05 }); nz(t + .2, .03, 'bandpass', 1400, 2, .1); bell(t + .25, deg(9), .6, .07); }, water: (t) => { nz(t, .5, 'bandpass', 1200, 1, .06, { to: 500 }); arp(t + .3, [deg(5), deg(7), deg(9)], .08, (tt, m) => bell(tt, m, .6, .05)); }, cut: (t) => { thud(t, 160, 90, .1, .2); nz(t, .08, 'bandpass', 900, 1.5, .12); S.creak(); }, grow: (t) => arp(t, [deg(0), deg(2), deg(4), deg(7), deg(9)], .1, (tt, m) => bell(tt, m, .7, .05)), fruit: (t) => S.up(2) },
+  // 占卜摊: the harp is hers — a note on hover, each omen beat a step up the harp, her leaving a falling glissando
+  tarot: { hover: (t, i) => { const m = deg(9 + (i | 0) * 2); fm(t, mtof(m), .9, .04, { r: 1, i: .6, itau: .1, tau: .5, rev: .5 }); },
+    omen: (t, b) => { const m = deg(7 + (b | 0) * 2); fm(t, mtof(m), .8, .05, { r: 1, i: .7, itau: .1, tau: .45, rev: .5 }); fm(t + .05, mtof(m + 12), .6, .025, { r: 1, i: .5, tau: .4, rev: .5 }); tone(t, 'sine', mtof(m - 12), .5, .02, { rev: .4 }); },
+    leave: (t) => arp(t, [deg(14), deg(12), deg(9), deg(7), deg(4), deg(2), deg(0)], .05, (tt, m) => fm(tt, mtof(m), .7, .03, { r: 1, i: .6, tau: .35, rev: .6 })),
+    lift: (t) => { whoosh(t, .35, 400, 1600, .04, { peak: .7 }); tone(t, 'sine', hz(5), .6, .03, { to: hz(9), slide: .4, a: .1, rev: .6 }); }, shuffle: (t) => { for (let i = 0; i < 12; i++) nz(t + i * .03, .025, 'bandpass', 3500 * V(.2), 1.5, .05); }, flip: (t) => { nz(t, .05, 'bandpass', 3000, 1.2, .08); whoosh(t, .15, 1200, 3500, .03); }, good: (t) => { arp(t, [deg(0), deg(2), deg(4), deg(7)].map(m => m + 12), .08, (tt, m) => bell(tt, m, 1, .08)); S.sparkle(); }, bad: (t) => { bell(t, 62, 1.2, .09); bell(t + .02, 63, 1.2, .07); padc(t, [50, 51, 56], 1.5, .02, { lp: 700 }); } },
   // 砸金蛋：hammer 在锤子落下的那一帧调用，声音不能晚
-  eggs: { hammer: (t) => { ring(t, 1800 * [1, .92, 1.08][VARI], .4, .08, { parts: [[1, 1], [2.4, .5], [3.8, .3]] }); thud(t, 150, 70, .1, .2); nz(t, .03, 'bandpass', 2500, 1.2, .06); }, crack: (t) => { for (let i = 0; i < 5; i++) nz(t + i * .025, .02, 'highpass', 3000, .7, .08); S.shatter(); }, prize: (t) => { S.up(3); coins(t + .1, 10, .03); }, snake: (t) => { nz(t, .6, 'highpass', 4500, .6, .08, { a: .05 }); S.hitAt(0, 1.2); } },
-  dice: { shake: (t) => { for (let i = 0; i < 10; i++) nz(t + i * .045 + rnd(0, .015), .02, 'bandpass', rnd(1800, 3000), 2, .07); }, roll: (t) => whoosh(t, .2, 900, 2400, .04), clack: (t) => { nz(t, .02, 'bandpass', 1900 * [1, .85, 1.15][VARI], 2.5, .07); thud(t, 230, 130, .03, .06); }, win: (t) => S.up(2), lose: (t) => sad(t), tie: (t) => tone(t, 'p25', hz(5), .1, .03, { crush: 1 }) },
-  fate: { cost: (t) => { nz(t, .2, 'lowpass', 900, 1, .14); S.heart(); }, spin: (t) => grind(t, 1.8, .12), click: (t) => { nz(t, .015, 'bandpass', 2500 * [1, .92, 1.08][VARI], 3, .08); thud(t, 180, 110, .03, .05); }, stop: (t) => { thud(t, 120, 50, .3, .35); ring(t + .02, mtof(deg(0, -1)), 2.2, .08, { parts: [[1, 1], [2.01, .5], [2.76, .35], [5.4, .2]], rev: .6 }); } },
-  musician: { note: (t, i) => fiddle(t, deg(i | 0, 0), .45, .05), metro: (t) => nz(t, .015, 'bandpass', 2600, 5, .09), miss: (t) => { tone(t, 'sawtooth', 190, .25, .05, { to: 170, lp: 2500, vib: [23, 120, .01] }); nz(t, .2, 'bandpass', 3500, 3, .04); }, great: (t) => { fiddle(t, deg(7), .3, .05); fiddle(t + .3, deg(9), .3, .05); fiddle(t + .6, deg(12), .8, .06); cheer(t + .6, 1.2, .025); }, ok: (t) => { fiddle(t, deg(5), .3, .05); fiddle(t + .3, deg(7), .6, .05); }, poor: (t) => { fiddle(t, deg(4), .3, .04); fiddle(t + .3, deg(2), .6, .04); } },
-  granny: { stitch: (t, i) => { nz(t, .025, 'bandpass', 4200, 3, .07); tone(t + .02, 'sine', hz(5 + (i | 0), 1), .06, .025, { to: hz(6 + (i | 0), 1) }); }, miss: (t) => tone(t, 'triangle', 180, .15, .06, { to: 120 }), done: (t) => S.heal() },
-  well: { charge: (t, x) => tone(t, 'p25', hz(Math.round((x || 0) * 10)), .04, .03, { crush: 1 }), toss: (t) => { ring(t, 3300, .1, .05, { parts: [[1, 1], [1.5, .5]] }); whoosh(t, .5, 1200, 3000, .04); }, splash: (t) => { nz(t, .2, 'bandpass', 1400, 1, .1, { to: 500, rev: .8 }); blip(t + .05, 700, .06, { rev: .9 }); blip(t + .5, 600, .03, { rev: .9 }); }, great: (t) => S.fanfare(), ok: (t) => arp(t, [deg(4), deg(7)], .15, (tt, m) => bell(tt, m, 1, .06, { rev: .9 })), miss: (t) => { ring(t, 2800, .15, .04); sad(t + .1); } },
-  child: { step: (t, i) => { step(t, .05); bell(t + .02, deg(5 + (i | 0)), .5, .05, { rev: .6 }); }, wrong: (t) => { thud(t, 110, 60, .15, .15); sad(t + .05); }, lost: (t) => { nz(t, 1.5, 'bandpass', 500, 2, .06, { a: .5, src: 'brown' }); S.hitAt(0, 1); }, found: (t) => { [53, 57, 60, 64].forEach(m => ep(t, m, 1.4, .06)); bell(t + .3, deg(12), 1.2, .07); } },
-  grave: { lid: (t) => { thud(t, 140, 60, .2, .3); nz(t, .08, 'bandpass', 900, 1.2, .16); tone(t + .05, 'sawtooth', 70, .5, .045, { lp: 700, vib: [23, 60, .02], a: .05 }); nz(t + .05, .45, 'bandpass', 380, 10, .08, { to: 650, a: .05 }); nz(t + .1, .6, 'lowpass', 1500, .7, .05, { a: .1 }); }, dig: (t) => { nz(t, .18, 'lowpass', 600, .7, .22); thud(t, 110, 60, .1, .15); }, candle: (t) => nz(t, .4, 'bandpass', 900, 1, .02, { a: .1 }), coffin: (t) => { thud(t, 150, 100, .15, .25); ring(t, 260, .4, .04); }, hand: (t) => { thud(t, 70, 30, .7, .45); tone(t, 'sawtooth', 700, .6, .04, { to: 1400, vib: [9, 80, .01], lp: 3000 }); }, out: (t) => tone(t, 'sine', 90, .6, .1, { to: 60 }), treasure: (t) => S.chest() },
-  clinic: { pick: (t) => ring(t, 2200 * V(.1), .25, .05, { parts: [[1, 1], [2.3, .4]] }), drink: (t) => { for (let i = 0; i < 4; i++) blip(t + i * .09, 350, .07); }, good: (t) => S.heal(), bad: (t) => { padc(t, [50, 51, 55], 1, .025, { lp: 600 }); tone(t, 'sawtooth', 220, .5, .04, { to: 160, vib: [7, 60, .05], lp: 1200 }); }, mult: (t) => S.mult() },
+  // 砸金蛋: each blow rings higher on the gold shell; the burst is a sparkle run with a party popper; the gong rides the big win
+  eggs: { hammer: (t, j) => { const k = 1 + Math.min(4, j | 0) * 0.09; ring(t, 1800 * k * [1, .92, 1.08][VARI], .4, .08, { parts: [[1, 1], [2.4, .5], [3.8, .3]] }); thud(t, 150, 70, .1, .2 + Math.min(4, j | 0) * .03); nz(t, .03, 'bandpass', 2500, 1.2, .06); },
+    swing: (t) => whoosh(t, .14, 500, 2200, .04),
+    burst: (t, q) => { nz(t, .06, 'highpass', 4000, .6, .12); thud(t, 120, 50, .25, .2); arp(t + .04, [deg(7), deg(9), deg(11), deg(14), deg(16)].slice(0, 3 + (q | 0)), .05, (tt, m) => bell(tt, m, .9, .05)); nz(t + .05, .3, 'bandpass', 3000, .8, .05, { to: 900 }); if ((q | 0) >= 2) ring(t + .1, 110, 3.2, .12, { parts: [[1, 1], [1.51, .6], [2.13, .4], [2.96, .3]], rev: .7 }); if ((q | 0) >= 3) for (let i = 0; i < 14; i++) nz(t + .3 + i * .07 + rnd(0, .04), .03, 'highpass', 2500, .5, .1); },
+    empty: (t) => { nz(t, .25, 'lowpass', 600, 1, .05, { a: .02 }); blip(t + .1, 300, .03); },
+    tap: (t) => thud(t, 240, 150, .04, .05),
+    leave: (t) => { tone(t, 'sine', hz(4), .6, .03, { to: hz(0), slide: .5 }); nz(t, .5, 'lowpass', 500, 1, .03); }, crack: (t) => { for (let i = 0; i < 5; i++) nz(t + i * .025, .02, 'highpass', 3000, .7, .08); S.shatter(); }, prize: (t) => { S.up(3); coins(t + .1, 10, .03); }, snake: (t) => { nz(t, .6, 'highpass', 4500, .6, .08, { a: .05 }); S.hitAt(0, 1.2); } },
+  // 骰子对决: chips clicking into the pot, the cup slammed on the felt, each bounce a soft bone thud a step higher, his leaving a
+  // low bassoon laugh
+  dice: { chips: (t, n) => { for (let i = 0; i < Math.min(10, (n | 0) + 2); i++) ring(t + i * .04 + rnd(0, .015), 2900 * rnd(.9, 1.15), .06, .035, { parts: [[1, 1], [2.3, .5]], pan: rnd(-.4, .4) }); },
+    slam: (t) => { thud(t, 140, 60, .18, .24); nz(t, .05, 'lowpass', 900, 1, .1); },
+    bounce: (t, n) => { const k = 1 + Math.min(5, n | 0) * .08; thud(t, 260 * k, 150 * k, .05, .09); nz(t, .02, 'bandpass', 1600 * k, 2.5, .05); },
+    tap: (t) => nz(t, .08, 'lowpass', 700, 1, .04),
+    leave: (t) => { [0, .22].forEach((d, i) => tone(t + d, 'sawtooth', mtof(deg(2 - i * 2, -2)), .2, .05, { lp: 700, a: .02 })); nz(t + .3, .8, 'lowpass', 500, 1, .04, { a: .2 }); },
+    shake: (t) => { for (let i = 0; i < 10; i++) nz(t + i * .045 + rnd(0, .015), .02, 'bandpass', rnd(1800, 3000), 2, .07); }, roll: (t) => whoosh(t, .2, 900, 2400, .04), clack: (t) => { nz(t, .02, 'bandpass', 1900 * [1, .85, 1.15][VARI], 2.5, .07); thud(t, 230, 130, .03, .06); }, win: (t) => S.up(2), lose: (t) => sad(t), tie: (t) => tone(t, 'p25', hz(5), .1, .03, { crush: 1 }) },
+  // 命运之轮 (2026-09-27): the grind lasts as long as the wheel runs fast; each stud clicks a step higher in the last stretch; the blood
+  // price is a drip, a hiss along the grooves and the ring of names lighting as low bells; hanging on a stud is a stone groan, then it
+  // slips over (a snap and a thud) or rolls back (a groan down); gold coins and a bell run for 积分, a minor organ chord for the curse
+  fate: { cost: (t) => { nz(t, .2, 'lowpass', 900, 1, .14); S.heart(); }, spin: (t, d) => { grind(t, d || 1.8, .12); nz(t, (d || 1.8) * 0.8, 'lowpass', 140, 1, .08, { src: 'brown', a: .1, hold: (d || 1.8) * 0.4 }); },
+    click: (t, i) => { const k = 1 + Math.min(8, i | 0) * 0.07; nz(t, .015, 'bandpass', 2500 * k * [1, .92, 1.08][VARI], 3, .08); thud(t, 180 * k, 110 * k, .03, .05); },
+    stop: (t) => { thud(t, 120, 50, .3, .35); ring(t + .02, mtof(deg(0, -1)), 2.2, .08, { parts: [[1, 1], [2.01, .5], [2.76, .35], [5.4, .2]], rev: .6 }); },
+    drip: (t) => { blip(t, 880, .09); thud(t + .02, 300, 120, .06, .07); nz(t, .04, 'highpass', 3000, .6, .04); },
+    flow: (t) => nz(t, .55, 'bandpass', 1500, 1.4, .05, { to: 600, a: .05 }),
+    rune: (t) => arp(t, [deg(0, -1), deg(2, -1), deg(4, -1), deg(7, -1)], .09, (tt, m) => bell(tt, m, 1.2, .045, { rev: .5 })),
+    creak: (t) => { nz(t, .55, 'bandpass', 220, 6, .1, { src: 'brown', to: 160, a: .04 }); tone(t, 'sawtooth', 62, .5, .03, { lp: 400, vib: [17, 40, .02], a: .05 }); },
+    slip: (t) => { nz(t, .03, 'bandpass', 2200, 2, .12); thud(t, 220, 70, .18, .26); },
+    back: (t) => { nz(t, .45, 'bandpass', 200, 4, .08, { src: 'brown', to: 110, a: .05 }); thud(t + .35, 140, 70, .12, .12); },
+    gold: (t) => { coins(t, 12, .04); arp(t + .05, [deg(4), deg(7), deg(9), deg(12)], .06, (tt, m) => bell(tt, m, .8, .05)); },
+    eye: (t) => { padc(t, [38, 39, 45], 1.4, .03, { lp: 600 }); fm(t, hz(-4, -1), .6, .06, { r: 1.414, i: 3, itau: .2, rev: .4 }); nz(t, .3, 'bandpass', 700, 3, .05); } },
+  // 乐师：结算时完成度往上滚，钢片琴沿 D 多利亚音阶一格格往上爬；跨线是钟琴 + 吉他扫弦；结尾用曲子里的小提琴收
+  musician: { note: (t, i) => fiddle(t, deg(i | 0, 0), .45, .05), metro: (t) => nz(t, .015, 'bandpass', 2600, 5, .09), miss: (t) => { tone(t, 'sawtooth', 190, .25, .05, { to: 170, lp: 2500, vib: [23, 120, .01] }); nz(t, .2, 'bandpass', 3500, 3, .04); },
+    pluck: (t) => IN.pizz(t, pick([74, 77, 79, 81, 84, 86]), .4, .5, { rev: .25 }),
+    tick: (t, i) => { const D = [62, 64, 65, 67, 69, 71, 72], k = i | 0; IN.celesta(t, D[k % 7] + 12 * Math.floor(k / 7), .3, .32); },
+    cross: (t, k) => { k = k | 0; IN.glock(t, [74, 77, 81][k], .8, .6 + k * .1); [[50, 57, 62, 65], [55, 59, 62, 67], [57, 62, 65, 69]][k].forEach((m, j) => IN.guitar(t + j * .012, m, .8, .45)); },
+    great: (t) => { [74, 77, 81, 86].forEach((m, i) => IN.violin(t + i * .12, m, i === 3 ? 1.4 : .14, .8)); IN.choirOo(t + .36, [62, 69, 74], 1.6, .4); IN.triangle(t + .36, .6); [50, 57, 62, 65].forEach((m, j) => IN.guitar(t + .36 + j * .012, m, 1.2, .5)); cheer(t + .4, 1.2, .02); },
+    ok: (t) => { IN.violin(t, 69, .2, .75); IN.violin(t + .22, 74, 1, .8); [50, 57, 62, 65].forEach((m, j) => IN.guitar(t + .22 + j * .012, m, 1, .45)); },
+    poor: (t) => { IN.violin(t, 74, .25, .6); IN.violin(t + .27, 72, .25, .55); IN.violin(t + .54, 69, .9, .5); },
+    snap: (t) => { nz(t, .02, 'highpass', 3000, .7, .12); tone(t, 'sawtooth', 660, .35, .05, { to: 90, lp: 3000 }); thud(t, 120, 60, .2, .1); IN.violin(t + .3, 62, .8, .35); } },
+  // 裁缝：每一针是一段摇篮曲的下一个音（八音盒，D 小调），漏针是打结的闷音；剪刀、穿线、针脚逐个亮（钢片琴往上爬）
+  granny: { stitch: (t, i) => { const M = [69, 65, 69, 74, 72, 69][((i | 0) - 1 + 6) % 6]; IN.musicbox(t, M + 12, .6, .7); nz(t, .02, 'bandpass', 4200, 3, .05); }, miss: (t) => { tone(t, 'triangle', 180, .15, .06, { to: 120 }); nz(t, .12, 'lowpass', 900, 1, .06); }, done: (t) => S.heal(),
+    snip: (t) => { nz(t, .03, 'highpass', 3500, .7, .1); ring(t + .005, 3800, .12, .04, { parts: [[1, 1], [1.6, .4]] }); nz(t + .06, .02, 'highpass', 4000, .7, .07); },
+    thread: (t) => { riser(t, t + .9, 400, 1600, .03, { q: 2 }); IN.celesta(t + .9, 81, .4, .4); },
+    light: (t, i) => IN.celesta(t, [62, 65, 69, 72, 74, 77][(i | 0) % 6] + 12, .5, .45 + (i | 0) * .05),
+    whole: (t) => { [62, 65, 69, 74].forEach((m, i) => IN.harp(t + i * .06, m + 12, 1.5, .5)); IN.choirOo(t + .1, [62, 69, 74], 1.4, .3); } },
+  well: { charge: (t, x) => { const D = [62, 65, 67, 69, 72, 74, 77, 79, 81, 84, 86], m = D[Math.min(10, Math.round((x || 0) * 10))]; ring(t, mtof(m + 12), .25, .03, { parts: [[1, 1], [2.01, .3], [3.02, .1]], rev: .4 }); }, flick: (t) => { ring(t, 3300, .08, .04, { parts: [[1, 1], [1.5, .5]] }); nz(t, .02, 'highpass', 5000, .7, .05); }, rise: (t, q) => { const k = q | 0; IN.choirAh(t, [62, 69, 74].map(m => m + [0, 2, 5, 7][k]), 1.4, .35 + k * .1); IN.harp(t, 74 + [0, 2, 5, 7][k], 1.2, .5); if (k >= 3) IN.glock(t + .2, 86, 1, .5); },  toss: (t) => { ring(t, 3300, .1, .05, { parts: [[1, 1], [1.5, .5]] }); whoosh(t, .5, 1200, 3000, .04); }, splash: (t) => { nz(t, .2, 'bandpass', 1400, 1, .1, { to: 500, rev: .8 }); blip(t + .05, 700, .06, { rev: .9 }); blip(t + .5, 600, .03, { rev: .9 }); }, great: (t) => S.fanfare(), ok: (t) => arp(t, [deg(4), deg(7)], .15, (tt, m) => bell(tt, m, 1, .06, { rev: .9 })), miss: (t) => { ring(t, 2800, .15, .04); sad(t + .1); } },
+  child: { step: (t, i) => { nz(t, .07, 'lowpass', 1800, 1, .05); IN.celesta(t + .01, [69, 72, 74, 77, 81, 84, 86, 89][Math.min(7, Math.round((i || 0) * 1.4))], .5, .4); }, crunch: (t) => { nz(t, .09, 'bandpass', 1500 * V(.2), 1.2, .05); nz(t + .03, .05, 'highpass', 4000, .7, .025); }, wrong: (t) => { thud(t, 110, 60, .15, .15); sad(t + .05); }, lost: (t) => { nz(t, 1.5, 'bandpass', 500, 2, .06, { a: .5, src: 'brown' }); S.hitAt(0, 1); }, found: (t) => { [53, 57, 60, 64].forEach(m => ep(t, m, 1.4, .06)); bell(t + .3, deg(12), 1.2, .07); } },
+  grave: { lid: (t) => { thud(t, 140, 60, .2, .3); nz(t, .08, 'bandpass', 900, 1.2, .16); tone(t + .05, 'sawtooth', 70, .5, .045, { lp: 700, vib: [23, 60, .02], a: .05 }); nz(t + .05, .45, 'bandpass', 380, 10, .08, { to: 650, a: .05 }); nz(t + .1, .6, 'lowpass', 1500, .7, .05, { a: .1 }); }, dig: (t, x) => { const k = x || 0; nz(t, .16, 'lowpass', 500 + 500 * k, .7, .2); thud(t, 100 + 60 * k, 55 + 30 * k, .1, .15); if (Math.random() < .5) ring(t + .02, 1800 * V(.1) + 900 * k, .08, .02, { parts: [[1, 1], [1.5, .4]] }); }, break: (t, i) => { IN.taiko(t, .5 + (i | 0) * .1); nz(t, .3, 'lowpass', 400, .7, .2); }, candle: (t) => nz(t, .4, 'bandpass', 900, 1, .02, { a: .1 }), coffin: (t) => { thud(t, 150, 100, .15, .25); ring(t, 260, .4, .04); }, hand: (t) => { thud(t, 70, 30, .7, .45); tone(t, 'sawtooth', 700, .6, .04, { to: 1400, vib: [9, 80, .01], lp: 3000 }); }, out: (t) => tone(t, 'sine', 90, .6, .1, { to: 60 }), treasure: (t) => S.chest() },
+  // 医务室：每个瓶子碰一下是自己的音高（D 小调五声），拔塞「啵」，咕嘟，玻璃裂；好药是颤音琴和弦，毒药是不协和低音
+  clinic: { pick: (t) => ring(t, 2200 * V(.1), .25, .05, { parts: [[1, 1], [2.3, .4]] }), drink: (t) => { for (let i = 0; i < 5; i++) { blip(t + i * .085, 260 + (i % 2) * 90, .06); nz(t + i * .085, .05, 'lowpass', 700, 2, .03); } }, good: (t) => S.heal(), bad: (t) => { padc(t, [50, 51, 55], 1, .025, { lp: 600 }); tone(t, 'sawtooth', 220, .5, .04, { to: 160, vib: [7, 60, .05], lp: 1200 }); }, mult: (t) => S.mult(),
+    hover: (t, i) => { const m = [74, 77, 79, 81, 84, 86][(i | 0) % 6]; ring(t, mtof(m) * 2, .35, .03, { parts: [[1, 1], [2.76, .35], [5.4, .12]], rev: .4 }); },
+    pop: (t) => { nz(t, .015, 'highpass', 3000, .7, .12); tone(t, 'sine', 900, .09, .09, { to: 260 }); tone(t + .01, 'triangle', 1800, .04, .03, { to: 700 }); },
+    crack: (t) => { nz(t, .06, 'highpass', 4000, .6, .1); ring(t, 3100 * V(.05), .3, .04, { parts: [[1, 1], [1.37, .6], [2.1, .3]] }); ring(t + .03, 4400 * V(.05), .2, .025, { parts: [[1, 1], [1.5, .4]] }); },
+    fizz: (t) => { for (let i = 0; i < 9; i++) blip(t + i * .045 + rnd(0, .02), rnd(900, 1600), .018); nz(t, .5, 'bandpass', 2500, 2, .025, { a: .05 }); },
+    omen: (t, q) => { const k = q | 0; IN.vibes(t, 62 + [0, 3, 7, 10][k] + 12, .9, .5 + k * .1); if (k >= 2) IN.vibes(t + .09, 69 + [0, 3, 7, 10][k], .9, .4); } },
   mirror: { tone: (t, i) => { const m = [deg(0), deg(2), deg(4), deg(7)][(i | 0) % 4] + 12; ring(t, mtof(m), .6, .06, { parts: [[1, 1], [2.01, .3], [3, .15]], rev: .5 }); }, wrong: (t) => S.shatter(), pass: (t) => S.up(2) },
-  altar: { pour: (t, x) => { const k = x || 0; blip(t, 400 + 700 * k, .06); nz(t, .1, 'lowpass', 900, 1, .05); }, flicker: (t) => nz(t, .3, 'bandpass', 800, 1, .03, { a: .1 }), out: (t) => { nz(t, .4, 'highpass', 3000, .5, .08, { to: 6000 }); tone(t, 'sine', 120, .8, .12, { to: 70 }); padc(t + .1, [50, 51, 56], 1.2, .02, { lp: 600 }); }, win: (t) => S.mult() },
-  peddler: { shuffle: (t) => { for (let i = 0; i < 6; i++) nz(t + i * .09, .07, 'bandpass', 900 * V(.2), 1.5, .06, { pan: i % 2 ? .4 : -.4 }); }, lift: (t) => { nz(t, .05, 'bandpass', 1100, 1.5, .08); bell(t + .05, deg(7), .5, .06); }, win: (t) => win(t, 1), lose: (t) => S.lose() },
-  spring: { zone: (t) => { bell(t, deg(7), .5, .07); bell(t + .06, deg(9), .6, .06); blip(t, 900, .03); }, bubble: (t) => { for (let i = 0; i < 3; i++) blip(t + rnd(0, .3), rnd(300, 700), .04); }, tick: (t, x) => tone(t, 'p25', hz(Math.round((x || 0) * 10)), .03, .025, { crush: 1 }), good: (t) => S.heal(), hot: (t) => { nz(t, .6, 'highpass', 3000, .5, .1, { a: .05 }); S.hitAt(0, 1); }, cool: (t) => { nz(t, .3, 'bandpass', 1000, 1, .07, { to: 400 }); sad(t + .1); } },
-  trap: { step: (t) => step(t, .07), num: (t, n) => tone(t, 'p25', hz(n | 0), .07, .04, { crush: 1 }), boom: (t) => { S.boom(); thud(t, 60, 25, .8, .45); }, box: (t) => S.chest() },
-  cat: { wave: (t) => { [0, .08].forEach(d => ring(t + d, 3000 + d * 2000, .5, .04, { parts: [[1, 1], [2.3, .4]] })); }, coin: (t) => S.coin(), bar: (t) => { coinRun(t, 3, .06); ring(t + .15, mtof(deg(12)), .8, .06, { parts: [[1, 1], [2.1, .5], [3.2, .3]] }); }, bomb: (t) => S.boom(), miss: (t) => thud(t, 180, 110, .05, .06) },
-  market: { grab: (t, g) => { g = Math.max(1, Math.min(3, g | 0)); whoosh(t, .12, 900, 4000, .06); nz(t + .02, .05, 'bandpass', 3000, 1.2, .08); thud(t + .05, 110, 40, .35, .3 + .05 * g); nz(t + .05, .1, 'lowpass', 1800, .7, .22); arp(t + .08, [deg(7), deg(9), deg(12)].slice(0, g), .06, (tt, m) => bell(tt, m, .6, .07)); if (g >= 3) sparkleAt(t + .25, 6, .022); }, swing: (t) => nz(t, .015, 'bandpass', 3000, 4, .05), stamp: (t) => S.stamp(), deal: (t) => { S.buy(); }, miss: (t) => sad(t) },
-  trainer: { bell: (t) => { [0, .18].forEach(d => ring(t + d, 980, 1.4, .09, { parts: [[1, 1], [2.76, .5], [5.4, .25], [8.93, .12]], rev: .4 })); }, punch: (t, i) => { const k = Math.min(1, (i | 0) / 10); thud(t, 140 + 60 * k, 60, .12, .25 + .1 * k); nz(t, .06, 'lowpass', 1200, .8, .15); if (k > .5) tone(t, 'p25', hz(Math.round(k * 12)), .05, .03, { crush: 1 }); }, done: (t) => S.up(3) },
-  statue: { eyes: (t) => { riser(t, t + .35, 500, 3500, .05); tone(t, 'sine', hz(0, -1), .6, .05, { a: .3 }); tone(t, 'sine', hz(7, 1), .5, .02, { a: .25, vib: [6, 20, .1], rev: .6 }); }, turn: (t) => { grind(t, .4, .1); nz(t + .38, .02, 'bandpass', 2000, 3, .1); }, align: (t, i) => ring(t, mtof(deg(5 + (i | 0) * 2)), 1.2, .06, { parts: [[1, 1], [2.01, .4], [2.76, .3]], rev: .5 }), wake: (t) => { rumble(t, 1.6, .25); choir(t + .3, [41, 48, 53, 57], 2.2, .045, { a: .6 }); S.portal(); }, fail: (t) => { grind(t, .6, .08); sad(t + .4); } },
-  arena: { ko: (t) => { duck(t, .6, 1.4); thud(t, 90, 30, .5, .5); [0, .2, .4].forEach(d => ring(t + .05 + d, 980, .7, .06, { parts: [[1, 1], [2.76, .5], [5.4, .25]] })); }, open: (t) => { cheer(t, 1.5, .035); timp(t, 38, .3); }, roar: (t) => { tone(t, 'sawtooth', 110, .7, .07, { to: 70, lp: 900, vib: [11, 80, .05] }); nz(t, .6, 'bandpass', 700, 1.5, .1); }, cheer: (t) => cheer(t, .7, .03), bet: (t) => { for (let i = 0; i < 3; i++) nz(t + i * .05, .02, 'bandpass', 2600, 2, .08); }, hit: (t) => S.hitAt(rnd(-.4, .4), 1.3), win: (t) => { S.kill(); fanfare(t + .2, .9); }, lose: (t) => { S.kill(); sad(t + .3); } },
-  camp: { fire: (t) => crackle(t, 1.5, 1300, .06, { a: .3 }), rest: (t) => { [53, 57, 60, 64].forEach(m => ep(t, m, 1.6, .05)); S.heal(); }, sharpen: (t) => { for (let i = 0; i < 3; i++) nz(t + i * .28, .22, 'bandpass', 4200, 3, .08, { a: .08, to: 6000 }); ring(t + .9, 3400, .5, .04); S.up(2); } },
-  recruit: { curtain: (t) => { whoosh(t, .45, 300, 1500, .07, { q: .7 }); for (let i = 0; i < 3; i++) nz(t + .05 + i * .07, .05, 'bandpass', 1300, 1, .05); }, reveal: (t) => { S.land(2); arp(t + .05, [deg(4), deg(7), deg(9), deg(12)], .06, (tt, m) => bell(tt, m, .6, .06)); }, full: (t) => S.ui_no() },
+  altar: { pour: (t, x) => { const k = x || 0; thud(t, 180 + 120 * k, 90, .09, .08); nz(t, .06, 'lowpass', 700, 1.5, .04); }, rune: (t, i) => { IN.organ(t, [50, 53, 57, 60, 62, 65, 69, 72, 74, 77, 81, 84][Math.min(11, (i | 0) - 1)], .45, .5); }, flicker: (t) => nz(t, .3, 'bandpass', 800, 1, .03, { a: .1 }), out: (t) => { nz(t, .4, 'highpass', 3000, .5, .08, { to: 6000 }); tone(t, 'sine', 120, .8, .12, { to: 70 }); padc(t + .1, [50, 51, 56], 1.2, .02, { lp: 600 }); }, win: (t) => { [50, 57, 62, 65, 69].forEach(m => IN.organ(t, m, 1.6, .55)); IN.choirAh(t + .05, [62, 65, 69], 1.6, .4); nz(t, .8, 'lowpass', 1200, .7, .08, { a: .1 }); } },
+  peddler: { shuffle: (t, i) => { const k = i | 0; IN.woodblock(t, 76 + Math.min(12, k), .55, { pan: k % 2 ? .35 : -.35 }); nz(t, .05, 'bandpass', 900 * V(.2), 1.5, .05); }, bell: (t) => { ring(t, 2400 * V(.05), .5, .03, { parts: [[1, 1], [2.4, .4], [4.1, .15]], rev: .4 }); }, lift: (t) => { nz(t, .05, 'bandpass', 1100, 1.5, .08); bell(t + .05, deg(7), .5, .06); }, win: (t) => win(t, 1), lose: (t) => S.lose() },
+  spring: { zone: (t) => { bell(t, deg(7), .5, .07); bell(t + .06, deg(9), .6, .06); blip(t, 900, .03); }, bubble: (t) => { for (let i = 0; i < 3; i++) blip(t + rnd(0, .3), rnd(300, 700), .04); }, tick: (t, x) => tone(t, 'p25', hz(Math.round((x || 0) * 10)), .03, .025, { crush: 1 }), good: (t) => S.heal(), hot: (t) => { nz(t, .6, 'highpass', 3000, .5, .1, { a: .05 }); S.hitAt(0, 1); }, cool: (t) => { nz(t, .3, 'bandpass', 1000, 1, .07, { to: 400 }); sad(t + .1); } , plunge: (t) => { thud(t, 160, 60, .18, .2); nz(t, .35, 'lowpass', 1400, .6, .12, { to: 500 }); for (let k = 0; k < 6; k++) blip(t + .05 + k * .04 + rnd(0, .02), rnd(500, 1100), .035); }, drop: (t) => { blip(t, rnd(900, 1400), .05); nz(t + .02, .08, 'bandpass', 2600, 2, .03); }, clamp: (t) => { nz(t, .02, 'bandpass', 3200, 3, .1); ring(t + .01, 1800, .25, .05, { parts: [[1, 1], [2.7, .4]] }); thud(t, 300, 180, .04, .08); }, geyser: (t) => { thud(t, 70, 40, .6, .35); nz(t, 1.4, 'bandpass', 900, .5, .16, { to: 3000, a: .05 }); arp(t + .2, [deg(0), deg(4), deg(7), deg(9), deg(12)], .07, (tt, m) => bell(tt, m, .7, .05)); } },
+  trap: { step: (t) => { step(t, .07); thud(t, 120, 70, .08, .12); nz(t + .01, .12, 'lowpass', 900, .6, .06); }, num: (t, n) => tone(t, 'p25', hz(n | 0), .07, .04, { crush: 1 }), boom: (t) => { S.boom(); thud(t, 60, 25, .8, .45); }, box: (t) => S.chest(),
+    // 起跳、不能走（闷的两声）、踩雷前那一声金属「咔」、开箱前一下下的木头碰撞、雷亮红灯、烟花升空炸开
+    hop: (t) => whoosh(t, .12, 500, 1400, .03), nope: (t) => { thud(t, 150, 110, .05, .07); thud(t + .08, 130, 95, .05, .06); }, click: (t) => { nz(t, .015, 'bandpass', 4200, 4, .12); ring(t + .005, 2400, .08, .05); },
+    rattle: (t) => { nz(t, .05, 'bandpass', 700 * [1, 1.15, .9][VARI], 1.5, .1); thud(t, 180, 120, .05, .08); },
+    reveal: (t) => { for (let i = 0; i < 4; i++) tone(t + i * .09, 'square', 660, .04, .02, { lp: 2400 }); },
+    fireworks: (t) => { for (let i = 0; i < 5; i++) { const d = i * .14; tone(t + d, 'sine', 700, .45, .025, { to: 2400, slide: .4 }); nz(t + d + .45, .35, 'bandpass', 2600, .6, .1, { a: .005 }); sparkleAt(t + d + .5, 4, .015); } } },
+  cat: { wave: (t) => { [0, .08].forEach(d => ring(t + d, 3000 + d * 2000, .5, .04, { parts: [[1, 1], [2.3, .4]] })); }, coin: (t) => S.coin(), bar: (t) => { coinRun(t, 3, .06); ring(t + .15, mtof(deg(12)), .8, .06, { parts: [[1, 1], [2.1, .5], [3.2, .3]] }); }, bomb: (t) => S.boom(), miss: (t) => thud(t, 180, 110, .05, .06),
+    // 猫爪甩钱上天（很轻的一声上扬 + 小铃）、炸飞的钱落地叮当往下、称重一拍一拍往上爬、猫铃、点地毯的一声铜钱
+    flick: (t) => { whoosh(t, .12, 900, 2600, .025); ring(t + .04, 4200 * [1, 1.12, .94][VARI], .18, .018, { parts: [[1, 1], [2.3, .3]] }); },
+    spill: (t) => { for (let i = 0; i < 5; i++) ring(t + i * .06 + rnd(0, .02), mtof(deg(9 - i, 1)), .2, .03, { parts: [[1, 1], [2.7, .35]] }); thud(t + .3, 200, 120, .05, .04); },
+    weigh: (t, x) => { const i = x | 0; nz(t, .05, 'bandpass', 1800 + i * 300, 1.2, .09); thud(t, 110 + i * 20, 70, .1, .12); ring(t + .02, mtof(deg(5 + i * 2, 1)), .4, .045, { parts: [[1, 1], [2.01, .4], [3, .2]] }); },
+    bell: (t) => { [0, .07, .14].forEach((d, i) => ring(t + d, 3200 + i * 420, .5, .035, { parts: [[1, 1], [2.3, .4], [3.9, .15]] })); },
+    clink: (t) => { ring(t, 2600 * [1, 1.1, .9][VARI], .22, .035, { parts: [[1, 1], [2.7, .4]] }); thud(t + .1, 240, 150, .03, .03); } },
+  market: { grab: (t, g) => { g = Math.max(1, Math.min(3, g | 0)); whoosh(t, .12, 900, 4000, .06); nz(t + .02, .05, 'bandpass', 3000, 1.2, .08); thud(t + .05, 110, 40, .35, .3 + .05 * g); nz(t + .05, .1, 'lowpass', 1800, .7, .22); arp(t + .08, [deg(7), deg(9), deg(12)].slice(0, g), .06, (tt, m) => bell(tt, m, .6, .07)); if (g >= 3) sparkleAt(t + .25, 6, .022); }, swing: (t) => nz(t, .015, 'bandpass', 3000, 4, .05), stamp: (t) => S.stamp(), deal: (t) => { S.buy(); }, miss: (t) => sad(t) , bell: (t) => { ring(t, 1760, 1.1, .1, { parts: [[1, 1], [2.76, .5], [5.4, .25], [8.9, .1]], rev: .5 }); thud(t, 200, 120, .05, .1); nz(t, .03, 'bandpass', 3000, 2, .06); }, cackle: (t) => { for (let k = 0; k < 4; k++) { tone(t + k * .11, 'sawtooth', 150 - k * 8, .08, .035, { lp: 900, vib: [22, 30, .02] }); nz(t + k * .11, .06, 'bandpass', 900, 1.5, .03); } ring(t + .02, 3600, .3, .03, { parts: [[1, 1], [2.3, .3]] }); }, slapScroll: (t) => { nz(t, .08, 'lowpass', 1200, .7, .1); thud(t, 140, 80, .06, .12); }, seal: (t) => { nz(t, .04, 'bandpass', 2400, 2, .12); thud(t, 300, 150, .04, .1); whoosh(t + .03, .35, 400, 2400, .05); }, fade: (t) => { whoosh(t, 1.2, 1200, 200, .04); tone(t + .9, 'sine', 330, .4, .015, { to: 220 }); }, tap: (t) => { for (let k = 0; k < 5; k++) nz(t + k * .07, .02, 'bandpass', 1500, 3, .05); }, chain: (t) => { for (let k = 0; k < 8; k++) ring(t + k * .07 + rnd(0, .02), rnd(2000, 3400), .12, .025, { parts: [[1, 1], [2.9, .4]] }); }, coinbag: (t) => { thud(t, 160, 90, .08, .15); coinRun(t + .03, 4, .04); } },
+  trainer: { bell: (t) => { [0, .18].forEach(d => ring(t + d, 980, 1.4, .09, { parts: [[1, 1], [2.76, .5], [5.4, .25], [8.93, .12]], rev: .4 })); }, punch: (t, i) => { const k = Math.min(1, (i | 0) / 10); thud(t, 140 + 60 * k, 60, .12, .25 + .1 * k); nz(t, .06, 'lowpass', 1200, .8, .15); if (k > .5) tone(t, 'p25', hz(Math.round(k * 12)), .05, .03, { crush: 1 }); }, done: (t) => S.up(3) , whistle: (t) => { tone(t, 'sine', 2900, .45, .05, { vib: [28, 120, .02] }); tone(t, 'sine', 3050, .45, .02, { vib: [28, 130, .02] }); }, windup: (t) => { riser(t, t + .5, 200, 1400, .06); nz(t, .5, 'bandpass', 700, 1, .05, { to: 1600 }); }, finisher: (t, x) => { const k = Math.max(1, Math.min(3, x | 0)); thud(t, 110, 40, .3 + k * .08, .35 + k * .1); nz(t, .2, 'lowpass', 1400, .7, .2); if (k >= 2) ring(t + .02, 1200, .6, .05, { parts: [[1, 1], [2.7, .4]] }); }, snap: (t) => { nz(t, .06, 'highpass', 3000, .6, .18); ring(t, 2600, .25, .08, { parts: [[1, 1], [3.1, .5]] }); for (let k = 0; k < 6; k++) nz(t + .35 + k * .05, .15, 'lowpass', 900, .5, .08); thud(t + .35, 90, 40, .4, .3); } },
+  statue: { eyes: (t) => { riser(t, t + .35, 500, 3500, .05); tone(t, 'sine', hz(0, -1), .6, .05, { a: .3 }); tone(t, 'sine', hz(7, 1), .5, .02, { a: .25, vib: [6, 20, .1], rev: .6 }); }, turn: (t) => { grind(t, .4, .1); nz(t + .38, .02, 'bandpass', 2000, 3, .1); }, align: (t, i) => ring(t, mtof(deg(5 + (i | 0) * 2)), 1.2, .06, { parts: [[1, 1], [2.01, .4], [2.76, .3]], rev: .5 }), wake: (t) => { rumble(t, 1.6, .25); choir(t + .3, [41, 48, 53, 57], 2.2, .045, { a: .6 }); S.portal(); }, fail: (t) => { grind(t, .6, .08); sad(t + .4); } , snuff: (t) => { nz(t + .18, .12, 'lowpass', 900, .5, .03); tone(t + .18, 'sine', 180, .15, .015, { to: 90 }); } },
+  arena: { ko: (t) => { duck(t, .6, 1.4); thud(t, 90, 30, .5, .5); [0, .2, .4].forEach(d => ring(t + .05 + d, 980, .7, .06, { parts: [[1, 1], [2.76, .5], [5.4, .25]] })); }, open: (t) => { cheer(t, 1.5, .035); timp(t, 38, .3); }, roar: (t) => { tone(t, 'sawtooth', 110, .7, .07, { to: 70, lp: 900, vib: [11, 80, .05] }); nz(t, .6, 'bandpass', 700, 1.5, .1); }, cheer: (t) => cheer(t, .7, .03), bet: (t) => { for (let i = 0; i < 3; i++) nz(t + i * .05, .02, 'bandpass', 2600, 2, .08); }, hit: (t) => S.hitAt(rnd(-.4, .4), 1.3), win: (t) => { S.kill(); fanfare(t + .2, .9); }, lose: (t) => { S.kill(); sad(t + .3); } , gong: (t) => { ring(t, 110, 3.2, .16, { parts: [[1, 1], [1.48, .6], [2.1, .45], [2.9, .3], [4.2, .2]], rev: .8 }); thud(t, 70, 45, .6, .25); }, gate: (t) => { for (let k = 0; k < 10; k++) ring(t + k * .05, rnd(900, 1400), .1, .03, { parts: [[1, 1], [2.9, .4]] }); tone(t, 'sawtooth', 70, .6, .04, { lp: 400 }); }, hush: (t) => { duck(t, .5, .9); }, ooh: (t) => cheer(t, .5, .02), toss: (t) => { for (let k = 0; k < 8; k++) ring(t + k * .07 + rnd(0, .03), mtof(deg(6 + k, 1)), .25, .03, { parts: [[1, 1], [2.7, .4]] }); }, boo: (t) => { tone(t, 'sawtooth', 120, .9, .05, { to: 85, lp: 700, vib: [6, 10, .1] }); nz(t, .9, 'bandpass', 500, .8, .06); } },
+  camp: { fire: (t) => crackle(t, 1.5, 1300, .06, { a: .3 }), rest: (t) => { [53, 57, 60, 64].forEach(m => ep(t, m, 1.6, .05)); S.heal(); }, sharpen: (t) => { for (let i = 0; i < 3; i++) nz(t + i * .28, .22, 'bandpass', 4200, 3, .08, { a: .08, to: 6000 }); ring(t + .9, 3400, .5, .04); S.up(2); } , clang: (t, n) => { const k = Math.max(1, n | 0); ring(t, mtof(deg(7 + k * 2, 1)), .5, .07, { parts: [[1, 1], [2.76, .5], [5.4, .25]] }); nz(t, .12, 'highpass', 5000, .6, .08); }, scrape: (t) => { nz(t, .18, 'bandpass', 1400, 2, .07, { to: 900 }); }, pop: (t) => { nz(t, .03, 'bandpass', 2400, 2, .08); } },
+  recruit: { curtain: (t) => { whoosh(t, .45, 300, 1500, .07, { q: .7 }); for (let i = 0; i < 3; i++) nz(t + .05 + i * .07, .05, 'bandpass', 1300, 1, .05); }, reveal: (t) => { S.land(2); arp(t + .05, [deg(4), deg(7), deg(9), deg(12)], .06, (tt, m) => bell(tt, m, .6, .06)); }, full: (t) => S.ui_no() , lamp: (t, q) => { const k = Math.max(0, Math.min(3, q | 0)); nz(t, .04, 'bandpass', 1800, 2, .05); bell(t, deg(4 + k * 2), .4, .04 + k * .01); }, flare: (t) => { whoosh(t, .25, 600, 3000, .06); nz(t, .3, 'highpass', 4000, .5, .06); }, salute: (t) => { [0, .12, .24].forEach((d, i) => tone(t + d, 'square', [523, 659, 784][i], .14, .03, { lp: 3000 })); }, none: (t) => { nz(t, .5, 'bandpass', 500, .7, .05, { to: 300 }); } },
 };
 S.MINI = MINI;
 def('mini', 1, (t, g, ev, x) => { if (!S.lim('mini:' + g + '.' + ev, 20)) return; const G = MINI[g] || MINI._, f = G[ev] || MINI._[ev]; if (f) f(t, x); });   // 每个小游戏的每个事件各自限流
@@ -1174,6 +1249,59 @@ const RC2 = {
 def('rc', 2, (t, beat, x) => { const f = RC2[beat]; if (f) f(t, x); });
 def('recruit', 2, (t, rar) => { rar = Math.max(0, Math.min(3, rar | 0)); RC2.in(t); RC2.charge(t + .55, { dur: 1.2, rar }); for (let k = 0; k <= rar; k++) RC2.tier(t + .55 + k * 1.2 / (rar + 1), k); RC2.shatter(t + 1.75, rar); RC2.fly(t + 3); RC2.land(t + 3.7, rar); }, 800);
 def('reveal', 2, (t, q) => reveal2(t, q | 0), 300);
+// ── 午夜卡包（夜市的抽卡，src/mc-gacha.js）：干脆的芯片音。每一拍下面一记三角波掉音高的重低音 + 低通噪声「砰」，上面方波五声音阶；
+// 几乎不加混响，亮音只给一点回声。碎卡那一下按品质越来越重；卡帧时整组掐断。游戏逐拍调用 S.ga(拍, 参数…)。
+let gaG = null;
+const GA_ROOT = 65;   // F4
+const gs = (i) => mtof(deg(i, 0));
+const gq = (f, t, d, v, type, f2, o) => tone(t, type || 'square', f, d, v, Object.assign({ a: .002, hold: d * .55 }, f2 ? { to: f2, slide: d } : {}, o || {}));
+const gkick = (t, f0, v, d) => { gq(f0 || 170, t, d || .16, v || .5, 'triangle', 42); nz(t, .14, 'lowpass', 420, .8, (v || .5) * .85); };
+const GA = {
+  press: (t) => { gq(880, t, .03, .04); nz(t, .04, 'bandpass', 2400, 1, .2); gq(1975, t + .02, .05, .1); gq(2637, t + .08, .2, .09, 'square', 0, { dly: .2 }); for (let i = 0; i < 6; i++) { nz(t + .1 + i * .045, .02, 'bandpass', 2200 + i * 150, 1.2, .2); gq(600 + i * 60, t + .1 + i * .045, .015, .02); } },
+  thunk: (t) => { gkick(t, 180, .55, .14); gq(330, t + .02, .06, .04); },
+  whoosh: (t, k) => { gq(300, t, .18, .05, 'square', 2400 * (k || 1)); nz(t, .2, 'bandpass', 3000, 1, .15); },
+  foil: (t) => { for (let i = 0; i < 4; i++) nz(t + i * .03, .025, 'highpass', 6500, .7, .12); },
+  tear: (t) => { nz(t, .26, 'bandpass', 800, 1, .45, { to: 6000 }); for (let i = 0; i < 6; i++) gq(1200 + i * 220, t + i * .035, .03, .025); gkick(t + .2, 140, .3, .1); },
+  tap: (t) => { gq(2093, t, .03, .06); gq(2637, t + .03, .05, .055); nz(t, .04, 'bandpass', 2400, 1, .2); },
+  riser: (t, d) => { cut(gaG, t); gaG = grp(); duck(t, .7, (d || 1.5) + 3); gq(55, t, d, .15, 'triangle', 330, { dest: gaG }); },
+  beat: (t, i, tier, up) => { i = i | 0; tier = tier | 0; up = !!up; nz(t, .14, 'lowpass', 420, .8, .45); gq(175, t, .16, .5, 'triangle', 44); gq(60, t, .2, .25, 'sine', 35);
+    gq(gs(7 + tier * 3 + i), t, .1, .11); gq(gs(9 + tier * 3 + i), t + .05, .12, .085, 'square', 0, { dly: .2 });
+    if (up) { for (let k = 0; k < 6; k++) gq(gs(10 + tier * 3 + k), t + .06 + k * .035, .05, .08, 'square', 0, { dly: .2 }); nz(t, .3, 'highpass', 6000, .7, .16); } },
+  heart: (t) => { gq(62, t, .16, .6, 'sine', 40); gq(58, t + .2, .18, .5, 'sine', 38); },
+  zap: (t) => { const p = rnd(-.7, .7); gq(2400 + Math.random() * 1200, t, .05, .025, 'square', 300, { pan: p }); nz(t, .05, 'highpass', 5000, .7, .1, { pan: p }); },
+  suck: (t, d) => { d = d || .3; riser(t, t + d, 400, 7000, .5, { dest: gaG || undefined }); gq(110, t, d, .1, 'square', 1760, { dest: gaG || undefined }); },
+  cut: (t) => { cut(gaG, t, .008); gaG = null; },
+  boom: (t, q) => { q = Math.max(0, Math.min(4, q | 0)); const L = [.62, .7, .8, .9, 1][q];
+    nz(t, .9 + q * .2, 'lowpass', 700, .8, .75 * L); nz(t, .4, 'highpass', 6000, .7, .3 * L); gq(260, t, .6, .6 * L, 'triangle', 28); gq(120, t, .9 + q * .15, .45 * L, 'sine', 30);
+    if (q >= 3) { gq(90, t + .12, 1.2, .5, 'sine', 24); nz(t + .1, 1.4, 'lowpass', 250, .8, .35, { to: 60 }); }
+    const seq = [[523, 659, 784, 1047], [523, 659, 784, 1047, 1319], [523, 659, 784, 1047, 784, 1047, 1319, 1568], [523, 659, 784, 1047, 1319, 1047, 1319, 1568, 2093], [392, 523, 659, 784, 1047, 1319, 1568, 2093, 2637]][q];
+    seq.forEach((f, i) => gq(f, t + .08 + i * .055, .1, .1, 'square', 0, { dly: .2 }));
+    const end = t + .08 + seq.length * .055, top = seq[seq.length - 1]; gq(top, end, .9, .09); gq(top / 2, end, .9, .13, 'triangle'); gq(top * .75, end, .9, .05);
+    for (let i = 0; i < 6 + q * 3; i++) gq(gs(12 + (Math.random() * 8 | 0)), t + .05 + Math.random() * .5, .05, .022, 'square', 0, { dly: .2, pan: rnd(-.8, .8) }); },
+  wave2: (t) => { [1568, 2093, 2637, 3136, 4186].forEach((f, i) => gq(f, t + i * .05, .08, .045, 'square', 0, { dly: .2 })); nz(t, .4, 'lowpass', 800, .8, .45); gq(200, t, .5, .45, 'triangle', 30); },
+  slam: (t, i) => { i = i | 0; nz(t, .12, 'lowpass', 520, .8, .55); gq(175, t, .14, .6, 'triangle', 42); nz(t, .05, 'highpass', 5000, .7, .12); gq(gs(10 + i * 2), t, .08, .07); gq(gs(12 + i * 2), t + .04, .1, .05, 'square', 0, { dly: .2 }); },
+  world: (t, i) => { i = i | 0; gq(110 + i * 30, t, .16, .45, 'triangle', 42); nz(t, .12, 'lowpass', 380 + i * 90, .8, .32); },
+  name: (t) => { gq(1568, t, .06, .18); gq(2093, t + .05, .12, .18, 'square', 0, { dly: .2 }); },
+  pip: (t, i) => { const f = gs(12 + ((i | 0) * 2)); gq(f, t, .09, .22); gq(f * 1.5, t + .05, .16, .15, 'square', 0, { dly: .2 }); gq(f / 2, t, .12, .2, 'triangle'); },
+  seg: (t, k) => { k = k | 0; gq(1300 + k * 70, t, .04, .17); gq(650 + k * 35, t, .04, .1, 'triangle'); },
+  roll: (t, k) => gq(1300 + ((k | 0) % 16) * 60, t, .035, .14),
+  charpop: (t, q) => { nz(t, .6, 'lowpass', 700, .8, .5); gq(180, t, .4, .42, 'triangle', 40); [784, 988, 1175, 1568, 1976, 2349].forEach((f, i) => gq(f, t + .03 + i * .045, .08, .05, 'square', 0, { dly: .2 })); const e = t + .03 + 6 * .045; gq(2349, e, .5, .045); gq(1175, e, .5, .07, 'triangle'); gq(1568, e, .5, .03); },
+  panel: (t) => { gq(1047, t, .05, .08); gq(1568, t + .04, .07, .08); },
+  back: (t) => { gq(1600, t, .15, .05, 'square', 400); nz(t, .15, 'bandpass', 2000, 1, .1); },
+  fly: (t) => { gq(1200, t, .22, .05, 'square', 150); nz(t, .2, 'bandpass', 2000, 1, .1); },
+  // a firework: a deep boom rolling off, then sparse pops of a few milliseconds thinning out over a faint sizzle (never hiss)
+  fw: (t, big) => { const p = rnd(-.7, .7); nz(t, big ? 1.6 : 1.2, 'lowpass', 420, .8, big ? .5 : .36, { to: 90, pan: p }); gq(72, t, .7, big ? .42 : .3, 'sine', 30); gq(150, t, .18, .18, 'triangle', 60);
+    const n = big ? 42 : 26; for (let i = 0; i < n; i++) nz(t + .1 + Math.pow(Math.random(), 1.7) * (big ? 1.4 : 1), .006 + Math.random() * .006, 'bandpass', 1600 + Math.random() * 2600, 1.6, .1 + Math.random() * .12, { pan: p + rnd(-.3, .3) });
+    nz(t + .08, big ? 1.5 : 1.1, 'bandpass', 6500, 1, .03); },
+  launch: (t) => { gq(700, t, .45, .035, 'sine', 2600); gq(1400, t, .45, .01, 'triangle', 5200); nz(t, .4, 'bandpass', 3000, 1, .04); },
+  coins: (t, n) => { for (let i = 0; i < (n | 0); i++) gq(gs(12 + (i % 8)), t + i * .04, .05, .035, 'square', 0, { dly: .2, pan: rnd(-.6, .6) }); },
+  evo: (t) => { [0, 2, 4, 5, 7, 9].forEach((k, i) => gq(gs(10 + k), t + i * .05, .08, .06, 'square', 0, { dly: .2 })); gq(gs(20), t + .32, .6, .05); gq(gs(10), t + .32, .6, .08, 'triangle'); },
+  hum: (t) => { gq(120, t, .3, .04); gq(1568, t, .04, .03); },
+  coil: () => {},   // the press already carries the coin and the coil
+  tick: (t) => gq(2093, t, .025, .05),
+};
+def('ga', 2, (t, ev, a, b, c) => { const f = GA[ev]; if (f) f(t, a, b, c); });
+
 
 // ── 宝箱（2026-09-25 重做：层太多听不清）：一条线，每个时刻只有一个主角 ──
 // 开箱木头响 → 0.5 秒落地一声低响 → 抖动是一下下木头碰撞（越抖越急越亮）→ 1.5 秒打开：六个音的竖琴上行停在一个钟琴和弦上 →
@@ -1289,6 +1417,26 @@ const MW = {
   lose: (t) => { IN.marimba(t, 52, .15, .5); IN.marimba(t + .1, 50, .2, .4); },
 };
 Object.assign(MINI._, MW);
+// ── 反馈底线（2026-09-27，mc-show.js）：悬停、按下、蓄力、逐拍、卡帧、揭晓冲击、第二波、逐项砸出、点空白、进退场——每一拍都有声音，音高跟着档位和拍数往上走 ──
+Object.assign(MINI._, {
+  hover: (t) => tone(t, 'p25', 1568, .04, .02, { crush: 1, lp: 6000 }),
+  press: (t) => { nz(t, .02, 'bandpass', 2400, 2, .06); thud(t, 170, 70, .08, .12); tone(t + .02, 'p25', hz(9, 0), .05, .025, { crush: 1 }); },
+  riser: (t, x) => { const d = Math.max(.4, Math.min(4, +x || 1.5)); riser(t, t + d, 110, 1400, .05); tone(t, 'triangle', 55, d, .05, { to: 330, slide: d }); },
+  beat: (t, x) => { const o = x || {}, i = o.i | 0, tr = o.tier | 0; nz(t, .14, 'lowpass', 420, .7, .12); thud(t, 170, 45, .16, .3); tone(t, 'p25', hz(7 + tr * 3 + i, 0), .1, .05, { crush: 1 }); tone(t + .05, 'p25', hz(9 + tr * 3 + i, 0), .12, .035, { crush: 1 });
+    if (o.up) { for (let k = 0; k < 6; k++) tone(t + .06 + k * .035, 'p25', hz(10 + tr * 3 + k, 0), .05, .03, { crush: 1 }); nz(t, .3, 'highpass', 6000, .5, .06); } },
+  hit: (t) => { nz(t, .06, 'highpass', 5000, .5, .1); thud(t, 90, 40, .12, .2); },
+  boom: (t, x) => { const r = Math.max(0, Math.min(3, x | 0)); nz(t, .9, 'lowpass', 700, .7, .18 + r * .04); nz(t, .35, 'highpass', 6000, .5, .06 + r * .02); thud(t, 260, 28, .6, .35 + r * .08); if (r >= 2) cymbal(t, 1.2 + r * .4, .05); },
+  wave2: (t) => { [0, 2, 4, 6, 9].forEach((d, i) => tone(t + i * .05, 'p25', hz(10 + d, 1), .08, .035, { crush: 1 })); nz(t, .4, 'lowpass', 800, .7, .12); },
+  slam: (t, x) => { const i = x | 0; nz(t, .06, 'lowpass', 600, .7, .14); thud(t, 110, 50, .12, .2); tone(t, 'p25', hz(10 + i * 2, 0), .06, .04, { crush: 1 }); },
+  tap: (t) => { tone(t, 'p25', 2093, .03, .025, { crush: 1 }); tone(t + .03, 'p25', 2637, .04, .02, { crush: 1 }); },
+  exit: (t) => { tone(t, 'p25', 1200, .22, .035, { to: 150, slide: .22, crush: 1 }); nz(t, .2, 'bandpass', 2000, 1, .05); },
+  enter: (t) => { nz(t, .12, 'lowpass', 500, .7, .1); thud(t, 110, 50, .12, .18); tone(t + .05, 'p25', 1319, .05, .02, { crush: 1 }); },
+});
+// 水果机：硬币一枚枚掉进出币盘（音高随堆高轮换）、骷髅的电火花
+Object.assign(MINI.fruit, {
+  drop: (t, x) => ring(t, 2400 + ((x | 0) % 6) * 160, .12, .028, { parts: [[1, 1], [2.4, .4], [3.9, .15]], pan: rnd(-.4, .4) }),
+  zap: (t) => { for (let i = 0; i < 7; i++) nz(t + i * .028, .025, 'bandpass', 2600 + rnd(0, 2600), 2, .08); tone(t, 'sawtooth', 110, .3, .05, { vib: [60, 40, .02], lp: 2000 }); },
+});
 
 // ── 世界主题传送门：每个世界一段招牌小曲 ──
 Object.assign(WORLD, {
@@ -1583,6 +1731,99 @@ const BATM = (() => {
   };
 })();
 
+// ═════════ 流浪乐师的曲子（G011 合奏）═════════
+// D 多利亚调式，132 拍 / 分，4/4 拍：预备 1 小节 + 旋律 8 小节（问句 4 + 答句 4，26 个音）+ 收尾 1 小节，约 18 秒。
+// 和弦 Dm | G | F | G Am | Dm | F | G | Dm；第 7 小节 G 大三和弦 + 旋律里的 B 是多利亚的 IV → i 收束。
+// 所有声音按音频时钟排在同一条节拍网格上：旋律音提前排好，没按之前是很轻的「影子旋律」，按中那一刻推到全音量
+// （所以你的琴声永远落在拍上），漏掉就掐断 + 一声擦弦。伴奏按连击一层层加进来（低音 → 吉他 → 铃鼓沙锤 → 曼陀林 → 哼唱）。
+IN.violin = (t, m, dur, v, o) => {
+  const ac = AC(), f = mtof(m), end = t + dur + .6, g = ac.createGain(); v = v == null ? .7 : v;
+  adsr(g, t, .035, .085 * v, .3, .82, dur, .14);
+  const b1 = bqf('peaking', 290, 1.4, 5), b2 = bqf('peaking', 1150, 1.6, 3.5), b3 = bqf('peaking', 2900, 1.8, 4.5), hp = bqf('highpass', 190, .7), lp = bqf('lowpass', 4200 + 1400 * v, .6);
+  [-4, 4].forEach(d => osc('sawtooth', f, t, end, { det: d + rnd(-1, 1), vib: [5.7, 13, .28] }).connect(b1));
+  wire(b1, [b2, b3, hp, lp, g]);
+  const bn = noiseSrc(t, t + dur + .05), bb = bqf('bandpass', 2600, 1.3), bg = ac.createGain(); bg.gain.setValueAtTime(0, t); bg.gain.linearRampToValueAtTime(.05 * v, t + .015); bg.gain.setTargetAtTime(.007 * v, t + .03, .04); bg.gain.setTargetAtTime(0, t + dur, .05); bn.connect(bb); bb.connect(bg); bg.connect(g);
+  P.out(g, O(o, .3), t, end);
+};
+const SONG = S.song = (() => {
+  const BPM = 132, B = 60 / BPM, S8 = B / 2;
+  const N = { D4: 62, E4: 64, F4: 65, G4: 67, A4: 69, B4: 71, C5: 72, D5: 74, E5: 76, F5: 77 };
+  // [拍（从旋律开始算）, 音, 时值拍]
+  const MEL = [[0, 'A4', 1], [1, 'D5', 1.5], [2.5, 'C5', .5], [3, 'A4', 1], [4, 'G4', 1], [5, 'F4', 1], [6, 'D4', 2], [8, 'F4', 1], [9, 'G4', 1], [10, 'A4', 1], [11, 'C5', 1], [12, 'D5', 2], [14, 'A4', 2],
+    [16, 'A4', 1], [17, 'D5', 1.5], [18.5, 'C5', .5], [19, 'A4', 1], [20, 'C5', 1], [21, 'D5', .5], [21.5, 'E5', .5], [22, 'F5', 2], [24, 'E5', 1], [25, 'D5', 1], [26, 'B4', 1], [27, 'A4', 1], [28, 'D5', 4]];
+  const CH = { Dm: [38, 45, [50, 57, 62, 65]], G: [43, 50, [50, 55, 59, 62]], F: [41, 48, [48, 53, 57, 60]], Am: [45, 52, [52, 57, 60, 64]] };
+  // 每小节两个半小节的和弦（第 -1 小节是预备）
+  const BARS = [['Dm', 'Dm'], ['G', 'G'], ['F', 'F'], ['G', 'Am'], ['Dm', 'Dm'], ['F', 'F'], ['G', 'G'], ['Dm', 'Dm'], ['Dm', 'Dm']];
+  const lane = (m) => (m <= N.G4 ? 0 : m <= N.C5 ? 1 : 2);
+  const NOTES = MEL.map(([b, n, len], i) => ({ i, beat: b, m: N[n], len, l: lane(N[n]) }));
+  let on = false, t0 = 0, bus = null, lead = null, acc = null, hushed = null, step = 0, nextT = 0, layers = 0, st = [], iv = null, endBeat = 36;
+  const ch = () => { P.setCh('mini'); return P.chNow(); };
+  const beatT = (b) => t0 + (b + 4) * B;      // 旋律第 b 拍的音频时间（前面是 4 拍预备）
+  function strum(t, ms, v, o) { ms.forEach((m, k) => IN.guitar(t + k * .013, m, .8, v * (1 - k * .06), o)); }
+  function schedLead(n) { const ac = A(), g = ac.createGain(), s = st[n.i]; g.gain.value = s.hit ? 1 : .26; g.connect(lead); s.g = g; IN.violin(beatT(n.beat), n.m, n.len * B * .96, .78, { dest: g, rev: 0 }); s.sched = 1; }
+  function doStep(t, k) {
+    // k：从预备开始的八分音符序号；预备小节 k 0–7，旋律从 k 8 开始
+    const bar = Math.floor(k / 8) - 1, s8 = k % 8, bs = BARS[Math.max(0, Math.min(BARS.length - 1, bar))], c = CH[bs[s8 < 4 ? 0 : 1]], dry = { dest: acc, rev: 0 }, wet = { dest: acc, rev: .12 };
+    if (bar < 0) {   // 预备：第一拍乐师扫一下 Dm，木鱼四声一声比一声高
+      if (s8 === 0) strum(t, CH.Dm[2], .55, wet);
+      if (s8 % 2 === 0) IN.woodblock(t, 79 + s8, .55 + s8 * .05, dry);
+      return;
+    }
+    if (bar >= 9) return;
+    const coda = bar === 8;
+    if (coda) { if (s8 === 0) { strum(t, CH.Dm[2], .7, wet); IN.pizz(t, CH.Dm[0], 2, .7, dry); if (layers >= 2) IN.tamb(t, .5, dry); if (layers >= 4) IN.choirOo(t, [62, 65, 69], B * 3.5, .35, wet); } return; }
+    // L0 低音拨弦（根音、五音）+ 乐师跺脚
+    if (s8 === 0 || s8 === 4) { IN.pizz(t, s8 === 0 ? c[0] : c[1], B * 1.5, .62, dry); IN.bassDrum(t, .32, { dest: acc, rev: 0 }); }
+    // L1 吉他在 2、4 拍扫弦
+    if (layers >= 1 && (s8 === 2 || s8 === 6)) strum(t, c[2], .42, wet);
+    // L2 铃鼓（2、4 拍）+ 反拍沙锤
+    if (layers >= 2) { if (s8 === 2 || s8 === 6) IN.tamb(t, .34, dry); if (s8 % 2 === 1) nz(t, .03, 'highpass', 7000, .7, .02, { dest: acc }); }
+    // L3 曼陀林八分音符琶音
+    if (layers >= 3) { const ord = [0, 1, 2, 3, 2, 1, 2, 3][s8]; IN.pizz(t, c[2][ord] + 12, S8 * 1.2, .28, { dest: acc, rev: .1 }); }
+    // L4 听众哼唱：每半小节一个和弦
+    if (layers >= 4 && (s8 === 0 || s8 === 4) && (s8 === 0 || bs[0] !== bs[1])) IN.choirOo(t, c[2].slice(1).map(m => m + 12), B * (bs[0] === bs[1] ? 3.8 : 1.9), .2, wet);
+  }
+  function pump() {
+    if (!on || !A()) return; const c0 = P.chNow(); ch();
+    try {
+      const now = A().currentTime;
+      while (nextT < now + .3) { doStep(nextT, step); step++; nextT = t0 + step * S8; }
+      NOTES.forEach(n => { const s = st[n.i]; if (!s.sched && beatT(n.beat) < now + .35) schedLead(n); });
+      if (step > (endBeat + 4) * 2 + 8 && now > beatT(endBeat) + 2) SONG.stop();
+    } finally { P.setCh(c0); }
+  }
+  function scratch(t, k) { const o = { dest: bus }; nz(t, .16, 'bandpass', 1900, 2.2, .06 * k, Object.assign({ to: 900 }, o)); tone(t, 'sawtooth', 185, .16, .035 * k, Object.assign({ to: 150, lp: 1800 }, o)); tone(t + .01, 'sawtooth', 950, .06, .012 * k, Object.assign({ to: 1250, lp: 3000 }, o)); }
+  return {
+    BPM, B, NOTES, BARS,
+    // 开始：返回谱面（每个音的时间都是相对 t0 的秒数，玩家听到 t0 时 songTime = 0）
+    begin() {
+      const ac = A(); if (!ac) return null; SONG.stop(true); const c0 = P.chNow(), c = ch();
+      t0 = ac.currentTime + .2; bus = ac.createGain(); bus.gain.value = 1; bus.connect(c.in);
+      lead = ac.createGain(); lead.gain.value = 1; lead.connect(bus); const rv = ac.createGain(); rv.gain.value = .22; lead.connect(rv); rv.connect(c.rv);
+      acc = ac.createGain(); acc.gain.value = .9; acc.connect(bus); P.setCh(c0);
+      // 地图配乐让出来：合奏时停下，曲子结束再淡回来
+      hushed = MAPM.on ? MAPM.world : null; if (hushed) MAPM.stop();
+      st = NOTES.map(() => ({ hit: 0, g: null, sched: 0 })); step = 0; nextT = t0; layers = 0; on = true;
+      if (!iv && typeof setInterval !== 'undefined') iv = setInterval(pump, 25); pump();
+      return { t0, B, count: 4 * B, notes: NOTES.map(n => ({ i: n.i, t: (n.beat + 4) * B, l: n.l, m: n.m, len: n.len * B })), end: (endBeat + 4) * B };
+    },
+    // 玩家现在听到的是第几秒（getOutputTimestamp 换算输出延迟）；ts：事件的 performance 时间戳，不给就是现在
+    heard(ts) { const ac = A(); if (!ac || !on) return null; let ct = ac.currentTime, pt = performance.now(); try { const o = ac.getOutputTimestamp && ac.getOutputTimestamp(); if (o && o.performanceTime) { ct = o.contextTime; pt = o.performanceTime; } else ct -= (ac.outputLatency || 0) + (ac.baseLatency || 0); } catch (e) {}
+      return ct + ((ts == null ? performance.now() : ts) - pt) / 1000 - t0; },
+    get on() { return on; },
+    layers(n) { layers = n; },
+    // 打中：把这个音推到全音量；PERFECT 在网格上加一声高八度的钢片琴
+    hit(i, perfect) { const s = st[i]; if (!s) return; s.hit = 1; const ac = A(), n = NOTES[i], at = Math.max(ac.currentTime, beatT(n.beat)); if (s.g) { s.g.gain.cancelScheduledValues(ac.currentTime); s.g.gain.setTargetAtTime(1, ac.currentTime, .008); }
+      if (perfect) { const c0 = P.chNow(); ch(); IN.celesta(at, n.m + 12, .5, .55, { dest: bus, rev: .3 }); P.setCh(c0); } },
+    // 漏掉：影子旋律掐断 + 一声擦弦
+    miss(i) { const s = st[i]; if (!s) return; s.miss = 1; const ac = A(); if (s.g) { s.g.gain.cancelScheduledValues(ac.currentTime); s.g.gain.setTargetAtTime(0, ac.currentTime, .02); } scratch(ac.currentTime + .005, 1); },
+    // 空按：不带音高的擦弦，立即响
+    stray() { const ac = A(); if (ac && on) scratch(ac.currentTime + .005, .7); },
+    stop(quick) { if (!A()) return; const t = A().currentTime; if (bus) { const b = bus; b.gain.cancelScheduledValues(t); b.gain.setValueAtTime(b.gain.value, t); b.gain.setTargetAtTime(0, t, quick ? .05 : .5); setTimeout(() => { try { b.disconnect(); } catch (e) {} }, 5000); }
+      if (hushed && !MAPM.on && S.musicDir.scene === 'map') MAPM.start(hushed); hushed = null;
+      on = false; bus = null; },
+  };
+})();
 const DIRM = S.musicDir = { scene: null, lv: 0 };
 function sceneOf(g) { const s2 = g && g.screen; if (!s2 || s2 === 'intro' || s2 === 'menu' || s2 === 'room') return 'room'; if (s2 === 'base') return 'base'; if (s2 === 'raid') return 'raid'; if (s2 === 'world' || s2 === 'shop') return 'map'; if (s2 === 'battle') return 'battle'; if (s2 === 'over') return 'none'; return 'bed'; }
 function baseLevel(m) { const MC = root.MC; if (!m || !MC) return 0; if (MC.NIGHTLY) return 1; /* every night is a raid (mc-night.js): the day keeps one steady unease */ const E = MC.RAID_EVERY || 5; if (m.day % E === 0 && m.lastRaid !== m.day && (m.heroes || []).length) return 4; const left = E - (m.day % E); return left >= 4 ? 0 : left === 3 ? 1 : left === 2 ? 2 : 3; }

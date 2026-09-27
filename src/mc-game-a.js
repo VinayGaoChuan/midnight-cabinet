@@ -146,44 +146,40 @@ class Game {
   // ── reel ──
   startReel(o) { this.reel = Object.assign({ t: 0, lastIdx: -1, upsDone: 0, locked: false }, o); if (o.iconKey) this.reel.icon = M.spriteCanvas(o.iconKey, 8); M.Sfx.lever(); this.bump(); }
   reelTick(dt) {
-    const r = this.reel, S = M.Sfx; r.t += dt;
+    const r = this.reel, S = M.Sfx, SH = M.SHOW, N = r.tiles.length, X = 960, Y = 520;
+    // the show kit (mc-show.js) runs on the reel too: beats, a frozen frame before the lock, the reveal, afterglow
+    if (SH) { if (!r.sh) SH.box(r, 0, 0, 1920, 1080); SH.tick(this, r, dt); if (SH.frozen(r)) return; }
+    r.t += dt;
     const p = M.reelP(r), idx = Math.round(p); if (idx !== r.lastIdx) { r.lastIdx = idx; S.tick(idx % 8); }
     const ups = r.ups ? [...Array(r.ups)].filter((_, i) => r.t >= 2.55 + i * 0.95).length : 0;
-    // 蓄力：每次往上冲前两下心跳（越往上越急）
+    // 蓄力：每次往上冲前两下心跳（越往上越急）；光点从四周被吸进窗口，颜色是下一档
     M.reelEv(r).forEach((E, i) => [M.REEL_CHG, M.REEL_CHG / 2].forEach((d, k) => { const at = E - d; if (r.t >= at && r.t - dt < at) { S.mini && S.mini('_', 'heart', Math.min(1, 0.45 + i * 0.2 + k * 0.1)); this.fx.kick(1.5 + i); } }));
-    // 每升一格都比上一格更响：炸得更大、闪得更亮、字更大，第二格起加光芒
-    if (ups > r.upsDone) { r.upsDone = ups; S.reelUp(ups); S.shatter(); const tl = r.tiles[(r.land + ups) % r.tiles.length]; this.fx.explode(960, 520, tl.c, 1 + ups * 0.5); this.fx.flash(tl.c, 0.1 + ups * 0.08); this.fx.pop(960, 250, tl.n + '！'.repeat(ups), tl.c, 70 + ups * 18, { slam: 1, life: 0.8, rise: 0 }); if (ups >= 2) this.fx.rays(960, 520, tl.c, 0.9, { r: 500 + ups * 150, n: 12 + ups * 2 }); this.fx.spark(660, 520, tl.c, 14, { dir: Math.PI, spread: 1.2, v: 1100 }); this.fx.spark(1260, 520, tl.c, 14, { dir: 0, spread: 1.2, v: 1100 }); }
+    if (SH) M.reelEv(r).forEach((E, i) => { if (r.t < E && r.t > E - M.REEL_CHG && Math.random() < 0.9) { const nx = r.tiles[(r.land + i + 1) % N]; SH.burst(r, X, Y, 2, { col: nx.c, ring: 260 + Math.random() * 120, sp: [80, 160], life: [0.5, 0.8], att: [X, Y], drag: 0.4 }); SH.shake(r, 2 + i * 2); } });
+    // 每升一格都比上一格更响：一拍比一拍重的震屏、白闪、下一档颜色的光环和粒子、全屏染色闪、字更大，第二格起加光芒
+    if (ups > r.upsDone) { r.upsDone = ups; S.reelUp(ups); S.shatter(); const tl = r.tiles[(r.land + ups) % N], q = Math.max(0, M.reelTierAt(r, ups));
+      if (SH) { SH.beat(this, r, X, Y, ups - 1, q, true, null, { quiet: true }); SH.flash(r, tl.c, 0.18 + ups * 0.06); if (ups >= 2) SH.rays(r, X, Y, tl.c, { n: 12 + ups * 2, life: 0.8, r: 500 + ups * 150 }); SH.burst(r, X - 300, Y, 14, { col: tl.c, ang: Math.PI, spread: 1.2, sp: [500, 1100] }); SH.burst(r, X + 300, Y, 14, { col: tl.c, ang: 0, spread: 1.2, sp: [500, 1100] }); SH.stamp(r, tl.n + '！'.repeat(ups), X, 140, tl.c, 70 + ups * 18, 0.8); }
+      this.fx.kick(4 + ups * 2); }
     // 停轮：猛地一顿（升档 / 「再上一格？」之前先停在起点那一格）
-    if (r.t >= M.REEL_STOP && r.t - dt < M.REEL_STOP && M.reelLock(r) > M.REEL_STOP) { S.reelStop(); this.fx.kick(5); }
+    if (r.t >= M.REEL_STOP && r.t - dt < M.REEL_STOP && M.reelLock(r) > M.REEL_STOP) { S.reelStop(); this.fx.kick(5); if (SH) { const c0 = r.tiles[r.land % N].c; SH.shake(r, 8); SH.ring(r, X, Y, 20, 260, c0, { life: 0.35 }); SH.burst(r, X, Y, 10, { col: c0, sp: [150, 400] }); } }
     const lk = M.reelLock(r); if (!r.locked && r.t > lk - 0.9 && Math.floor((r.t - (lk - 0.9)) / 0.3) !== r.hb) { r.hb = Math.floor((r.t - (lk - 0.9)) / 0.3); S.heart(); this.fx.kick(2); }
-    if (!r.locked && r.t >= M.reelLock(r)) {
-      r.locked = true; S.reelStop(); const tl = r.tiles[(r.land + r.ups) % r.tiles.length];
+    if (!r.locked && r.t >= lk) {
+      r.locked = true; S.reelStop(); const tl = r.tiles[(r.land + r.ups) % N], q = M.reelQ(r);
       const big = !r.itemMode || r.ups >= 3; if (big) S.fanfare(); else S.itemReveal(1);
-      // 锁定按结果分档：普通一圈光、稀有小炸、史诗大炸 + 光芒 + 金币、传说（黑场之后）全屏金币雨和彩纸；「再上一格」没冲上去先一声「差一点」
-      const tier = r.itemMode ? r.ups : 1.5; if (r.tease) S.mini && S.mini('_', 'near'); if (r.itemMode && r.ups >= 4) S.mini && S.mini('_', 'win4');
-      if (tier < 1) { this.fx.ring(960, 520, 20, 320, tl.c, 6, 0.4); this.fx.spark(960, 520, tl.c, 16, { v: 700 }); this.fx.kick(4); }
-      else { this.fx.explode(960, 520, tl.c, 1 + tier * 0.6); if (tier >= 1.5) this.fx.rays(960, 520, tl.c, 1.4, { r: 900, n: 18 }); if (tier >= 2) { this.fx.confetti(tier >= 3 ? 220 : 100, { x: 960, y: 520, cols: [tl.c, '#ffffff', '#ffe08a'] }); this.fx.coins(960, 600, tier >= 3 ? 90 : 30, { v: 1300, spread: tier >= 3 ? 1.9 : 1.3 }); } if (tier >= 3) { this.fx.flash('#ffffff', 0.7); this.fx.confetti(120); this.fx.kick(26); } }
-      this.fx.pop(960, 250, tl.n + '！', tl.c, tier >= 3 ? 150 : tier >= 1 ? 120 : 90, { slam: 1, life: tier >= 2 ? 1.3 : 0.8, rise: 0 }); S.impact();
+      if (r.tease) S.mini && S.mini('_', 'near'); if (r.itemMode && r.ups >= 4) S.mini && S.mini('_', 'win4');
+      // 锁定：卡帧（压到近黑、焦点一团白）→ 揭晓爆点按档位（普通一圈光、稀有小炸、史诗光芒 + 金币、传说彩虹光芒 + 第二波 + 彩纸）→ 名字和属性逐项砸下 → 余韵粒子
+      const go = () => {
+        if (!SH) return;
+        if (q < 0) { SH.ring(r, X, Y, 20, 260, tl.c, { life: 0.4 }); SH.stamp(r, tl.n, X, 140, tl.c, 90, 0.8); this.fx.kick(3); return; }
+        SH.reveal(this, r, q, { x: X, y: Y, col: tl.c });
+        if (q >= 2) { this.fx.confetti(q >= 3 ? 220 : 100, { x: X, y: Y, cols: [tl.c, '#ffffff', '#ffe08a'] }); this.fx.coins(X, 600, q >= 3 ? 90 : 30, { v: 1300, spread: q >= 3 ? 1.9 : 1.3 }); }
+        SH.items(this, r, [{ text: tl.n + '！', col: tl.c, size: q >= 3 ? 150 : q >= 1 ? 120 : 96 }].concat(tl.sub ? [{ text: tl.sub, col: M.PJ.PAL.cream, size: 44 }] : []), { x: X, y: 140, dy: 780, gap: 0.24, life: 1.6 });   // the name above the cabinet, its line under it
+        SH.ambient(r, q, { x: 560, y: 220, w: 800, h: 640 }); S.impact();
+      };
+      if (SH && q >= 1) SH.hitstop(r, q >= 2 ? 0.15 : 0.08, X, Y, go); else go();
     }
     if (r.t >= M.reelDur(r)) { this.reel = null; r.onDone && r.onDone(); }
   }
-  // ── chest ──
-  openChest(items, col, onClose) { this.chest = { t: 0, items, col: col || '#ffcc33', onClose }; M.Sfx.creak(); this.bump(); }
-  chestTick(dt) {
-    const c = this.chest, p = c.t; c.t += dt;
-    if (p < 0.5 && c.t >= 0.5) { M.Sfx.chestLand(); this.fx.kick(14); this.fx.burst(960, 600, '#6a5a40', 20, { up: 200 }); }
-    if (c.t > 0.8 && c.t < 1.5) { if (Math.floor(p * 12) !== Math.floor(c.t * 12)) { M.Sfx.knock((c.t - 0.8) / 0.7); this.fx.kick(1 + (c.t - 0.8) * 4); } if (Math.random() < 0.6) this.fx.spark(960 + (Math.random() - 0.5) * 240, 470, c.col, 2, { dir: -Math.PI / 2, spread: 2, v: 500, w: 3, life: 0.35 }); }
-    if (p < 1.45 && c.t >= 1.45) this.fx.freeze(110);
-    if (p < 1.5 && c.t >= 1.5) { M.Sfx.chest(); this.fx.explode(960, 480, c.col, 3); this.fx.flash('#ffffff', 0.9); this.fx.confetti(160, { x: 960, y: 480 }); this.fx.coins(960, 520, 50, { v: 1400, spread: 1.6 }); this.fx.spark(960, 480, c.col, 60, { v: 1500, w: 6, life: 0.7 }); }
-    const q = c.t - 1.5; c.items.forEach((it, i) => { if (!it.snd && q > 0.25 + i * 0.28 + 0.5) { it.snd = 1; M.Sfx.itemReveal(Math.max(0, M.QUALITY.findIndex(Q => Q.c === it.c))); const gold = it.c === M.QUALITY[5].c || it.c === M.QUALITY[4].c || it.c === M.QUALITY[3].c; this.fx.explode(it.x || 960, it.y || 380, it.c, gold ? 1.6 : 0.8); if (gold) this.fx.rays(it.x || 960, it.y || 380, it.c, 1.2, { r: 320 }); } });
-  }
-  chestClick() {
-    const c = this.chest; if (!c) return; if (c.t < 1.5 + 0.6 + c.items.length * 0.28) { if (c.t < 1.4) c.t = 1.4; return; }
-    this.chest = null; const list = [], froms = [];
-    c.items.forEach(it => { if (it.award) { list.push(it.award); froms.push({ x: it.x, y: it.y }); } });
-    list.forEach((g, i) => { this.award([g], froms[i]); this.fx.explode(froms[i].x, froms[i].y, '#ffe08a', 0.6); }); M.Sfx.whoosh(0.5);
-    c.onClose && c.onClose();
-  }
+  // ── chest ── openChest / chestTick / chestClick live in mc-chest.js (the vault show)
   // ── banners ──
   banner(o) { this.banners.push(Object.assign({ t: 0, life: 1.8, col: '#ffd970' }, o)); }
   // ── main tick ──

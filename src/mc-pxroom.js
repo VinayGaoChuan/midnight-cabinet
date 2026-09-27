@@ -360,7 +360,7 @@ function bake(key) {
   const B = { key, D, sc, lights, LP, L: {} };
   LAYS.forEach(([k]) => {
     const Y = L[k], idx = []; for (let p = 0; p < N; p++) if (Y.m[p]) idx.push(p);
-    const n = idx.length, pi = new Int32Array(idx), xs = new Uint8Array(n), ys = new Uint8Array(n), base = new Uint16Array(n), len1 = new Uint8Array(n), s0 = new Float32Array(n), gl = new Int8Array(n), tw = new Float32Array(n), td = new Uint8Array(n), jx = new Int32Array(N).fill(-1);
+    const n = idx.length, pi = new Int32Array(idx), xs = new Uint16Array(n), ys = new Uint16Array(n), base = new Uint16Array(n), len1 = new Uint8Array(n), s0 = new Float32Array(n), gl = new Int8Array(n), tw = new Float32Array(n), td = new Uint8Array(n), jx = new Int32Array(N).fill(-1);
     for (let j = 0; j < n; j++) { const p = pi[j], R = MATS[Y.m[p]]; jx[p] = j; xs[j] = p % W; ys[j] = (p / W) | 0; base[j] = R.o; len1[j] = R.n - 1;
       const e = Y.e[p]; if (e) { s0[j] = Y.t[p]; gl[j] = e === 255 ? -1 : e; continue; }
       const nx = Y.nx[p] / 127, ny = Y.ny[p] / 127, nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny)), amb = sc.amb[0] + sc.amb[1] * Math.max(0, nx * KEY[0] + ny * KEY[1] + nz * KEY[2]);
@@ -446,7 +446,7 @@ function render(s, t, o) {
   // light intensities: flicker × kicks (flashes decay) × room events
   Object.keys(s.kick).forEach(k => { s.kick[k] *= Math.exp(-dt * 7); if (s.kick[k] < 0.01) delete s.kick[k]; });
   const ev = s.ev, now = t, hovK = s.hov += ((o.hov ? 1 : 0) - s.hov) * (1 - Math.exp(-dt * 8));
-  const selA = ev.sel != null ? Math.max(0, 1 - (now - ev.sel) / 0.7) : 0, bootT = ev.built != null ? now - ev.built : 9;
+  const selA = ev.sel != null ? Math.max(0, 1 - (now - ev.sel) / 0.7) : 0, bootT = ev.built != null ? (now - ev.built) * (D.bootK || 1) : 9;   // D.bootK: a def whose lights come on faster (minigame stages)
   // animated content into the shared dyn layers (before the lights: anim may set s.mul[i] or kick lights)
   LAYS.forEach(([k]) => clearLay(DL[k])); DP.c = DL.mid; DP.id = 1; DP.dx = DP.dy = 0;
   const moving = []; s.dl = moving; s.mul = s.mul || {};

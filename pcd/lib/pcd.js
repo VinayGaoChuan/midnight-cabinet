@@ -640,7 +640,8 @@ function audit() {
   }
   C.poseAt(IDLE, 0, 0); C.drawHero(); C.bakeHero(); const b = bboxOf(s);
   res.idle = { w: b.x1 - b.x0 + 1, h: b.y1 - b.y0 + 1, pixels: b.n };
-  if (res.idle.h < 12 || res.idle.h > 48) res.problems.push('待机高度 ' + res.idle.h + ' 格，超出 12–48');
+  const hMax = C.MAX_H || 48;   // 模块可以用 MAX_H 放宽上限（小游戏里按设定特别高的 NPC，例如荷官）
+  if (res.idle.h < 12 || res.idle.h > hMax) res.problems.push('待机高度 ' + res.idle.h + ' 格，超出 12–' + hMax);
   res.ownColors = PAL.length - BASE_PAL; if (res.ownColors > 24) res.problems.push('专属色 ' + res.ownColors + ' 个，超过 24（和共用色接近的改用 near()）');
   if (C.deathKit) res.deathKit = C.deathKit;
   if (C.SFX) {   // 声明了音效的模块：检查关键事件都有
