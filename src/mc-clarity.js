@@ -32,6 +32,17 @@ G.tipFor = function (key) {
   if (key === 'w-trip' && this.run) return { title: '这一趟的加成', c: '#5fd0c0', d: '途中奇遇、营火给的加成，回到基地时清空。', lines: M.tripLines(this.run).map(t => ({ t, c: '#bff7f0' })) };
   return oTip ? oTip.apply(this, arguments) : null;
 };
+// before leaving: how many come home (2026-09-27 feedback: 「通关后才出现三选一，容易以为买过的兵都能留下……出征前说清本次能带回几支」)
+const oST = G.steleTip;
+if (oST) G.steleTip = function () { const t = oST.apply(this, arguments), n = M.paradePicks ? M.paradePicks(this.meta) : 1; if (t) t.lines = (t.lines || []).concat([{ t: '这一趟最后只带回' + (n > 1 ? '两' : '一') + '支部队，留在基地守夜。', c: '#5fd0c0' }]); return t; };
+// phones: a long-press shows what a thing is — said once, on the first touch on the base, the map or a shop, unless a
+// long-press came first (the plan's 「第一次用触屏时提示一次长按看说明」)
+const K_LP = 'midnight-cabinet-lphint', LP_SCR = { base: 1, world: 1, shop: 1 };
+if (typeof window !== 'undefined') window.addEventListener('pointerdown', (e) => {
+  if (e.pointerType !== 'touch') return; const g = M._g; if (!g || !LP_SCR[g.screen]) return;
+  let seen = null; try { seen = localStorage.getItem(K_LP); } catch (err) { return; } if (seen) return; try { localStorage.setItem(K_LP, '1'); } catch (err) {}
+  setTimeout(() => { if (!g.touchTipAt && LP_SCR[g.screen]) g.toast('长按任何东西，看它是什么', '#bff7f0'); }, 1600);
+}, true);
 const oToast = G.toast;
 G.toast = function () { const r = oToast.apply(this, arguments); if (this.toastData) this.toastData.scr = this.screen; return r; };
 // one card per kind in a chest

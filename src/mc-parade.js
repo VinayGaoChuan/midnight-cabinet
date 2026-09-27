@@ -19,7 +19,7 @@ function outlined(img, col, w) {
 }
 M.PARADE_N = 3;   // how many of the strongest the player chooses from
 // the beat: the title, then one card every STEP seconds (a 史诗 or better holds the stage longer)
-const T_TITLE = 0.9, STEP = 0.5, BIG = 0.85, FLY = 0.6, FADE = 0.35, CW = 300, CH = 400, GAP = 60, CY = 560;
+const T_TITLE = 0.9, STEP = 0.5, BIG = 0.85, FLY = 0.6, FADE = 0.35, CW = 320, CH = 500, GAP = 50, CY = 580;
 const pw = (u) => M.unitPower(u.type, u);
 G.paradeStart = function (gi) {
   const list = (gi.units || []).filter(u => u && DB[u.type]); if (!list.length) return false;
@@ -29,7 +29,16 @@ G.paradeStart = function (gi) {
   this.parade = { t: 0, cards, n, allAt: at + 0.3, hov: n - 1, chosen: null, flyT: null, picks: Math.min(n, M.paradePicks ? M.paradePicks(this.meta) : 1) };   // 空中花园: two (mc-wonders.js)
   S.whoosh && S.whoosh(0.6); this.bump(); return true;
 };
-function card(ctx, c, i, T, F) {
+// what the garrison already holds of this unit's vocation; a frontline card says so when the garrison has none
+const FRONT = { 先锋: 1, 守护者: 1 };
+function garHint(g, d) {
+  const m = g && g.meta, gar = m && M.garrisonOf ? M.garrisonOf(m) : null; if (!gar || !d.voc) return null;
+  const n = gar.filter(x => DB[x.type] && DB[x.type].voc === d.voc).length, front = gar.some(x => DB[x.type] && FRONT[DB[x.type].voc]);
+  if (FRONT[d.voc] && !front) return { t: '驻军缺前排', c: P.lime };
+  return n ? { t: '驻军里已有 ' + n + ' 支' + d.voc, c: P.lavender } : { t: '驻军里还没有' + d.voc, c: P.lime };
+}
+function wrap(ctx, s, max, size) { ctx.save(); ctx.font = U.font(size); const out = []; let line = ''; for (const ch of String(s)) { if (ctx.measureText(line + ch).width > max && line) { out.push(line); line = ch; } else line += ch; } if (line) out.push(line); ctx.restore(); return out; }
+function card(ctx, c, i, T, F, g) {
   const d = DB[c.u.type], qc = Q[c.q].c, u = c.u, age = T - c.at, still = RM(), open = F.chosen == null && T >= F.allAt, hov = open && F.hov === i;
   let x = c.x, y = c.y, k = (still ? 1 : eb(age / 0.4)) * (hov ? 1.07 : 1), a = 1;
   if (F.chosen != null && F.chosen !== i) { const f = cl((T - F.pickT) / FADE, 0, 1); if (f >= 1) return; a = 1 - f; y += 80 * f * f; }
@@ -43,10 +52,13 @@ function card(ctx, c, i, T, F) {
   ctx.globalAlpha = a * 0.3; U.R(ctx, -CW / 2, -CH / 2, CW, CH * 0.55, qc); ctx.globalAlpha = a;
   const bw = hov || F.chosen === i ? 8 : 5;
   [[-CW / 2 + 5, -CH / 2 + 5, CW - 10, bw], [-CW / 2 + 5, CH / 2 - 5 - bw, CW - 10, bw], [-CW / 2 + 5, -CH / 2 + 5, bw, CH - 10], [CW / 2 - 5 - bw, -CH / 2 + 5, bw, CH - 10]].forEach(r => U.R(ctx, r[0], r[1], r[2], r[3], hov ? P.butter : qc));
-  const im = c.img; if (im) { const f = Math.min(230 / im.width, 200 / im.height, 3.4), w = Math.max(2, Math.round(3 / f)), o = c.q > 0 ? outlined(im, qc, w) : im; ctx.save(); ctx.imageSmoothingEnabled = false; ctx.translate(0, -70); ctx.scale(f, f); ctx.drawImage(o, -o.width / 2, -o.height / 2); ctx.restore(); }
-  U.text(ctx, d.n, 0, 86, 36, qc, { outline: true });
-  U.text(ctx, Q[c.q].n + (d.voc ? ' · ' + d.voc : ''), 0, 130, 26, (M.VOCS && M.VOCS[d.voc]) || P.cream);
-  U.text(ctx, '★ ' + pw(u), 0, 170, 26, P.butter);
+  const im = c.img; if (im) { const f = Math.min(230 / im.width, 200 / im.height, 3.4), w = Math.max(2, Math.round(3 / f)), o = c.q > 0 ? outlined(im, qc, w) : im; ctx.save(); ctx.imageSmoothingEnabled = false; ctx.translate(0, -120); ctx.scale(f, f); ctx.drawImage(o, -o.width / 2, -o.height / 2); ctx.restore(); }
+  U.text(ctx, d.n, 0, 36, 36, qc, { outline: true });
+  U.text(ctx, Q[c.q].n + (d.voc ? ' · ' + d.voc : '') + '　★ ' + pw(u), 0, 80, 26, (M.VOCS && M.VOCS[d.voc]) || P.cream);
+  // what it does, and what the garrison already has of its kind (2026-09-27 feedback: 「别让选择只剩比战力……旁边展示基地已有
+  // 阵容、缺什么职业，以及候选单位的技能」)
+  wrap(ctx, M.unitLine ? M.unitLine(u.type) : '', CW - 44, 22).slice(0, 2).forEach((ln, j) => U.text(ctx, ln, 0, 124 + j * 30, 22, P.cream));
+  const hint = garHint(g, d); if (hint) { U.R(ctx, -CW / 2 + 14, CH / 2 - 62, CW - 28, 44, P.ink); U.text(ctx, hint.t, 0, CH / 2 - 40, 22, hint.c); }
   // the card's landing: a white flash over it
   if (age < 0.18 && !still) { ctx.globalAlpha = a * 0.8 * (1 - age / 0.18); U.R(ctx, -CW / 2, -CH / 2, CW, CH, P.white); }
   ctx.restore();
@@ -59,7 +71,7 @@ function draw(ctx, g, F) {
   const ti = eb((T - 0.1) / 0.5), ta = cl((T - 0.1) / 0.2, 0, 1) * fade; ctx.globalAlpha = ta;
   U.text(ctx, '凯旋！', 960, 120 + (1 - ti) * -80, 96, P.gold, { outline: true, ramp: true });
   U.text(ctx, F.cards.length > 1 ? (F.picks > 1 ? '选两支带回基地' : '选一支带回基地') : '带回基地', 960, 214, 40, P.cream, { outline: true }); ctx.globalAlpha = 1;
-  F.cards.forEach((c, i) => { if (T >= c.at) card(ctx, c, i, T, F); });
+  F.cards.forEach((c, i) => { if (T >= c.at) card(ctx, c, i, T, F, g); });
   if (F.chosen == null && T >= F.allAt) { ctx.globalAlpha = 0.55 + 0.45 * Math.abs(Math.sin(T * 3)); U.text(ctx, '点一张', 960, 1000, 30, P.cream, { outline: true }); ctx.globalAlpha = 1; }
   ctx.restore();
 }
