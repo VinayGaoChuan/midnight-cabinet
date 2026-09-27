@@ -91,6 +91,7 @@ const CONCEPTS = [
   { id: 'voc', cat: '标签与品质', icon: 'v_archer', title: '职业标签', line: '决定打法：先锋、守护者扛伤，战士近战，射手远程，刺客先杀弱小，法师群体伤害，牧师、圣骑士治疗，祭司光环，召唤师召唤，商人赚钱。', scr: ['shop', 'world', 'battle', 'base'], sel: '[data-tip^="tag-voc-"]' },
   { id: 'trait', cat: '战斗', icon: 'e_skull', title: '特性', line: '卡片上那一句话就是这支部队的本事。开战时它的图标从身上亮出来，停在头顶，生效时会闪。', scr: ['shop', 'world'], sel: '[data-g="trait"]' },
   { id: 'upower', cat: '标签与品质', icon: 'u_star', title: '战斗力', line: '部队有多强，就是它的价格：越贵越强。', scr: ['world'], sel: '[data-tip="w-power"]' },
+  { id: 'report', cat: '战斗', icon: 't_sword', title: '战报', line: '这一仗输出最高、承伤最高、治疗最多的部队；倒下的下一仗全部归队。', scr: 'battle', sel: '[data-g="report"]' },
   // ── 夜市 ──
   { id: 'shop', cat: '夜市', icon: 'e_market', title: '商店', line: '每家店卖的部队不一样，招牌旁边写着它的特点和代价。点自己的部队可以半价卖掉。', scr: 'shop', sel: '[data-g="shop-units"]' },
   { id: 'shopnums', cat: '夜市', icon: 't_sword', title: '关键数值', line: '生命和它最拿手的那一项，高一档的同种部队数字更大。', scr: 'shop', sel: '[data-g="nums"]' },

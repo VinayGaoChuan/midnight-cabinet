@@ -154,4 +154,5 @@ mc-gacha.js
 mc-endone.js
 mc-clarity.js
 mc-shopcard.js
+mc-report.js
 mc-perf.js
