@@ -116,43 +116,81 @@ MINI.trap = { title: '地雷阵', img: 'e_trap', col: C.amber, text: '对面有�
   } };
 
 // ═════════════════════ 招财猫 · catch the coin rain ═════════════════════
-// 每接一下都是连击（逢 5 砸字、5 连进狂热），金条鼓得更大；炸弹断连击、灰一下；最后 3 秒一秒一响；结束砸评级再按评级走中奖档
+// 像素神龛舞台（mc-pxroom-mini-d.js 的 mini_cat）：猫每招一下就甩一枚金币上天；领袖头顶红漆盘跑着接。
+// 接一下是连击（逢 5 砸字、5 连进狂热：猫睁眼、举起小判、身后金光转起来）；炸弹把盘里的钱炸飞一把、在地毯上滚走；
+// 时间到先「称重」（盘里的钱一层层亮，拍数按评级），再砸评级章、按评级走中奖档，钱一枚枚飞进钱包
+const CATY = K.FLOOR - 40, CAT_PAW = [174, 50];
+const catSlot = () => M.PXR && M.PXR.slots['mini_mini_cat'];
+const catHero = (g) => { const k = heroSp(g); return M.PCDG && M.PCDG.has(k) ? k : null; };
 MINI.cat = { title: '招财猫', img: 'e_cat', col: C.gold, text: '猫爪一招，天上就下钱。接住金币和金条，躲开炸弹。',
-  init(mg) { mg.px = CX; mg.items = []; mg.sum = 0; mg.spawn = 0; mg.left = 8; mg.bombs = 0; mg.pop = 0; mg.boom = 0; },
-  btns(mg) { if (mg.phase === 'idle') return [{ t: '摸摸猫爪', sub: mg.pay + ' 积分 · 8 秒接钱（鼠标 / ← →）', gold: 1, dis: this.run.wallet < mg.pay, why: '积分不够', fn: () => { if (!this.miniPay(mg.pay)) return; this.miniSet('rain'); S.mini('cat', 'wave'); } }, { t: '给猫鞠个躬', sub: '免费 · 本局事件好运 +5%', fn: () => { this.buffRun('eventLuck', 0.05, '好运 +5%', '#ffcc33'); this.miniFinish('猫眯起了眼睛。你觉得运气好了一点。', '#ffcc33'); } }, { t: '离开', leave: 1, fn: () => this.miniFinish('猫爪还在一下一下地招。', '#8d8496') }]; return []; },
+  init(mg) { mg.px = CX; mg.items = []; mg.sum = 0; mg.spawn = 0; mg.left = 8; mg.bombs = 0; mg.pop = 0; mg.boom = 0; mg.ups = []; mg.spill = []; mg.dir = 1; mg.run = 0; },
+  btns(mg) { if (mg.phase === 'idle') return [{ t: '摸摸猫爪', sub: mg.pay + ' 积分 · 8 秒接钱（鼠标 / ← →）', gold: 1, dis: this.run.wallet < mg.pay, why: '积分不够', fn: () => { if (!this.miniPay(mg.pay)) return; this.miniSet('rain'); mg.px = CX; mg.startT = mg.t; mg.flickT = mg.t; S.mini('cat', 'wave'); S.mini('cat', 'bell'); this.fx.kick(4); const s = catSlot(); if (s) { s.flash('all', 0.6); s.burst('glint', 150, 62, 10, { sp: 30, life: 0.6, w: 30, h: 24 }); } } },
+    { t: '给猫鞠个躬', sub: '免费 · 本局事件好运 +5%', fn: () => { this.buffRun('eventLuck', 0.05, '好运 +5%', '#ffcc33'); this.miniSet('bow'); mg.bowT = mg.t; S.mini('cat', 'bell'); const s = catSlot(); if (s) { s.flash(0, 1.2); s.burst('glint', 150, 60, 14, { sp: 24, life: 0.8, w: 40, h: 30 }); } SHOW.later(mg, 0.75, () => { if (this.mini === mg) this.miniFinish('猫眯起了眼睛。你觉得运气好了一点。', '#ffcc33'); }); } },
+    { t: '离开', leave: 1, fn: () => this.miniFinish('猫爪还在一下一下地招。', '#8d8496') }]; return []; },
+  // 点空白（开始前）：地毯上弹起一枚铜钱
+  down(mg, px, py) { if (mg.phase !== 'idle' || px < SX || px > SX + SW || py < SY || py > SY + SH) return; const [ax] = M.PXR.MINI_D.art(px, py); mg.spill.push({ x: ax, y: 166, vx: (rnd() - 0.5) * 40, vy: -90, r: rnd() * 6, a: 1.4 }); S.mini('cat', 'clink'); },
   tick(mg, dt) {
     mg.pop = Math.max(0, mg.pop - dt * 5); mg.boom = Math.max(0, mg.boom - dt * 4);
+    // 滚在地毯上的钱：抛物线落地、弹两下、滚一段、淡掉
+    mg.spill.forEach(p => { p.vy += 320 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.r += p.vx * dt * 0.3; if (p.y > 168) { p.y = 168; if (Math.abs(p.vy) > 30) { p.vy *= -0.42; p.vx *= 0.75; } else { p.vy = 0; p.vx *= Math.exp(-dt * 2); } p.a -= dt * 0.6; } });
+    mg.spill = mg.spill.filter(p => p.a > 0 && p.x > 2 && p.x < 298); if (mg.spill.length > 40) mg.spill.splice(0, mg.spill.length - 40);
     if (mg.phase !== 'rain') return; mg.left = 8 - mg.pt;
-    const kb = (mg.keys.left ? -1 : 0) + (mg.keys.right ? 1 : 0); if (kb) mg.px += kb * 900 * dt; else mg.px += (cl(mg.mx, SX + 80, SX + SW - 80) - mg.px) * Math.min(1, dt * 14); mg.px = cl(mg.px, SX + 80, SX + SW - 80);
-    mg.spawn -= dt; if (mg.spawn <= 0 && mg.left > 0.6) { mg.spawn = 0.16 + rnd() * 0.12; const r = rnd(); mg.items.push({ x: SX + 80 + rnd() * (SW - 160), y: SY + 60, vy: 220 + rnd() * 200 + mg.pt * 30, k: r < 0.14 ? 'bomb' : r < 0.26 ? 'bar' : 'coin', rot: rnd() * 6 }); }
-    const catchY = FLOOR - 40;
-    mg.items.forEach(it => { it.vy += 500 * dt; it.y += it.vy * dt; it.rot += dt * 4; if (!it.done && it.y > catchY - 30 && it.y < catchY + 20 && Math.abs(it.x - mg.px) < 80) { it.done = true;
-      if (it.k === 'bomb') { mg.sum = Math.floor(mg.sum * 0.6); mg.bombs++; S.mini('cat', 'bomb'); this.fx.kick(14); this.fx.explode(it.x, catchY, '#ff5a3a', 1); SHOW.comboBreak(mg); SHOW.state(mg).gray = 0.8; mg.boom = 1; }
-      else { const bar = it.k === 'bar', v = bar ? 5 : 1; mg.sum += v; mg.pop = bar ? 1.6 : 1; S.mini('cat', bar ? 'bar' : 'coin'); this.fx.spark(it.x, catchY, '#ffcc33', bar ? 10 : 4, { dir: -Math.PI / 2, spread: 1.5, v: 400 });
-        hitCombo(this, mg, mg.px, catchY - 150, bar); this.fx.pop(it.x, catchY - 60, '+' + v, bar ? C.gold : C.butter, bar ? 60 : 32, { num: 1, life: 0.5, rise: 70 });
-        if (bar) { this.fx.flare(it.x, catchY, 200, C.gold, 0.25); this.fx.ring(it.x, catchY, 10, 140, C.gold, 5, 0.3); this.fx.kick(4); } } } });
-    mg.items.forEach(it => { if (!it.done && it.y >= FLOOR + 80 && it.k !== 'bomb') S.mini('cat', 'miss'); });
+    const x0 = mg.px, kb = (mg.keys.left ? -1 : 0) + (mg.keys.right ? 1 : 0); if (kb) mg.px += kb * 900 * dt; else mg.px += (cl(mg.mx, SX + 80, SX + SW - 80) - mg.px) * Math.min(1, dt * 14); mg.px = cl(mg.px, SX + 80, SX + SW - 80);
+    const v = (mg.px - x0) / Math.max(dt, 1e-3); mg.run = Math.abs(v) > 60 ? mg.run + dt : 0; if (Math.abs(v) > 60) mg.dir = v > 0 ? 1 : -1; mg.lean = cl(-v / 1800, -1, 1);
+    // 每下一枚，猫爪就甩一下：一枚金币从爪子里飞上天（天上落下来的就是它招来的）
+    mg.spawn -= dt; if (mg.spawn <= 0 && mg.left > 0.6) { mg.spawn = 0.16 + rnd() * 0.12; const r = rnd(); mg.items.push({ x: SX + 80 + rnd() * (SW - 160), y: SY + 60, vy: 220 + rnd() * 200 + mg.pt * 30, k: r < 0.14 ? 'bomb' : r < 0.26 ? 'bar' : 'coin', rot: rnd() * 6 });
+      mg.flickT = mg.t; mg.ups.push({ x: CAT_PAW[0], y: CAT_PAW[1], vx: (rnd() - 0.3) * 60, t: mg.t }); if (mg.ups.length > 8) mg.ups.shift(); if (rnd() < 0.35) S.mini('cat', 'flick'); }
+    mg.items.forEach(it => { it.vy += 500 * dt; it.y += it.vy * dt; it.rot += dt * 4; if (!it.done && it.y > CATY - 30 && it.y < CATY + 20 && Math.abs(it.x - mg.px) < 80) { it.done = true; const s = catSlot(), [tx] = M.PXR.MINI_D.art(mg.px, CATY);
+      if (it.k === 'bomb') { const lost = mg.sum - Math.floor(mg.sum * 0.6); mg.sum = Math.floor(mg.sum * 0.6); mg.bombs++; S.mini('cat', 'bomb'); if (lost > 0) SHOW.later(mg, 0.08, () => S.mini('cat', 'spill')); this.fx.kick(14); this.fx.explode(it.x, CATY, '#ff5a3a', 1); SHOW.comboBreak(mg); SHOW.state(mg).gray = 0.8; mg.boom = 1;
+        // 被炸掉的那四成：一把钱从盘里飞出去，落在地毯上滚走
+        for (let i = 0; i < Math.min(14, Math.max(3, Math.round(lost * 0.7))); i++) mg.spill.push({ x: tx + (rnd() - 0.5) * 10, y: 132, vx: (rnd() - 0.5) * 220, vy: -120 - rnd() * 140, r: rnd() * 6, a: 1.6 });
+        if (s) { s.burst('spark', tx, 134, 14, { sp: 60, spread: 6.3, life: 0.6 }); s.burst('steam', tx, 130, 5, { sp: 10, life: 1.4, w: 8 }); } }
+      else { const bar = it.k === 'bar', v2 = bar ? 5 : 1; mg.sum += v2; mg.pop = mg.popMax = bar ? 1.6 : 1; S.mini('cat', bar ? 'bar' : 'coin'); this.fx.spark(it.x, CATY, '#ffcc33', bar ? 10 : 4, { dir: -Math.PI / 2, spread: 1.5, v: 400 });
+        hitCombo(this, mg, mg.px, CATY - 150, bar); this.fx.pop(it.x, CATY - 60, '+' + v2, bar ? C.gold : C.butter, bar ? 60 : 32, { num: 1, life: 0.5, rise: 70 });
+        if (s) { s.flash(8, bar ? 0.9 : 0.35); s.burst('glint', tx, 130, bar ? 6 : 2, { sp: 26, life: 0.5, w: 14 }); if (bar) { s.flash('all', 0.4); S.mini('cat', 'bell'); } }
+        if (bar) { this.fx.flare(it.x, CATY, 200, C.gold, 0.25); this.fx.ring(it.x, CATY, 10, 140, C.gold, 5, 0.3); this.fx.kick(4); } } } });
+    // 漏掉的钱砸在地毯上弹起来滚走
+    mg.items.forEach(it => { if (!it.done && it.y >= FLOOR + 80 && it.k !== 'bomb') { S.mini('cat', 'miss'); const [ax] = M.PXR.MINI_D.art(it.x, it.y); mg.spill.push({ x: ax, y: 167, vx: (rnd() - 0.5) * 80, vy: -70 - rnd() * 40, r: it.rot, a: 1 }); } });
     mg.items = mg.items.filter(it => !it.done && it.y < FLOOR + 80);
-    const sec = Math.ceil(mg.left); if (mg.left < 3 && mg.left > 0 && sec !== mg.sec) { mg.sec = sec; mg.secT = mg.t; SHOW.crawl(this, mg, 4 - sec); }
-    if (mg.left <= 0 && !mg.fin) { mg.fin = true; this.miniSet('end'); const sum = mg.sum, v = M.nice(mg.P * 0.5 * sum), from = { x: mg.px, y: catchY - 20 }, col = v > mg.pay ? '#ffcc33' : '#caa84a', tx = '猫爪停了。你接住了 ' + sum + ' 份钱' + (mg.bombs ? '（被炸掉了一些）' : '') + '。';
+    const sec = Math.ceil(mg.left); if (mg.left < 3 && mg.left > 0 && sec !== mg.sec) { mg.sec = sec; mg.secT = mg.t; SHOW.crawl(this, mg, 4 - sec); const s = catSlot(); if (s) s.flash('all', 0.5); }
+    if (mg.left <= 0 && !mg.fin) { mg.fin = true; this.miniSet('end'); const sum = mg.sum, v2 = M.nice(mg.P * 0.5 * sum), from = { x: mg.px, y: CATY - 20 }, col = v2 > mg.pay ? '#ffcc33' : '#caa84a', tx = '猫爪停了。你接住了 ' + sum + ' 份钱' + (mg.bombs ? '（被炸掉了一些）' : '') + '。';
       mg.items.forEach(it => this.fx.spark(it.x, it.y, it.k === 'bomb' ? C.slate : C.gold, 3, { v: 200 })); mg.items = [];
-      const tier = SHOW.grade(this, mg, sum >= 45 ? 'S' : sum >= 30 ? 'A' : sum >= 16 ? 'B' : 'C', CX, SY + 250), gains = v ? [{ k: 'wallet', v }] : [];
-      if (tier) { SHOW.later(mg, 0.25, () => SHOW.win(this, mg, tier, { x: from.x, y: FLOOR - 20, v, col: C.gold })); SHOW.later(mg, 0.4, () => give(this, mg, gains, from)); endIn(this, mg, 0.4 + TIER_END[tier - 1], tx, col); }
-      else { give(this, mg, gains, from); endIn(this, mg, 0.55, tx, col); } }
+      // 称重：盘里的钱一层层亮起来，一拍比一拍响，拍数按评级（C 一拍就过）
+      const gr = sum >= 45 ? 'S' : sum >= 30 ? 'A' : sum >= 16 ? 'B' : 'C', n = { S: 4, A: 3, B: 2, C: 1 }[gr], gap = 0.22, gains = v2 ? [{ k: 'wallet', v: v2 }] : [];
+      mg.weighT = mg.t; mg.weighN = n;
+      for (let i = 0; i < n; i++) SHOW.later(mg, i * gap, () => { S.mini('cat', 'weigh', i); this.fx.kick(2 + i * 2); this.fx.ring(mg.px, CATY - 10, 10, 90 + i * 30, C.gold, 4, 0.25); const s = catSlot(); if (s) { s.flash(8, 0.5 + i * 0.3); s.burst('glint', M.PXR.MINI_D.art(mg.px, 0)[0], 130, 3 + i * 2, { sp: 30, life: 0.5, w: 16 }); } });
+      const at = n * gap + (n > 1 ? 0.12 : 0);
+      SHOW.later(mg, at, () => { const tier = SHOW.grade(this, mg, gr, CX, SY + 250);
+        if (tier) { if (tier >= 3) { mg.joyT = mg.t; S.mini('cat', 'bell'); const s = catSlot(); if (s) { s.flash('all', 1.2); s.burst('glint', 150, 60, 24, { sp: 50, life: 1, w: 50, h: 40 }); } this.fx.coins(CX, SY + 230, 30, { v: 1100 }); }
+          SHOW.later(mg, 0.25, () => SHOW.win(this, mg, tier, { x: from.x, y: FLOOR - 20, v: v2, col: C.gold })); SHOW.later(mg, 0.4, () => give(this, mg, gains, from)); }
+        else give(this, mg, gains, from); });
+      endIn(this, mg, at + (gr === 'C' ? 0.5 : 0.4 + TIER_END[{ S: 3, A: 2, B: 1 }[gr] - 1]), tx, col); }
   },
   draw(x, mg) {
-    const t = mg.t, sh = mg.sh; bgv(x, '#3a1010', '#120404'); for (let i = 0; i < 10; i++) K.R(x, SX + i * 130, SY, 6, SH, 'rgba(255,200,80,0.04)');
-    K.bulbs(x, SX + 24, SY + 24, SW - 48, SH - 48, t, C.gold, 40);
-    const cx0 = CX, cy0 = SY + 200, fev = sh && sh.fever, paw = Math.sin(t * (mg.phase === 'rain' ? (fev ? 18 : 10) : 3)) * 0.5; if (fev) K.GL(x, cx0, cy0, 200, C.gold, 0.3 + 0.15 * Math.sin(t * 12));
-    K.CI(x, cx0, cy0, 90, '#f5f0e8'); K.PL(x, [[cx0 - 80, cy0 - 40], [cx0 - 60, cy0 - 120], [cx0 - 20, cy0 - 70]], '#f5f0e8'); K.PL(x, [[cx0 + 80, cy0 - 40], [cx0 + 60, cy0 - 120], [cx0 + 20, cy0 - 70]], '#f5f0e8'); K.EL(x, cx0 - 32, cy0 - 5, 10, 4, '#1a1418'); K.EL(x, cx0 + 32, cy0 - 5, 10, 4, '#1a1418'); K.R(x, cx0 - 60, cy0 + 50, 120, 16, '#d0202a'); K.CI(x, cx0, cy0 + 72, 16, '#ffcc33');
-    x.save(); x.translate(cx0 + 100, cy0 - 20); x.rotate(-0.4 + paw); K.RR(x, -20, -100, 40, 100, 20, '#f5f0e8'); K.CI(x, 0, -100, 26, '#f5f0e8'); x.restore();
-    mg.items.forEach(it => { x.save(); x.translate(it.x, it.y); if (it.k === 'coin') { x.scale(Math.abs(Math.cos(it.rot)) * 0.8 + 0.2, 1); K.IC(x, 'e_coin', 0, 0, 44); } else if (it.k === 'bar') { K.GL(x, 0, 0, 60, C.gold, 0.35); x.rotate(Math.sin(it.rot) * 0.3); K.PL(x, [[-30, 12], [30, 12], [22, -12], [-22, -12]], '#e8b830'); K.R(x, -18, -10, 36, 4, '#fff2a0'); } else { K.CI(x, 0, 0, 22, '#2a2a33'); K.R(x, -4, -32, 8, 12, '#6a6a78'); K.CI(x, 6, -34, 5, Math.floor(t * 12) % 2 ? '#ffcc33' : '#ff3a2a'); } x.restore(); });
-    if (mg.phase === 'rain' || mg.phase === 'end') { const px = mg.px + Math.sin(t * 60) * 8 * mg.boom, py = FLOOR - 40, sq = 1 + 0.12 * mg.pop; // 篮子：接到一下压扁再弹，炸到时抖
-      x.save(); x.translate(px, py); x.scale(sq, 2 - sq); K.EL(x, 0, 20, 90, 30, '#6a3a1a'); for (let i = 0; i < Math.min(9, Math.floor(mg.sum / 4)); i++) K.CI(x, -56 + (i % 5) * 28 + (i >= 5 ? 14 : 0), -26 - (i >= 5 ? 12 : 0), 12, C.gold); K.PL(x, [[-90, 20], [90, 20], [70, -20], [-70, -20]], '#8a5a2a'); K.R(x, -70, -24, 140, 8, '#caa84a'); x.restore();
-      U.coin(x, SX + 70, SY + 119, 42); U.text(x, mg.sum + ' 份', SX + 128, SY + 140, T.num, C.gold, { align: 'left' }); U.bar(x, SX + SW - 380, SY + 134, 300, 12, cl(mg.left / 8, 0, 1), { col: mg.left < 3 && Math.sin(t * 16) > 0 ? C.red : C.gold }); // 剩余时间条放在右上，不压说明文字
+    const t = mg.t, px = M.PXR;
+    if (px && px.has('mini_cat')) {
+      // 舞台：整张像素画，按 4 倍画上去（1 格 = 4 逻辑像素，和战斗角色一样大）
+      const id = 'mini_mini_cat'; px.pixels('mini_cat', t, { mg, t }, id); const s = px.slots[id]; s.cx.putImageData(s.img, 0, 0);
+      x.save(); x.imageSmoothingEnabled = false; x.drawImage(s.cv, 0, 0, s.cv.width, s.cv.height, SX, SY, SW, SH); x.restore();
+    } else bgv(x, '#3a1010', '#120404');
+    // 领袖：接钱时头顶红漆盘跑（跑步动作、朝着跑的方向），不接钱时站在一边
+    const hk = catHero(this), rain = mg.phase === 'rain' || mg.phase === 'end';
+    if (hk) { const f = rain && mg.run > 0 ? ['move', Math.floor(t * 12) % 8] : ['idle', Math.floor(t * 12) % 24], c = M.PCDG.bodyFrame(hk, f[0], f[1], mg.boom > 0.6 ? '#ffffff' : null);
+      const hx = rain ? mg.px + Math.sin(t * 60) * 6 * mg.boom : CX - 330, fy = rain ? CATY + 18 + c.S : FLOOR + 72, flip = rain ? mg.dir < 0 : false;
+      x.save(); x.imageSmoothingEnabled = false; x.translate(Math.round(hx), Math.round(fy)); if (flip) x.scale(-1, 1); x.drawImage(c, -c.cx, -c.footY, c.width, c.height); x.restore();
+      if (rain) MINI.cat.tray(x, mg, hx); }
+    else { K.SP(x, heroSp(this), rain ? mg.px : CX - 330, rain ? CATY + 130 : FLOOR, 170); if (rain) MINI.cat.tray(x, mg, mg.px); }
+    if (rain) { U.coin(x, SX + 70, SY + 119, 42); U.text(x, mg.sum + ' 份', SX + 128, SY + 140, T.num, C.gold, { align: 'left' }); U.bar(x, SX + SW - 380, SY + 134, 300, 12, cl(mg.left / 8, 0, 1), { col: mg.left < 3 && Math.sin(t * 16) > 0 ? C.red : C.gold }); // 剩余时间条放在右上，不压说明文字
       if (mg.phase === 'rain' && mg.left < 3 && mg.secT != null) K.big(x, String(mg.sec), CX + 300, SY + 220, T.hero, C.red, t - mg.secT, { num: true }); }
-    else K.SP(x, heroSp(this), CX - 330, FLOOR, 170);
-  } };
+  },
+  // 红漆盘：金边、酒红漆身，盘里的钱越接越高（按整格画，和舞台同一个像素大小）；接到一下压一格再弹，称重时一层层亮
+  tray(x, mg, hx) {
+    const P = 4, pk = mg.pop / (mg.popMax || 1), dy = pk > 0.72 ? 1 + (mg.popMax > 1.2 ? 1 : 0) : pk > 0.36 ? -1 : 0, hot = pk > 0.8, lean = Math.round((mg.lean || 0) * 2), n = Math.min(28, Math.round(mg.sum * 0.6)), wk = mg.weighT != null ? (mg.t - mg.weighT) / 0.22 : -1;
+    const ox = Math.round(hx / P) * P, oy = CATY + dy * P, R = (a, b, w, h, c) => K.R(x, ox + a * P, oy + b * P, w * P, h * P, c);
+    for (let i = 0; i < n; i++) { const row = Math.floor((Math.sqrt(8 * i + 1) - 1) / 2), k = i - row * (row + 1) / 2, cx0 = -row * 2 + k * 4 + lean * (row > 1 ? 1 : 0), cy = -1 - row, lit = wk >= 0 && Math.floor(wk) === Math.min(mg.weighN - 1, Math.floor(row / 2));
+      R(cx0 - 1, cy, 3, 1, lit ? C.butter : (i % 3 ? C.gold : C.amber)); if ((i + row) % 4 === 0) R(cx0 - 1, cy, 1, 1, C.butter); }
+    R(-12, 0, 24, 1, hot ? C.white : C.gold); R(-12, 0, 1, 1, C.butter); R(-11, 1, 22, 1, hot ? C.butter : C.red); R(-11, 2, 22, 1, C.wine); R(-10, 3, 20, 1, C.ink); R(-13, 0, 1, 2, C.amber); R(12, 0, 1, 2, C.amber);
+    } };
 
 // ═════════════════════ 黑市 · stop the price needle ═════════════════════
 // 拍板那一刻价格就定了；好价：慢镜头、聚光罩住表盘、价签一格一格往下滚，最后砸 GOOD / GREAT / PERFECT；
