@@ -47,12 +47,13 @@ function later(mg, dt, fn) { const s = st(mg); s.q.push({ at: s.clock + dt, fn }
 SH.later = later;
 
 // ───────── low-level pixel effects (logical coordinates in, drawn on the 4-px grid) ─────────
-// particles: single art px (size 1–3) that walk the ramp over their life; o { ramp | col | q, n, sp [a, b] px/s, life [a, b], g px/s², drag, size [a, b], ang, spread, att (x, y) pull, vx, vy, w, h }
+// particles: single art px (size 1–3) that walk the ramp over their life; o { ramp | col | q | rainbow, sp [a, b] px/s, life [a, b], g px/s², drag, size [a, b], ang, spread, att [x, y] pull, ring r (start on a circle, moving round it), vx, vy, w, h }
 SH.burst = function (h, x, y, n, o) {
   o = o || {}; const s = st(h), rp = o.rainbow ? null : o.ramp || (o.q != null ? SH.tierRamp(o.q) : SH.ramp(o.col || C.gold)), sp = o.sp || [120, 420], lf = o.life || [0.35, 0.8], sz = o.size || [1, 2];
   n = RM() ? Math.min(n, 6) : n;
   for (let i = 0; i < n; i++) { if (s.parts.length > 520) s.parts.shift(); const a = o.ang != null ? o.ang + (rnd() - 0.5) * (o.spread != null ? o.spread : 1) : rnd() * Math.PI * 2, v = sp[0] + rnd() * (sp[1] - sp[0]);
-    s.parts.push({ x: x + (rnd() - 0.5) * (o.w || 0), y: y + (rnd() - 0.5) * (o.h || 0), vx: Math.cos(a) * v + (o.vx || 0), vy: Math.sin(a) * v + (o.vy || 0), t: 0, life: lf[0] + rnd() * (lf[1] - lf[0]), g: o.g || 0, drag: o.drag == null ? 2.2 : o.drag,
+    const ra = rnd() * Math.PI * 2, rr = o.ring || 0;   // o.ring: start on a circle round (x, y) instead (a charge pulling light in)
+    s.parts.push({ x: x + (rnd() - 0.5) * (o.w || 0) + Math.cos(ra) * rr, y: y + (rnd() - 0.5) * (o.h || 0) + Math.sin(ra) * rr, vx: (rr ? -Math.sin(ra) * v : Math.cos(a) * v) + (o.vx || 0), vy: (rr ? Math.cos(ra) * v : Math.sin(a) * v) + (o.vy || 0), t: 0, life: lf[0] + rnd() * (lf[1] - lf[0]), g: o.g || 0, drag: o.drag == null ? 2.2 : o.drag,
       sz: Math.round(sz[0] + rnd() * (sz[1] - sz[0])), rp: rp || SH.ramp(RAINBOW[(i + (s.clock * 10 | 0)) % RAINBOW.length]), att: o.att || null, trail: o.trail !== false && v > 300 }); }
 };
 // an expanding ring: r0 → r1 px over life s; w = thickness in art px
@@ -109,12 +110,12 @@ SH.charge = function (g, h, o) {
 };
 // one beat: white flash, a punch, a shake that grows, the camera leans in, a ring and a burst in the tier's colour, a higher note;
 // a tier-up beat adds a whole-stage tint flash and a white ring
-SH.beat = function (g, h, x, y, i, tq, up, id) {
+SH.beat = function (g, h, x, y, i, tq, up, id, o) {
   const rp = SH.tierRamp(tq); if (id != null) { const b = obj(h, id); b.k = 1.12; b.kv = 0; b.w = 0.8; }
   SH.shake(h, 3 + i * 2 + (up ? 8 : 0)); SH.zoom(h, 0.012 + (up ? 0.02 : 0), x, y);
   SH.ring(h, x, y, 12, 90 + i * 14, rp[2], { life: 0.45 }); SH.burst(h, x, y, 12 + i * 3, { ramp: rp, sp: [120, 320], life: [0.25, 0.55] });
   if (up) { SH.flash(h, rp[2], 0.3); SH.ring(h, x, y, 12, 220, C.white, { life: 0.5, delay: 0.05, w: 2 }); }
-  snd('beat', { i, tier: tq, up }); if (g && g.fx) g.fx.kick(1 + i * 0.6 + (up ? 2 : 0));
+  if (!(o && o.quiet)) snd('beat', { i, tier: tq, up }); if (g && g.fx) g.fx.kick(1 + i * 0.6 + (up ? 2 : 0));
 };
 // 卡帧：舞台停住、压到近黑、焦点一团白；到点再往下走
 SH.hitstop = function (h, dur, x, y, then) { const s = st(h); if (RM()) { then && then(); return; } s.hit = dur || 0.15; s.hitX = x == null ? K.CX : x; s.hitY = y == null ? K.SY + 330 : y; s.hitThen = then || null; snd('hit'); };
@@ -288,34 +289,35 @@ function tri(J, ax, ay, bx, by, cx, cy, vf) {
   for (let y = y0; y <= y1; y++) { const yc = y + 0.5, xs = []; for (let i = 0; i < 3; i++) { const a = P[i], b = P[(i + 1) % 3]; if ((a[1] <= yc && b[1] > yc) || (b[1] <= yc && a[1] > yc)) xs.push(a[0] + (yc - a[1]) / (b[1] - a[1]) * (b[0] - a[0])); }
     if (xs.length < 2) continue; const xa = Math.max(0, Math.round(Math.min(xs[0], xs[1]))), xb = Math.min(J.W - 1, Math.round(Math.max(xs[0], xs[1])) - 1); for (let x = xa; x <= xb; x++) { const v = vf(x, y); if (v) J.u[y * J.W + x] = v; } }
 }
-function drawBuf(s, b) {
+function drawBuf(s, b, pass) {
   const J = jb(s, b), ox = b.x, oy = b.y, A = (x) => (x - ox) / GRID, B = (y) => (y - oy) / GRID; let any = false;
   // the spotlight's dim: three hard steps outside the circle
   const T = s.tense || (s.tLv > 0.02 ? s.lastT : null); if (s.tense) s.lastT = s.tense;
-  if (T && s.tLv > 0.02) { any = true; const cx = A(T.x), cy = B(T.y), beat = Math.max(0, 1 - s.beatT * 5), r = T.r / GRID * (1 + 0.05 * beat), r1 = r * r, r2 = (r * 1.35) ** 2, r3 = (r * 1.9) ** 2, a = s.tLv * (1 + 0.3 * beat);
+  const back = pass !== 'front', front = pass !== 'back';
+  if (back && T && s.tLv > 0.02) { any = true; const cx = A(T.x), cy = B(T.y), beat = Math.max(0, 1 - s.beatT * 5), r = T.r / GRID * (1 + 0.05 * beat), r1 = r * r, r2 = (r * 1.35) ** 2, r3 = (r * 1.9) ** 2, a = s.tLv * (1 + 0.3 * beat);
     const v1 = w32(C.ink, 0.2 * a), v2 = w32(C.ink, 0.42 * a), v3 = w32(C.ink, 0.62 * a), rim = w32(T.col, a * (0.55 + 0.45 * beat));
     for (let y = 0; y < J.H; y++) for (let x = 0; x < J.W; x++) { const d = (x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2; if (d < r1) continue; J.u[y * J.W + x] = d > r3 ? v3 : d > r2 ? v2 : d > (r + 1.2) ** 2 ? v1 : rim; } }
   // rays
-  s.fx.forEach(f => { if (f.k !== 'rays' || f.t < 0) return; any = true; const p = f.t / f.life, a = p < 0.1 ? p / 0.1 : p > 0.7 ? (1 - p) / 0.3 : 1, cx = A(f.x), cy = B(f.y), R = f.r / GRID, rot = f.a0 + f.t * f.spin, n = f.n;
+  if (back) s.fx.forEach(f => { if (f.k !== 'rays' || f.t < 0) return; any = true; const p = f.t / f.life, a = p < 0.1 ? p / 0.1 : p > 0.7 ? (1 - p) / 0.3 : 1, cx = A(f.x), cy = B(f.y), R = f.r / GRID, rot = f.a0 + f.t * f.spin, n = f.n;
     for (let i = 0; i < n; i++) { const a0 = rot + (i / n) * Math.PI * 2, w = Math.PI / n * 0.55, c1 = f.rainbow ? RAINBOW[i % RAINBOW.length] : f.c1, c2 = f.rainbow ? C.white : f.c2;
       const va = [w32(c1, 0.5 * a), w32(c1, 0.34 * a), w32(c1, 0.2 * a)], vb = [w32(c2, 0.6 * a), w32(c2, 0.42 * a), w32(c2, 0.26 * a)];
       const x1 = cx + Math.cos(a0 - w) * R, y1 = cy + Math.sin(a0 - w) * R, x2 = cx + Math.cos(a0 + w) * R, y2 = cy + Math.sin(a0 + w) * R, im = Math.cos(w * 0.4);
       tri(J, cx, cy, x1, y1, x2, y2, (x, y) => { const dx = x + 0.5 - cx, dy = y + 0.5 - cy, d = Math.hypot(dx, dy); if (d < 6) return 0; const band = d < R * 0.22 ? 0 : d < R * 0.5 ? 1 : 2, inner = (dx * Math.cos(a0) + dy * Math.sin(a0)) / d > im; if (band === 2 && ((x + y) & 1)) return 0; return inner ? vb[band] : va[band]; }); } });
   // hitstop: a white core at the focus
-  if (s.hit > 0) { any = true; const cx = Math.round(A(s.hitX)), cy = Math.round(B(s.hitY)), v = w32(C.white); for (let y = -9; y <= 9; y++) for (let x = -9; x <= 9; x++) if (x * x + y * y <= 81) put(J, cx + x, cy + y, v); }
+  if (front && s.hit > 0) { any = true; const cx = Math.round(A(s.hitX)), cy = Math.round(B(s.hitY)), v = w32(C.white); for (let y = -9; y <= 9; y++) for (let x = -9; x <= 9; x++) if (x * x + y * y <= 81) put(J, cx + x, cy + y, v); }
   // rings
-  s.fx.forEach(f => { if (f.k !== 'ring' || f.t < 0) return; any = true; const p = f.t / f.life, r = (f.r0 + (f.r1 - f.r0) * eo(p)) / GRID, cx = A(f.x), cy = B(f.y), v = w32(p < 0.12 ? C.white : f.col), steps = Math.max(12, Math.ceil(r * 7));
+  if (front) s.fx.forEach(f => { if (f.k !== 'ring' || f.t < 0) return; any = true; const p = f.t / f.life, r = (f.r0 + (f.r1 - f.r0) * eo(p)) / GRID, cx = A(f.x), cy = B(f.y), v = w32(p < 0.12 ? C.white : f.col), steps = Math.max(12, Math.ceil(r * 7));
     for (let i = 0; i < steps; i++) { const t = i / steps * Math.PI * 2; for (let k = 0; k < f.w; k++) { const rr = r - k, x = Math.round(cx + Math.cos(t) * rr), y = Math.round(cy + Math.sin(t) * rr * f.sq); if (p > 0.55 && bay(x, y) < (p - 0.55) / 0.45) continue; put(J, x, y, v); } } });
   // particles: white → light → main → dark over their life; twinkles blink; fast ones leave a dark trail pixel
-  s.parts.forEach(q => { any = true; const l = q.t / q.life, rp = q.rp, c = q.amb ? rp[Math.min(3, 1 + Math.floor(l * 3))] : rp[Math.min(3, Math.floor(l * 4))], x = Math.round(A(q.x)), y = Math.round(B(q.y));
+  if (front) s.parts.forEach(q => { any = true; const l = q.t / q.life, rp = q.rp, c = q.amb ? rp[Math.min(3, 1 + Math.floor(l * 3))] : rp[Math.min(3, Math.floor(l * 4))], x = Math.round(A(q.x)), y = Math.round(B(q.y));
     if (q.twinkle) { const k = Math.sin(l * Math.PI); put(J, x, y, w32(rp[1])); if (k > 0.6) { const v = w32(rp[2]); put(J, x - 1, y, v); put(J, x + 1, y, v); put(J, x, y - 1, v); put(J, x, y + 1, v); } return; }
     if (q.amb && l > 0.75 && bay(x, y) < (l - 0.75) / 0.25) return;
     if (q.trail && q.px != null) { const tx = Math.round(A(q.px - (q.x - q.px) * 2)), ty = Math.round(B(q.py - (q.y - q.py) * 2)); if (tx !== x || ty !== y) put(J, tx, ty, w32(rp[3])); }
     const v = w32(c); if (q.sz > 1) rect(J, x, y, q.sz, q.sz, v); else put(J, x, y, v); });
   if (!any) return null; J.cx.putImageData(J.img, 0, 0); return J;
 }
-SH.drawFx = function (x, h) {
-  const s = h.sh; if (!s) return; const b = boxOf(s), J = drawBuf(s, b);
+SH.drawFx = function (x, h, pass) {
+  const s = h.sh; if (!s) return; const b = boxOf(s), J = drawBuf(s, b, pass);
   if (J) { const sm = x.imageSmoothingEnabled; x.imageSmoothingEnabled = false; x.drawImage(J.cv, 0, 0, J.W, J.H, b.x, b.y, J.W * GRID, J.H * GRID); x.imageSmoothingEnabled = sm; }
 };
 // whole-box overlays: dim, tint, white, black (flat alpha, no gradient)
@@ -327,9 +329,11 @@ SH.drawOver = function (x, h) {
 };
 // any holder that is not a minigame (a full-screen show, the reel, a chest…): SH.box(h, …) once, SH.tick(g, h, dt) every frame
 // (freeze your own clock while SH.frozen(h)), SH.push(h) for the camera, then this after drawing your scene
-SH.drawAll = function (x, h) {
-  const s = h.sh; if (!s) return; if (!(s.hit > 0)) { const b = boxOf(s); if (s.dimA > 0.01) { x.save(); x.globalAlpha = Math.round(s.dimA * 8) / 8; x.fillStyle = U.pal(C.ink); x.fillRect(b.x, b.y, b.w, b.h); x.restore(); } }
-  SH.drawFx(x, h); const dimA = s.dimA; s.dimA = 0; SH.drawOver(x, h); s.dimA = dimA; if (s.hit > 0) SH.drawFx(x, h);
+// pass: 'back' = the dim and the rays (draw it before your scene, so the light fans out behind it), 'front' = everything else; none = both
+SH.drawAll = function (x, h, pass) {
+  const s = h.sh; if (!s) return; const back = pass !== 'front', front = pass !== 'back';
+  if (back && !(s.hit > 0)) { const b = boxOf(s); if (s.dimA > 0.01) { x.save(); x.globalAlpha = Math.round(s.dimA * 8) / 8; x.fillStyle = U.pal(C.ink); x.fillRect(b.x, b.y, b.w, b.h); x.restore(); } }
+  SH.drawFx(x, h, pass); if (!front) return; const dimA = s.dimA; s.dimA = 0; SH.drawOver(x, h); s.dimA = dimA; if (s.hit > 0) SH.drawFx(x, h, 'front');
   s.rolls.forEach(r => { const p = cl(r.t / r.dur, 0, 1), v = Math.round(r.v * (1 - Math.pow(1 - p, 2.2))), done = r.t >= r.dur, bump = done ? 1 + 0.25 * Math.exp(-(r.t - r.dur) * 10) : 1 + 0.04 * Math.sin(r.t * 40); x.save(); x.globalAlpha = cl((r.dur + 0.9 - r.t) / 0.3, 0, 1); x.translate(Math.round(r.x), Math.round(r.y - (done ? (r.t - r.dur) * 30 : 0))); x.scale(bump, bump); U.text(x, '+' + M.fmt(v), 0, 0, 64, r.col, { num: true, outline: true }); x.restore(); });
   s.stamps.forEach(p => { const q = p.t / 0.14, k = q < 1 ? 2.4 - 1.4 * eb(q) : 1, al = cl((p.life - p.t) / 0.3, 0, 1); x.save(); x.globalAlpha = al; x.translate(Math.round(p.x), Math.round(p.y)); x.rotate(p.rot); x.scale(k, k); U.text(x, p.text, 0, 0, p.size, p.col, { outline: true }); x.restore(); });
 };

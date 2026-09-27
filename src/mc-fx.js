@@ -262,101 +262,65 @@ M.reelEv = (r) => [...Array(r.ups || 0)].map((_, i) => 2.55 + i * 0.95).concat(r
 M.REEL_CHG = 0.42;
 function bolt(ctx, x1, y1, x2, y2, col, w, seed) { let s = seed; const rnd = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; }; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(x1, y1); const n = 9; for (let i = 1; i < n; i++) { const t = i / n; ctx.lineTo(x1 + (x2 - x1) * t + (rnd() - 0.5) * 60, y1 + (y2 - y1) * t + (rnd() - 0.5) * 60); } ctx.lineTo(x2, y2); ctx.stroke(); ctx.strokeStyle = '#fff'; ctx.lineWidth = w * 0.35; ctx.stroke(); ctx.restore(); }
 M.bolt = bolt;
-// 四边框 / 像素箭头（dir 1 朝右、-1 朝左：一列一列缩短，3px 墨边）
+// 四边框
 const frame = (x, a, b, w, h, k, c) => { R(x, a, b, w, k, c); R(x, a, b + h - k, w, k, c); R(x, a, b, k, h, c); R(x, a + w - k, b, k, h, c); };
-function parrow(x, bx, cy, dir, col) { const H = [48, 36, 24, 12], cw = 9, cx0 = (i) => (dir > 0 ? bx + i * cw : bx - (i + 1) * cw); H.forEach((h, i) => R(x, cx0(i) - 3, cy - h / 2 - 3, cw + 6, h + 6, P.ink)); H.forEach((h, i) => R(x, cx0(i), cy - h / 2, cw, h, col)); }
-M.drawReel = function (ctx, r, fx) {
-  const t = r.t, N = r.tiles.length, p = M.reelP(r), lockT = M.reelLock(r), dur = M.reelDur(r);
-  const vel = Math.abs(M.reelP(Object.assign({}, r, { t: t + 0.02 })) - p) / 0.02;
+// 展示用的档位：锁定的那一格按四档演（打造 / 招魂 / 道具按品质；许愿井和赌博滚轮都按一档，「空」不演）
+M.reelTierAt = (r, u) => { const n = r.tiles.length; if (!r.itemMode) { const tl = r.tiles[(r.land + (u | 0)) % n]; return tl.n === '空' ? -1 : 1; } u = u | 0; return n >= 6 ? (u <= 1 ? 0 : u === 2 ? 1 : u === 3 ? 2 : 3) : clamp(Math.round(u * 3 / Math.max(1, n - 1)), 0, 3); };
+M.reelQ = (r) => M.reelTierAt(r, r.ups || 0);
+// 机箱（像素引擎画，mc-minipx-a.js 的 _reel_cab）：820×640，滚筒上的品质名和属性是清晰的界面字，按同一个圆柱排
+M.drawReel = function (ctx, r) {
+  const t = r.t, N = r.tiles.length, p = M.reelP(r), lockT = M.reelLock(r), dur = M.reelDur(r), SH = M.SHOW, PX = M.PXR, CY = M.REEL_CYL;
+  const vel = Math.abs(M.reelP(Object.assign({}, r, { t: t + 0.02 })) - p) / 0.02, locked = t >= lockT;
   const cur = r.tiles[((Math.round(p) % N) + N) % N], cc = palC(cur.c);
-  // 机箱的弹入、冲击、升品放大都按 15 帧取样
-  const ts = stepT(t, 15), inA = eback(ts / 0.35), outA = st4(clamp((dur - t) / 0.25, 0, 1));
-  const X = 960, Y = 540;
-  ctx.save();
-  if (!r.fever) M.fxDim(ctx, 0.88 * st4(Math.min(1, t / 0.2)) * outA); ctx.globalAlpha = outA;   // FEVER's reel: no dark screen (user ruling 2026-09-26)
-  if (t > lockT) { const q = t - lockT; hardRays(ctx, X, Y, 16, 900, 80, cc, 0.12 * st4(q * 3) * outA, stepT(q, 8) * 0.5); }
+  const inA = eback(t / 0.35), outA = st4(clamp((dur - t) / 0.25, 0, 1)), W = 820, H = 640, hw = W / 2, hh = H / 2;
   const upIdx = r.ups ? [...Array(r.ups)].map((_, i) => 2.55 + i * 0.95).findIndex(a => t >= a && t < a + 0.45) : -1;
-  const sh = upIdx >= 0 ? (1 - (t - (2.55 + upIdx * 0.95)) / 0.45) * 16 : t > lockT && t < lockT + 0.3 ? (1 - (t - lockT) / 0.3) * 20 : 0;
-  const ant = t < lockT ? clamp((ts - (lockT - 0.9)) / 0.9, 0, 1) : 0, punch = ts >= lockT ? 1 + 0.16 * Math.exp(-(ts - lockT) * 9) * Math.cos((ts - lockT) * 30) : 1, upP = upIdx >= 0 ? 1 + 0.07 * (1 - clamp((ts - (2.55 + upIdx * 0.95)) / 0.45, 0, 1)) : 1;
-  if (ant > 0 && !r.fever) { ctx.globalAlpha = st4(0.35 * ant) * outA; R(ctx, 0, 0, 1920, 1080, P.ink); ctx.globalAlpha = outA; }
+  const ant = t < lockT ? clamp((t - (lockT - 0.9)) / 0.9, 0, 1) : 0, punch = locked ? 1 + 0.16 * Math.exp(-(t - lockT) * 9) * Math.cos((t - lockT) * 30) : 1, upP = upIdx >= 0 ? 1 + 0.07 * (1 - clamp((t - (2.55 + upIdx * 0.95)) / 0.45, 0, 1)) : 1;
   // 蓄力：每次往上冲之前灯珠全灭、窗口透出下一档的颜色、机箱越抖越厉害
   let chg = 0; M.reelEv(r).forEach(E => { if (t < E && t > E - M.REEL_CHG) chg = (t - (E - M.REEL_CHG)) / M.REEL_CHG; });
   const nxt = r.tiles[((Math.round(p) + 1) % N + N) % N], nc = palC(nxt.c);
-  // 传说锁定前黑场一下
   const legend = r.itemMode && r.ups >= 4, black = legend && t > lockT - 0.18 && t < lockT ? 1 : 0;
-  const SC = inA * (0.85 + 0.15 * outA) * (1 + 0.08 * ant * ant + 0.04 * chg) * punch * upP, jig = () => Math.round((Math.random() - 0.5) * (sh + ant * 5 + chg * 8));
-  ctx.translate(X + jig(), Y + jig() - Math.round(curve(M.CURVE.jolt, t - 0.2) * 0.7)); ctx.scale(SC, SC);
-  const W = 820, H = 640, hw = W / 2, hh = H / 2;
-  // 机箱：酒红铁皮面板（墨框、斜面、铆钉、12px 硬投影）；锁定后外面多一圈 3px 品质色
-  U.plate(ctx, -hw, -hh, W, H, { fill: P.wine, hi: P.red, lo: P.umber });
-  if (t > lockT) frame(ctx, -hw - 9, -hh - 9, W + 18, H + 18, 3, cc);
-  // 跑马灯泡：12px 方灯 + 3px 墨框；亮 = 奶油（锁定后 = 品质色），灭 = 赭，不发光
-  const w2 = hw - 36, h2 = hh - 36, per = 4 * (w2 + h2), nb = 34, speed = vel > 0.5 ? 18 : t > lockT ? 10 : 4, lit = t > lockT ? cc : P.butter;
-  for (let i = 0; i < nb; i++) {
-    let d = (i / nb) * per, bx, by;
-    if (d < 2 * w2) { bx = -w2 + d; by = -h2; } else if ((d -= 2 * w2) < 2 * h2) { bx = w2; by = -h2 + d; } else if ((d -= 2 * h2) < 2 * w2) { bx = w2 - d; by = h2; } else { d -= 2 * w2; bx = -w2; by = h2 - d; }
-    const on = chg > 0 ? false : (Math.floor(t * speed) + i) % 3 === 0, qx = Math.round(bx) - 6, qy = Math.round(by) - 6;
-    R(ctx, qx - 3, qy - 3, 18, 18, P.ink); R(ctx, qx, qy, 12, 12, on ? lit : P.umber); if (on) R(ctx, qx, qy, 3, 3, P.white);
-  }
+  ctx.save();
+  if (!r.fever) M.fxDim(ctx, 0.88 * st4(Math.min(1, t / 0.2)) * outA); ctx.globalAlpha = outA;
+  if (ant > 0 && !r.fever) { ctx.globalAlpha = st4(0.35 * ant) * outA; R(ctx, 0, 0, 1920, 1080, P.ink); ctx.globalAlpha = outA; }
+  if (SH && r.sh) SH.drawAll(ctx, r, 'back');   // the light fans out behind the cabinet
+  const pz = SH && r.sh ? SH.push(r) : null, sn = (v) => Math.round(v / 4) * 4;
+  const SC = inA * (0.85 + 0.15 * outA) * (1 + 0.08 * ant * ant + 0.04 * chg) * punch * upP * (pz ? pz.k : 1), jig = () => sn((Math.random() - 0.5) * (ant * 5 + chg * 10));
+  ctx.translate(960 + jig() + (pz ? pz.sx : 0), 540 + jig() + (pz ? pz.sy : 0) - sn(curve(M.CURVE.jolt, t - 0.2) * 0.7)); ctx.scale(SC, SC);
+  // the cabinet: body, drum and its quality tags, rails, bulbs, lever
+  if (PX && PX.has('_reel_cab')) { PX.pixels('_reel_cab', t, { p, tiles: r.mats || (r.mats = r.tiles.map(tl => M.reelMat(tl.c))), chg, lock: locked ? Math.max(0, 1 - (t - lockT) / 0.6) * 2.4 : 0, tc: locked ? M.reelMat(cur.c) : null, rail: t > 1.2 ? M.reelMat(cur.c) : 'gold', lever: t < 0.45 ? Math.sin(t / 0.45 * Math.PI) : 0, fast: vel > 0.5 }, '_reel'); const s = PX.slots._reel; if (s && s.cx) { s.cx.putImageData(s.img, 0, 0); ctx.imageSmoothingEnabled = false; ctx.drawImage(s.cv, -hw, -hh, W, H); } }
+  if (locked) frame(ctx, -hw + 28, -hh + 36, 752, 592, 4, cc);   // a quality-coloured line round the body once it locks
   // 招牌灯箱压在机箱上沿，图标放在灯箱左头
-  const tw = U.measure(ctx, r.title, 60) + 4 * ([...String(r.title)].length - 1), mq = U.marquee(ctx, r.title, 0, -hh, { size: 60, t, minW: Math.max(560, tw + 180) });
-  if (r.icon) { ctx.imageSmoothingEnabled = false; ctx.drawImage(r.icon, Math.round(mq.x + 18), -hh - 32, 64, 64); }
-  // 窗口：深渊色凹槽 + 3px 暮色内圈，里面是滚筒
-  const WX = -300, WY = -150, WW = 600, WH = 330;
-  R(ctx, WX - 9, WY - 9, WW + 18, WH + 18, P.ink); R(ctx, WX - 3, WY - 3, WW + 6, WH + 6, P.dusk); R(ctx, WX, WY, WW, WH, P.abyss);
+  const tw = U.measure(ctx, r.title, 60) + 4 * ([...String(r.title)].length - 1), mq = U.marquee(ctx, r.title, 0, -hh + 40, { size: 60, t, minW: Math.max(560, tw + 180) });
+  if (r.icon) { ctx.imageSmoothingEnabled = false; ctx.drawImage(r.icon, Math.round(mq.x + 18), -hh + 8, 64, 64); }
+  // the words on the drum: quality name and its line, on the same cylinder as the drum's bands
+  const WX = -hw + CY.x0 * 4, WY = -hh + CY.y0 * 4, WW = (CY.x1 - CY.x0) * 4, WH = (CY.y1 - CY.y0) * 4, cx = -hw + CY.cx * 4, cy = -hh + CY.cy * 4, RR = CY.R * 4;
   ctx.save(); ctx.beginPath(); ctx.rect(WX, WY, WW, WH); ctx.clip();
-  const base = Math.floor(p), cy = WY + WH / 2, RR = 190;
-  for (let o = -3; o <= 3; o++) {
-    const idx = base + o, tile = r.tiles[((idx % N) + N) % N], off = idx - p, ang = off * 0.62;
-    // 滚带上的 3px 分隔线
-    const da = ang - 0.31; if (Math.abs(da) < 1.5) { ctx.globalAlpha = outA * st4(Math.pow(Math.cos(da), 2)); R(ctx, WX, cy + Math.sin(da) * RR - 1, WW, 3, P.dusk); ctx.globalAlpha = outA; }
-    if (Math.abs(ang) > 1.5) continue;
-    const y = cy + Math.sin(ang) * RR, sy = Math.cos(ang), br = Math.pow(Math.cos(ang), 2), tc = palC(tile.c);
-    // 全速转时换成拖影：本体竖着拉长 1.17 倍，身后（下方）拖两道越来越淡的残影
+  const base = Math.floor(p), fr = p - base;
+  for (let o = -2; o <= 2; o++) {
+    const off = o - fr, ang = off * CY.step; if (Math.abs(ang) > 1.25) continue; const tile = r.tiles[(((base + o) % N) + N) % N], tc = palC(tile.c), y = cy + Math.sin(ang) * RR, sy = Math.cos(ang), br = sy * sy;
+    // 全速转时换成拖影：本体竖着拉长，身后（下方）拖两道越来越淡的残影
     const blurN = vel > 3 ? 3 : 1, gap = Math.min(40, vel * 2.4);
-    for (let b = blurN - 1; b >= 0; b--) {
-      ctx.save(); ctx.globalAlpha = outA * (blurN > 1 ? [0.85, 0.35, 0.15][b] : 1) * br; ctx.translate(0, y + b * gap); ctx.scale(1, sy * (blurN > 1 ? 1.17 : 1));
-      // 品质色硬边签：左右各一块
-      [-WW / 2 + 15, WW / 2 - 33].forEach(sx => { R(ctx, sx - 3, -42, 24, 84, P.ink); R(ctx, sx, -39, 18, 78, tc); });
-      const ghost = blurN > 1 && b > 0; // 拖影副本不描边，省一点
-      U.text(ctx, tile.n, 0, tile.sub ? -18 : 0, 88, tc, ghost ? { shadow: false } : { outline: true });
-      if (tile.sub) U.text(ctx, tile.sub, 0, 50, 30, P.cream, { shadow: !ghost });
-      ctx.restore();
-    }
+    for (let b = blurN - 1; b >= 0; b--) { ctx.save(); ctx.globalAlpha = outA * (blurN > 1 ? [0.85, 0.35, 0.15][b] : 1) * br; ctx.translate(cx, y + b * gap); ctx.scale(1, sy * (blurN > 1 ? 1.17 : 1));
+      const ghost = blurN > 1 && b > 0; U.text(ctx, tile.n, 0, tile.sub ? -16 : 0, 76, tc, ghost ? { shadow: false } : { outline: true }); if (tile.sub) U.text(ctx, tile.sub, 0, 42, 28, P.cream, { shadow: !ghost }); ctx.restore(); }
   }
-  // 滚筒上下压暗：4 段硬边墨色
-  [0.85, 0.6, 0.35, 0.15].forEach((a, k) => { ctx.globalAlpha = outA * a; R(ctx, WX, WY + k * 24, WW, 24, P.ink); R(ctx, WX, WY + WH - (k + 1) * 24, WW, 24, P.ink); });
-  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.06 * outA; R(ctx, WX, WY + 24, WW, 36, P.white);
-  if (t >= lockT && t < lockT + 0.45) { ctx.globalAlpha = st4(1 - (t - lockT) / 0.45); R(ctx, WX, WY, WW, WH, P.white); }
-  ctx.globalCompositeOperation = 'source-over';
-  if (chg > 0) { ctx.globalAlpha = outA * chg * (0.18 + 0.14 * Math.sin(t * 34)); R(ctx, WX, WY, WW, WH, nc); ctx.globalAlpha = outA; }
-  if (upIdx >= 0) { const q = (t - (2.55 + upIdx * 0.95)) / 0.45; ctx.globalAlpha = st4((1 - q) * 0.7); R(ctx, WX, WY, WW, WH, cc); for (let k = 0; k < 3; k++) bolt(ctx, WX + Math.random() * WW, WY, WX + Math.random() * WW, WY + WH, cc, 6, Math.floor(t * 30) + k * 7); }
-  ctx.restore();
-  // 中奖线：两条 6px 金色硬轨（按拍闪）+ 两侧像素箭头（滚起来后换成当前格的颜色）
-  ctx.globalAlpha = outA * (RM() ? 1 : 0.8 + 0.2 * Math.sin(t * 6 * Math.PI));
-  U.box(ctx, WX - 12, Math.round(cy - 88), WW + 24, 6, P.gold); U.box(ctx, WX - 12, Math.round(cy + 82), WW + 24, 6, P.gold);
-  ctx.globalAlpha = outA; const ac = t > 1.2 ? cc : P.gold; parrow(ctx, WX - 54, cy, 1, ac); parrow(ctx, WX + WW + 54, cy, -1, ac);
-  // 拉杆：像素方块（钢杆 + 红球 + 粉高光），角度按 5 档跳
-  const lp = t < 0.45 ? Math.sin(t / 0.45 * Math.PI) : 0, la = -0.9 + lp * 1.8, lq = la;
-  ctx.save(); ctx.translate(hw + 30, -20);
-  U.box(ctx, -12, -36, 36, 72, P.slate); R(ctx, -12, -36, 36, 3, P.steel); R(ctx, -12, 30, 36, 6, P.abyss);
-  ctx.rotate(lq * 0.6);
-  U.box(ctx, 0, -200, 12, 200, P.steel); R(ctx, 0, -200, 3, 200, P.silver);
-  U.box(ctx, -18, -236, 48, 48, P.red); R(ctx, -18, -197, 48, 9, P.wine); R(ctx, -12, -230, 12, 12, P.pink);
-  ctx.restore();
-  // 信息屏：深渊色凹槽里的墨描边字，锁定时按 4 格弹
+  ctx.globalAlpha = outA;
+  if (locked && t < lockT + 0.45) { ctx.globalAlpha = Math.round(st4(1 - (t - lockT) / 0.45) * 8) / 8; R(ctx, WX, WY, WW, WH, P.white); }
+  if (chg > 0) { ctx.globalAlpha = outA * Math.round(chg * (0.2 + 0.14 * Math.sin(t * 34)) * 8) / 8; R(ctx, WX, WY, WW, WH, nc); }
+  if (upIdx >= 0) { const q = (t - (2.55 + upIdx * 0.95)) / 0.45; ctx.globalAlpha = Math.round(st4((1 - q) * 0.7) * 8) / 8; R(ctx, WX, WY, WW, WH, cc); }
+  ctx.restore(); ctx.globalAlpha = outA;
+  // 信息屏：凹槽里的墨描边字，锁定时弹一下
   let msg = '', mc = P.lavender;
   if (t < 0.5) msg = '拉杆！'; else if (t < 1.9) msg = '滚动中……';
   else if (upIdx >= 0) { msg = '升品' + '！'.repeat(upIdx + 1); mc = cc; }
   else if (chg > 0) { msg = '……'; mc = nc; }
   else if (r.tease && t >= lockT - 0.75 && t < lockT) { msg = '还能再升……？'; mc = P.cream; }
-  else if (t >= lockT) { msg = r.itemMode ? '锁定 · ' + cur.n : cur.n; mc = cc; }
+  else if (locked) { msg = r.itemMode ? '锁定 · ' + cur.n : cur.n; mc = cc; }
   else { msg = cur.n + '……'; mc = cc; }
   if (black) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; R(ctx, 0, 0, 1920, 1080, P.ink); ctx.restore(); }
-  const ms = t >= lockT ? seq(POP, t - lockT, 0.075) : upIdx >= 0 ? 1.2 : 1, MY = hh - 88;
-  U.box(ctx, -330, MY - 32, 660, 64, P.abyss); R(ctx, -330, MY - 32, 660, 6, P.ink);
-  ctx.save(); ctx.translate(0, MY); ctx.scale(ms, ms); U.text(ctx, msg, 0, 0, 52, mc, { outline: true }); ctx.restore();
+  const ms = locked ? seq(POP, t - lockT, 0.075) : upIdx >= 0 ? 1.2 : 1, MY = -hh + 137 * 4;
+  ctx.save(); ctx.translate(-hw + 98 * 4, MY); ctx.scale(ms, ms); U.text(ctx, msg, 0, 0, 44, mc, { outline: true }); ctx.restore();
   ctx.restore();
+  if (SH && r.sh) SH.drawAll(ctx, r, 'front');
 };
 
 // ───────── treasure chest opening ─────────
