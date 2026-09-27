@@ -10,6 +10,7 @@
 // · What an expedition picked up on the way (events' buffs) is remembered on its own, so the fight's opening chips can show
 //   it next to the base's; the chips also show the wonders and the patron god now (they still read the old 发展方向 and
 //   宗教, which are gone).
+// · A caption (toast) shows only on the screen that raised it.
 const M = window.MC, G = M.Game.prototype;
 M.heroFull = (g) => { const run = g && g.run, h = run && run.hero; if (!h) return false; const mx = M.heroMaxHp ? M.heroMaxHp(h, run.M) : h.maxHp; return mx > 0 && h.hp >= mx - 0.5; };
 // 结束白天
@@ -18,8 +19,12 @@ G.view = function () {
   const v = oView.call(this), m = this.meta;
   v.restSub = ''; v.restC = '#e8dcc4';
   if (m && this.screen === 'base' && M.nightPower && M.garrisonPower) { try { const e = M.nightPower(m), a = M.garrisonPower(m); v.restSub = '今晚 ★' + e + ' · 驻军 ★' + a; v.restC = a && M.oddsCol ? M.oddsCol(a, e) : '#ff6a5a'; } catch (err) {} }
+  // a caption belongs to the screen it was raised on: the map's departure line does not follow into a shop or an event
+  if (this.toastData && this.toastData.scr && this.toastData.scr !== this.screen) v.toastOn = false;
   return v;
 };
+const oToast = G.toast;
+G.toast = function () { const r = oToast.apply(this, arguments); if (this.toastData) this.toastData.scr = this.screen; return r; };
 // one card per kind in a chest
 const oCO = G.chestOpen;
 if (oCO) G.chestOpen = function (items, col, onClose, o) {

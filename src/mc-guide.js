@@ -78,7 +78,7 @@ const CONCEPTS = [
   { id: 'banners', cat: '出征', img: () => sprite('flag'), title: '战旗', line: '整支部队的常驻加成，比如「射手战旗」让所有射手更强。', scr: ['world', 'shop'], sel: '[data-fx="banners"],[data-g="shop-banners"]' },
   { id: 'minimap', cat: '出征', icon: 'e_path', title: '小地图', line: '整条路线的缩略图。越往右越深，最右边是首领。', scr: 'world', at: () => Object.assign({}, M.MMAP || { x: 1320, y: 48 }, { w: 560, h: 250 }), when: (g) => g.run && !g.run.tut },
   { id: 'mmfold', cat: '出征', icon: 'e_path', title: '收起小地图', line: '收起后只留路线名和第几站。', scr: 'world', sel: '[data-g="w-mm"]' },
-  { id: 'canevo', cat: '夜市', icon: 'u_star', title: '可进化', line: '这种部队还能进化：3 支相同的进化一次。', scr: 'shop', sel: '[data-tip="s-evo"]' },
+  { id: 'canevo', cat: '夜市', icon: 'u_star', title: '进化进度', line: '队伍里已有几支这种部队；凑齐 3 支就进化成更强的一支。', scr: 'shop', sel: '[data-tip="s-evo"]' },
   { id: 'wpower', cat: '出征', icon: 'u_star', title: '战斗力', line: '敌人头上是它的战斗力，你头上是你的。颜色：绿稳赢，黄有风险，红很危险。', scr: 'world', sel: '[data-tip="w-power"]' },
   { id: 'gogo', cat: '出征', icon: 'u_star', title: 'GOGO 灯', line: '水果机顶上的灯。拉杆时亮了，这一把一定中铃铛以上。', scr: 'world', at: (g) => g.mini && g.mini.kind === 'fruit' ? { x: 1136, y: 214, w: 80, h: 48 } : null },
   { id: 'legion', cat: '领袖', icon: 't_skill', title: '被动技能', line: '领袖一直生效的本事，每个领袖不同，随等级变强。', scr: ['base', 'world'], sel: '[data-tip="tal-root"],[data-g="w-skill"]' },
@@ -91,6 +91,8 @@ const CONCEPTS = [
   { id: 'upower', cat: '标签与品质', icon: 'u_star', title: '战斗力', line: '部队有多强，就是它的价格：越贵越强。', scr: ['world'], sel: '[data-tip="w-power"]' },
   // ── 夜市 ──
   { id: 'shop', cat: '夜市', icon: 'e_market', title: '商店', line: '每家店卖的部队不一样，招牌旁边写着它的特点和代价。点自己的部队可以半价卖掉。', scr: 'shop', sel: '[data-g="shop-units"]' },
+  { id: 'shopnums', cat: '夜市', icon: 't_sword', title: '关键数值', line: '生命和它最拿手的那一项，高一档的同种部队数字更大。', scr: 'shop', sel: '[data-g="nums"]' },
+  { id: 'shopbuy', cat: '夜市', img: () => sprite('coin', 4), title: '购买', line: '买下这支部队。', scr: 'shop', sel: '[data-g="buy"]' },
   { id: 'gacha', cat: '夜市', icon: 'g_pack', title: '午夜卡包', line: '每家夜市都有的抽卡机：一包出一支这家店卖的部队，每趟第一包免费。', scr: 'shop', sel: '[data-fx="gapull"]' },
   { id: 'garate', cat: '夜市', icon: 't_clover', title: '出货概率', line: '每包出普通、优质、稀有、史诗、传说的概率。', scr: 'shop', sel: '[data-tip="s-garate"]' },
   { id: 'gapity', cat: '夜市', icon: 't_hourglass', title: '保底灯', line: '连着没出稀有就亮一盏，亮满 4 盏的下一包必出稀有以上。', scr: 'shop', sel: '[data-tip="s-gapity"]' },
