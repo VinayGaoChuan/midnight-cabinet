@@ -31,46 +31,81 @@ function payout(g, mg, o) {
 }
 
 // ═════════════════════ 流浪乐师 · rhythm ═════════════════════
-const LANE_X = [CX - 170, CX, CX + 170], HIT_Y = FLOOR - 70, TRAVEL = 1.5;
+// 曲子、伴奏、判定都在音频时钟上（mc-audio.js 的 S.song）：音符时间是玩家真正听到的时间，按键用事件自己的时间戳
+const MUA = M.MCPX, MU = MUA.MUS, LANE_X = MU.lane.map(x => MUA.lx(x)), HIT_Y = MUA.ly(MU.hit);
 const mTier = (p) => (p >= 0.8 ? 3 : p >= 0.55 ? 2 : p >= 0.3 ? 1 : 0);
+const muLayer = (c) => (c >= 12 ? 4 : c >= 8 ? 3 : c >= 5 ? 2 : c >= 3 ? 1 : 0);
+let lastInTs = 0; if (typeof window !== 'undefined') ['keydown', 'pointerdown'].forEach(n => window.addEventListener(n, (e) => { lastInTs = e.timeStamp; }, true));
+const inTs = () => (performance.now() - lastInTs < 80 ? lastInTs : performance.now());
+const muSlot = () => MUA.slot('mini_musician', 'mc_mus');
+// 合奏中途关掉小游戏（离开、被打断）：曲子立刻停，地图配乐淡回
+if (typeof setInterval !== 'undefined') setInterval(() => { const g = window.__mcg; if (S.song && S.song.on && !(g && g.mini && g.mini.kind === 'musician')) S.song.stop(true); }, 250);
+// 现在（或 ts 那一刻）玩家听到的是曲子的第几秒；没有声音时用 performance 时钟
+function songAt(mg, ts) { if (mg.useAudio) { const v = S.song.heard(ts); if (v != null) return v; } return ((ts == null ? performance.now() : ts) - mg.clock0) / 1000; }
 MINI.musician = { title: '流浪乐师', img: 'musician', col: C.gold, text: '没有脸的乐师拉着琴。琴声停下来，他把弓递给了你。',
-  init(mg) { const n = 26; mg.notes = []; let t = 1.4, last = -1; for (let i = 0; i < n; i++) { let l = Math.floor(rnd() * 3); if (l === last && rnd() < 0.6) l = (l + 1 + Math.floor(rnd() * 2)) % 3; last = l; mg.notes.push({ t, l, m: (i * 2 + l) % 8, st: 0 }); t += [0.5, 0.5, 0.25, 0.75][Math.floor(rnd() * 4)]; } mg.end = t + 0.8; mg.score = 0; mg.combo = 0; mg.laneF = [0, 0, 0]; mg.lastN = mg.notes[n - 1]; mg.bob = 0; },
-  start(mg) { this.miniSet('play'); mg.song = -0.6; S.whoosh(0.3); },
-  hit(mg, l) { if (mg.phase !== 'play') return; mg.laneF[l] = 1; let best = null, bd = 0.24; mg.notes.forEach(n => { if (n.st || n.l !== l) return; const d = Math.abs(n.t - mg.song); if (d < bd) { bd = d; best = n; } });
-    if (!best) { S.mini('musician', 'miss'); mg.combo = 0; miss(this, mg, LANE_X[l], HIT_Y - 130); return; }
-    best.st = bd < 0.08 ? 2 : 1; mg.score += best.st; mg.combo++; S.mini('musician', 'note', best.m); mg.bob = 1;
-    const col = [C.pink, C.ice, C.lime][l]; combo(this, mg, LANE_X[l], HIT_Y - 130, bd < 0.04 ? 'PERFECT' : bd < 0.08 ? 'GREAT' : 'GOOD');
-    this.fx.ring(LANE_X[l], HIT_Y, 24, 80 + best.st * 30, col, 4, 0.25); if (best.st === 2) this.fx.spark(LANE_X[l], HIT_Y, '#ffe08a', 8, { dir: -Math.PI / 2, spread: 1.2, v: 500 });
+  init(mg) { const B = S.song.B; mg.B = B; mg.notes = S.song.NOTES.map(n => ({ i: n.i, t: (n.beat + 4) * B, l: n.l, st: 0 })); mg.end = 40 * B; mg.score = 0; mg.combo = 0; mg.maxCombo = 0; mg.perf = 0;
+    mg.laneF = [0, 0, 0]; mg.laneG = [0, 0, 0]; mg.laneBad = [0, 0, 0]; mg.keyP = [-9, -9, -9]; mg.lastN = mg.notes[mg.notes.length - 1]; mg.layer = 0; mg.lampK = 1; mg.bulbsK = 0; mg.crowd = 0; mg.song = null; mg.cnt = -1; },
+  start(mg) { this.miniSet('play'); S.whoosh(0.3); const sg = S.song.begin(); mg.useAudio = !!sg; mg.clock0 = performance.now() + 200; mg.song = songAt(mg); },
+  hit(mg, l) { if (mg.phase !== 'play') return; mg.keyP[l] = mg.t; const at = songAt(mg, inTs()); let best = null, bd = 0.24;
+    mg.notes.forEach(n => { if (n.st || n.l !== l) return; const d = Math.abs(n.t - at); if (d < bd) { bd = d; best = n; } });
+    const sl = muSlot(), bx = MU.lane[l], by = MU.hit - 3;
+    if (!best) { mg.laneBad[l] = 1; S.song.stray(); mg.combo = 0; mg.layer = Math.max(0, mg.layer - 2); S.song.layers(mg.layer); miss(this, mg, LANE_X[l], HIT_Y - 130); return; }
+    const w = bd < 0.04 ? 'PERFECT' : bd < 0.08 ? 'GREAT' : 'GOOD'; best.st = bd < 0.08 ? 2 : 1; mg.score += best.st; mg.combo++; mg.maxCombo = Math.max(mg.maxCombo, mg.combo); if (w === 'PERFECT') mg.perf++;
+    S.song.hit(best.i, w === 'PERFECT'); mg.layer = Math.max(mg.layer, muLayer(mg.combo)); S.song.layers(mg.layer);
+    mg.laneF[l] = 1; mg.laneG[l] = w === 'PERFECT' ? 3 : w === 'GREAT' ? 2 : 1;
+    if (sl) { if (w === 'GOOD') sl.burst('rosin', bx, by, 4, { sp: 16, ang: 0, spread: 1.6, life: 0.5 }); else { sl.burst('spark', bx, by, w === 'PERFECT' ? 10 : 6, { sp: 34, ang: 0, spread: 1.4, life: 0.5, floor: MU.hit + 2 }); sl.flash(1, w === 'PERFECT' ? 1.4 : 0.7); }
+      if (w === 'PERFECT') { sl.burst('notefx', bx, by - 4, 3, { sp: 20, ang: 0, spread: 0.6, life: 1.2 }); sl.burst('glint', bx, by, 2, { sp: 10, life: 0.5 }); } }
+    combo(this, mg, LANE_X[l], HIT_Y - 130, w); this.fx.ring(LANE_X[l], HIT_Y - 10, 18, 60 + best.st * 30, [C.pink, C.ice, C.lime][l], 4, 0.22);
     if (best === mg.lastN) SHW.calm(mg); },
   key(mg, k, down) { const l = { l0: 0, l1: 1, l2: 2, left: 0, down: 1, up: 1, right: 2 }[k]; if (l != null && mg.phase === 'play') { if (down) MINI.musician.hit.call(this, mg, l); return true; } },
-  down(mg, px, py) { if (mg.phase !== 'play') return; const l = px < CX - 85 ? 0 : px > CX + 85 ? 2 : 1; MINI.musician.hit.call(this, mg, l); },
+  down(mg, px, py) { if (mg.phase === 'play') { const l = px < CX - 85 ? 0 : px > CX + 85 ? 2 : 1; return MINI.musician.hit.call(this, mg, l); }
+    // 演奏前点舞台：水面一圈涟漪、一声曼陀林
+    if (mg.phase === 'idle') { const sl = muSlot(); if (sl) sl.burst('glint', MUA.ax(px), Math.max(150, Math.min(172, MUA.ay(py))), 3, { sp: 8, life: 0.6 }); S.mini('musician', 'pluck'); } },
   btns(mg) { if (mg.phase !== 'idle') return []; return [{ t: '接过琴弓合奏', sub: '按 Q W E（或点三条音轨）跟上音符', gold: 1, fn: () => MINI.musician.start.call(this, mg) }, { t: '扔一枚硬币', sub: '免费 · 他会回赠物资', fn: () => this.miniFinish('他点点头，从琴盒里拿出一袋东西给你。', '#caa84a', [{ k: 'rsup', v: 15 }]) }, { t: '离开', leave: 1, fn: () => this.miniFinish('琴声在你背后停了。', '#8d8496') }]; },
   tick(mg, dt) {
-    mg.laneF = mg.laneF.map(f => Math.max(0, f - dt * 5)); mg.bob = Math.max(0, mg.bob - dt * 5);
-    if (mg.phase !== 'play') return; const prev = mg.song; mg.song += dt;
-    if (Math.floor(prev * 2) !== Math.floor(mg.song * 2) && mg.song > 0) S.mini('musician', 'metro');
-    mg.notes.forEach(n => { if (!n.st && mg.song - n.t > 0.24) { n.st = -1; mg.combo = 0; miss(this, mg, LANE_X[n.l], HIT_Y - 130); if (n === mg.lastN) SHW.calm(mg); } });
+    mg.laneF = mg.laneF.map(f => Math.max(0, f - dt * 4)); mg.laneBad = mg.laneBad.map(f => Math.max(0, f - dt * 5)); mg.lampK += (1 - mg.lampK) * Math.min(1, dt * 1.5);
+    mg.bulbsK = cl(mg.bulbsK + (mg.layer >= 2 ? dt * 1.2 : -dt * 3), 0, 1); mg.crowd = cl(mg.crowd + (mg.layer >= 3 ? dt * 1.5 : -dt * 2), 0, 1);
+    if (mg.phase === 'tally') return MINI.musician.tally.call(this, mg, dt);
+    if (mg.phase !== 'play') return; mg.song = songAt(mg); const B = mg.B, song = mg.song;
+    // 预备小节：第 2、3、4 拍砸「3」「2」「1」
+    const bi = Math.floor(song / B); if (bi !== mg.cnt && bi >= 1 && bi <= 3 && song < 4 * B) { mg.cnt = bi; SHW.stamp(mg, String(4 - bi), CX, SY + 260, C.gold, 110 + bi * 10, B * 0.9); this.fx.kick(1 + bi); }
+    mg.notes.forEach(n => { if (!n.st && song - n.t > 0.24) { n.st = -1; S.song.miss(n.i); mg.combo = 0; mg.layer = Math.max(0, mg.layer - 2); S.song.layers(mg.layer); mg.lampK = 0.5; miss(this, mg, LANE_X[n.l], HIT_Y - 130); if (n === mg.lastN) SHW.calm(mg); } });
     // 最后一个音符能改评级时：聚光罩住它那条音轨、心跳（能冲到 S 就是超级听牌）
-    const L = mg.lastN; if (!mg.reached && !L.st && mg.song > L.t - 0.9 && mg.notes.every(n => n === L || n.st)) { mg.reached = 1; const N2 = mg.notes.length * 2, hi = mTier((mg.score + 2) / N2); if (hi > mTier(mg.score / N2)) SHW.reach(this, mg, { x: LANE_X[L.l], y: HIT_Y, r: 130, lv: hi >= 3 ? 2 : 1 }); }
-    if (mg.song > mg.end) { this.miniSet('end'); const N = mg.notes.length, pct = mg.score / (N * 2); let tx, col, g = [], gr, ev;
-      if (pct >= 0.8) { this.run.runBuff.unitAtk = (this.run.runBuff.unitAtk || 0) + 0.08; g.push({ k: 'wallet', v: M.nice(mg.P * 6) }); tx = '乐师第一次笑了（如果那算笑的话）。本局部队攻击 +8%。'; col = '#ffcc33'; gr = 'S'; ev = 'great'; }
-      else if (pct >= 0.55) { this.run.runBuff.unitAtk = (this.run.runBuff.unitAtk || 0) + 0.1; tx = '部队听得热血沸腾。本局部队攻击 +10%。'; col = '#f2c14e'; gr = 'A'; ev = 'ok'; }
-      else if (pct >= 0.3) { g.push({ k: 'rsup', v: 15 }); tx = '勉强能听。他还是给了你一点东西。'; col = '#caa84a'; gr = 'B'; ev = 'poor'; }
-      else { tx = '琴弦断了一根。他默默收起了琴。'; col = '#8d8496'; gr = 'C'; ev = 'poor'; }
-      const wv = g.find(o => o.k === 'wallet');
-      payout(this, mg, { grade: gr, tier: GT[gr], x: CX, y: SY + 420, gx: CX - 330, gy: SY + 300, v: wv && wv.v, gains: g, tx: '合奏完成度 ' + Math.round(pct * 100) + '%。' + tx, tc: col, snd: () => S.mini('musician', ev) }); }
+    const L = mg.lastN; if (!mg.reached && !L.st && song > L.t - 0.9 && mg.notes.every(n => n === L || n.st)) { mg.reached = 1; const N2 = mg.notes.length * 2, hi = mTier((mg.score + 2) / N2); if (hi > mTier(mg.score / N2)) SHW.reach(this, mg, { x: LANE_X[L.l], y: HIT_Y, r: 130, lv: hi >= 3 ? 2 : 1 }); }
+    if (song > mg.lastN.t + 2 * B && mg.lastN.st) { this.miniSet('tally'); mg.tally = { t: 0, shown: 0, cross: 0, pct: mg.score / (mg.notes.length * 2) }; }
   },
+  // 结算四拍：完成度条从 0 往上滚、跨线一拍一拍加码、评级字母升格 → 卡帧 → 评级章 → 逐项砸出 → 奖励
+  tally(mg, dt) { const T = mg.tally; T.t += dt; const p = Math.min(T.pct, T.t / 1.3 * Math.max(0.3, T.pct)); T.shown = p;
+    if (Math.floor(p * 20) !== T.tick) { T.tick = Math.floor(p * 20); S.mini('musician', 'tick', T.tick); }
+    [0.3, 0.55, 0.8].forEach((v, k) => { if (p >= v && T.cross <= k) { T.cross = k + 1; SHW.stamp(mg, 'CBAS'[k + 1], SX + 80 + Math.round(300 * v), SY + 190, [C.teal, C.magenta, C.gold][k], 60 + k * 14, 0.9); this.fx.flash('#ffffff', 0.12 + k * 0.06); this.fx.kick(3 + k * 3); S.mini('musician', 'cross', k); } });
+    if (T.t > 1.3 && !T.done) { T.done = 1; mg.holdT = mg.t; SHW.slowmo(mg, 0.04, 0.15); SHW.later(mg, 0.16, () => MINI.musician.pay.call(this, mg));
+      [['完成度 ' + Math.round(T.pct * 100) + '%', C.cream], ['最大连击 ' + mg.maxCombo, C.gold], ['PERFECT ' + mg.perf, C.magenta]].forEach(([w, c], i) => SHW.later(mg, 0.3 + i * 0.22, () => { SHW.stamp(mg, w, SX + SW - 270, SY + 250 + i * 64, c, 40, 2.4); S.mini('musician', 'tick', 14 + i * 3); this.fx.kick(2); })); } },
+  pay(mg) { const N = mg.notes.length, pct = mg.score / (N * 2); let tx, col, g = [], gr, ev;
+    if (pct >= 0.8) { this.run.runBuff.unitAtk = (this.run.runBuff.unitAtk || 0) + 0.08; g.push({ k: 'wallet', v: M.nice(mg.P * 6) }); tx = '乐师第一次笑了（如果那算笑的话）。本局部队攻击 +8%。'; col = '#ffcc33'; gr = 'S'; ev = 'great'; }
+    else if (pct >= 0.55) { this.run.runBuff.unitAtk = (this.run.runBuff.unitAtk || 0) + 0.1; tx = '部队听得热血沸腾。本局部队攻击 +10%。'; col = '#f2c14e'; gr = 'A'; ev = 'ok'; }
+    else if (pct >= 0.3) { g.push({ k: 'rsup', v: 15 }); tx = '勉强能听。他还是给了你一点东西。'; col = '#caa84a'; gr = 'B'; ev = 'poor'; }
+    else { tx = '琴弦断了一根。他默默收起了琴。'; col = '#8d8496'; gr = 'C'; ev = 'snap'; }
+    const wv = g.find(o => o.k === 'wallet'); mg.after = { q: GT[gr], t: mg.t }; S.song.stop();
+    payout(this, mg, { grade: gr, tier: GT[gr], x: CX, y: SY + 420, gx: CX - 330, gy: SY + 300, v: wv && wv.v, gains: g, tx: '合奏完成度 ' + Math.round(pct * 100) + '%。' + tx, tc: col, snd: () => S.mini('musician', ev) }); },
   draw(x, mg) {
-    const t = mg.t, fev = mg.sh && mg.sh.fever > 0 && mg.phase === 'play', beat = mg.song > 0 ? Math.max(0, 1 - ((mg.song * 2) % 1) * 3) : 0; night(x, '#1a1030', '#0a0610'); K.GL(x, CX, SY + 200, 400, '#ffb060', 0.18 + (fev ? 0.22 * beat : 0));
-    const bob = Math.round(mg.bob * 12); K.SP(x, 'musician', SX + 200, FLOOR - 20 - bob, 200); const bow = Math.sin((mg.song || t) * 8) * 20; K.LN(x, SX + 180 + bow, FLOOR - 170 - bob, SX + 260 + bow, FLOOR - 120 - bob, 3, '#e8dcc4');
-    K.SP(x, heroSp(this), SX + SW - 200, FLOOR - 20 - (fev ? Math.round(beat * 8) : 0), 170, true);
-    LANE_X.forEach((lx, i) => { x.fillStyle = K.LG(x, 0, SY + 90, 0, HIT_Y, [[0, 'rgba(255,224,138,0)'], [1, 'rgba(255,224,138,' + (0.12 + mg.laneF[i] * 0.4 + (fev ? 0.12 * beat : 0)) + ')']]); x.fillRect(lx - 70, SY + 90, 140, HIT_Y - SY - 60); K.R(x, lx - 70, SY + 90, 2, HIT_Y - SY - 60, 'rgba(255,224,138,0.2)'); K.R(x, lx + 68, SY + 90, 2, HIT_Y - SY - 60, 'rgba(255,224,138,0.2)');
-      // 判定框：方形金框，按下时亮一下、外扩一格；下面是 Q W E 键帽
-      const f = mg.laneF[i], hs = 40 + Math.ceil(f * 2) * 4; K.R(x, lx - 44, HIT_Y - 44, 88, 88, 'rgba(7,6,15,0.6)'); K.RR(x, lx - hs - 3, HIT_Y - hs - 3, hs * 2 + 6, hs * 2 + 6, 0, null, f ? C.butter : fev ? C.magenta : C.gold, 6); U.key(x, ['Q', 'W', 'E'][i], lx - 24, HIT_Y + 46, { size: 24 }); });
-    const sp = (HIT_Y - SY - 90) / TRAVEL;
-    mg.notes.forEach(n => { if (n.st > 0 || n.st === -1 && mg.song - n.t > 0.6) return; const y = HIT_Y - (n.t - (mg.song || -9)) * sp; if (y < SY + 60 || y > HIT_Y + 80) return; const col = [C.pink, C.ice, C.lime][n.l]; x.globalAlpha = n.st === -1 ? 0.3 : 1; K.GL(x, LANE_X[n.l], y, 50 + (fev ? 16 * beat : 0), col, 0.6); K.CI(x, LANE_X[n.l], y, 30, col); K.IC(x, 'e_music', LANE_X[n.l], y, 40); x.globalAlpha = 1; });
-    if (mg.phase === 'play') { K.sign(x, '连击 ' + mg.combo, SX + SW - 200, SY + 140, { kind: 'dark', size: T.btn, minW: 180 }); const pct = mg.score / (mg.notes.length * 2); U.bar(x, SX + 80, SY + 120, 300, 18, pct, { col: C.gold }); [0.3, 0.55, 0.8].forEach(v => K.R(x, SX + 80 + Math.round(300 * v) - 1, SY + 112, 3, 34, C.white)); U.text(x, '完成度', SX + 230, SY + 160, T.cap, C.lavender); if (mg.song < 0) K.big(x, '准备', CX, SY + 300, 96, C.gold, mg.pt); }
-  } };
+    if (mg.phase === 'play') mg.song = songAt(mg);
+    const song = mg.song == null ? -9 : mg.song, beat = song / (mg.B || 0.4545), bp = beat - Math.floor(beat), pulse = song > 0 ? Math.max(0, 1 - bp * 4) : 0;
+    MUA.draw(x, 'mini_musician', 0, 0, mg.t, { song, beat, layers: mg.layer, laneF: mg.laneF, laneG: mg.laneG, laneBad: mg.laneBad, notes: mg.phase === 'play' || mg.phase === 'tally' ? mg.notes : [], lampK: mg.lampK, bulbsK: mg.bulbsK, crowd: mg.crowd }, 'mc_mus');
+    // 乐师（像素人物做好之前是剪影）和领袖：都踩着拍子
+    MINI.musician.npc(x, mg, pulse); MUA.cast(x, heroSp(this), 256, 148 - (mg.phase === 'play' ? Math.round(pulse) : 0), 'idle', mg.t, true);
+    // Q W E 键帽：按下先压扁再弹大
+    for (let l = 0; l < 3; l++) { const q = (mg.t - mg.keyP[l]) / 0.2, k = q < 0.3 ? 1 - 0.1 * q / 0.3 : q < 1 ? 0.9 + 0.22 * Math.sin((q - 0.3) / 0.7 * Math.PI) * (1 - (q - 0.3) / 0.7) + 0.1 * (q - 0.3) / 0.7 : 1; x.save(); x.translate(LANE_X[l], HIT_Y + 58); x.scale(k, k); U.key(x, ['Q', 'W', 'E'][l], -22, -14, { size: 22 }); x.restore(); }
+    if (mg.phase === 'play' || mg.phase === 'tally') { const shown = mg.phase === 'tally' ? mg.tally.shown : mg.score / (mg.notes.length * 2);
+      U.bar(x, SX + 80, SY + 120, 300, 18, shown, { col: C.gold }); [0.3, 0.55, 0.8].forEach(v => K.R(x, SX + 80 + Math.round(300 * v) - 1, SY + 112, 3, 34, C.white)); U.text(x, '完成度', SX + 230, SY + 160, T.cap, C.lavender);
+      if (mg.phase === 'play') K.sign(x, '连击 ' + mg.combo, SX + SW - 200, SY + 140, { kind: 'dark', size: T.btn, minW: 180 }); }
+    if (mg.holdT != null && mg.t - mg.holdT < 0.15) { x.save(); x.globalAlpha = 0.6; K.R(x, SX, SY, SW, SH, C.ink); x.restore(); }
+  },
+  // 乐师的剪影占位：宽檐帽、苍白的脸、长大衣，踩拍子一沉一起（像素人物做好后换成 pcd 角色）
+  npc(x, mg, pulse) { const bob = mg.phase === 'play' ? Math.round(pulse) : Math.round(Math.sin(mg.t * 2) * 0.5 + 0.5), ax = 44, feet = 148;
+    const px = (a, b, c) => { x.fillStyle = U.pal(c); x.fillRect(MUA.lx(a), MUA.ly(b), 4, 4); };
+    for (let k = 0; k < 40; k++) { const y = feet - 1 - k - (k > 6 ? bob : 0), q = k / 40; let hw = q > 0.9 ? (q > 0.95 ? 3 : 7) : q > 0.82 ? 2.5 : 4 + (1 - q) * 4; if (q > 0.82 && q <= 0.9) hw = 3;
+      for (let d = -Math.round(hw); d <= Math.round(hw); d++) px(ax + d, y, d === -Math.round(hw) ? '#ffb060' : q > 0.82 && q <= 0.9 && Math.abs(d) < 3 ? '#d8d2c8' : '#12101e'); } },
+};
 
 // ═════════════════════ 裁缝老太 · sew a soldier into your shadow ═════════════════════
 MINI.granny = { title: '裁缝老太', img: 'old', col: C.violet, text: '她能把一名部队缝进你的影子里，让你的伤口合上。针脚越齐，伤好得越快。',
@@ -261,35 +296,59 @@ const MEDS = [
   { n: '白色药片', c: C.white, d: '物资', q: 0, f(g, mg) { return g.award([{ k: 'rsup', v: 25 }], mg.from).join(''); } },
   { n: '红色药水', c: C.red, d: '剧毒', q: -1, f(g) { S.mini('clinic', 'bad'); return '中毒 -' + g.heroHurt(0.1); } },
   { n: '紫色药水', c: C.violet, d: '部队攻击', q: 2, f(g) { g.run.runBuff.unitAtk = (g.run.runBuff.unitAtk || 0) + 0.05; S.mini('clinic', 'mult'); return '本局部队攻击 +5%'; } }];
+const PXA = M.MCPX, CLI = PXA.CLINIC, clX = (i) => PXA.lx(CLI.x[i]), clY = PXA.ly(CLI.y);
+const clSlot = () => PXA.slot('mini_clinic', 'mc_clinic');
+const clHit = (mg, px, py) => mg.bt.findIndex((b, i) => !b.opened && Math.abs(px - clX(i)) < 46 && py < clY + 10 && py > clY - 150);
+// liquid vapour puffs in each med's own colour ramp (PXR particles walk the ramp as they fade)
+['screen', 'water', 'gold', 'bone', 'red', 'arcane'].forEach(m => { M.PXR.PK['vap_' + m] = { g: -12, drag: 1.3, puff: 1, ramp: [m, [10, 9, 8, 7, 6, 5]], grow: 4 }; });
 MINI.clinic = { title: '废弃医务室', img: 'gurney', col: C.ice, text: '药柜里有六个瓶子。有两个标签被血糊住了。你最多敢试三瓶。',
-  init(mg) { const pool = MEDS.slice().sort(() => rnd() - 0.5); mg.bt = pool.map((m, i) => ({ m, x: SX + 250 + i * 140, y: SY + 330, dark: false, open: 0 })); const dk = [0, 1, 2, 3, 4, 5].sort(() => rnd() - 0.5).slice(0, 2); dk.forEach(i => mg.bt[i].dark = true); mg.opened = 0; mg.got = []; },
-  open(mg, i) { const b = mg.bt[i]; if (!b || b.opened || mg.phase !== 'idle' || mg.opened >= 3) return; b.opened = true; mg.opened++; mg.cur = i; S.mini('clinic', 'pick');
+  init(mg) { const pool = MEDS.slice().sort(() => rnd() - 0.5); mg.bt = pool.map((m, i) => ({ m, liq: MEDS.indexOf(m), dark: false, open: 0, lift: 0, sy: 1, dx: 0, dy: 0, glow: 0, lvl: 0.7 })); const dk = [0, 1, 2, 3, 4, 5].sort(() => rnd() - 0.5).slice(0, 2); dk.forEach(i => mg.bt[i].dark = true); mg.opened = 0; mg.got = []; mg.hov = -1; },
+  open(mg, i) { const b = mg.bt[i]; if (!b || b.opened || mg.phase !== 'idle' || mg.opened >= 3) return; b.opened = true; mg.opened++; mg.cur = i; b.pressT = mg.t; S.mini('clinic', 'pick'); S.mini('clinic', 'hover', i);
+    const sl = clSlot(); if (sl) sl.burst('dust', CLI.x[i], CLI.y - 2, 6, { sp: 14, life: 0.8, w: 10 });
     mg.it = b.m.q === 3 ? K.item(this.run, mg.P) : null; b.q = b.m.q === 3 ? (mg.it.k === 'item' ? mg.it.q || 0 : 1) : b.m.q;
     // 毒药一拍带过；好药先抖、先亮品质色（糊了标签的可能先亮低一档再升格），史诗以上还压暗聚光
     if (b.q < 0) { mg.om = null; this.miniSet('uncork'); return; }
-    const path = b.dark ? SHW.omenPath(b.q) : [b.q]; mg.om = { path, at: 0, dur: 0.3 + b.q * 0.2 + (path.length - 1) * 0.25 }; this.miniSet('omen');
-    if (b.q >= 2) SHW.reach(this, mg, { x: b.x, y: b.y - 10, r: 120, lv: b.q >= 3 ? 2 : 1, label: '' }); },
-  down(mg, px, py) { mg.bt.forEach((b, i) => { if (Math.abs(px - b.x) < 55 && Math.abs(py - b.y) < 90) MINI.clinic.open.call(this, mg, i); }); },
+    const path = b.dark ? SHW.omenPath(b.q) : [b.q]; mg.om = { path, at: 0.15, dur: 0.3 + b.q * 0.2 + (path.length - 1) * 0.25 }; this.miniSet('omen');
+    if (b.q >= 2) SHW.reach(this, mg, { x: clX(i), y: clY - 70, r: 130, lv: b.q >= 3 ? 2 : 1, label: '' }); },
+  down(mg, px, py) { if (mg.phase !== 'idle') return; const i = clHit(mg, px, py); if (i >= 0) return MINI.clinic.open.call(this, mg, i);
+    // 点空白：瓷砖墙一声回响、一小撮灰落下
+    const sl = clSlot(); if (sl) sl.burst('dust', PXA.ax(px), Math.min(PXA.ay(py), 140), 5, { sp: 10, life: 1.2, w: 4 }); S.mini('clinic', 'hover', 5); },
   btns(mg) { if (mg.phase !== 'idle') return []; return [{ t: '收手', leave: 1, gold: mg.opened >= 3, sub: '已试 ' + mg.opened + ' / 3 · 点击药瓶试喝', fn: () => this.miniFinish(mg.got.length ? '你试了：' + mg.got.join('；') + '。' : '你一瓶都没敢碰。', mg.got.length ? '#8fe0ff' : '#8d8496') }]; },
-  tick(mg) {
-    if (mg.phase === 'omen') { const b = mg.bt[mg.cur]; omen(this, mg, mg.om, b.x, b.y - 10); if (mg.pt > mg.om.dur + 0.12) this.miniSet('uncork'); }
-    if (mg.phase === 'uncork') { const b = mg.bt[mg.cur], bad = b.q < 0, u0 = bad ? 0.15 : 0.3; b.open = cl(mg.pt / u0, 0, 1);
-      if (mg.pt > u0 && !b.done) { b.done = true; mg.from = { x: b.x, y: b.y }; S.mini('clinic', 'drink'); const tx = b.m.f(this, mg); mg.got.push(b.m.n + '：' + tx); this.miniSay(b.m.n + '：' + tx, b.m.c);
-        if (bad) { SHW.lose(this, mg); this.fx.spark(b.x, b.y - 40, b.m.c, 10, { v: 300 }); }
-        else { const tier = b.m.q === 3 ? Math.max(2, Math.min(4, b.q + 1)) : b.m.q === 2 ? 2 : 1, n = +(String(tx).match(/\d+/) || [0])[0]; this.fx.explode(b.x, b.y - 40, b.m.c, 0.8); SHW.win(this, mg, tier, { x: b.x, y: b.y - 60, col: SHW.QC(b.q), v: b.m.q <= 1 ? n : 0 }); mg.hold = HOLD[tier]; } }
-      if (mg.pt > u0 + (bad ? 0.25 : mg.hold || 0.6)) this.miniSet('idle'); } },
+  tick(mg, dt) {
+    const sl = clSlot();
+    // 悬停：瓶子被提起一点、朝鼠标歪，一声这个瓶子自己的玻璃音
+    const hv = mg.phase === 'idle' ? clHit(mg, mg.mx, mg.my) : -1; if (hv !== mg.hov) { if (hv >= 0) { S.mini('clinic', 'hover', hv); if (sl) sl.burst('glint', CLI.x[hv] - 4, CLI.y - 18, 1, { sp: 3, life: 0.4 }); } mg.hov = hv; }
+    mg.bt.forEach((b, i) => { const act = i === mg.cur && (mg.phase === 'omen' || mg.phase === 'uncork') && !b.done, tgt = act ? 14 : i === hv ? 4 : 0; b.lift += (tgt - b.lift) * Math.min(1, dt * (act ? 10 : 14));
+      b.dx = i === hv ? Math.sign(mg.mx - clX(i)) : 0; b.dy = 0;
+      const q = b.pressT == null ? 9 : (mg.t - b.pressT) / 0.3; b.sy = q < 0.25 ? 1 - 0.1 * q / 0.25 : q < 0.6 ? 0.9 + 0.22 * eo((q - 0.25) / 0.35) : q < 1 ? 1.12 - 0.12 * eo((q - 0.6) / 0.4) : 1; });
+    if (mg.phase === 'omen') { const b = mg.bt[mg.cur], q0 = mg.om.q; omen(this, mg, mg.om, clX(mg.cur), clY - 60);
+      const k = omK(mg, mg.om); b.glow = k; b.gc = SHW.QC(mg.om.q == null ? 0 : mg.om.q);
+      const sh = Math.round((rnd() - 0.5) * (1 + (mg.om.q || 0)) * k * 1.6); b.dx = sh; b.dy = Math.round((rnd() - 0.5) * k);
+      // 糊了血的瓶子：升格那一下血痂一片片裂开掉下来
+      if (b.dark) { const n = mg.om.path.length, stage = mg.om.i == null ? 0 : mg.om.i; b.crack = n > 1 ? stage / (n - 1) * 0.85 + 0.15 * k : 0.2 * k; if (sl && rnd() < 0.3 * k) sl.burst('blood', CLI.x[mg.cur] + (rnd() - 0.5) * 10, CLI.y - b.lift - 12, 1, { sp: 10, life: 0.5, floor: CLI.y }); }
+      if (mg.pt > mg.om.at + mg.om.dur + 0.12) { mg.holdT = mg.t; SHW.slowmo(mg, 0.04, 0.15); this.miniSet('uncork'); } }
+    if (mg.phase === 'uncork') { const b = mg.bt[mg.cur], bad = b.q < 0, u0 = bad ? 0.15 : 0.3, x0 = CLI.x[mg.cur], yb = CLI.y - b.lift;
+      if (!b.popped && mg.pt > 0.02) { b.popped = 1; S.mini('clinic', 'pop'); if (b.dark) { b.crack = 1; b.dark = false; } if (sl) sl.burst('vap_' + LIQS[b.liq], x0, yb - 30, 10, { sp: 18, ang: 0, spread: 1.4, life: 1.1 }); }
+      b.open = cl(mg.pt / u0, 0, 1);
+      if (mg.pt > u0 && !b.done) { b.done = true; mg.from = { x: clX(mg.cur), y: clY - 60 }; S.mini('clinic', 'drink'); const tx = b.m.f(this, mg); mg.got.push(b.m.n + '：' + tx); this.miniSay(b.m.n + '：' + tx, b.m.c);
+        if (bad) { SHW.lose(this, mg); b.sick = 1; mg.sickT = mg.t; S.mini('clinic', 'crack'); S.mini('clinic', 'fizz'); if (sl) { sl.burst('vap_screen', x0, yb - 20, 14, { sp: 22, life: 1.2 }); sl.burst('vap_arcane', x0, yb - 20, 10, { sp: 18, life: 1.2 }); sl.burst('shard', x0, yb - 12, 8, { sp: 40, life: 0.8, floor: CLI.y }); } this.fx.kick(3); }
+        else { const tier = b.m.q === 3 ? Math.max(2, Math.min(4, b.q + 1)) : b.m.q === 2 ? 2 : 1, n = +(String(tx).match(/\d+/) || [0])[0], col = SHW.QC(b.q);
+          if (tier >= 2) this.fx.flash('#ffffff', 0.3); if (sl) { sl.flash('all', 0.6 + tier * 0.35); sl.burst('glint', x0, yb - 16, 6 + tier * 4, { sp: 30 + tier * 10, life: 0.9 }); sl.burst(['heal', 'soul', 'glint', 'dust', 'glint', 'rune'][b.liq], x0, yb - 20, 8 + tier * 3, { sp: 16, ang: 0, spread: 1.2, life: 1.4 }); }
+          SHW.win(this, mg, tier, { x: clX(mg.cur), y: clY - 90, col, v: b.m.q <= 1 ? n : 0 }); mg.hold = HOLD[tier]; mg.after = { q: b.q, t: mg.t, x: x0 }; } }
+      if (b.done) { b.lvl = Math.max(0.1, (b.lvl == null ? 0.7 : b.lvl) - dt * 2); if (sl && !b.sick && rnd() < 0.4) sl.burst('bubble', x0 + (rnd() - 0.5) * 4, yb - 6, 1, { sp: 4, life: 0.6 }); }
+      if (mg.pt > u0 + (bad ? 0.25 : mg.hold || 0.6)) { this.miniSet('idle'); mg.cur = -1; } }
+    // 余韵：好药之后柜子里飘一会儿闪点，档位越高越多
+    if (mg.after && sl && mg.t - mg.after.t < 3 && rnd() < 0.05 + 0.08 * mg.after.q) sl.burst('glint', 80 + rnd() * 140, 50 + rnd() * 70, 1, { sp: 4, life: 0.8 });
+  },
   draw(x, mg) {
-    const t = mg.t; night(x, '#16202a', '#080c10'); K.R(x, SX + 180, SY + 150, SW - 360, 360, '#3a3028'); K.R(x, SX + 195, SY + 165, SW - 390, 330, '#1a1612'); K.R(x, SX + 195, SY + 405, SW - 390, 12, '#5a4838'); K.R(x, SX + 195, SY + 250, SW - 390, 10, '#5a4838');
-    for (let i = 0; i < 3; i++) K.pip(x, SX + 80, SY + 200 + i * 50, 24, i < 3 - mg.opened ? C.ice : null);
-    // legend：色块 + 一个词
-    MEDS.forEach((m, i) => { U.box(x, SX + SW - 160, SY + 160 + i * 44, 20, 20, m.c); U.text(x, m.d, SX + SW - 100, SY + 170 + i * 44, T.cap, C.silver, { align: 'left' }); });
-    mg.bt.forEach((b, i) => { const hov = mg.phase === 'idle' && !b.opened && Math.abs(mg.mx - b.x) < 55 && Math.abs(mg.my - b.y) < 90, lift = hov ? 14 : 0, col = b.dark && !b.done ? '#2a1a1a' : b.m.c;
-      // 揭晓前：瓶子被提起一点、抖、背后亮品质色
-      const cur = i === mg.cur && mg.phase === 'omen' && mg.om && mg.om.q != null, j = cur ? SHW.aura(x, b.x, b.y - 10, 90, mg.om.q, t, omK(mg, mg.om)) : { dx: 0, dy: 0 }, up = cur ? Math.round(12 * eo(cl(mg.pt / 0.2, 0, 1))) : 0;
-      x.save(); x.translate(b.x + j.dx, b.y + 70 - lift - up + j.dy); if (b.done) x.globalAlpha = 0.5;
-      K.RR(x, -34, -110, 68, 110, 14, 'rgba(200,230,255,0.25)', C.silver, 3); K.RR(x, -30, -70, 60, 66, 10, col); if (!b.dark || b.done) K.GL(x, 0, -40, 60, col, 0.3); K.R(x, -12, -130, 24, 22, C.brown); if (b.dark && !b.done) { K.R(x, -26, -64, 52, 30, C.wine); U.text(x, '?', 0, -50, T.item, C.cream); } K.R(x, -24, -100, 8, 60, 'rgba(255,255,255,0.35)');
-      if (b.open > 0 && !b.done) { K.R(x, -12, -130 - eo(b.open) * 60, 24, 22, C.brown); } x.restore(); });
+    PXA.draw(x, 'mini_clinic', 0, 0, mg.t, mg, 'mc_clinic');
+    // 图例：墙上病历表的六行字（小瓶子图标是画在纸上的）
+    const [cx0, cy0] = CLI.chart; MEDS.forEach((m, r) => U.text(x, m.d, PXA.lx(cx0 + 11), PXA.ly(cy0 + 11 + Math.round(r * 7.6)), 20, r === 4 ? C.red : '#3a2c28', { align: 'left', shadow: false }));
+    // 揭晓前卡帧：压暗 0.15 秒；毒药：舞台染一下病绿
+    if (mg.holdT != null && mg.t - mg.holdT < 0.15) { x.save(); x.globalAlpha = 0.55; K.R(x, SX, SY, SW, SH, C.ink); x.restore(); }
+    if (mg.sickT != null && mg.t - mg.sickT < 0.4) { x.save(); x.globalAlpha = 0.28 * (1 - (mg.t - mg.sickT) / 0.4); K.R(x, SX, SY, SW, SH, '#6fd46a'); x.restore(); }
   } };
+const LIQS = ['screen', 'water', 'gold', 'bone', 'red', 'arcane'];
 
 // ═════════════════════ 落地镜 · repeat the reflection's moves ═════════════════════
 const ARW = { up: '↑', down: '↓', left: '←', right: '→' }, MRX = CX + 200, MRY = SY + 380;

@@ -360,7 +360,7 @@ function bake(key) {
   const B = { key, D, sc, lights, LP, L: {} };
   LAYS.forEach(([k]) => {
     const Y = L[k], idx = []; for (let p = 0; p < N; p++) if (Y.m[p]) idx.push(p);
-    const n = idx.length, pi = new Int32Array(idx), xs = new Uint8Array(n), ys = new Uint8Array(n), base = new Uint16Array(n), len1 = new Uint8Array(n), s0 = new Float32Array(n), gl = new Int8Array(n), tw = new Float32Array(n), td = new Uint8Array(n), jx = new Int32Array(N).fill(-1);
+    const n = idx.length, pi = new Int32Array(idx), xs = new Uint16Array(n), ys = new Uint16Array(n), base = new Uint16Array(n), len1 = new Uint8Array(n), s0 = new Float32Array(n), gl = new Int8Array(n), tw = new Float32Array(n), td = new Uint8Array(n), jx = new Int32Array(N).fill(-1);
     for (let j = 0; j < n; j++) { const p = pi[j], R = MATS[Y.m[p]]; jx[p] = j; xs[j] = p % W; ys[j] = (p / W) | 0; base[j] = R.o; len1[j] = R.n - 1;
       const e = Y.e[p]; if (e) { s0[j] = Y.t[p]; gl[j] = e === 255 ? -1 : e; continue; }
       const nx = Y.nx[p] / 127, ny = Y.ny[p] / 127, nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny)), amb = sc.amb[0] + sc.amb[1] * Math.max(0, nx * KEY[0] + ny * KEY[1] + nz * KEY[2]);

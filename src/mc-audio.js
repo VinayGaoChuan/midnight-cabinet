@@ -874,12 +874,26 @@ const MINI = {
   eggs: { hammer: (t) => { ring(t, 1800 * [1, .92, 1.08][VARI], .4, .08, { parts: [[1, 1], [2.4, .5], [3.8, .3]] }); thud(t, 150, 70, .1, .2); nz(t, .03, 'bandpass', 2500, 1.2, .06); }, crack: (t) => { for (let i = 0; i < 5; i++) nz(t + i * .025, .02, 'highpass', 3000, .7, .08); S.shatter(); }, prize: (t) => { S.up(3); coins(t + .1, 10, .03); }, snake: (t) => { nz(t, .6, 'highpass', 4500, .6, .08, { a: .05 }); S.hitAt(0, 1.2); } },
   dice: { shake: (t) => { for (let i = 0; i < 10; i++) nz(t + i * .045 + rnd(0, .015), .02, 'bandpass', rnd(1800, 3000), 2, .07); }, roll: (t) => whoosh(t, .2, 900, 2400, .04), clack: (t) => { nz(t, .02, 'bandpass', 1900 * [1, .85, 1.15][VARI], 2.5, .07); thud(t, 230, 130, .03, .06); }, win: (t) => S.up(2), lose: (t) => sad(t), tie: (t) => tone(t, 'p25', hz(5), .1, .03, { crush: 1 }) },
   fate: { cost: (t) => { nz(t, .2, 'lowpass', 900, 1, .14); S.heart(); }, spin: (t) => grind(t, 1.8, .12), click: (t) => { nz(t, .015, 'bandpass', 2500 * [1, .92, 1.08][VARI], 3, .08); thud(t, 180, 110, .03, .05); }, stop: (t) => { thud(t, 120, 50, .3, .35); ring(t + .02, mtof(deg(0, -1)), 2.2, .08, { parts: [[1, 1], [2.01, .5], [2.76, .35], [5.4, .2]], rev: .6 }); } },
-  musician: { note: (t, i) => fiddle(t, deg(i | 0, 0), .45, .05), metro: (t) => nz(t, .015, 'bandpass', 2600, 5, .09), miss: (t) => { tone(t, 'sawtooth', 190, .25, .05, { to: 170, lp: 2500, vib: [23, 120, .01] }); nz(t, .2, 'bandpass', 3500, 3, .04); }, great: (t) => { fiddle(t, deg(7), .3, .05); fiddle(t + .3, deg(9), .3, .05); fiddle(t + .6, deg(12), .8, .06); cheer(t + .6, 1.2, .025); }, ok: (t) => { fiddle(t, deg(5), .3, .05); fiddle(t + .3, deg(7), .6, .05); }, poor: (t) => { fiddle(t, deg(4), .3, .04); fiddle(t + .3, deg(2), .6, .04); } },
+  // 乐师：结算时完成度往上滚，钢片琴沿 D 多利亚音阶一格格往上爬；跨线是钟琴 + 吉他扫弦；结尾用曲子里的小提琴收
+  musician: { note: (t, i) => fiddle(t, deg(i | 0, 0), .45, .05), metro: (t) => nz(t, .015, 'bandpass', 2600, 5, .09), miss: (t) => { tone(t, 'sawtooth', 190, .25, .05, { to: 170, lp: 2500, vib: [23, 120, .01] }); nz(t, .2, 'bandpass', 3500, 3, .04); },
+    pluck: (t) => IN.pizz(t, pick([74, 77, 79, 81, 84, 86]), .4, .5, { rev: .25 }),
+    tick: (t, i) => { const D = [62, 64, 65, 67, 69, 71, 72], k = i | 0; IN.celesta(t, D[k % 7] + 12 * Math.floor(k / 7), .3, .32); },
+    cross: (t, k) => { k = k | 0; IN.glock(t, [74, 77, 81][k], .8, .6 + k * .1); [[50, 57, 62, 65], [55, 59, 62, 67], [57, 62, 65, 69]][k].forEach((m, j) => IN.guitar(t + j * .012, m, .8, .45)); },
+    great: (t) => { [74, 77, 81, 86].forEach((m, i) => IN.violin(t + i * .12, m, i === 3 ? 1.4 : .14, .8)); IN.choirOo(t + .36, [62, 69, 74], 1.6, .4); IN.triangle(t + .36, .6); [50, 57, 62, 65].forEach((m, j) => IN.guitar(t + .36 + j * .012, m, 1.2, .5)); cheer(t + .4, 1.2, .02); },
+    ok: (t) => { IN.violin(t, 69, .2, .75); IN.violin(t + .22, 74, 1, .8); [50, 57, 62, 65].forEach((m, j) => IN.guitar(t + .22 + j * .012, m, 1, .45)); },
+    poor: (t) => { IN.violin(t, 74, .25, .6); IN.violin(t + .27, 72, .25, .55); IN.violin(t + .54, 69, .9, .5); },
+    snap: (t) => { nz(t, .02, 'highpass', 3000, .7, .12); tone(t, 'sawtooth', 660, .35, .05, { to: 90, lp: 3000 }); thud(t, 120, 60, .2, .1); IN.violin(t + .3, 62, .8, .35); } },
   granny: { stitch: (t, i) => { nz(t, .025, 'bandpass', 4200, 3, .07); tone(t + .02, 'sine', hz(5 + (i | 0), 1), .06, .025, { to: hz(6 + (i | 0), 1) }); }, miss: (t) => tone(t, 'triangle', 180, .15, .06, { to: 120 }), done: (t) => S.heal() },
   well: { charge: (t, x) => tone(t, 'p25', hz(Math.round((x || 0) * 10)), .04, .03, { crush: 1 }), toss: (t) => { ring(t, 3300, .1, .05, { parts: [[1, 1], [1.5, .5]] }); whoosh(t, .5, 1200, 3000, .04); }, splash: (t) => { nz(t, .2, 'bandpass', 1400, 1, .1, { to: 500, rev: .8 }); blip(t + .05, 700, .06, { rev: .9 }); blip(t + .5, 600, .03, { rev: .9 }); }, great: (t) => S.fanfare(), ok: (t) => arp(t, [deg(4), deg(7)], .15, (tt, m) => bell(tt, m, 1, .06, { rev: .9 })), miss: (t) => { ring(t, 2800, .15, .04); sad(t + .1); } },
   child: { step: (t, i) => { step(t, .05); bell(t + .02, deg(5 + (i | 0)), .5, .05, { rev: .6 }); }, wrong: (t) => { thud(t, 110, 60, .15, .15); sad(t + .05); }, lost: (t) => { nz(t, 1.5, 'bandpass', 500, 2, .06, { a: .5, src: 'brown' }); S.hitAt(0, 1); }, found: (t) => { [53, 57, 60, 64].forEach(m => ep(t, m, 1.4, .06)); bell(t + .3, deg(12), 1.2, .07); } },
   grave: { lid: (t) => { thud(t, 140, 60, .2, .3); nz(t, .08, 'bandpass', 900, 1.2, .16); tone(t + .05, 'sawtooth', 70, .5, .045, { lp: 700, vib: [23, 60, .02], a: .05 }); nz(t + .05, .45, 'bandpass', 380, 10, .08, { to: 650, a: .05 }); nz(t + .1, .6, 'lowpass', 1500, .7, .05, { a: .1 }); }, dig: (t) => { nz(t, .18, 'lowpass', 600, .7, .22); thud(t, 110, 60, .1, .15); }, candle: (t) => nz(t, .4, 'bandpass', 900, 1, .02, { a: .1 }), coffin: (t) => { thud(t, 150, 100, .15, .25); ring(t, 260, .4, .04); }, hand: (t) => { thud(t, 70, 30, .7, .45); tone(t, 'sawtooth', 700, .6, .04, { to: 1400, vib: [9, 80, .01], lp: 3000 }); }, out: (t) => tone(t, 'sine', 90, .6, .1, { to: 60 }), treasure: (t) => S.chest() },
-  clinic: { pick: (t) => ring(t, 2200 * V(.1), .25, .05, { parts: [[1, 1], [2.3, .4]] }), drink: (t) => { for (let i = 0; i < 4; i++) blip(t + i * .09, 350, .07); }, good: (t) => S.heal(), bad: (t) => { padc(t, [50, 51, 55], 1, .025, { lp: 600 }); tone(t, 'sawtooth', 220, .5, .04, { to: 160, vib: [7, 60, .05], lp: 1200 }); }, mult: (t) => S.mult() },
+  // 医务室：每个瓶子碰一下是自己的音高（D 小调五声），拔塞「啵」，咕嘟，玻璃裂；好药是颤音琴和弦，毒药是不协和低音
+  clinic: { pick: (t) => ring(t, 2200 * V(.1), .25, .05, { parts: [[1, 1], [2.3, .4]] }), drink: (t) => { for (let i = 0; i < 5; i++) { blip(t + i * .085, 260 + (i % 2) * 90, .06); nz(t + i * .085, .05, 'lowpass', 700, 2, .03); } }, good: (t) => S.heal(), bad: (t) => { padc(t, [50, 51, 55], 1, .025, { lp: 600 }); tone(t, 'sawtooth', 220, .5, .04, { to: 160, vib: [7, 60, .05], lp: 1200 }); }, mult: (t) => S.mult(),
+    hover: (t, i) => { const m = [74, 77, 79, 81, 84, 86][(i | 0) % 6]; ring(t, mtof(m) * 2, .35, .03, { parts: [[1, 1], [2.76, .35], [5.4, .12]], rev: .4 }); },
+    pop: (t) => { nz(t, .015, 'highpass', 3000, .7, .12); tone(t, 'sine', 900, .09, .09, { to: 260 }); tone(t + .01, 'triangle', 1800, .04, .03, { to: 700 }); },
+    crack: (t) => { nz(t, .06, 'highpass', 4000, .6, .1); ring(t, 3100 * V(.05), .3, .04, { parts: [[1, 1], [1.37, .6], [2.1, .3]] }); ring(t + .03, 4400 * V(.05), .2, .025, { parts: [[1, 1], [1.5, .4]] }); },
+    fizz: (t) => { for (let i = 0; i < 9; i++) blip(t + i * .045 + rnd(0, .02), rnd(900, 1600), .018); nz(t, .5, 'bandpass', 2500, 2, .025, { a: .05 }); },
+    omen: (t, q) => { const k = q | 0; IN.vibes(t, 62 + [0, 3, 7, 10][k] + 12, .9, .5 + k * .1); if (k >= 2) IN.vibes(t + .09, 69 + [0, 3, 7, 10][k], .9, .4); } },
   mirror: { tone: (t, i) => { const m = [deg(0), deg(2), deg(4), deg(7)][(i | 0) % 4] + 12; ring(t, mtof(m), .6, .06, { parts: [[1, 1], [2.01, .3], [3, .15]], rev: .5 }); }, wrong: (t) => S.shatter(), pass: (t) => S.up(2) },
   altar: { pour: (t, x) => { const k = x || 0; blip(t, 400 + 700 * k, .06); nz(t, .1, 'lowpass', 900, 1, .05); }, flicker: (t) => nz(t, .3, 'bandpass', 800, 1, .03, { a: .1 }), out: (t) => { nz(t, .4, 'highpass', 3000, .5, .08, { to: 6000 }); tone(t, 'sine', 120, .8, .12, { to: 70 }); padc(t + .1, [50, 51, 56], 1.2, .02, { lp: 600 }); }, win: (t) => S.mult() },
   peddler: { shuffle: (t) => { for (let i = 0; i < 6; i++) nz(t + i * .09, .07, 'bandpass', 900 * V(.2), 1.5, .06, { pan: i % 2 ? .4 : -.4 }); }, lift: (t) => { nz(t, .05, 'bandpass', 1100, 1.5, .08); bell(t + .05, deg(7), .5, .06); }, win: (t) => win(t, 1), lose: (t) => S.lose() },
@@ -1583,6 +1597,99 @@ const BATM = (() => {
   };
 })();
 
+// ═════════ 流浪乐师的曲子（G011 合奏）═════════
+// D 多利亚调式，132 拍 / 分，4/4 拍：预备 1 小节 + 旋律 8 小节（问句 4 + 答句 4，26 个音）+ 收尾 1 小节，约 18 秒。
+// 和弦 Dm | G | F | G Am | Dm | F | G | Dm；第 7 小节 G 大三和弦 + 旋律里的 B 是多利亚的 IV → i 收束。
+// 所有声音按音频时钟排在同一条节拍网格上：旋律音提前排好，没按之前是很轻的「影子旋律」，按中那一刻推到全音量
+// （所以你的琴声永远落在拍上），漏掉就掐断 + 一声擦弦。伴奏按连击一层层加进来（低音 → 吉他 → 铃鼓沙锤 → 曼陀林 → 哼唱）。
+IN.violin = (t, m, dur, v, o) => {
+  const ac = AC(), f = mtof(m), end = t + dur + .6, g = ac.createGain(); v = v == null ? .7 : v;
+  adsr(g, t, .035, .085 * v, .3, .82, dur, .14);
+  const b1 = bqf('peaking', 290, 1.4, 5), b2 = bqf('peaking', 1150, 1.6, 3.5), b3 = bqf('peaking', 2900, 1.8, 4.5), hp = bqf('highpass', 190, .7), lp = bqf('lowpass', 4200 + 1400 * v, .6);
+  [-4, 4].forEach(d => osc('sawtooth', f, t, end, { det: d + rnd(-1, 1), vib: [5.7, 13, .28] }).connect(b1));
+  wire(b1, [b2, b3, hp, lp, g]);
+  const bn = noiseSrc(t, t + dur + .05), bb = bqf('bandpass', 2600, 1.3), bg = ac.createGain(); bg.gain.setValueAtTime(0, t); bg.gain.linearRampToValueAtTime(.05 * v, t + .015); bg.gain.setTargetAtTime(.007 * v, t + .03, .04); bg.gain.setTargetAtTime(0, t + dur, .05); bn.connect(bb); bb.connect(bg); bg.connect(g);
+  P.out(g, O(o, .3), t, end);
+};
+const SONG = S.song = (() => {
+  const BPM = 132, B = 60 / BPM, S8 = B / 2;
+  const N = { D4: 62, E4: 64, F4: 65, G4: 67, A4: 69, B4: 71, C5: 72, D5: 74, E5: 76, F5: 77 };
+  // [拍（从旋律开始算）, 音, 时值拍]
+  const MEL = [[0, 'A4', 1], [1, 'D5', 1.5], [2.5, 'C5', .5], [3, 'A4', 1], [4, 'G4', 1], [5, 'F4', 1], [6, 'D4', 2], [8, 'F4', 1], [9, 'G4', 1], [10, 'A4', 1], [11, 'C5', 1], [12, 'D5', 2], [14, 'A4', 2],
+    [16, 'A4', 1], [17, 'D5', 1.5], [18.5, 'C5', .5], [19, 'A4', 1], [20, 'C5', 1], [21, 'D5', .5], [21.5, 'E5', .5], [22, 'F5', 2], [24, 'E5', 1], [25, 'D5', 1], [26, 'B4', 1], [27, 'A4', 1], [28, 'D5', 4]];
+  const CH = { Dm: [38, 45, [50, 57, 62, 65]], G: [43, 50, [50, 55, 59, 62]], F: [41, 48, [48, 53, 57, 60]], Am: [45, 52, [52, 57, 60, 64]] };
+  // 每小节两个半小节的和弦（第 -1 小节是预备）
+  const BARS = [['Dm', 'Dm'], ['G', 'G'], ['F', 'F'], ['G', 'Am'], ['Dm', 'Dm'], ['F', 'F'], ['G', 'G'], ['Dm', 'Dm'], ['Dm', 'Dm']];
+  const lane = (m) => (m <= N.G4 ? 0 : m <= N.C5 ? 1 : 2);
+  const NOTES = MEL.map(([b, n, len], i) => ({ i, beat: b, m: N[n], len, l: lane(N[n]) }));
+  let on = false, t0 = 0, bus = null, lead = null, acc = null, hushed = null, step = 0, nextT = 0, layers = 0, st = [], iv = null, endBeat = 36;
+  const ch = () => { P.setCh('mini'); return P.chNow(); };
+  const beatT = (b) => t0 + (b + 4) * B;      // 旋律第 b 拍的音频时间（前面是 4 拍预备）
+  function strum(t, ms, v, o) { ms.forEach((m, k) => IN.guitar(t + k * .013, m, .8, v * (1 - k * .06), o)); }
+  function schedLead(n) { const ac = A(), g = ac.createGain(), s = st[n.i]; g.gain.value = s.hit ? 1 : .26; g.connect(lead); s.g = g; IN.violin(beatT(n.beat), n.m, n.len * B * .96, .78, { dest: g, rev: 0 }); s.sched = 1; }
+  function doStep(t, k) {
+    // k：从预备开始的八分音符序号；预备小节 k 0–7，旋律从 k 8 开始
+    const bar = Math.floor(k / 8) - 1, s8 = k % 8, bs = BARS[Math.max(0, Math.min(BARS.length - 1, bar))], c = CH[bs[s8 < 4 ? 0 : 1]], dry = { dest: acc, rev: 0 }, wet = { dest: acc, rev: .12 };
+    if (bar < 0) {   // 预备：第一拍乐师扫一下 Dm，木鱼四声一声比一声高
+      if (s8 === 0) strum(t, CH.Dm[2], .55, wet);
+      if (s8 % 2 === 0) IN.woodblock(t, 79 + s8, .55 + s8 * .05, dry);
+      return;
+    }
+    if (bar >= 9) return;
+    const coda = bar === 8;
+    if (coda) { if (s8 === 0) { strum(t, CH.Dm[2], .7, wet); IN.pizz(t, CH.Dm[0], 2, .7, dry); if (layers >= 2) IN.tamb(t, .5, dry); if (layers >= 4) IN.choirOo(t, [62, 65, 69], B * 3.5, .35, wet); } return; }
+    // L0 低音拨弦（根音、五音）+ 乐师跺脚
+    if (s8 === 0 || s8 === 4) { IN.pizz(t, s8 === 0 ? c[0] : c[1], B * 1.5, .62, dry); IN.bassDrum(t, .32, { dest: acc, rev: 0 }); }
+    // L1 吉他在 2、4 拍扫弦
+    if (layers >= 1 && (s8 === 2 || s8 === 6)) strum(t, c[2], .42, wet);
+    // L2 铃鼓（2、4 拍）+ 反拍沙锤
+    if (layers >= 2) { if (s8 === 2 || s8 === 6) IN.tamb(t, .34, dry); if (s8 % 2 === 1) nz(t, .03, 'highpass', 7000, .7, .02, { dest: acc }); }
+    // L3 曼陀林八分音符琶音
+    if (layers >= 3) { const ord = [0, 1, 2, 3, 2, 1, 2, 3][s8]; IN.pizz(t, c[2][ord] + 12, S8 * 1.2, .28, { dest: acc, rev: .1 }); }
+    // L4 听众哼唱：每半小节一个和弦
+    if (layers >= 4 && (s8 === 0 || s8 === 4) && (s8 === 0 || bs[0] !== bs[1])) IN.choirOo(t, c[2].slice(1).map(m => m + 12), B * (bs[0] === bs[1] ? 3.8 : 1.9), .2, wet);
+  }
+  function pump() {
+    if (!on || !A()) return; const c0 = P.chNow(); ch();
+    try {
+      const now = A().currentTime;
+      while (nextT < now + .3) { doStep(nextT, step); step++; nextT = t0 + step * S8; }
+      NOTES.forEach(n => { const s = st[n.i]; if (!s.sched && beatT(n.beat) < now + .35) schedLead(n); });
+      if (step > (endBeat + 4) * 2 + 8 && now > beatT(endBeat) + 2) SONG.stop();
+    } finally { P.setCh(c0); }
+  }
+  function scratch(t, k) { const o = { dest: bus }; nz(t, .16, 'bandpass', 1900, 2.2, .06 * k, Object.assign({ to: 900 }, o)); tone(t, 'sawtooth', 185, .16, .035 * k, Object.assign({ to: 150, lp: 1800 }, o)); tone(t + .01, 'sawtooth', 950, .06, .012 * k, Object.assign({ to: 1250, lp: 3000 }, o)); }
+  return {
+    BPM, B, NOTES, BARS,
+    // 开始：返回谱面（每个音的时间都是相对 t0 的秒数，玩家听到 t0 时 songTime = 0）
+    begin() {
+      const ac = A(); if (!ac) return null; SONG.stop(true); const c0 = P.chNow(), c = ch();
+      t0 = ac.currentTime + .2; bus = ac.createGain(); bus.gain.value = 1; bus.connect(c.in);
+      lead = ac.createGain(); lead.gain.value = 1; lead.connect(bus); const rv = ac.createGain(); rv.gain.value = .22; lead.connect(rv); rv.connect(c.rv);
+      acc = ac.createGain(); acc.gain.value = .9; acc.connect(bus); P.setCh(c0);
+      // 地图配乐让出来：合奏时停下，曲子结束再淡回来
+      hushed = MAPM.on ? MAPM.world : null; if (hushed) MAPM.stop();
+      st = NOTES.map(() => ({ hit: 0, g: null, sched: 0 })); step = 0; nextT = t0; layers = 0; on = true;
+      if (!iv && typeof setInterval !== 'undefined') iv = setInterval(pump, 25); pump();
+      return { t0, B, count: 4 * B, notes: NOTES.map(n => ({ i: n.i, t: (n.beat + 4) * B, l: n.l, m: n.m, len: n.len * B })), end: (endBeat + 4) * B };
+    },
+    // 玩家现在听到的是第几秒（getOutputTimestamp 换算输出延迟）；ts：事件的 performance 时间戳，不给就是现在
+    heard(ts) { const ac = A(); if (!ac || !on) return null; let ct = ac.currentTime, pt = performance.now(); try { const o = ac.getOutputTimestamp && ac.getOutputTimestamp(); if (o && o.performanceTime) { ct = o.contextTime; pt = o.performanceTime; } else ct -= (ac.outputLatency || 0) + (ac.baseLatency || 0); } catch (e) {}
+      return ct + ((ts == null ? performance.now() : ts) - pt) / 1000 - t0; },
+    get on() { return on; },
+    layers(n) { layers = n; },
+    // 打中：把这个音推到全音量；PERFECT 在网格上加一声高八度的钢片琴
+    hit(i, perfect) { const s = st[i]; if (!s) return; s.hit = 1; const ac = A(), n = NOTES[i], at = Math.max(ac.currentTime, beatT(n.beat)); if (s.g) { s.g.gain.cancelScheduledValues(ac.currentTime); s.g.gain.setTargetAtTime(1, ac.currentTime, .008); }
+      if (perfect) { const c0 = P.chNow(); ch(); IN.celesta(at, n.m + 12, .5, .55, { dest: bus, rev: .3 }); P.setCh(c0); } },
+    // 漏掉：影子旋律掐断 + 一声擦弦
+    miss(i) { const s = st[i]; if (!s) return; s.miss = 1; const ac = A(); if (s.g) { s.g.gain.cancelScheduledValues(ac.currentTime); s.g.gain.setTargetAtTime(0, ac.currentTime, .02); } scratch(ac.currentTime + .005, 1); },
+    // 空按：不带音高的擦弦，立即响
+    stray() { const ac = A(); if (ac && on) scratch(ac.currentTime + .005, .7); },
+    stop(quick) { if (!A()) return; const t = A().currentTime; if (bus) { const b = bus; b.gain.cancelScheduledValues(t); b.gain.setValueAtTime(b.gain.value, t); b.gain.setTargetAtTime(0, t, quick ? .05 : .5); setTimeout(() => { try { b.disconnect(); } catch (e) {} }, 5000); }
+      if (hushed && !MAPM.on && S.musicDir.scene === 'map') MAPM.start(hushed); hushed = null;
+      on = false; bus = null; },
+  };
+})();
 const DIRM = S.musicDir = { scene: null, lv: 0 };
 function sceneOf(g) { const s2 = g && g.screen; if (!s2 || s2 === 'intro' || s2 === 'menu' || s2 === 'room') return 'room'; if (s2 === 'base') return 'base'; if (s2 === 'raid') return 'raid'; if (s2 === 'world' || s2 === 'shop') return 'map'; if (s2 === 'battle') return 'battle'; if (s2 === 'over') return 'none'; return 'bed'; }
 function baseLevel(m) { const MC = root.MC; if (!m || !MC) return 0; if (MC.NIGHTLY) return 1; /* every night is a raid (mc-night.js): the day keeps one steady unease */ const E = MC.RAID_EVERY || 5; if (m.day % E === 0 && m.lastRaid !== m.day && (m.heroes || []).length) return 4; const left = E - (m.day % E); return left >= 4 ? 0 : left === 3 ? 1 : left === 2 ? 2 : 3; }

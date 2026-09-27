@@ -55,6 +55,7 @@ mc-game-l.js
 mc-mini-a.js
 mc-show.js
 mc-mini-b.js
+mc-mini-c-px.js
 mc-mini-c.js
 mc-mini-d.js
 mc-game-m.js
