@@ -29,6 +29,27 @@ K.SP = (x, key, a, b, h, flip) => { const c = M.spriteCanvas(key, 6); if (!c || 
 K.bulbs = (x, a, b, w, h, t, col, n) => { n = n || 24; const L = K.lampFx; if (L) { t *= L.sp || 1; if (L.col) col = L.col; } const strobe = L && L.strobe ? Math.floor(t * 3) % 2 : -1; for (let i = 0; i < n; i++) { const p = i / n, per = 2 * (w + h), d = p * per; let px, py; if (d < w) { px = a + d; py = b; } else if (d < w + h) { px = a + w; py = b + d - w; } else if (d < 2 * w + h) { px = a + w - (d - w - h); py = b + h; } else { px = a; py = b + h - (d - 2 * w - h); } const on = strobe >= 0 ? (i + strobe) % 2 === 0 : (Math.floor(t * 6) + i) % 3 === 0; K.R(x, px - 6, py - 6, 12, 12, '#07060f'); K.R(x, px - 3, py - 3, 6, 6, on ? (L && L.strobe ? col : '#fff3b0') : L && L.strobe ? '#07060f' : col); } };
 K.shade = (c, k) => M.shade(c, k);
 K.ease = { eo, eio, eb };
+// ───────── pixel stages (2026-09-27)：所有小游戏同一个像素格——1 美术格 = 4 逻辑像素，舞台 300×175 格，和像素角色一样大 ─────────
+// 舞台和道具用 M.PXR.def 画（材质色阶、每帧打光、4 个深度层，以后 HD-2D 直接升维），用 K.pxr 按 4 倍贴上舞台；
+// 美术格 (ax, ay) 对应逻辑坐标 (SX + 4ax, SY + 4ay)。人物用 M.PCDG.bodyFrame（默认也是 4 倍）。
+K.ART = 4; K.AW = SW / 4; K.AH = SH / 4;
+K.snap = (v) => Math.round(v / 4) * 4;
+K.ax = (lx) => (lx - SX) / 4; K.ay = (ly) => (ly - SY) / 4; K.lx = (ax) => SX + ax * 4; K.ly = (ay) => SY + ay * 4;
+const TOUCH = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0 && typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
+K.pxrEvery = TOUCH ? 2 : 1;   // phones re-light the stage every other frame
+// draw PXR def `key` with its top-left at art cell (ax, ay) of the stage; t = the minigame's clock (mg.t), o = the def's anim options,
+// id = which instance (one slot per id). A new minigame run starts the slot fresh and its lights come on one by one.
+K.pxr = function (x, key, ax, ay, t, o, id) {
+  const X = M.PXR; if (!X || !X.has(key)) return null;
+  const sid = '_mg:' + (id || key), g = M._g, mg = (g && g.mini) || null; let s = X.slots[sid];
+  if (s && s._mg !== mg) { delete X.slots[sid]; s = null; }
+  const fresh = !s;
+  if (fresh || !(K.pxrEvery > 1 && (s._n = (s._n || 0) + 1) % K.pxrEvery)) { X.pixels(key, t, o || {}, sid); s = X.slots[sid]; if (fresh) { s._mg = mg; if (!(o && o.noBoot)) X.poke(sid, 'built'); } if (s.cx) s.cx.putImageData(s.img, 0, 0); }
+  if (s.cv) { const sm = x.imageSmoothingEnabled; x.imageSmoothingEnabled = false; x.drawImage(s.cv, SX + ax * 4, SY + ay * 4, s.cv.width * 4, s.cv.height * 4); x.imageSmoothingEnabled = sm; }
+  return s;
+};
+// kick one of a stage's lights (index as declared with sc.light) for a moment: a flash, a win glow
+K.pxrFlash = (id, i, a) => { const s = M.PXR && M.PXR.slots['_mg:' + id]; if (s) s.flash(i, a); };
 // ───────── lifecycle ─────────
 G.miniStart = function (kind, o) {
   const D = MINI[kind]; if (!D) return false; const run = this.run;
@@ -51,35 +72,67 @@ G.giveExp = function (v, from) { const run = this.run; this.hold('rexp', run.loo
 G.giveShards = function (v, from) { const run = this.run; run.loot.shards = run.loot.shards || 0; this.hold('rshard', run.loot.shards); run.loot.shards += v; this.fly('shard', from || { x: 960, y: 500 }, 'rshard', '#d8a0ff', () => this.release('rshard')); return '灵魂碎片 +' + v; };
 G.buffRun = function (k, v, label, col) { const run = this.run; if (k === 'unitAtk' || k === 'heroAtk' || k === 'mult') run.runBuff[k] = (run.runBuff[k] || 0) + v; else run.mods[k] = (run.mods[k] || 0) + v; this.fx.pop(960, 420, label, col || '#ffcc33', 54); S.mini('_', 'buff'); return label; };
 // ───────── frame: dim, stage, title plate, flavour text, message banner ─────────
+// 入场分层：压暗 → 机箱从上落下弹一下（0.38 秒）→ 招牌砸下（0.36 秒起）→ 舞台里的灯一盏盏亮（像素舞台的 boot）
+const dropY = (mg) => (M.PJ && M.PJ.reduced ? 0 : -K.snap(90 * (1 - eb(mg.t / 0.38))));
 function frameBegin(x, mg) {
-  const a = cl(mg.t / 0.25, 0, 1), q = eb(mg.t / 0.4), D = mg.D;
+  const a = cl(mg.t / 0.25, 0, 1), D = mg.D, sh = mg.sh || {};
   x.save(); x.globalAlpha = a * 0.84; K.R(x, 0, 0, 1920, 1080, '#07060f'); x.restore();
-  x.save(); x.globalAlpha = a; const sc = 0.86 + 0.14 * q; x.translate(CX, SY + SH / 2); x.scale(sc, sc); x.translate(-CX, -(SY + SH / 2));
+  x.save(); x.globalAlpha = cl(mg.t / 0.12, 0, 1); x.translate(sh.sx || 0, dropY(mg) + (sh.sy || 0));
   x.fillStyle = D.bg ? D.bg(x) : K.LG(x, 0, SY, 0, SY + SH, [[0, '#1a1640'], [1, '#0d0b1e']]); x.fillRect(SX, SY, SW, SH);
   x.save(); x.beginPath(); x.rect(SX, SY, SW, SH); x.clip();
 }
-// 机箱框（清晰层）：墨框 + 本玩法的颜色内圈 + 斜面 + 右下硬投影 + 铆钉；标题是压在上沿的招牌灯箱
+// 机箱框：像素铁皮（4 倍格）——斜面、本玩法颜色的enamel 边、四角包铁和铆钉、一圈跑马灯泡、右下硬投影；标题是压在上沿的招牌灯箱
+const BZ = 6, BW = SW / 4 + BZ * 2, BH = SH / 4 + BZ * 2;   // bezel ring (art px) round the 300×175 stage
+const BZ_R = ['sand', 'red', 'pink', 'candy', 'ice', 'teal', 'gold', 'arcane', 'leaf', 'brass', 'copper', 'crimson', 'tile', 'fire', 'lav', 'bone', 'magic'];
+const nearRamp = (col, list) => { const X = M.PXR, h = (c) => { const n = parseInt(String(c).slice(1, 7), 16); return [n >> 16, (n >> 8) & 255, n & 255]; }, a = h(pc(col)); let best = list[0], bd = 1e9;
+  list.forEach(r => { const R = X.RAMPS[r]; if (!R) return; const b = h(R[Math.min(R.length - 1, 7)]), d = (a[0] - b[0]) ** 2 * 0.3 + (a[1] - b[1]) ** 2 * 0.59 + (a[2] - b[2]) ** 2 * 0.11; if (d < bd) { bd = d; best = r; } }); return best; };
+function bezelDef(ramp) {
+  const X = M.PXR, key = '_mg_bezel_' + ramp; if (!X || X.has(key)) return key;
+  X.def(key, { size: [BW, BH], fy: BH, clear: 1, noFrame: 1, noFloor: 1, amb: [0.52, 0.34],
+    paint(S, sc) {
+      const TX = X.TX; S.lay('back'); const ring = (x, y) => x < BZ || y < BZ || x >= BW - BZ || y >= BH - BZ;
+      for (let y = 0; y < BH; y++) for (let x = 0; x < BW; x++) { if (!ring(x, y)) continue; const edge = x === 0 || y === 0 || x === BW - 1 || y === BH - 1, inner = !ring(x - 1, y) || !ring(x + 1, y) || !ring(x, y - 1) || !ring(x, y + 1);
+        let tn = 4.2 + ((x * 7 + y * 3) % 5 === 0 ? -0.6 : 0) + (x + y) % 9 * 0.04, n = [0, 0];
+        if (edge) { S.px(x, y, 'ink', 0); continue; }
+        if (y === 1 || x === 1) { tn = 7.5; n = [-0.6, -0.6]; } else if (y === BH - 2 || x === BW - 2) { tn = 2.4; n = [0.6, 0.6]; }
+        if (inner) { S.px(x, y, ramp, 7.5, { n: [0, -0.5] }); continue; }
+        const nearIn = !ring(x - 2, y) || !ring(x + 2, y) || !ring(x, y - 2) || !ring(x, y + 2); if (nearIn) { S.px(x, y, ramp, 4.5); continue; }
+        S.px(x, y, 'iron', tn, { n }); }
+      // corner plates with rivets
+      [[0, 0], [BW - 12, 0], [0, BH - 12], [BW - 12, BH - 12]].forEach(([x, y]) => { S.beg(); S.box(x + 1, y + 1, 11, 11, 'iron', 6, { bev: 1 }); for (let yy = y + 1; yy < y + 12; yy++) for (let xx = x + 1; xx < x + 12; xx++) if (!ring(xx, yy)) S.px(xx, yy, 'iron', 6); S.end({ none: 1 }); TX.rivet(S, x + 3, y + 3, 'iron', 7); TX.rivet(S, x + 8, y + 8, 'iron', 7); });
+      sc.light({ x: BW / 2, y: -40, z: 60, r: 400, i: 0.35, c: '#fff0d0', tint: 0.2 });
+    },
+    anim(D, t, rs, o) {
+      // chase bulbs along the middle of the ring: dark glass when off, the lamp colour (a glowing pixel with a hot core) when on
+      const L = o.L, per = 2 * (BW - 26 + BH - 26), n = Math.round(per / 11), sp = (L && L.sp) || 1, strobe = L && L.strobe ? Math.floor(t * 3) % 2 : -1, m = o.lamp || 'lamp';
+      for (let i = 0; i < n; i++) { let d = i / n * per, x, y; if (d < BW - 26) { x = 13 + d; y = 2; } else if ((d -= BW - 26) < BH - 26) { x = BW - 4; y = 13 + d; } else if ((d -= BH - 26) < BW - 26) { x = BW - 13 - d; y = BH - 4; } else { d -= BW - 26; x = 2; y = BH - 13 - d; }
+        x = Math.round(x); y = Math.round(y); const on = strobe >= 0 ? (i + strobe) % 2 === 0 : (Math.floor(t * 6 * sp) + i) % 3 === 0;
+        D.rect(x, y, 2, 2, on ? m : 'iron', on ? 10 : 2.5, { e: on ? 255 : 0 }); D.px(x, y, on ? m : 'iron', on ? 11 : 4, { e: on ? 255 : 0 }); }
+    } });
+  return key;
+}
 function frameDeco(x, mg) {
-  const a = cl(mg.t / 0.25, 0, 1), q = eb(mg.t / 0.4), sc = 0.86 + 0.14 * q; x.save(); x.globalAlpha = a; x.translate(CX, SY + SH / 2); x.scale(sc, sc); x.translate(-CX, -(SY + SH / 2));
-  const col = pc(mg.col), ink = '#07060f';
-  K.R(x, SX + SW + 9, SY + 6, 12, SH + 15, ink); K.R(x, SX + 6, SY + SH + 9, SW + 15, 12, ink);
-  K.R(x, SX - 9, SY - 9, SW + 18, 6, ink); K.R(x, SX - 9, SY + SH + 3, SW + 18, 6, ink); K.R(x, SX - 9, SY - 3, 6, SH + 6, ink); K.R(x, SX + SW + 3, SY - 3, 6, SH + 6, ink);
-  K.R(x, SX - 3, SY - 3, SW + 6, 3, col); K.R(x, SX - 3, SY + SH, SW + 6, 3, col); K.R(x, SX - 3, SY, 3, SH, col); K.R(x, SX + SW, SY, 3, SH, col);
-  K.R(x, SX, SY, SW, 3, '#3d3a8c'); K.R(x, SX, SY, 3, SH, '#3d3a8c'); K.R(x, SX, SY + SH - 6, SW, 6, '#0d0b1e'); K.R(x, SX + SW - 3, SY, 3, SH, '#0d0b1e');
-  if (U) { U.rivet(x, SX + 12, SY + SH - 27); U.rivet(x, SX + SW - 24, SY + SH - 27); U.rivet(x, SX + 12, SY + 12); U.rivet(x, SX + SW - 24, SY + 12); }
-  if (U) U.marquee(x, mg.title, CX, SY - 6, { size: 52, t: mg.t, minW: 380 }); else K.PT(x, mg.title, CX, SY, 46, col);
-  if (mg.text) K.TX(x, mg.text, CX, SY + 74, 26, '#a9a3c9');
+  const a = cl(mg.t / 0.12, 0, 1), sh = mg.sh || {}; x.save(); x.globalAlpha = a; x.translate(sh.sx || 0, dropY(mg) + (sh.sy || 0));
+  const ink = '#07060f', X = M.PXR;
+  K.R(x, SX + SW + 24, SY - 12, 12, SH + 48, ink); K.R(x, SX - 12, SY + SH + 24, SW + 48, 12, ink);   // hard shadow, right and below
+  if (X) { const L = K.lampFx, key = bezelDef(mg.bzR || (mg.bzR = nearRamp(mg.col, BZ_R))), lamp = L && L.col ? nearRamp(L.col, ['lamp', 'red', 'pink', 'teal', 'gold', 'arcane', 'leaf', 'ice', 'fire', 'candy']) : 'lamp';
+    const s = X.pixels(key, mg.t, { L, lamp }, '_mg:bezel') && X.slots['_mg:bezel']; if (s && s.cx) { s.cx.putImageData(s.img, 0, 0); x.imageSmoothingEnabled = false; x.drawImage(s.cv, SX - BZ * 4, SY - BZ * 4, BW * 4, BH * 4); } }
+  // the title sign slams down onto the top edge
+  const mt = mg.t - 0.24; if (mt > 0 && U) { const q = cl(mt / 0.14, 0, 1), k = q < 1 ? 1.9 - 0.9 * eb(q) : 1; x.save(); x.translate(CX, SY - 6); x.scale(k, k); x.translate(-CX, -(SY - 6)); U.marquee(x, mg.title, CX, SY - 6, { size: 52, t: mg.t, minW: 380 }); x.restore(); }
+  // the rule line sits on a dark strip so it reads over a detailed stage
+  if (mg.text && U) { const w = K.snap(U.measure(x, mg.text, 26) + 48); x.save(); x.globalAlpha *= 0.75; K.R(x, CX - w / 2, SY + 54, w, 40, '#0d0b1e'); x.restore(); K.R(x, CX - w / 2, SY + 94, w, 4, ink); K.TX(x, mg.text, CX, SY + 74, 26, '#a9a3c9'); }
   // 提示条：小面板，顶边一道本条颜色
   const m = mg.msg; if (m) { const q = cl(m.t / 0.25, 0, 1), fade = cl((m.big ? 3 : 2.2) - m.t, 0, 1), y = SY + SH - 64; if (fade > 0 && U) { x.globalAlpha = fade; const size = m.big ? 44 : 32, w = (U.measure(x, m.text, size) + 72) * eb(q), h = size + 30; U.box(x, CX - w / 2, y - h / 2, w, h, '#1a1640'); K.R(x, CX - w / 2, y - h / 2, w, 6, m.col); K.R(x, CX - w / 2, y + h / 2 - 6, w, 6, '#0d0b1e'); if (q > 0.7) U.text(x, m.text, CX, y + 2, size, m.col, { outline: m.big }); x.globalAlpha = 1; } }
   x.restore();
 }
-// the stage is painted at art resolution (pixel look, like the rest of the game); frame, title and text stay crisp on top
+// the stage is painted at art resolution (pixel look, like the rest of the game); frame, title and text stay crisp on top.
+// SHOW 的镜头：聚光 / 逐拍 / 揭晓的推镜头只推舞台内容；震屏整台机箱一起动（按 4 像素格取整）
 M.drawMini = function (ctx, g) {
   const mg = g.mini; if (!mg || g.reel) return;
   const L = M.pixelMode ? M.pxLayer('mini', 1920, 1080) : null, x = L ? L.getContext('2d') : ctx;
   if (L) { x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = 1; x.globalCompositeOperation = 'source-over'; x.clearRect(0, 0, 1920, 1080); }
   frameBegin(x, mg); const SW_ = M.SHOW, pz = SW_ && SW_.push(mg);
-  x.save(); if (pz) { x.translate(pz.x, pz.y); x.scale(pz.k, pz.k); x.translate(-pz.x, -pz.y); }   // 听牌时镜头往聚光点推
+  x.save(); if (pz && pz.k !== 1) { x.translate(pz.x, pz.y); x.scale(pz.k, pz.k); x.translate(-pz.x, -pz.y); }
   try { mg.D.draw.call(g, x, mg); } catch (e) { (window.__mcErrs = window.__mcErrs || []).push('mini ' + mg.kind + ': ' + e.message); } x.restore();
   try { SW_ && SW_.draw(x, mg); } catch (e) { (window.__mcErrs = window.__mcErrs || []).push('show ' + mg.kind + ': ' + e.message); }
   x.restore(); x.restore();
@@ -90,6 +143,8 @@ M.drawMini = function (ctx, g) {
 const padHeld = () => { try { const P = M.settings.pad, gp = [...(navigator.getGamepads ? navigator.getGamepads() : [])].find(Boolean); return !!(gp && P && gp.buttons[P.confirm] && gp.buttons[P.confirm].pressed); } catch (e) { return false; } };
 G.miniPt = function (cx, cy) { const st = this.ui.stage(); if (!st) return { x: 960, y: 540 }; const r = st.getBoundingClientRect(), s = this.ui.scale(); return { x: (cx - r.left) / s, y: (cy - r.top) / s }; };
 G.miniDown = function (x, y, src) { const mg = this.mini; if (!mg || this.reel) return false; mg.mx = x; mg.my = y; if (mg.D.down) { mg.holding = src; mg.D.down.call(this, mg, x, y, src); this.bump(); return true; } return false; };
+// a click on the stage the game did not use: a ripple and a light tick (feedback floor: nothing is ever dead to the touch)
+G.miniTap = function (x, y) { const mg = this.mini; if (!mg || this.reel || !M.SHOW || x < SX || y < SY || x > SX + SW || y > SY + SH) return; M.SHOW.tap(this, mg, x, y); this.bump(); };
 G.miniUp = function (src) { const mg = this.mini; if (!mg || !mg.holding || (src && mg.holding !== src)) return; mg.holding = null; if (mg.D.up) mg.D.up.call(this, mg); this.bump(); };
 const KEYMAP = { Space: 'act', Enter: 'act', NumpadEnter: 'act', KeyQ: 'l0', KeyW: 'up', KeyE: 'l2', ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', KeyA: 'left', KeyD: 'right', KeyS: 'down', Escape: 'back' };
 const oldKey = G.handleKey;
@@ -104,20 +159,22 @@ G.handleKey = function (ev) {
 };
 const oldCC = G.cursorClick;
 G.cursorClick = function () {
-  if (this.mini && !this.reel && this.cur) { const p = this.stageToClient(this.cur.x, this.cur.y), el = p && document.elementFromPoint(p.x, p.y); if (!(el && el.closest && el.closest('[data-minibtn]'))) { if (this.miniDown(this.cur.x, this.cur.y, 'pad')) return; } }
+  if (this.mini && !this.reel && this.cur) { const p = this.stageToClient(this.cur.x, this.cur.y), el = p && document.elementFromPoint(p.x, p.y); if (!(el && el.closest && el.closest('[data-minibtn]'))) { if (this.miniDown(this.cur.x, this.cur.y, 'pad')) return; this.miniTap(this.cur.x, this.cur.y); } }
   return oldCC.call(this);
 };
 const oldTick = G.tick;
 G.tick = function (dt) {
   if (!this._miniInit) { this._miniInit = 1;
-    window.addEventListener('pointerdown', (e) => { if (e.pointerId === 77 || !this.mini || this.reel) return; if (e.target && e.target.closest && e.target.closest('[data-minibtn]')) return; const p = this.miniPt(e.clientX, e.clientY); if (this.miniDown(p.x, p.y, 'ptr')) e.preventDefault(); }, true);
+    window.addEventListener('pointerdown', (e) => { if (e.pointerId === 77 || !this.mini || this.reel) return; if (e.target && e.target.closest && e.target.closest('[data-minibtn]')) return; const p = this.miniPt(e.clientX, e.clientY); if (this.miniDown(p.x, p.y, 'ptr')) e.preventDefault(); else this.miniTap(p.x, p.y); }, true);
     ['pointerup', 'pointercancel'].forEach(n => window.addEventListener(n, (e) => { if (e.pointerId === 77) return; this.miniUp('ptr'); }, true));
     window.addEventListener('pointermove', (e) => { if (!this.mini) return; const p = this.miniPt(e.clientX, e.clientY); this.mini.mx = p.x; this.mini.my = p.y; }, true);
   }
   oldTick.call(this, dt);
   const mg = this.mini;
   if (!mg) M.MK.lampFx = null;
-  if (mg && !this.reel && !this.fx.frozen) { const d0 = Math.min(dt, 0.05), d = d0 * (M.SHOW ? M.SHOW.slowK(mg) : 1); if (M.SHOW) M.SHOW.tick(this, mg, d0); mg.t += d0; mg.pt += d; if (mg.msg) mg.msg.t += d0; if (mg.holding === 'pad' && !padHeld()) this.miniUp('pad'); if (this.cur && M.inputMode(this) === 'pad' && this.cur.shown) { mg.mx = this.cur.x; mg.my = this.cur.y; } try { mg.D.tick && mg.D.tick.call(this, mg, d); } catch (e) { (window.__mcErrs = window.__mcErrs || []).push('mini ' + mg.kind + ': ' + e.message); } this.bump(); }
+  if (mg && !this.reel && !this.fx.frozen) { const d0 = Math.min(dt, 0.05), d = d0 * (M.SHOW ? M.SHOW.slowK(mg) : 1); if (M.SHOW) M.SHOW.tick(this, mg, d0); if (M.SHOW && M.SHOW.frozen(mg)) { this.bump(); return; }   // 卡帧：整个小玩法停住
+    if (!mg.signed && mg.t + d0 >= 0.38) { mg.signed = 1; if (M.SHOW) M.SHOW.shake(mg, 6); S.mini('_', 'slam', 0); }
+    mg.t += d0; mg.pt += d; if (mg.msg) mg.msg.t += d0; if (mg.holding === 'pad' && !padHeld()) this.miniUp('pad'); if (this.cur && M.inputMode(this) === 'pad' && this.cur.shown) { mg.mx = this.cur.x; mg.my = this.cur.y; } try { mg.D.tick && mg.D.tick.call(this, mg, d); } catch (e) { (window.__mcErrs = window.__mcErrs || []).push('mini ' + mg.kind + ': ' + e.message); } this.bump(); }
 };
 // ───────── view: buttons ─────────
 const oldView = G.view;

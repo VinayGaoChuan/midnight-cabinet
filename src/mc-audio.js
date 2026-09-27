@@ -1309,6 +1309,21 @@ const MW = {
   lose: (t) => { IN.marimba(t, 52, .15, .5); IN.marimba(t + .1, 50, .2, .4); },
 };
 Object.assign(MINI._, MW);
+// ── 反馈底线（2026-09-27，mc-show.js）：悬停、按下、蓄力、逐拍、卡帧、揭晓冲击、第二波、逐项砸出、点空白、进退场——每一拍都有声音，音高跟着档位和拍数往上走 ──
+Object.assign(MINI._, {
+  hover: (t) => tone(t, 'p25', 1568, .04, .02, { crush: 1, lp: 6000 }),
+  press: (t) => { nz(t, .02, 'bandpass', 2400, 2, .06); thud(t, 170, 70, .08, .12); tone(t + .02, 'p25', hz(9, 0), .05, .025, { crush: 1 }); },
+  riser: (t, x) => { const d = Math.max(.4, Math.min(4, +x || 1.5)); riser(t, t + d, 110, 1400, .05); tone(t, 'triangle', 55, d, .05, { to: 330, slide: d }); },
+  beat: (t, x) => { const o = x || {}, i = o.i | 0, tr = o.tier | 0; nz(t, .14, 'lowpass', 420, .7, .12); thud(t, 170, 45, .16, .3); tone(t, 'p25', hz(7 + tr * 3 + i, 0), .1, .05, { crush: 1 }); tone(t + .05, 'p25', hz(9 + tr * 3 + i, 0), .12, .035, { crush: 1 });
+    if (o.up) { for (let k = 0; k < 6; k++) tone(t + .06 + k * .035, 'p25', hz(10 + tr * 3 + k, 0), .05, .03, { crush: 1 }); nz(t, .3, 'highpass', 6000, .5, .06); } },
+  hit: (t) => { nz(t, .06, 'highpass', 5000, .5, .1); thud(t, 90, 40, .12, .2); },
+  boom: (t, x) => { const r = Math.max(0, Math.min(3, x | 0)); nz(t, .9, 'lowpass', 700, .7, .18 + r * .04); nz(t, .35, 'highpass', 6000, .5, .06 + r * .02); thud(t, 260, 28, .6, .35 + r * .08); if (r >= 2) cymbal(t, 1.2 + r * .4, .05); },
+  wave2: (t) => { [0, 2, 4, 6, 9].forEach((d, i) => tone(t + i * .05, 'p25', hz(10 + d, 1), .08, .035, { crush: 1 })); nz(t, .4, 'lowpass', 800, .7, .12); },
+  slam: (t, x) => { const i = x | 0; nz(t, .06, 'lowpass', 600, .7, .14); thud(t, 110, 50, .12, .2); tone(t, 'p25', hz(10 + i * 2, 0), .06, .04, { crush: 1 }); },
+  tap: (t) => { tone(t, 'p25', 2093, .03, .025, { crush: 1 }); tone(t + .03, 'p25', 2637, .04, .02, { crush: 1 }); },
+  exit: (t) => { tone(t, 'p25', 1200, .22, .035, { to: 150, slide: .22, crush: 1 }); nz(t, .2, 'bandpass', 2000, 1, .05); },
+  enter: (t) => { nz(t, .12, 'lowpass', 500, .7, .1); thud(t, 110, 50, .12, .18); tone(t + .05, 'p25', 1319, .05, .02, { crush: 1 }); },
+});
 
 // ── 世界主题传送门：每个世界一段招牌小曲 ──
 Object.assign(WORLD, {

@@ -446,7 +446,7 @@ function render(s, t, o) {
   // light intensities: flicker × kicks (flashes decay) × room events
   Object.keys(s.kick).forEach(k => { s.kick[k] *= Math.exp(-dt * 7); if (s.kick[k] < 0.01) delete s.kick[k]; });
   const ev = s.ev, now = t, hovK = s.hov += ((o.hov ? 1 : 0) - s.hov) * (1 - Math.exp(-dt * 8));
-  const selA = ev.sel != null ? Math.max(0, 1 - (now - ev.sel) / 0.7) : 0, bootT = ev.built != null ? now - ev.built : 9;
+  const selA = ev.sel != null ? Math.max(0, 1 - (now - ev.sel) / 0.7) : 0, bootT = ev.built != null ? (now - ev.built) * (D.bootK || 1) : 9;   // D.bootK: a def whose lights come on faster (minigame stages)
   // animated content into the shared dyn layers (before the lights: anim may set s.mul[i] or kick lights)
   LAYS.forEach(([k]) => clearLay(DL[k])); DP.c = DL.mid; DP.id = 1; DP.dx = DP.dy = 0;
   const moving = []; s.dl = moving; s.mul = s.mul || {};
