@@ -250,7 +250,7 @@ FLP.draw = function (ctx, noClear) { this.items = this.items.filter(it => it.k =
 const oldWM = G.worldMove;
 G.worldMove = function (sx, sy) {
   const MM = M.MMAP || { x: 1320, y: 48 };
-  if (this.walker && sx >= MM.x && sx <= MM.x + 560 && sy >= MM.y && sy <= MM.y + 250) {
+  if (this.walker && !(M.mmOff && M.mmOff()) && sx >= MM.x && sx <= MM.x + 560 && sy >= MM.y && sy <= MM.y + 250) {
     const map = this.run.map, X = MM.x, Y = MM.y, Wd = 560, Ht = 250, COLW = 520, ROWH = 270, Y0 = 700, sxk = (Wd - 70) / (map.W - 500), syk = (Ht - 90) / (ROWH * 2.4);
     let best = null, bd = 18; map.nodes.forEach(n => { const cx = X + 35 + (n.x - 300) * sxk, cy = Y + 60 + (n.y - (Y0 - ROWH * 1.2)) * syk, d = Math.hypot(cx - sx, cy - sy); if (d < bd) { bd = d; best = n; } });
     if (best) { const n = best, cur = this.walker.edge ? this.walker.edge.b : this.walker.node; this.tipData = { title: M.nodeLabel(n), c: !n.seen ? '#8d8496' : n.type === 'boss' || n.type === 'elite' ? '#ff6a5a' : n.type === 'extract' ? '#5fd0c0' : '#f2c14e', kind: (n.id === cur ? '你在这里 · ' : n.done ? '已经过 · ' : '') + '第 ' + (n.col + 1) + ' 站', d: n.seen ? M.nodeDesc(n) : '在视野之外。' }; this.tipKey = null; return; }

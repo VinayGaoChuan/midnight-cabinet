@@ -226,7 +226,7 @@ G.runWin = function (kind) {
     const first = !M.chClear(m, w); p.clr[w] = 1; p.wp[w] = 0; if (dOf(m) === 0) m.cleared[w] = true;
     const idx = M.chapterIndex(w), next = ORDER[idx + 1];
     if (e) { e.title = '第 ' + (idx + 1) + ' 章通关'; e.sub = run.region.n + (first ? '通关。' : '又通关了一次。') + (first && next ? '下一章：' + M.WORLDS[next].n + '。' : ''); }
-    if (first && w === ORDER[ORDER.length - 1] && dOf(m) < 2 && (m.diffMax || 0) <= dOf(m)) { m.diffMax = dOf(m) + 1; M.LV_MAX = Math.max(M.LV_MAX, DIFF[m.diffMax].lv); if (e) { e.title = DIFF[m.diffMax].n + '难度开启'; e.sub = '全部章节通关。传送门上可以换到' + DIFF[m.diffMax].n + '难度：同样的章节，更强的敌人，更好的收获。'; } }
+    if (false && first && w === ORDER[ORDER.length - 1] && dOf(m) < 2 && (m.diffMax || 0) <= dOf(m)) {   /* chapter difficulties gave way to the game's (mc-gdiff.js) */ m.diffMax = dOf(m) + 1; M.LV_MAX = Math.max(M.LV_MAX, DIFF[m.diffMax].lv); if (e) { e.title = DIFF[m.diffMax].n + '难度开启'; e.sub = '全部章节通关。传送门上可以换到' + DIFF[m.diffMax].n + '难度：同样的章节，更强的敌人，更好的收获。'; } }
   } else if (e && kind === 'extract') e.sub = (e.sub || '') + '路标还在，下次从这里接着走。';
   this.save();
   return r;

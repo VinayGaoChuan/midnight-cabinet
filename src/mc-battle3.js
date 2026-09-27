@@ -282,7 +282,7 @@ class B3 extends M.Battle2 {
       if (!this.hero.alive && armies === 0) this.end('dead');   // the army standing keeps the fight going (user ruling 2026-09-25)
       else if (this.mode === 'hold') { if (T >= this.cfg.dur + this.fightT0) { this.finish(); this.end('survived'); this.ents.forEach(e => { if (e.alive && e.side === 'E') { e.alive = false; this.burst(e.x, e.y - 30, '#3a2a4a', 6); } }); } }
       else if (left === 0) { this.finish(); this.end('clear'); }
-      else if (T >= (this.cfg.fb ? 240 : 150)) this.end('time');
+      else if (T >= (this.cfg.fb ? (M.FB_TIME || 420) : 150)) this.end('time');
     } else this.overT += dt;
   }
   finish() { this.ents.filter(e => e.side === 'A' && !e.isHero && !e.summon).forEach(e => this.call(e, 'end')); }

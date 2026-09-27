@@ -78,7 +78,8 @@ const oSettle = G.startSettle;
 G.startSettle = function () {
   oSettle.apply(this, arguments); const st = this.settle, run = this.run, n = this.node; if (!st || !st.good || !run || run.tut || !n) return;
   // about one a trip (2026-09-27 drop count: every boss gave one, 37 keepsakes to 20 blueprints in 13 trips)
-  const ch = n.type === 'boss' ? 0.4 : n.type === 'extract' ? 0.35 : n.type === 'elite' ? 0.15 : 0.02; if (Math.random() >= ch) return;
+  // 2026-09-26 (「这爆率太高了」): halved again — a boss 20%, an extraction 20%, an elite 6%, anything else 1%
+  const ch = n.type === 'boss' ? 0.2 : n.type === 'extract' ? 0.2 : n.type === 'elite' ? 0.06 : 0.01; if (Math.random() >= ch) return;
   const k = M.dropGift(), I = M.itemInfo(k); this.hold('rbp', run.loot.bp.length); run.loot.bp.push(k); st.tiles.push({ icon: I.icon, v: 1, c: I.c, to: 'rbp', n: I.n, key: k });
 };
 const oChest = G.openChest;

@@ -27,12 +27,12 @@ function tr(base, vals, text) {
 const S = (k, a, b, c, d) => [k, [a, b, c, d]];
 const LINES = M.LINES = [
   // 先锋
-  ['先锋', 'FootSoldier', 40, ['步卒', '盾兵', '铁壁卫士', '不破城壁'], [S('SummonStoneskinTrait', [20], [25], [30], [38]), S('SummonRangedDamageReductionTrait', null, [15], [20], [25]), S('SummonThornsTrait', null, null, null, [0.2, 15])]],
-  ['先锋', 'VoodooBeliever', 35, ['巫毒信徒', '巫毒守卫', '巫毒祭主', '巫毒之王'], [S('SummonAnaphylaxisTrait', [600], [800], [1000], [1400]), S('SummonBoneRegenerationTrait', null, [2], [3], [4]), S('SummonSpeedBoostTrait', null, null, null, [1.5, 50])]],
+  ['先锋', 'FootSoldier', 40, ['步卒', '重甲兵', '铁壁先锋', '不破城壁'], [S('SummonStoneskinTrait', [20], [25], [30], [38]), S('SummonRangedDamageReductionTrait', null, [15], [20], [25]), S('SummonThornsTrait', null, null, null, [0.2, 15])]],
+  ['先锋', 'VoodooBeliever', 35, ['巫毒信徒', '巫毒狂信徒', '巫毒祭主', '巫毒之王'], [S('SummonAnaphylaxisTrait', [600], [800], [1000], [1400]), S('SummonBoneRegenerationTrait', null, [2], [3], [4]), S('SummonSpeedBoostTrait', null, null, null, [1.5, 50])]],
   ['先锋', 'BigWildBoar', 45, ['小野猪', '獠牙野猪', '巨型野猪', '赤瞳猪王'], [S('SummonChargeAttackNewTrait', [2], [2.6], [3.3], [4.2]), S('SummonBarbsTrait', null, [0.4, 10], [0.5, 12], [0.6, 15]), S('SummonNimbleFeetTrait', null, null, null, [25])]],
   // 守护者
   ['守护者', 'YellowManeHorse', 40, ['黄鬃马', '战马', '汗血宝马', '天马'], [S('SummonThickHideTrait', [5], [7], [9], [12]), S('SummonBoneRegenerationTrait', null, [2], [3], [4]), S('SummonResonanceAuraTrait', null, null, null, [2.75, 10])]],
-  ['守护者', 'BloodKnight', 45, ['血仆', '血骑士', '猩红骑士长', '血月领主'], [S('SummonLeechTrait', [10], [15], [20], [26]), S('SummonThickHideTrait', null, [4], [6], [8]), S('SummonSpeedBoostTrait', null, null, null, [1.5, 50])]],
+  ['守护者', 'BloodKnight', 45, ['血仆', '血誓守卫', '猩红守护者', '血月领主'], [S('SummonLeechTrait', [10], [15], [20], [26]), S('SummonThickHideTrait', null, [4], [6], [8]), S('SummonSpeedBoostTrait', null, null, null, [1.5, 50])]],
   ['守护者', 'CursedSwordsman', 45, ['咒刃学徒', '诅咒剑士', '冥誓剑圣', '永咒剑魔'], [S('SummonIronHailTrait', [14, 60, 2, 2, 5, 10], [14, 80, 2, 3, 5, 10], [15, 100, 2, 4, 5, 10], [16, 125, 2, 6, 5, 10]), S('SummonThickHideTrait', null, [4], [6], [8]), S('SummonResonanceAuraTrait', null, null, null, [2.75, 10])]],
   // 战士
   ['战士', 'SlaveLord', 40, ['打手', '奴隶主', '角斗场主', '血斗之王'], [S('SummonUnchainedRageTrait', [50, 80], [50, 100], [55, 130], [60, 170]), S('SummonBoneRegenerationTrait', null, [2], [3], [4]), S('SummonDuelistTrait', null, null, null, [20, 20])]],
@@ -48,22 +48,22 @@ const LINES = M.LINES = [
   ['射手', 'Bat', 40, ['蝙蝠枪手', '机枪蝠', '重炮蝠', '暴风炮蝠'], [S('SummonMachineGunnerTrait', [0.5, 1, 40], [0.5, 1, 50], [0.4, 1, 60], [0.3, 1, 70]), S('SummonAcrobaticsSuperTrait', null, [2, 3.4, 5], [2.5, 3.4, 5], [3, 3.4, 6]), S('SummonExplosiveShellsTrait', null, null, null, [80])]],
   // 刺客
   ['刺客', 'BlackSword', 40, ['黑剑', '暗刃', '夜刃', '影王之刃'], [S('SummonWolfPackTrait', [5, 3, 12], [6, 3, 12], [8, 3, 12], [10, 3, 15]), S('SummonNimbleFeetTrait', null, [15], [20], [25]), S('SummonAmbushTrait', null, null, null, [800])]],
-  ['刺客', 'WaterWarrior', 45, ['水战士', '潮刃刺客', '深渊刺客', '海渊之影'], [S('SummonAmbushTrait', [600], [800], [1000], [1400]), S('SummonNimbleFeetTrait', null, [15], [20], [25]), S('SummonWolfPackTrait', null, null, null, [8, 3, 12])]],
-  ['刺客', 'Gladiator', 45, ['角斗学徒', '角斗士', '冠军角斗士', '不败角斗王'], [S('SummonDuelistTrait', [15, 20], [20, 20], [25, 20], [32, 25]), S('SummonWolfPackTrait', null, [3, 3, 12], [4, 3, 12], [5, 3, 15]), S('SummonNimbleFeetTrait', null, null, null, [25])]],
+  ['刺客', 'WaterWarrior', 45, ['水刃', '潮刃刺客', '深渊刺客', '海渊之影'], [S('SummonAmbushTrait', [600], [800], [1000], [1400]), S('SummonNimbleFeetTrait', null, [15], [20], [25]), S('SummonWolfPackTrait', null, null, null, [8, 3, 12])]],
+  ['刺客', 'Gladiator', 45, ['决斗新手', '决斗者', '决斗大师', '不败决斗王'], [S('SummonDuelistTrait', [15, 20], [20, 20], [25, 20], [32, 25]), S('SummonWolfPackTrait', null, [3, 3, 12], [4, 3, 12], [5, 3, 15]), S('SummonNimbleFeetTrait', null, null, null, [25])]],
   // 召唤师
   ['召唤师', 'Summoner', 45, ['驯兽师', '召唤师', '兽王', '百兽之主'], [['SummonHoundSummoningTrait', [{ v: [5, 40] }, { v: [6, 40] }, { k: 'SummonHellhoundTrait', v: [7, 40] }, { k: 'SummonHellhoundTrait', d: '每秒恢复8%法力值，法力值满后，召唤2只DireWolf，持续40秒' }]], S('SummonIntelligenceTrait', null, [5], [7], [9])]],
-  ['召唤师', 'CrabWarlock', 45, ['小蟹巫', '蟹术士', '蟹巫', '蟹皇'], [['SummonSummonCrablingTrait', [{ v: [2.5, 40] }, { v: [3, 40] }, { v: [3.5, 40] }, { k: 'SummonSummonPincerTrait', v: [4, 40] }]], S('SummonIntelligenceTrait', null, [5], [7], [9]), S('SummonThickHideTrait', null, null, null, [8])]],
-  ['召唤师', 'ShadowSwordsman', 45, ['影随从', '影剑士', '影骑士', '暗影君王'], [['SummonShadowBreederTrait', [{ v: [7, 40] }, { v: [6, 40] }, { v: [5, 40] }, { k: 'SummonHatebreederTrait', v: [4, 40] }]], S('SummonNimbleFeetTrait', null, [10], [15], [20])]],
+  ['召唤师', 'CrabWarlock', 45, ['小蟹巫', '唤蟹师', '蟹巫', '蟹皇'], [['SummonSummonCrablingTrait', [{ v: [2.5, 40] }, { v: [3, 40] }, { v: [3.5, 40] }, { k: 'SummonSummonPincerTrait', v: [4, 40] }]], S('SummonIntelligenceTrait', null, [5], [7], [9]), S('SummonThickHideTrait', null, null, null, [8])]],
+  ['召唤师', 'ShadowSwordsman', 45, ['唤影学徒', '影主', '影群之主', '暗影君王'], [['SummonShadowBreederTrait', [{ v: [7, 40] }, { v: [6, 40] }, { v: [5, 40] }, { k: 'SummonHatebreederTrait', v: [4, 40] }]], S('SummonNimbleFeetTrait', null, [10], [15], [20])]],
   // 法师
   ['法师', 'MageApprentice', 40, ['见习法师', '法师', '雷法师', '风暴大法师'], [S('SummonLightningStrikeTrait', [18, 4, 90, 0.1], [18, 5, 109, 0.15], [20, 6, 125, 0.2], [22, 7, 150, 0.25]), S('SummonAmplifyMagicTrait', null, [15], [20], [25]), S('SummonTribalWarfareTrait', null, null, null, [1])]],
-  ['法师', 'WildMage', 35, ['野法师', '叶刃法师', '森林法师', '翠影贤者'], [S('SummonRazorLeafTrait', [70], [85], [100], [125]), S('SummonExplosiveShellsTrait', null, [30], [45], [60]), S('SummonAmplifyMagicTrait', null, null, null, [25])]],
+  ['法师', 'WildMage', 35, ['野法师', '叶刃法师', '森林法师', '翠林贤者'], [S('SummonRazorLeafTrait', [70], [85], [100], [125]), S('SummonExplosiveShellsTrait', null, [30], [45], [60]), S('SummonAmplifyMagicTrait', null, null, null, [25])]],
   ['法师', 'TimeMage', 45, ['时之学徒', '时间法师', '时光术士', '时间领主'], [S('SummonAsteroidTrait', [3, 450, 1], [3, 550, 1.5], [3.5, 686, 2], [4, 850, 2.5]), S('SummonAmplifyMagicTrait', null, [15], [20], [30]), S('SummonExplosiveShellsTrait', null, null, null, [80])]],
   // 牧师
-  ['牧师', 'DesertBeliever', 40, ['沙漠信徒', '沙海祭司', '沙海先知', '圣沙使徒'], [S('SummonChainHealTrait', [10, 1, 160, 2], [10, 1, 200, 3], [11, 1, 240, 3], [12, 1, 300, 4]), S('SummonBoneRegenerationTrait', null, [2], [3], [4]), S('SummonResonanceAuraTrait', null, null, null, [2.75, 10])]],
+  ['牧师', 'DesertBeliever', 40, ['沙漠信徒', '沙海医者', '沙海先知', '圣沙使徒'], [S('SummonChainHealTrait', [10, 1, 160, 2], [10, 1, 200, 3], [11, 1, 240, 3], [12, 1, 300, 4]), S('SummonBoneRegenerationTrait', null, [2], [3], [4]), S('SummonResonanceAuraTrait', null, null, null, [2.75, 10])]],
   ['牧师', 'GreenDragon', 40, ['幼龙', '青龙', '翠羽龙', '天龙'], [['SummonLifeExchangeTrait', [{ v: [14, 243, 1, 200] }, { v: [14, 243, 1, 270] }, { k: 'SummonSoulTransferTrait', v: [18, 135, 1, 270] }, { k: 'SummonSoulTransferTrait', v: [20, 110, 1, 340] }]], S('SummonBoneRegenerationTrait', null, [2], [3], [4]), S('SummonDevotionTrait', null, null, null, [4])]],
-  ['牧师', 'SnakeGodMessenger', 45, ['蛇信徒', '蛇神祭司', '蛇神使者', '蛇神化身'], [S('SummonTreatmentChainTrait', [200], [600], [1800], [5000]), S('SummonChainHealTrait', null, [8, 1, 120, 2], [9, 1, 150, 2], [10, 1, 190, 3]), S('SummonDevotionTrait', null, null, null, [4])]],
+  ['牧师', 'SnakeGodMessenger', 45, ['蛇信徒', '蛇神医者', '蛇神使者', '蛇神化身'], [S('SummonTreatmentChainTrait', [200], [600], [1800], [5000]), S('SummonChainHealTrait', null, [8, 1, 120, 2], [9, 1, 150, 2], [10, 1, 190, 3]), S('SummonDevotionTrait', null, null, null, [4])]],
   // 祭司
-  ['祭司', 'Mage', 40, ['骸骨术士', '骸骨法师', '骸骨巫师', '骸骨魔导'], [S('SummonAttackSpeedAuraTrait', [8], [10], [13], [17]), S('SummonBoneRegenerationTrait', null, [2], [3], [4]), S('SummonAerialCommandTrait', null, null, null, [12])]],
+  ['祭司', 'Mage', 40, ['骸骨侍祭', '骸骨祭司', '骸骨大祭司', '骸骨圣祭'], [S('SummonAttackSpeedAuraTrait', [8], [10], [13], [17]), S('SummonBoneRegenerationTrait', null, [2], [3], [4]), S('SummonAerialCommandTrait', null, null, null, [12])]],
   ['祭司', 'DarkFang', 40, ['暗牙', '暗牙督军', '暗牙统帅', '暗牙王'], [S('SummonLeadershipAuraTrait', [10, 18], [15, 16], [20, 14], [28, 12]), S('SummonBoneRegenerationTrait', null, [2], [3], [4]), S('SummonAttackSpeedAuraTrait', null, null, null, [10])]],
   ['祭司', 'WarpWing', 45, ['翼虫', '曲速之翼', '虚空之翼', '虚空魔鬼鱼'], [S('SummonPlasmaDecayTrait', [3, 1.5, 20], [3, 2, 25], [2.5, 2.5, 25], [2, 3, 25]), S('SummonNimbleFeetTrait', null, [10], [15], [20]), S('SummonAerialCommandTrait', null, null, null, [12])]],
   // 商人
@@ -75,17 +75,19 @@ const LINES = M.LINES = [
 // evolution building lets a 传说 evolve once more, to 神话 (「超限进化」, mc-evo.js). The four tiers above are spread over the
 // six: 优质 sits halfway between 普通 and 稀有, 神话 goes past 传说 as far again and wears its vocation's own skill on top.
 const QN = ['普通', '优质', '稀有', '史诗', '传说', '神话'], TIER_K = 3.3, TIERS = 6;
+// names agree with the vocation (user ruling 2026-09-26: 「有的叫法师结果是祭祀，有的叫祭祀结果是牧师，别乱搞，名字和形象和职业和技能
+// 要保持一致」): a 祭司 line is not called 法师, a 牧师 line not 祭司, a 刺客 line not 角斗士 …
 const NAMES2 = {   // [优质, 神话] for every line
   FootSoldier: ['老兵', '神铸城壁'], VoodooBeliever: ['巫毒侍从', '巫毒神'], BigWildBoar: ['野猪', '撼地猪神'],
   YellowManeHorse: ['骏马', '神驹'], BloodKnight: ['血卫', '血神'], CursedSwordsman: ['咒刃剑客', '咒神'],
   SlaveLord: ['恶棍', '不灭斗神'], Berserker: ['蛮勇战士', '战神'], Skybot: ['改装机器人', '神机'],
   HolyLightKnight: ['骑士', '光之神使'], LifeTree: ['生命之枝', '生命之神'], LionHammer: ['重锤卫', '狮神'],
   Ranger: ['林间游侠', '风神射手'], Archer: ['骸骨猎手', '冥神弓'], Bat: ['蝙蝠射手', '雷神蝠'],
-  BlackSword: ['黑刃', '影神之刃'], WaterWarrior: ['浪刃', '海神之影'], Gladiator: ['角斗新星', '角斗之神'],
-  Summoner: ['驯兽大师', '兽神'], CrabWarlock: ['蟹巫学徒', '蟹神'], ShadowSwordsman: ['影卫', '暗影神'],
+  BlackSword: ['黑刃', '影神之刃'], WaterWarrior: ['浪刃', '海神之影'], Gladiator: ['决斗新星', '决斗之神'],
+  Summoner: ['驯兽大师', '兽神'], CrabWarlock: ['蟹巫学徒', '蟹神'], ShadowSwordsman: ['唤影者', '暗影神'],
   MageApprentice: ['法师学徒', '雷神'], WildMage: ['林法师', '森之神'], TimeMage: ['时之术士', '时间之神'],
   DesertBeliever: ['沙漠行者', '圣沙之神'], GreenDragon: ['小青龙', '龙神'], SnakeGodMessenger: ['蛇侍', '蛇神'],
-  Mage: ['骸骨学徒', '骸骨之神'], DarkFang: ['暗牙卫士', '暗牙神'], WarpWing: ['翼兽', '虚空之神'],
+  Mage: ['骸骨学徒', '骸骨之神'], DarkFang: ['暗牙侍祭', '暗牙神'], WarpWing: ['翼兽', '虚空之神'],
   Chick: ['小公鸡', '财神鸡'], VikingPirate: ['水手', '海神'], JadeBeast: ['玉石兽', '玉神麒麟'],
 };
 // the 神话 tier of a skill that changes kind on the way (summons, the healer dragon, the jade count)

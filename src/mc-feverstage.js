@@ -61,7 +61,7 @@ G.fvStageStart = function (key, tier, b) {
   S.whoosh && S.whoosh(0.5); S.itemUse && S.itemUse(key === 'horn' ? 'bell' : key, f);
   const g = this, foes = () => b.ents.filter(e => e.alive && e.side === 'E' && e.x < 1900 && (b.t >= (e.entryT || 0)));
   if (key === 'bolt') {
-    const n = FX.bolt.n[tier], dmg = FX.bolt.dmg[tier] * Math.max(200, ((b.cfg && b.cfg.budget) || 100) * 2.4) * (b.ek || 1), gap = n > 8 ? 0.11 : n > 5 ? 0.15 : 0.24, struck = new Set();
+    const n = FX.bolt.n[tier], dmg = FX.bolt.dmg[tier] * Math.max(200, ((b.cfg && b.cfg.budget) || 100) * 2.4) * (b.ek || 1) * (M.feverPow ? M.feverPow(b) : 1), gap = n > 8 ? 0.11 : n > 5 ? 0.15 : 0.24, struck = new Set();
     for (let i = 0; i < n; i++) on(0.5 + i * gap, () => {
       const F = foes(); if (!F.length) return; let list = F.filter(e => !struck.has(e.id)); if (!list.length) list = F; const tg = list[Math.floor(Math.random() * list.length)]; struck.add(tg.id);
       const p = bodyAt(g, tg); st.bolts.push({ x: p.x, y: p.y, t0: st.t, tier: f, myth, seed: Math.random() * 1000 }); st.holes.push({ e: tg, r: 120, t0: st.t, life: 0.9 });

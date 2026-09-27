@@ -105,7 +105,7 @@ G.tipFor = function (key) {
   if (key === 'rel-faith' && m) { const R = relOf(m); return { title: '信仰值 · 宗教 Lv' + R.lv, c: FC, d: '攒够 ' + M.REL_NEED(R.lv) + ' 宗教自动升级，每座信仰建筑给出一条教义，选一条。', lines: R.picks.map(p => { const d = docOf(p); return d ? { rich: [{ t: B[p.b].n + '　', c: FC }, { t: d.t, c: '#e8dcc4' }] } : null; }).filter(Boolean) }; }
   return t;
 };
-if (M.GUIDE) M.GUIDE.push({ id: 'religion', cat: '基地', icon: 'f_faith', title: '宗教', line: '信仰值攒够，宗教自动升一级：每座信仰建筑给出一条教义，选一条。', scr: 'base', sel: '[data-fx="mfa"]', when: (g) => M.faithOn && M.faithOn(g.meta) });
+if (M.GUIDE) M.GUIDE.push({ id: 'religion', cat: '基地', icon: 'f_faith', title: '宗教', line: '选一位守护神，信仰值攒够就自动升一级，最多 5 级。', scr: 'base', sel: '[data-fx="mfa"]' });
 })();
 
 ;

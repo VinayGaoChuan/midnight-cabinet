@@ -55,13 +55,15 @@ const FIGHT = { normal: 1, elite: 1, boss: 1, hold: 1, extract: 1 };
 M.BOSS_SHOW = 1.05;
 // a boss fights alone since 2026-09-26 (.ai/sim-boss3.js, 400 fights each): a small boss with its two charged blows plays
 // like 1.26× its raw power, a final boss in its arena like 0.92× (its blows are slow; the army fights it along the whole edge)
-M.MB_SHOW = 1.26; M.FB_SHOW = 0.92;
+M.MB_SHOW = 1.26; M.FB_SHOW = 0.6;
 // how strong a boss is, against the elite fight at the same stop (2026-09-26 growth sims, tools/prog.js): the first small
 // boss 0.75× (the army has seen one shop), later small bosses 1.0×, the final boss 1.15×
-M.BOSS_T0 = 0.75; M.BOSS_TM = 1.1; M.BOSS_TF = 1.4;   // 2026-09-26 (evolution lines): bosses were beaten at 2–3 times their strength; 1.0 / 1.25 → 1.1 / 1.4 on top of ENEMY_K 1.9
+M.BOSS_T0 = 0.75; M.BOSS_TM = 1.1; M.BOSS_TF = 2.15;   // 2026-09-26 (evolution lines): bosses were beaten at 2–3 times their strength; 1.0 / 1.25 → 1.1 / 1.4 on top of ENEMY_K 1.9
 // a final boss had too much life for what it hits (2026-09-27 playtest: median 62 s, a third over 90 s, up to 4 minutes,
 // and still won almost every time): the same power, less life and harder blows (power = √(life × damage) is kept)
-M.FB_SKEW = 0.45;
+M.FB_SKEW = 1.8;   // 2026-09-26 (user ruling: 「大boss血量要加厚……boss攻击力可以不用这么高，但是打得时间要长，这才像个boss」): from 0.45 (short, hard blows) to 1.8
+// ‥ which on its own made it far weaker than its power says (it barely hurts the army), so its real strength goes up (BOSS_TF 1.4 → 2.15)
+// and its shown power down (FB_SHOW 0.92 → 0.6): the same number on the map as before, the same odds, fights of 2½–3 minutes (.ai/sim-boss6.js)
 // every fight shows 15% stronger since the leader lost its field skill and units throw each other (2026-09-26,
 // .ai/sim-kb.js: a shown 1.0–1.15 had dropped to ~40% wins; ×1.15 brings the colours back to their promise)
 M.E_SHOW = 1.15;

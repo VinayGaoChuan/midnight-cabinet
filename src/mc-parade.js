@@ -1,11 +1,11 @@
 // ==== mc-parade.js ====
 (function () {
-// The homecoming parade (user ruling 2026-09-26: 「每局结束时会带回部队，这个带回部队要有伟大仪式感，现在我都不知道每次探索带回
-// 了什么部队」). After the haul, before the garrison evolves: 凯旋！ comes down, and every unit that came home steps onto the
-// stage as a card, one by one, weakest first and the best last — the higher its quality the longer the beat, the bigger
-// the light and the sound. Each card: the unit, its name in its quality's colour, quality and vocation, its power. The
-// cards stay until the player clicks (a click before that brings the rest in at once); then they march one after the
-// other into the garrison on the bar, which counts them in.
+// The homecoming (user rulings 2026-09-26: 「每局结束时会带回部队，这个带回部队要有伟大仪式感」, then 「每次凯旋只能带回一只部队……
+// 带回来的那只部队应该是战斗力最高的3个里面玩家自己选1个」). After the haul, before the garrison evolves: 凯旋！ comes down, and
+// the three strongest units of the army step onto the stage as cards, one by one, the best last — the higher its quality
+// the longer the beat, the bigger the light and the sound. Each card: the unit, its name in its quality's colour, quality
+// and vocation, its power. Then the player picks one (click, or ← → and Enter): the other two fade away, the chosen one
+// flies into the garrison on the bar. A click before all three are up brings them in at once.
 const M = window.MC, G = M.Game.prototype, DB = M.DB, S = M.Sfx, U = M.UI, P = M.PJ.PAL, Q = M.QUALITY, now = () => performance.now();
 const cl = (v, a, b) => Math.max(a, Math.min(b, v)), eo = (t) => 1 - Math.pow(1 - cl(t, 0, 1), 3), RM = () => !!(M.PJ && M.PJ.reduced);
 const eb = (t) => { t = cl(t, 0, 1); const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
@@ -17,82 +17,114 @@ function outlined(img, col, w) {
   const c = document.createElement('canvas'); c.width = img.width + w * 2; c.height = img.height + w * 2; const x = c.getContext('2d');
   for (const [dx, dy] of [[-w, 0], [w, 0], [0, -w], [0, w], [-w, -w], [w, -w], [-w, w], [w, w]]) x.drawImage(s, w + dx, w + dy); x.drawImage(img, w, w); return (m[k] = c);
 }
+M.PARADE_N = 3;   // how many of the strongest the player chooses from
 // the beat: the title, then one card every STEP seconds (a 史诗 or better holds the stage longer)
-const T_TITLE = 0.9, STEP = 0.34, BIG = 0.7, FLY = 0.55, EACH = 0.07, CW = 220, CH = 300, GAP = 24;
+const T_TITLE = 0.9, STEP = 0.5, BIG = 0.85, FLY = 0.6, FADE = 0.35, CW = 300, CH = 400, GAP = 60, CY = 560;
+const pw = (u) => M.unitPower(u.type, u);
 G.paradeStart = function (gi) {
   const list = (gi.units || []).filter(u => u && DB[u.type]); if (!list.length) return false;
-  const pw = (u) => M.unitPower(u.type, u), units = list.slice().sort((a, b) => DB[a.type].q - DB[b.type].q || pw(a) - pw(b));
-  const n = units.length, rows = n > 5 ? 2 : 1, per = Math.ceil(n / rows), sc = Math.min(1, 1760 / (per * (CW + GAP)));
-  let at = T_TITLE; const cards = units.map((u, i) => {
-    const r = rows > 1 && i >= per ? 1 : 0, k = r ? i - per : i, inRow = r ? n - per : per, w = (CW + GAP) * sc;
-    const q = DB[u.type].q, c = { u, q, x: 960 + (k - (inRow - 1) / 2) * w, y: rows > 1 ? 405 + r * (CH * sc + 36) : 560, at, img: imgOf(u.type, 6), s: 0 };
-    at += q >= 3 ? BIG : STEP; return c;
-  });
-  const best = cards.reduce((b, c, i) => (c.q > cards[b].q ? i : b), cards.length - 1);
-  this.parade = { t: 0, cards, sc, n, out: gi.out || null, allAt: at + 0.35, best, go: false };
+  const top = list.slice().sort((a, b) => pw(b) - pw(a)).slice(0, M.PARADE_N), units = top.slice().sort((a, b) => DB[a.type].q - DB[b.type].q || pw(a) - pw(b));
+  const n = units.length; let at = T_TITLE;
+  const cards = units.map((u, i) => { const q = DB[u.type].q, c = { u, q, x: 960 + (i - (n - 1) / 2) * (CW + GAP), y: CY, at, img: imgOf(u.type, 6), s: 0 }; at += q >= 3 ? BIG : STEP; return c; });
+  this.parade = { t: 0, cards, n, allAt: at + 0.3, hov: n - 1, chosen: null, flyT: null, picks: Math.min(n, M.paradePicks ? M.paradePicks(this.meta) : 1) };   // 空中花园: two (mc-wonders.js)
   S.whoosh && S.whoosh(0.6); this.bump(); return true;
 };
-function card(ctx, c, T, sc, F) {
-  const d = DB[c.u.type], qc = Q[c.q].c, u = c.u, age = T - c.at, still = RM();
-  let x = c.x, y = c.y, k = sc * (still ? 1 : eb(age / 0.4)), a = 1;
-  if (F.flyT != null) { const i = F.cards.indexOf(c), f = cl((T - F.flyT - i * EACH) / FLY, 0, 1), e = eo(f), to = F.dest; if (f >= 1) return; x += (to.x - x) * e; y += (to.y - y) * e - Math.sin(e * Math.PI) * 120; k *= 1 - 0.8 * e; a = 1 - 0.4 * e; }
+function card(ctx, c, i, T, F) {
+  const d = DB[c.u.type], qc = Q[c.q].c, u = c.u, age = T - c.at, still = RM(), open = F.chosen == null && T >= F.allAt, hov = open && F.hov === i;
+  let x = c.x, y = c.y, k = (still ? 1 : eb(age / 0.4)) * (hov ? 1.07 : 1), a = 1;
+  if (F.chosen != null && F.chosen !== i) { const f = cl((T - F.pickT) / FADE, 0, 1); if (f >= 1) return; a = 1 - f; y += 80 * f * f; }
+  if (F.chosen === i && F.flyT != null) { const f = cl((T - F.flyT) / FLY, 0, 1), e = eo(f), to = F.dest; if (f >= 1) return; x += (to.x - x) * e; y += (to.y - y) * e - Math.sin(e * Math.PI) * 140; k *= 1 - 0.85 * e; }
+  if (hov && !still) y -= 14 + 4 * Math.sin(T * 5);
   ctx.save(); ctx.globalAlpha = a; ctx.translate(Math.round(x), Math.round(y)); ctx.scale(k, k);
-  // a 史诗 or better: turning rays behind it
-  if (c.q >= 3 && F.flyT == null) { ctx.save(); ctx.rotate(still ? 0 : T * 0.6); ctx.globalAlpha = 0.28 * cl(age / 0.3, 0, 1); for (let i = 0; i < 12; i++) { ctx.rotate(Math.PI / 6); ctx.fillStyle = i % 2 ? qc : P.butter; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-40, -330); ctx.lineTo(40, -330); ctx.fill(); } ctx.restore(); }
-  M.glow(ctx, 0, 0, 200 + c.q * 30, qc, 0.3 + c.q * 0.05);
+  // a 史诗 or better (and the one under the pointer): turning rays behind it
+  if ((c.q >= 3 || hov) && F.flyT == null) { ctx.save(); ctx.rotate(still ? 0 : T * 0.6); ctx.globalAlpha = a * (hov ? 0.4 : 0.26) * cl(age / 0.3, 0, 1); for (let j = 0; j < 12; j++) { ctx.rotate(Math.PI / 6); ctx.fillStyle = j % 2 ? qc : P.butter; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-44, -380); ctx.lineTo(44, -380); ctx.fill(); } ctx.restore(); }
+  M.glow(ctx, 0, 0, 230 + c.q * 30 + (hov ? 60 : 0), qc, 0.3 + c.q * 0.05 + (hov ? 0.15 : 0));
   U.R(ctx, -CW / 2 + 8, -CH / 2 + 8, CW, CH, P.ink); U.box(ctx, -CW / 2, -CH / 2, CW, CH, P.night);
   ctx.globalAlpha = a * 0.3; U.R(ctx, -CW / 2, -CH / 2, CW, CH * 0.55, qc); ctx.globalAlpha = a;
-  [[-CW / 2 + 5, -CH / 2 + 5, CW - 10, 5], [-CW / 2 + 5, CH / 2 - 10, CW - 10, 5], [-CW / 2 + 5, -CH / 2 + 5, 5, CH - 10], [CW / 2 - 10, -CH / 2 + 5, 5, CH - 10]].forEach(r => U.R(ctx, r[0], r[1], r[2], r[3], qc));
-  const im = c.img; if (im) { const f = Math.min(170 / im.width, 150 / im.height, 3), w = Math.max(2, Math.round(3 / f)), o = c.q > 0 ? outlined(im, qc, w) : im; ctx.save(); ctx.imageSmoothingEnabled = false; ctx.translate(0, -52); ctx.scale(f, f); ctx.drawImage(o, -o.width / 2, -o.height / 2); ctx.restore(); }
-  U.text(ctx, d.n, 0, 62, 30, qc, { outline: true });
-  U.text(ctx, Q[c.q].n + (d.voc ? ' · ' + d.voc : ''), 0, 100, 22, (M.VOCS && M.VOCS[d.voc]) || P.cream);
-  U.text(ctx, '★ ' + M.unitPower(u.type, u), 0, 132, 22, P.butter);
+  const bw = hov || F.chosen === i ? 8 : 5;
+  [[-CW / 2 + 5, -CH / 2 + 5, CW - 10, bw], [-CW / 2 + 5, CH / 2 - 5 - bw, CW - 10, bw], [-CW / 2 + 5, -CH / 2 + 5, bw, CH - 10], [CW / 2 - 5 - bw, -CH / 2 + 5, bw, CH - 10]].forEach(r => U.R(ctx, r[0], r[1], r[2], r[3], hov ? P.butter : qc));
+  const im = c.img; if (im) { const f = Math.min(230 / im.width, 200 / im.height, 3.4), w = Math.max(2, Math.round(3 / f)), o = c.q > 0 ? outlined(im, qc, w) : im; ctx.save(); ctx.imageSmoothingEnabled = false; ctx.translate(0, -70); ctx.scale(f, f); ctx.drawImage(o, -o.width / 2, -o.height / 2); ctx.restore(); }
+  U.text(ctx, d.n, 0, 86, 36, qc, { outline: true });
+  U.text(ctx, Q[c.q].n + (d.voc ? ' · ' + d.voc : ''), 0, 130, 26, (M.VOCS && M.VOCS[d.voc]) || P.cream);
+  U.text(ctx, '★ ' + pw(u), 0, 170, 26, P.butter);
   // the card's landing: a white flash over it
   if (age < 0.18 && !still) { ctx.globalAlpha = a * 0.8 * (1 - age / 0.18); U.R(ctx, -CW / 2, -CH / 2, CW, CH, P.white); }
   ctx.restore();
 }
 function draw(ctx, g, F) {
   const T = F.t; ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
-  const fade = F.flyT != null ? 1 - cl((T - F.flyT - F.n * EACH - FLY + 0.3) / 0.3, 0, 1) : cl(T / 0.3, 0, 1);
+  const fade = F.flyT != null ? 1 - cl((T - F.flyT - FLY + 0.3) / 0.3, 0, 1) : cl(T / 0.3, 0, 1);
   U.dim(ctx, 0.85 * fade);
-  // 凯旋！ drops in, then how many came home
+  // 凯旋！ drops in; once all are up, what to do
   const ti = eb((T - 0.1) / 0.5), ta = cl((T - 0.1) / 0.2, 0, 1) * fade; ctx.globalAlpha = ta;
   U.text(ctx, '凯旋！', 960, 120 + (1 - ti) * -80, 96, P.gold, { outline: true, ramp: true });
-  U.text(ctx, '带回 ' + F.n + ' 支部队', 960, 214, 36, P.cream, { outline: true }); ctx.globalAlpha = 1;
-  F.cards.forEach(c => { if (T >= c.at) card(ctx, c, T, F.sc, F); });
-  if (F.flyT == null && T >= F.allAt) {
-    if (F.out) { U.text(ctx, '驻军满了：最弱的 ' + F.out.n + ' 支离开，物资 +' + F.out.sup, 960, 952, 26, '#caa84a', { outline: true }); }
-    ctx.globalAlpha = 0.55 + 0.45 * Math.abs(Math.sin(T * 3)); U.text(ctx, '点击继续', 960, 1010, 30, P.cream, { outline: true }); ctx.globalAlpha = 1;
-  }
+  U.text(ctx, F.cards.length > 1 ? (F.picks > 1 ? '选两支带回基地' : '选一支带回基地') : '带回基地', 960, 214, 40, P.cream, { outline: true }); ctx.globalAlpha = 1;
+  F.cards.forEach((c, i) => { if (T >= c.at) card(ctx, c, i, T, F); });
+  if (F.chosen == null && T >= F.allAt) { ctx.globalAlpha = 0.55 + 0.45 * Math.abs(Math.sin(T * 3)); U.text(ctx, '点一张', 960, 1000, 30, P.cream, { outline: true }); ctx.globalAlpha = 1; }
   ctx.restore();
 }
+// the chosen one joins the garrison (the weakest leaves when it is full)
+function join(g, u) {
+  const m = g.meta; if (!m || !M.garrisonOf) return; const gar = M.garrisonOf(m);
+  gar.push(Object.assign({}, u, { uid: M.rid(), mana: 0 }));
+  if (gar.length > M.GARRISON_CAP) { gar.sort((a, b) => pw(b) - pw(a)); const gone = gar.splice(M.GARRISON_CAP), sup = gone.reduce((a, x) => a + Math.round(((DB[x.type] && DB[x.type].cost) || 10) * 0.3), 0); m.supplies += sup; g.toast && g.toast('驻军满了：' + gone.map(x => DB[x.type].n).join('、') + ' 离开，物资 +' + sup, '#caa84a'); }
+  g.save && g.save();
+}
 function finish(g, F) {
-  g.parade = null; g.pulse.mgar = now(); const p = g.fxPos('mgar') || { x: 700, y: 50 };
-  g.fx.pop && g.fx.pop(p.x, p.y + 70, '驻军 +' + F.n, '#ffcf4a', 40, { rise: 40 }); g.fx.burst && g.fx.burst(p.x, p.y, '#ffcf4a', 16); S.up && S.up(2); g.bump();
+  const c = F.cards[F.chosen]; g.parade = null; g.pulse.mgar = now(); const p = g.fxPos('mgar') || { x: 700, y: 50 };
+  g.fx.pop && g.fx.pop(p.x, p.y + 70, '驻军 +1 · ' + (c ? DB[c.u.type].n : ''), c ? Q[c.q].c : '#ffcf4a', 36, { rise: 40 }); g.fx.burst && g.fx.burst(p.x, p.y, c ? Q[c.q].c : '#ffcf4a', 16); S.up && S.up(2); g.bump();
 }
 const oTick = G.tick;
 G.tick = function (dt) {
   const r = oTick.apply(this, arguments), F = this.parade; if (!F) return r;
-  if (this.screen !== 'base') { this.parade = null; return r; }
+  if (this.screen !== 'base') { if (F.chosen == null) this.paradePick(this.paradeBest()); if (this.parade && F.chosen != null) { join(this, F.cards[F.chosen].u); this.parade = null; } return r; }
   const t0 = F.t; F.t += dt || 0;
-  // a card lands: its sound by quality, sparks in its colour; the best one shakes the screen
+  // a card lands: its sound by quality, sparks in its colour; the best ones shake the screen
   F.cards.forEach((c, i) => { if (F.t >= c.at && !c.s) { c.s = 1; if (F.quick) return; if (c.q >= 2) S.reveal ? S.reveal(c.q) : S.stamp && S.stamp(); else S.land && S.land(i); if (this.fx) { this.fx.burst && this.fx.burst(c.x, c.y, Q[c.q].c, 8 + c.q * 5, { v: 300 + c.q * 80 }); if (c.q >= 3) { this.fx.kick && this.fx.kick(8 + c.q * 3); this.fx.rays && this.fx.rays(c.x, c.y, Q[c.q].c, 1, { r: 260 }); } } } });
   if (t0 < F.allAt && F.t >= F.allAt && !F.quick) S.fanfare && S.fanfare();
-  if (F.flyT != null) {
-    F.cards.forEach((c, i) => { const land = F.flyT + i * EACH + FLY; if (t0 < land && F.t >= land) { S.land && S.land(i % 6); this.pulse.mgar = now(); this.fx && this.fx.burst && this.fx.burst(F.dest.x, F.dest.y, Q[c.q].c, 6); } });
-    if (F.t >= F.flyT + F.n * EACH + FLY + 0.1) { finish(this, F); return r; }
-  }
-  const fc = this.ui && this.ui.cv && this.ui.cv('fx'); if (fc) { try { draw(fc.getContext('2d'), this, F); } catch (e) { (window.__mcErrs = window.__mcErrs || []).push('parade: ' + e.message); this.parade = null; } }
+  if (F.chosen != null && F.flyT == null && F.t >= F.pickT + FADE) { F.flyT = F.t; F.dest = this.fxPos('mgar') || { x: 700, y: 50 }; S.whoosh && S.whoosh(0.5); }
+  if (F.flyT != null && t0 < F.flyT + FLY && F.t >= F.flyT + FLY) { join(this, F.cards[F.chosen].u); S.land && S.land(3);
+    // one more to take: the chosen card leaves the stage, the rest come back
+    if (F.picks > 1 && F.cards.length > 1) { F.picks--; const got = F.cards.splice(F.chosen, 1)[0]; F.took = (F.took || []).concat([got]); F.chosen = null; F.flyT = null; F.pickT = null; F.hov = Math.min(F.hov, F.cards.length - 1); const n = F.cards.length; F.cards.forEach((c, i) => { c.x = 960 + (i - (n - 1) / 2) * (CW + GAP); }); this.pulse.mgar = now(); return r; } }
+  if (F.flyT != null && F.t >= F.flyT + FLY + 0.1) { finish(this, F); return r; }
+  const fc = this.ui && this.ui.cv && this.ui.cv('fx'); if (fc) { try { draw(fc.getContext('2d'), this, F); } catch (e) { (window.__mcErrs = window.__mcErrs || []).push('parade: ' + e.message); if (F.chosen == null) { F.chosen = this.paradeBest(); } join(this, F.cards[F.chosen].u); this.parade = null; } }
   return r;
 };
-// a click: all the cards at once, or (once they are all up) off they march
-G.paradeClick = function () {
-  const F = this.parade; if (!F || F.flyT != null) return;
+G.paradeBest = function () { const F = this.parade; if (!F) return 0; let b = 0; F.cards.forEach((c, i) => { if (pw(c.u) > pw(F.cards[b].u)) b = i; }); return b; };
+G.paradePick = function (i) {
+  const F = this.parade; if (!F || F.chosen != null || !F.cards[i]) return;
+  if (F.t < F.allAt) { F.t = F.allAt; F.cards.forEach(c => { c.at = Math.min(c.at, F.t - 0.4); c.s = 1; }); }
+  F.chosen = i; F.pickT = F.t; S.stamp && S.stamp(); this.fx && this.fx.burst && this.fx.burst(F.cards[i].x, F.cards[i].y, Q[F.cards[i].q].c, 24, { v: 500 }); this.bump();
+};
+// which card is under a point of the stage
+const hit = (F, x, y) => F.cards.findIndex(c => Math.abs(x - c.x) < CW / 2 + 10 && Math.abs(y - c.y) < CH / 2 + 10);
+// a click: all the cards at once; once they are all up, the card under the pointer is the one
+G.paradeClick = function (e) {
+  const F = this.parade; if (!F || F.chosen != null) return;
   if (F.t < F.allAt) { F.quick = F.t < F.allAt - 0.4; F.t = F.allAt; F.cards.forEach(c => { c.at = Math.min(c.at, F.t - 0.4); }); S.click && S.click(); return; }
-  F.flyT = F.t; F.dest = this.fxPos('mgar') || { x: 700, y: 50 }; S.whoosh && S.whoosh(0.5); this.bump();
+  const p = e && e.clientX != null && this.miniPt ? this.miniPt(e.clientX, e.clientY) : null, i = p ? hit(F, p.x, p.y) : F.hov;
+  if (i >= 0) this.paradePick(i);
+};
+G.paradeHover = function (e) {
+  const F = this.parade; if (!F || F.chosen != null || !e || e.clientX == null || !this.miniPt) return; const p = this.miniPt(e.clientX, e.clientY), i = hit(F, p.x, p.y);
+  if (i >= 0 && i !== F.hov) { F.hov = i; S.hover && S.hover(); }
+};
+// keys and pads: ← → move, Enter / Space pick
+const oKey = G.handleKey;
+G.handleKey = function (ev) {
+  const F = this.parade;
+  if (F && ev && ev.type === 'keydown') {
+    const k = ev.code || ev.key;
+    if (/ArrowLeft|KeyA/.test(k)) { F.hov = Math.max(0, F.hov - 1); ev.preventDefault && ev.preventDefault(); return; }
+    if (/ArrowRight|KeyD/.test(k)) { F.hov = Math.min(F.cards.length - 1, F.hov + 1); ev.preventDefault && ev.preventDefault(); return; }
+    if (/Enter|Space/.test(k)) { if (F.t < F.allAt) this.paradeClick(); else this.paradePick(F.hov); ev.preventDefault && ev.preventDefault(); return; }
+    return;
+  }
+  return oKey ? oKey.apply(this, arguments) : undefined;
 };
 const oView = G.view;
-G.view = function () { const v = oView.call(this); if (this.parade) { v.fxZ = 75; v.coverOn = true; v.coverClick = () => this.paradeClick(); } return v; };
+G.view = function () { const v = oView.call(this); if (this.parade) { v.fxZ = 75; v.coverOn = true; v.coverClick = (e) => this.paradeClick(e); } return v; };
+if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('pointermove', (e) => { const g = M._g; if (g && g.parade) g.paradeHover(e); }, true);
 const oBusy = G.baseBusy; G.baseBusy = function () { return !!this.parade || oBusy.apply(this, arguments); };
 const oLS = G.longShow; if (oLS) G.longShow = function () { return !!this.parade || oLS.apply(this, arguments); };
 const oNG = G.newGame; if (oNG) G.newGame = function () { this.parade = null; return oNG.apply(this, arguments); };

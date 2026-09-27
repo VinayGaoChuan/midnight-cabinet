@@ -18,7 +18,8 @@ G.runFail = function () {
   const ex = tut ? 0 : Math.round(((run.loot && run.loot.exp) || 0) * Math.min(1, M.FAIL_EXP + (M.baseMods(m).failExp || 0)));   /* 守墓人的墓园 keeps it all */ if (ex > 0) M.addExp(h, ex);
   const mx = M.heroMaxHp(h, m);
   // 信仰值 (mc-faith.js): with enough of it, faith pays for the leader instead of a heart of the core
-  const before = m.core == null ? M.CORE_MAX : m.core, fc = M.RITE_FAITH || 30, byFaith = false,   /* faith no longer pays for the revival (2026-09-26: 信仰值 grows the religion, mc-religion.js) */ after = tut || byFaith ? before : Math.max(0, before - 1);
+  const before = m.core == null ? M.CORE_MAX : m.core, fc = M.RITE_FAITH || 30, byFaith = false,   /* faith no longer pays for the revival (2026-09-26: 信仰值 grows the religion, mc-religion.js) */ godSave = !tut && !!(M.godSave && M.godSave(m)), after = tut || byFaith || godSave ? before : Math.max(0, before - 1);   /* 冥神 Lv5 (mc-gods.js) */
+  if (godSave) m.godSaved = 1;
   if (byFaith) m.faith -= fc;
   m.core = after; h.hp = after > 0 ? mx : 1; h.relics = []; h.runs = (h.runs || 0) + 1; m.runs++;
   m.st = m.st || {}; m.st.fails = (m.st.fails || 0) + 1; if (!tut) m.st.deaths = (m.st.deaths || 0) + 1;
@@ -26,7 +27,7 @@ G.runFail = function () {
   this.save(); S.lose && S.lose();
   const card = { name: M.heroN(h), cls: h.cls, lv: h.lv, rarity: h.rarity, region: run.region.n };
   this.endInfo = { title: '探索失败', color: '#ff4a4a', sub: after > 0 ? M.heroN(h) + ' 倒在了' + run.region.n + '，这一趟的收获丢了，经验留下一半。' : '基地核心的最后一颗心保不住了。',
-    tiles: [], lines: [byFaith ? { k: '信仰值', v: '-' + fc, c: '#ffe6a0' } : { k: '基地核心', v: after + ' / ' + M.CORE_MAX, c: after <= 1 ? '#ff4a4a' : '#ff8ab0' }].concat(ex > 0 ? [{ k: '经验', v: '+' + ex, c: '#9cff7a' }] : []), at: now(), gain: {}, revive: tut ? null : { card, before, after, faith: byFaith ? fc : 0 } };
+    tiles: [], lines: [byFaith ? { k: '信仰值', v: '-' + fc, c: '#ffe6a0' } : godSave ? { k: '冥神', v: '这一次不扣心', c: '#b86bff' } : { k: '基地核心', v: after + ' / ' + M.CORE_MAX, c: after <= 1 ? '#ff4a4a' : '#ff8ab0' }].concat(ex > 0 ? [{ k: '经验', v: '+' + ex, c: '#9cff7a' }] : []), at: now(), gain: {}, revive: tut ? null : { card, before, after, faith: byFaith ? fc : 0 } };
   this.go('end');
 };
 // the rite is the first thing that happens back home

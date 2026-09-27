@@ -26,16 +26,20 @@ M.ROSTER_CAP = M.ROSTER_BASE;
 // a third copy always goes in: it merges at once (mc-evo.js)
 M.wouldMerge = (run, type) => !!(run && type && DB[type] && DB[type].next && run.roster.filter(u => u.type === type).length >= M.EVO_NEED - 1 && (!M.evoOpen || M.evoOpen(run.M, type)));
 M.canAdd = (run, type) => !run || M._noCap || run.roster.length < M.rosterCap(run) || M.wouldMerge(run, type);
-M.addUnit = function (run, type) { if (!M.canAdd(run, type)) return null; run.roster.push({ uid: M.rid(), type, star: 1, bAtk: 0, bHp: 0, lv: 1, battles: 0, kills: 0, mana: 0, bonusAtk: 0 }); return null; };
+// every way a unit joins the army (a shop, a reward, a mini-game, a talent) stays under the tier only evolving reaches (M.buyCap,
+// mc-night.js); the tutorial keeps its scripted units
+const downTier = (run, type) => { const d = DB[type], m = run && run.M; if (!d || !d.line || !d.tier || !m || !M.buyCap || (run.region && run.region.tut) || run.tut) return type; const c = M.buyCap(m, type); return d.tier > c && DB[M.lineKey(d.line, c)] ? M.lineKey(d.line, c) : type; };
+M.downTier = downTier;
+M.addUnit = function (run, type) { type = downTier(run, type); if (!M.canAdd(run, type)) return null; run.roster.push({ uid: M.rid(), type, star: 1, bAtk: 0, bHp: 0, lv: 1, battles: 0, kills: 0, mana: 0, bonusAtk: 0 }); return null; };
 // the starting army is never cut short by the cap
 const oNR = M.newRun3;
 M.newRun3 = function () { M._noCap = true; let run; try { run = oNR.apply(this, arguments); } finally { M._noCap = false; } return run; };
-// a unit given while the army is full: half its price in points
+// a unit given by an event (a recruit flag, a mini-game, a reward) always joins, whatever the cap (user ruling 2026-09-26:
+// 「像招募旗，之类的直接给部队的事件，是不受部队上限影响的，直接入队」); only buying in a shop is held to it
 const oAward = G.award;
 G.award = function (list, from) {
-  const run = this.run;
-  if (run && Array.isArray(list)) list = list.map(g => { if (!g || g.k !== 'unit' || M.canAdd(run, g.type)) return g; const v = Math.max(1, Math.round(((DB[g.type] && DB[g.type].cost) || 20) * 0.5)); this.toast && this.toast('队伍满了，' + ((DB[g.type] && DB[g.type].n) || '部队') + '换成 ' + v + ' 积分', '#ffcc33'); return { k: 'wallet', v }; });
-  return oAward.call(this, list, from);
+  if (!(Array.isArray(list) && list.some(g => g && g.k === 'unit'))) return oAward.call(this, list, from);
+  const was = M._noCap; M._noCap = true; try { return oAward.call(this, list, from); } finally { M._noCap = was; }
 };
 // buying with the army full: a merge goes in, anything else is a swap
 const oBuy = G.buy;
@@ -102,15 +106,15 @@ G.tipFor = function (key) {
 
 // ───────── blueprints: 三选一 at the base ─────────
 const PICK = 'pick:bbp';
-M.bpChanceK = 0.5;
+M.bpChanceK = 0.25;   // 2026-09-26: halved again (mc-drops.js)
 const oChance = M.bpChance; if (oChance) M.bpChance = function () { return oChance.apply(this, arguments) * M.bpChanceK; };
-// an area's final boss pays a choice of three instead of one random blueprint
-M.oneBldBp = function () { return PICK; };
+// (2026-09-26, wonders: 「不要强化和图纸了」) an area's final boss pays one random blueprint again, and a 繁荣度 level pays a wonder
+// (mc-wonders.js), not a blueprint pick
 const oInfo = M.itemInfo;
 M.itemInfo = function (key) { if (key === PICK) return { n: '图纸三选一', icon: 'scroll', c: '#ffcf4a', q: 3, kind: '建筑图纸', d: '回到基地后，从三张建筑图纸里选一张。', sub: '三选一' }; return oInfo.apply(this, arguments); };
 // a prosperity level brings one too
 const oAD = M.advanceDay;
-M.advanceDay = function (m) { const l0 = m ? M.prosLv(m) : 0, x0 = m ? M.portalMax(m) : 0, r = oAD.apply(this, arguments); if (m && M.prosLv(m) > l0) { M.invAdd(m, PICK, M.prosLv(m) - l0); m.portal.hp = Math.min(M.portalMax(m), m.portal.hp + Math.max(0, M.portalMax(m) - x0)); } return r; };   // a level also adds the main base's new life
+M.advanceDay = function (m) { const l0 = m ? M.prosLv(m) : 0, x0 = m ? M.portalMax(m) : 0, r = oAD.apply(this, arguments); if (m && M.prosLv(m) > l0) { m.portal.hp = Math.min(M.portalMax(m), m.portal.hp + Math.max(0, M.portalMax(m) - x0)); } return r; };   // a level also adds the main base's new life
 const pickOpts = (m) => { const out = []; for (let i = 0; i < 40 && out.length < 3; i++) { const k = M.dropBp(1); if (k && k.startsWith('bbp:') && !out.includes(k) && (!M.bpUseful || M.bpUseful(m, k))) out.push(k); } return out; };
 G.bpOpen = function () {
   const m = this.meta, opts = pickOpts(m);
@@ -137,6 +141,21 @@ G.tick = function (dt) {
 // one pick on screen at a time
 ['relOpen', 'dirOpen'].forEach(k => { const o = G[k]; if (o) G[k] = function () { if (this.bpPick) return; return o.apply(this, arguments); }; });
 const oNG = G.newGame; if (oNG) G.newGame = function () { this.bpPick = null; this.replace = null; return oNG.apply(this, arguments); };
+// a new expedition starts with its own counters (2026-09-26 bug: 「商店中不管有多贵的，我都能买……离开这个商店，后面积分跟显示的就正确
+// 了」): a number frozen for a flying reward of the last expedition (hold → release on landing) was never let go when that
+// expedition ended mid-flight, so the new one showed the old score while buying used the real one
+const RUN_KEYS = ['wallet', 'rsup', 'rbp', 'rshard', 'rexp', 'rfaith', 'hp'];
+const oEW = G.enterWorld;
+G.enterWorld = function () {
+  const run = this.run;
+  if (run && this._cntRun !== run) { this._cntRun = run; RUN_KEYS.forEach(k => { delete this.held[k]; delete this.tw[k]; delete this.twT[k]; });
+    // from a waypoint the expedition carries the army money it would have earned on the way (M.chapterGrant): say so once
+    if (run.grant > 0) setTimeout(() => { if (this.run === run && this.screen === 'world') { const p = this.fxPos('wallet') || { x: 300, y: 60 }; this.fx.pop && this.fx.pop(p.x, p.y + 60, '路标补给 +' + run.grant + ' 积分', '#ffcc33', 32, { rise: 30 }); this.pulse.wallet = now(); } }, 900); }
+  return oEW.apply(this, arguments);
+};
+// and a shop always opens on the real score (a reward still flying in lands in the counter on its own)
+const oOpenS = G.openShop;
+G.openShop = function () { if (this.held) { delete this.held.wallet; if (this.run && this.tw) this.tw.wallet = this.run.wallet; } return oOpenS.apply(this, arguments); };
 
 // ───────── the garrison: one unit a tier up, for soul shards, once a day per building ─────────
 M.GAR_UP = { 2: 10, 3: 20, 4: 40, 5: 80, 6: 160 };

@@ -79,7 +79,7 @@ const T = {
 };
 M.TALENTS = T; M.TAL_SC = SC; M.TAL_TIER = TIER;
 const tiersOf = (k) => T[k].tiers || [1, 2, 3, 4, 5, 6];
-const famFor = (t) => Object.keys(T).filter(k => tiersOf(k).includes(t));
+const famFor = (t) => Object.keys(T).filter(k => tiersOf(k).includes(t) && !(M.talOff && M.talOff(k)));   // M.talOff: a talent for a mechanic not in the game yet (mc-parts.js)
 M.talHeightOf = (rarity) => (SHAPE[rarity] || SHAPE[0]).length;
 
 // ───────── a new tree ─────────

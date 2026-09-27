@@ -49,11 +49,19 @@ const SLOTS = [{ n: '图纸', ic: 'scroll', c: C.butter }, { n: '空', ic: '', c
 const PTIER = [4, 0, 1, 1, 1, 0, 3], PROW = PB.T + 90 + 4.5 * 46;
 MINI.pachinko = { title: '弹珠台', img: 'e_pachinko', col: C.gold, text: '钢珠弹过一排排钉子，落进底下的格子里。两边的格子最值钱。',
   init(mg) { mg.pegs = []; const rows = 8, W = PB.R - PB.L; for (let i = 0; i < rows; i++) { const n = i % 2 ? 9 : 10; for (let j = 0; j < n; j++) mg.pegs.push({ x: PB.L + 30 + j * (W - 60) / 9 + (i % 2 ? (W - 60) / 18 : 0), y: PB.T + 90 + i * 46, f: 0 }); }
-    mg.balls = []; mg.queue = 0; mg.buys = 0; mg.won = []; mg.slotF = SLOTS.map(() => 0); mg.slotP = SLOTS.map(() => -1); mg.spawnT = 0; mg.reachB = null; mg.pend = 0; mg.launchF = 0; },
-  buy(mg, n, cost) { if (!this.miniPay(cost)) return; mg.buys++; mg.queue += n; mg.launchF = 1; S.lever(); },
+    mg.balls = []; mg.queue = 0; mg.buys = 0; mg.won = []; mg.spent = 0; mg.gW = 0; mg.gS = 0; mg.slotF = SLOTS.map(() => 0); mg.slotP = SLOTS.map(() => -1); mg.spawnT = 0; mg.reachB = null; mg.pend = 0; mg.launchF = 0; },
+  buy(mg, n, cost) { if (!this.miniPay(cost)) return; mg.spent += cost; mg.buys++; mg.queue += n; mg.launchF = 1; S.lever(); },
   // 奖励还在飞的时候不许离开（mg.pend），不然结算文字里会少东西
   btns(mg) { const busy = mg.queue > 0 || mg.balls.length > 0 || mg.pend > 0, over = mg.buys >= 2; const c3 = mg.pay, c8 = M.nice(mg.pay * 2.2);
-    return [{ t: '投 3 颗', sub: c3 + ' 积分', dis: busy || over || this.run.wallet < c3, why: busy ? '钢珠还在跑' : over ? '台子关了' : '积分不够', fn: () => MINI.pachinko.buy.call(this, mg, 3, c3) }, { t: '投 8 颗', sub: c8 + ' 积分', gold: !busy && !over, dis: busy || over || this.run.wallet < c8, why: busy ? '钢珠还在跑' : over ? '台子关了' : '积分不够', fn: () => MINI.pachinko.buy.call(this, mg, 8, c8) }, { t: '离开', leave: 1, dis: busy, why: '等钢珠落完', fn: () => this.miniFinish(mg.won.length ? '弹珠台吐出了：' + mg.won.join('、') + '。' : '钢珠全掉进了空格子。', mg.won.length ? '#ffcc33' : '#8d8496') }]; },
+    return [{ t: '投 3 颗', sub: c3 + ' 积分', dis: busy || over || this.run.wallet < c3, why: busy ? '钢珠还在跑' : over ? '台子关了' : '积分不够', fn: () => MINI.pachinko.buy.call(this, mg, 3, c3) }, { t: '投 8 颗', sub: c8 + ' 积分', gold: !busy && !over, dis: busy || over || this.run.wallet < c8, why: busy ? '钢珠还在跑' : over ? '台子关了' : '积分不够', fn: () => MINI.pachinko.buy.call(this, mg, 8, c8) }, { t: '离开', leave: 1, dis: busy, why: '等钢珠落完', fn: () => { const r = MINI.pachinko.sum(mg); this.miniFinish(r.t, r.c); } }]; },
+  // the settlement in one line (user ruling 2026-09-26: 「把相同的合并一下再显示，例如赚了还是赔了多少积分」): what went in, what came
+  // back, won or lost on the score, then the other things counted by kind
+  sum(mg) {
+    const net = mg.gW - mg.spent, n = {}; mg.won.forEach(w => { n[w] = (n[w] || 0) + 1; });
+    const rest = Object.keys(n).map(k => k + (n[k] > 1 ? ' ×' + n[k] : '')), parts = ['投了 ' + mg.spent + ' 积分，赢回 ' + mg.gW + ' 积分，' + (net >= 0 ? '净赚 ' + net : '净赔 ' + -net)];
+    if (mg.gS) parts.push('物资 +' + mg.gS); if (rest.length) parts.push('还有 ' + rest.join('、'));
+    return { t: parts.join('；') + '。', c: net >= 0 || rest.length ? '#ffcc33' : '#8d8496' };
+  },
   land(mg, i, b) {
     const s = SLOTS[i], run = this.run, sw = (PB.R - PB.L) / SLOTS.length, from = { x: PB.L + (i + 0.5) * sw, y: PB.B - 40 }, reached = mg.reachB === b; mg.slotF[i] = 1; mg.slotP[i] = 0; let g = null;
     if (reached) { mg.reachB = null; SHOW.slowmo(mg, 1, 0); }
@@ -64,7 +72,7 @@ MINI.pachinko = { title: '弹珠台', img: 'e_pachinko', col: C.gold, text: '钢
       this.fx.spark(from.x, from.y, s.c, 8 + tier * 5, { v: 420 + tier * 120, dir: -Math.PI / 2, spread: 1.6 }); this.fx.ring(from.x, from.y, 8, 60 + tier * 24, s.c, 5, 0.3);
       SHOW.later(mg, 0.06, () => { if (solo) SHOW.win(this, mg, tier, { x: from.x, y: from.y - 40, col: s.c, v, label: WL(tier) }); else if (v) SHOW.roll(mg, v, from.x, from.y - 120, s.c, 0.4); });
       if (tier >= 3) { S.mini('pachinko', 'edge'); SHOW.later(mg, tier === 4 ? 0.75 : 0.1, () => this.miniSay(s.n + '！', s.c, true)); }
-      SHOW.later(mg, tier === 4 ? 0.7 : tier === 3 ? 0.25 : 0.12, () => { mg.won.push(...this.award([g], from)); mg.pend--; });
+      SHOW.later(mg, tier === 4 ? 0.7 : tier === 3 ? 0.25 : 0.12, () => { const got = this.award([g], from); if (g.k === 'wallet') mg.gW += g.v; else if (g.k === 'rsup') mg.gS += g.v; else mg.won.push(...got); mg.pend--; });
     } else { S.tone(200, 0.12, 'sine', 0.06, -80); if (reached) { if (i === 1 || i === 5) SHOW.near(this, mg, from.x, from.y - 10, '差一点！'); else SHOW.lose(this, mg); } }
   },
   tick(mg, dt) {

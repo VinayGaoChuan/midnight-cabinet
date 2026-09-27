@@ -1172,13 +1172,14 @@
   </sc-if>
   <div style="position:absolute;z-index:30;left:24px;top:{{w.rosTop}}px;display:flex;flex-direction:column;gap:8px">
       <div data-tip="w-roster" style="font-size:22px;color:#a9a3c9;text-shadow:3px 3px 0 #07060f">部队 <span style="color:#f4efe0">{{w.rosterN}}</span></div>
-      <div data-fx="roster" style="display:grid;grid-template-columns:repeat(2,78px);grid-auto-rows:96px;gap:8px;min-height:96px;min-width:78px;transform:scale({{w.rosFit}});transform-origin:left top">
+      <div data-fx="roster" style="display:grid;grid-template-columns:repeat({{w.rosCols}},78px);grid-auto-rows:96px;gap:8px;min-height:96px;min-width:78px;transform:scale({{w.rosFit}});transform-origin:left top">
         <sc-for list="{{w.roster}}" as="wr" hint-placeholder-count="0">
           <div sc-camel-on-click="{{wr.onClick}}" sc-camel-on-mouse-enter="{{wr.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:0;width:78px;height:96px;box-sizing:border-box;padding:2px;border:3px solid {{wr.border}};background:{{wr.bg}};box-shadow:0 0 0 3px #07060f,{{wr.glow}};cursor:pointer" style-hover="transform:translateY(-6px)"><sc-if value="{{wr.hasR}}"><m-img data-tip="{{wr.ri.tip}}" src="{{wr.ri.img}}" style="position:absolute;left:-3px;top:-3px;width:24px;height:24px;background:#07060f"></m-img></sc-if><sc-if value="{{wr.hasV}}"><m-img data-tip="{{wr.vi.tip}}" src="{{wr.vi.img}}" style="position:absolute;right:-3px;top:-3px;width:24px;height:24px;background:#07060f"></m-img></sc-if><m-img src="{{wr.img}}" style="max-width:74px;max-height:74px"></m-img><div style="display:flex;gap:5px;align-items:center;justify-content:center;font-size:18px;color:#ffcf4a;height:17px">{{wr.stars}}<sc-if value="{{wr.evoOn}}"><sc-for list="{{wr.evoPips}}" as="ep" hint-placeholder-count="0"><i style="display:block;width:8px;height:8px;transform:rotate(45deg);background:{{ep.c}};box-shadow:0 0 0 2px #07060f"></i></sc-for></sc-if></div></div>
         </sc-for>
       </div>
   </div>
-  <sc-if value="{{w.poolOn}}" hint-placeholder-val="{{false}}"><div style="position:absolute;z-index:30;right:40px;top:318px;display:flex;flex-direction:column;align-items:flex-end;gap:8px;transform:scale({{w.poolSc}});transform-origin:right top">
+  <sc-if value="{{isWorld}}"><div data-g="w-mm" data-tip="w-mm" data-pj="ink" sc-camel-on-click="{{mmToggle}}" style="--q:#3d3a8c;position:absolute;z-index:31;right:36px;top:{{w.mmBtnTop}}px;padding:2px 14px 6px;font-size:22px;color:#e8dcc4;cursor:pointer;text-shadow:3px 3px 0 #07060f" style-hover="color:#ffe08a">{{w.mmBtn}}</div></sc-if>
+  <sc-if value="{{w.poolOn}}" hint-placeholder-val="{{false}}"><div style="position:absolute;z-index:30;right:40px;top:{{w.poolTop}}px;display:flex;flex-direction:column;align-items:flex-end;gap:8px;transform:scale({{w.poolSc}});transform-origin:right top">
     <div data-tip="w-pool" style="font-size:22px;color:#a9a3c9;text-shadow:3px 3px 0 #07060f">部队池</div>
     <div style="display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;max-width:420px"><sc-for list="{{w.pool}}" as="wp" hint-placeholder-count="0"><div sc-camel-on-mouse-enter="{{wp.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" style="position:relative;width:60px;height:74px;box-sizing:border-box;border:3px solid {{wp.c}};background:#0d0b1e;box-shadow:0 0 0 3px #07060f;display:flex;flex-direction:column;align-items:center;justify-content:flex-end"><m-img src="{{wp.img}}" style="max-width:54px;max-height:50px"></m-img><div style="display:flex;gap:5px;height:14px;align-items:center"><sc-if value="{{wp.pipsOn}}"><sc-for list="{{wp.pips}}" as="pp" hint-placeholder-count="0"><i style="display:block;width:7px;height:7px;transform:rotate(45deg);background:{{pp.c}};box-shadow:0 0 0 2px #07060f"></i></sc-for></sc-if></div></div></sc-for></div>
   </div></sc-if>
@@ -1206,12 +1207,14 @@
   </div>
   <sc-if value="{{pausedOn}}"><div style="position:absolute;left:0;top:480px;width:1920px;text-align:center;font-size:110px;text-shadow:5px 0px 0 #07060f,-5px 0px 0 #07060f,0px 5px 0 #07060f,0px -5px 0 #07060f,5px 5px 0 #07060f,-5px 5px 0 #07060f,5px -5px 0 #07060f,-5px -5px 0 #07060f,0 10px 0 #07060f,5px 10px 0 #07060f,-5px 10px 0 #07060f;pointer-events:none"><mc-wave t="已暂停"></mc-wave></div></sc-if>
   <div style="position:absolute;left:0;top:900px;width:1920px;height:180px;box-sizing:border-box;background:#1a1640;box-shadow:inset 0 6px 0 0 #07060f,inset 0 9px 0 0 #3d3a8c">
+    <sc-if value="{{h.fvOn}}" hint-placeholder-val="{{true}}">
     <div data-tip="b-fever" sc-camel-on-mouse-enter="{{h.fvTip}}" sc-camel-on-mouse-leave="{{tipOff}}" style="position:absolute;left:50px;top:22px;width:360px;display:flex;flex-direction:column;gap:12px">
       <div style="display:flex;justify-content:space-between">
         <sc-for list="{{h.fvL}}" as="fl" hint-placeholder-count="5"><div style="font-family:'Silkscreen','Fusion Pixel 12px Proportional SC',monospace;font-size:56px;line-height:64px;color:{{fl.c}};text-shadow:4px 0 0 #07060f,-4px 0 0 #07060f,0 4px 0 #07060f,0 -4px 0 #07060f,4px 4px 0 #07060f;transform:translateY({{fl.dy}}px)">{{fl.ch}}</div></sc-for>
       </div>
       <div style="position:relative;height:24px;background:#07060f;box-shadow:0 0 0 3px #07060f"><div style="position:absolute;left:0;top:0;bottom:0;width:{{h.fvW}};background:{{h.fvC}};box-shadow:inset 0 6px 0 0 rgba(255,255,255,0.35)"></div></div>
     </div>
+    </sc-if>
     <sc-if value="{{h.skOn}}" hint-placeholder-val="{{false}}">
     <div data-g="b-skill" sc-camel-on-click="{{castSkill}}" sc-camel-on-mouse-enter="{{skillTip}}" sc-camel-on-mouse-leave="{{tipOff}}" style="position:absolute;left:450px;top:{{h.skTop}}px;width:360px;height:{{h.skH}}px;overflow:hidden;box-sizing:border-box;border:3px solid {{h.skillBorder}};background:{{h.skillBg}};box-shadow:0 0 0 3px #07060f,inset 0 -9px 0 0 rgba(7,6,15,0.45),{{h.skillGlow}};display:flex;align-items:center;gap:14px;padding:0 16px;cursor:pointer" style-hover="translate:0 -3px" style-active="translate:0 6px">
       <sc-if value="{{h.skFoldOn}}" hint-placeholder-val="{{false}}"><div style="position:absolute;inset:0;display:flex;align-items:center;gap:10px;padding:0 14px;opacity:{{h.skFoldOp}};pointer-events:none"><sc-if value="{{h.psOn}}" hint-placeholder-val="{{false}}"><span style="font-size:22px;color:{{h.psC}};white-space:nowrap">{{h.psName}}</span><div style="flex:1;height:12px;background:#07060f;box-shadow:0 0 0 3px #07060f,0 0 0 6px #3d3a8c"><div style="height:100%;width:{{h.psW}};background:{{h.psC}};box-shadow:inset 0 3px 0 0 rgba(255,243,176,0.55)"></div></div><span style="font-size:18px;color:#a9a3c9;white-space:nowrap">{{h.psRes}}</span></sc-if></div></sc-if>
@@ -1277,7 +1280,7 @@
           <div data-fx="{{su.fx}}" sc-camel-on-click="{{su.onBuy}}" sc-camel-on-mouse-enter="{{su.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" data-pj="card" style="--q:{{su.qc}};position:relative;box-sizing:border-box;background:linear-gradient(180deg,{{su.bg}} 0 calc(100% - 60px),#0d0b1e calc(100% - 60px));display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:8px 10px 12px;cursor:pointer;transform:translate({{su.sh}}px,{{su.dy}}px);opacity:{{su.op}}">
             <sc-if value="{{su.hasR}}"><div data-tip="{{su.ri.tip}}" data-pj="ink" style="--q:{{su.ri.c}};position:absolute;left:9px;top:9px;padding:3px"><m-img src="{{su.ri.img}}" style="width:40px;height:40px"></m-img></div></sc-if>
             <sc-if value="{{su.hasV}}"><div data-tip="{{su.vi.tip}}" data-pj="ink" style="--q:{{su.vi.c}};position:absolute;right:9px;top:9px;padding:3px"><m-img src="{{su.vi.img}}" style="width:40px;height:40px"></m-img></div></sc-if>
-            <sc-if value="{{su.evoOn}}"><div data-tip="s-evo" style="position:absolute;left:50%;top:12px;transform:translateX(-50%);display:flex;gap:9px;padding:6px 10px;background:#07060f"><sc-for list="{{su.evoPips}}" as="ep" hint-placeholder-count="0"><i style="display:block;width:14px;height:14px;transform:rotate(45deg);background:{{ep.c}};box-shadow:0 0 0 2px #07060f"></i></sc-for></div></sc-if>
+            <sc-if value="{{su.evoOn}}"><div data-tip="s-evo" style="position:absolute;left:50%;top:12px;transform:translateX(-50%);display:flex;align-items:center;gap:9px;padding:4px 10px 6px;background:#07060f;box-shadow:0 0 0 3px #ffcf4a;white-space:nowrap"><span style="font-size:20px;line-height:1;color:#ffcf4a">▲ 可进化</span><sc-for list="{{su.evoPips}}" as="ep" hint-placeholder-count="0"><i style="display:block;width:14px;height:14px;transform:rotate(45deg);background:{{ep.c}};box-shadow:0 0 0 2px #07060f"></i></sc-for></div></sc-if>
             <sc-if value="{{su.evoGo}}"><div style="position:absolute;inset:-8px;pointer-events:none;box-shadow:0 0 0 5px #ffcf4a,0 0 28px 8px rgba(255,207,74,.55);animation:fitBlink 1s ease-in-out infinite"></div></sc-if>
             <mc-anim src="{{su.img}}" style="width:220px;height:124px"></mc-anim>
             <div style="font-size:30px;line-height:1.1;color:{{su.qc}};text-shadow:3px 3px 0 #07060f">{{su.n}}</div>
@@ -1432,6 +1435,20 @@
     <div sc-camel-on-click="{{stop}}" data-pj="panel plate" data-enter="pop" style="position:relative;width:1680px;height:1000px;box-sizing:border-box;padding:56px 52px 30px;display:flex;flex-direction:column;gap:12px">
       <div data-pj="tab" data-enter="drop" style="--d:.1s;position:absolute;left:52px;top:-30px;font-size:40px"><mc-wave t="{{lg.title}}"></mc-wave></div>
       <div data-tip="lg-tok" data-pj="ink" style="--q:#ffcf4a;position:absolute;right:52px;top:14px;display:flex;align-items:center;gap:10px;padding:4px 16px 6px 12px"><i data-pj="coin" style="--s:24px;box-shadow:inset 3px 3px 0 0 #fff3b0,inset -3px -3px 0 0 #e0781f"></i><mc-num v="{{lg.tok}}" style="font-size:30px;color:#ffcf4a"></mc-num></div>
+      <div style="position:absolute;right:230px;top:14px;display:flex;gap:10px">
+        <sc-for list="{{lg.tabs}}" as="lt" hint-placeholder-count="2"><div data-g="{{lt.g}}" data-pj="ink" sc-camel-on-click="{{lt.onClick}}" style="--q:{{lt.q}};padding:4px 16px 6px;font-size:26px;color:{{lt.c}};cursor:pointer">{{lt.n}}<sc-if value="{{lt.dot}}"><span style="display:inline-block;width:12px;height:12px;margin-left:8px;background:#ffcf4a;box-shadow:0 0 0 3px #07060f;vertical-align:middle"></span></sc-if></div></sc-for>
+      </div>
+      <sc-if value="{{lg.tabMain}}" hint-placeholder-val="{{true}}">
+      <sc-if value="{{lg.showDiffs}}" hint-placeholder-val="{{false}}">
+      <div data-g="lg-diff" style="font-size:26px;color:#a9a3c9;text-shadow:3px 3px 0 #07060f">难度</div>
+      <div style="display:flex;gap:16px">
+        <sc-for list="{{lg.diffs}}" as="ld" hint-placeholder-count="4">
+          <div data-pj="opt" sc-camel-on-click="{{ld.onClick}}" sc-camel-on-mouse-enter="{{ld.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" style="--q:{{ld.ring}};width:250px;height:72px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;opacity:{{ld.op}}">
+            <div style="font-size:28px;line-height:1.1;color:{{ld.c}}">{{ld.n}}</div><div style="font-size:18px;color:#a9a3c9">{{ld.sub}}</div>
+          </div>
+        </sc-for>
+      </div>
+      </sc-if>
       <div data-g="lg-figs" style="font-size:26px;color:#a9a3c9;text-shadow:3px 3px 0 #07060f">手办台</div>
       <div style="display:flex;gap:16px">
         <sc-for list="{{lg.leaders}}" as="ll" hint-placeholder-count="6">
@@ -1473,6 +1490,23 @@
             <div data-pj="well" style="--q:{{la.ring}};display:flex;align-items:center;gap:10px;padding:8px 12px;opacity:{{la.op}}"><div style="flex:1;min-width:0"><div style="font-size:22px;color:{{la.c}}">{{la.n}}</div><div style="font-size:17px;color:#a9a3c9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{la.d}}</div></div><div style="font-size:20px;color:#ffcf4a">{{la.tok}}</div></div>
           </sc-for>
         </div>
+      </sc-if>
+      </sc-if>
+      <sc-if value="{{lg.tabParts}}" hint-placeholder-val="{{false}}">
+      <div style="font-size:24px;color:#a9a3c9;text-shadow:3px 3px 0 #07060f">{{lg.partsLine}}</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px 20px">
+        <sc-for list="{{lg.parts}}" as="lp2" hint-placeholder-count="6">
+          <div data-pj="opt" sc-camel-on-click="{{lp2.onClick}}" style="--q:{{lp2.ring}};height:220px;box-sizing:border-box;display:flex;align-items:center;gap:22px;padding:16px 26px;opacity:{{lp2.op}}">
+            <div style="flex:none;width:112px;height:112px;display:flex;align-items:center;justify-content:center;background:#07060f;box-shadow:0 0 0 3px {{lp2.c}}"><m-img src="{{lp2.img}}" style="width:80px;height:80px;filter:{{lp2.filt}}"></m-img></div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+              <div style="font-size:32px;color:{{lp2.c}}">{{lp2.n}}</div>
+              <div style="font-size:22px;line-height:1.35;color:#e8dcc4">{{lp2.d}}</div>
+              <sc-if value="{{lp2.buy}}" hint-placeholder-val="{{true}}"><div style="align-self:flex-start;display:flex;align-items:center;gap:6px;padding:2px 12px 4px;background:#07060f"><i data-pj="coin" style="--s:20px;box-shadow:inset 3px 3px 0 0 #fff3b0,inset -3px -3px 0 0 #e0781f"></i><span style="font-size:24px;color:{{lp2.pc}}">{{lp2.price}}</span></div></sc-if>
+              <sc-if value="{{lp2.own}}" hint-placeholder-val="{{false}}"><div style="font-size:22px;color:#9cff7a">已装上</div></sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </div>
       </sc-if>
       <div style="margin-top:auto;display:flex;justify-content:flex-end;align-items:center;gap:26px">
         <div data-pj="lnk" sc-camel-on-click="{{lg.close}}" style="padding:2px 12px;font-size:32px;color:#47d6c1;text-shadow:3px 3px 0 #07060f"><span data-pj="cur">▶</span> {{lg.closeT}}</div>
@@ -1526,6 +1560,7 @@
         <m-img src="{{rc.img}}" style="width:{{rc.iw}}px;height:{{rc.ih}}px"></m-img>
         <div style="font-size:34px;line-height:46px;color:#ffe6a0;text-align:center;min-height:92px;text-wrap:balance;text-shadow:3px 3px 0 #07060f"><span data-pj="cur" style="font-size:24px;margin-right:8px">▶</span>{{rc.t}}</div>
         <div style="font-size:22px;color:{{rc.c}};text-shadow:2px 2px 0 #07060f">{{rc.n}}</div>
+        <sc-if value="{{rc.hasList}}" hint-placeholder-val="{{false}}"><div style="align-self:stretch;display:flex;flex-direction:column;gap:6px;padding:10px 12px;background:rgba(7,6,15,.55);box-shadow:0 0 0 3px #07060f"><sc-for list="{{rc.list}}" as="rl" hint-placeholder-count="0"><div style="font-size:21px;line-height:1.35;color:{{rl.c}}">{{rl.t}}</div></sc-for></div></sc-if>
       </div>
     </sc-for>
   </div>
@@ -1544,10 +1579,10 @@
         <sc-if value="{{dc.hasTags}}"><div style="display:flex;gap:22px;flex-wrap:wrap;justify-content:center"><sc-for list="{{dc.tags}}" as="dt" hint-placeholder-count="0"><span data-tip="{{dt.tip}}" style="display:flex;align-items:center;gap:8px;font-size:28px;color:{{dt.c}};text-shadow:3px 3px 0 #07060f"><m-img src="{{dt.img}}" style="width:34px;height:34px"></m-img>{{dt.n}}</span></sc-for></div></sc-if>
         <div style="font-size:28px;line-height:38px;color:#f4efe0;text-align:center;min-height:76px;text-wrap:balance">{{dc.t}}</div>
         <sc-if value="{{dc.hasSub}}"><div style="font-size:22px;color:#ffcf4a">{{dc.sub}}</div></sc-if>
-        <div style="align-self:stretch;display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 14px 14px;background:rgba(7,6,15,.55);box-shadow:0 0 0 3px #07060f">
+        <sc-if value="{{dc.hasHave}}" hint-placeholder-val="{{true}}"><div style="align-self:stretch;display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 14px 14px;background:rgba(7,6,15,.55);box-shadow:0 0 0 3px #07060f">
           <div style="font-size:22px;color:#a9a3c9">{{dc.have}}</div>
           <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:6px 18px;max-height:96px;overflow:hidden"><sc-for list="{{dc.blds}}" as="db" hint-placeholder-count="0"><span style="font-size:24px;color:{{db.c}};text-shadow:3px 3px 0 #07060f;white-space:nowrap">{{db.n}}</span></sc-for></div>
-        </div>
+        </div></sc-if>
       </div>
     </sc-for>
   </div>

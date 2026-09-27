@@ -34,7 +34,7 @@ M.dayEvents = function (m) {
     const d0 = (m.evGen || 0) + 1, end = E * Math.ceil(d0 / E), days = [];
     for (let d = d0; d < end; d++) if (d > m.day && d > 1 && !m.evs.some(e => e.day === d)) days.push(d);   // end = the blood moon, kept free
     const kinds = Object.keys(EV).filter(k => EV[k].w && (!EV[k].need || EV[k].need(m)));
-    days.sort(() => Math.random() - 0.5).slice(0, 1).forEach(d => { const k = M.wpick(kinds, x => EV[x].w); kinds.splice(kinds.indexOf(k), 1); m.evs.push({ day: d, k }); });
+    days.sort(() => Math.random() - 0.5).slice(0, M.visitN ? M.visitN(m) : 1).forEach(d => { const k = M.wpick(kinds, x => EV[x].w); kinds.splice(kinds.indexOf(k), 1); m.evs.push({ day: d, k }); });
     m.evGen = end;
   }
   return m.evs;
@@ -205,7 +205,7 @@ M.BLESS = BLESS;
 G.dayEvent = function (k) {
   const m = this.meta, E = EV[k]; if (!E || isNight(k)) return;
   const ev = (m.evs || []).find(e => e.day === m.day && e.k === k && !e.done); if (ev) ev.done = true; this.save();
-  if (k === 'merchant') return merchant(this, m, goods(this, m));
+  if (k === 'merchant') return merchant(this, m, M.dayGoods(this, m));
   if (k === 'star') { const opts = BLESS.map((b, i) => i).sort(() => rnd() - 0.5).slice(0, 3);
     this.modal = { title: E.n, titleColor: E.c, text: E.d, img: 'e_fate', border: E.c, at: performance.now(), choices: opts.map(i => ({ t: BLESS[i].n, gold: true, fn: () => { m.bless = i; this.modal = null; this.save(); this.toast('下一次出征：' + BLESS[i].n, E.c); } })) }; return; }
   if (k === 'plague') { const cost = 40 * m.heroes.length;

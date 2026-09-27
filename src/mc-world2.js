@@ -8,7 +8,7 @@ const PJ = M.PJ || {}, P = PJ.PAL || {};
 const E = (v) => Math.round(v);
 const PR = (x, a, b, w, h, c) => { x.fillStyle = c; x.fillRect(E(a), E(b), E(w), E(h)); };
 // 站点类型 → 调色板含义色（撤离青、首领红、商店金、奇遇紫……）
-const NODE_C = { extract: 'teal', hold: 'teal', camp: 'amber', chest: 'gold', shop: 'gold', boss: 'red', elite: 'red', event: 'violet', recruit: 'blue', normal: 'pink', start: 'cream' };
+const NODE_C = { extract: 'teal', hold: 'amber',   /* only 撤离 is teal (2026-09-26: 坚守战 looked like an extraction) */ camp: 'amber', chest: 'gold', shop: 'gold', boss: 'red', elite: 'red', event: 'violet', recruit: 'blue', normal: 'pink', start: 'cream' };
 // 站牌：夜色底 + 墨框 + 右下硬投影 + 左侧含义色条；像素字 24（= 字库原生 12px × 2，最清楚）
 function nodeTag(ctx, n, p) {
   const U = M.UI, lab = M.nodeLabel(n), fs = 24, h = 40, w = E(U.measure(ctx, lab, fs) + 38), x0 = E(p.x - w / 2), y0 = E(p.y + 36);
@@ -68,12 +68,16 @@ M.genMap2 = function (run, meta) {
   }
   const edges = [];
   const dirOf = (a, b) => b.row < a.row ? 'up' : b.row > a.row ? 'down' : 'right';
-  const link = (a, b) => { const d = dirOf(a, b); if (a.out.some(e => edges[e].dir === d)) return false; const pts = d === 'right' ? [[a.x, a.y], [b.x, b.y]] : [[a.x, a.y], [a.x + STUB, a.y], [a.x + STUB, b.y], [b.x, b.y]]; let len = 0; for (let i = 1; i < pts.length; i++) len += Math.abs(pts[i][0] - pts[i - 1][0]) + Math.abs(pts[i][1] - pts[i - 1][1]); a.out.push(edges.length); edges.push({ a: a.id, b: b.id, pts, len, dir: d }); return true; };
+  // a road only ever moves one lane (user ruling 2026-09-26: 「应该每次移动都移动一个口，例如从下移动到中，这个时候再选上中下」): from the
+  // bottom lane the middle is always one step up, and from there all three are open again
+  const link = (a, b, any) => { const d = dirOf(a, b); if (a.out.some(e => edges[e].dir === d)) return false; if (!any && Math.abs(a.row - b.row) > 1) return false; const pts = d === 'right' ? [[a.x, a.y], [b.x, b.y]] : [[a.x, a.y], [a.x + STUB, a.y], [a.x + STUB, b.y], [b.x, b.y]]; let len = 0; for (let i = 1; i < pts.length; i++) len += Math.abs(pts[i][0] - pts[i - 1][0]) + Math.abs(pts[i][1] - pts[i - 1][1]); a.out.push(edges.length); edges.push({ a: a.id, b: b.id, pts, len, dir: d }); return true; };
   for (let c = 0; c < cols - 1; c++) {
     const A = byCol[c].filter(n => n.type !== 'extract'), B = byCol[c + 1];   // 撤离 ends the run: nothing leaves it
     B.forEach(b => { const cand = A.slice().sort((x, y) => Math.abs(x.row - b.row) - Math.abs(y.row - b.row)); for (const a of cand) if (link(a, b)) break; });
     A.forEach(a => { if (!a.out.length) { const cand = B.slice().sort((x, y) => Math.abs(x.row - a.row) - Math.abs(y.row - a.row)); for (const b of cand) if (link(a, b)) break; } });
     if (!tut && Math.random() < 0.45) { const a = pick(A), b = pick(B); link(a, b); }
+    // nothing is left cut off (never needed with the lanes the columns get, kept as a guard)
+    B.forEach(b => { if (!A.some(a => a.out.some(e => edges[e].b === b.id))) { const a = A.slice().sort((x, y) => Math.abs(x.row - b.row) - Math.abs(y.row - b.row))[0]; if (a) link(a, b, true); } });
   }
   // types
   nodes.forEach(n => {
@@ -255,9 +259,13 @@ M.worldPick = function (run, walker, sx, sy) {
 };
 // the minimap sits top-right, level with the leader panel (user ruling 2026-09-25)
 M.MMAP = { x: 1320, y: 48, w: 560, h: 250 };
+// it folds away (user ruling 2026-09-26: 「小地图设计一个收起和展开的功能，很多时候是不看小地图的」): folded, only its title plate stays
+M.mmOff = () => !!(M.settings && M.settings.mmOff);
 M.drawMinimap2 = function (ctx, run, walker) {
   const map = run.map, X = M.MMAP.x, Y = M.MMAP.y, Wd = 560, Ht = 250;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (M.mmOff()) { const cur = walker.edge ? walker.edge.b : walker.node, curCol = map.nodes[cur].col, U = M.UI, cap = run.region.n + ' · 第 ' + (curCol + 1) + '/' + map.cols + ' 站', tw = E((U ? U.measure(ctx, cap, 24) : 300) + 32), tx = X + 24, ty = Y - 20;
+    PR(ctx, tx - 4, ty - 4, tw + 8, 44, P.ink); PR(ctx, tx, ty, tw, 36, P.indigo); PR(ctx, tx, ty, tw, 4, P.dusk); if (U) U.text(ctx, cap, tx + 16, ty + 28, 24, P.butter, { align: 'left', base: 'alphabetic', u: 2 }); return; }
   // 机箱面板：右下 12px 硬投影 + 墨框 + 斜面（上左亮、下右暗）+ 四角铆钉；里面是网点凹槽
   PR(ctx, X + 8, Y + 8, Wd + 8, Ht + 8, P.ink); PR(ctx, X - 4, Y - 4, Wd + 8, Ht + 8, P.ink); PR(ctx, X, Y, Wd, Ht, P.night);
   PR(ctx, X, Y, Wd, 4, P.dusk); PR(ctx, X, Y, 4, Ht, P.dusk); PR(ctx, X, Y + Ht - 6, Wd, 6, P.abyss); PR(ctx, X + Wd - 4, Y, 4, Ht, P.abyss);

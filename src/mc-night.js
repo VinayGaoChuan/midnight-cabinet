@@ -74,7 +74,8 @@ M.defaultMeta3 = function () { const m = oDM.apply(this, arguments); if (m && m.
 if (M.DIRS && M.DIRS.fort) Object.assign(M.DIRS.fort, { cats: [], styles: ['medieval'], t: '中世纪风格的建筑效果 +35%，驻军生命 +10%。', fn: (o, m, lv) => { o.garHp = (o.garHp || 0) + 0.1 * lv; } });
 if (M.TALENTS && M.TALENTS.ballistics) Object.assign(M.TALENTS.ballistics, { n: '驻防术', d: (v) => '驻军攻击 +' + Math.round(v * 100) + '%。' });
 if (M.REL_DOCTRINES && M.REL_DOCTRINES.potala) M.REL_DOCTRINES.potala.forEach(e => { if (e.base && e.base.defDmg) e.t = '驻军攻击 +' + Math.round(e.base.defDmg * 100) + '%。'; });
-if (M.SHOPS && M.SHOPS.mercs) Object.assign(M.SHOPS.mercs, { d: '只卖稀有以上的部队，价格贵一成。', pool: (k) => DB[k].q >= 2 && DB[k].q <= 4 });
+if (M.SHOPS && M.SHOPS.mercs) Object.assign(M.SHOPS.mercs, { d: '只卖优质以上的部队，价格贵一成。', pool: (k) => DB[k].q >= 1 });
+if (M.SHOPS && M.SHOPS.slaver) Object.assign(M.SHOPS.slaver, { pool: (k) => DB[k].q >= 1 });
 
 // ───────── what evolving may reach: runs, the garrison, shops, the pool ─────────
 M.evoFind = function (run, hide) {
@@ -83,20 +84,26 @@ M.evoFind = function (run, hide) {
   const k = Object.keys(g).find(t => g[t].length >= M.EVO_NEED);
   return k ? g[k].slice(0, M.EVO_NEED) : null;
 };
-// no tier above the vocation's cap in the pool; a shop card above it comes down to the cap, at the lower price
+// what shops and rewards hand out stays one tier below the vocation's cap: the top tier is only ever reached by evolving
+// (user ruling 2026-09-26: 「前期只能进化到稀有的时候，我在游戏中竟然可以直接买到或者获得稀有单位，这就完全损失了进化乐趣」). With the
+// cap at 稀有 that is 普通 and 优质; a vocation hall (cap 史诗) lets its 稀有 into the shops. A card above comes down, cheaper.
 const capOf = (m, k) => { const d = DB[k]; return d && d.line && d.tier && m ? M.vocCap(m, d.voc) : 9; };
+const buyCap = (m, k) => Math.max(1, capOf(m, k) - 1);
+M.buyCap = buyCap;
 const oUP = M.unitPool;
-M.unitPool = function (run) { const L = oUP.apply(this, arguments), m = metaOf(run); if (!m || !run || !run.pool) return L; const out = L.filter(k => !DB[k] || !DB[k].tier || DB[k].tier <= capOf(m, k)); return out.length ? out : L; };
+M.unitPool = function (run) { const L = oUP.apply(this, arguments), m = metaOf(run); if (!m || !run || !run.pool) return L; const out = L.filter(k => !DB[k] || !DB[k].tier || DB[k].tier <= buyCap(m, k)); return out.length ? out : L; };
 const oRS = M.rollShop;
 M.rollShop = function (run) {
   const r = oRS.apply(this, arguments), m = metaOf(run), sh = run && run.shop;
-  if (m && sh && sh.units && !(run.region && run.region.tut)) sh.units.forEach(c => { const d = c && DB[c.type]; if (!d || !d.line || !d.tier) return; const cap = capOf(m, c.type); if (d.tier <= cap) return; const k = M.lineKey(d.line, cap); if (!DB[k]) return; c.cost = Math.max(5, Math.round(c.cost * DB[k].cost / Math.max(1, d.cost))); c.type = k; c.q = DB[k].q; });
+  if (m && sh && sh.units && !(run.region && run.region.tut)) sh.units.forEach(c => { const d = c && DB[c.type]; if (!d || !d.line || !d.tier) return; const cap = buyCap(m, c.type); if (d.tier <= cap) return; const k = M.lineKey(d.line, cap); if (!DB[k]) return; c.cost = Math.max(5, Math.round(c.cost * DB[k].cost / Math.max(1, d.cost))); c.type = k; c.q = DB[k].q; });
   return r;
 };
 
 // ───────── the garrison ─────────
 M.GARRISON_CAP = 30;
-const garOf = (m) => { if (!m) return []; if (!Array.isArray(m.garrison)) m.garrison = []; m.garrison = m.garrison.filter(u => u && typeof u === 'object' && DB[u.type]); return m.garrison; };
+// cleaned in place: the evolution (mc-evo.js) holds on to this very array while it plays; a fresh copy each call left it
+// merging into a stale list, and the same three evolved again and again (2026-09-26 bug: 「局外3合1的时候，好像死循环了」)
+const garOf = (m) => { if (!m) return []; if (!Array.isArray(m.garrison)) m.garrison = []; const g = m.garrison; for (let i = g.length - 1; i >= 0; i--) { const u = g[i]; if (!(u && typeof u === 'object' && DB[u.type])) g.splice(i, 1); } return g; };
 M.garrisonOf = garOf;
 M.garFix = function (m) {
   if (!m) return false; let ch = false;
@@ -107,16 +114,13 @@ M.garFix = function (m) {
   if (!m.nightV) { m.nightV = 1; ch = true; }
   return ch;
 };
-// the army that comes home stays (copies: the run's roster goes with the run)
+// one unit comes home and stays (user ruling 2026-09-26: 「每次凯旋只能带回一只部队……带回来的那只部队应该是战斗力最高的3个里面玩家
+// 自己选1个」): the army is copied for the homecoming (mc-parade.js), which lets the player pick among the three strongest and
+// puts that one into the garrison; the run's roster goes with the run
 const oWin = G.runWin;
 G.runWin = function (kind) {
   const run = this.run, m = this.meta;
-  if (run && m && run.roster && run.roster.length) {
-    const g = garOf(m), n = run.roster.length; let out = null;
-    run.roster.forEach(u => g.push(Object.assign({}, u, { uid: M.rid(), mana: 0 })));
-    if (g.length > M.GARRISON_CAP) { g.sort((a, b) => M.unitPower(b.type, b) - M.unitPower(a.type, a)); const gone = g.splice(M.GARRISON_CAP), sup = gone.reduce((a, u) => a + Math.round(((DB[u.type] && DB[u.type].cost) || 10) * 0.3), 0); m.supplies += sup; out = { n: gone.length, sup }; }
-    this._garIn = { n, out, units: run.roster.map(u => Object.assign({}, u)) };
-  }
+  if (run && m && run.roster && run.roster.length) this._garIn = { n: 1, units: run.roster.map(u => Object.assign({}, u)) };
   return oWin.apply(this, arguments);
 };
 const garHost = (m) => ({ roster: garOf(m), M: m, garrison: true });
@@ -131,7 +135,7 @@ G.endBack = function () {
   const gi = this._garIn; this._garIn = null;
   const r = oEB.apply(this, arguments), m = this.meta;
   if (gi && m) {
-    const steps = [{ run: () => { if (!(this.paradeStart && this.paradeStart(gi))) { const p = this.fxPos('mgar') || { x: 700, y: 50 }; this.fx.pop(p.x, p.y + 70, '驻军 +' + gi.n, '#ffcf4a', 40, { rise: 40 }); this.pulse.mgar = now(); } }, until: () => !this.parade },
+    const steps = [{ run: () => { if (!(this.paradeStart && this.paradeStart(gi))) { const best = gi.units.slice().sort((a, b) => M.unitPower(b.type, b) - M.unitPower(a.type, a))[0]; if (best) garOf(m).push(Object.assign({}, best, { uid: M.rid(), mana: 0 })); this.pulse.mgar = now(); } }, until: () => !this.parade },
       { run: () => this.garEvo(), until: () => !this.evoFx && !this.garEvo() }];
     const q = this.homeQ;
     if (q && q.m === m) { const i = q.steps.findIndex(s => s && s._day); if (i >= 0) q.steps.splice(i, 0, ...steps); else q.steps.push(...steps); } else this.homeQueue(steps);
@@ -153,7 +157,7 @@ G.garEvo = function () {
 // it; the calendar marks it, the morning before and the morning of show a warning. A lost night costs three in ten of
 // the fallen (half made one loss snowball into the next: 2026-09-26 growth sims).
 M.NIGHT = { HIT: 0.6, LOSS: 0.3, T_MAX: 240, STRONG: 1.25, BOSS: 1.45, SHARE: { strong: [0.3, 0.1], boss: [0.4, 0.1] }, SLAM: 2.5, SLAM_R: 190, SLAM_CD: 7, SLAM_WIND: 1.3,
-  CURVE: [[1, 300], [2, 520], [3, 850], [4, 1150], [5, 1800], [8, 3900], [10, 5500], [15, 10500], [20, 16500], [30, 28000]] };   // 2026-09-26 on the base map: the battle-screen curve ×1.3 held 31 nights without a scratch, ×2.2 broke the main base by night 2–5
+  CURVE: [[1, 120], [2, 210], [3, 340], [4, 460], [5, 720], [8, 1560], [10, 2200], [15, 4200], [20, 6600], [30, 11200]] };   // provisional ×0.4 (one unit a homecoming), fitted below   // 2026-09-26 on the base map: the battle-screen curve ×1.3 held 31 nights without a scratch, ×2.2 broke the main base by night 2–5
 M.nightKind = (d) => (d > 0 && d % 10 === 0 ? 'boss' : d > 0 && d % 5 === 0 ? 'strong' : null);
 M.bloodMoon = (d) => !!M.nightKind(d);   // older callers: "is this night a special one"
 const NK = { strong: { n: '强敌来袭', c: '#ff7a3a', who: '强敌' }, boss: { n: '首领来袭', c: '#ff2a4a', who: '首领' } };
@@ -250,6 +254,13 @@ M.NightRaid = class extends Siege {
     const cfg = M.makeRaidCfg(meta);
     this.list = cfg.list.map((x, i) => ({ t: 1 + x.spawn * 1.2, type: x.type, elite: x.elite, champ: x.champ, nm: x.nm, hpMul: x.hpMul, atkMul: x.atkMul, side: x.champ ? (rnd() < 0.5 ? -1 : 1) : i % 2 ? 1 : -1 })).sort((a, b) => a.t - b.t);
     this.spawnI = 0; this.total = this.list.length; this.target = cfg.night; this.foe = cfg.foe; this.zones = [];
+  }
+  // the garrison sees the whole field (user ruling 2026-09-26: 「每个单位的警戒范围……应该都是全屏才对」): the nearest monster on
+  // its own side of the main base, else the nearest anywhere
+  guardTarget(e, foes) {
+    if (!e.gar) return null; const mine = (e.home0 == null ? e.home : e.home0) < DOOR_X; let best = null, bd = 1e9, any = null, ad = 1e9;
+    for (const o of foes) { const d = Math.abs(o.x - e.x); if (d < ad) { ad = d; any = o; } if ((o.x < DOOR_X) === mine && d < bd) { bd = d; best = o; } }
+    return best || any;
   }
   spawn(x) {
     const d = DB[x.type]; if (!d) return; const k = x.elite ? 1.15 : 1, hp = d.hp * k * (x.hpMul || 1), boss = x.champ === 'boss';

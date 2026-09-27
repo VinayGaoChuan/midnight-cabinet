@@ -16,7 +16,7 @@ fs.readFileSync(path.join(SRC, '_order.txt'), 'utf8').split(/\s+/).filter(f => /
 const M = win.MC, DB = M.DB, TDB = M.TDB, FX = M.P16.FX;
 if (!M.unitSkill) throw new Error('game code did not load');
 
-const Q = ['普通', '稀有', '史诗', '传说'];
+const Q = ['普通', '优质', '稀有', '史诗', '传说', '神话', '不朽'];   // the six qualities since 2026-09-26 (M.QUALITY), plus 不朽
 const esc = (s) => String(s == null ? '' : s).replace(/\|/g, '／').replace(/\n/g, ' ');
 const pad = (p, i) => p + String(i).padStart(3, '0');
 const short = (t) => t.replace(/^Summon|Trait$/g, '');
@@ -79,7 +79,7 @@ const count = {};
 // ── rooms: every building has an animated scene; defence rooms fire in base defence ──
 {
   const B = M.BUILDINGS; let out = '\n| 编号 | 建筑 | 品质 | 房间场景 | 守城武器 |\n|---|---|---|---|---|\n', n = 0;
-  Object.keys(B).forEach(k => { const b = B[k], w = b.weapon; out += '| ' + pad('R', ++n) + ' | ' + b.n + ' | ' + Q[b.q || 0] + ' | ' + esc((M.ROOM_D || {})[k] || '（缺描述）') + ' | ' + (w ? w.kind + ' · 射程 ' + w.range + (w.splash ? ' · 溅射' : '') + (w.chain ? ' · 连锁 ' + w.chain : '') + (w.slow ? ' · 减速' : '') : (b.defend || /参战|守卫|陶俑|武僧/.test(b.d || '') ? '守城时召唤援军' : '—')) + ' |\n'; });
+  Object.keys(B).filter(k => !B[k].gone).forEach(k => { const b = B[k], w = b.weapon; out += '| ' + pad('R', ++n) + ' | ' + b.n + ' | ' + (b.boss ? '不朽' : Q[b.q || 0]) + ' | ' + esc((M.ROOM_D || {})[k] || '（缺描述）') + ' | ' + (w ? w.kind + ' · 射程 ' + w.range + (w.splash ? ' · 溅射' : '') + (w.chain ? ' · 连锁 ' + w.chain : '') + (w.slow ? ' · 减速' : '') : (b.defend || /参战|守卫|陶俑|武僧/.test(b.d || '') ? '守城时召唤援军' : '—')) + ' |\n'; });
   doc = put(doc, 'rooms', out); count.rooms = n;
 }
 

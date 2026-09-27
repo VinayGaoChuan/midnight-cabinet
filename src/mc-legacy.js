@@ -107,7 +107,7 @@ G.gameOver = function (reason) {
     over.text += '\n代币 +' + got + (first ? '\n机台屏幕上多了「遗像墙」。' : '');
     (over.choices || []).forEach(c => { if (c.t === '重新开始') c.fn = () => { this.modal = null; this.lgOpen('setup'); }; });
   }
-  if (snap && snap.tal.length && over) {
+  if (snap && snap.tal.length && over && reason !== 'goal') {   // a game won leaves no fallen leader
     const carve = (n) => {
       p.shrine = (p.shrine || []).concat([{ id: M.rid(), cls: snap.cls, lv: snap.lv, day: snap.day, t: n, at: Date.now() }]);
       if (p.shrine.length > M.SHRINE_MAX) p.shrine = p.shrine.slice(-M.SHRINE_MAX);

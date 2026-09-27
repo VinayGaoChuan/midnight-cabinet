@@ -90,7 +90,7 @@ M.Raid = class extends Base {
       const sp = e.spd * (e.slow > 0 ? 0.5 : 1) * dt;
       if (e.side === 'A') {
         // guards: fight what comes within reach of their spot, else stand there
-        let tg = null, bd = 360; foes.forEach(o => { const d = Math.abs(o.x - e.x); if (Math.abs(o.x - e.home) < 440 && d < bd) { bd = d; tg = o; } });
+        let tg = this.guardTarget ? this.guardTarget(e, foes) : null, bd = 360; if (!tg) foes.forEach(o => { const d = Math.abs(o.x - e.x); if (Math.abs(o.x - e.home) < 440 && d < bd) { bd = d; tg = o; } });
         const tx = tg ? tg.x : e.home, d = Math.abs(tx - e.x), reach = tg ? e.range : 4;
         if (d > reach) { e.x += Math.sign(tx - e.x) * Math.min(sp, d - reach + 1); e.face = Math.sign(tx - e.x) || e.face; e.walk = (e.walk || 0) + sp; }
         else if (tg) { e.t -= dt; e.face = Math.sign(tg.x - e.x) || e.face; if (e.t <= 0) { e.t = e.cd; e.lunge = T; if (e.ranged) this.proj.push({ x: e.x, y: e.y - 40, tg, tx: tg.x, dmg: e.atk, col: '#ffe08a', src: e }); else { this.damage(tg, e.atk, '#fff'); this.fx.push({ k: 'slash', x: tg.x, y: tg.y - 40, t0: T, life: 0.14 }); S.hit(); } } }

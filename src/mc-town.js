@@ -392,7 +392,7 @@ M.BASE_HOOKS.push(function (ctx, meta, bv, lights, phase, opts) {
     return;
   }
   // in front of the main base: the fighting line (the back line first)
-  vs.filter(v => v.fight).sort((a, b) => a.y - b.y || Math.abs(b.x - DOOR_X) - Math.abs(a.x - DOOR_X)).forEach(v => drawBuilding(ctx, v, t, lights, raid, meta, T));
+  vs.filter(v => (M.townFront ? M.townFront(v) : v.fight)).sort((a, b) => a.y - b.y || Math.abs(b.x - DOOR_X) - Math.abs(a.x - DOOR_X)).forEach(v => drawBuilding(ctx, v, t, lights, raid, meta, T));   // the wonders stand in front too (mc-wonders.js)
   T.gone.forEach(gv => { if (gv.fight) drawGone(ctx, gv, t); });
   if (raid) T.npcs.forEach(n => { const v = T.vis[n.home]; if (n.kind === 'crew' && v && !v.site && !v.ruin) drawCrew(ctx, v, n, t, raid); });
   drawLeader(ctx, g, t, raid, lights);

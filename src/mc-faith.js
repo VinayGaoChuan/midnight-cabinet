@@ -11,7 +11,7 @@
 //   the revival with faith are gone: nobody plays towards losing a fight.
 const M = window.MC, G = M.Game.prototype, S = M.Sfx, BP = M.Battle3 && M.Battle3.prototype;
 const FC = '#ffe6a0', now = () => performance.now();
-if (M.GUIDE) M.GUIDE.push({ id: 'faith', cat: '基地', icon: 'f_faith', title: '信仰值', line: '建了信仰类建筑才会出现；攒够了宗教就升一级。', scr: 'base', sel: '[data-fx="mfa"]' },
+if (M.GUIDE) M.GUIDE.push({ id: 'faith', cat: '基地', icon: 'f_faith', title: '信仰值', line: '建了信仰类建筑才会出现；攒够了守护神就升一级。', scr: 'base', sel: '[data-fx="mfa"]' },
   { id: 'shrine', cat: '出征', icon: 'f_faith', title: '神龛', line: '有了信仰值以后，地图上会出现神龛，在那里祈祷能收集信仰值。', scr: 'world', sel: '[data-g="nothing"]' });
 M.faithOn = (m) => !!(m && m.faithOn);
 const unlock = (m) => { if (!m || m.faithOn || !M.hasBuilt || !M.hasBuilt(m, X => X.cat === 'faith')) return false; m.faithOn = true; m.faith = m.faith || 0; return true; };

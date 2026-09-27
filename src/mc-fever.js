@@ -72,7 +72,9 @@ if (BP) {
   };
 }
 // the effect the fight needs most, weighted: a hurt army → 回魂烛, a crowd → 摄魂铃, a thin army → 旧相框
-const pickEffect = (b) => {
+// 2026-09-26 (user ruling: 「fever只保留一个效果就是闪电攻击，因为就那个爽。其他的以后再说」): lightning, every time
+const pickEffect = () => 'bolt';
+const pickEffectOld = (b) => {
   const A = b.ents.filter(e => e.alive && e.side === 'A' && !e.isHero), E = b.ents.filter(e => b.active(e) && e.side === 'E');
   const hp = A.reduce((s, e) => s + e.hp, 0) / Math.max(1, A.reduce((s, e) => s + e.maxHp, 0));
   const w = { bolt: 3, heal: hp < 0.55 ? 5 : 0.6, frame: A.length < 3 ? 4 : 1, bell: E.length >= 6 ? 3 : 1, horn: 1.4 };

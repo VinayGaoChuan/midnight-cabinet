@@ -9,7 +9,7 @@
 // · The show: the three fly out of the roster, circle and melt into one light that flickers between the old and the new
 //   shape, bursts, and the new unit's card stands in the middle of the screen until the player clicks; then it flies
 //   into the roster (2026-09-26: it used to fly off by itself before it could be read).
-// · The prologue starts with two 步卒 and its shop sells a third: three 步卒 become a 盾兵.
+// · The prologue starts with two 步卒 and its shop sells a third: three 步卒 become a 老兵.
 const M = window.MC, G = M.Game.prototype, DB = M.DB, S = M.Sfx, U = M.UI, P = M.PJ.PAL, Q = M.QUALITY;
 const rnd = Math.random, now = () => performance.now(), cl = (v, a, b) => Math.max(a, Math.min(b, v));
 const eo = (q) => 1 - Math.pow(1 - q, 3), eb = (q) => { const c = 1.7; return 1 + (c + 1) * Math.pow(q - 1, 3) + c * Math.pow(q - 1, 2); };
@@ -92,9 +92,9 @@ M.evoMerge = function (run, three, to) {
   return nu;
 };
 
-// ───────── where a roster card sits (two columns, strongest first — mc-tidy.js) ─────────
+// ───────── where a roster card sits (one row, strongest first — mc-tidy.js) ─────────
 function rosterOrder(g) { const run = g.run; return run.roster.filter(u => !g.hideU.has(u.uid)).map((u, i) => [u, M.unitPower(u.type, u), i]).sort((a, b) => b[1] - a[1] || a[2] - b[2]).map(x => x[0]); }
-function slotPos(g, i) { const L = g._rosLay || { top: g.screen === 'shop' ? 196 : 320, fit: 1 }, f = L.fit || 1; return { x: 24 + (i % 2) * 86 * f + 39 * f, y: L.top + 38 + Math.floor(i / 2) * 104 * f + 48 * f }; }
+function slotPos(g, i) { const L = g._rosLay || { top: 930, fit: 1 }, f = L.fit || 1; return { x: 24 + i * 86 * f + 39 * f, y: L.top + 38 + 48 * f }; }   // one row along the bottom-left (mc-tidy.js)
 
 // ───────── the show ─────────
 const T_IN = 0.7, T_SPIN = 2.0, T_BOOM = 2.8, T_HOLD = 4.9, T_END = 5.45;
@@ -232,7 +232,9 @@ G.view = function () {
   (v.w.roster || []).forEach((r, i) => { const u = byPow[i], d = u && DB[u.type], e = d && d.tier ? d.tier - 1 : u ? u.evo || 0 : 0; r.evoOn = e > 0; r.evoPips = pips(e, e, P.gold, P.gold); if (e > 0) r.stars = ''; });
   // shop cards: how many of it the army holds; the card that makes three glows
   const have = {}; run.roster.forEach(u => { if (DB[u.type] && DB[u.type].next) have[u.type] = (have[u.type] || 0) + 1; });
-  if (v.s && run.shop && this.screen === 'shop') (v.s.units || []).forEach((cv, i) => { const c = (run.shop.units || [])[i], n = c ? have[c.type] || 0 : 0; cv.evoOn = !!c && !c.sold && n > 0; cv.evoPips = pips(Math.min(2, n), 3, P.gold, '#3a3450'); cv.evoGo = !!c && !c.sold && n % M.EVO_NEED === M.EVO_NEED - 1 && (!M.evoOpen || M.evoOpen(run.M, c.type)); });
+  // every card that can still evolve says so (user ruling 2026-09-26: 「可进化的卡片上要有可进化的提示……这样我就能分清楚，哪些单位可以进化」);
+  // the diamonds show how many of it the army already has
+  if (v.s && run.shop && this.screen === 'shop') (v.s.units || []).forEach((cv, i) => { const c = (run.shop.units || [])[i], n = c ? have[c.type] || 0 : 0; cv.evoOn = !!c && !c.sold && (!M.evoOpen || M.evoOpen(run.M, c.type)); cv.evoPips = n > 0 ? pips(Math.min(2, n), 3, P.gold, '#3a3450') : []; cv.evoGo = !!c && !c.sold && n % M.EVO_NEED === M.EVO_NEED - 1 && (!M.evoOpen || M.evoOpen(run.M, c.type)); });
   // the area's pool, under the minimap
   v.w.poolOn = this.screen === 'world' && !!run.pool;
   if (v.w.poolOn) {
@@ -249,7 +251,7 @@ G.view = function () {
 const oTip = G.tipFor;
 G.tipFor = function (key) {
   if (key === 'w-pool') return { title: '部队池', c: '#ffcf4a', d: '这个场景的商店和招募只出这几条进化链。' };
-  if (key === 's-evo') return { title: '进化', c: '#ffcf4a', d: '同一种部队凑齐三支，就进化成下一档；稀有以上要在基地建进化建筑。' };
+  if (key === 's-evo') return { title: '可进化', c: '#ffcf4a', d: '3 支相同的部队可以进化一次，变成下一档。' };
   return oTip.apply(this, arguments);
 };
 if (M.GUIDE) M.GUIDE.push(

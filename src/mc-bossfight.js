@@ -98,7 +98,7 @@ BP.fbTick = function (e) {
   if (A.st === 'dead') return;
   if (A.st === 'rise') { if (T >= A.t) { A.st = 'idle'; A.t = T + 0.6; } else if (Math.random() < 0.3) this.shake = Math.max(this.shake, 6); return; }
   if (this.opening || !e.alive) return;
-  if (A.phase === 1 && e.hp < e.maxHp * 0.5 && (A.st === 'idle' || A.st === 'recover')) {
+  if (A.phase === 1 && !this.noP2 && e.hp < e.maxHp * 0.5 && (A.st === 'idle' || A.st === 'recover')) {   // 普通 difficulty: one phase only (mc-gdiff.js)
     A.phase = 2; A.st = 'roar'; A.t0 = T; A.t = T + 1.5; this.shake = Math.max(this.shake, 22); this.flash = Math.max(this.flash, 0.4); this.flashCol = '#ff4a3a';
     this.fxp({ k: 'ctitle', ent: e, text: (e.fb.names || {}).roar || '狂暴', col: FOE, tier: 3, side: 'E', life: 1.9 }); if (this.arena) this.arena.heat = 1; S.impact && S.impact();
     if (M.TITAN && M.TITAN.impact) M.TITAN.impact(this, e, 'roar', e.x + FB_DX, FB_Y - 200);
@@ -118,7 +118,7 @@ BP.fbTick = function (e) {
     if (A.k === 'rain') { this.fbRainTick(e); if (T >= A.t) { A.st = 'recover'; A.t = T + FBK.rest * 0.7; } return; }
     if (T >= A.t) this.fbStrike(e); return;
   }
-  if (A.st === 'strike' && T >= A.t) { A.st = 'recover'; A.t = T + FBK.rest; return; }
+  if (A.st === 'strike' && T >= A.t) { A.st = 'recover'; A.t = T + FBK.rest * (A.phase === 2 && this.fbFast ? this.fbFast : 1); return; }
   if (A.st === 'recover' && T >= A.t) { A.st = 'idle'; A.t = T + 0.15; }
 };
 

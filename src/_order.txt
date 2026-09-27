@@ -126,6 +126,14 @@ mc-q6.js
 mc-night.js
 mc-parade.js
 mc-passive.js
+mc-gdiff.js
+mc-parts.js
+mc-wonders.js
+mc-roomset.js
+mc-gods.js
+mc-drops.js
+mc-bigloot.js
+mc-story.js
 mc-boons.js
 mc-q7.js
 mc-roster.js
