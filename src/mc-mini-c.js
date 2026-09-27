@@ -63,7 +63,7 @@ MINI.musician = { title: '流浪乐师', img: 'musician', col: C.gold, text: '�
   down(mg, px, py) { if (mg.phase === 'play') { const l = px < CX - 85 ? 0 : px > CX + 85 ? 2 : 1; return MINI.musician.hit.call(this, mg, l); }
     // 演奏前点舞台：水面一圈涟漪、一声曼陀林
     if (mg.phase === 'idle') { SHW.tap(this, mg, px, py); const sl = muSlot(); if (sl) sl.burst('glint', MUA.ax(px), Math.max(150, Math.min(172, MUA.ay(py))), 3, { sp: 8, life: 0.6 }); S.mini('musician', 'pluck'); } },
-  btns(mg) { if (mg.phase !== 'idle') return []; return [{ t: '接过琴弓合奏', sub: '按 Q W E（或点三条音轨）跟上音符', gold: 1, fn: () => MINI.musician.start.call(this, mg) }, { t: '听他拉完一曲', sub: '免费 · 他会回赠物资', fn: () => this.miniFinish('他点点头，从琴盒里拿出一袋东西给你。', '#caa84a', [{ k: 'rsup', v: 15 }]) }, { t: '离开', leave: 1, fn: () => this.miniFinish('琴声在你背后停了。', '#8d8496') }]; },
+  btns(mg) { if (mg.phase !== 'idle') return []; return [{ t: '接过琴弓合奏', sub: '免费 · 合得越好赏得越多', gold: 1, how: { kbm: '音符落到线上时按 [Q][W][E]', touch: '{tap} 音符落到线上时点那条音轨' }, fn: () => MINI.musician.start.call(this, mg) }, { t: '听他拉完一曲', sub: '免费 · 物资 +15', fn: () => this.miniFinish('他点点头，从琴盒里拿出一袋东西给你。', '#caa84a', [{ k: 'rsup', v: 15 }]) }, { t: '离开', leave: 1, fn: () => this.miniFinish('琴声在你背后停了。', '#8d8496') }]; },
   tick(mg, dt) {
     mg.laneF = mg.laneF.map(f => Math.max(0, f - dt * 4)); mg.laneBad = mg.laneBad.map(f => Math.max(0, f - dt * 5)); mg.lampK += (1 - mg.lampK) * Math.min(1, dt * 1.5);
     mg.bulbsK = cl(mg.bulbsK + (mg.layer >= 2 ? dt * 1.2 : -dt * 3), 0, 1); mg.crowd = cl(mg.crowd + (mg.layer >= 3 ? dt * 1.5 : -dt * 2), 0, 1);
@@ -95,8 +95,9 @@ MINI.musician = { title: '流浪乐师', img: 'musician', col: C.gold, text: '�
     K.pxr(x, 'mini_musician', 0, 0, mg.t, { song, beat, layers: mg.layer, laneF: mg.laneF, laneG: mg.laneG, laneBad: mg.laneBad, notes: mg.phase === 'play' || mg.phase === 'tally' ? mg.notes : [], lampK: mg.lampK, bulbsK: mg.bulbsK, crowd: mg.crowd }, 'mc_mus');
     // 乐师（像素人物做好之前是剪影）和领袖：都踩着拍子
     MINI.musician.npc(x, mg, pulse); MUA.cast(x, heroSp(this), 256, 148 - (mg.phase === 'play' ? Math.round(pulse) : 0), 'idle', mg.t, true);
-    // Q W E 键帽：按下先压扁再弹大
-    for (let l = 0; l < 3; l++) { const q = (mg.t - mg.keyP[l]) / 0.2, k = q < 0.3 ? 1 - 0.1 * q / 0.3 : q < 1 ? 0.9 + 0.22 * Math.sin((q - 0.3) / 0.7 * Math.PI) * (1 - (q - 0.3) / 0.7) + 0.1 * (q - 0.3) / 0.7 : 1; x.save(); x.translate(LANE_X[l], HIT_Y + 58); x.scale(k, k); U.key(x, ['Q', 'W', 'E'][l], -22, -14, { size: 22 }); x.restore(); }
+    // Q W E 键帽：开始合奏才亮出来（手柄是 ← ↓ →，手机直接点音轨、不画键帽）；按下先压扁再弹大
+    const capL = mg.phase === 'play' ? M.byInput({ kbm: ['Q', 'W', 'E'], pad: ['←', '↓', '→'], touch: null }, this) : null;
+    if (capL) for (let l = 0; l < 3; l++) { const q = (mg.t - mg.keyP[l]) / 0.2, k = q < 0.3 ? 1 - 0.1 * q / 0.3 : q < 1 ? 0.9 + 0.22 * Math.sin((q - 0.3) / 0.7 * Math.PI) * (1 - (q - 0.3) / 0.7) + 0.1 * (q - 0.3) / 0.7 : 1; x.save(); x.translate(LANE_X[l], HIT_Y + 58); x.scale(k, k); U.key(x, capL[l], -22, -14, { size: 22 }); x.restore(); }
     if (mg.phase === 'play' || mg.phase === 'tally') { const shown = mg.phase === 'tally' ? mg.tally.shown : mg.score / (mg.notes.length * 2);
       U.bar(x, SX + 80, SY + 120, 300, 18, shown, { col: C.gold }); [0.3, 0.55, 0.8].forEach(v => K.R(x, SX + 80 + Math.round(300 * v) - 1, SY + 112, 3, 34, C.white)); U.text(x, '完成度', SX + 230, SY + 160, T.cap, C.lavender);
       if (mg.phase === 'play') K.sign(x, '连击 ' + mg.combo, SX + SW - 200, SY + 140, { kind: 'dark', size: T.btn, minW: 180 }); }
@@ -127,10 +128,10 @@ MINI.granny = { title: '裁缝老太', img: 'old', col: C.violet, text: '她能�
     else { S.mini('granny', 'miss'); M.MCPX.npcAct('ShadowSeamstress', 'hurt'); mg.miss = (mg.miss || 0) + 1; mg.knots = (mg.knots || []).concat([{ u, t: mg.t }]); if (sl) sl.burst('thread', sp.x, sp.y, 8, { sp: 10, life: 0.6 }); this.fx.kick(3); miss(this, mg, p.x, p.y - 80); } },
   path(u) { return grPt(u); },
   key(mg, k, down) { if (k === 'act' && down && mg.phase === 'sew') { MINI.granny.stitch.call(this, mg); return true; } },
-  btns(mg) { if (mg.phase === 'idle') return [{ t: '献出一名部队', sub: this.run.roster.length ? '然后跟着针脚下针' : '你没有部队', gold: 1, dis: !this.run.roster.length, why: '你没有部队', fn: () => this.miniSet('select') }, { t: '离开', leave: 1, fn: () => this.miniFinish('她继续缝着什么。', '#8d8496') }];
+  btns(mg) { if (mg.phase === 'idle') return [{ t: '献出一名部队', sub: this.run.roster.length ? '一名部队 · 领袖回复生命' : '你没有部队', gold: 1, dis: !this.run.roster.length, why: '你没有部队', fn: () => this.miniSet('select') }, { t: '离开', leave: 1, fn: () => this.miniFinish('她继续缝着什么。', '#8d8496') }];
     if (mg.phase === 'select') return [{ t: '算了', leave: 1, fn: () => this.miniFinish('她继续缝着什么。', '#8d8496') }]; if (mg.phase === 'sew') return [{ t: '下针', sub: '空格 / 点击', gold: 1, fn: () => MINI.granny.stitch.call(this, mg) }]; return []; },
   tick(mg, dt) { mg.threadF = Math.max(0, (mg.threadF || 0) - dt * 4);
-    if (mg.phase === 'thread' && mg.pt > 1.2) this.miniSet('sew');
+    if (mg.phase === 'thread' && mg.pt > 1.2) { this.miniSet('sew'); K.how(this, mg, { kbm: '针走到大头针上时点击或按 [空格]', touch: '{tap} 针走到大头针上时点画面' }); }
     if (mg.phase === 'close') return MINI.granny.close.call(this, mg);
     if (mg.phase !== 'sew') return; const u = cl(mg.pt / 4, 0, 1), last = mg.marks[5];
     mg.marks.forEach(m => { if (!m.ok && !m.gone && u > m.u + 0.035) { m.gone = 1; const p = grPt(m.u); miss(this, mg, p.x, p.y - 80); if (m === last) SHW.calm(mg); } });
@@ -178,7 +179,7 @@ MINI.well = { title: '许愿井', img: 'well', col: C.teal, text: '井底有东�
   up(mg) { if (mg.phase === 'charge') { mg.shot = mg.pow; mg.acc = 1 - Math.abs(mg.shot - mg.band) / 0.32; mg.slo = 0; mg.relT = mg.t; this.miniSet('fly'); S.mini('well', 'toss'); S.mini('well', 'flick'); const sx = SX + 344, sy = FLOOR - 400;
       const sl = wlSlot(); if (sl) sl.burst(mg.acc > 0.8 ? 'glint' : 'spark', WLA.meter[0] + 4, WLA.meter[1] + WLA.meter[3] * (1 - mg.shot), mg.acc > 0.8 ? 6 : 3, { sp: 18, life: 0.5, floor: 148 });
       if (mg.acc > 0.2) combo(this, mg, sx, sy, mg.acc > 0.8 ? 'PERFECT' : mg.acc > 0.5 ? 'GREAT' : 'GOOD'); else miss(this, mg, sx, sy); } },
-  btns(mg) { if (mg.phase === 'idle') { const over = mg.throws >= mg.max; return [{ t: '拿出一枚硬币', sub: mg.pay + ' 积分 · 按住蓄力，松手扔出', gold: !over, dis: over || this.run.wallet < mg.pay, why: over ? '井水平静了' : '积分不够', fn: () => { if (!this.miniPay(mg.pay)) return; mg.throws++; mg.band = 0.4 + rnd() * 0.38; this.miniSet('ready'); } }, { t: '离开', leave: 1, gold: over, fn: () => this.miniFinish(mg.got.length ? '井底回应了你：' + mg.got.join('；') + '。' : '你没有许愿。', mg.got.length ? '#6fd0ff' : '#8d8496') }]; }
+  btns(mg) { if (mg.phase === 'idle') { const over = mg.throws >= mg.max; return [{ t: '拿出一枚硬币', sub: mg.pay + ' 积分 · 扔得越准回应越好', how: { kbm: '按住鼠标或 [空格] 蓄力，松手扔出', touch: '{hold} 按住画面蓄力，松手扔出' }, howWait: 1, gold: !over, dis: over || this.run.wallet < mg.pay, why: over ? '井水平静了' : '积分不够', fn: () => { if (!this.miniPay(mg.pay)) return; mg.throws++; mg.band = 0.4 + rnd() * 0.38; this.miniSet('ready'); } }, { t: '离开', leave: 1, gold: over, fn: () => this.miniFinish(mg.got.length ? '井底回应了你：' + mg.got.join('；') + '。' : '你没有许愿。', mg.got.length ? '#6fd0ff' : '#8d8496') }]; }
     if (mg.phase === 'ready' || mg.phase === 'charge') return [{ t: '按住空格 / 鼠标蓄力', sub: '在金色区域松手', dis: 1, why: '按住画面' }]; return []; },
   tick(mg, dt) {
     if (mg.phase === 'charge') { const q = (mg.pt / 1.1) % 2; mg.pow = q < 1 ? q : 2 - q; if (Math.floor(mg.pt * 10) !== mg.tk) { mg.tk = Math.floor(mg.pt * 10); S.mini('well', 'charge', mg.pow); } }
@@ -235,7 +236,7 @@ MINI.child = { title: '迷路的孩子', img: 'child', col: C.butter, text: '她
   down(mg, px, py) { if (mg.phase === 'choose') return MINI.child.choose.call(this, mg, px < CX ? 0 : 1);
     // 点空白：雪地上一个小坑、几片雪扬起
     if (mg.phase === 'idle') { SHW.tap(this, mg, px, py); const sl = chSlot(); if (sl) sl.burst('snow', M.MCPX.ax(px), Math.max(100, M.MCPX.ay(py)), 5, { sp: 14, ang: 0, spread: 1.2, life: 0.8 }); S.mini('child', 'crunch'); } },
-  btns(mg) { if (mg.phase === 'idle') return [{ t: '带她回家', sub: '跟着她的脚印走', gold: 1, fn: () => this.miniSet('walk') }, { t: '无视', leave: 1, fn: () => this.miniFinish('她一直看着你走远。', '#8d8496') }]; if (mg.phase === 'choose') return [{ t: '← 左边', fn: () => MINI.child.choose.call(this, mg, 0) }, { t: '右边 →', fn: () => MINI.child.choose.call(this, mg, 1) }]; return []; },
+  btns(mg) { if (mg.phase === 'idle') return [{ t: '带她回家', sub: '免费 · 跟对了有谢礼', gold: 1, how: { kbm: '记住亮起的脚印，按 [←][→] 选岔口', touch: '{tap} 记住亮起的脚印，点左边或右边' }, fn: () => this.miniSet('walk') }, { t: '无视', leave: 1, fn: () => this.miniFinish('她一直看着你走远。', '#8d8496') }]; if (mg.phase === 'choose') return [{ t: '← 左边', fn: () => MINI.child.choose.call(this, mg, 0) }, { t: '右边 →', fn: () => MINI.child.choose.call(this, mg, 1) }]; return []; },
   tick(mg, dt) {
     if (mg.phase === 'walk') { mg.walk += dt; if (!mg.moving) { mg.moving = 1; M.MCPX.npcAct('LanternGirl', 'move'); } if (mg.pt > 1.3) { mg.moving = 0; M.MCPX.npcAct('LanternGirl', 'idle'); this.miniSet('prints'); mg.walked = null; M.MCPX.npcAct('LanternGirl', 'attack'); } if (Math.floor(mg.pt * 3) !== mg.stp) { mg.stp = Math.floor(mg.pt * 3); S.mini('child', 'crunch'); } }
     // 前两个岔口都走对：最后一个岔口压暗、聚光、心跳
@@ -296,7 +297,7 @@ MINI.grave = { title: '无名墓碑', img: 'tomb', col: C.lavender, text: '墓�
     // 挖之前点空白：墓碑前的土抖一下
     if (mg.phase === 'idle') { SHW.tap(this, mg, px, py); const sl = gvSlot(); if (sl) sl.burst('dirt', M.MCPX.ax(px), Math.max(146, M.MCPX.ay(py)), 3, { sp: 20, ang: 0, spread: 1, life: 0.6, floor: 150 }); } },
   key(mg, k, down) { if (k === 'act' && down) { MINI.grave.shovel.call(this, mg); return true; } },
-  btns(mg) { if (mg.phase === 'idle') return [{ t: '挖开', sub: '疯狂点击 / 连按空格', gold: 1, fn: () => { this.miniSet('dig'); S.mini('grave', 'candle'); } }, { t: '默哀', sub: '物资 +15', leave: 1, fn: () => this.miniFinish('你站了一会儿。墓碑后面有人留下了东西。', '#caa84a', [{ k: 'rsup', v: 15 }]) }]; if (mg.phase === 'dig') return [{ t: '挖！', sub: '点击 / 空格', gold: 1, fn: () => MINI.grave.shovel.call(this, mg) }]; return []; },
+  btns(mg) { if (mg.phase === 'idle') return [{ t: '挖开', sub: '免费 · 棺材里有东西', gold: 1, how: {kbm: '狂点鼠标或连按 [空格]', touch: '{tap} 狂点画面'}, fn: () => { this.miniSet('dig'); S.mini('grave', 'candle'); } }, { t: '默哀', sub: '物资 +15', leave: 1, fn: () => this.miniFinish('你站了一会儿。墓碑后面有人留下了东西。', '#caa84a', [{ k: 'rsup', v: 15 }]) }]; if (mg.phase === 'dig') return [{ t: '挖！', gold: 1, fn: () => MINI.grave.shovel.call(this, mg) }]; return []; },
   tick(mg, dt) {
     mg.sw = Math.max(0, mg.sw - dt * 6);
     if (mg.phase === 'dig') { mg.burn -= dt; const near = mg.dig / mg.need, per = 0.8 - near * 0.5;
@@ -335,7 +336,7 @@ const clHit = (mg, px, py) => mg.bt.findIndex((b, i) => !b.opened && Math.abs(px
 // liquid vapour puffs in each med's own colour ramp (PXR particles walk the ramp as they fade)
 ['screen', 'water', 'gold', 'bone', 'red', 'arcane'].forEach(m => { M.PXR.PK['vap_' + m] = { g: -12, drag: 1.3, puff: 1, ramp: [m, [10, 9, 8, 7, 6, 5]], grow: 4 }; });
 MINI.clinic = { title: '废弃医务室', img: 'gurney', col: C.ice, text: '药柜里有六个瓶子。有两个标签被血糊住了。你最多敢试三瓶。',
-  init(mg) { const pool = MEDS.slice().sort(() => rnd() - 0.5); mg.bt = pool.map((m, i) => ({ m, liq: MEDS.indexOf(m), dark: false, open: 0, lift: 0, sy: 1, dx: 0, dy: 0, glow: 0, lvl: 0.7 })); const dk = [0, 1, 2, 3, 4, 5].sort(() => rnd() - 0.5).slice(0, 2); dk.forEach(i => mg.bt[i].dark = true); mg.opened = 0; mg.got = []; mg.hov = -1; },
+  init(mg) { K.how(this, mg, { kbm: '点药瓶试喝，最多 3 瓶', touch: '{tap} 点药瓶试喝，最多 3 瓶' }, 0, 0.6); const pool = MEDS.slice().sort(() => rnd() - 0.5); mg.bt = pool.map((m, i) => ({ m, liq: MEDS.indexOf(m), dark: false, open: 0, lift: 0, sy: 1, dx: 0, dy: 0, glow: 0, lvl: 0.7 })); const dk = [0, 1, 2, 3, 4, 5].sort(() => rnd() - 0.5).slice(0, 2); dk.forEach(i => mg.bt[i].dark = true); mg.opened = 0; mg.got = []; mg.hov = -1; },
   open(mg, i) { const b = mg.bt[i]; if (!b || b.opened || mg.phase !== 'idle' || mg.opened >= 3) return; b.opened = true; mg.opened++; mg.cur = i; b.pressT = mg.t; S.mini('clinic', 'pick'); S.mini('clinic', 'hover', i);
     const sl = clSlot(); if (sl) sl.burst('dust', CLI.x[i], CLI.y - 2, 6, { sp: 14, life: 0.8, w: 10 });
     mg.it = b.m.q === 3 ? K.item(this.run, mg.P) : null; b.q = b.m.q === 3 ? (mg.it.k === 'item' ? mg.it.q || 0 : 1) : b.m.q;
@@ -346,7 +347,7 @@ MINI.clinic = { title: '废弃医务室', img: 'gurney', col: C.ice, text: '药�
   down(mg, px, py) { if (mg.phase !== 'idle') return; const i = clHit(mg, px, py); if (i >= 0) return MINI.clinic.open.call(this, mg, i);
     // 点空白：瓷砖墙一声回响、一小撮灰落下
     SHW.tap(this, mg, px, py); const sl = clSlot(); if (sl) sl.burst('dust', PXA.ax(px), Math.min(PXA.ay(py), 140), 5, { sp: 10, life: 1.2, w: 4 }); S.mini('clinic', 'hover', 5); },
-  btns(mg) { if (mg.phase !== 'idle') return []; return [{ t: '收手', leave: 1, gold: mg.opened >= 3, sub: '已试 ' + mg.opened + ' / 3 · 点击药瓶试喝', fn: () => this.miniFinish(mg.got.length ? '你试了：' + mg.got.join('；') + '。' : '你一瓶都没敢碰。', mg.got.length ? '#8fe0ff' : '#8d8496') }]; },
+  btns(mg) { if (mg.phase !== 'idle') return []; return [{ t: '收手', leave: 1, gold: mg.opened >= 3, sub: '已试 ' + mg.opened + ' / 3', fn: () => this.miniFinish(mg.got.length ? '你试了：' + mg.got.join('；') + '。' : '你一瓶都没敢碰。', mg.got.length ? '#8fe0ff' : '#8d8496') }]; },
   tick(mg, dt) {
     const sl = clSlot();
     // 悬停：瓶子被提起一点、朝鼠标歪，一声这个瓶子自己的玻璃音
@@ -407,8 +408,8 @@ MINI.mirror = { title: '落地镜', img: 'mirror', col: C.blue, text: '镜子里
     mg.rtx = mg.rw.k === 'unit' ? '另一个' + M.DB[mg.rw.type].n : mg.rw.k === 'item' ? M.ITEMS[mg.rw.key].name : '积分 +' + M.fmt(mg.rw.v);
     mg.tier = Math.max(q >= 3 ? 4 : 0, Math.min(3, (mg.round >= 2 ? 3 : 2) + (gr === 'S' ? 1 : 0))); mg.paid = false; mg.om = { path: SHW.omenPath(q), at: 0.1, dur: 0.7 }; SHW.grade(this, mg, gr, CX - 280, SY + 250); },
   key(mg, k, down) { if (down && mg.phase === 'input' && ARW[k]) { MINI.mirror.input.call(this, mg, k); return true; } },
-  btns(mg) { if (mg.phase === 'idle') return [{ t: '凝视镜子', sub: '记住它的动作，再做一遍', gold: 1, fn: () => MINI.mirror.begin.call(this, mg) }, { t: '打碎镜子', sub: '得到积分，领袖受伤', danger: 1, fn: () => { this.heroHurt(0.1); S.mini('mirror', 'wrong'); this.miniFinish('碎片划伤了你。镜框里藏着东西。', '#d0453c', [K.item(this.run, mg.P)]); } }, { t: '离开', leave: 1, fn: () => this.miniFinish('你背对着镜子离开。它还在看你。', '#8d8496') }];
-    if (mg.phase === 'input') return ['up', 'down', 'left', 'right'].map(d => ({ t: ARW[d], sub: '点击或方向键', fn: () => MINI.mirror.input.call(this, mg, d) }));
+  btns(mg) { if (mg.phase === 'idle') return [{ t: '凝视镜子', sub: '免费 · 跟对了得一名部队', gold: 1, how: { kbm: '记住它的动作，再按 [↑][↓][←][→] 做一遍', touch: '记住它的动作，再点下面的箭头做一遍' }, fn: () => MINI.mirror.begin.call(this, mg) }, { t: '打碎镜子', sub: '领袖受伤 · 镜框里的东西', danger: 1, fn: () => { this.heroHurt(0.1); S.mini('mirror', 'wrong'); this.miniFinish('碎片划伤了你。镜框里藏着东西。', '#d0453c', [K.item(this.run, mg.P)]); } }, { t: '离开', leave: 1, fn: () => this.miniFinish('你背对着镜子离开。它还在看你。', '#8d8496') }];
+    if (mg.phase === 'input') return ['up', 'down', 'left', 'right'].map(d => ({ t: ARW[d], fn: () => MINI.mirror.input.call(this, mg, d) }));
     if (mg.phase === 'won') return [{ t: '再来一轮', sub: '更长的动作 · 赢了再得一件宝贝', gold: 1, dis: mg.round >= 2, why: '镜子不肯了', fn: () => MINI.mirror.begin.call(this, mg) }, { t: '见好就收', leave: 1, fn: () => this.miniFinish('镜子里走出了：' + mg.got.join('、') + '。', '#8fb0ff') }]; return []; },
   tick(mg, dt) {
     if (mg.pose) mg.pose.t += dt;
@@ -451,7 +452,7 @@ MINI.altar = { title: '血祭坛', img: 'candle', col: C.red, text: '一滴血�
     SHW.hitstop(mg, 0.15, CUP.x, CUP.y, () => { S.mini('altar', 'win'); mg.fire = 1; mg.fireT = mg.t; K.pxrFlash('mc_altar', 4, 1.5); const sl = alSlot(); if (sl) { sl.burst('ember', ALA.cup[0], ALA.cup[1] - 20, 14 + tier * 8, { sp: 40, ang: 0, spread: 1, life: 1.4 }); sl.burst('glint', ALA.cup[0], ALA.cup[1] - 22, 6, { sp: 20, life: 0.7 }); }
       this.miniSay('这一趟部队攻击 +' + Math.round(mg.gain * 100) + '%', '#ffcc33', true); SHW.win(this, mg, tier, { x: CX, y: FLOOR - 300, col: tier >= 3 ? C.gold : C.magenta, id: 'cup' });
       SHW.later(mg, HOLD[tier], () => this.mini === mg && this.miniFinish('蜡烛亮了一截。你流了 ' + lost + ' 点血，这一趟部队攻击 +' + Math.round(mg.gain * 100) + '%。', '#ffcc33')); }); },
-  btns(mg) { if (mg.phase === 'idle') return [{ t: '献血', sub: '按住倒血，松手停下', danger: 1, fn: () => this.miniSet('ready') }, { t: '离开', leave: 1, fn: () => this.miniFinish('烛火跟着你晃了一下。', '#8d8496') }]; if (mg.phase === 'ready') return [{ t: '按住空格 / 鼠标', sub: '倒血', dis: 1, why: '按住画面' }]; return []; },
+  btns(mg) { if (mg.phase === 'idle') return [{ t: '献血', sub: '领袖生命 · 这一趟部队攻击', danger: 1, how: { kbm: '按住鼠标或 [空格] 倒血，松手停下', touch: '{hold} 按住画面倒血，松手停下' }, howWait: 1, fn: () => this.miniSet('ready') }, { t: '离开', leave: 1, fn: () => this.miniFinish('烛火跟着你晃了一下。', '#8d8496') }]; return []; },
   tick(mg, dt) {
     mg.fire = Math.max(0, mg.fire - dt * 0.5);
     if (mg.phase !== 'pour') return; const h = this.run.hero, mx = M.heroMaxHp(h, this.meta), step = 0.1 * dt; if (h.hp - mx * step <= 1) return MINI.altar.stop.call(this, mg); h.hp -= mx * step; mg.poured += step;
@@ -467,7 +468,6 @@ MINI.altar = { title: '血祭坛', img: 'candle', col: C.red, text: '一滴血�
     M.MCPX.cast(x, heroSp(this), ALA.hero, 148 + (mg.phase === 'pour' ? Math.round(Math.sin(t * 20) * 0.5 + 0.5) : 0), 'idle', t);
     // 部队攻击读数：品红大字，每涨一档弹一下；流血量红字
     K.big(x, '部队攻击 +' + (Math.floor(mg.poured / 0.04) * 2) + '%', CX, SY + 180, T.num, C.magenta, mg.phase === 'pour' ? (mg.poured % 0.04) / 0.1 : 9); U.text(x, '已流血 ' + Math.round(mg.poured * 100) + '%', CX, SY + 232, T.body, C.red);
-    if (mg.phase === 'ready') K.sign(x, '按住倒血', CX, SY + 290, { kind: 'red', size: T.btn });
   } };
 
 // ═════════════════════ 货郎 · shell game with gourds ═════════════════════

@@ -1559,8 +1559,11 @@
   </div>
 </div></sc-if>
 <sc-if value="{{lockOn}}" hint-placeholder-val="{{false}}"><div data-g="lock" sc-camel-on-click="{{lockClick}}" style="position:absolute;inset:0;z-index:70"></div></sc-if>
-<sc-if value="{{miniOn}}" hint-placeholder-val="{{false}}"><div style="position:absolute;z-index:60;left:0;top:828px;width:1920px;display:flex;justify-content:center;gap:22px;pointer-events:none">
-  <sc-for list="{{mini.btns}}" as="mn" hint-placeholder-count="0"><div data-minibtn="1" sc-camel-on-click="{{mn.onClick}}" data-pj="key {{mn.k}}" style="pointer-events:auto;min-width:230px;max-width:420px;box-sizing:border-box;padding:12px 26px 20px;display:flex;flex-direction:column;align-items:center;gap:2px;opacity:{{mn.op}}"><span style="font-size:34px;line-height:1.1;white-space:nowrap">{{mn.t}}</span><sc-if value="{{mn.hasSub}}"><span style="font-size:20px;opacity:0.8;text-align:center">{{mn.sub}}</span></sc-if></div></sc-for>
+<sc-if value="{{miniOn}}" hint-placeholder-val="{{false}}"><div style="position:absolute;z-index:60;left:336px;top:852px;width:1248px;display:flex;flex-direction:column;gap:10px;pointer-events:none">
+  <sc-if value="{{mini.hasDesc}}" hint-placeholder-val="{{false}}"><div style="box-sizing:border-box;padding:9px 28px 11px;background:#0d0b1e;border:3px solid #07060f;box-shadow:6px 6px 0 #07060f;font-size:28px;line-height:1.35;color:#cfc8ea;text-align:center;opacity:{{mini.descOp}}">{{mini.desc}}</div></sc-if>
+  <div style="display:flex;gap:14px;align-items:stretch;justify-content:{{mini.jc}}">
+  <sc-for list="{{mini.btns}}" as="mn" hint-placeholder-count="0"><div data-minibtn="1" sc-camel-on-click="{{mn.onClick}}" data-pj="key {{mn.k}}" style="pointer-events:auto;flex:{{mn.fl}};min-width:0;box-sizing:border-box;padding:{{mn.pad}};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;opacity:{{mn.op}};color:{{mn.lc}}"><span style="font-size:{{mn.ts}}px;line-height:1.1;white-space:nowrap">{{mn.t}}</span><sc-if value="{{mn.hasSub}}"><span style="font-size:20px;opacity:0.8;text-align:center">{{mn.sub}}</span></sc-if></div></sc-for>
+  </div>
 </div></sc-if>
 
 <sc-if value="{{coachOn}}" hint-placeholder-val="{{false}}">

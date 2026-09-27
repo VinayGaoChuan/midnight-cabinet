@@ -17,6 +17,10 @@ M.inputMode = function (g) {
   if (M.platform === 'deck') return g && g.lastInput === 'kbm' ? 'kbm' : 'pad';
   return g && g.lastInput === 'pad' ? 'pad' : 'kbm';
 };
+// one switch for everything that differs by platform (user ruling 2026-09-27: 「做不同平台的适配，用类似宏的技术」):
+// o = { kbm, touch, pad } → the one for the current input mode; a missing key falls back (pad → kbm → touch), null means "none here"
+M.byInput = (o, g) => { if (o == null || typeof o !== 'object' || Array.isArray(o)) return o; const md = M.inputMode(g || M._g), has = (k) => k in o; return md === 'touch' ? (has('touch') ? o.touch : o.kbm) : md === 'pad' ? (has('pad') ? o.pad : has('kbm') ? o.kbm : o.touch) : (has('kbm') ? o.kbm : o.touch); };
+M.twoStepBuy = (g) => M.inputMode(g || M._g) === 'touch';   // phones: tap to pick, tap again to buy; mouse and pad buy on the first press
 const oldKeyOf = M.keyOf;
 M.keyOf = (act) => { const md = M.inputMode(M._g); if (md === 'touch') return ''; if (md === 'pad') { const b = M.settings.pad[act]; return b == null ? '' : M.padName(b); } return oldKeyOf(act); };
 

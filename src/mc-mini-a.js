@@ -53,7 +53,7 @@ K.pxrFlash = (id, i, a) => { const s = M.PXR && M.PXR.slots['_mg:' + id]; if (s)
 // ───────── lifecycle ─────────
 G.miniStart = function (kind, o) {
   const D = MINI[kind]; if (!D) return false; const run = this.run;
-  const mg = this.mini = Object.assign({ kind, D, t: 0, pt: 0, phase: 'idle', title: D.title || '', text: D.text || '', col: D.col || '#ffe08a', img: D.img || 'star', keys: {}, msg: null, mx: 960, my: 540 }, o || {});
+  const mg = this.mini = Object.assign({ kind, D, t: 0, pt: 0, phase: 'idle', title: D.title || '', text: D.text || '', col: D.col || '#ffe08a', img: D.img || 'star', keys: {}, msg: null, mx: 960, my: 540, at0: now() }, o || {});
   mg.P = run && this.node ? this.runP(this.node) : 10; mg.pay = M.nice(mg.P * 8); mg.luck = run ? run.mods.eventLuck || 0 : 0;
   // a placeholder modal keeps the explorer, pad cursor and hotkeys in 'window open' mode while the game runs
   this.modal = { kind: 'event', title: mg.title, img: mg.img, at: now(), choices: [], mini: 1 };
@@ -124,10 +124,31 @@ function frameDeco(x, mg) {
     const s = X.pixels(key, mg.t, { L, lamp }, '_mg:bezel') && X.slots['_mg:bezel']; if (s && s.cx) { s.cx.putImageData(s.img, 0, 0); x.imageSmoothingEnabled = false; x.drawImage(s.cv, SX - BZ * 4, SY - BZ * 4, BW * 4, BH * 4); } }
   // the title sign slams down onto the top edge
   const mt = mg.t - 0.24; if (mt > 0 && U) { const q = cl(mt / 0.14, 0, 1), k = q < 1 ? 1.9 - 0.9 * eb(q) : 1; x.save(); x.translate(CX, SY - 6); x.scale(k, k); x.translate(-CX, -(SY - 6)); U.marquee(x, mg.title, CX, SY - 6, { size: 52, t: mg.t, minW: 380 }); x.restore(); }
-  // the rule line sits on a dark strip so it reads over a detailed stage
-  if (mg.text && U) { const w = K.snap(U.measure(x, mg.text, 26) + 48); x.save(); x.globalAlpha *= 0.75; K.R(x, CX - w / 2, SY + 54, w, 40, '#0d0b1e'); x.restore(); K.R(x, CX - w / 2, SY + 94, w, 4, ink); K.TX(x, mg.text, CX, SY + 74, 26, '#a9a3c9'); }
+  // the one-line description sits under the frame (HTML, with the buttons) so it never covers the stage
+  drawHow(x, mg);
   // 提示条：小面板，顶边一道本条颜色
   const m = mg.msg; if (m) { const q = cl(m.t / 0.25, 0, 1), fade = cl((m.big ? 3 : 2.2) - m.t, 0, 1), y = SY + SH - 64; if (fade > 0 && U) { x.globalAlpha = fade; const size = m.big ? 44 : 32, w = (U.measure(x, m.text, size) + 72) * eb(q), h = size + 30; U.box(x, CX - w / 2, y - h / 2, w, h, '#1a1640'); K.R(x, CX - w / 2, y - h / 2, w, 6, m.col); K.R(x, CX - w / 2, y + h / 2 - 6, w, 6, '#0d0b1e'); if (q > 0.7) U.text(x, m.text, CX, y + 2, size, m.col, { outline: m.big }); x.globalAlpha = 1; } }
+  x.restore();
+}
+// 选定之后的操作提示（user ruling 2026-09-27: 操作方法放到选定之后画面中央提示）：舞台上三分之一处一块深色牌，一句话，
+// 2.6 秒后收起；[Q] 画成一个接一个按下去的键帽，{tap} 画成一圈点按的涟漪，{hold} 是按住不放的键帽。
+// 文字按平台挑（M.byInput）：键鼠写键位，手机写点哪里。
+const HOW_T = 2.6;
+const howParts = (s) => String(s).split(/(\[[^\]]+\]|\{tap\}|\{hold\})/).filter(Boolean).map(p => (p[0] === '[' ? { key: p.slice(1, -1) } : p === '{tap}' ? { tap: 1 } : p === '{hold}' ? { hold: 1 } : { s: p }));
+// o = { kbm, touch, pad } or one string; wait = the game waits for the player's first press (the card stays till then)
+K.how = (g, mg, o, wait, delay) => { if (g.mini === mg && !mg._exit) mg.how = { text: M.byInput(o, g), t0: mg.t + (delay || 0), wait: !!wait }; };
+K.howPlain = (s) => String(s || '').replace(/\{tap\}|\{hold\}/g, '').replace(/\[([^\]]+)\]/g, ' $1 ').replace(/\s+/g, ' ').replace(/ ([，。])/g, '$1').trim();
+function drawHow(x, mg) {
+  const h = mg.how; if (!h || !U) return; const t = h.wait && !h.done ? Math.min(mg.t - h.t0, 1) : mg.t - h.t0; if (t < 0 || t > HOW_T) return;
+  const a = cl(t / 0.15, 0, 1) * cl((HOW_T - t) / 0.35, 0, 1), k = K.pop(t), size = 34, parts = howParts(h.text), KS = 26;
+  const pw = parts.map(p => (p.s ? U.measure(x, p.s, size) : p.key ? Math.max(KS * 2, U.measure(x, p.key, KS, true) + 24) : 56)), gap = 10, W = pw.reduce((q, w) => q + w, 0) + gap * (parts.length - 1), bw = K.snap(W + 72), bh = 92, y = SY + 190;
+  x.save(); x.globalAlpha *= a; x.translate(CX, y); if (k !== 1) x.scale(k, k);
+  K.R(x, -bw / 2 + 6, -bh / 2 + 6, bw, bh, '#07060f'); U.box(x, -bw / 2, -bh / 2, bw, bh, '#1a1640'); K.R(x, -bw / 2, -bh / 2, bw, 4, mg.col);
+  let cx = -W / 2; parts.forEach((p, i) => { const w = pw[i];
+    if (p.s) U.text(x, p.s, cx + w / 2, -2, size, C.cream, { shadow: true });
+    else if (p.key || p.hold) { const n = parts.filter(q => q.key).indexOf(p), ph = p.hold ? (t % 1.2 < 0.9 ? 1 : 0) : ((t * 2.2 - n * 0.35) % 1.4 + 1.4) % 1.4 < 0.22 ? 1 : 0; x.save(); x.translate(cx, -KS + ph * 5); U.key(x, p.key || '空格', 0, 0, { size: KS }); x.restore(); }
+    else { const q = (t * 1.6) % 1, r = 8 + q * 22; x.save(); x.globalAlpha *= 1 - q; K.RR(x, cx + w / 2 - r, -r, r * 2, r * 2, 0, null, C.cream, 3); x.restore(); K.R(x, cx + w / 2 - 7, -7, 14, 14, C.cream); }
+    cx += w + gap; });
   x.restore();
 }
 // the stage is painted at art resolution (pixel look, like the rest of the game); frame, title and text stay crisp on top.
@@ -150,7 +171,7 @@ M.drawMini = function (ctx, g) {
 const padHeld = () => { try { const P = M.settings.pad, gp = [...(navigator.getGamepads ? navigator.getGamepads() : [])].find(Boolean); return !!(gp && P && gp.buttons[P.confirm] && gp.buttons[P.confirm].pressed); } catch (e) { return false; } };
 G.miniPt = function (cx, cy) { const st = this.ui.stage(); if (!st) return { x: 960, y: 540 }; const r = st.getBoundingClientRect(), s = this.ui.scale(); return { x: (cx - r.left) / s, y: (cy - r.top) / s }; };
 // D.down may return false: the press was not for the game (then the framework's empty-stage feedback runs)
-G.miniDown = function (x, y, src) { const mg = this.mini; if (!mg || this.reel || mg._exit) return false; mg.mx = x; mg.my = y; if (mg.D.down) { mg.holding = src; const used = mg.D.down.call(this, mg, x, y, src); this.bump(); if (used === false) { mg.holding = null; return false; } return true; } return false; };
+G.miniDown = function (x, y, src) { const mg = this.mini; if (!mg || this.reel || mg._exit) return false; mg.mx = x; mg.my = y; const hw = mg.how; if (hw && hw.wait && !hw.done) { hw.done = 1; hw.t0 = mg.t - (HOW_T - 0.35); } if (mg.D.down) { mg.holding = src; const used = mg.D.down.call(this, mg, x, y, src); this.bump(); if (used === false) { mg.holding = null; return false; } return true; } return false; };
 // a click on the stage the game did not use: a ripple and a light tick (feedback floor: nothing is ever dead to the touch)
 G.miniTap = function (x, y) { const mg = this.mini; if (!mg || this.reel || !M.SHOW || x < SX || y < SY || x > SX + SW || y > SY + SH) return; M.SHOW.tap(this, mg, x, y); this.bump(); };
 G.miniUp = function (src) { const mg = this.mini; if (!mg || !mg.holding || (src && mg.holding !== src)) return; mg.holding = null; if (mg.D.up) mg.D.up.call(this, mg); this.bump(); };
@@ -192,8 +213,13 @@ G.view = function () {
   v.miniOn = !!mg && !this.reel;
   if (mg) { v.modalOn = false; v.tipOn = false; v.coachOn = false; if (!this.reel) v.coverOn = true;
     const bs = mg._exit ? [] : mg.D.btns ? mg.D.btns.call(this, mg) || [] : [];
-    v.mini = { btns: bs.map(b => ({ t: b.t, sub: b.sub || '', hasSub: !!b.sub, op: b.dis ? 0.45 : 1, k: b.dis ? 'dis' : b.gold ? 'gold' : b.danger ? 'red' : 'dark', bg: b.dis ? '#15111a' : b.gold ? 'linear-gradient(180deg,#ffe08a,#d4982e)' : b.danger ? 'linear-gradient(180deg,#e05a4a,#8a2020)' : 'linear-gradient(180deg,#2e2436,#1a1420)', color: b.dis ? '#6b6570' : b.gold ? '#1a0e08' : '#f5ead4', border: b.dis ? '#2a2230' : b.gold ? '#fff3c4' : b.danger ? '#ff9a8a' : '#8a6a3a', glow: b.gold && !b.dis ? 'rgba(255,200,90,0.45)' : 'rgba(0,0,0,0)',
-      onClick: () => { if (!this.mini) return; if (b.dis) { this.deny(b.why || '现在不行', '#8d8496'); return; } M.Sfx.click(); b.fn(); this.bump(); } })) };
+    // under the frame: the one-line description while there is a choice to make, the control line while playing; then the
+    // buttons, as wide as the frame — the main ones share the row equally, 离开 is a narrow grey one at the end
+    const desc = bs.length ? mg.text : mg.how && !mg._exit ? K.howPlain(mg.how.text) : '';
+    if (this.toastData && this.toastData.at < mg.at0) v.toastOn = false;   // the map's departure caption does not follow into the event
+    else if (v.toastOn && v.toast) v.toast.y = 740;
+    v.mini = { desc, hasDesc: !!desc, jc: bs.some(b => !b.leave) ? 'flex-start' : 'center', descOp: cl((mg.t - 0.3) / 0.2, 0, 1), btns: bs.map(b => ({ t: b.t, sub: b.sub || '', hasSub: !!b.sub, op: b.dis ? 0.6 : 1, lv: !!b.leave, fl: b.leave ? '0 0 200px' : '1 1 0', lc: b.leave && !b.dis ? '#b3abc4' : '', ts: b.leave ? 28 : 32, pad: b.leave ? '10px 12px 16px' : '10px 18px 16px', k: b.dis ? 'dis' : b.gold ? 'gold' : b.danger ? 'red' : 'dark', bg: b.dis ? '#15111a' : b.gold ? 'linear-gradient(180deg,#ffe08a,#d4982e)' : b.danger ? 'linear-gradient(180deg,#e05a4a,#8a2020)' : 'linear-gradient(180deg,#2e2436,#1a1420)', color: b.dis ? '#6b6570' : b.gold ? '#1a0e08' : '#f5ead4', border: b.dis ? '#2a2230' : b.gold ? '#fff3c4' : b.danger ? '#ff9a8a' : '#8a6a3a', glow: b.gold && !b.dis ? 'rgba(255,200,90,0.45)' : 'rgba(0,0,0,0)',
+      onClick: () => { if (!this.mini) return; if (b.dis) { this.deny(b.why || '现在不行', '#8d8496'); return; } M.Sfx.click(); const m0 = this.mini; b.fn(); if (b.how && this.mini === m0) K.how(this, m0, b.how, b.howWait); this.bump(); } })) };
   }
   return v;
 };
@@ -312,7 +338,7 @@ MINI.roulette = { title: '午夜转盘', img: 'e_wheel', col: C.red, text: '荷�
     this.miniSet('spin'); S.mini('roulette', 'bet'); S.mini('roulette', 'spin'); this.fx.kick(2);
   },
   btns(mg) { if (mg.phase !== 'idle') return []; const left = mg.max - mg.spins, poor = this.run.wallet < mg.pay, over = left <= 0;
-    const b = (t, k, sub) => ({ t, sub: sub + ' · ' + mg.pay, dis: poor || over, why: over ? '荷官收起了转盘' : '积分不够', fn: () => MINI.roulette.spin.call(this, mg, k) });
+    const b = (t, k, sub) => ({ t, sub: mg.pay + ' 积分 · 中了 ' + sub, dis: poor || over, why: over ? '荷官收起了转盘' : '积分不够', fn: () => MINI.roulette.spin.call(this, mg, k) });
     return [b('押红', 'r', '×2'), b('押黑', 'b', '×2'), b('押金', 'g', '×10'), { t: '离开', leave: 1, sub: '还能转 ' + left + ' 次', gold: over, fn: () => this.miniFinish(mg.net > 0 ? '你赢走了 ' + M.fmt(mg.net) + ' 积分。荷官的笑容僵住了。' : mg.net < 0 ? '转盘吃掉了你 ' + M.fmt(-mg.net) + ' 积分。' : '你看了一会儿，没有下注。', mg.net > 0 ? '#ffcc33' : '#8d8496') }]; },
   // 直接点桌面上的下注位也能下注（和按键一样）；点别处交给框架
   down(mg, x, y, src) {
@@ -496,7 +522,7 @@ MINI.claw = { title: '抓娃娃机', img: 'e_claw', col: C.pink, text: '玻璃�
     mg.tgt = p && bd < 60 ? best : -1; mg.succ = rnd() < ch; mg.dx = dx; mg.ty = p && bd < 60 ? p.y - 80 : FLOOR - 40; this.miniSet('down'); S.mini('claw', 'drop');
     // the button goes down, the claw brakes hard and swings on its cable, the motor whines
     const P = CLP(); mg.press = 1; M.SHOW.press(this, mg, 'btn', K.lx(P.btn[0]), K.ly(P.btn[1]), C.red); mg.swv += -mg.vx * 0.004; M.SHOW.shake(mg, 3); S.mini('claw', 'move'); },
-  btns(mg) { if (mg.phase !== 'idle') return []; const over = mg.tries >= mg.max; return [{ t: '放爪！', sub: mg.pay + ' 积分 · 剩 ' + (mg.max - mg.tries) + ' 次 · 空格', gold: !over, dis: over || this.run.wallet < mg.pay, why: over ? '机器没电了' : '积分不够', fn: () => MINI.claw.drop.call(this, mg) }, { t: '离开', leave: 1, gold: over, fn: () => this.miniFinish(mg.got.length ? '你抱着 ' + mg.got.join('、') + ' 离开了娃娃机。' : '一个都没抓到。爪子好像是松的。', mg.got.length ? '#ff8ac0' : '#8d8496') }]; },
+  btns(mg) { if (mg.phase !== 'idle') return []; const over = mg.tries >= mg.max; return [{ t: '放爪！', sub: mg.pay + ' 积分 · 剩 ' + (mg.max - mg.tries) + ' 次', gold: !over, dis: over || this.run.wallet < mg.pay, why: over ? '机器没电了' : '积分不够', fn: () => MINI.claw.drop.call(this, mg) }, { t: '离开', leave: 1, gold: over, fn: () => this.miniFinish(mg.got.length ? '你抱着 ' + mg.got.join('、') + ' 离开了娃娃机。' : '一个都没抓到。爪子好像是松的。', mg.got.length ? '#ff8ac0' : '#8d8496') }]; },
   // the big red button on the cabinet works like the key; any other click is the framework's
   down(mg, x, y) { const P = CLP(); if (Math.abs(K.ax(x) - P.btn[0]) > 12 || Math.abs(K.ay(y) - P.btn[1]) > 9) return false; const b = (MINI.claw.btns.call(this, mg) || [])[0]; if (!b) return true; if (b.dis) { this.deny(b.why, '#8d8496'); return true; } S.click(); b.fn(); return true; },
   tick(mg, dt) {

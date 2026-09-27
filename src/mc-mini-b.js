@@ -165,8 +165,8 @@ MINI.tree = { title: '世界树', img: 'e_tree', col: C.green, text: '树根扎�
   water(mg) { const run = this.run; this.hold('rsup', run.loot.supplies); run.loot.supplies -= 30; this.release('rsup'); mg.watered = true; mg.allow++;
     mg.fr.push({ f: mg.spare, k: FRUITS.indexOf(mg.spare), x: K.lx(TREE_HANG[3][0]), y: K.ly(TREE_HANG[3][1]), gone: false, grow: 0, q: 0, crack: 0 }); this.miniSet('water'); S.mini('tree', 'water'); SHOW.ring(mg, CX, K.ly(146), 10, 260, C.teal, { life: 0.5 }); },
   btns(mg) { if (mg.phase !== 'idle') return []; const b = mg.fr.map((F, i) => ({ t: '摘 ' + F.f.n, sub: F.f.d, dis: F.gone, why: '已经摘了', fn: () => MINI.tree.pick.call(this, mg, i) }));
-    b.push({ t: '浇灌', sub: '-30 这一趟的物资 · 再结一个，能多摘一个', dis: mg.watered || this.run.loot.supplies < 30, why: mg.watered ? '已经浇过了' : '这一趟的物资不够 30', fn: () => MINI.tree.water.call(this, mg) });
-    b.push({ t: '砍树枝', sub: '得到自然风格图纸，可能被诅咒', danger: 1, dis: mg.picks > 0, why: '树不再理你了', fn: () => { this.miniSet('cut'); S.mini('tree', 'swing'); } });
+    b.push({ t: '浇灌', sub: '30 物资 · 多摘一个', dis: mg.watered || this.run.loot.supplies < 30, why: mg.watered ? '已经浇过了' : '这一趟的物资不够 30', fn: () => MINI.tree.water.call(this, mg) });
+    b.push({ t: '砍树枝', sub: '免费 · 一张图纸，可能被诅咒', danger: 1, dis: mg.picks > 0, why: '树不再理你了', fn: () => { this.miniSet('cut'); S.mini('tree', 'swing'); } });
     return b; },
   // a fruit under the cursor or the pointer: click to pick it; anywhere else the fireflies scatter
   down(mg, px, py) { const i = mg.fr.findIndex(F => !F.gone && (F.grow == null || F.grow >= 1) && Math.hypot(px - F.x, py - F.y) < 48); if (i >= 0 && mg.phase === 'idle') { MINI.tree.pick.call(this, mg, i); return; } mg.tap = { x: K.ax(px), y: K.ay(py), t0: mg.t }; S.mini('tree', 'rustle'); return false; },
