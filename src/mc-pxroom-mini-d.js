@@ -451,6 +451,7 @@ X.def('mini_trap', {
           D.rect(cx - 7, cy - 8, 15, 15, 'stone', 2.2); D.rect(cx - 6, cy - 7, 13, 13, m, tn - 6, { e: 255 });
           D.hl(cx - 7, cy - 8, 15, m, tn - (st < 0.3 ? 0 : 2), { e: 255 }); D.hl(cx - 7, cy + 6, 15, m, tn - 3, { e: 255 }); D.vl(cx - 7, cy - 8, 15, m, tn - 2, { e: 255 }); D.vl(cx + 7, cy - 8, 15, m, tn - 3, { e: 255 });
           if (n >= 2) rs.dl.push({ x: cx, y: cy, z: 8, r: 14 + n * 3, i: 0.4, rgb: n >= 3 ? [255, 70, 60] : [255, 150, 60], tint: 0.6 });
+          if (idle && mg.adjOk && mg.adjOk(r, c) && !(mg.at && mg.at.r === r && mg.at.c === c)) { const hv = mg.hov && mg.hov.r === r && mg.hov.c === c, g = hv ? 10 : 6.5; for (let xx = x + 1; xx < x + TG.tw - 1; xx++) { D.px(xx, y + press, 'fire', g, { e: 255 }); D.px(xx, y + TG.th - 1, 'fire', g - 2, { e: 255 }); } }   // a legal step back
         }
         continue;
       }
@@ -588,6 +589,301 @@ X.def('mini_statue', {
     D.lay('front'); for (let i = 0; i < 8; i++) { const x = 105 + i * 13 + (i >= 4 ? 2 : 0); if (i < mv || wake) { D.px(x, 142, low ? 'red' : 'fire', 10 + Math.sin(T * 13 + i) * 0.6, { e: 255 }); D.px(x, 141, low ? 'red' : 'fire', 8, { e: 255 }); } else if (Math.random() < 0.05) rs.burst('steam', x, 141, 1, { sp: 4, ang: 0, spread: 0.2, life: 1.4 }); }
     if (wake && mg.pt < 1.4) { if (Math.random() < 0.9) rs.burst('dust', 150 + (Math.random() - 0.5) * 120, 54 + Math.random() * 20, 3, { sp: 10, life: 1.4 }); if (Math.random() < 0.4) rs.burst('leaf', 150 + (Math.random() - 0.5) * 100, 56, 1, { sp: 8, life: 1.6 }); }
     if (wake) { const fr = clamp((mg.pt - 0.6) / 1, 0, 1); D.lay('wall'); for (let i = 0; i < 16; i++) { const x = 10 + i * 18, y = 156 + (i % 2) * 8, d = Math.abs(x - 150) / 150; if (d < fr) { D.rect(x, y, 5, 1, 'teal', 9, { e: 255 }); D.rect(x + 2, y - 2, 1, 5, 'teal', 9, { e: 255 }); } } }
+  },
+});
+
+// ═════════════════════ 黑市 · the market under the bridge ═════════════════════
+// a rainy night under a stone bridge: wet brick with rusty dripping pipes and torn wanted posters, the bridge arch overhead with
+// rain coming through its gap, cobbles with puddles that mirror the green ghost-lantern (broken up by the rain), crates and a rat.
+// The stall: a tattered violet canopy hung with bottles, a skull and charms; a table under a violet cloth; on it a wax-sealed
+// blueprint scroll (left), the brass bell you slap to close the price (middle) and a mechanical price scale — brass case,
+// three enamel bands, a bone needle, glass with a glint, a little abacus base (right). The dealer (a pixel-cast character)
+// stands behind the table.
+const MK = { dial: [212, 96, 30], scroll: [80, 104], bell: [150, 114], lantern: [132, 58], table: [46, 254, 112] };
+MD.MARKET = MK;
+X.def('mini_market', {
+  size: [W, H], fy: FY, noFrame: 1, amb: [0.18, 0.22],
+  paint(S, sc) {
+    sc.light({ x: MK.lantern[0], y: MK.lantern[1] + 6, z: 24, r: 110, i: 1.25, c: '#6af0a0', fl: 'candle', tint: 0.6 });   // 0 the ghost lantern
+    sc.light({ x: 40, y: 20, z: 40, r: 90, i: 0.35, c: '#8fa8ff', tint: 0.3 });                                               // 1 cold street glow through the bridge gap
+    sc.light({ x: 212, y: 96, z: 14, r: 34, i: 0.35, c: '#ffcf70', tint: 0.4 });                                              // 2 the scale's brass (kicked on a slap)
+    sc.light({ x: 80, y: 104, z: 12, r: 30, i: 0.2, c: '#9ab8ff', tint: 0.5 });                                               // 3 the scroll (its omen glow)
+    // ── wall: wet brick, pipes, posters; the bridge arch across the top with a gap where the rain comes in ──
+    S.lay('wall'); TX.bricks(S, 0, 0, W, FY, 'brick', 2.8, { bw: 12, bh: 6, v: 1.2, chip: 0.2 }); S.noise(0, 0, W, FY, 0.8, 3, 51, { only: 'brick' }); S.ao(0, 0, W, 60, 't', 1.4); S.ao(0, 0, 40, FY, 'l', 1.2); S.ao(W - 40, 0, 40, FY, 'r', 1.2);
+    for (let x = 0; x < W; x += 5) { const len = 6 + ((x * 7) % 13); for (let k = 0; k < len; k++) S.tone(x, 30 + k + ((x * 3) % 40), 1); }   // wet streaks
+    S.lay('back'); S.beg(); for (let x = 0; x < W; x++) { const top = x < 120 ? 0 : Math.round(26 - Math.sqrt(Math.max(0, 1 - ((x - 210) / 90) ** 2)) * 20); for (let y = 0; y < top + (x >= 120 ? 0 : 10); y++) S.px(x, y, 'stone', 4.4 - y * 0.04); } S.end();
+    S.beg(); for (let x = 120; x < W; x++) { const y = Math.round(26 - Math.sqrt(Math.max(0, 1 - ((x - 210) / 90) ** 2)) * 20); for (let k = 0; k < 4; k++) S.px(x, y + k, 'stone', 6 - k * 0.8 + ((x >> 3) % 2 ? 0.4 : 0)); } S.end();
+    for (let x = 60; x < 120; x++) for (let y = 0; y < 10; y++) S.px(x, y, 'night', 2 + y * 0.1, { e: 255 });   // the gap to the sky
+    S.beg(); S.hcyl(0, 44, 70, 4, 'iron', 4.6, { rim: 1.4 }); S.cyl(66, 44, 4, 60, 'iron', 4.2, { rim: 1.4 }); S.rect(64, 60, 8, 3, 'iron', 6); S.end();
+    S.beg(); S.cyl(270, 30, 5, 118, 'copper', 3.6, { rim: 1.6 }); S.rect(268, 70, 9, 3, 'copper', 5); S.end();
+    [[22, 64, 14, 18], [236, 58, 16, 20]].forEach(([x, y, w, h], i) => { S.beg(); S.rect(x, y, w, h, 'paper', 7.4 - i * 0.6); S.ell(x + w / 2, y + 7, 3.5, 4, 'paper', 4.2); S.rect(x + 2, y + h - 5, w - 4, 1, 'paper', 4.6); S.rect(x + 3, y + h - 3, w - 6, 1, 'paper', 4.6); S.poly([[x + w, y + h], [x + w - 5, y + h], [x + w, y + h - 6]], 'brick', 3.6); S.end(); });
+    // ── floor: wet cobbles, puddles ──
+    S.lay('wall'); TX.ashlar(S, 0, FY, W, H - FY, 'stone', 3.4, { bh: 4, bw: 9, crack: 0 });
+    [[70, 162, 22, 3], [196, 166, 18, 2.5], [138, 172, 12, 1.6]].forEach(([x, y, rx, ry]) => S.ell(x, y, rx, ry, 'water', 2.6, { n: [0, -0.95] }));
+    // ── crates and the rat's hole ──
+    S.lay('back'); [[260, 118, 34, 30], [266, 92, 26, 26]].forEach(([x, y, w, h]) => { S.beg(); TX.vplanks(S, x, y, w, h, 'wood', 4.6, { pw: 5 }); S.hl(x, y, w, 'wood', 6.4); S.line(x, y, x + w - 1, y + h - 1, 'wood', 3.4); S.end(); });
+    S.ell(8, 146, 4, 2.4, 'ink', 0);
+    // ── the canopy: a tattered violet cloth on two poles ──
+    S.lay('mid'); [[48, 40], [252, 40]].forEach(([x, y]) => { S.beg(); S.rect(x - 1, y, 3, 72, 'wood', 4.6); S.px(x - 1, y, 'wood', 7); S.end(); });
+    S.beg(); for (let x = 42; x <= 258; x++) { const sag = Math.round(Math.sin((x - 42) / 216 * Math.PI) * 5), top = 36 + sag, bot = top + 10 + ((x * 7) % 5 === 0 ? 3 : 0) - ((x * 11) % 7 === 0 ? 2 : 0); for (let y = top; y < bot; y++) S.px(x, y, 'magic', 6 - (y - top) * 0.3 + ((x >> 2) % 2 ? 0.6 : 0), { n: [0, -0.4] }); } S.end();
+    for (let x = 44; x < 258; x += 9) S.vl(x, 38 + Math.round(Math.sin((x - 42) / 216 * Math.PI) * 5), 8, 'magic', 3.4);
+    // ── the table: violet cloth with a gold fringe over a heavy board ──
+    const [tx0, tx1, ty] = MK.table;
+    S.beg(); S.box(tx0, ty, tx1 - tx0, 4, 'wood', 5.6, { top: 2 }); S.end();
+    S.beg(); for (let x = tx0 + 2; x < tx1 - 2; x++) { const hang = 20 + Math.round(Math.sin(x * 0.4) * 1.5); for (let y = ty + 2; y < ty + hang; y++) S.px(x, y, 'magic', 5.2 - (y - ty) * 0.06 + (Math.sin(x * 0.8) > 0.6 ? 0.8 : Math.sin(x * 0.8) < -0.6 ? -0.8 : 0), { n: [Math.sin(x * 0.8) * 0.5, 0] }); if (x % 3 === 0) S.px(x, ty + hang, 'gold', 6); } S.end();
+    for (let x = tx0 + 8; x < tx1 - 8; x += 24) { S.ell(x, ty + 11, 3, 3, 'gold', 5, { ring: 1 }); S.px(x, ty + 11, 'gold', 7); }
+    S.lay('back'); S.rect(tx0 + 4, ty + 22, 3, FY - ty - 22, 'wood', 3); S.rect(tx1 - 7, ty + 22, 3, FY - ty - 22, 'wood', 3);
+    // things on the table that never move: a candle stub, a pile of coins, a knife stuck in the board
+    S.lay('mid'); S.beg(); S.rect(60, ty - 5, 3, 5, 'bone', 7); S.end(); S.beg(); for (let i = 0; i < 7; i++) S.hl(170 + (i % 3) * 3, ty - 1 - Math.floor(i / 3), 3, 'gold', 7 + (i % 2)); S.end();
+    S.beg(); S.line(236, ty - 9, 238, ty, 'iron', 8); S.rect(234, ty - 13, 4, 4, 'wood', 5); S.end();
+    // ── the scale: brass case (a half disc standing on a little abacus), enamel bands, ticks; needle and glass are live ──
+    const [dx, dy, dr] = MK.dial;
+    S.lay('mid'); S.beg(); S.box(dx - dr - 4, dy + 2, (dr + 4) * 2, 12, 'wood', 4.4, { top: 1 }); for (let r = 0; r < 2; r++) { S.hl(dx - dr, dy + 5 + r * 4, dr * 2, 'brass', 6); for (let k = 0; k < 9; k++) S.ell(dx - dr + 4 + k * 7 + (r ? 3 : 0), dy + 5 + r * 4, 1.4, 1.4, 'wood', 7.5, { dome: 1 }); } S.end();
+    S.beg(); for (let y = dy - dr - 3; y <= dy + 1; y++) for (let x = dx - dr - 3; x <= dx + dr + 3; x++) { const d = Math.hypot(x + 0.5 - dx, y + 0.5 - dy); if (d > dr + 3) continue; S.px(x, y, 'brass', d > dr ? 6.4 - (x - dx) / dr * 1.6 + (y - dy) / dr * 1 : 2.6, { n: [(x - dx) / dr * 0.6, (y - dy) / dr * 0.6] }); } S.end();
+    const bands = [[0, 1 / 3, 'screen', 7], [1 / 3, 2 / 3, 'lamp', 8], [2 / 3, 1, 'red', 6.5]];
+    for (let y = dy - dr; y <= dy; y++) for (let x = dx - dr; x <= dx + dr; x++) { const d = Math.hypot(x + 0.5 - dx, y + 0.5 - dy); if (d > dr - 2 || d < dr - 10) continue; const a = Math.atan2(y + 0.5 - dy, x + 0.5 - dx), f = (a + Math.PI) / Math.PI; if (f < 0 || f > 1) continue; const b = bands.find(bb => f >= bb[0] && f <= bb[1]); S.px(x, y, b[2], b[3] - (d < dr - 8 ? 1.5 : 0) + (d > dr - 3 ? 1 : 0)); }
+    for (let k = 0; k <= 12; k++) { const a = Math.PI + k / 12 * Math.PI; S.line(dx + Math.cos(a) * (dr - 11), dy + Math.sin(a) * (dr - 11), dx + Math.cos(a) * (dr - (k % 3 ? 13 : 15)), dy + Math.sin(a) * (dr - (k % 3 ? 13 : 15)), 'bone', k % 3 ? 7 : 9); }
+    // the bell's cradle
+    S.beg(); S.box(MK.bell[0] - 7, ty - 2, 14, 2, 'wood', 4); S.end();
+    sc.emit({ k: 'drip', x: 68, y: 64, w: 2, rate: 0.9, sp: 0, life: 2, floor: 150 });
+    sc.emit({ k: 'drip', x: 272, y: 74, w: 2, rate: 0.6, sp: 0, life: 2, floor: 150 });
+  },
+  anim(D, t, rs, o) {
+    const mg = (o && o.mg) || {}, T = o && o.t != null ? o.t : t, tq = q12(T), [tx0, tx1, ty] = MK.table, slap = mg.slapT != null ? T - mg.slapT : 9, jump = slap < 0.12 ? 1 : 0;
+    // rain: steady diagonal streaks, pushed away for a moment by a reveal's shock
+    const clr = mg.clearT != null && T - mg.clearT < 0.6 ? { x: MK.scroll[0], y: MK.scroll[1], r: (T - mg.clearT) * 260 } : null;
+    D.lay('front'); for (let i = 0; i < 120; i++) { const sp = 150 + (i % 7) * 12, y = ((i * 53.7 + T * sp) % 190) - 10, x = ((i * 37.3 + T * sp * 0.25) % 310) - 5; if (y < 8 && x > 120) continue; if (clr && Math.hypot(x - clr.x, y - clr.y) < clr.r) continue; D.px(x, y, 'ice', 7 + (i % 3)); D.px(x - 0.25, y - 1, 'ice', 5.5); D.px(x - 0.5, y - 2, 'ice', 4); }
+    if (Math.random() < 0.7) rs.burst('drip', Math.random() * 300, 150 + Math.random() * 20, 1, { sp: 20, life: 0.2, floor: 151 + Math.random() * 20 });
+    // puddles mirror the ghost lantern, the reflection broken by the rain
+    D.lay('wall'); [[70, 162, 22], [196, 166, 18], [138, 172, 12]].forEach(([x, y, rx], pi) => { for (let k = -rx + 2; k < rx - 2; k++) { const wob = Math.sin(T * 6 + k * 0.7 + pi) > 0.3, near = Math.abs(x + k - MK.lantern[0]) < 16; if (near && wob) D.px(x + k, y + (k % 2), 'screen', 7 - Math.abs(x + k - MK.lantern[0]) / 5, { e: 255 }); else if ((k + Math.floor(T * 4)) % 9 === 0) D.px(x + k, y, 'water', 7, { e: 255 }); } });
+    // the rat now and then
+    const rp = steps(T, 11); if (rp < 0.25) { const rx = 10 + rp * 4 * 250; D.lay('mid'); D.beg(); D.rect(rx, 146, 6, 3, 'hair', 4); D.px(rx + 6, 147, 'hair', 5); D.px(rx + 7, 148, 'candy', 7); D.line(rx - 1, 148, rx - 5, 147 - Math.round(Math.sin(T * 20)), 'candy', 5); D.end(); }
+    // the canopy's trinkets sway; the ghost lantern flickers green
+    D.lay('mid'); [[64, 'bottle'], [92, 'skull'], [178, 'charm'], [200, 'bottle2'], [232, 'bat']].forEach(([x, k], i) => { const sw = Math.round(Math.sin(T * 1.8 + i * 1.3) * 1.5), y0 = 44 + Math.round(Math.sin((x - 42) / 216 * Math.PI) * 5); D.beg(); D.line(x, y0, x + sw, y0 + 7, 'wood', 3); D.end({ none: 1 }); const y = y0 + 8;
+      if (k === 'bottle' || k === 'bottle2') { D.beg(); D.rect(x + sw - 2, y, 5, 6, k === 'bottle' ? 'teal' : 'crimson', 6); D.rect(x + sw - 1, y - 2, 3, 2, 'glass', 6); D.px(x + sw - 1, y + 1, 'glass', 10); D.end(); }
+      else if (k === 'skull') { D.beg(); D.ell(x + sw, y + 2, 3, 3, 'bone', 8, { dome: 1 }); D.px(x + sw - 1, y + 2, 'ink', 0); D.px(x + sw + 1, y + 2, 'ink', 0); D.hl(x + sw - 1, y + 5, 3, 'bone', 6); D.end(); }
+      else if (k === 'charm') { D.beg(); D.ell(x + sw, y + 2, 3, 3, 'gold', 7, { ring: 1 }); D.px(x + sw, y + 2, 'red', 8); D.end(); }
+      else { D.beg(); D.poly([[x + sw - 5, y], [x + sw, y + 3], [x + sw + 5, y], [x + sw + 3, y + 3], [x + sw, y + 5], [x + sw - 3, y + 3]], 'hair', 4); D.end(); } });
+    const [lx, ly] = MK.lantern; D.beg(); D.line(lx, 40, lx, ly - 4, 'iron', 4); D.box(lx - 4, ly - 4, 9, 2, 'iron', 6); for (let k = 0; k < 8; k++) { const w = k < 2 || k > 5 ? 3 : 4; D.rect(lx - w, ly - 2 + k, w * 2 + 1, 1, 'glass', 3); } D.box(lx - 4, ly + 6, 9, 2, 'iron', 5); D.end();
+    for (let k = 0; k < 5; k++) { const f = 0.8 + 0.25 * n1(T * 9 + k); D.px(lx + Math.round(n1(T * 4 + k) * 1.4), ly + 3 - Math.round(k * f), 'screen', 10 - k, { e: 255 }); D.px(lx - 1 + (k & 1), ly + 4 - Math.round(k * f * 0.7), 'teal', 9 - k, { e: 255 }); }
+    // the scroll: rolled with a red wax seal; before the reveal it shakes in its omen colour and light leaks from the seal; then it unrolls
+    const B = mg.bq || {}, [sx, sy] = MK.scroll, sk = B.sk || 0, jx = Math.round(Math.sin(T * 50) * sk), op = B.open != null ? T - B.open : -1;
+    D.lay('mid');
+    if (!mg.bq) { /* the scroll is on the table only once the dealer slaps it down */ }
+    else if (op < 0) { const yy = sy - jump; D.beg(); D.hcyl(sx - 14 + jx, yy - 3, 28, 7, 'paper', 7.4, { rim: 2 }); D.rect(sx - 15 + jx, yy - 3, 2, 7, 'wood', 5); D.rect(sx + 13 + jx, yy - 3, 2, 7, 'wood', 5); D.end();
+      D.ell(sx + jx, yy, 3.2, 3.2, 'red', 6.5, { dome: 1 }); D.px(sx - 1 + jx, yy - 1, 'red', 9);
+      if (B.qc) { D.ell(sx + jx, yy, 2, 2, B.qc[0], B.qc[1], { e: 255 }); D.hl(sx - 12 + jx, yy - 3, 24, B.qc[0], B.qc[1] - 2, { e: 255 }); rs.dl.push({ x: sx, y: yy, z: 10, r: 26 + sk * 8, i: 0.6 + sk * 0.3, rgb: B.qc[2], tint: 0.6 }); } }
+    else { const un = clamp(op / 0.3, 0, 1), hh = Math.round(4 + un * 30), top = sy - 6 - hh; D.beg(); D.rect(sx - 15, top, 30, hh, 'water', 4); D.hcyl(sx - 16, top - 2, 32, 3, 'wood', 5, { rim: 1 }); D.hcyl(sx - 16, top + hh, 32, 3, 'wood', 5, { rim: 1 }); D.end();
+      if (un > 0.6) { for (let k = 0; k < 5; k++) D.hl(sx - 11, top + 4 + k * 5, 14 + (k % 2) * 6, 'water', 9, { e: 255 }); D.rect(sx + 6, top + 6, 6, 6, 'water', 8, { e: 255 }); D.ell(sx + 8.5, top + 20, 3, 3, 'water', 9, { ring: 1, e: 255 }); }
+      if (B.qc) rs.dl.push({ x: sx, y: top + hh / 2, z: 14, r: 50, i: Math.max(0, 1.2 - op * 0.4), rgb: B.qc[2], tint: 0.6 }); }
+    // the bell: jumps and rings when slapped; a hand comes down on it from the bottom of the stage
+    const [bx, by] = MK.bell; D.beg(); D.ell(bx, by - 3 - jump, 5.5, 4, 'brass', 7, { dome: 1 }); D.rect(bx - 6, by - 1 - jump, 13, 2, 'brass', 5); D.px(bx, by - 8 - jump, 'brass', 9); D.px(bx - 2, by - 5 - jump, 'brass', 11); D.end();
+    if (slap < 0.35) { const hy = slap < 0.08 ? by - 12 + Math.round(slap / 0.08 * 6) : by - 6 + Math.round((slap - 0.08) / 0.27 * 40); D.lay('front'); D.beg(); D.rect(bx - 7, hy + 8, 14, H - hy, 'leather', 3.8); D.hl(bx - 7, hy + 8, 14, 'leather', 5); for (let k = 0; k < 4; k++) { D.rect(bx - 7 + k * 4, hy - 1 + (k === 0 || k === 3 ? 1 : 0), 3, 9, 'leather', 5.6 - k * 0.3); D.px(bx - 7 + k * 4, hy - 1 + (k === 0 || k === 3 ? 1 : 0), 'leather', 7.5); } D.rect(bx - 9, hy + 4, 3, 6, 'leather', 5); D.hl(bx - 7, hy + 6, 14, 'brass', 7); D.end(); if (slap < 0.05) rs.burst('glint', bx, by - 6, 6, { sp: 30, life: 0.3 }); }
+    // the scale's needle (bone), a trembling stop, the glass glint sweeping; the green band flashes when the needle crosses it
+    const [dx, dy, dr] = MK.dial, nd = mg.dialN != null ? mg.dialN : 0.5, a = Math.PI + clamp(nd, 0, 1) * Math.PI; D.lay('mid');
+    if (mg.phase === 'swing' && nd < 1 / 3) for (let k = 0; k < 10; k++) { const aa = Math.PI + k / 30 * Math.PI; D.px(dx + Math.round(Math.cos(aa) * (dr - 1)), dy + Math.round(Math.sin(aa) * (dr - 1)), 'screen', 10, { e: 255 }); }
+    D.beg(); D.line(dx, dy - jump, dx + Math.cos(a) * (dr - 4), dy - jump + Math.sin(a) * (dr - 4), 'bone', 9); D.line(dx + 1, dy - jump, dx + 1 + Math.cos(a) * (dr - 8), dy - jump + Math.sin(a) * (dr - 8), 'bone', 6); D.end(); D.ell(dx, dy - jump, 2.4, 2.4, 'brass', 8, { dome: 1 });
+    const gl = steps(T, 3.5); if (gl < 0.3) { const ga = Math.PI + gl / 0.3 * Math.PI; for (let r = 6; r < dr - 2; r += 2) D.px(dx + Math.round(Math.cos(ga) * r), dy + Math.round(Math.sin(ga) * r), 'glass', 11, { e: 255 }); }
+  },
+});
+
+// ═════════════════════ 地下拳馆 · the basement gym ═════════════════════
+// red-brown brick with faded fight posters, a chalk tally board, a caged lamp on a chain that swings with every punch (its
+// light swings with it), cigar smoke in the lamp's cone; the corner of a ring (red / white / blue ropes, a brass post with
+// the bell on it), a dumbbell rack, a skipping rope, a bucket with a towel; a stained canvas floor. The heavy bag: old
+// leather with tape patches and stitching on a chain from the beam — squashes and swings, splits and leaks sand in fever,
+// and on an S the chain snaps and it flies into the wall.
+const GY = { len: 90, bag: [192, 18], lamp: [160, 4], board: [14, 46, 64, 40], post: 286, ropes: [78, 94, 110] };
+MD.GYM = GY;
+X.def('mini_gym', {
+  size: [W, H], fy: FY, noFrame: 1, amb: [0.2, 0.24],
+  paint(S, sc) {
+    sc.light({ x: 160, y: 30, z: 30, r: 130, i: 1.2, c: '#ffd890', fl: 'buzz', ph: 1, tint: 0.35, bake: false });   // 0 the caged lamp (moved each frame by its swing: see anim)
+    sc.light({ x: 286, y: 60, z: 16, r: 40, i: 0.4, c: '#ffcf70', tint: 0.4 });                                      // 1 the bell's brass (kicked when it rings)
+    sc.light({ x: 40, y: 20, z: 40, r: 80, i: 0.3, c: '#8898ff', tint: 0.3 });                                        // 2 a cold window high on the left
+    // ── wall ──
+    S.lay('wall'); TX.bricks(S, 0, 0, W, FY, 'brick', 3.4, { bw: 11, bh: 5, v: 1.4, chip: 0.3 }); S.noise(0, 0, W, FY, 0.8, 4, 61, { only: 'brick' });
+    S.ao(0, 0, W, 40, 't', 2); S.ao(0, 110, W, 38, 'b', 1.2);
+    S.rect(28, 6, 24, 12, 'night', 3, { e: 255 }); S.rect(28, 11, 24, 1, 'iron', 4); S.rect(39, 6, 1, 12, 'iron', 4); S.hl(26, 18, 28, 'stone', 6);   // a barred window
+    // faded fight posters (no words): two boxers squaring up, a fist, a belt
+    const poster = (x, y, w, h, m, t, draw) => { S.lay('back'); S.beg(); S.rect(x, y, w, h, 'paper', t); S.hl(x, y, w, 'paper', t + 1.5); S.rect(x + 2, y + 2, w - 4, h - 10, m, 4.6); draw(x, y, w, h); S.rect(x + 3, y + h - 6, w - 6, 1, 'crimson', 5); S.rect(x + 5, y + h - 4, w - 10, 1, 'crimson', 4); S.poly([[x + w, y], [x + w - 5, y], [x + w, y + 5]], 'brick', 3); S.end(); };
+    poster(92, 36, 22, 30, 'crimson', 6.4, (x, y) => { S.rect(x + 6, y + 8, 3, 10, 'ink', 1.5); S.rect(x + 13, y + 8, 3, 10, 'ink', 1.5); S.ell(x + 7, y + 6, 2, 2, 'ink', 1.5); S.ell(x + 14, y + 6, 2, 2, 'ink', 1.5); S.rect(x + 9, y + 10, 4, 2, 'ink', 1.5); });
+    poster(226, 30, 20, 26, 'denim', 6, (x, y) => { S.ell(x + 10, y + 11, 5, 4, 'ink', 1.5); S.rect(x + 7, y + 14, 6, 4, 'ink', 1.5); });
+    poster(122, 44, 16, 20, 'sand', 5.4, (x, y) => { S.rect(x + 3, y + 7, 10, 4, 'gold', 7); S.ell(x + 8, y + 9, 2, 2, 'red', 7); });
+    // the chalk tally board
+    const [bx, by, bw, bh] = GY.board; S.lay('back'); S.beg(); S.box(bx, by, bw, bh, 'wood', 5.4); S.rect(bx + 2, by + 2, bw - 4, bh - 4, 'leaf', 1.6); S.noise(bx + 2, by + 2, bw - 4, bh - 4, 0.6, 3, 62, { only: 'leaf' }); S.hl(bx + 4, by + bh + 1, 18, 'wood', 6); S.rect(bx + 30, by + bh, 6, 2, 'linen', 9); S.end();
+    // skipping rope on a nail, a dumbbell rack, a bucket with a towel
+    S.lay('back'); S.beg(); for (let k = 0; k <= 20; k++) { const a = k / 20 * Math.PI; S.px(88 + Math.round(Math.cos(a) * 6), 94 + Math.round(Math.sin(a) * 18), 'red', 6); } S.rect(80, 92, 3, 5, 'wood', 6); S.rect(94, 92, 3, 5, 'wood', 6); S.end();
+    S.lay('mid'); S.beg(); S.rect(12, 126, 44, 3, 'iron', 4); S.rect(14, 129, 2, 19, 'iron', 3); S.rect(52, 129, 2, 19, 'iron', 3); for (let k = 0; k < 3; k++) { const x = 18 + k * 12; S.rect(x, 120, 8, 2, 'iron', 6); S.box(x - 1, 117, 3, 7, 'iron', 4); S.box(x + 7, 117, 3, 7, 'iron', 4); } S.rect(12, 138, 44, 2, 'iron', 4); S.box(18, 132, 5, 6, 'iron', 3.4); S.box(36, 132, 5, 6, 'iron', 3.4); S.end();
+    S.beg(); S.cyl(64, 132, 14, 16, 'iron', 4.6, { rim: 2 }); S.hcyl(64, 133, 14, 1, 'iron', 7); S.ell(71, 132, 7, 1.4, 'water', 4, { n: [0, -0.9] }); S.rect(66, 126, 5, 9, 'red', 6); S.hl(66, 126, 5, 'red', 8); S.end();
+    // ── the ring's corner: brass post with the bell, three ropes ──
+    S.lay('mid'); S.beg(); S.cyl(GY.post - 3, 56, 6, 92, 'brass', 5.4, { rim: 2 }); S.cyl(GY.post - 4, 54, 8, 3, 'brass', 8, { rim: 2 }); for (let k = 0; k < 3; k++) S.cyl(GY.post - 4, GY.ropes[k] - 2, 8, 4, 'linen', [4, 9, 6][k], { rim: 1.5 }); S.end();
+    GY.ropes.forEach((y, k) => { S.beg(); for (let x = 214; x < GY.post - 3; x++) { const yy = y + Math.round(Math.sin((x - 214) / (GY.post - 217) * Math.PI) * 2); S.px(x, yy, k === 1 ? 'linen' : k === 0 ? 'red' : 'denim', k === 1 ? 9 : 6); S.px(x, yy + 1, k === 1 ? 'linen' : k === 0 ? 'red' : 'denim', k === 1 ? 6 : 3.6); } S.end(); });
+    S.beg(); S.line(GY.post, 60, GY.post - 6, 64, 'iron', 5); S.ell(GY.post - 7, 68, 4, 3.5, 'brass', 7, { dome: 1 }); S.px(GY.post - 7, 72, 'brass', 4); S.end();
+    // the beam the bag hangs from; canvas floor with stains and tape
+    S.lay('back'); S.beg(); S.box(0, 12, W, 6, 'wood', 3.6, { top: 1 }); for (let x = 6; x < W; x += 24) { S.px(x, 14, 'iron', 7); S.px(x + 1, 15, 'iron', 3); } S.end();
+    S.lay('wall'); S.rect(0, FY, W, H - FY, 'paper', 5.6); S.noise(0, FY, W, H - FY, 0.8, 3, 63, { only: 'paper' });
+    [[60, 160, 9, 3], [210, 166, 12, 3], [150, 170, 6, 2]].forEach(([x, y, rx, ry]) => { S.ell(x, y, rx, ry, 'paper', 4.2, { n: [0, -0.9] }); S.ell(x + 2, y, rx * 0.5, ry * 0.5, 'paper', 3.6, { n: [0, -0.9] }); });
+    S.rect(0, FY, W, 1, 'paper', 3); S.hl(100, 156, 30, 'paper', 8.6); S.hl(180, 162, 18, 'paper', 8.6);
+    sc.emit({ k: 'dust', x: 160, y: 70, w: 90, h: 80, rate: 5, sp: 2, life: 3.4 });
+  },
+  anim(D, t, rs, o) {
+    const mg = (o && o.mg) || {}, T = o && o.t != null ? o.t : t, tq = q12(T), s = rs.st, fev = mg.sh && mg.sh.fever;
+    // the caged lamp: its chain, cage and bulb swing; the light follows the bulb; it flickers red in the last second
+    const sw = (mg.lampSw || 0) * Math.sin(T * 5) + Math.sin(T * 0.9) * 0.04, [lx0, ly0] = GY.lamp, L = 26, bx = lx0 + Math.sin(sw) * L, by = ly0 + Math.cos(sw) * L, red = mg.phase === 'mash' && mg.pt > 3;
+    D.lay('mid'); D.beg(); for (let k = 0; k < L; k += 2) D.px(lx0 + Math.sin(sw) * k, ly0 + Math.cos(sw) * k, 'iron', 5 + (k % 4 ? 0 : 2)); D.end({ none: 1 });
+    D.beg(); D.box(bx - 4, by - 1, 9, 2, 'iron', 6); for (let k = 0; k < 6; k++) { D.px(bx - 4, by + 1 + k, 'iron', 4); D.px(bx + 4, by + 1 + k, 'iron', 4); if (k % 2) D.hl(bx - 4, by + 1 + k, 9, 'iron', 3); } D.hl(bx - 4, by + 7, 9, 'iron', 5); D.end();
+    const bulb = red && Math.floor(T * 8) % 2 ? 'red' : 'lamp'; D.ell(bx, by + 4, 2.4, 2.6, bulb, 11, { e: 255 });
+    rs.dl.push({ x: bx, y: by + 6, z: 30, r: 120, i: 0.25, rgb: red ? [255, 90, 70] : [255, 220, 150], tint: 0.3 });
+    // cigar smoke drifting in the cone
+    if (Math.random() < 0.3) rs.burst('steam', 250 + Math.random() * 10, 92, 1, { sp: 3, ang: -0.4, spread: 0.5, life: 4 });
+    // the tally board: one chalk stroke per punch, bundled by five
+    const [gx, gy, gw, gh] = GY.board, n = Math.min(60, mg.hits || 0); D.lay('back');
+    for (let i = 0; i < n; i++) { const b = Math.floor(i / 5), k = i % 5, col = b % 6, row = Math.floor(b / 6), x = gx + 5 + col * 9, y = gy + 5 + row * 11; if (y > gy + gh - 12) break; if (k < 4) D.vl(x + k * 2, y, 8, 'linen', 9 - (i === n - 1 ? 0 : 1), { e: 255 }); else D.line(x - 1, y + 6, x + 7, y + 1, 'linen', 10, { e: 255 }); }
+    // the bag: swings on its chain, squashes when hit; tape, stitching; a split that leaks sand in fever; snaps off on an S
+    const [hx, hy] = GY.bag, fly = mg.flyT != null ? T - mg.flyT : -1, ang = (mg.bagAng || 0), sq = 1 + (mg.bag || 0) * 0.08;
+    let cx, cy, rot = ang; if (fly >= 0) { cx = hx + Math.sin(ang) * GY.len + Math.min(1, fly / 0.35) * 70; cy = hy + GY.len - Math.sin(Math.min(1, fly / 0.35) * Math.PI * 0.6) * 24 + Math.max(0, fly - 0.35) * 40; rot = ang + fly * 5; } else { cx = hx + Math.sin(ang) * GY.len; cy = hy + Math.cos(ang) * GY.len; }
+    D.lay('mid');
+    if (fly < 0) { D.beg(); for (let k = 0; k < GY.len - 30; k += 2) D.px(hx + Math.sin(ang) * k, hy + Math.cos(ang) * k, 'iron', 6 + (k % 4 ? -1 : 1)); D.end({ none: 1 }); }
+    else if (fly < 0.2) { rs.burst('spark', hx, hy + 10, 8, { sp: 40, spread: 6.3, life: 0.5 }); }
+    const w = Math.round(13 / sq), h = Math.round(58 * sq), top = cy - 30, split = fev || mg.phase === 'end';
+    if (fly < 0 || cy < FY + 20) { D.beg(); for (let yy = 0; yy < h; yy++) { const q = yy / h, ww = Math.round(w * (q < 0.08 ? 0.7 + q * 3 : q > 0.92 ? 0.8 : 1)); for (let xx = -ww; xx <= ww; xx++) { const u = xx / (ww + 0.5), px = cx + xx + Math.round(Math.sin(rot) * (yy - 28) * 0.9), py = top + yy; D.px(px, py, 'leather', 3.4 - u * 1.8 + (Math.abs(u) > 0.85 ? -0.8 : 0) + (u < -0.4 && u > -0.7 ? 1.3 : 0) - (q < 0.1 || q > 0.9 ? 0.6 : 0), { n: [u * 0.8, 0] }); } } D.end();
+      const at = (xx, yy, m, tt) => D.px(cx + xx + Math.round(Math.sin(rot) * (yy - 28) * 0.9), top + yy, m, tt);
+      [[6, 'linen'], [48, 'linen']].forEach(([yy, m]) => { for (let xx = -w; xx <= w; xx++) { at(xx, yy, m, 6.4 - xx / w * 1.4); at(xx, yy + 1, m, 5); } });
+      for (let yy = 14; yy < 44; yy += 3) at(-Math.round(w * 0.3), yy, 'leather', 2.2);
+      [[4, 22, 4, 5], [-6, 34, 5, 4]].forEach(([x0, y0, pw, ph]) => { for (let a = 0; a < pw; a++) for (let b = 0; b < ph; b++) at(x0 + a, y0 + b, 'iron', 6 - b * 0.4); });
+      if (split) { for (let yy = 30; yy < 38; yy++) at(Math.round(w * 0.4), yy, 'ink', 0); if (Math.random() < 0.6) rs.burst('dust', cx + w * 0.4, top + 38, 2, { sp: 8, life: 1.2 }); } }
+    if (fly >= 0.35 && !s.crashed) { s.crashed = 1; rs.burst('dust', cx, cy, 40, { sp: 40, spread: 6.3, life: 1.8 }); rs.burst('spark', cx, cy, 10, { sp: 50, spread: 6.3, life: 0.6 }); }
+    if (fly < 0) s.crashed = 0;
+    // the bell rings: the hammer shakes
+    const bt = mg.bellT != null ? T - mg.bellT : 9; if (bt < 0.5) { D.lay('mid'); D.px(GY.post - 7 + (Math.floor(T * 40) % 2 ? 1 : -1), 72, 'brass', 10, { e: 255 }); rs.flash(1, 0.6); }
+  },
+});
+
+// ═════════════════════ 斗兽场 · the fighting pit ═════════════════════
+// tiers of stone stands full of a pixel crowd (dozens of heads and raised fists; your side waves gold flags, they jump with
+// the cheer, freeze on the killing blow, throw coins or boo); a VIP box with a shadowy host; red banners and torches round
+// the wall; portcullis gates left and right (they rise when the beasts are pushed in); a gong over the right gate; a row of
+// six braziers along the wall that is the cheer meter; a sand floor with blood, claw marks and a broken spear.
+const AR = { gates: [[14, 44], [256, 286]], gong: [271, 50], braz: [104, 118, 132, 168, 182, 196], wall: 70 };
+MD.ARENA = AR;
+const CROWD = []; (() => { const r = X.rng(77); for (let row = 0; row < 3; row++) for (let x = 6 + row * 3; x < 294; x += 7 + Math.floor(r() * 3)) { if (x > 118 && x < 182 && row < 2) continue; CROWD.push({ x, row, y: 30 + row * 13, skin: ['skin', 'skin', 'leather', 'bone'][Math.floor(r() * 4)], st: 3 + r() * 3, cloth: ['crimson', 'denim', 'leaf', 'lav', 'sand', 'brick'][Math.floor(r() * 6)], ct: 3 + r() * 3, ph: r() * 7, side: x < 150 ? 0 : 1, hat: r() < 0.25 }); } })();
+X.def('mini_arena', {
+  size: [W, H], fy: FY, noFrame: 1, amb: [0.2, 0.24],
+  paint(S, sc) {
+    [[60, 58], [104, 60], [196, 60], [240, 58]].forEach(([x, y], i) => sc.light({ x, y, z: 20, r: 80, i: 1, c: '#ff9040', fl: 'fire', ph: i * 1.7, tint: 0.55 }));   // 0–3 torches
+    sc.light({ x: 150, y: 120, z: 30, r: 120, i: 0.45, c: '#ffd8a0', tint: 0.2 });   // 4 the pit
+    sc.light({ x: 150, y: 90, z: 12, r: 70, i: 0.2, c: '#ff8030', fl: 'fire', tint: 0.5 });   // 5 the braziers together (kicked with the cheer)
+    // ── the stands: three stone tiers under a dark sky, the VIP box in the middle ──
+    S.lay('wall'); S.vgrad(0, 0, W, 26, 'night', 0.8, 2.4, { e: 255 }); for (let i = 0; i < 20; i++) S.px((i * 47) % W, (i * 13) % 20, 'linen', 8, { e: 255 });
+    for (let row = 0; row < 3; row++) { const y = 26 + row * 13; S.rect(0, y, W, 13, 'stone', 3.4 - row * 0.3); S.hl(0, y + 10, W, 'stone', 5.4); S.hl(0, y + 11, W, 'stone', 2); }
+    S.lay('back'); S.beg(); S.box(118, 12, 64, 30, 'wood', 3.4, { top: 2 }); S.rect(122, 16, 56, 22, 'night', 1.2); S.poly([[114, 12], [186, 12], [180, 4], [120, 4]], 'crimson', 5.4); for (let x = 116; x < 184; x += 6) S.vl(x, 4, 8, 'gold', 5); S.hl(118, 38, 64, 'gold', 6); S.end();
+    S.ell(150, 28, 5, 6, 'ink', 0.6); S.rect(143, 30, 14, 8, 'ink', 0.6); S.px(148, 27, 'gold', 9, { e: 255 }); S.px(152, 27, 'gold', 9, { e: 255 });   // the host: a shape with two glints
+    // ── the wall: big stones, red banners, torch brackets; the gates ──
+    S.lay('wall'); TX.ashlar(S, 0, AR.wall - 4, W, FY - AR.wall + 4, 'stone', 4.6, { bh: 10, bw: 18, crack: 0.25 }); S.hl(0, AR.wall - 4, W, 'stone', 7.4); S.ao(0, AR.wall - 4, W, 30, 't', 1);
+    [[76, 'crimson'], [224, 'crimson'], [130, 'gold'], [170, 'gold']].forEach(([x, m]) => { S.lay('back'); S.beg(); S.rect(x - 6, AR.wall - 2, 12, 22, m, m === 'gold' ? 5 : 4.6); S.poly([[x - 6, AR.wall + 20], [x, AR.wall + 15], [x + 6, AR.wall + 20], [x + 6, AR.wall + 26], [x, AR.wall + 22], [x - 6, AR.wall + 26]], m, m === 'gold' ? 4 : 3.6); S.rect(x - 7, AR.wall - 3, 14, 2, 'wood', 5); S.end(); S.ell(x, AR.wall + 7, 3, 3, m === 'gold' ? 'crimson' : 'gold', 6, { ring: 1 }); });
+    [60, 104, 196, 240].forEach(x => { S.lay('back'); S.beg(); S.box(x - 3, 64, 7, 3, 'iron', 5); S.line(x, 64, x, 58, 'wood', 6); S.end(); });
+    AR.gates.forEach(([x0, x1]) => { S.lay('back'); S.beg(); S.rect(x0 - 3, 66, x1 - x0 + 6, 4, 'stone', 7); S.rect(x0 - 3, 66, 3, 84, 'stone', 5.6); S.rect(x1, 66, 3, 84, 'stone', 5.6); S.end(); S.lay('wall'); S.rect(x0, 70, x1 - x0, 78, 'night', 0.6); });
+    // gong on its frame over the right gate
+    S.lay('back'); S.beg(); S.rect(260, 36, 2, 30, 'wood', 5); S.rect(282, 36, 2, 30, 'wood', 4); S.rect(258, 34, 28, 3, 'wood', 6); S.end();
+    // braziers along the wall foot (their fire is live)
+    AR.braz.forEach(x => { S.lay('mid'); S.beg(); S.rect(x - 1, 98, 3, 8, 'iron', 4); S.ell(x, 97, 5, 2.4, 'iron', 6, { dome: 1 }); S.hl(x - 5, 95, 11, 'iron', 8); S.end(); });
+    // ── the sand ──
+    S.lay('wall'); S.rect(0, 104, W, H - 104, 'sand', 5.6); S.noise(0, 104, W, H - 104, 1.2, 3, 71, { only: 'sand' }); S.ao(0, 104, W, 10, 't', 1.8);
+    [[90, 132, 8, 2], [210, 150, 10, 2.4], [150, 164, 6, 1.6]].forEach(([x, y, rx, ry]) => S.ell(x, y, rx, ry, 'red', 3, { n: [0, -0.9] }));
+    for (let k = 0; k < 4; k++) { S.line(60 + k * 3, 150, 70 + k * 3, 140, 'sand', 3.4); S.line(236 + k * 3, 124, 244 + k * 3, 116, 'sand', 3.4); }
+    S.lay('mid'); S.beg(); S.line(40, 160, 70, 152, 'wood', 5); S.line(70, 152, 76, 150, 'iron', 8); S.end(); S.beg(); S.ell(260, 160, 4, 2, 'bone', 8); S.line(252, 158, 262, 162, 'bone', 7); S.end();
+  },
+  anim(D, t, rs, o) {
+    const mg = (o && o.mg) || {}, T = o && o.t != null ? o.t : t, tq = q12(T), cheer = mg.cheer || 0, fight = mg.phase === 'fight', frozen = mg.ko && !mg.fin, fev = mg.sh && mg.sh.fever, won = mg.fin && mg.winner === mg.side, lost = mg.fin && mg.winner !== mg.side;
+    // torches
+    [60, 104, 196, 240].forEach((x, i) => flame(D, x, 58, 6, T, i * 1.9));
+    // the crowd: heads, shoulders, fists; your side waves gold flags; jump with the cheer; freeze on the killing blow; throw coins / boo
+    D.lay('back');
+    CROWD.forEach((c, i) => { const mine = mg.side != null && c.side === mg.side, amp = frozen ? 0 : (fight ? (mine ? 1 + cheer * 3 + (fev ? 1.5 : 0) : 1) : won && mine ? 3 : 0.5), jy = frozen ? -1 : -Math.round(Math.abs(Math.sin(T * (fight ? 9 : 4) + c.ph)) * amp), x = c.x, y = c.y + jy;
+      D.rect(x - 2, y + 4, 5, 5, c.cloth, c.ct); D.ell(x, y + 2, 2, 2, c.skin, c.st, { dome: 1 }); if (c.hat) D.hl(x - 2, y, 5, 'wood', 3);
+      const armUp = frozen ? 1 : lost ? 0 : fight ? (Math.sin(T * 7 + c.ph) > 0.2 - cheer) : won && mine;
+      if (armUp) { D.vl(x + 3, y - 2, 4, c.skin, c.st); if (mine && mg.side != null && (i % 3 === 0)) { D.vl(x + 4, y - 7, 6, 'wood', 6); D.rect(x + 5, y - 7, 4, 3, 'gold', 8 + (Math.floor(T * 6 + i) % 2)); } }
+      else if (lost && !mine) { D.vl(x + 3, y - 1, 3, c.skin, c.st); } else if (lost && mine) { D.px(x + 3, y + 6, c.skin, c.st); D.px(x + 3, y + 7, c.skin, c.st - 1); } });
+    // gates: the portcullis rises when the fight opens
+    const gt = mg.gateT != null ? clamp((T - mg.gateT) / 0.6, 0, 1) : 0; D.lay('back');
+    AR.gates.forEach(([x0, x1]) => { const lift = Math.round(gt * 70); for (let x = x0 + 1; x < x1; x += 4) D.rect(x, 70, 2, Math.max(0, 76 - lift), 'iron', 5.4); for (let y = 74; y < 146 - lift; y += 8) D.hl(x0, y, x1 - x0, 'iron', 4); });
+    // gong: struck at the open and on the KO, it swings and glows
+    const gg = mg.gongT != null ? T - mg.gongT : 9, gs = gg < 1 ? Math.sin(gg * 20) * (1 - gg) * 2 : 0, [gx, gy] = AR.gong; D.lay('mid');
+    D.beg(); D.line(gx - 6, 37, gx - 6 + Math.round(gs), 41, 'iron', 5); D.line(gx + 6, 37, gx + 6 + Math.round(gs), 41, 'iron', 5); for (let yy = -9; yy <= 9; yy++) for (let xx = -9; xx <= 9; xx++) { const d = Math.hypot(xx, yy); if (d > 9) continue; D.px(gx + xx + Math.round(gs), gy + yy, 'brass', (gg < 0.4 ? 9 : 6.4) - d * 0.12 + (d > 7.6 ? -1.5 : d < 2 ? 1.4 : 0) - xx * 0.08, { n: [xx / 12, yy / 12] }); } D.end();
+    if (gg < 0.6) rs.dl.push({ x: gx, y: gy, z: 16, r: 50, i: 1 - gg, rgb: [255, 200, 90], tint: 0.5 });
+    // the cheer braziers: lit from the left as the cheer climbs; all roar when it is full
+    const lit = fight ? Math.round(cheer * 6) : mg.fin ? (won ? 6 : 0) : 0;
+    AR.braz.forEach((x, i) => { if (i < lit) { flame(D, x, 94, 5 + (lit >= 6 ? 3 : 0) + (i === lit - 1 ? 1 : 0), T, i); if (lit >= 6 && Math.random() < 0.3) rs.burst('ember', x, 88, 1, { sp: 12, ang: 0, spread: 0.6, life: 1 }); } else D.px(x, 95, 'fire', 3, { e: 255 }); });
+    if (lit) rs.flash(5, lit / 6 * 0.6);
+    // coins thrown from the stands after a win: they arc down onto the sand and bounce
+    (mg.toss || []).forEach(c => { const k = T - c.t; if (k < 0 || k > 1.4) return; const x = c.x + c.vx * k, y = c.y - c.vy * k + 200 * k * k, yy = Math.min(y, c.fy); coin(D, x, yy, T * 12 + c.x, 9); });
+  },
+});
+
+// ═════════════════════ 营火 · a clearing in the woods at night ═════════════════════
+// a hard-banded night sky with stars and a faint milky way, a cratered moon, layers of pine silhouettes; a clearing with a
+// canvas tent (lit on the fire side), a log to sit on, the campfire (a heat automaton), a pot on a tripod, fireflies in the
+// grass, and a long whetstone on two stumps. Resting: the moon crosses the sky, the fire burns down to embers and the east
+// goes dawn-pink. Sharpening: a sword slides along the stone; every stroke on the worn middle throws sparks and heats the blade.
+const CP = { fire: [128, 146], stone: [176, 276, 146], moon: [70, 36], sky: new Array(300).fill(104) };
+MD.CAMP = CP;
+function campFire(st, w, h, t, heat) {
+  if (!st.f || st.f.length !== w * h) { st.f = new Uint8Array(w * h); st.ft = t - 1; } const f = st.f; let n = Math.min(4, Math.floor((t - st.ft) * 30)); if (n < 0) { st.ft = t; n = 0; } st.ft += n / 30;
+  while (n-- > 0) { for (let x = 0; x < w; x++) { const e = Math.min(x, w - 1 - x); f[(h - 1) * w + x] = e < 1 ? 0 : clamp(Math.round(36 * heat * (0.8 + R() * 0.2) - (e < 3 ? 8 : 0)), 0, 36); }
+    for (let y = 1; y < h; y++) for (let x = 0; x < w; x++) { const s2 = y * w + x, v = f[s2]; if (!v) { f[s2 - w] = 0; continue; } const r = Math.floor(R() * 4), d = clamp(x - r + 1, 0, w - 1); f[(y - 1) * w + d] = Math.max(0, v - (r & 1) - (R() < 0.62 ? 1 : 0)); } }
+  return f;
+}
+X.def('mini_camp', {
+  size: [W, H], fy: FY, noFrame: 1, amb: [0.16, 0.2],
+  paint(S, sc) {
+    sc.light({ x: CP.fire[0], y: CP.fire[1] - 8, z: 18, r: 130, i: 1.3, c: '#ff8a38', fl: 'fire', tint: 0.6 });   // 0 the fire
+    sc.light({ x: CP.moon[0], y: CP.moon[1], z: 80, r: 260, i: 0.4, c: '#c8d0ff', tint: 0.25 });                  // 1 the moon
+    // ── sky (glow: lights never touch it), stars, a faint milky way, the moon ──
+    S.lay('wall'); S.vgrad(0, 0, W, 120, 'night', 0.6, 3.6, { e: 255 });
+    for (let i = 0; i < 90; i++) { const x = S.r() * W, y = S.r() * 90, b = S.r(); S.px(x, y, 'linen', b < 0.15 ? 10 : 5 + b * 3, { e: 255 }); }
+    for (let x = 0; x < W; x++) { const y0 = 70 - x * 0.2; for (let k = -4; k <= 4; k++) if (S.r() < 0.35 - Math.abs(k) * 0.07) S.px(x, y0 + k + Math.sin(x * 0.1) * 3, 'lav', 6 + S.r() * 2, { e: 255 }); }
+    // ── pines: three layers, the farthest the palest ──
+    const pine = (x, base, h, m, tn) => { for (let k = 0; k < h; k++) { const w = Math.round((k / h) * h * 0.32 + (k % 4 === 3 ? -1 : 0)); S.rect(x - w, base - h + k, w * 2 + 1, 1, m, tn, { e: 255 }); for (let xx = x - w; xx <= x + w; xx++) if (xx >= 0 && xx < W) CP.sky[xx] = Math.min(CP.sky[xx], base - h + k); } S.rect(x, base, 1, 3, m, tn, { e: 255 }); };
+    for (let i = 0; i < 22; i++) pine(i * 14 + (i % 3) * 3, 98, 16 + (i % 4) * 4, 'night', 2.2);
+    for (let i = 0; i < 16; i++) pine(i * 20 + 6 + (i % 2) * 5, 108, 22 + (i % 3) * 6, 'night', 1.4);
+    // ── the clearing: grass over earth, a path to the fire ──
+    S.rect(0, 104, W, H - 104, 'leaf', 2.4); S.noise(0, 104, W, H - 104, 1, 3, 81, { only: 'leaf' }); S.rect(0, 104, W, 3, 'leaf', 1.4);
+    for (let x = 0; x < W; x++) if (S.r() < 0.5) S.px(x, 104 + Math.floor(S.r() * 4), 'leaf', 3.6 + S.r() * 2);
+    S.ell(CP.fire[0], CP.fire[1] + 4, 40, 9, 'earth', 3.6, { n: [0, -0.9] }); S.noise(88, 136, 80, 22, 1, 2, 82, { only: 'earth' });
+    // ── tent: canvas triangle, the open flap dark, guy ropes and pegs ──
+    S.lay('back'); S.beg(); S.poly([[10, 142], [44, 92], [80, 142]], 'linen', 4.6, { n: [0.3, -0.3] }); S.poly([[44, 92], [80, 142], [72, 142], [46, 102]], 'linen', 6.6, { n: [0.8, -0.2] }); S.poly([[34, 142], [44, 112], [54, 142]], 'night', 0.8, { e: 255 }); S.hl(8, 142, 74, 'linen', 3); S.line(44, 92, 44, 88, 'wood', 5); S.end();
+    for (let k = 0; k < 6; k++) S.line(44 + 1, 96 + k * 8, 60 + k * 2, 96 + k * 8 + 2, 'linen', 5.4);
+    S.line(10, 142, 2, 146, 'wood', 5); S.line(80, 142, 90, 146, 'wood', 5);
+    // ── the log seat, the whetstone on its stumps ──
+    S.lay('mid'); S.beg(); S.hcyl(70, 140, 40, 7, 'wood', 5, { rim: 2 }); S.ell(110, 143.5, 2, 3.5, 'wood', 8); S.ell(110, 143.5, 1, 2, 'wood', 5); S.end();
+    const [s0, s1, sy] = CP.stone; [s0 + 8, s1 - 12].forEach(x => { S.beg(); S.cyl(x, sy + 4, 12, 14, 'wood', 4.6, { rim: 2 }); S.ell(x + 6, sy + 4, 6, 1.4, 'wood', 7.5); S.end(); });
+    S.beg(); S.box(s0, sy - 3, s1 - s0, 7, 'stone', 6.2, { top: 1 }); for (let x = s0 + 2; x < s1 - 2; x += 3) S.px(x, sy - 1 + (x % 2), 'stone', 4.4); const mid = (s0 + s1) / 2; S.rect(mid - 10, sy - 3, 20, 2, 'stone', 4.2); S.hl(mid - 9, sy - 3, 18, 'fire', 4.4); S.end();
+    // ── the fire's ring of stones and logs, the tripod and pot ──
+    const [fx, fy] = CP.fire; S.beg(); for (let k = 0; k < 9; k++) { const a = Math.PI * (1 + k / 8), x = fx + Math.cos(a) * 16, y = fy + 2 + Math.sin(a) * -3; blob(S, x, y + 3, 3.4, 2.4, 'stone', 5, { k: 2 }); } S.end();
+    S.beg(); S.line(fx - 12, fy + 2, fx + 10, fy - 4, 'wood', 4, { w: 2 }); S.line(fx - 10, fy - 4, fx + 12, fy + 2, 'wood', 3.4, { w: 2 }); S.end();
+    S.beg(); S.line(fx - 14, fy + 2, fx, fy - 30, 'wood', 5); S.line(fx + 14, fy + 2, fx, fy - 30, 'wood', 4); S.line(fx, fy - 30, fx, fy - 22, 'iron', 5); S.ell(fx, fy - 17, 6, 5, 'iron', 4, { dome: 1 }); S.hl(fx - 6, fy - 21, 13, 'iron', 7); S.end();
+    sc.emit({ k: 'steam', x: fx, y: fy - 24, w: 4, rate: 1.2, sp: 4, ang: 0, spread: 0.5, life: 3 });
+  },
+  anim(D, t, rs, o) {
+    const mg = (o && o.mg) || {}, T = o && o.t != null ? o.t : t, rest = mg.phase === 'rest', nq = rest ? clamp((mg.pt || 0) / 2.2, 0, 1) : 0, st = rs.st;
+    // resting: the sky walks to dawn from the east, the moon crosses, stars wheel
+    if (nq > 0.3) { D.lay('wall'); const k0 = (nq - 0.3) / 0.7; for (let x = 0; x < W; x++) for (let y = 0; y < CP.sky[x]; y++) { const e = clamp(k0 * 1.3 - 0.35 + (x / W) * 0.45 - (1 - y / 100) * 0.55, 0, 1); if (e < 0.06) continue; D.px(x, y, 'dusk', 1 + e * 4.5 + (y / 100) * 1.5 * e, { e: 255 }); } }
+    for (let i = 0; i < 10; i++) { const r = X.rng(90 + i), sx = r() * W, sy = r() * 80, a = Math.sin(T * (1.4 + r() * 2) + r() * 7); if (a > 0.7 && nq < 0.6) { D.lay('wall'); D.px(sx, sy, 'linen', 10, { e: 255 }); D.px(sx - 1, sy, 'linen', 7, { e: 255 }); D.px(sx + 1, sy, 'linen', 7, { e: 255 }); } }
+    const ma = rest ? Math.PI * (1 - nq) : Math.PI * 0.8, mx = 150 + Math.cos(ma) * 120, my = 70 - Math.sin(ma) * 50; D.lay('wall');
+    for (let yy = -8; yy <= 8; yy++) for (let xx = -8; xx <= 8; xx++) { const d = Math.hypot(xx, yy); if (d > 8) continue; const cr = (xx + 3) ** 2 + (yy + 2) ** 2 < 5 || (xx - 3) ** 2 + (yy - 3) ** 2 < 3 || (xx - 1) ** 2 + (yy + 5) ** 2 < 2; D.px(mx + xx, my + yy, 'bone', (d > 7 ? 8 : 10) - (cr ? 2 : 0) - (xx > 3 ? 1 : 0), { e: 255 }); }
+    // the fire: a heat automaton; brighter on a good stroke, low embers by dawn; embers rise
+    const [fx, fy] = CP.fire, hot = (mg.flare || 0), heat = rest ? 0.95 - nq * 0.55 : 0.9 + hot * 0.25;
+    const fh = 30 + Math.round(hot * 12), f = campFire(st, 24, fh, T, heat); D.lay('mid'); for (let y = 0; y < fh; y++) for (let x = 0; x < 24; x++) { const v = f[y * 24 + x], u = Math.abs(x - 11.5) / 12, q = (fh - y) / fh; if (v < 5 || q > 1.05 - u * 1.3 - (u > 0.5 ? 0.2 : 0)) continue; D.px(fx - 12 + x, fy - fh + y + 2, 'fire', clamp(v / 36 * 11.5 + (u < 0.25 ? 0.8 : 0), 1, 11), { e: 255 }); }
+    if (Math.random() < 0.5 + hot) rs.burst('ember', fx + (Math.random() - 0.5) * 12, fy - 10, 1, { sp: 10, ang: 0, spread: 0.6, life: 1.6 });
+    rs.flash(0, hot * 0.8 - (rest ? nq * 0.5 : 0));
+    // fireflies drifting over the grass
+    for (let i = 0; i < 8; i++) { const r = X.rng(200 + i), x = r() * 300 + Math.sin(T * 0.4 + i) * 12, y = 112 + r() * 40 + Math.sin(T * 0.7 + i * 2) * 5, on = Math.sin(T * 2 + i * 1.3) > 0.2; if (on && nq < 0.8) { D.lay('front'); D.px(x, y, 'screen', 10, { e: 255 }); } }
+    // the sword on the whetstone: slides with the stroke clock; the edge heats one step per clean stroke
+    if (mg.phase === 'sharpen' || mg.phase === 'sharpDone') { const [s0, s1, sy] = CP.stone, q = mg.q != null ? mg.q : 0.5, bx = Math.round(s0 + 6 + q * (s1 - s0 - 40)), heatB = Math.min(5, mg.hits || 0), sk = mg.spark || 0;
+      D.lay('front'); D.beg(); D.rect(bx, sy - 6 - (sk > 0.5 ? 1 : 0), 34, 2, 'iron', 8); D.hl(bx, sy - 6 - (sk > 0.5 ? 1 : 0), 34, 'iron', 10); D.px(bx + 34, sy - 6, 'iron', 7); D.rect(bx - 2, sy - 9, 2, 8, 'brass', 7); D.rect(bx - 10, sy - 6, 8, 2, 'leather', 5); D.px(bx - 11, sy - 6, 'brass', 7); D.end();
+      if (heatB) for (let k = 0; k < 34; k++) if (k > 34 - heatB * 7) D.px(bx + k, sy - 5, 'fire', 6 + heatB, { e: 255 });
+      if (mg.phase === 'sharpDone' && mg.hits >= 5) { const sw = ((T - (mg.doneT || T)) * 1.4) % 1; D.px(bx + Math.round(sw * 34), sy - 6, 'linen', 11, { e: 255 }); } }
   },
 });
 })();

@@ -100,11 +100,11 @@ const tileC = (r, c) => ({ x: TRX0 + c * TW + TW / 2, y: TRY0 + r * TH + TH / 2 
 MINI.trap = { title: '地雷阵', img: 'e_trap', col: C.amber, text: '对面有个箱子。地上的数字告诉你周围埋了几颗雷。一次走一格。',
   init(mg) { mg.mine = [...Array(TR)].map(() => Array(TC).fill(0)); let n = 0; while (n < 5) { const r = Math.floor(rnd() * TR), c = 1 + Math.floor(rnd() * (TC - 2)); if (!mg.mine[r][c]) { mg.mine[r][c] = 1; n++; } }
     mg.open = [...Array(TR)].map(() => Array(TC).fill(0)); mg.openT = [...Array(TR)].map(() => Array(TC).fill(-9)); mg.at = null; mg.hp = 0; mg.x0 = TRX0; mg.y0 = TRY0; mg.booms = [];
-    mg.cnt = (r, c) => MINI.trap.cnt(mg, r, c); mg.adjOk = (r, c) => !mg.open[r][c] && MINI.trap.adj(mg, r, c); mg.pos = { x: TRX0 - 64, y: K.ly(146) }; },
+    mg.cnt = (r, c) => MINI.trap.cnt(mg, r, c); mg.adjOk = (r, c) => MINI.trap.adj(mg, r, c); mg.pos = { x: TRX0 - 64, y: K.ly(146) }; },
   cnt(mg, r, c) { let n = 0; for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) { const rr = r + dr, cc = c + dc; if ((dr || dc) && rr >= 0 && rr < TR && cc >= 0 && cc < TC && mg.mine[rr][cc]) n++; } return n; },
   adj(mg, r, c) { if (!mg.at) return c === 0; return Math.abs(mg.at.r - r) + Math.abs(mg.at.c - c) === 1 || (Math.abs(mg.at.r - r) === 1 && Math.abs(mg.at.c - c) === 1); },
   hopTo(mg, x, y, dur, back) { mg.hop = { fx: mg.pos.x, fy: mg.pos.y, tx: x, ty: y, t0: mg.t, d: dur || 0.18, back }; mg.pos = { x, y }; },
-  step(mg, r, c) { if (mg.phase !== 'idle') return; if (!MINI.trap.adj(mg, r, c) || mg.open[r][c]) { const p = tileC(r, c); mg.nope = { r, c, t: mg.t }; S.mini('trap', 'nope'); return; }
+  step(mg, r, c) { if (mg.phase !== 'idle') return; if (!MINI.trap.adj(mg, r, c)) { mg.nope = { r, c, t: mg.t }; S.mini('trap', 'nope'); return; }   // stepping back onto an opened slab is allowed, as before
     const prev = mg.at, from = prev ? tileC(prev.r, prev.c) : null, p = tileC(r, c), n = MINI.trap.cnt(mg, r, c), s = trapSlot();
     mg.at = { r, c }; mg.open[r][c] = 1; mg.openT[r][c] = mg.t + 0.16; mg.stepT = mg.t + 0.16; MINI.trap.hopTo(mg, p.x, p.y + TH / 2 - 14); S.mini('trap', 'hop');
     // 落地那一下才压石板、出数字
@@ -230,76 +230,121 @@ MINI.cat = { title: '招财猫', img: 'e_cat', col: C.gold, text: '猫爪一招�
     } };
 
 // ═════════════════════ 黑市 · stop the price needle ═════════════════════
-// 拍板那一刻价格就定了；好价：慢镜头、聚光罩住表盘、价签一格一格往下滚，最后砸 GOOD / GREAT / PERFECT；
-// 成交时图纸先亮品质色（手快才可能升格），再揭晓走中奖档；贵价一拍带过
-const MKD = { x: CX + 20, y: SY + 420 }, MKP = { x: CX - 310, y: SY + 340 };
+// 像素舞台（mc-pxroom-mini-d.js 的 mini_market）：雨夜桥洞，鬼火灯下的摊子，斗篷人（像素角色 BlackMarketDealer）站在桌后。
+// 拍板：画面下方伸出一只手拍下铜铃，桌上的东西全跳一下，骨针颤两下停住，价格那一刻就定了；好价：慢镜头、聚光罩住秤盘、
+// 价签一格格往下翻，斗篷人一拍比一拍往后缩；贵价：他金牙一亮咧嘴笑，一拍带过；再砍一次他更不耐烦。
+// 成交：他把卷轴拍在桌上，卷轴逐拍加码（在品质色里抖、火漆透光）→ 卡帧 → 火漆炸开、卷轴展开、冲击波把雨推开 → 图纸逐项砸出；然后他化进黑暗，只剩两只眼
+const MKD = { x: K.lx(212), y: K.ly(96) }, MKP = { x: K.lx(80), y: K.ly(104) }, MKDEAL = 'BlackMarketDealer';
+const mkSlot = () => M.PXR && M.PXR.slots['_mg:mini_market'];
 MINI.market = { title: '黑市', img: 'e_market', col: C.violet, text: '斗篷底下的人亮出一张高级图纸。「价钱？看你手快不快。」',
-  init(mg) { mg.base = M.nice(mg.P * 14); mg.needle = 0; mg.price = 0; mg.tries = 0; },
-  stop(mg) { if (mg.phase !== 'swing') return; const k = 0.4 + mg.needle * 1.4; mg.mul = k; mg.price = M.nice(mg.base * k); this.miniSet('offer'); S.mini('market', 'stamp'); this.fx.kick(5);
+  init(mg) { mg.base = M.nice(mg.P * 14); mg.needle = 0; mg.price = 0; mg.tries = 0; mg.react = { k: 'idle', t: 0 }; },
+  stop(mg) { if (mg.phase !== 'swing') return; const k = 0.4 + mg.needle * 1.4; mg.mul = k; mg.price = M.nice(mg.base * k); this.miniSet('offer'); S.mini('market', 'stamp'); S.mini('market', 'bell'); this.fx.kick(5);
     const g = k < 0.6 ? 3 : k < 0.9 ? 2 : k < 1.2 ? 1 : 0, a = Math.PI + mg.needle * Math.PI; mg.grab = g; mg.stopN = mg.needle; mg.rollD = g >= 2 ? 0.5 : 0.25; mg.stamped = 0; mg.rs = -1;
-    this.fx.spark(MKD.x + Math.cos(a) * 180, MKD.y + Math.sin(a) * 180, g ? C.lime : C.red, 6 + g * 4, { v: 500 });
-    if (g >= 2) { SHOW.slowmo(mg, g >= 3 ? 0.3 : 0.5, 0.45); SHOW.reach(this, mg, { x: MKD.x, y: MKD.y - 60, r: 250, col: C.lime, label: '' }); }
-    else if (!g) { mg.stamped = 1; SHOW.state(mg).gray = 0.8; SHOW.stamp(mg, 'MISS', MKD.x, MKD.y - 250, C.steel, 44, 0.6); } },
-  deal(mg) { const b = fixBp(this, K.bp(null, 2)), q = gq(b), g = mg.grab || 0, path = g >= 3 ? SHOW.omenPath(q) : [q], tier = Math.max(1, Math.min(4, g + (q >= 3 ? 1 : 0))), open = 0.35 + 0.15 * q + (path.length - 1) * 0.4;
-    this.miniSet('deal'); mg.bq = { s: path[0], q, t0: mg.t, open: 0 }; SHOW.omen(this, mg, path[0]); if (tier >= 3) SHOW.reach(this, mg, { x: MKP.x, y: MKP.y, r: 230, col: QC(path[0]), lv: tier >= 4 ? 2 : 1, label: '' });
-    path.slice(1).forEach((pq, i) => SHOW.later(mg, 0.45 + i * 0.4, () => { mg.bq.s = pq; SHOW.promote(this, mg, MKP.x, MKP.y, pq); }));
-    SHOW.later(mg, open, () => { mg.bq.open = mg.t; this.fx.explode(MKP.x, MKP.y, QC(q), 0.8 + 0.3 * q);
-      SHOW.later(mg, 0.08, () => SHOW.win(this, mg, tier, { x: MKP.x + 60, y: MKP.y, col: tier >= 3 ? C.gold : QC(q), label: tier === 4 ? '大奖' : tier === 3 ? '大赢' : '' }));
-      SHOW.later(mg, tier === 4 ? 0.7 : 0.2, () => give(this, mg, [b], MKP)); });
-    endIn(this, mg, open + TIER_END[tier - 1], '你用 ' + mg.price + ' 积分买下了图纸（原价 ' + mg.base + '）。', '#9a8aff'); },
+    mg.slapT = mg.t; SHOW.shake(mg, 6); K.pxrFlash('mini_market', 2, 1.4); SHOW.burst(mg, K.lx(150), K.ly(110), 10, { ramp: [C.white, C.butter, C.gold, C.amber], sp: [80, 220], life: [0.2, 0.4], ang: -Math.PI / 2, spread: 2.4 });
+    SHOW.burst(mg, MKD.x + Math.cos(a) * 100, MKD.y + Math.sin(a) * 100, 6 + g * 4, { col: g ? C.lime : C.red, sp: [100, 300], life: [0.2, 0.45] });
+    mg.react = { k: g >= 2 ? 'recoil' : g ? 'idle' : 'laugh', t: mg.t };
+    if (g >= 2) { SHOW.slowmo(mg, g >= 3 ? 0.3 : 0.5, 0.45); SHOW.reach(this, mg, { x: MKD.x, y: MKD.y, r: 170, col: C.lime, label: '' }); }
+    else if (!g) { mg.stamped = 1; S.mini('market', 'cackle'); SHOW.state(mg).gray = 0.8; SHOW.stamp(mg, 'MISS', MKD.x, MKD.y - 170, C.steel, 44, 0.6); } },
+  deal(mg) { const b = fixBp(this, K.bp(null, 2)), q = cl(gq(b), 0, 3), g = mg.grab || 0, tier = Math.max(1, Math.min(4, g + (q >= 3 ? 1 : 0)));
+    this.miniSet('deal'); mg.react = { k: 'present', t: mg.t }; SHOW.calm(mg);
+    // 他把卷轴拍在桌上（出手那一帧卷轴才出现），然后逐拍加码
+    SHOW.later(mg, 0.25, () => { mg.bq = { sk: 0, qc: trapQC[0] }; S.mini('market', 'slapScroll'); SHOW.shake(mg, 3); });
+    const T = SHOW.charge(this, mg, { x: MKP.x, y: MKP.y, q, t0: 0.7, onBeat: (i, tq) => { if (!mg.bq) return; mg.bq.sk = 1 + i * 0.5; mg.bq.qc = trapQC[tq]; K.pxrFlash('mini_market', 3, 0.6 + i * 0.3); },
+      onReveal: () => { mg.bq.open = mg.t; mg.bq.sk = 0; mg.bq.qc = trapQC[q]; mg.clearT = mg.t; S.mini('market', 'seal'); K.pxrFlash('mini_market', 'all', 0.8); if (g >= 3 && q >= 2) mg.hoodT = mg.t;
+        SHOW.later(mg, 0.1, () => SHOW.win(this, mg, tier, { x: MKP.x + 60, y: MKP.y, col: tier >= 3 ? C.gold : QC(q), label: tier === 4 ? '大奖' : tier === 3 ? '大赢' : '' }));
+        SHOW.later(mg, tier === 4 ? 0.7 : 0.25, () => { const got = give(this, mg, [b], MKP); SHOW.items(this, mg, got.map(t2 => ({ text: t2, col: C.gold, size: 36 })), { x: CX, y: SY + 420 }); });
+        SHOW.later(mg, 1.1, () => { mg.react = { k: 'leave', t: mg.t }; S.mini('market', 'fade'); }); } });
+    endIn(this, mg, T + TIER_END[tier - 1] + 0.3, '你用 ' + mg.price + ' 积分买下了图纸（原价 ' + mg.base + '）。', '#9a8aff'); },
   key(mg, k, down) { if (k === 'act' && down && mg.phase === 'swing') { MINI.market.stop.call(this, mg); return true; } },
-  down(mg) { if (mg.phase === 'swing') MINI.market.stop.call(this, mg); },
-  btns(mg) { if (mg.phase === 'idle') return [{ t: '开始砍价', sub: '指针越靠左越便宜', gold: 1, fn: () => { mg.tries++; this.miniSet('swing'); } }, { t: '卖掉一名部队', sub: '按 1.5 倍价格收', dis: !this.run.roster.length, why: '你没有部队', fn: () => { const run = this.run, u = run.roster.slice().sort((a, b) => M.sellValue(run, b) - M.sellValue(run, a))[0], v = M.nice(M.sellValue(run, u) * 1.5); run.roster = run.roster.filter(o => o !== u); this.miniFinish('斗篷人牵走了 ' + M.DB[u.type].n + '，丢给你一袋钱。', '#9a8aff', [{ k: 'wallet', v }]); } }, { t: '离开', leave: 1, fn: () => this.miniFinish('斗篷人缩回了阴影里。', '#8d8496') }];
+  down(mg, px, py) { if (mg.phase === 'swing') MINI.market.stop.call(this, mg); else SHOW.tap(this, mg, px, py); },
+  btns(mg) { if (mg.phase === 'idle') return [{ t: '开始砍价', sub: '指针越靠左越便宜', gold: 1, fn: () => { mg.tries++; this.miniSet('swing'); S.mini('market', 'swing'); } }, { t: '卖掉一名部队', sub: '按 1.5 倍价格收', dis: !this.run.roster.length, why: '你没有部队', fn: () => { const run = this.run, u = run.roster.slice().sort((a, b) => M.sellValue(run, b) - M.sellValue(run, a))[0], v = M.nice(M.sellValue(run, u) * 1.5); run.roster = run.roster.filter(o => o !== u); mg.sellT = mg.t; mg.sellK = u.type; this.miniSet('sell'); S.mini('market', 'chain'); SHOW.later(mg, 0.75, () => { S.mini('market', 'coinbag'); SHOW.shake(mg, 3); }); SHOW.later(mg, 0.9, () => { if (this.mini === mg) this.miniFinish('斗篷人牵走了 ' + M.DB[u.type].n + '，丢给你一袋钱。', '#9a8aff', [{ k: 'wallet', v }]); }); } }, { t: '离开', leave: 1, fn: () => this.miniFinish('斗篷人缩回了阴影里。', '#8d8496') }];
     if (mg.phase === 'swing') return [{ t: '拍板！', sub: '空格 / 点击', gold: 1, fn: () => MINI.market.stop.call(this, mg) }];
-    if (mg.phase === 'offer') return [{ t: '成交', sub: mg.price + ' 积分', gold: 1, dis: this.run.wallet < mg.price, why: '积分不够', fn: () => { if (!this.miniPay(mg.price)) return; S.mini('market', 'deal'); MINI.market.deal.call(this, mg); } }, { t: '再砍一次', sub: '他会更不耐烦', dis: mg.tries >= 2, why: '他不跟你砍了', fn: () => { mg.tries++; SHOW.calm(mg); this.miniSet('swing'); } }, { t: '算了', leave: 1, fn: () => this.miniFinish('你把图纸推了回去。', '#8d8496') }]; return []; },
+    if (mg.phase === 'offer') return [{ t: '成交', sub: mg.price + ' 积分', gold: 1, dis: this.run.wallet < mg.price, why: '积分不够', fn: () => { if (!this.miniPay(mg.price)) return; S.mini('market', 'deal'); MINI.market.deal.call(this, mg); } }, { t: '再砍一次', sub: '他会更不耐烦', dis: mg.tries >= 2, why: '他不跟你砍了', fn: () => { mg.tries++; SHOW.calm(mg); mg.react = { k: 'impatient', t: mg.t }; S.mini('market', 'tap'); this.miniSet('swing'); } }, { t: '算了', leave: 1, fn: () => this.miniFinish('你把图纸推了回去。', '#8d8496') }]; return []; },
   tick(mg) { if (mg.phase === 'swing') { const sp = 1.3 + mg.tries * 0.6, q = (mg.pt * sp) % 2; mg.needle = q < 1 ? q : 2 - q; const sk = Math.floor(mg.pt * sp * 3); if (sk !== mg.sk) { mg.sk = sk; S.mini('market', 'swing'); } }
-    if (mg.phase === 'offer' && !mg.stamped) { const p = cl(mg.pt / mg.rollD, 0, 1), s = Math.floor(p * 6), g = mg.grab; if (g >= 2 && s !== mg.rs && p < 1) { mg.rs = s; SHOW.crawl(this, mg, s); }
-      if (p >= 1) { mg.stamped = 1; SHOW.calm(mg); SHOW.stamp(mg, ['GOOD', 'GREAT', 'PERFECT'][g - 1], MKD.x, MKD.y - 250, g >= 3 ? C.gold : C.lime, 52 + g * 10, 1.2); S.mini('market', 'grab', g); this.fx.kick(3 + g * 3); this.fx.ring(MKD.x, MKD.y + 70, 10, 120 + g * 40, C.lime, 5, 0.35); if (g >= 3) { this.fx.flash('#ffffff', 0.2); this.fx.rays(MKD.x, MKD.y + 70, C.gold, 1, { r: 320 }); } } } },
+    if (mg.phase === 'offer' && !mg.stamped) { const p = cl(mg.pt / mg.rollD, 0, 1), s = Math.floor(p * 6), g = mg.grab; if (g >= 2 && s !== mg.rs && p < 1) { mg.rs = s; SHOW.crawl(this, mg, s); SHOW.beat(this, mg, MKD.x, MKD.y + 150, s, g - 1, false); }
+      if (p >= 1) { mg.stamped = 1; SHOW.calm(mg); SHOW.stamp(mg, ['GOOD', 'GREAT', 'PERFECT'][g - 1], MKD.x, MKD.y - 170, g >= 3 ? C.gold : C.lime, 52 + g * 10, 1.2); S.mini('market', 'grab', g); this.fx.kick(3 + g * 3); SHOW.ring(mg, MKD.x, MKD.y + 150, 10, 120 + g * 40, C.lime, { life: 0.35 }); if (g >= 3) { SHOW.white(mg, 0.4); SHOW.rays(mg, MKD.x, MKD.y + 150, C.gold, { r: 320, life: 1 }); } } } },
   draw(x, mg) {
-    const t = mg.t, B = mg.bq; bgv(x, '#141228', '#06050c'); K.SP(x, 'stall', CX + 300, FLOOR - 40, 180); K.GL(x, CX + 300, FLOOR - 200, 160, C.violet, 0.25);
-    // 图纸：米色纸 + 墨边 + 9px 硬投影，名字是金色小签；成交后先在品质色里抖，揭晓时鼓一下
-    let jd = { dx: 0, dy: 0 }; if (B && !B.open) jd = SHOW.aura(x, MKP.x, MKP.y, 230, B.s, t, cl((t - B.t0) / 1.0, 0.25, 1));
-    x.save(); x.translate(jd.dx, jd.dy); if (B && B.open) { const k = 1 + 0.12 * Math.exp(-(t - B.open) * 7); K.GL(x, MKP.x, MKP.y, 320, QC(B.q), 0.5 + 0.15 * Math.sin(t * 5)); x.translate(MKP.x, MKP.y); x.scale(k, k); x.translate(-MKP.x, -MKP.y); }
-    K.R(x, CX - 454, SY + 156, 306, 386, C.ink); U.box(x, CX - 460, SY + 150, 300, 380, C.cream); K.R(x, CX - 440, SY + 170, 260, 340, C.blueDeep); for (let i = 0; i < 6; i++) K.R(x, CX - 420, SY + 200 + i * 44, 220 - (i % 3) * 40, 4, 'rgba(255,255,255,0.5)'); K.IC(x, 'scroll', CX - 310, SY + 420, 90); K.chipC(x, '高级图纸', CX - 310, SY + 480, C.gold); x.restore();
-    // 价格表盘：墨底弧 + 绿 / 金 / 红三段，倍数品红；指针扫过绿段时绿段亮一下
-    const gx = MKD.x, gy = MKD.y, R = 200; if (mg.phase === 'swing' && mg.needle < 1 / 7) K.GL(x, gx - R * 0.8, gy - 60, 120, C.green, 0.4);
-    x.lineCap = 'butt'; x.lineWidth = 42; x.strokeStyle = C.ink; x.beginPath(); x.arc(gx, gy, R, Math.PI, Math.PI * 2); x.stroke(); x.lineWidth = 36; [[Math.PI, Math.PI * 1.33, C.green], [Math.PI * 1.33, Math.PI * 1.66, C.gold], [Math.PI * 1.66, Math.PI * 2, C.red]].forEach(([a, b, c]) => { x.strokeStyle = c; x.beginPath(); x.arc(gx, gy, R, a, b); x.stroke(); });
-    [0.4, 1, 1.8].forEach((k, i) => U.text(x, '×' + k, gx + Math.cos(Math.PI + i * Math.PI / 2) * (R + 50), gy + Math.sin(Math.PI + i * Math.PI / 2) * (R + 50), T.cap, C.magenta));
-    // 拍板后指针颤一下再停（只是画，价格早定了）
-    const nd = mg.phase === 'offer' ? mg.stopN + 0.04 * Math.sin(mg.pt * 38) * Math.exp(-mg.pt * 7) : mg.phase === 'deal' ? mg.stopN : mg.needle, a = Math.PI + cl(nd, 0, 1) * Math.PI; K.LN(x, gx, gy, gx + Math.cos(a) * (R - 10), gy + Math.sin(a) * (R - 10), 12, C.ink); K.LN(x, gx, gy, gx + Math.cos(a) * (R - 10), gy + Math.sin(a) * (R - 10), 6, C.white); U.box(x, gx - 12, gy - 12, 24, 24, C.gold);
+    const t = mg.t, off = mg.phase === 'offer' ? mg.stopN + 0.04 * Math.sin(mg.pt * 38) * Math.exp(-mg.pt * 7) : mg.phase === 'deal' ? mg.stopN : mg.needle;
+    mg.dialN = cl(off, 0, 1);
+    if (!K.pxr(x, 'mini_market', 0, 0, t, { mg, t })) bgv(x, '#141228', '#06050c');
+    // 斗篷人：站在桌后（腰以下被桌子挡住），朝左看着桌上的卷轴；反应跟着砍价走
+    const R = mg.react || { k: 'idle', t: 0 }, rt = t - R.t, f = (n) => Math.floor(rt * 12) % n; let st = 'idle', fi = Math.floor(t * 12) % (mg.tries > 0 ? 48 : 24), tint = null;
+    if (R.k === 'recoil') { st = 'hurt'; fi = rt < 0.5 ? 5 + Math.min(1, Math.floor(rt * 12) - 0) : 6; if (rt > 1.2) { st = 'idle'; fi = Math.floor(t * 12) % 24; } }
+    else if (R.k === 'laugh') { if (rt < 0.5) { st = 'cast'; fi = f(6); } else if (rt < 1.2) { st = 'recover'; fi = Math.min(8, Math.floor((rt - 0.5) * 12)); } }
+    else if (R.k === 'impatient') { st = 'idle'; fi = 36 + f(10); if (rt > 1.6) fi = Math.floor(t * 12) % 48; }
+    else if (R.k === 'present') { st = 'attack'; fi = Math.min(8, Math.floor(rt * 12)); if (rt > 0.75) { st = 'idle'; fi = Math.floor(t * 12) % 24; } }
+    else if (R.k === 'leave') { st = 'death'; fi = Math.min(34, 7 + Math.floor(rt * 12)); }
+    const hoodPop = mg.hoodT != null && t - mg.hoodT < 0.25 ? -4 : 0;
+    if (!M.PXR.MINI_D.cast(x, MKDEAL, K.lx(112), K.ly(124) + hoodPop, st, fi, true, tint, K.ly(113))) K.SP(x, 'stall', CX + 300, FLOOR - 40, 180);
+    // 卖部队：一条锁链从左边暗处把部队拖走，一袋钱落在桌上
+    if (mg.phase === 'sell') { const q = cl((t - mg.sellT) / 0.7, 0, 1), ux = K.lx(170) - eo(q) * 900; if (!M.PXR.MINI_D.cast(x, mg.sellK, ux, K.ly(147), 'hurt', 6, false)) K.SP(x, mg.sellK, ux, FLOOR, 120); for (let k = 0; k < 30; k++) K.R(x, K.snap(SX + k * 8), K.ly(128) + ((k & 1) ? 0 : 4), 8, 4, k % 2 ? C.steel : C.slate); }
+    // 价签：挂在秤盘下，数字像翻页数字一样一格格往下翻
     if (mg.phase === 'offer' || mg.phase === 'deal') { const top = M.nice(mg.base * 1.8), p = mg.phase === 'offer' && !mg.stamped ? cl(mg.pt / mg.rollD, 0, 1) : 1, shown = p < 1 ? Math.round(top - (top - mg.price) * eo(p)) : mg.price;
-      K.big(x, shown + ' 积分', gx, gy + 70, T.num, mg.mul < 0.8 ? C.lime : mg.mul < 1.3 ? C.gold : C.red, mg.phase === 'offer' ? mg.pt : 9); U.text(x, '原价 ' + mg.base, gx, gy + 120, T.cap, C.lavender); }
+      K.R(x, MKD.x - 96, MKD.y + 124, 192, 64, C.cream); K.R(x, MKD.x - 96, MKD.y + 124, 192, 4, C.white); K.R(x, MKD.x - 96, MKD.y + 184, 192, 4, C.tan); K.R(x, MKD.x - 4, MKD.y + 104, 8, 20, C.brown);
+      K.big(x, shown + ' 积分', MKD.x, MKD.y + 156, T.num, mg.mul < 0.8 ? C.greenDeep : mg.mul < 1.3 ? C.amber : C.red, mg.phase === 'offer' ? mg.pt : 9); U.text(x, '原价 ' + mg.base, MKD.x, MKD.y + 212, T.cap, C.lavender); }
   } };
 
 // ═════════════════════ 特训 · mash to train a soldier ═════════════════════
-// 每一拳都是连击（逢 5 砸字、5 连进狂热），沙袋越打晃得越凶；最后一秒一格一响；时间到砸评级，按评级走中奖档
+// 像素舞台（mc-pxroom-mini-d.js 的 mini_gym）：地下拳馆，教练（像素角色 PitCoach）站在拳台角柱边。
+// 交钱：倒数 3-2-1（教练竖手指）→「铛」开打（教练吹哨）；每一拳：领袖出手、沙袋压扁晃起来、冲击星、吊灯晃一下、计数板多划一道，
+// 连击往上爬，教练挥拳喊「上！」；狂热：沙袋裂口漏沙、教练把毛巾甩上天；最后一秒吊灯红闪。时间到：铃响两声 → 领袖自动蓄一记
+// 终结拳（慢动作、聚光）→ 卡帧 → 按已算好的评级打出去：S 铁链崩断、沙袋飞出去撞墙；A 沙袋荡到横着；B 重拳大幅荡回；C 软绵绵一下
+const GYB = { x: K.lx(186), y: K.ly(118) }, GYH = { x: K.lx(170), y: K.ly(148) }, GYC = { x: K.lx(262), y: K.ly(148) }, COACH = 'PitCoach';
 MINI.trainer = { title: '地下拳馆', img: 'e_trainer', col: C.amber, text: '教练叼着烟：「交钱，上来打沙袋。打得越狠，练得越壮。」',
   // the leader steps in itself (user ruling 2026-09-25): no picking a unit, the gain is the leader's
-  init(mg) { mg.hits = 0; mg.bag = 0; mg.bagK = 0.4; },
-  punch(mg) { if (mg.phase !== 'mash') return; mg.hits++; mg.bag = 1; mg.bagK = Math.min(1.2, 0.4 + mg.hits / 30); S.mini('trainer', 'punch', mg.hits); this.fx.kick(2 + Math.min(8, mg.hits / 4)); this.fx.spark(CX + 170, SY + 330, '#ffe08a', 4 + Math.min(8, mg.hits >> 2), { dir: 0, spread: 1, v: 400 + Math.min(400, mg.hits * 12) });
-    const n = hitCombo(this, mg, CX + 170 + (rnd() - 0.5) * 120, SY + 190, false); if (n % 10 === 0) { this.fx.ring(CX + 170, SY + 330, 10, 150, C.gold, 5, 0.3); this.fx.flare(CX + 170, SY + 330, 160, C.gold, 0.2); } },
-  down(mg) { MINI.trainer.punch.call(this, mg); },
+  init(mg) { mg.hits = 0; mg.bag = 0; mg.bagK = 0.4; mg.bagAng = 0; mg.bagV = 0; mg.lampSw = 0; mg.coach = { k: 'idle', t: 0 }; },
+  punch(mg) { if (mg.phase !== 'mash') return; mg.hits++; mg.bag = 1; mg.bagK = Math.min(1.2, 0.4 + mg.hits / 30); mg.bagV += 0.45 + mg.bagK * 0.45; mg.lampSw = Math.min(0.5, mg.lampSw + 0.06); mg.punchT = mg.t;
+    S.mini('trainer', 'punch', mg.hits); this.fx.kick(2 + Math.min(8, mg.hits / 4)); SHOW.shake(mg, 2 + Math.min(6, mg.hits / 5));
+    SHOW.burst(mg, GYB.x - 30, GYB.y, 6 + Math.min(10, mg.hits >> 2), { ramp: [C.white, C.butter, C.gold, C.amber], sp: [160, 360 + Math.min(300, mg.hits * 10)], life: [0.15, 0.35], ang: Math.PI / 2 + 0.3, spread: 1.4 });
+    if (mg.hits % 6 === 0) mg.coach = { k: 'shout', t: mg.t };
+    const n = hitCombo(this, mg, GYB.x + (rnd() - 0.5) * 120, SY + 190, false); if (n % 10 === 0) { SHOW.ring(mg, GYB.x, GYB.y, 10, 150, C.gold, { life: 0.3 }); SHOW.flash(mg, C.gold, 0.12); }
+    if (n === 5) { mg.coach = { k: 'fever', t: mg.t }; S.mini('trainer', 'whistle'); } },
+  down(mg, px, py) { if (mg.phase === 'mash') MINI.trainer.punch.call(this, mg); else SHOW.tap(this, mg, px, py); },
   key(mg, k, down) { if (k === 'act' && down && mg.phase === 'mash') { MINI.trainer.punch.call(this, mg); return true; } },
-  btns(mg) { if (mg.phase === 'idle') return [{ t: '领袖上场', sub: mg.pay + ' 积分 · 4 秒疯狂出拳', gold: 1, dis: this.run.wallet < mg.pay, why: '积分不够', fn: () => { if (!this.miniPay(mg.pay)) return; this.miniSet('count'); } }, { t: '离开', leave: 1, fn: () => this.miniFinish('教练把烟头弹进了沙袋里。', '#8d8496') }];
+  btns(mg) { if (mg.phase === 'idle') return [{ t: '领袖上场', sub: mg.pay + ' 积分 · 4 秒疯狂出拳', gold: 1, dis: this.run.wallet < mg.pay, why: '积分不够', fn: () => { if (!this.miniPay(mg.pay)) return; this.miniSet('count'); mg.coach = { k: 'count', t: mg.t }; } }, { t: '离开', leave: 1, fn: () => this.miniFinish('教练把烟头弹进了沙袋里。', '#8d8496') }];
     if (mg.phase === 'mash') return [{ t: '出拳！', sub: '连点 / 连按空格', gold: 1, fn: () => MINI.trainer.punch.call(this, mg) }]; return []; },
-  tick(mg, dt) { mg.bag = Math.max(0, mg.bag - dt * 6);
-    if (mg.phase === 'count') { const n = Math.floor(mg.pt * 2); if (n !== mg.cn && n < 3) { mg.cn = n; SHOW.crawl(this, mg, n); } if (mg.pt > 1.5) { this.miniSet('mash'); S.mini('trainer', 'bell'); this.fx.flash(C.gold, 0.12); this.fx.kick(6); } }
+  tick(mg, dt) { mg.bag = Math.max(0, mg.bag - dt * 6); mg.lampSw = Math.max(0, mg.lampSw - dt * 0.25);
+    // the bag's swing: a damped pendulum kicked by every punch (the harder the combo, the higher it goes)
+    if (mg.flyT == null) { mg.bagV += -mg.bagAng * 26 * dt; mg.bagV *= Math.exp(-dt * 2.4); mg.bagAng = cl(mg.bagAng + mg.bagV * dt, -0.4, mg.phase === 'end' ? 1.3 : 0.55); }
+    if (mg.phase === 'count') { const n = Math.floor(mg.pt * 2); if (n !== mg.cn && n < 3) { mg.cn = n; SHOW.crawl(this, mg, n); SHOW.shake(mg, 3); } if (mg.pt > 1.5) { this.miniSet('mash'); mg.bellT = mg.t; mg.coach = { k: 'whistle', t: mg.t }; S.mini('trainer', 'bell'); SHOW.white(mg, 0.3); SHOW.shake(mg, 6); K.pxrFlash('mini_gym', 1, 1); } }
     if (mg.phase === 'mash' && mg.pt > 3 && mg.pt <= 4) { const q = Math.floor((mg.pt - 3) / 0.25); if (q !== mg.cq) { mg.cq = q; SHOW.crawl(this, mg, 2 + q); } }
     if (mg.phase === 'mash' && mg.pt > 4 && !mg.fin) { mg.fin = true; const run = this.run, h = run.hero, k = Math.min(0.3, mg.hits * 0.009), mx = M.heroMaxHp(h, run.M), heal = Math.round(mx * k);
-      run.runBuff.heroAtk = (run.runBuff.heroAtk || 0) + k; this.hold && this.hold('hp', Math.round(h.hp)); h.hp = Math.min(mx, h.hp + heal); S.mini('trainer', 'done'); this.miniSet('end');
-      mg.bag = 1; mg.bagK = 1.6; const tier = SHOW.grade(this, mg, mg.hits >= 34 ? 'S' : mg.hits >= 24 ? 'A' : mg.hits >= 14 ? 'B' : 'C', CX, SY + 280), from = { x: CX - 80, y: FLOOR - 130 };
-      if (tier) SHOW.later(mg, 0.3, () => SHOW.win(this, mg, tier, { x: from.x, y: from.y, v: Math.round(k * 100), col: C.amber, label: tier === 3 ? '大赢' : '' }));
-      SHOW.later(mg, tier ? 0.4 : 0.1, () => hearts(this, from, C.lime, () => { if (this.held && this.held.hp != null) this.release('hp'); }));
-      endIn(this, mg, tier ? 0.4 + TIER_END[tier - 1] + 0.1 : 1.0, mg.hits + ' 拳！领袖本局攻击 +' + Math.round(k * 100) + '%，回复 ' + heal + ' 生命。', '#ff8a3a'); } },
+      run.runBuff.heroAtk = (run.runBuff.heroAtk || 0) + k; this.hold && this.hold('hp', Math.round(h.hp)); h.hp = Math.min(mx, h.hp + heal); S.mini('trainer', 'done'); this.miniSet('end'); mg.bellT = mg.t; S.mini('trainer', 'bell');
+      const gr = mg.hits >= 34 ? 'S' : mg.hits >= 24 ? 'A' : mg.hits >= 14 ? 'B' : 'C', from = { x: GYH.x, y: GYH.y - 130 };
+      // 终结拳：蓄力（慢动作、聚光）→ 卡帧 → 按评级打出去
+      mg.windT = mg.t; SHOW.reach(this, mg, { x: GYB.x - 40, y: GYB.y, r: 150, col: gr === 'S' ? C.red : C.gold, lv: gr === 'S' ? 2 : 1, label: '' }); S.mini('trainer', 'windup'); SHOW.slowmo(mg, 0.5, 0.5);
+      SHOW.later(mg, 0.55, () => SHOW.hitstop(mg, 0.15, GYB.x - 30, GYB.y, () => { mg.finT = mg.t; mg.punchT = mg.t; SHOW.calm(mg); S.mini('trainer', 'finisher', gr === 'S' ? 3 : gr === 'A' ? 2 : 1); mg.bag = 1;
+        if (gr === 'S') { mg.flyT = mg.t; mg.bagV = 0; SHOW.reveal(this, mg, 3, { x: GYB.x, y: GYB.y, col: C.gold }); S.mini('trainer', 'snap'); }
+        else if (gr === 'A') { mg.bagV = 9; SHOW.reveal(this, mg, 2, { x: GYB.x, y: GYB.y, col: C.gold }); }
+        else if (gr === 'B') { mg.bagV = 5; SHOW.ring(mg, GYB.x, GYB.y, 10, 160, C.amber, { life: 0.35 }); SHOW.shake(mg, 8); }
+        else { mg.bagV = 0.8; }
+        mg.coach = { k: gr === 'S' || gr === 'A' ? 'thumbs' : gr === 'C' ? 'facepalm' : 'idle', t: mg.t };
+        const tier = SHOW.grade(this, mg, gr, CX, SY + 280);
+        if (tier) SHOW.later(mg, 0.3, () => SHOW.win(this, mg, tier, { x: from.x, y: from.y, v: Math.round(k * 100), col: C.amber, label: tier === 3 ? '大赢' : '' }));
+        SHOW.later(mg, tier ? 0.4 : 0.1, () => hearts(this, from, C.lime, () => { if (this.held && this.held.hp != null) this.release('hp'); }));
+        endIn(this, mg, tier ? 0.4 + TIER_END[tier - 1] + 0.1 : 0.6, mg.hits + ' 拳！领袖本局攻击 +' + Math.round(k * 100) + '%，回复 ' + heal + ' 生命。', '#ff8a3a'); })); } },
   draw(x, mg) {
-    const t = mg.t, fev = mg.sh && mg.sh.fever; bgv(x, '#2a1a10', '#0c0806'); K.GL(x, CX, SY + 120, 300, '#ffd080', 0.3 + (fev ? 0.15 * Math.sin(t * 14) : 0)); K.LN(x, CX, SY, CX, SY + 120, 3, '#8a8a9a');
-    // 沙袋：越打晃得越凶，挨一拳压扁一下
-    const bx = CX + 170, sw = Math.sin(mg.bag * Math.PI) * (0.15 + 0.25 * mg.bagK), sq = 1 + 0.08 * mg.bag; K.LN(x, bx, SY + 90, bx + Math.sin(sw) * 200, SY + 200, 4, '#8a8a9a'); x.save(); x.translate(bx, SY + 90); x.rotate(-sw); x.scale(2 - sq, sq); U.box(x, -50, 110, 100, 240, C.wine); K.R(x, -50, 150, 100, 10, C.umber); K.R(x, -50, 300, 100, 10, C.umber); x.restore();
-    if (fev) K.GL(x, CX - 80, FLOOR - 20, 180, C.gold, 0.3 + 0.15 * Math.sin(t * 16));
-    K.SP(x, heroSp(this), CX - 80 + mg.bag * 30, FLOOR, 200);
-    // 倒数每跳一个数弹一下；出拳数每打一拳弹一下
+    const t = mg.t, fev = mg.sh && mg.sh.fever;
+    if (!K.pxr(x, 'mini_gym', 0, 0, t, { mg, t })) bgv(x, '#2a1a10', '#0c0806');
+    // 教练：按节奏换动作（倒数竖手指、吹哨、挥拳喊、甩毛巾、竖拇指 / 捂脸）
+    const C0 = mg.coach || { k: 'idle', t: 0 }, ct = t - C0.t, f12 = Math.floor(ct * 12); let cs = 'idle', cf = Math.floor(t * 12) % 36;
+    if (C0.k === 'count') { cs = 'charge'; cf = Math.min(16, Math.floor(ct / 1.5 * 16)); }
+    else if (C0.k === 'whistle' && ct < 0.5) { cs = 'cast'; cf = Math.min(5, f12); }
+    else if (C0.k === 'shout' && ct < 0.75) { cs = 'attack'; cf = Math.min(8, f12); }
+    else if (C0.k === 'fever' && ct < 1.2) { if (ct < 0.5) { cs = 'cast'; cf = Math.min(5, f12); } else { cs = 'recover'; cf = Math.min(8, Math.floor((ct - 0.5) * 12)); } }
+    else if (C0.k === 'thumbs') { cs = 'recover'; cf = Math.min(8, f12); }
+    else if (C0.k === 'facepalm') { cs = 'hurt'; cf = ct < 0.2 ? 5 : 5; }
+    else if (mg.phase === 'mash') { cs = 'attack'; cf = Math.floor(t * 12) % 9; }
+    if (!M.PXR.MINI_D.cast(x, COACH, GYC.x, GYC.y, cs, cf, true)) { /* no coach module: the stage still works */ }
+    // 领袖：蓄力帧和出手帧快速交替（一阵拳雨）；终结拳先慢慢后拉再打出去
+    const hk = catHero(this), b = hk && M.PCDG.body(hk), sf = b ? Math.max(1, Math.round(b.strike * 12)) : 2, pt = mg.punchT != null ? t - mg.punchT : 9, wind = mg.windT != null && mg.finT == null;
+    let hs = 'idle', hf = Math.floor(t * 12) % 24; if (mg.phase === 'mash' || mg.phase === 'end') { hs = 'attack'; hf = pt < 0.07 ? sf : pt < 0.2 ? sf + 1 : Math.max(0, sf - 1); } if (wind) { hs = 'attack'; hf = 0; } if (mg.finT != null && t - mg.finT < 0.4) { hs = 'attack'; hf = sf + Math.min(3, Math.floor((t - mg.finT) * 12)); }
+    const lean = mg.bag > 0.5 ? 8 : 0, glow = wind && Math.floor(t * 16) % 2;
+    if (hk) M.PXR.MINI_D.cast(x, hk, GYH.x + lean - (wind ? 8 : 0), GYH.y, hs, hf, false, glow ? '#ffffff' : null); else K.SP(x, heroSp(this), CX - 80 + mg.bag * 30, FLOOR, 200);
+    if (fev) { x.save(); x.globalAlpha = 0.35 + 0.2 * Math.sin(t * 16); K.R(x, K.snap(GYH.x - 60), K.snap(GYH.y + 4), 120, 8, C.gold); x.restore(); }
+    // 倒数：数字弹簧砸下；拳数压在粉笔计数板上；时间条在拳数下面
     if (mg.phase === 'count') K.big(x, String(Math.max(1, 3 - Math.floor(mg.pt * 2))), CX, SY + 250, 120, C.gold, mg.pt % 0.5, { num: true });
-    if (mg.phase === 'mash' || mg.phase === 'end') { K.big(x, mg.hits + ' 拳', CX - 300, SY + 200, T.hero, C.gold, mg.bag > 0 ? (1 - mg.bag) / 6 : 9); U.bar(x, CX - 450, SY + 262, 300, 14, cl(1 - mg.pt / 4, 0, 1), { col: mg.phase === 'mash' && mg.pt > 3 && Math.sin(t * 18) > 0 ? C.red : C.amber }); K.R(x, CX - 450 + 300 * 26 / 40, SY + 252, 3, 34, C.white); } // 时间条放在拳数下面，不压说明文字
+    if (mg.phase === 'mash' || mg.phase === 'end') { K.big(x, mg.hits + ' 拳', K.lx(46), K.ly(58), T.hero, C.gold, mg.bag > 0 ? (1 - mg.bag) / 6 : 9); U.bar(x, K.lx(16), K.ly(90), 240, 14, cl(1 - mg.pt / 4, 0, 1), { col: mg.phase === 'mash' && mg.pt > 3 && Math.sin(t * 18) > 0 ? C.red : C.amber }); K.R(x, K.lx(16) + 240 * 26 / 40, K.ly(88), 4, 22, C.white); }
   } };
 
 // ═════════════════════ 古像 · rotate the rings to wake the statue ═════════════════════
@@ -337,35 +382,54 @@ MINI.statue = { title: '沉睡的古像', img: 'e_statue', col: C.teal, text: '�
   } };
 
 // ═════════════════════ 斗兽场 · bet, then cheer ═════════════════════
-// 加油是连击（逢 5 砸字，喊停了就断）；决定胜负的那一击：慢镜头 + 聚光罩住挨打的那头 + KO；押中走中 / 大赢（险胜是大赢），押错一拍带过
+// 像素舞台（mc-pxroom-mini-d.js 的 mini_arena）：看台坐满像素观众，两边铁栅门，包厢、红旗、火把、铜锣、一排火盆（加油表）。
+// 两头怪物是游戏里真的像素角色：押注前关在栅门后面走动；押注：钱袋落在沙地上、锣响、栅门升起、它们冲进场（跑步动作）；
+// 对打时播它们自己的攻击、受击动作；加油：你那边的观众跳起来挥金旗、火盆一个个点亮；决定胜负的一击：慢动作、聚光、全场观众
+// 定格、攻击的那头慢慢扑上去 → 命中：KO 章、锣、挨打的那头播死亡动作；押中：看台往场子里扔金币，赢的那头跳；押错：一片嘘声、灰一下
+const ARG = [K.lx(29), K.lx(271)], ARF = K.ly(150);
 MINI.arena = { title: '斗兽场', img: 'e_arena', col: C.red, text: '两头怪物被推进场子。押一边，然后给它加油——喊得越响它打得越狠。',
-  init(mg) { const a = M.pickUnitQ(this.run); let b = M.pickUnitQ(this.run); for (let i = 0; i < 8 && b === a; i++) b = M.pickUnitQ(this.run); mg.b = [a, b].map((k, i) => ({ k, hp: 1, x: i ? CX + 260 : CX - 260, hit: 0, pw: 0.8 + rnd() * 0.4 })); mg.cheer = 0; },
-  bet(mg, i) { if (!this.miniPay(mg.pay)) return; mg.side = i; this.miniSet('fight'); S.mini('arena', 'bet'); S.mini('arena', 'open'); },
-  down(mg) { if (mg.phase === 'fight' && !mg.ko) { mg.cheer = Math.min(1, mg.cheer + 0.12); S.mini('arena', 'cheer'); hitCombo(this, mg, CX + (rnd() - 0.5) * 200, SY + 175, false); } },
-  key(mg, k, down) { if (k === 'act' && down && mg.phase === 'fight') { MINI.arena.down.call(this, mg); return true; } },
-  btns(mg) { if (mg.phase === 'idle') return mg.b.map((b, i) => ({ t: '押' + ['左边', '右边'][i] + '的 ' + M.DB[b.k].n, sub: mg.pay + ' 积分 · 赢了 ×2.2', dis: this.run.wallet < mg.pay, why: '积分不够', fn: () => MINI.arena.bet.call(this, mg, i) })).concat([{ t: '离开', leave: 1, fn: () => this.miniFinish('人群的吼声在你背后炸开。', '#8d8496') }]); if (mg.phase === 'fight' && !mg.ko) return [{ t: '加油！', sub: '连点 / 连按空格', gold: 1, fn: () => MINI.arena.down.call(this, mg) }]; return []; },
-  // 这一击已经定了会打死对面：先慢下来、聚光、攻击的那头慢慢扑上去，落下去再判
-  ko(mg, who, dmg) { const tgt = mg.b[1 - who], win = who === mg.side; mg.ko = { who, t: 0 }; SHOW.slowmo(mg, 0.3, 0.7); SHOW.reach(this, mg, { x: tgt.x, y: FLOOR - 100, r: 170, col: win ? C.gold : C.red, label: '' }); S.mini('arena', 'roar');
-    SHOW.later(mg, 0.55, () => { tgt.hp -= dmg; tgt.hit = 1; S.mini('arena', 'hit'); S.mini('arena', 'ko'); this.fx.explode(tgt.x, FLOOR - 100, '#ff5a3a', 1.2); this.fx.kick(18); SHOW.stamp(mg, 'KO', tgt.x, FLOOR - 320, C.red, 130, 1.2); MINI.arena.result.call(this, mg); }); },
+  init(mg) { const a = M.pickUnitQ(this.run); let b = M.pickUnitQ(this.run); for (let i = 0; i < 8 && b === a; i++) b = M.pickUnitQ(this.run); mg.b = [a, b].map((k, i) => ({ k, hp: 1, x: ARG[i], hit: 0, pw: 0.8 + rnd() * 0.4, atkT: -9 })); mg.cheer = 0; mg.anT = 0; },
+  bet(mg, i) { if (!this.miniPay(mg.pay)) return; mg.side = i; this.miniSet('fight'); S.mini('arena', 'bet'); S.mini('arena', 'open'); mg.gateT = mg.t + 0.35; mg.gongT = mg.t + 0.2; mg.bagT = mg.t; SHOW.later(mg, 0.2, () => { S.mini('arena', 'gong'); SHOW.shake(mg, 5); }); SHOW.later(mg, 0.35, () => S.mini('arena', 'gate')); },
+  down(mg, px, py) { if (mg.phase === 'fight' && !mg.ko) { mg.cheer = Math.min(1, mg.cheer + 0.12); S.mini('arena', 'cheer'); hitCombo(this, mg, CX + (rnd() - 0.5) * 200, SY + 175, false); const sx = mg.side ? K.lx(220) : K.lx(80); SHOW.burst(mg, sx + (rnd() - 0.5) * 300, K.ly(40), 8, { rainbow: 1, sp: [60, 200], life: [0.5, 0.9], g: 200, ang: -Math.PI / 2, spread: 1.6 }); } else SHOW.tap(this, mg, px, py); },
+  key(mg, k, down) { if (k === 'act' && down && mg.phase === 'fight') { MINI.arena.down.call(this, mg, CX, SY + 300); return true; } },
+  btns(mg) { if (mg.phase === 'idle') return mg.b.map((b, i) => ({ t: '押' + ['左边', '右边'][i] + '的 ' + M.DB[b.k].n, sub: mg.pay + ' 积分 · 赢了 ×2.2', dis: this.run.wallet < mg.pay, why: '积分不够', fn: () => MINI.arena.bet.call(this, mg, i) })).concat([{ t: '离开', leave: 1, fn: () => this.miniFinish('人群的吼声在你背后炸开。', '#8d8496') }]); if (mg.phase === 'fight' && !mg.ko) return [{ t: '加油！', sub: '连点 / 连按空格', gold: 1, fn: () => MINI.arena.down.call(this, mg, CX, SY + 300) }]; return []; },
+  // 这一击已经定了会打死对面：先慢下来、聚光、全场定格，攻击的那头慢慢扑上去，落下去再判
+  ko(mg, who, dmg) { const tgt = mg.b[1 - who], win = who === mg.side; mg.ko = { who, t: 0 }; mg.b[who].atkT = mg.anT; SHOW.slowmo(mg, 0.3, 0.7); SHOW.reach(this, mg, { x: tgt.x, y: FLOOR - 100, r: 170, col: win ? C.gold : C.red, label: '' }); S.mini('arena', 'roar'); S.mini('arena', 'hush');
+    SHOW.later(mg, 0.55, () => SHOW.hitstop(mg, 0.12, tgt.x, FLOOR - 100, () => { tgt.hp -= dmg; tgt.hit = 1; tgt.dieT = mg.anT; mg.gongT = mg.t; S.mini('arena', 'hit'); S.mini('arena', 'ko'); S.mini('arena', 'gong'); this.fx.kick(18); SHOW.shake(mg, 16); SHOW.white(mg, 0.6);
+      SHOW.burst(mg, tgt.x, FLOOR - 90, 40, { ramp: [C.white, C.butter, C.orange, C.red], sp: [150, 520], life: [0.3, 0.7], g: 300 }); SHOW.shock(mg, tgt.x, FLOOR - 40, C.gold, { r: 260 }); SHOW.stamp(mg, 'KO', tgt.x, FLOOR - 320, C.red, 130, 1.2);
+      const s = M.PXR && M.PXR.slots['_mg:mini_arena']; if (s) s.burst('dust', K.ax(tgt.x), 146, 30, { sp: 30, spread: 3, ang: 0, life: 1.4, w: 20 }); MINI.arena.result.call(this, mg); })); },
   result(mg) { mg.fin = true; const dead = mg.b.findIndex(b => b.hp <= 0), W = mg.b[1 - dead], win = 1 - dead === mg.side; S.mini('arena', win ? 'win' : 'lose'); mg.winner = 1 - dead;
-    if (win) { const v = M.nice(mg.pay * 2.2), tier = W.hp < 0.3 ? 3 : 2, from = { x: W.x, y: FLOOR - 140 }; SHOW.later(mg, 0.1, () => SHOW.win(this, mg, tier, { x: W.x, y: FLOOR - 120, v, col: C.gold, label: tier === 3 ? '大赢' : '' })); SHOW.later(mg, 0.25, () => give(this, mg, [{ k: 'wallet', v }], from)); endIn(this, mg, 0.25 + TIER_END[tier - 1], M.DB[W.k].n + ' 赢了！你押对了。', '#ffcc33'); }
-    else { SHOW.lose(this, mg); endIn(this, mg, 0.4, M.DB[W.k].n + ' 赢了。你押的那头倒下了。', '#8d8496'); } },
+    if (win) { const v = M.nice(mg.pay * 2.2), tier = W.hp < 0.3 ? 3 : 2, from = { x: W.x, y: FLOOR - 140 };
+      // 看台往场子里扔金币：从你那边的看台划弧线落到赢家脚边
+      mg.toss = []; for (let i = 0; i < 14; i++) { const sx = (mg.side ? 170 : 20) + rnd() * 110; mg.toss.push({ x: sx, y: 32 + rnd() * 20, vx: (K.ax(W.x) - sx) / 1.1 + (rnd() - 0.5) * 30, vy: 90 + rnd() * 40, fy: 140 + rnd() * 12, t: mg.t + 0.2 + i * 0.05 }); }
+      SHOW.later(mg, 0.3, () => S.mini('arena', 'toss'));
+      SHOW.later(mg, 0.1, () => SHOW.win(this, mg, tier, { x: W.x, y: FLOOR - 120, v, col: C.gold, label: tier === 3 ? '大赢' : '' })); SHOW.later(mg, 1.1, () => give(this, mg, [{ k: 'wallet', v }], from)); endIn(this, mg, 1.1 + TIER_END[tier - 1], M.DB[W.k].n + ' 赢了！你押对了。', '#ffcc33'); }
+    else { SHOW.lose(this, mg); S.mini('arena', 'boo'); endIn(this, mg, 0.4, M.DB[W.k].n + ' 赢了。你押的那头倒下了。', '#8d8496'); } },
   tick(mg, dt) {
-    mg.cheer = Math.max(0, mg.cheer - dt * 0.35); mg.b.forEach(b => b.hit = Math.max(0, b.hit - dt * 4)); if (mg.ko) mg.ko.t += dt;
-    if (mg.phase !== 'fight' || mg.ko) return; if (mg.cheer < 0.15 && mg.sh && mg.sh.combo) SHOW.comboBreak(mg);
-    const [A, B] = mg.b; const gap = 120; A.x = Math.min(A.x + 200 * dt, CX - gap / 2); B.x = Math.max(B.x - 200 * dt, CX + gap / 2);
+    mg.anT += dt; mg.cheer = Math.max(0, mg.cheer - dt * 0.35); mg.b.forEach(b => b.hit = Math.max(0, b.hit - dt * 4)); if (mg.ko) mg.ko.t += dt;
+    if (mg.phase !== 'fight' || mg.ko) return; if (mg.cheer < 0.15 && mg.sh && mg.sh.combo) SHOW.comboBreak(mg); if (mg.gateT != null && mg.t < mg.gateT + 0.3) return;
+    const [A, B] = mg.b; const gap = 120; A.walk = A.x < CX - gap / 2 - 1; B.walk = B.x > CX + gap / 2 + 1; A.x = Math.min(A.x + 200 * dt, CX - gap / 2); B.x = Math.max(B.x - 200 * dt, CX + gap / 2);
     if (A.x >= CX - gap / 2 - 1) { mg.cd = (mg.cd || 0) - dt; if (mg.cd <= 0) { mg.cd = 0.45; const who = rnd() < 0.5 ? 0 : 1, boost = who === mg.side ? mg.cheer : 0, dmg = (0.06 + rnd() * 0.06) * mg.b[who].pw * (who === mg.side ? 1 + mg.cheer * 0.9 : 1); const tgt = mg.b[1 - who];
       if (tgt.hp - dmg <= 0) { MINI.arena.ko.call(this, mg, who, dmg); return; }
-      tgt.hp -= dmg; tgt.hit = 1; S.mini('arena', 'hit'); this.fx.kick(5 + boost * 4); this.fx.spark(tgt.x, FLOOR - 90, '#ff5a3a', 8 + Math.round(boost * 12), { dir: who ? Math.PI : 0, spread: 1, v: 500 + boost * 300 }); if (boost > 0.6) this.fx.ring(tgt.x, FLOOR - 90, 10, 110, C.gold, 4, 0.25); } }
+      mg.b[who].atkT = mg.anT; SHOW.later(mg, 0.12, () => { tgt.hp -= dmg; tgt.hit = 1; S.mini('arena', 'hit'); this.fx.kick(5 + boost * 4); SHOW.shake(mg, 3 + boost * 4); SHOW.burst(mg, tgt.x, FLOOR - 90, 8 + Math.round(boost * 12), { ramp: [C.white, C.butter, C.orange, C.red], sp: [150, 400 + boost * 300], life: [0.2, 0.4], ang: who ? -Math.PI / 2 - 0.9 : Math.PI / 2 - 0.6, spread: 1.2 }); if (boost > 0.6) SHOW.ring(mg, tgt.x, FLOOR - 90, 10, 110, C.gold, { life: 0.25 }); if (tgt === mg.b[mg.side]) S.mini('arena', 'ooh'); }); } }
   },
   draw(x, mg) {
-    const t = mg.t, fev = mg.sh && mg.sh.fever; bgv(x, '#2a1a10', '#0a0604'); for (let r = 0; r < 3; r++) for (let i = 0; i < 26; i++) { const j = mg.phase === 'fight' ? Math.abs(Math.sin(t * (fev ? 12 : 8) + i + r)) * 6 * (0.4 + mg.cheer + (fev ? 0.6 : 0)) : 0; K.CI(x, SX + 30 + i * 46, SY + 110 + r * 40 - j, 12, ['#4a3a30', '#5a4a3a', '#3a2e26'][(i + r) % 3]); }
-    K.EL(x, CX, FLOOR + 10, 560, 90, '#8a6a3a'); K.EL(x, CX, FLOOR, 540, 76, '#b08a50');
-    mg.b.forEach((b, i) => { const ko = mg.ko && mg.ko.who === i ? 50 * eb(cl(mg.ko.t / 0.16, 0, 1)) * (i ? -1 : 1) : 0, hop = mg.fin && mg.winner === i ? -Math.abs(Math.sin(t * 9)) * 14 : 0, lunge = mg.phase === 'fight' && !mg.fin ? Math.sin(t * 9 + i * 3) * 8 : 0;
-      if (i === mg.side && mg.phase === 'fight') K.GL(x, b.x, FLOOR - 90, 140 + 60 * mg.cheer, C.gold, 0.1 + 0.35 * mg.cheer);
-      x.save(); if (b.hit) x.globalAlpha = 0.6 + 0.4 * Math.sin(t * 60); K.SP(x, b.k, b.x + (i ? -lunge : lunge) + ko, FLOOR + hop, 180, i === 1); x.restore();
-      U.bar(x, b.x - 70, FLOOR - 230, 140, 14, cl(b.hp, 0, 1), { col: i === mg.side ? C.gold : C.red }); K.chipC(x, M.DB[b.k].n, b.x, FLOOR - 256, i === mg.side ? C.gold : C.silver); });
-    if (mg.phase === 'fight' && !mg.fin) { if (mg.cheer > 0.7) K.GL(x, CX, SY + 258, 200, C.gold, 0.25 + 0.15 * Math.sin(t * 16)); U.bar(x, CX - 150, SY + 250, 300, 16, mg.cheer, { col: C.gold }); K.chipC(x, '加油', CX, SY + 222, C.gold); }
+    const t = mg.t, fev = mg.sh && mg.sh.fever;
+    if (!K.pxr(x, 'mini_arena', 0, 0, t, { mg, t })) bgv(x, '#2a1a10', '#0a0604');
+    // 两头怪物：押注前在栅门后面走动（栅栏压在它们身上），押注后冲进场、对打、倒下、赢家跳
+    mg.b.forEach((b, i) => { const at = mg.anT - b.atkT, flip = i === 1; let st = 'idle', fi = Math.floor(mg.anT * 12 + i * 7) % 24, x0 = b.x, hop = 0;
+      if (mg.phase === 'idle') { x0 = ARG[i] + Math.round(Math.sin(t * 0.8 + i * 2) * 8) * 4; st = 'move'; fi = Math.floor(t * 12) % 8; }
+      else if (b.dieT != null) { st = 'death'; fi = Math.min(34, Math.floor((mg.anT - b.dieT) * 12) + 3); }
+      else if (at < 0.75) { st = 'attack'; fi = Math.min(8, Math.floor(at * 12)); }
+      else if (b.hit > 0.3) { st = 'hurt'; fi = 5; }
+      else if (b.walk) { st = 'move'; fi = Math.floor(mg.anT * 12) % 8; }
+      if (mg.fin && mg.winner === i) hop = -Math.round(Math.abs(Math.sin(t * 9)) * 3) * 4;
+      if (i === mg.side && mg.phase === 'fight' && mg.cheer > 0.4) { x.save(); x.globalAlpha = 0.5 * mg.cheer; K.R(x, K.snap(x0 - 48), ARF + 4, 96, 8, C.gold); x.restore(); }
+      if (!M.PXR.MINI_D.cast(x, b.k, x0, ARF + hop, st, fi, flip, b.hit > 0.8 ? '#ffffff' : null)) K.SP(x, b.k, x0, FLOOR + hop, 180, flip);
+      if (mg.phase === 'idle') { for (let k = -3; k <= 3; k++) K.R(x, K.snap(ARG[i] + k * 16) - 4, K.ly(70), 8, K.ly(146) - K.ly(70), C.slate); for (let y = K.ly(74); y < K.ly(146); y += 32) K.R(x, ARG[i] - 60, y, 120, 8, C.steel); }
+      if (mg.phase !== 'idle') { U.bar(x, b.x - 70, FLOOR - 230, 140, 14, cl(b.hp, 0, 1), { col: i === mg.side ? C.gold : C.red }); K.chipC(x, M.DB[b.k].n, b.x, FLOOR - 256, i === mg.side ? C.gold : C.silver); } });
+    // 押注：一袋钱从你那边扔进场子
+    if (mg.bagT != null && t - mg.bagT < 0.6) { const q = (t - mg.bagT) / 0.35, bx = CX + (mg.side ? 160 : -160), by = K.ly(40) + Math.min(1, q) * (FLOOR - K.ly(40) - 20) - Math.sin(Math.min(1, q) * Math.PI) * 60; K.R(x, K.snap(bx) - 16, K.snap(by) - 20, 32, 28, C.tan); K.R(x, K.snap(bx) - 8, K.snap(by) - 28, 16, 8, C.brown); K.R(x, K.snap(bx) - 4, K.snap(by) - 8, 8, 8, C.gold); }
   } };
 
 // ═════════════════════ 营火 · rest through the night, or sharpen on the beat ═════════════════════
