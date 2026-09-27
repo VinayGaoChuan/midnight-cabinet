@@ -348,4 +348,139 @@ X.def('_mg_claw_front', {
     const dr = o.door || 0; D.beg(); if (dr < 0.5) { D.rect(CL.door[0] - 13, 154, 26, 14, 'ink', 1); D.hl(CL.door[0] - 13, 154, 26, 'iron', 7); } else { D.rect(CL.door[0] - 13, 154, 26, 14, 'lamp', 6 + (o.doorGlow || 0) * 4, { e: 255 }); D.rect(CL.door[0] - 13, 168, 26, 3, 'iron', 7); } D.end({ none: 1 });
   },
 });
+
+const AW = 300, AH = 175, FY = 148, R = Math.random, n1 = X.n1, worker = X.worker;
+// ═════════════ 废弃矿坑 ═════════════
+// o: { digs, risk 0…1, swing 0…1 (the current swing; −1 idle), glow { m, k } (the hole lit by what is coming out), pile [{ m, tn }], collapse 0…1, jolt 0…1 }
+const HOLE = [172, 114]; M.MINE_PX = { hole: HOLE, cart: [44, 120], lead: [86, 148], meter: [272, 150], miner: [146, 148], FY: 148 };
+X.def('_mg_mine', {
+  size: [300, 175], fy: 148, noFrame: 1, bootK: 1.6, amb: [0.22, 0.22],
+  paint(S, sc) {
+    const r = S.r;
+    sc.light({ x: 40, y: 104, z: 2, r: 70, i: 0.55, c: '#7aa8ff', tint: 0.45 });                              // 0 cold air from the far end of the tunnel
+    sc.light({ x: 64, y: 118, z: 16, r: 46, i: 0.7, c: '#ffb050', fl: 'candle', ph: 2, tint: 0.5 });           // 1 candle stub on the cart
+    sc.light({ x: 276, y: 60, z: 14, r: 40, i: 0.0, c: '#7ae070', tint: 0.6, bake: false });                    // 2 meter glow: safe
+    sc.light({ x: 276, y: 60, z: 14, r: 40, i: 0.0, c: '#ffc040', tint: 0.6, bake: false });                    // 3 meter glow: loose
+    sc.light({ x: 276, y: 60, z: 14, r: 44, i: 0.0, c: '#ff4040', tint: 0.65, bake: false });                   // 4 meter glow: danger
+    sc.light({ x: HOLE[0], y: HOLE[1], z: 10, r: 70, i: 0.0, c: '#fff0b0', tint: 0.6, bake: false });          // 5 ore flash in the hole
+    sc.light({ x: 158, y: 50, z: 16, r: 150, i: 1.0, c: '#ffb45a', fl: 'candle', ph: 5, tint: 0.55 });           // 6 the lantern (its swing is a moving light on top)
+    sc.light({ x: 42, y: 100, z: 4, r: 30, i: 0.8, c: '#ffc070', fl: 'candle', ph: 1, tint: 0.5 });            // 7 a lamp far down the tunnel
+
+    // ── the rock: strata that wave, stones set in them, a darker ceiling ──
+    S.lay('wall');
+    for (let y = 0; y < FY; y++) for (let x = 0; x < AW; x++) {
+      const band = Math.floor((y + Math.sin(x * 0.045 + 1.3) * 6 + Math.sin(x * 0.13) * 2) / 17), m = band % 3 === 1 ? 'earth' : 'rock';
+      let tn = (m === 'rock' ? 4.2 : 4.6) + (vnoise(x / 7, y / 5, band + 3) - 0.5) * 2.2 - (y < 16 ? (16 - y) * 0.12 : 0);
+      const edge = Math.floor((y - 1 + Math.sin(x * 0.045 + 1.3) * 6 + Math.sin(x * 0.13) * 2) / 17) !== band; if (edge) tn -= 1.6;
+      S.px(x, y, m, tn, { n: [0, 0] });
+    }
+    for (let i = 0; i < 46; i++) { const x = 8 + r() * 284, y = 6 + r() * 136, rx = 3 + r() * 7, ry = rx * (0.55 + r() * 0.3); if (x < 84 && y > 34) continue; S.ell(x, y, rx, ry, 'rock', 5 + r() * 1.5, { dome: 1 }); S.ell(x + rx * 0.2, y + ry * 0.35, rx * 0.8, ry * 0.45, 'rock', 3.2); }
+    // ore veins: gold flecks, violet crystals, silver streaks (glints come from emitters)
+    const VEIN = [[112, 44, 'gold'], [214, 30, 'arcane'], [250, 88, 'gold'], [128, 78, 'iron'], [30, 20, 'arcane'], [236, 132, 'iron'], [96, 128, 'gold'], [282, 18, 'gold']];
+    VEIN.forEach(([x, y, m], i) => { for (let k = 0; k < 9; k++) { const px = x + Math.round((r() - 0.5) * 12), py = y + Math.round((r() - 0.5) * 6); S.px(px, py, m, m === 'arcane' ? 7 + r() * 3 : m === 'gold' ? 7 + r() * 2 : 8 + r() * 2, { n: [-0.4, -0.5] }); if (r() < 0.4) S.px(px + 1, py + 1, m, 4); }
+      if (m === 'arcane') { S.poly([[x - 2, y + 3], [x, y - 5], [x + 2, y + 3]], 'arcane', 8, { n: [-0.5, -0.3] }); S.vl(x, y - 4, 7, 'arcane', 10); S.poly([[x + 3, y + 4], [x + 5, y - 2], [x + 7, y + 4]], 'arcane', 6); }
+      sc.emit({ k: 'glint', x, y, w: 10, h: 5, rate: 0.35, sp: 0, life: 0.6 }); });
+    // ceiling cracks the dust sifts from
+    [[140, 2], [206, 4], [120, 8]].forEach(([x, y]) => TX.crack(S, x, y, 16, 'rock', 4, 'v'));
+
+    // ── the tunnel on the left: timber sets shrinking into the dark, cold light far in ──
+    const tun = (k) => ({ x0: Math.round(42 - 34 * k), x1: Math.round(42 + 34 * k), y0: Math.round(104 - 66 * k), y1: Math.round(104 + 44 * k) });
+    { const o = tun(1); for (let y = o.y0; y < o.y1; y++) for (let x = o.x0; x < o.x1; x++) { const d = Math.max(Math.abs(x - 42) / 34, (y < 104 ? (104 - y) / 66 : (y - 104) / 44)); S.px(x, y, 'rock', 0.6 + d * 2.6 + (vnoise(x / 4, y / 4, 9) - 0.5) * 0.8); } }
+    [0.22, 0.36, 0.52, 0.72].forEach((k, i) => { const o = tun(k), w = Math.max(1, Math.round(4 * k)), tn = 2 + i * 1.1; S.beg(); S.rect(o.x0, o.y0, w, o.y1 - o.y0, 'wood', tn); S.rect(o.x1 - w, o.y0, w, o.y1 - o.y0, 'wood', tn - 0.6); S.rect(o.x0 - 1, o.y0, o.x1 - o.x0 + 2, w, 'wood', tn + 0.4); S.end({ none: 1 }); });
+    S.vl(42, 90, 8, 'hair', 2); S.rect(41, 98, 3, 3, 'lamp', 9, { e: 255 }); S.px(42, 99, 'lamp', 11, { e: 255 });
+    // the mouth's own set: two big posts and a lintel, lit from the cave
+    S.lay('back');
+    S.beg(); S.box(4, 36, 8, 112, 'wood', 5); S.box(72, 36, 8, 112, 'wood', 4.5); S.box(0, 30, 86, 8, 'wood', 5.5, { top: 2 }); [8, 76].forEach(x => { TX.rivet(S, x - 1, 40, 'iron', 5); TX.rivet(S, x - 1, 140, 'iron', 5); }); S.end();
+    for (let y = 40; y < 146; y += 9) { S.hl(5, y, 6, 'wood', 3.5); S.hl(73, y + 4, 6, 'wood', 3); }
+    S.beg(); S.poly([[10, 38], [24, 38], [11, 52]], 'wood', 4); S.poly([[74, 38], [60, 38], [73, 52]], 'wood', 3.5); S.end();
+
+    // ── the dig: a timber frame over the face, the face itself bulging out of the wall ──
+    S.beg(); S.box(98, 30, 6, 118, 'wood', 5); S.box(250, 30, 6, 118, 'wood', 4.2); S.box(90, 22, 174, 8, 'wood', 5.6, { top: 2 }); S.end();
+    for (let x = 94; x < 262; x += 11) S.vl(x, 23, 6, 'wood', 3.8);
+    TX.crack(S, 150, 24, 14, 'wood', 5, 'h');                                                                                 // the cap beam is splitting
+    S.beg(); S.line(104, 42, 122, 30, 'wood', 4, { w: 2 }); S.line(249, 42, 231, 30, 'wood', 3.6, { w: 2 }); S.end();
+    [[101, 60], [101, 120], [253, 60], [253, 120]].forEach(([x, y]) => TX.rivet(S, x, y, 'iron', 5));
+    // the face: fractured rock, each chunk its own facet (Voronoi cells with their own normal and tone), dark cracks between
+    { const seeds = []; for (let i = 0; i < 64; i++) { const a = r() * Math.PI * 2, d = Math.pow(r(), 0.7); seeds.push({ x: 198 + Math.cos(a) * d * 54, y: 108 + Math.sin(a) * d * 50, nx: (r() - 0.5) * 1.5, ny: -0.25 - r() * 0.6, tn: 4.2 + r() * 2.2 }); }
+      for (let y = 54; y < FY; y++) for (let x = 140; x < 256; x++) { const u = (x - 198) / 55, v = (y - 108) / 53, ang = Math.atan2(v, u), rim = 1 + n1(ang * 3 + 4) * 0.14 + n1(ang * 9) * 0.05; if (u * u + v * v > rim * rim && y < 134) continue; if (y >= 134 && Math.abs(u) > rim + (y - 134) * 0.02) continue;
+        let b1 = 1e9, b2 = 1e9, sd = null; for (const q of seeds) { const d = (x - q.x) * (x - q.x) + (y - q.y) * (y - q.y) * 1.3; if (d < b1) { b2 = b1; b1 = d; sd = q; } else if (d < b2) b2 = d; }
+        const gap = Math.sqrt(b2) - Math.sqrt(b1), edge = gap < 0.75, lip = !edge && gap < 1.6 && sd.ny < -0.5, outer = u * u + v * v > rim * rim * 0.9;
+        S.px(x, y, 'rock', edge ? 1.4 : lip ? sd.tn + 1.4 : sd.tn - (outer ? 0.8 : 0) - (vnoise(x / 2.5, y / 2.5, 5) - 0.5) * 0.7, { n: edge ? [0, 0] : [clamp(sd.nx + u * 0.3, -0.9, 0.9), clamp(sd.ny + v * 0.3, -0.9, 0.9)] }); } }
+    // rubble at the foot of the face, ore crumbs in it
+    for (let i = 0; i < 26; i++) { const x = 150 + r() * 96, y = FY - 1 - r() * 5, s2 = 1.5 + r() * 3; S.ell(x, y, s2 * 1.3, s2, 'rock', 4 + r() * 2.5, { dome: 1 }); if (r() < 0.25) S.px(x, y - 1, r() < 0.5 ? 'gold' : 'arcane', 8); }
+    // ── props ──
+    S.lay('mid');
+    // tools leaning on the left post: a spare pick and a shovel
+    S.beg(); S.line(106, 146, 118, 106, 'wood', 5.5); S.poly([[114, 106], [125, 101], [126, 103], [117, 108]], 'iron', 6); S.line(111, 111, 114, 106, 'iron', 4); S.end();
+    S.beg(); S.line(124, 147, 126, 110, 'wood', 5); S.poly([[121, 146], [131, 146], [130, 138], [122, 138]], 'iron', 6.5); S.hl(122, 138, 8, 'iron', 9); S.end();
+    // water bucket and a coil of rope
+    S.beg(); S.poly([[132, 147], [141, 147], [142, 139], [131, 139]], 'wood', 5); S.hcyl(131, 141, 11, 1, 'iron', 5); S.hcyl(131, 145, 11, 1, 'iron', 4); S.ell(136.5, 139, 5.5, 1.2, 'water', 4); S.end();
+    S.beg(); for (let k = 0; k < 4; k++) S.ell(88, 144 - k * 1.5, 7 - k * 0.4, 2.2, 'sand', 6 - k * 0.3, { ring: 1 }); S.end();
+    // the danger meter: a glass tube on a board, brass caps, a skull on top (the level is animated)
+    S.beg(); S.box(262, 34, 18, 104, 'wood', 4.4); TX.vplanks(S, 263, 35, 16, 102, 'wood', 4.6, { pw: 4 }); S.box(260, 136, 22, 4, 'wood', 5, { top: 1 }); S.end();
+    S.beg(); S.cyl(266, 48, 10, 80, 'glass', 2.2, { rim: 1.5 }); S.box(264, 44, 14, 4, 'brass', 7); S.box(264, 128, 14, 4, 'brass', 6); for (let y = 56; y < 128; y += 9) { S.hl(263, y, 3, 'brass', 8); S.hl(276, y, 3, 'brass', 7); } S.end();
+    S.beg(); S.ell(271, 36, 6, 5.5, 'bone', 8, { dome: 1 }); S.rect(268, 40, 7, 3, 'bone', 7); S.px(269, 36, 'ink', 1); S.px(270, 36, 'ink', 1); S.px(273, 36, 'ink', 1); S.px(274, 36, 'ink', 1); S.px(271, 38, 'ink', 1); for (let k = 0; k < 3; k++) S.px(269 + k * 2, 42, 'ink', 2); S.end();
+    // canary cage on a hook from the cap beam
+    S.beg(); S.vl(232, 30, 8, 'iron', 5); S.ell(232, 44, 7, 6, 'brass', 7, { ring: 1, dome: 1 }); for (let x = 226; x <= 238; x += 3) S.vl(x, 44, 12, 'brass', x < 232 ? 7 : 5); S.hl(225, 56, 15, 'brass', 7); S.hl(225, 57, 15, 'brass', 4); S.hl(227, 51, 11, 'wood', 6); S.end();
+    // the mine cart on the rails: planked body, iron bands, rivets
+    S.beg(); S.poly([[18, 124], [70, 124], [66, 142], [22, 142]], 'wood', 5); TX.planks(S, 20, 125, 48, 16, 'wood', 5, { ph: 4, pw: 18, nails: false });
+    S.hl(16, 123, 56, 'iron', 8); S.hl(16, 124, 56, 'iron', 5); [26, 44, 62].forEach(x => { S.vl(x, 125, 17, 'iron', 6); S.px(x, 127, 'iron', 9); S.px(x, 139, 'iron', 9); }); S.hl(22, 141, 44, 'iron', 4);
+    [30, 58].forEach(x => { S.ell(x, 145, 4, 4, 'iron', 5, { ring: 1.5 }); S.px(x, 145, 'iron', 8); }); S.end({ lit: 1 });
+    S.beg(); S.cyl(62, 116, 3, 7, 'paper', 8, { rim: 1 }); S.px(63, 115, 'wood', 2); S.end();
+    // floor: packed earth, sleepers and two rails running into the tunnel
+    S.lay('wall');
+    for (let y = FY; y < AH; y++) for (let x = 0; x < AW; x++) S.px(x, y, 'earth', 4.2 + (vnoise(x / 5, y / 2, 4) - 0.5) * 1.6 + (y === FY ? 1.2 : 0));
+    for (let i = 0; i < 70; i++) { const x = Math.floor(r() * AW), y = FY + 1 + Math.floor(r() * 26); S.px(x, y, 'rock', 6 + r() * 2); S.px(x + 1, y, 'rock', 3); }
+    const rail = (y) => ({ a: Math.round(38 - (y - FY) * 0.6), b: Math.round(46 + (y - FY) * 1.4) });
+    for (let y = FY; y < AH; y += 4) { const q = rail(y); S.rect(0, y, q.b + 12, 2, 'wood', 3.6); S.hl(0, y, q.b + 12, 'wood', 5); }
+    for (let x = 0; x < 128; x++) { S.px(x, FY + 3, 'iron', 8, { n: [0, -0.8] }); S.px(x, FY + 4, 'iron', 4); S.px(x, FY + 11, 'iron', 9, { n: [0, -0.8] }); S.px(x, FY + 12, 'iron', 4); }
+    // foreground rubble, near the eye
+    S.lay('front');
+    [[150, 172, 9], [170, 174, 6], [286, 173, 11], [4, 174, 8]].forEach(([x, y, s]) => { S.beg(); S.ell(x, y - s * 0.4, s, s * 0.55, 'rock', 4.5, { dome: 1 }); S.ell(x - s * 0.3, y - s * 0.6, s * 0.4, s * 0.2, 'rock', 6.5); S.end(); });
+    // a crack in the roof lets the moon in: a cold beam onto the face, dust drifting in it
+    S.lay('wall'); for (let x = 196; x < 214; x++) { const w = 2 + Math.round(n1(x * 0.4) * 1.5); for (let y = 0; y < w; y++) S.px(x, y, 'ice', 8 - y, { e: 255 }); }
+    sc.shaft({ x: 205, y0: 0, y1: FY, w0: 7, w1: 30, dx: -28, i: 0.5, c: '#a8c0ff', haze: 0.35, fade: 0.35 });
+    sc.emit({ k: 'dust', x: 190, y: 20, w: 40, h: 80, rate: 2, sp: 2, life: 4 });
+    // a warning board nailed to the left post, a chain hanging from the beam, wedges under the posts
+    S.lay('mid'); S.beg(); S.box(86, 58, 26, 14, 'wood', 6); S.hl(87, 59, 24, 'wood', 7.5); for (let k = 0; k < 4; k++) S.px(90 + k * 6, 64, 'red', 6); S.poly([[96, 60], [101, 60], [98, 69]], 'red', 7); S.px(98, 70, 'red', 7); S.end();
+    S.beg(); for (let y = 30; y < 58; y += 3) { S.px(122, y, 'iron', 5); S.px(122, y + 1, 'iron', 7); S.px(123, y + 2, 'iron', 4); } S.line(122, 58, 120, 62, 'iron', 6); S.px(123, 62, 'iron', 5); S.end();
+    [[96, 146], [248, 146]].forEach(([x, y]) => { S.beg(); S.poly([[x, y + 2], [x + 12, y + 2], [x + 12, y - 2]], 'wood', 6.5); S.end(); });
+    sc.emit({ k: 'dust', x: 150, y: 6, w: 120, rate: 1.2, sp: 3, life: 3.6 });
+  },
+  anim(D, t, rs, o) {
+    const st = rs.st, risk = clamp(o.risk || 0, 0, 1), digs = o.digs || 0;
+    // lantern on the cap beam: swings harder as the rock loosens; its light swings with it
+    const amp = 0.18 + risk * 0.5 + (o.jolt || 0) * 0.6, a = Math.sin(t * (1.5 + risk * 1.5)) * amp, lx = 158 + Math.sin(a) * 18, ly = 30 + Math.cos(a) * 18;
+    D.lay('mid'); D.line(158, 30, lx, ly - 3, 'hair', 3); D.beg(); D.rect(Math.round(lx) - 2, Math.round(ly) - 4, 5, 1, 'iron', 7); D.rect(Math.round(lx) - 2, Math.round(ly) - 3, 5, 6, 'glass', 5); D.rect(Math.round(lx) - 1, Math.round(ly) - 2, 3, 4, 'lamp', 10, { e: 255 }); D.px(Math.round(lx), Math.round(ly) - 1, 'lamp', 11, { e: 255 }); D.rect(Math.round(lx) - 2, Math.round(ly) + 3, 5, 1, 'iron', 5); D.end();
+    rs.dl.push({ x: lx, y: ly + 2, z: 14, r: 120, i: 0.55, rgb: [255, 190, 100], tint: 0.5 }); rs.mul[6] = 1 - (o.collapse || 0);
+    // the meter: liquid level = risk; green / amber / red, bubbling
+    const lvl = Math.round(risk * 78), band = risk < 0.34 ? 0 : risk < 0.67 ? 1 : 2, mat = ['screen', 'lamp', 'red'][band];
+    for (let y = 127 - lvl; y < 128; y++) for (let x = 267; x < 275; x++) D.px(x, y, mat, (band === 2 ? 6 : 6.5) + (x === 268 ? 2 : 0) + (y === 127 - lvl ? 2.5 : 0) - (x === 274 ? 1.5 : 0), { e: 255 });
+    if (lvl > 4 && R() < 0.15 + risk) rs.burst('bubble', 268 + R() * 6, 126, 1, { sp: 4, ang: 0, spread: 0.3, life: 0.4 + lvl / 90, floor: 175 });
+    [2, 3, 4].forEach((i, k) => { rs.mul[i] = k === band ? 0.8 + (band === 2 ? 0.4 * Math.max(0, Math.sin(t * 9)) : 0) : 0; });
+    // canary: hops on its perch, frantic when the rock is loose
+    const hop = Math.floor(t * (2 + risk * 8)) % 5 === 0 ? 1 : 0, cx = 231 + (Math.floor(t * (1 + risk * 4)) % 2);
+    D.beg(); D.rect(cx - 2, 47 - hop, 5, 4, 'gold', 8); D.rect(cx + 1, 45 - hop, 3, 3, 'gold', 9); D.px(cx + 2, 46 - hop, 'ink', 1); D.px(cx + 4, 46 - hop, 'lamp', 7); D.px(cx - 3, 48 - hop, 'gold', 6); D.px(cx - 1, 47 - hop, 'gold', 10); D.end();
+    // the hole in the face: deeper and wider every swing; its rim catches light; it glows with what is coming out
+    const hr = 5 + Math.min(20, digs * 2.6), [hx, hy] = HOLE; D.lay('back');
+    for (let y = Math.floor(hy - hr); y <= hy + hr; y++) for (let x = Math.floor(hx - hr * 1.2); x <= hx + hr * 1.2; x++) { const u = (x + 0.5 - hx) / (hr * 1.2), v = (y + 0.5 - hy) / hr, d = u * u + v * v + n1(Math.atan2(v, u) * 2 + 7) * 0.12; if (d > 1) continue; D.px(x, y, 'rock', d > 0.78 ? (v < 0 ? 2.2 : 5.5) : 0.4 + d * 1.2, { n: d > 0.78 ? [-u * 0.6, -v * 0.6] : [0, 0] }); }
+    if (o.glow && o.glow.k > 0) { const k = Math.min(1, o.glow.k), gm = o.glow.m || 'gold'; for (let y = Math.floor(hy - hr * 0.7); y <= hy + hr * 0.7; y++) for (let x = Math.floor(hx - hr * 0.8); x <= hx + hr * 0.8; x++) { const d = Math.hypot((x - hx) / (hr * 0.8), (y - hy) / (hr * 0.7)); if (d < k) D.px(x, y, gm, 11 - d * 6, { e: 255 }); } rs.mul[5] = o.glow.k * 1.6; } else rs.mul[5] = 0;
+    // the miner with the pick: wind up, strike, pull back
+    const sw = o.swing == null || o.swing < 0 ? -1 : o.swing, idle = Math.sin(t * 2) * 0.08;
+    const aF = sw < 0 ? 0.9 + idle : sw < 0.43 ? 0.9 + sw / 0.43 * 2.2 : sw < 0.5 ? 3.1 - (sw - 0.43) / 0.07 * 1.7 : 1.4 - (sw - 0.5) * 0.6;
+    const p = worker(D, 146, FY, { skin: ['skin', 5], hair: ['hair', 2], top: ['denim', 4], bot: ['leather', 3], boot: ['hair', 2], cap: ['brass', 7] }, { aF, eF: -0.25, aB: aF * 0.7, eB: 0.4, lF: 0.35, lB: -0.25, lean: sw >= 0.43 && sw < 0.6 ? 0.55 : 0.2 }, 1);
+    // pick: ash handle, curved iron head
+    const ang = aF - 0.25 + 0.5, dx = Math.sin(ang), dy = Math.cos(ang), [px0, py0] = p.hand, tx = px0 + dx * 11, ty = py0 + dy * 11; D.beg(); D.line(px0, py0, tx, ty, 'wood', 6.5);
+    for (let k = -5; k <= 5; k++) { const bend = Math.abs(k) * 0.25; D.px(Math.round(tx - dy * k + dx * bend), Math.round(ty + dx * k + dy * bend), 'iron', Math.abs(k) > 3 ? 9 : 6.5); } D.end({ lit: 1 });
+    // helmet lamp
+    D.px(p.head[0] + 3, p.head[1] - 3, 'lamp', 11, { e: 255 }); rs.dl.push({ x: p.head[0] + 8, y: p.head[1], z: 12, r: 60, i: 0.7, rgb: [255, 240, 190], tint: 0.3 });
+    if (sw >= 0.5 && !st.hit) { st.hit = 1; rs.burst('spark', hx - hr * 0.6, hy, 10, { sp: 60, ang: -Math.PI / 2, spread: 1.6, life: 0.5, floor: FY }); rs.burst('dust', hx - 4, hy, 6, { sp: 14, life: 1, ang: -Math.PI / 2, spread: 2 }); }
+    if (sw < 0.5) st.hit = 0;
+    // the haul in the cart: chunks pile up
+    (o.pile || []).forEach((c, i) => { const col = i % 6, row = Math.floor(i / 6), x = 24 + col * 7 + (row % 2) * 3, y = 121 - row * 4; D.beg(); D.ell(x + 2.5, y + 1.5, 3.2, 2.6, c.m, c.tn, { dome: 1 }); D.px(x + 1, y, c.m, c.tn + 3); D.end(); });
+    if (R() < 0.04 + risk * 0.4) rs.burst('dust', 110 + R() * 150, 30 + R() * 4, 1, { sp: 2, life: 3 });
+    if (risk > 0.4 && R() < risk * 0.08) rs.burst('spark', 110 + R() * 150, 31, 1, { sp: 4, life: 1.4, floor: FY });
+  },
+});
+
 })();

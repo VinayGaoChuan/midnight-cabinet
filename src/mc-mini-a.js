@@ -205,8 +205,18 @@ K.card = (x, a, b, w, h, ring, hov, fill) => { a = Math.round(a); b = Math.round
 K.pip = (x, a, b, s, col) => { const h = Math.round(s / 2), X = Math.round(a) - h, Y = Math.round(b) - h, f = col ? pc(col) : C.indigo; U.box(x, X, Y, s, s, f); if (col && M.PJ.shades) K.R(x, X, Y, s, 3, M.PJ.shades(f).hi); };
 K.pop = (t) => (M.PJ.reduced || !(t >= 0) || t >= 0.5 ? 1 : 1 + 0.45 * Math.exp(-t * 11) * Math.cos(t * 26));   // 砸下来回弹，连续
 K.big = (x, s, a, b, size, col, t, o) => { const k = K.pop(t); x.save(); x.translate(Math.round(a), Math.round(b)); if (k !== 1) x.scale(k, k); U.text(x, s, 0, 0, size, col, Object.assign({ outline: size >= 52 }, o)); x.restore(); };
+// 废弃矿坑：像素舞台（mc-minipx-a.js 的 _mg_mine：矿道、矿车、木框架下一块块受光的碎岩、吊灯、金丝鸟、风险管、顶缝的月光），
+// 雇来的矿工（和基地挖掘同一套像素工人）抡镐，领袖站在矿车旁；规则和数值不变
+const MNP = () => M.MINE_PX;
+const ORE = { 煤块: ['iron', 2, C.steel], 银矿石: ['iron', 8, C.silver], 金矿石: ['gold', 8, C.gold], 魔晶: ['arcane', 8, C.violet], 古代图纸: ['paper', 8, C.butter] };
+// the chunk coming out of the hole: a little lit nugget (or a rolled blueprint) on the 4-px grid, drawn crisp over the show
+const oreSprite = (x, name, cx, cy, k, rot) => { const R = M.PXR && M.PXR.RAMPS, o = ORE[name] || ORE.煤块, ramp = R ? R[o[0]] : null; if (!ramp) return; const c = (t) => ramp[Math.max(0, Math.min(ramp.length - 1, t))];
+  x.save(); x.translate(Math.round(cx), Math.round(cy)); if (rot) x.rotate(rot); x.scale(k * 4, k * 4); x.imageSmoothingEnabled = false;
+  if (name === '古代图纸') { x.fillStyle = '#07060f'; x.fillRect(-6, -3, 12, 6); x.fillStyle = c(8); x.fillRect(-5, -2, 10, 4); x.fillStyle = c(10); x.fillRect(-5, -2, 10, 1); x.fillStyle = c(5); x.fillRect(-5, 1, 10, 1); const gd = R.gold; x.fillStyle = gd[8]; x.fillRect(-3, -2, 1, 4); x.fillRect(2, -2, 1, 4); x.restore(); return; }
+  const px = [[-2, -3], [-1, -3], [0, -3], [-3, -2], [-2, -2], [-1, -2], [0, -2], [1, -2], [-3, -1], [-2, -1], [-1, -1], [0, -1], [1, -1], [2, -1], [-3, 0], [-2, 0], [-1, 0], [0, 0], [1, 0], [2, 0], [-2, 1], [-1, 1], [0, 1], [1, 1], [2, 1], [-1, 2], [0, 2], [1, 2]];
+  x.fillStyle = '#07060f'; px.forEach(([a, b]) => x.fillRect(a - 1, b - 1, 3, 3)); px.forEach(([a, b]) => { const l = -a - b; x.fillStyle = c(o[1] + (l > 1 ? 2 : l < -1 ? -2 : 0)); x.fillRect(a, b, 1, 1); }); x.fillStyle = c(ramp.length - 1); x.fillRect(-2, -2, 1, 1); x.restore(); };
 MINI.mine = { title: '废弃矿坑', img: 'u_pick', col: C.tan, text: '岩壁里闪着光。每挖一镐，头顶的石头就松一分。',
-  init(mg) { mg.digs = 0; mg.pile = []; mg.cracks = []; mg.seed = rnd() * 100; mg.rocks = [...Array(26)].map((_, i) => ({ x: SX + 80 + rnd() * (SW - 160), y: SY + 110 + rnd() * 330, r: 30 + rnd() * 50, c: ['#3a2e26', '#2e241e', '#443629'][i % 3] })); mg.fall = []; mg.dust = []; },
+  init(mg) { mg.digs = 0; mg.pile = []; mg.shown = 0; mg.fall = []; mg.ore = null; mg.glow = null; mg.jolt = 0; mg.cartK = 0; },
   risk(mg) { return cl(0.05 + mg.digs * 0.085 - mg.luck * 0.3, 0.03, 0.8); },
   table(mg) { const d = mg.digs, run = this.run, P = mg.P; return [
     { n: '煤块', ic: 'sack', c: C.steel, w: 40, g: () => ({ k: 'rsup', v: 10 + d * 4 }) },
@@ -214,51 +224,57 @@ MINI.mine = { title: '废弃矿坑', img: 'u_pick', col: C.tan, text: '岩壁里
     { n: '金矿石', ic: 'coin', c: C.gold, w: 12 + d * 3, g: () => ({ k: 'wallet', v: M.nice(P * 6) }) },
     { n: '魔晶', ic: 'gem', c: C.violet, w: 6 + d * 2, g: () => K.item(run, P) },
     { n: '古代图纸', ic: 'scroll', c: C.butter, w: 4 + d * 2, g: () => K.bp() }]; },
+  hole(mg) { const H = MNP().hole; return { x: K.lx(H[0]), y: K.ly(H[1]) }; },
   dig(mg) { const r = MINI.mine.risk(mg); mg.collapse = rnd() < r; mg.next = M.wpick(MINI.mine.table.call(this, mg), o => o.w); mg.hit = false; this.miniSet('swing');
     // 风险一高，这一镐就是一次紧张：压暗、聚光罩住坑、心跳，镐子挥得慢一点
-    if (r >= 0.3) { M.SHOW.reach(this, mg, { x: CX + 60, y: SY + 290, r: 170, lv: r >= 0.55 ? 2 : 1, label: '危险！', col: C.red }); M.SHOW.slowmo(mg, 0.55, 0.9); } },
+    const h = MINI.mine.hole(mg); if (r >= 0.3) { M.SHOW.reach(this, mg, { x: h.x, y: h.y, r: 150, lv: r >= 0.55 ? 2 : 1, label: '危险！', col: C.red }); M.SHOW.slowmo(mg, 0.55, 0.9); } },
   btns(mg) { if (mg.phase !== 'idle') return []; const r = Math.round(MINI.mine.risk(mg) * 100);
     return [{ t: '挖一镐', sub: '塌方风险 ' + r + '%', gold: 1, fn: () => MINI.mine.dig.call(this, mg) }, { t: '收工离开', leave: 1, sub: mg.pile.length ? '带走 ' + mg.pile.length + ' 样东西' : '什么也不拿', fn: () => { if (!mg.pile.length) return this.miniFinish('你拍掉身上的灰，离开了矿坑。', '#8d8496'); this.miniFinish('你背着 ' + mg.pile.map(p => p.n).join('、') + ' 爬出了矿坑。', '#e0904a', mg.pile.map(p => p.g())); } }]; },
+  // a find comes out of the hole: it pops, spins, lands in the cart
+  found(mg, o, tier) { const SHW = M.SHOW, h = MINI.mine.hole(mg); mg.digs++; mg.pile.push(o); mg.ore = { o, t: 0 }; mg.glow = null; this.miniSet('idle'); S.mini('mine', 'gem'); S.mini('mine', 'loosen', MINI.mine.risk(mg));
+    SHW.pop(mg, 'ore', { spin: tier >= 3 ? 2 : 1, k0: 0.4 }); if (tier < 3) SHW.win(this, mg, tier, { x: h.x, y: h.y, col: o.c, label: o.n });
+    this.miniSay('挖到了 ' + o.n + '！', o.c, tier >= 3); },
   tick(mg, dt) {
-    const ox = CX + 60, oy = SY + 290;
+    const SHW = M.SHOW, h = MINI.mine.hole(mg);
+    mg.jolt = Math.max(0, mg.jolt - dt * 2); mg.cartK = Math.max(0, mg.cartK - dt * 4);
     if (mg.phase === 'swing') {
-      if (!mg.hit && mg.pt > 0.3) { mg.hit = true; S.mini('mine', 'pick'); this.fx.kick(6 + mg.digs); this.fx.spark(ox - 40, oy, '#ffd080', 14, { dir: Math.PI, spread: 1.4, v: 700 }); for (let i = 0; i < 3 + mg.digs; i++) mg.cracks.push({ a: rnd() * 6.28, l: 40 + rnd() * (60 + mg.digs * 25), w: 1 + rnd() * 2 }); }
+      if (!mg.hit && mg.pt > 0.3) { mg.hit = true; S.mini('mine', 'pick'); this.fx.kick(6 + mg.digs); mg.jolt = 1; SHW.shake(mg, 5 + mg.digs * 1.5); SHW.white(mg, 0.12);
+        SHW.burst(mg, h.x - 30, h.y, 16, { ramp: [C.white, C.butter, C.gold, C.amber], sp: [200, 520], ang: -Math.PI / 2, spread: 2, g: 900, life: [0.3, 0.6] });
+        SHW.burst(mg, h.x - 20, h.y, 10, { ramp: [C.cream, C.tan, C.brown, C.umber], sp: [120, 300], ang: -Math.PI * 0.7, spread: 1.4, g: 1100, life: [0.4, 0.8], size: [1, 2] }); }
       if (mg.pt > 0.7) {
-        if (mg.collapse) { this.miniSet('collapse'); S.mini('mine', 'cavein'); M.SHOW.lose(this, mg); this.fx.kick(16); this.fx.flash('#ffffff', 0.15); for (let i = 0; i < 22; i++) mg.fall.push({ x: SX + 60 + rnd() * (SW - 120), y: SY - rnd() * 300, vy: 200 + rnd() * 300, r: 18 + rnd() * 40, rot: rnd() * 6, c: ['#4a3a2e', '#3a2e26', '#5a4838'][i % 3] }); }
-        else { const o = mg.next; mg.digs++; mg.pile.push(o); mg.ore = { o, t: 0 }; this.miniSet('idle'); S.mini('mine', 'gem'); S.mini('mine', 'loosen', MINI.mine.risk(mg));
-          const tier = { 煤块: 1, 银矿石: 1, 金矿石: 2, 魔晶: 2, 古代图纸: 3 }[o.n] || 1; M.SHOW.win(this, mg, tier, { x: ox, y: oy, col: o.c, label: o.n }); this.miniSay('挖到了 ' + o.n + '！', o.c, tier >= 3); }
+        if (mg.collapse) { this.miniSet('collapse'); S.mini('mine', 'cavein'); SHW.lose(this, mg); SHW.stamp(mg, '塌方！', CX, SY + 280, C.red, 120, 1); this.fx.kick(16); SHW.shake(mg, 16); SHW.white(mg, 0.2); SHW.dim(mg, 0.5, 0.9);
+          for (let i = 0; i < 26; i++) mg.fall.push({ x: SX + 60 + rnd() * (SW - 120), y: SY - rnd() * 300, vy: 200 + rnd() * 300, r: 3 + Math.floor(rnd() * 6), rot: rnd() * 6, vr: (rnd() - 0.5) * 6 });
+          for (let i = 0; i < 4; i++) SHW.later(mg, i * 0.12, () => SHW.burst(mg, SX + 100 + rnd() * (SW - 200), FLOOR - 20, 14, { ramp: [C.cream, C.tan, C.brown, C.umber], sp: [60, 200], ang: -Math.PI / 2, spread: 2.4, life: [0.7, 1.3], drag: 1.5, size: [2, 3] })); }
+        else if (!mg.charging) { const o = mg.next, tier = { 煤块: 1, 银矿石: 1, 金矿石: 2, 魔晶: 2, 古代图纸: 3 }[o.n] || 1;
+          if (tier === 1) MINI.mine.found.call(this, mg, o, 1);
+          else { // 悬念：洞里先亮它的颜色——金矿一拍、魔晶两拍、古代图纸四拍（白 → 蓝 → 紫 → 金，一拍比一拍亮），图纸最后卡帧再炸开
+            mg.charging = 1; this.miniSet('charge'); const big = o.n === '古代图纸', tiers = big ? [C.silver, C.blue, C.violet, C.gold] : [C.silver, o.c], mats = big ? ['iron', 'tile', 'arcane', 'gold'] : ['iron', ORE[o.n][0]];
+            SHW.charge(this, mg, { x: h.x, y: h.y, q: tiers.length - 1, tiers, beats: big ? 4 : o.n === '魔晶' ? 2 : 1, t0: 0.25, iv: 0.45, hit: big, reveal: big, col: o.c,
+              onBeat: (i, tq) => { mg.glow = { m: mats[tq], k: 0.45 + i * 0.2 }; },
+              onReveal: () => { mg.charging = 0; MINI.mine.found.call(this, mg, o, big ? 3 : 2); if (big) { S.mini('_', 'win3'); SHW.stamp(mg, '大赢', h.x, h.y - 190, C.gold, 110, 1.8); SHW.items(this, mg, [{ text: '+ ' + o.n, col: C.butter, size: 52 }], { x: h.x, y: h.y + 100, t0: 0.25 }); mg.sh.lamp = { t: 2, col: C.gold, sp: 4, strobe: 1 }; SHW.ambient(mg, 3); } } }); } }
       }
     }
-    if (mg.ore) mg.ore.t += dt;
-    if (mg.phase === 'collapse') { mg.fall.forEach(f => { f.vy += 1400 * dt; f.y += f.vy * dt; f.rot += dt * 3; if (f.y > FLOOR - f.r * 0.5) { f.y = FLOOR - f.r * 0.5; f.vy *= -0.2; } });
+    // the find flies from the hole into the cart; the cart bumps and shows it
+    if (mg.ore) { mg.ore.t += dt; if (mg.ore.t >= 0.9 && !mg.ore.landed) { mg.ore.landed = 1; mg.shown = mg.pile.length; mg.cartK = 1; S.mini('mine', 'gem'); const c = MNP().cart; SHW.burst(mg, K.lx(c[0]), K.ly(c[1]), 8, { col: mg.ore.o.c, sp: [80, 200], ang: -Math.PI / 2, spread: 1.6, life: [0.3, 0.6] }); SHW.shake(mg, 3); } if (mg.ore.t > 1.1) mg.ore = null; }
+    if (mg.phase === 'collapse') { mg.fall.forEach(f => { f.vy += 1400 * dt; f.y += f.vy * dt; f.rot += dt * f.vr; if (f.y > FLOOR - f.r * 2) { f.y = FLOOR - f.r * 2; f.vy *= -0.2; } });
       if (mg.pt > 1.0 && !mg.done) { mg.done = true; const lost = mg.pile.map(p => p.n); this.heroHurt(0.12); this.miniFinish('矿坑塌了！你被埋了半截才爬出来。' + (lost.length ? '挖到的 ' + lost.join('、') + ' 全埋在了下面。' : ''), '#d0453c'); } }
-    const r = MINI.mine.risk(mg); if (rnd() < r * 0.6) mg.dust.push({ x: SX + 40 + rnd() * (SW - 80), y: SY, v: 60 + rnd() * 80, t: 0 }); mg.dust.forEach(d => { d.y += d.v * dt; d.t += dt; }); mg.dust = mg.dust.filter(d => d.y < FLOOR);
   },
   draw(x, mg) {
-    const t = mg.t, ox = CX + 60, oy = SY + 290, r = MINI.mine.risk(mg);
-    x.fillStyle = K.LG(x, 0, SY, 0, SY + SH, [[0, '#2a1e18'], [1, '#120c0a']]); x.fillRect(SX, SY, SW, SH);
-    mg.rocks.forEach(k => { K.EL(x, k.x, k.y, k.r, k.r * 0.7, k.c); K.EL(x, k.x - k.r * 0.2, k.y - k.r * 0.25, k.r * 0.5, k.r * 0.3, 'rgba(255,220,180,0.05)'); });
-    for (let i = 0; i < 18; i++) { const a = mg.seed + i * 2.1, px = SX + 120 + ((i * 97) % (SW - 240)), py = SY + 120 + ((i * 61) % 320); K.GL(x, px, py, 14, [C.gold, C.violet, C.silver][i % 3], 0.25 + 0.2 * Math.sin(t * 2 + a)); K.R(x, px - 2, py - 2, 4, 4, [C.gold, C.violet, C.silver][i % 3]); }
-    // the hole grows with every swing
-    const hr = 50 + mg.digs * 16; K.EL(x, ox, oy, hr + 10, hr * 0.8 + 8, '#1a120e'); K.EL(x, ox, oy, hr, hr * 0.78, K.RG(x, ox, oy, 4, hr, [[0, '#000'], [1, '#150e0b']]));
-    // 裂纹：3px 硬线，风险高了变红
-    x.save(); x.globalAlpha *= 0.6; x.strokeStyle = r > 0.4 ? C.red : C.ink; x.lineWidth = 3; x.lineCap = 'square'; mg.cracks.forEach(c => { x.beginPath(); let px = ox + Math.cos(c.a) * hr, py = oy + Math.sin(c.a) * hr * 0.78; x.moveTo(px, py); for (let s = 1; s <= 4; s++) { px += Math.cos(c.a + Math.sin(s * 3 + c.l) * 0.5) * c.l / 4; py += Math.sin(c.a + Math.cos(s * 2 + c.l) * 0.5) * c.l / 4; x.lineTo(px, py); } x.stroke(); }); x.restore();
-    if (mg.ore && mg.ore.t < 1.4) { const q = eb(mg.ore.t / 0.4), o = mg.ore.o; K.GL(x, ox, oy, 120, o.c, 0.8 * (1 - mg.ore.t / 1.4)); K.IC(x, o.ic, ox, oy - q * 30, 90 * q); }
-    // floor + hero
-    K.R(x, SX, FLOOR, SW, SH - (FLOOR - SY), '#1a120e'); K.R(x, SX, FLOOR, SW, 4, '#4a3a2e');
-    const hx = CX - 260, sw = mg.phase === 'swing' ? (mg.pt < 0.3 ? -1.9 + mg.pt / 0.3 * 2.6 : 0.7 - (mg.pt - 0.3) * 1.5) : -0.5 + Math.sin(t * 2) * 0.1;
-    K.SP(x, M.HEROES[this.run.hero.cls].sprite, hx, FLOOR, 170);
-    x.save(); x.translate(hx + 40, FLOOR - 110); x.rotate(sw); K.IC(x, 'u_pick', 60, 0, 110); x.restore();
-    K.GL(x, hx + 20, FLOOR - 140, 160, '#ffcf80', 0.35); // head lamp
-    // 塌方风险条：小机箱面板上的墨槽，按格切，底绿、中金、顶红
-    const gx = SX + SW - 90, gy = SY + 110, gh = 380, fh = Math.round(gh * r); U.plate(x, gx - 30, gy - 66, 96, gh + 132, { shadow: 9, rivets: false }); U.box(x, gx, gy, 36, gh, C.ink);
-    [[0, C.green], [1 / 3, C.gold], [2 / 3, C.red]].forEach(([z, c]) => { const y0 = gy + gh - Math.round(gh * z), y1 = Math.max(gy + gh - fh, gy + gh - Math.round(gh * (z + 1 / 3))); if (y1 < y0) K.R(x, gx, y1, 36, y0 - y1, c); });
-    if (fh > 0) K.R(x, gx, gy + gh - fh, 36, 3, C.butter); for (let k = gy + gh - 38; k > gy; k -= 38) K.R(x, gx, k, 36, 3, C.ink);
-    K.IC(x, 'r_skel', gx + 18, gy - 34, 44); U.text(x, Math.round(r * 100) + '%', gx + 18, gy + gh + 30, T.item, r > 0.4 ? C.red : C.gold, { num: true });
-    mg.dust.forEach(d => K.R(x, d.x, d.y, 3, 3, 'rgba(200,180,150,0.6)'));
-    // haul：底部一排小格，顶边是矿石的颜色
-    mg.pile.forEach((p, i) => { const px = SX + 70 + i * 86, py = FLOOR + 50; U.box(x, px - 36, py - 36, 72, 72, C.abyss); K.R(x, px - 36, py - 36, 72, 6, p.c); K.IC(x, p.ic, px, py + 3, 52); });
-    if (mg.phase === 'collapse') { K.R(x, SX, SY, SW, SH, 'rgba(7,6,15,' + Math.floor(cl(mg.pt / 0.84, 0, 1) * 4) / 4 * 0.7 + ')'); mg.fall.forEach(f => { x.save(); x.translate(f.x, f.y); x.rotate(f.rot); K.EL(x, 0, 0, f.r, f.r * 0.75, f.c); K.EL(x, -f.r * 0.25, -f.r * 0.25, f.r * 0.4, f.r * 0.25, 'rgba(255,220,180,0.08)'); x.restore(); }); if (mg.pt > 0.6) K.big(x, '塌方！', CX, SY + 300, 120, C.red, mg.pt - 0.6); }
+    const t = mg.t, P = MNP(), r = MINI.mine.risk(mg), sw = mg.phase === 'swing' ? cl(mg.pt / 0.7, 0, 1) : -1, col = mg.phase === 'collapse' ? cl(mg.pt / 0.4, 0, 1) : 0;
+    K.pxr(x, '_mg_mine', 0, 0, t, { digs: mg.digs, risk: r, swing: sw, glow: mg.glow, jolt: mg.jolt, collapse: col, pile: mg.pile.slice(0, mg.shown).map(p => ({ m: (ORE[p.n] || ORE.煤块)[0], tn: (ORE[p.n] || ORE.煤块)[1] })) }, 'mine');
+    // the leader stands by the cart and watches (knocked back when the roof comes down)
+    const hk0 = M.HEROES[this.run.hero.cls].sprite, hk = M.artOf ? M.artOf(hk0) : hk0, G = M.PCDG;
+    if (G && G.has(hk)) { const st = mg.phase === 'collapse' ? 'hurt' : 'idle', fi = Math.floor((st === 'hurt' ? mg.pt : t) * 12) % (st === 'hurt' ? 10 : (G.body(hk).nIdle || 1)), c = G.bodyFrame(hk, st, fi); if (c) { const sm = x.imageSmoothingEnabled; x.imageSmoothingEnabled = false; x.drawImage(c, Math.round(K.lx(P.lead[0]) - c.cx), Math.round(K.ly(P.lead[1]) - c.footY)); x.imageSmoothingEnabled = sm; } }
+    else K.SP(x, hk0, K.lx(P.lead[0]), K.ly(P.lead[1]), 120);
+    if (mg.cartK > 0) { const c = P.cart; x.save(); x.globalAlpha = Math.round(mg.cartK * 4) / 8; K.R(x, K.lx(c[0] - 26), K.ly(c[1] - 6), 52 * 4, 8, C.butter); x.restore(); }
+    U.text(x, Math.round(r * 100) + '%', K.lx(P.meter[0]), K.ly(P.meter[1]), 22, r > 0.4 ? C.red : r > 0.2 ? C.gold : C.lime, { num: true, align: 'center' });
+  },
+  // over the show: the chunk popping out of the hole and flying to the cart, the rocks of a cave-in
+  front(x, mg) {
+    const P = MNP(), o = mg.ore; if (o) { const xf = M.SHOW.xf(mg, 'ore'), H = P.hole, c = P.cart, t = o.t; let ax, ay;
+      if (t < 0.35) { ax = H[0]; ay = H[1] - 16 * eo(t / 0.35); } else { const q = eio(cl((t - 0.35) / 0.55, 0, 1)); ax = H[0] + (c[0] - H[0]) * q; ay = (H[1] - 16) + (c[1] - H[1] + 16) * q - Math.sin(q * Math.PI) * 30; }
+      if (!o.landed) oreSprite(x, o.o.n, K.lx(ax), K.ly(ay), Math.max(0.2, xf.k) * (o.o.n === '古代图纸' ? 1.4 : 1.2), xf.rot); }
+    if (mg.phase === 'collapse') { const R = M.PXR && M.PXR.RAMPS.rock; if (R) mg.fall.forEach(f => { x.save(); x.translate(Math.round(f.x / 4) * 4, Math.round(f.y / 4) * 4); x.rotate(Math.round(f.rot * 4) / 4); const s = f.r * 4; x.fillStyle = '#07060f'; x.fillRect(-s - 4, -s * 0.8 - 4, s * 2 + 8, s * 1.6 + 8); x.fillStyle = R[5]; x.fillRect(-s, -s * 0.8, s * 2, s * 1.6); x.fillStyle = R[8]; x.fillRect(-s, -s * 0.8, s * 2, 4); x.fillRect(-s, -s * 0.8, 4, s * 1.2); x.fillStyle = R[3]; x.fillRect(-s, s * 0.8 - 4, s * 2, 4); x.restore(); }); }
   } };
 
 // ═════════════════════ 转盘 · roulette ═════════════════════
