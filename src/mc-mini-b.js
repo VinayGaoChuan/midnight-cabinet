@@ -43,17 +43,29 @@ const CRK = [[[-6, -80], [4, -58], [-12, -40], [6, -20], [-4, 0]], [[40, -50], [
 const crack = (x, pts, col) => { x.lineCap = 'square'; x.lineJoin = 'miter'; [[9, col], [3, C.white]].forEach(([w, c2]) => { x.strokeStyle = U.pal(c2); x.lineWidth = w; x.beginPath(); pts.forEach(([a, b], i) => (i ? x.lineTo(a, b) : x.moveTo(a, b))); x.stroke(); }); };
 
 // ═════════════════════ 弹球 · pachinko ═════════════════════
+// Pixel stage mb_pachinko (mc-pxroom-minib-pachinko.js): a chrome-and-brass machine in a midnight parlour; the brass pegs sit
+// exactly where the physics has them. Bought balls pour into the tray, each one runs up the launch rail and drops in at the
+// gate (the physics starts there as before); a ball that reaches the last rows over an edge pocket is the reach — its every
+// row is a beat, the LCD's moon face goes wide-eyed, the tulips twitch open; the tulip snaps shut on it, the machine strobes
+// in the prize colour, the LCD shows fireworks and the payout spout spills balls.
 const PB = { L: SX + 300, R: SX + SW - 300, T: SY + 110, B: FLOOR - 10 };
-const SLOTS = [{ n: '图纸', ic: 'scroll', c: C.butter }, { n: '空', ic: '', c: C.slate }, { n: '积分', ic: 'coin', c: C.gold }, { n: '物资', ic: 'sack', c: C.tan }, { n: '积分', ic: 'coin', c: C.gold }, { n: '空', ic: '', c: C.slate }, { n: '道具', ic: 'gem', c: C.violet }];
+const SLOTS = [{ n: '图纸', ic: 'scroll', c: C.butter, m: 'gold' }, { n: '空', ic: '', c: C.slate }, { n: '积分', ic: 'coin', c: C.gold, m: 'gold' }, { n: '物资', ic: 'sack', c: C.tan, m: 'sand' }, { n: '积分', ic: 'coin', c: C.gold, m: 'gold' }, { n: '空', ic: '', c: C.slate }, { n: '道具', ic: 'gem', c: C.violet, m: 'arcane' }];
 // 落格的中奖档：图纸大奖、道具大赢、中间三格小中、空格没中；PROW = 进最后三排钉子的高度
-const PTIER = [4, 0, 1, 1, 1, 0, 3], PROW = PB.T + 90 + 4.5 * 46;
+const PTIER = [4, 0, 1, 1, 1, 0, 3], PROW = PB.T + 90 + 4.5 * 46, PRAIL = 0.3;
+const PKG = () => M.PXR && M.PXR.MINIB && M.PXR.MINIB.pachinko;
 MINI.pachinko = { title: '弹珠台', img: 'e_pachinko', col: C.gold, text: '钢珠弹过一排排钉子，落进底下的格子里。两边的格子最值钱。',
   init(mg) { mg.pegs = []; const rows = 8, W = PB.R - PB.L; for (let i = 0; i < rows; i++) { const n = i % 2 ? 9 : 10; for (let j = 0; j < n; j++) mg.pegs.push({ x: PB.L + 30 + j * (W - 60) / 9 + (i % 2 ? (W - 60) / 18 : 0), y: PB.T + 90 + i * 46, f: 0 }); }
-    mg.balls = []; mg.queue = 0; mg.buys = 0; mg.won = []; mg.spent = 0; mg.gW = 0; mg.gS = 0; mg.slotF = SLOTS.map(() => 0); mg.slotP = SLOTS.map(() => -1); mg.spawnT = 0; mg.reachB = null; mg.pend = 0; mg.launchF = 0; },
-  buy(mg, n, cost) { if (!this.miniPay(cost)) return; mg.spent += cost; mg.buys++; mg.queue += n; mg.launchF = 1; S.lever(); },
+    mg.balls = []; mg.rail = []; mg.queue = 0; mg.buys = 0; mg.won = []; mg.spent = 0; mg.gW = 0; mg.gS = 0; mg.slotF = SLOTS.map(() => 0); mg.slotP = SLOTS.map(() => -1); mg.spawnT = 0; mg.reachB = null; mg.pend = 0; mg.launchF = 0;
+    mg.tulip = [0, 0]; mg.tulT = [-9, -9]; mg.lcd = { mode: 'idle', t0: 0 }; mg.lamps = { mode: 'idle', mat: 'lamp', t0: 0 }; mg.pourT = null; mg.pourN = 0; mg.payT = null; mg.jolt = 0; mg.beatN = 0; },
+  lcd(mg, mode) { if (mg.lcd.mode !== mode) mg.lcd = { mode, t0: mg.t }; },
+  lamps(mg, mode, mat) { mg.lamps = { mode, mat: mat || 'lamp', t0: mg.t }; },
+  // 投币：出珠口哗啦倒进一把钢珠（托盘里一颗颗落下），把手拧一格，整圈灯珠亮一下
+  buy(mg, n, cost) { if (!this.miniPay(cost)) return; mg.spent += cost; mg.buys++; mg.queue += n; mg.pourT = mg.t; mg.pourN = n; mg.launchF = 1; mg.spawnT = 0.5; S.lever(); S.mini('pachinko', 'pour', n);
+    MINI.pachinko.lamps(mg, 'chase'); K.pxrFlash('mb_pachinko', 0, 0.9); const G = PKG(); if (G) { const x = K.lx((G.tray.x0 + G.tray.x1) / 2), y = K.ly(G.tray.y0 + 5); SHOW.burst(mg, x, y, 14, { col: C.silver, sp: [80, 220], ang: -Math.PI / 2, spread: 1.6, life: [0.25, 0.5], w: 200 }); SHOW.ring(mg, x, y, 8, 120, C.gold, { life: 0.35 }); } SHOW.shake(mg, 4); },
   // 奖励还在飞的时候不许离开（mg.pend），不然结算文字里会少东西
-  btns(mg) { const busy = mg.queue > 0 || mg.balls.length > 0 || mg.pend > 0, over = mg.buys >= 2; const c3 = mg.pay, c8 = M.nice(mg.pay * 2.2);
-    return [{ t: '投 3 颗', sub: c3 + ' 积分', dis: busy || over || this.run.wallet < c3, why: busy ? '钢珠还在跑' : over ? '台子关了' : '积分不够', fn: () => MINI.pachinko.buy.call(this, mg, 3, c3) }, { t: '投 8 颗', sub: c8 + ' 积分', gold: !busy && !over, dis: busy || over || this.run.wallet < c8, why: busy ? '钢珠还在跑' : over ? '台子关了' : '积分不够', fn: () => MINI.pachinko.buy.call(this, mg, 8, c8) }, { t: '离开', leave: 1, dis: busy, why: '等钢珠落完', fn: () => { const r = MINI.pachinko.sum(mg); this.miniFinish(r.t, r.c); } }]; },
+  btns(mg) { if (mg.phase === 'leave') return []; const busy = mg.queue > 0 || mg.rail.length > 0 || mg.balls.length > 0 || mg.pend > 0, over = mg.buys >= 2; const c3 = mg.pay, c8 = M.nice(mg.pay * 2.2);
+    return [{ t: '投 3 颗', sub: c3 + ' 积分', dis: busy || over || this.run.wallet < c3, why: busy ? '钢珠还在跑' : over ? '台子关了' : '积分不够', fn: () => MINI.pachinko.buy.call(this, mg, 3, c3) }, { t: '投 8 颗', sub: c8 + ' 积分', gold: !busy && !over, dis: busy || over || this.run.wallet < c8, why: busy ? '钢珠还在跑' : over ? '台子关了' : '积分不够', fn: () => MINI.pachinko.buy.call(this, mg, 8, c8) },
+      { t: '离开', leave: 1, dis: busy, why: '等钢珠落完', fn: () => { this.miniSet('leave'); MINI.pachinko.lamps(mg, 'off'); MINI.pachinko.lcd(mg, 'off'); S.mini('pachinko', 'off'); SHOW.ambient(mg, null); } }]; },
   // the settlement in one line (user ruling 2026-09-26: 「把相同的合并一下再显示，例如赚了还是赔了多少积分」): what went in, what came
   // back, won or lost on the score, then the other things counted by kind
   sum(mg) {
@@ -70,14 +82,30 @@ MINI.pachinko = { title: '弹珠台', img: 'e_pachinko', col: C.gold, text: '钢
       // 格子先亮 → 近处火花 → 舞台 → 奖励飞进计数器；另一颗珠子还在聚光里时，小奖只在格子上滚数字，不抢舞台
       const tier = PTIER[i], v = g.k === 'wallet' || g.k === 'rsup' ? g.v : 0, solo = !mg.reachB || tier >= 3; mg.pend++; S.mini('pachinko', 'slot');
       this.fx.spark(from.x, from.y, s.c, 8 + tier * 5, { v: 420 + tier * 120, dir: -Math.PI / 2, spread: 1.6 }); this.fx.ring(from.x, from.y, 8, 60 + tier * 24, s.c, 5, 0.3);
+      if (tier >= 3) {   // a tulip: it snaps open on the ball and shut again, the whole machine strobes in the prize colour, the LCD fireworks, the spout pays out
+        const k = i ? 1 : 0; mg.tulip[k] = 1; mg.tulT[k] = mg.t; MINI.pachinko.lcd(mg, 'win'); MINI.pachinko.lamps(mg, 'strobe', s.m); mg.payT = mg.t + 0.2; S.mini('pachinko', 'tulip'); S.mini('pachinko', 'edge'); SHOW.later(mg, 0.25, () => S.mini('pachinko', 'payout'));
+        K.pxrFlash('mb_pachinko', 0, 1.4); }
+      else if (mg.lamps.mode !== 'strobe') MINI.pachinko.lamps(mg, 'chase', s.m);
       SHOW.later(mg, 0.06, () => { if (solo) SHOW.win(this, mg, tier, { x: from.x, y: from.y - 40, col: s.c, v, label: WL(tier) }); else if (v) SHOW.roll(mg, v, from.x, from.y - 120, s.c, 0.4); });
-      if (tier >= 3) { S.mini('pachinko', 'edge'); SHOW.later(mg, tier === 4 ? 0.75 : 0.1, () => this.miniSay(s.n + '！', s.c, true)); }
-      SHOW.later(mg, tier === 4 ? 0.7 : tier === 3 ? 0.25 : 0.12, () => { const got = this.award([g], from); if (g.k === 'wallet') mg.gW += g.v; else if (g.k === 'rsup') mg.gS += g.v; else mg.won.push(...got); mg.pend--; });
-    } else { S.tone(200, 0.12, 'sine', 0.06, -80); if (reached) { if (i === 1 || i === 5) SHOW.near(this, mg, from.x, from.y - 10, '差一点！'); else SHOW.lose(this, mg); } }
+      SHOW.later(mg, tier === 4 ? 0.7 : tier === 3 ? 0.25 : 0.12, () => { const got = this.award([g], from); if (g.k === 'wallet') mg.gW += g.v; else if (g.k === 'rsup') mg.gS += g.v; else mg.won.push(...got); mg.pend--;
+        if (tier >= 3) SHOW.items(this, mg, [{ text: s.n, col: C.cream, size: 44 }].concat(got.map(t2 => ({ text: t2, col: s.c, size: 36 }))), { x: CX, y: SY + 440, dy: 50, gap: 0.2, t0: tier === 4 ? 0.5 : 0 }); });
+    } else { S.mini('pachinko', 'out'); SHOW.burst(mg, from.x, from.y + 10, 8, { ramp: [C.lavender, C.haze, C.slate, C.indigo], sp: [40, 120], ang: -Math.PI / 2, spread: 1.4, life: [0.2, 0.4] });
+      if (reached) { MINI.pachinko.lcd(mg, 'lose'); if (i === 1 || i === 5) SHOW.near(this, mg, from.x, from.y - 10, '差一点！'); else SHOW.lose(this, mg); } }
   },
+  // 点玻璃：玻璃上一圈反光涟漪、托盘里的钢珠一震；点在机台外面走框架的波纹
+  down(mg, px, py) { const G = PKG(), ax = K.ax(px), ay = K.ay(py); if (G && ax > G.glass.x0 && ax < G.glass.x1 && ay > G.glass.y0 && ay < G.glass.y1) { mg.ripple = { x: ax, y: ay, t0: mg.t }; mg.jolt = 0.9; S.mini('pachinko', 'peg', 2); SHOW.tap(this, mg, px, py); return; } return false; },
   tick(mg, dt) {
-    mg.slotF = mg.slotF.map(f => Math.max(0, f - dt * 2)); mg.slotP = mg.slotP.map(p => (p >= 0 ? p + dt : p)); mg.pegs.forEach(q => q.f = Math.max(0, q.f - dt * 4)); mg.launchF = Math.max(0, mg.launchF - dt * 3);
-    if (mg.queue > 0) { mg.spawnT -= dt; if (mg.spawnT <= 0) { mg.spawnT = 0.32; mg.queue--; mg.launchF = 1; mg.balls.push({ x: (PB.L + PB.R) / 2 + (rnd() - 0.5) * 60, y: PB.T + 30, vx: (rnd() - 0.5) * 120, vy: 0, tr: [] }); S.mini('pachinko', 'launch'); } }
+    const t = mg.t, G = PKG();
+    mg.slotF = mg.slotF.map(f => Math.max(0, f - dt * 2)); mg.slotP = mg.slotP.map(p => (p >= 0 ? p + dt : p)); mg.pegs.forEach(q => q.f = Math.max(0, q.f - dt * 4)); mg.launchF = Math.max(0, mg.launchF - dt * 3); mg.jolt = Math.max(0, mg.jolt - dt * 2);
+    [0, 1].forEach(k => { if (t - mg.tulT[k] > 0.9) mg.tulip[k] = Math.max(0, mg.tulip[k] - dt * 3); });
+    if (mg.lcd.mode === 'win' && t - mg.lcd.t0 > 3) MINI.pachinko.lcd(mg, 'idle'); if (mg.lcd.mode === 'lose' && t - mg.lcd.t0 > 0.6) MINI.pachinko.lcd(mg, 'idle');
+    if (mg.lamps.mode !== 'idle' && mg.lamps.mode !== 'off' && t - mg.lamps.t0 > (mg.lamps.mode === 'strobe' ? 2.6 : 1.4) && !mg.balls.length && !mg.rail.length && !mg.queue) MINI.pachinko.lamps(mg, 'idle');
+    if (mg.phase === 'leave') { if (mg.pt > 0.9 && !mg.left) { mg.left = 1; const r = MINI.pachinko.sum(mg); this.miniFinish(r.t, r.c); } return; }
+    // hovering the tray: its balls hop (a tick when the cursor comes onto it)
+    if (G) { const ax = K.ax(mg.mx), ay = K.ay(mg.my), on = ax > G.tray.x0 && ax < G.tray.x1 && ay > G.tray.y0 - 2 && ay < G.tray.y1 + 2; if (on) mg.jolt = Math.max(mg.jolt, 0.5); if (on && !mg.trayHov) S.mini('_', 'hover'); mg.trayHov = on; }
+    // 发射：把手一抖、「叮」，钢珠沿左边轨道冲上去，从顶上的入口掉进钉阵（进钉阵的位置和速度跟以前一样）
+    if (mg.queue > 0) { mg.spawnT -= dt; if (mg.spawnT <= 0) { mg.spawnT = 0.32; mg.queue--; mg.launchF = 1; mg.rail.push({ u: 0 }); S.mini('pachinko', 'launch'); } }
+    mg.rail.forEach(q => q.u += dt / PRAIL); mg.rail = mg.rail.filter(q => { if (q.u < 1) return true; mg.balls.push({ x: (PB.L + PB.R) / 2 + (rnd() - 0.5) * 60, y: PB.T + 30, vx: (rnd() - 0.5) * 120, vy: 0, tr: [] }); S.mini('pachinko', 'peg', 0); return false; });
     const W = PB.R - PB.L, sw = W / SLOTS.length, br = 10, pr = 7;
     for (let s = 0; s < 4; s++) { const h = dt / 4; mg.balls.forEach(b => {
       b.vy += 1500 * h; b.x += b.vx * h; b.y += b.vy * h;
@@ -90,32 +118,31 @@ MINI.pachinko = { title: '弹珠台', img: 'e_pachinko', col: C.gold, text: '钢
       if (b.y > PB.B - 16 && !b.done) { b.done = true; MINI.pachinko.land.call(this, mg, cl(Math.floor((b.x - PB.L) / sw), 0, SLOTS.length - 1), b); } }); }
     mg.balls = mg.balls.filter(b => !b.done);
     mg.balls.forEach(b => { b.tr.push(b.x, b.y); if (b.tr.length > 16) b.tr.splice(0, 2); });
-    // 听牌：珠子进最后三排、又正好在两边的格子上方——慢动作 + 聚光跟着它；同一时间只给一颗
-    if (!mg.reachB) { const b = mg.balls.find(b => !b.rc && b.vy > 0 && b.y > PROW && b.y < PB.B - 60 && (b.x < PB.L + sw * 1.25 || b.x > PB.R - sw * 1.25)); if (b) { b.rc = 1; mg.reachB = b; SHOW.reach(this, mg, { x: b.x, y: b.y, r: 110, lv: b.x < CX ? 2 : 1 }); SHOW.slowmo(mg, 0.35, 1.6); } }
-    const T0 = mg.sh && mg.sh.tense; if (mg.reachB && T0) { T0.x = mg.reachB.x; T0.y = mg.reachB.y; }
+    // 听牌：珠子进最后三排、又正好在两边的格子上方——慢动作 + 聚光跟着它；同一时间只给一颗。液晶屏里的月亮脸瞪大眼、两边的郁金香微微张开
+    if (!mg.reachB) { const b = mg.balls.find(b => !b.rc && b.vy > 0 && b.y > PROW && b.y < PB.B - 60 && (b.x < PB.L + sw * 1.25 || b.x > PB.R - sw * 1.25)); if (b) { b.rc = 1; b.row = 5; mg.reachB = b; mg.beatN = 0; SHOW.reach(this, mg, { x: b.x, y: b.y, r: 110, lv: b.x < CX ? 2 : 1 }); SHOW.slowmo(mg, 0.35, 1.6); MINI.pachinko.lcd(mg, 'reach'); MINI.pachinko.lamps(mg, 'chase', 'red'); S.mini('pachinko', 'reach'); } }
+    const hb = mg.reachB, T0 = mg.sh && mg.sh.tense; if (hb && T0) { T0.x = hb.x; T0.y = hb.y; }
+    // the reach ball: every row it drops through is a beat — a ring, a harder shake, the camera leans in, a higher tick
+    if (hb) { const row = Math.floor((hb.y - PB.T - 90 + 23) / 46); if (row > hb.row) { hb.row = row; const i = mg.beatN++; SHOW.ring(mg, hb.x, hb.y, 6, 50 + i * 12, C.gold, { life: 0.35 }); SHOW.shake(mg, 2 + i * 2); SHOW.zoom(mg, 0.012 + i * 0.006, hb.x, hb.y); S.mini('_', 'beat', { i, tier: 1 + i, up: i >= 2 }); }
+      [0, 1].forEach(k => { if (t - mg.tulT[k] > 0.9) mg.tulip[k] = Math.max(mg.tulip[k], 0.35 + 0.1 * Math.sin(t * 18)); }); }
   },
   draw(x, mg) {
-    const t = mg.t, W = PB.R - PB.L, sw = W / SLOTS.length;
-    x.fillStyle = K.RG(x, CX, SY + 350, 50, 700, [[0, '#2a1a3a'], [1, '#0a0610']]); x.fillRect(SX, SY, SW, SH);
-    U.box(x, PB.L - 30, PB.T - 30, W + 60, PB.B - PB.T + 50, C.gold); K.R(x, PB.L - 18, PB.T - 18, W + 36, PB.B - PB.T + 28, K.LG(x, 0, PB.T, 0, PB.B, [[0, '#3a1a5a'], [1, '#1a0a2a']]));
-    K.bulbs(x, PB.L - 24, PB.T - 24, W + 48, PB.B - PB.T + 38, t, C.gold, 36);
-    K.sign(x, 'PACHINKO', CX, PB.T + 30, { kind: 'gold', size: T.btn, num: true });
-    // 钉子被碰到：变白、一圈光往外扩
-    mg.pegs.forEach(q => { K.CI(x, q.x, q.y + 2, 7, 'rgba(0,0,0,0.5)'); K.CI(x, q.x, q.y, 7 + q.f * 2, q.f > 0.6 ? C.white : q.f ? C.butter : C.gold); K.CI(x, q.x - 2, q.y - 2, 2.4, C.white);
-      if (q.f) { K.GL(x, q.x, q.y, 24, C.gold, q.f * 0.8); x.save(); x.globalAlpha = q.f; x.strokeStyle = U.pal(C.butter); x.lineWidth = 3; x.beginPath(); x.arc(q.x, q.y, 10 + (1 - q.f) * 16, 0, 7); x.stroke(); x.restore(); } });
-    SLOTS.forEach((s, i) => { const x0 = PB.L + i * sw; if (PTIER[i] >= 3) K.GL(x, x0 + sw / 2, PB.B - 40, 80, s.c, 0.22 + 0.14 * Math.sin(t * 4 + i));
-      K.R(x, x0 + 2, PB.B - 70, sw - 4, 70, s.ic ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.6)'); if (mg.slotF[i]) { x.save(); x.globalAlpha = mg.slotF[i] * 0.5; K.R(x, x0 + 2, PB.B - 70, sw - 4, 70, s.ic ? C.butter : C.steel); x.restore(); } if (i) K.R(x, x0 - 3, PB.B - 70, 6, 70, C.gold);
-      if (s.ic) K.IC(x, s.ic, x0 + sw / 2, PB.B - 40, 44 * (mg.slotP[i] >= 0 ? K.pop(mg.slotP[i]) : 1)); else U.text(x, '空', x0 + sw / 2, PB.B - 40, T.body, C.haze); });
-    // 珠子拖一条残影；聚光里的那颗拖金色
-    mg.balls.forEach(b => { const hot = b === mg.reachB, n = b.tr.length / 2; for (let k = 0; k < n - 1; k++) { x.save(); x.globalAlpha = (k + 1) / n * (hot ? 0.55 : 0.3); K.CI(x, b.tr[k * 2], b.tr[k * 2 + 1], 10 * (k + 1) / n, hot ? C.gold : C.silver); x.restore(); }
-      if (hot) K.GL(x, b.x, b.y, 50, C.gold, 0.6 + 0.3 * Math.sin(t * 20)); K.CI(x, b.x, b.y + 3, 10, 'rgba(0,0,0,0.5)'); K.CI(x, b.x, b.y, 10, K.RG(x, b.x - 3, b.y - 3, 1, 12, [[0, C.white], [0.5, C.silver], [1, C.slate]])); });
-    // launcher & queue
-    K.RR(x, CX - 40, PB.T - 50, 80, 40, 8, C.abyss, C.gold, 3); if (mg.launchF) K.GL(x, CX, PB.T - 30, 70, C.gold, mg.launchF); for (let i = 0; i < Math.min(8, mg.queue); i++) K.CI(x, PB.R + 70, PB.B - 40 - i * 26, 10, C.silver);
-    U.text(x, '待发 ' + mg.queue, PB.R + 70, PB.B + 10, T.cap, C.cream);
-    mg.won.slice(-8).forEach((w, i) => U.text(x, w, SX + 150, SY + 170 + i * 40, T.cap, C.lime));
+    const t = mg.t, G = PKG(), A = (v, i) => (i % 2 ? K.ay(v) : K.ax(v));
+    const o = { balls: mg.balls.map(b => ({ x: K.ax(b.x), y: K.ay(b.y), hot: b === mg.reachB ? 1 : 0, tr: b.tr.map(A) })), pegF: mg.pegs.map(q => q.f), slotF: mg.slotF, tulip: mg.tulip, queue: mg.queue, handle: mg.launchF, turn: mg.queue || mg.rail.length ? 0.8 : 0,
+      pour: mg.pourT != null && t - mg.pourT < 0.8 ? cl((t - mg.pourT) / 0.5, 0, 1) : 0, payout: mg.payT != null && t > mg.payT ? cl((t - mg.payT) / 1.2, 0, 1) : 0, lcd: { mode: mg.lcd.mode, t: t - mg.lcd.t0 }, lamps: { mode: mg.lamps.mode, mat: mg.lamps.mat, t: t - mg.lamps.t0 },
+      jolt: mg.jolt, ripple: mg.ripple ? { x: mg.ripple.x, y: mg.ripple.y, age: t - mg.ripple.t0 } : null };
+    if (G) mg.rail.forEach(q => { const tr = []; for (let k = 5; k >= 1; k--) tr.push(...G.rail(q.u - k * 0.03)); const [rx, ry] = G.rail(q.u); o.balls.push({ x: rx, y: ry, tr }); });
+    if (!K.pxr(x, 'mb_pachinko', 0, 0, t, o)) { K.R(x, SX, SY, SW, SH, '#0a0610'); return; }
+    // the tray's count on its chrome lip
+    if (G && mg.queue) U.text(x, '×' + mg.queue, K.lx(G.tray.x0) - 34, K.ly((G.tray.y0 + G.tray.y1) / 2), T.cap, C.cream, { num: true });
   } };
 
 // ═════════════════════ 世界树 · pick fruit, water, or cut ═════════════════════
+// Pixel stage mb_tree (mc-pxroom-minib-tree.js): a giant tree in a cavern at the root of the worlds (its root hollows show a snowy
+// night, a lava field, a galaxy, a windy meadow), sap veins beating upward, seven fruits each drawn as its own sprite.
+// Picking: the fruit ripens beat by beat (SHOW.charge: its omen colour climbs to its true quality, a crack of light when it steps
+// up), a frozen instant, the stem snaps, it falls, squashes, bursts into juice in its colour; an epic fruit sets every vein of
+// the trunk burning gold and gold leaves fall. Watering: the sap climbs, a bud flowers, a fourth fruit swells. Cutting: the axe
+// bites, a glowing branch falls and unrolls a blueprint; cursed, the bark knots open into red eyes.
 // q = 揭晓时按哪一档品质演（只管演出）；rv = 落地时舞台上滚的数字
 const FRUITS = [
   { n: '生命果', c: C.pink, ic: 't_heart', q: 0, d: '领袖回复 40% 生命', f(g) { return '回复 ' + g.heroHeal(0.4) + ' 生命'; } },
@@ -125,68 +152,64 @@ const FRUITS = [
   { n: '灵魂果', c: C.violet, ic: 't_shard', q: 1, rv: () => 25, d: '灵魂碎片 +25', f(g, mg) { return g.giveShards(25, mg.from); } },
   { n: '黄金果', c: C.gold, ic: 't_coin', q: 2, rv: (mg) => M.nice(mg.P * 10), d: '积分 +', f(g, mg) { g.award([{ k: 'wallet', v: M.nice(mg.P * 10) }], mg.from); return '积分 +' + M.nice(mg.P * 10); } },
   { n: '幸运果', c: C.green, ic: 't_clover', q: 2, d: '本局事件好运 +10%，FEVER 好效果 +5%', f(g) { g.run.mods.tier = (g.run.mods.tier || 0) + 0.05; return g.buffRun('eventLuck', 0.1, '好运 +10%', C.green); } }];
+const TRG = () => M.PXR && M.PXR.MINIB && M.PXR.MINIB.tree;
+const TREE_HANG = [[95, 62.5], [150, 47.5], [205, 62.5], [150, 82.5]], TREE_LAND = 140;
 MINI.tree = { title: '世界树', img: 'e_tree', col: C.green, text: '树根扎进每一个世界。它结的果子，只允许你摘一个。',
-  init(mg) { const pool = FRUITS.slice().sort(() => rnd() - 0.5); mg.fr = pool.slice(0, 3).map((f, i) => ({ f, x: CX - 220 + i * 220, y: SY + 250 + (i === 1 ? -60 : 0), gone: false, vy: 0, fy: 0 })); mg.spare = pool[3]; mg.picks = 0; mg.allow = 1; mg.got = []; mg.watered = false; mg.bugs = [...Array(24)].map(() => ({ x: SX + rnd() * SW, y: SY + 100 + rnd() * 500, p: rnd() * 6 })); },
-  // 摘下之前先熟透：果子鼓起来、亮预兆色，可能裂开升一档（只往上、停在真实品质），然后才掉
-  pick(mg, i) { const F = mg.fr[i]; if (F.gone || mg.phase !== 'idle') return; F.gone = true; F.falling = true; mg.pickI = i; this.miniSet('fall'); S.mini('tree', 'pick');
-    const q = F.f.q; F.path = SHOW.omenPath(q); F.os = 0; F.ripe = 0.4 + 0.2 * q + 0.3 * (F.path.length - 1); SHOW.omen(this, mg, F.path[0]); if (q >= 2) SHOW.reach(this, mg, { x: F.x, y: F.y, r: 120, lv: q >= 3 ? 2 : 1 }); },
+  init(mg) { const pool = FRUITS.slice().sort(() => rnd() - 0.5); mg.fr = pool.slice(0, 3).map((f, i) => ({ f, k: FRUITS.indexOf(f), x: K.lx(TREE_HANG[i][0]), y: K.ly(TREE_HANG[i][1]), gone: false, vy: 0, fy: 0, q: 0, crack: 0 }));
+    mg.spare = pool[3]; mg.picks = 0; mg.allow = 1; mg.got = []; mg.watered = false; mg.hovI = -1; },
+  // 摘：果子一缩再鼓起、叶子抖落一把，然后一拍一拍熟透（预兆色往上走，升一档那拍果皮裂开透光）→ 卡帧 → 果柄断、掉下来
+  pick(mg, i) { const F = mg.fr[i]; if (!F || F.gone || mg.phase !== 'idle') return; F.gone = true; F.falling = true; F.ripeT = mg.t; mg.pickI = i; this.miniSet('ripen'); S.mini('tree', 'pick'); SHOW.press(this, mg, 'fruit', F.x, F.y, F.f.c); F.beat = mg.t;
+    const q = F.f.q; SHOW.omen(this, mg, 0);
+    F.ripeD = SHOW.charge(this, mg, { x: F.x, y: F.y, q, reveal: false, onBeat: (b, tq, up) => { F.q = tq; F.beat = mg.t; S.mini('tree', 'ripe', b); if (up) { F.crack = Math.min(1, F.crack + 0.5 + 0.5 * (tq >= q ? 1 : 0)); SHOW.stamp(mg, '升格！', F.x, F.y - 110, QC(tq), 44, 0.9); } },
+      onReveal: () => { F.drop = mg.t; F.q = q; S.mini('tree', 'snap'); this.miniSet('fall'); SHOW.burst(mg, F.x, F.y - 30, 12, { ramp: [C.lime, C.green, C.greenDeep, C.ink], sp: [80, 220], life: [0.3, 0.6] }); } }); },
+  water(mg) { const run = this.run; this.hold('rsup', run.loot.supplies); run.loot.supplies -= 30; this.release('rsup'); mg.watered = true; mg.allow++;
+    mg.fr.push({ f: mg.spare, k: FRUITS.indexOf(mg.spare), x: K.lx(TREE_HANG[3][0]), y: K.ly(TREE_HANG[3][1]), gone: false, grow: 0, q: 0, crack: 0 }); this.miniSet('water'); S.mini('tree', 'water'); SHOW.ring(mg, CX, K.ly(146), 10, 260, C.teal, { life: 0.5 }); },
   btns(mg) { if (mg.phase !== 'idle') return []; const b = mg.fr.map((F, i) => ({ t: '摘 ' + F.f.n, sub: F.f.d, dis: F.gone, why: '已经摘了', fn: () => MINI.tree.pick.call(this, mg, i) }));
-    b.push({ t: '浇灌', sub: '-30 本局物资 · 再结一个，能多摘一个', dis: mg.watered || this.run.loot.supplies < 30, why: mg.watered ? '已经浇过了' : '本局物资不够 30', fn: () => { const run = this.run; this.hold('rsup', run.loot.supplies); run.loot.supplies -= 30; this.release('rsup'); mg.watered = true; mg.allow++; mg.fr.push({ f: mg.spare, x: CX, y: SY + 330, gone: false, grow: 0 }); this.miniSet('water'); S.mini('tree', 'water'); } });
-    b.push({ t: '砍树枝', sub: '得到自然风格图纸，可能被诅咒', danger: 1, dis: mg.picks > 0, why: '树不再理你了', fn: () => this.miniSet('cut') });
+    b.push({ t: '浇灌', sub: '-30 本局物资 · 再结一个，能多摘一个', dis: mg.watered || this.run.loot.supplies < 30, why: mg.watered ? '已经浇过了' : '本局物资不够 30', fn: () => MINI.tree.water.call(this, mg) });
+    b.push({ t: '砍树枝', sub: '得到自然风格图纸，可能被诅咒', danger: 1, dis: mg.picks > 0, why: '树不再理你了', fn: () => { this.miniSet('cut'); S.mini('tree', 'swing'); } });
     return b; },
+  // a fruit under the cursor or the pointer: click to pick it; anywhere else the fireflies scatter
+  down(mg, px, py) { const i = mg.fr.findIndex(F => !F.gone && (F.grow == null || F.grow >= 1) && Math.hypot(px - F.x, py - F.y) < 48); if (i >= 0 && mg.phase === 'idle') { MINI.tree.pick.call(this, mg, i); return; } mg.tap = { x: K.ax(px), y: K.ay(py), t0: mg.t }; S.mini('tree', 'rustle'); return false; },
   tick(mg, dt) {
+    const t = mg.t;
+    // hover: the branch dips, the fruit swells and brightens, a wind chime (one note per fruit)
+    if (mg.phase === 'idle') { const h = mg.fr.findIndex(F => !F.gone && (F.grow == null || F.grow >= 1) && Math.hypot(mg.mx - F.x, mg.my - F.y) < 48); if (h !== mg.hovI) { mg.hovI = h; if (h >= 0) { S.mini('tree', 'chime', mg.fr[h].k); SHOW.hover(this, mg, 'fruit' + h, true); } } } else mg.hovI = -1;
     if (mg.phase === 'fall') { const F = mg.fr[mg.pickI];
-      if (mg.pt < F.ripe) { const k = Math.min(F.path.length - 1, Math.floor(mg.pt / F.ripe * F.path.length)); if (k !== F.os) { F.os = k; SHOW.promote(this, mg, F.x, F.y, F.path[k]); } }
-      else {
-        if (!F.drop) { F.drop = 1; this.fx.spark(F.x, F.y - 40, C.lime, 8, { v: 300, w: 3 }); if (F.f.q >= 3) SHOW.slowmo(mg, 0.5, 0.9); }
-        F.vy = (F.vy || 0) + 1800 * dt; F.fy = (F.fy || 0) + F.vy * dt; const T0 = mg.sh && mg.sh.tense; if (T0) T0.y = F.y + F.fy;
-        if (F.y + F.fy > FLOOR - 30) { F.fy = FLOOR - 30 - F.y; F.falling = false; F.land = mg.t; mg.from = { x: F.x, y: FLOOR - 30 }; this.miniSet('land'); S.mini('tree', 'fruit');
-          // 落地：果子先压扁 → 近处溅光 → 舞台按品质走中奖档 → 效果生效、奖励飞走
-          const q = F.f.q, tier = q + 1, qc = QC(q), v = F.f.rv ? F.f.rv(mg) : 0;
-          this.fx.spark(F.x, FLOOR - 40, qc, 10 + q * 6, { v: 520, dir: -Math.PI / 2, spread: 2.2 }); this.fx.ring(F.x, FLOOR - 30, 10, 80 + q * 30, qc, 5, 0.3);
-          SHOW.later(mg, 0.07, () => SHOW.win(this, mg, tier, { x: F.x, y: FLOOR - 70, col: q ? qc : F.f.c, v, label: WL(tier) }));
-          SHOW.later(mg, tier === 4 ? 0.7 : 0.16, () => { const tx = F.f.f(this, mg); mg.got.push(F.f.n + '（' + tx + '）'); this.miniSay(F.f.n + '：' + tx, F.f.c, tier >= 3); mg.picks++; mg.finD = [1, 1, 1.5, 2.2][tier - 1]; this.miniSet(mg.picks >= mg.allow ? 'done' : 'idle'); }); } } }
-    if (mg.phase === 'water') { const F = mg.fr[mg.fr.length - 1]; F.grow = cl(mg.pt / 1.2, 0, 1); if (mg.pt > 1.2) { this.miniSet('idle'); this.miniSay('树又结了一个' + F.f.n, F.f.c); S.mini('tree', 'grow'); this.fx.spark(F.x, F.y, F.f.c, 12, { v: 400, w: 4 }); } }
+      if (F.f.q >= 2 && !F.slow) { F.slow = 1; SHOW.slowmo(mg, 0.5, 0.7); }
+      F.vy = (F.vy || 0) + 1800 * dt; F.fy = (F.fy || 0) + F.vy * dt;
+      if (F.y + F.fy > FLOOR - 30) { F.fy = FLOOR - 30 - F.y; F.falling = false; F.land = mg.t; mg.from = { x: F.x, y: FLOOR - 30 }; this.miniSet('land'); S.mini('tree', 'fruit'); S.mini('tree', 'splat');
+        // 落地：果子压扁 → 果汁溅成品质色的像素花 → 舞台按品质走中奖档 → 效果生效、奖励飞走、逐项砸出
+        const q = F.f.q, tier = q + 1, qc = QC(q), v = F.f.rv ? F.f.rv(mg) : 0;
+        this.fx.spark(F.x, FLOOR - 40, qc, 10 + q * 6, { v: 520, dir: -Math.PI / 2, spread: 2.2 }); SHOW.shock(mg, F.x, FLOOR - 30, qc, { r: 160 + q * 60 }); SHOW.shake(mg, 6 + q * 4);
+        if (q >= 2) { mg.flareT = mg.t; S.mini('tree', 'bloom'); }
+        SHOW.later(mg, 0.07, () => SHOW.win(this, mg, tier, { x: F.x, y: FLOOR - 70, col: q ? qc : F.f.c, v, label: WL(tier) }));
+        SHOW.later(mg, tier >= 3 ? 0.5 : 0.16, () => { const tx = F.f.f(this, mg); mg.got.push(F.f.n + '（' + tx + '）'); SHOW.items(this, mg, [{ text: F.f.n, col: C.cream, size: 40 }, { text: tx, col: F.f.c, size: 34 }], { x: CX, y: SY + 420, dy: 48, gap: 0.2 });
+          mg.picks++; mg.finD = [1.4, 1.5, 2, 2.6][tier - 1]; this.miniSet(mg.picks >= mg.allow ? 'done' : 'idle'); }); } }
+    // watering: the glowing water climbs the veins (1.2 s), the bud flowers (1.2 s), the new fruit swells (0.8 s)
+    if (mg.phase === 'water') { const F = mg.fr[mg.fr.length - 1], u = mg.pt; F.grow = cl((u - 2.0) / 0.8, 0, 1);
+      if (u > 1.0 && !mg.bloomS) { mg.bloomS = 1; S.mini('tree', 'grow'); }
+      if (u > 2.8) { this.miniSet('idle'); this.miniSay('树又结了一个' + F.f.n, F.f.c); S.mini('tree', 'fruit'); SHOW.pop(mg, 'fruit' + (mg.fr.length - 1)); SHOW.burst(mg, F.x, F.y, 16, { col: F.f.c, sp: [100, 300], life: [0.3, 0.6] }); SHOW.ring(mg, F.x, F.y, 10, 120, F.f.c, { life: 0.4 }); } }
     if (mg.phase === 'cut' && !mg.cutDone && mg.pt > 0.5) {
-      // 斧子砍下 → 发光的树枝掉下来、图纸飞走（中）；被诅咒的话树皮上的眼睛一拍睁开
-      mg.cutDone = true; S.mini('tree', 'cut'); this.fx.kick(8); const bx = CX + 230, by = SY + 320; this.fx.spark(bx, by, C.tan, 14, { v: 600 });
-      const g = [K.bp('nature', 1)], cursed = rnd() < 0.5 - mg.luck;
-      SHOW.later(mg, 0.08, () => SHOW.win(this, mg, 2, { x: bx, y: by, col: C.butter }));
-      SHOW.later(mg, 0.2, () => { mg.cutGot = this.award(g, { x: bx, y: by + 80 }); });
-      if (cursed) SHOW.later(mg, 0.5, () => { mg.eyes = mg.t; SHOW.lose(this, mg); this.fx.flash(C.red, 0.18); this.fx.kick(5); S.mini('tree', 'curse'); mg.hurt = this.heroHurt(0.1); });
-      SHOW.later(mg, cursed ? 0.9 : 1.2, () => { if (this.mini !== mg) return; let tx = '你砍下一根发光的树枝，里面卷着一张图纸。'; if (cursed) tx += '树皮上的眼睛全睁开了。生命 -' + mg.hurt + '。'; const got = mg.cutGot || []; this.miniFinish(tx + (got.length ? '\n获得：' + got.join('、') : ''), cursed ? '#d0453c' : '#9cdc6a'); }); }
+      // 斧子砍下 → 发光的树枝掉下来、图纸展开飞走（中）；被诅咒的话树皮上的眼睛一个个睁开
+      mg.cutDone = true; S.mini('tree', 'cut'); this.fx.kick(8); SHOW.shake(mg, 10); const G = TRG(), cx0 = G ? K.lx(G.cut.x) : CX + 230, cy0 = G ? K.ly(G.cut.y) : SY + 320; this.fx.spark(cx0, cy0, C.tan, 14, { v: 600 });
+      SHOW.burst(mg, cx0, cy0, 18, { ramp: [C.cream, C.tan, C.brown, C.umber], sp: [120, 360], life: [0.3, 0.7], g: 500 });
+      const g = [K.bp('nature', 1)], cursed = rnd() < 0.5 - mg.luck; mg.cutCursed = cursed;
+      SHOW.later(mg, 0.55, () => { SHOW.win(this, mg, 2, { x: cx0, y: K.ly(120), col: C.butter }); mg.cutGot = this.award(g, { x: cx0, y: K.ly(130) }); if (mg.cutGot.length) SHOW.items(this, mg, [{ text: mg.cutGot.join('、'), col: C.butter, size: 36 }], { x: CX, y: SY + 440 }); });
+      if (cursed) SHOW.later(mg, 1.0, () => { mg.eyesT = mg.t; SHOW.lose(this, mg); SHOW.flash(mg, C.red, 0.4); SHOW.shake(mg, 8); this.fx.kick(5); S.mini('tree', 'curse'); mg.hurt = this.heroHurt(0.1); });
+      SHOW.later(mg, cursed ? 1.6 : 1.8, () => { if (this.mini !== mg) return; let tx = '你砍下一根发光的树枝，里面卷着一张图纸。'; if (cursed) tx += '树皮上的眼睛全睁开了。生命 -' + mg.hurt + '。'; const got = mg.cutGot || []; this.miniFinish(tx + (got.length ? '\n获得：' + got.join('、') : ''), cursed ? '#d0453c' : '#9cdc6a'); }); }
     if (mg.phase === 'done' && mg.pt > (mg.finD || 1.0) && !mg.fin) { mg.fin = true; this.miniFinish('世界树的叶子沙沙作响。你收下了：' + mg.got.join('；') + '。', '#9cdc6a'); }
-    mg.bugs.forEach(b => { b.p += dt; b.x += Math.cos(b.p * 0.7) * 20 * dt; b.y += Math.sin(b.p) * 14 * dt; });
   },
   draw(x, mg) {
-    const t = mg.t, sway = Math.sin(t * 0.8) * 4;
-    x.fillStyle = K.LG(x, 0, SY, 0, SY + SH, [[0, '#0a1a2a'], [0.6, '#10281e'], [1, '#081410']]); x.fillRect(SX, SY, SW, SH);
-    K.GL(x, CX, SY + 260, 520, '#6affb0', 0.25);
-    // trunk & roots
-    x.fillStyle = K.LG(x, CX - 70, 0, CX + 70, 0, [[0, C.umber], [0.5, C.brown], [1, C.umber]]); x.beginPath(); x.moveTo(CX - 60, FLOOR); x.quadraticCurveTo(CX - 40, SY + 400, CX - 30, SY + 280); x.lineTo(CX + 30, SY + 280); x.quadraticCurveTo(CX + 40, SY + 400, CX + 60, FLOOR); x.fill();
-    for (let i = 0; i < 6; i++) { const s = i < 3 ? -1 : 1, k = i % 3; x.strokeStyle = C.umber; x.lineWidth = 14 - k * 3; x.beginPath(); x.moveTo(CX + s * 40, FLOOR - 20); x.quadraticCurveTo(CX + s * (100 + k * 60), FLOOR - 10, CX + s * (160 + k * 110), FLOOR + 20); x.stroke(); }
-    for (let i = 0; i < 5; i++) { const y = SY + 320 + i * 60; K.GL(x, CX, y, 26, '#8fffb0', 0.4 + 0.4 * Math.sin(t * 2 + i)); K.R(x, CX - 4, y - 8, 8, 16, '#bfffd0'); }
-    // canopy
-    const L = [[CX, SY + 180, 260, C.tealDeep], [CX - 190, SY + 230, 170, C.tealDeep], [CX + 190, SY + 230, 170, C.tealDeep], [CX - 90, SY + 150, 170, C.greenDeep], [CX + 100, SY + 150, 170, C.greenDeep], [CX, SY + 110, 150, C.greenDeep]]; // 树冠：调色板里的深青在后、深绿在前
-    L.forEach(([a, b, rr, col], i) => K.EL(x, a + sway * (i % 2 ? 1 : -1), b, rr, rr * 0.55, col));
-    for (let i = 0; i < 60; i++) { const a = i * 2.4, rr = (i * 37) % 260; K.R(x, CX + Math.cos(a) * rr * 1.1 + sway, SY + 180 + Math.sin(a) * rr * 0.4, 4, 4, i % 3 ? 'rgba(160,255,190,0.25)' : 'rgba(255,255,200,0.3)'); }
-    // 诅咒：树皮上一排红眼睛睁开
-    if (mg.eyes) { const o = eo((t - mg.eyes) / 0.15); [[CX - 14, SY + 330], [CX + 16, SY + 400], [CX - 10, SY + 470], [CX - 120, SY + 200], [CX + 130, SY + 190]].forEach(([ex, ey]) => { K.EL(x, ex, ey, 16, 9 * o, C.red); K.CI(x, ex, ey, 4 * o, C.ink); }); }
-    // fruit
-    mg.fr.forEach(F => {
-      const qc = QC(F.f.q);
-      if (F.gone && !F.falling) { if (F.land != null) { const u = t - F.land; if (u < 0.18) { const k = 1 - u / 0.18; K.EL(x, F.x, FLOOR - 26, 44 * k + 6, 24 * k + 4, F.f.c); } K.GL(x, F.x, FLOOR - 30, 70, qc, 0.45 + 0.1 * Math.sin(t * 3)); } return; }
-      const g = F.grow == null ? 1 : F.grow, yy = F.y + (F.fy || 0), bob = F.falling ? 0 : Math.sin(t * 2 + F.x) * 5, om = F.path && mg.phase === 'fall' && mg.fr[mg.pickI] === F, rip = om ? (F.drop ? 1 : cl(mg.pt / F.ripe, 0, 1)) : 0, sw2 = 1 + 0.18 * eo(rip);
-      let jx = 0, jy = 0; if (om) { const j = SHOW.aura(x, F.x, yy + bob, 80, F.path[F.os], t, 0.35 + 0.65 * rip); if (!F.drop) { jx = j.dx; jy = j.dy; } }
-      if (!F.drop) K.LN(x, F.x, yy - 70, F.x, yy - 36 + bob, 3, '#3a6a2a');
-      if (F.drop && F.falling) for (let k = 1; k <= 4; k++) { x.save(); x.globalAlpha = 0.4 - k * 0.08; K.CI(x, F.x, yy - k * 20, 34 - k * 5, QC(F.path[F.os])); x.restore(); }
-      const fx0 = F.x + jx, fy0 = yy + bob + jy, rr = 34 * g * sw2;
-      K.GL(x, fx0, fy0, 90 * g, F.f.c, 0.7); K.CI(x, fx0, fy0, rr, F.f.c); K.CI(x, fx0 - 10 * g, fy0 - 10 * g, 10 * g, 'rgba(255,255,255,0.55)'); K.IC(x, F.f.ic, fx0, fy0, 40 * g * sw2);
-      if (!F.falling && mg.phase === 'idle') K.chipC(x, F.f.n, F.x, yy + 66, F.f.c); });
-    mg.bugs.forEach(b => { K.GL(x, b.x, b.y, 14, '#d8ff8a', 0.5 + 0.5 * Math.sin(b.p * 3)); K.R(x, b.x - 1, b.y - 1, 3, 3, '#f0ffb0'); });
-    if (mg.phase === 'cut') { const a = mg.pt < 0.5 ? -1.4 + mg.pt * 4 : 0.6; x.save(); x.translate(CX + 190, SY + 340); x.rotate(a); K.R(x, -6, -10, 12, 120, '#6a4a2a'); K.PL(x, [[6, -10], [46, -30], [46, 30], [6, 10]], '#c8d0dc'); x.restore();
-      if (mg.cutDone) { const u = cl((mg.pt - 0.5) / 0.55, 0, 1), by = SY + 300 + u * u * (FLOOR - SY - 330); K.GL(x, CX + 250, by, 90, C.butter, 0.7); x.save(); x.translate(CX + 250, by); x.rotate(0.3 + u * 1.2); K.R(x, -50, -6, 100, 12, C.brown); K.R(x, -50, -6, 100, 4, C.butter); K.EL(x, 30, -12, 14, 8, C.green); x.restore(); } }
-    if (mg.phase === 'water') { for (let i = 0; i < 20; i++) { const q = (mg.pt * 2 + i / 20) % 1; K.R(x, CX - 120 + i * 12, SY + 120 + q * 400, 3, 10, 'rgba(140,220,255,0.7)'); } }
+    const t = mg.t, fr = mg.fr.map((F, i) => { const xf = SHOW.xf(mg, 'fruit' + i), land = F.land != null ? t - F.land : -1;
+      return { k: F.k, x: K.ax(F.x), y: K.ay(F.y), grow: F.grow == null ? 1 : F.grow, gone: land > 1.3, fy: F.fy / 4, ripe: F.ripeT != null && F.drop == null ? cl((t - F.ripeT) / (F.ripeD || 1.8), 0, 1) : F.drop != null ? 1 : 0,
+        q: F.q || 0, crack: F.crack || 0, hov: i === mg.hovI ? 1 : xf.k > 1.02 ? 0.5 : 0, land, beat: F.beat != null && t - F.beat < 0.6 ? t - F.beat : -1 }; });
+    const wu = mg.phase === 'water' ? mg.pt : mg.watered ? 9 : -1;
+    const o = { fruits: fr, sap: wu >= 0 ? (wu < 2.2 ? cl(wu / 1.2, 0, 1) : cl(1 - (wu - 2.2) / 1.2, 0, 1)) : 0, bloom: wu >= 0 ? cl((wu - 1.0) / 1.2, 0, 1) : 0,
+      cut: mg.phase === 'cut' ? { a: cl(mg.pt / 0.5, 0, 1) ** 2, hit: mg.pt >= 0.5, branch: cl((mg.pt - 0.5) / 0.55, 0, 1) } : null, eyes: mg.eyesT != null ? cl((t - mg.eyesT) / 0.6, 0, 1) : 0,
+      flare: mg.flareT != null ? cl(1 - (t - mg.flareT) / 1.6, 0, 1) : 0, tier: mg.picks ? 2 : 0, dim: mg.phase === 'done' ? cl((mg.pt - (mg.finD || 1) + 0.6) / 0.6, 0, 1) : 0,
+      tap: mg.tap ? { x: mg.tap.x, y: mg.tap.y, age: t - mg.tap.t0 } : null };
+    if (!K.pxr(x, 'mb_tree', 0, 0, t, o)) K.R(x, SX, SY, SW, SH, '#081410');
+    if (mg.phase === 'idle') mg.fr.forEach((F, i) => { if (!F.gone && (F.grow == null || F.grow >= 1)) K.chipC(x, F.f.n, F.x, F.y + 58, F.f.c); });
   } };
 
 // ═════════════════════ 塔罗 / 砸金蛋 · pick from covered things ═════════════════════
@@ -202,48 +225,81 @@ const TAROT = [
   { n: '高塔', c: C.red, ic: 'r_demon', good: 0, f(g) { return '领袖受伤 ' + g.heroHurt(0.15); } },
   { n: '死神', c: C.steel, ic: 'r_skel', good: 0, f(g, mg) { const u = M.pick(g.run.roster); if (u) g.run.roster = g.run.roster.filter(x => x !== u); g.award([K.bp()], mg.from); return (u ? M.DB[u.type].n + ' 被带走了，' : '') + '留下一张图纸'; } }];
 function pickInit(mg, pool, n) { const s = pool.slice().sort(() => rnd() - 0.5); mg.items = s.slice(0, n).map((f, i) => ({ f, x: CX - (n - 1) * 150 + i * 300, y: SY + 330, open: 0, picked: false })); mg.done = 0; mg.got = []; }
+// a pixel-cast NPC (pcd module) on the stage: anchor (where it meets the table line) at art (ax, ay), 4× like the stage.
+// st = state name, u = seconds into it; idle and move loop, the others play once and hold their last frame.
+const NPC_ST = ['idle', 'move', 'attack', 'charge', 'cast', 'recover', 'hurt', 'death'];
+// o (optional): { f0 first frame, loop [a, b] frames to cycle once played through, frames [..] an explicit cycle }
+function npcFrame(key, st, u, o) {
+  const P = M.PCDG; if (!P || !P.has(key)) return null; o = o || {}; const b = P.body(key), si = Math.max(0, NPC_ST.indexOf(st)), d = (b.dur && b.dur[si]) || 1, n = Math.max(1, Math.ceil(d * 12 - 1e-6)), f = Math.floor(u * 12) + (o.f0 || 0);
+  let fi; if (o.frames) fi = o.frames[Math.floor(u * 6) % o.frames.length]; else if (st === 'idle' || st === 'move') fi = f % n; else if (o.loop && f > o.loop[1]) fi = o.loop[0] + (f - o.loop[0]) % (o.loop[1] - o.loop[0] + 1); else fi = Math.min(n - 1, f);
+  return P.bodyFrame(key, st, fi, o.tint || '', K.ART);
+}
+function npcDraw(x, c, ax, ay) { if (!c) return false; const sm = x.imageSmoothingEnabled; x.imageSmoothingEnabled = false; x.drawImage(c, Math.round(K.lx(ax) - c.cx), Math.round(K.ly(ay) - c.footY), c.width, c.height); x.imageSmoothingEnabled = sm; return true; }
+function npc(x, key, ax, ay, st, u, o) { return npcDraw(x, npcFrame(key, st, u, o), ax, ay); }
+// Pixel stage mb_tarot (+ mb_tarot_fg in front of her): a fortune teller's velvet tent — star lanterns throwing star spots on the
+// curtains, a crystal ball, a black cat, three tarot cards floating over the round table. She (pcd module 'teller') sits between the
+// two halves. Choosing a card: it squeezes and lifts, she raises her hands, the omen charges beat by beat (SHOW.charge: the card
+// trembles, its aura climbs through the quality colours, a crack of light when it steps up, the crystal ball and the star spots
+// with it), a frozen instant, then it flips — more turns the better it is — and slams down face up; she recoils at a good card and
+// grins at a bad one. The other two turn over after. Leaving: the cards fly back to her hands and she dissolves into smoke.
+const TRC = [[90, 106], [150, 106], [210, 106]], TRY = K.ly(106), TRX = (i) => K.lx(TRC[i][0]), TELLER = [150, 126];
+const TRP = () => M.PXR && M.PXR.MINIB && M.PXR.MINIB.tarot;
 MINI.tarot = { title: '占卜摊', img: 'e_card', col: C.violet, text: '蒙着眼的占卜师把三张牌扣在桌上。「只能翻一张。」',
-  init(mg) { pickInit(mg, TAROT, 3); this.miniSet('deal'); S.mini('tarot', 'shuffle'); },
-  // 牌早就定了；翻开之前它先悬起来亮预兆（越好亮得越久、抖得越厉害，可能裂开升格），坏牌一拍就翻
-  choose(mg, i) { if (mg.phase !== 'idle') return; const it = mg.items[i]; it.picked = true; mg.cur = i; const q = it.f.good ? it.f.q : -1;
-    mg.path = q >= 0 ? SHOW.omenPath(q) : null; mg.os = 0; mg.omenD = q < 0 ? 0.12 : 0.45 + 0.22 * q + 0.35 * (mg.path.length - 1); mg.revAt = null; mg.flipS = 0;
-    this.miniSet('flip'); S.mini('tarot', 'lift'); if (q >= 0) SHOW.omen(this, mg, mg.path[0]); if (q >= 2) SHOW.reach(this, mg, { x: it.x, y: it.y - 70, r: 200, lv: q >= 3 ? 2 : 1 }); },
-  btns(mg) { if (mg.phase === 'idle') return mg.items.map((it, i) => ({ t: ['左边', '中间', '右边'][i], sub: '翻开这张', fn: () => MINI.tarot.choose.call(this, mg, i) })); if (mg.phase === 'shown') return [{ t: '离开', leave: 1, gold: 1, fn: () => this.miniFinish('你翻开了「' + mg.items[mg.cur].f.n + '」：' + mg.got[0] + '。另外两张是「' + mg.items.filter((_, i) => i !== mg.cur).map(o => o.f.n).join('」「') + '」。', mg.items[mg.cur].f.c) }]; return []; },
-  down(mg, px, py) { if (mg.phase !== 'idle') return; mg.items.forEach((it, i) => { if (Math.abs(px - it.x) < 110 && Math.abs(py - it.y) < 160) MINI.tarot.choose.call(this, mg, i); }); },
+  init(mg) { pickInit(mg, TAROT, 3); mg.items.forEach((it, i) => { it.x = TRX(i); it.y = TRY; it.flip = 0; it.q = -1; it.crack = 0; }); mg.hovI = -1; mg.tel = { st: 'attack', t0: 0 }; this.miniSet('deal'); S.mini('tarot', 'shuffle'); },
+  tel(mg, st) { mg.tel = { st, t0: mg.t }; },
+  // 牌早就定了；翻开之前它先悬起来，按预兆一拍一拍加码（可能裂开升格），坏牌一拍就翻
+  choose(mg, i) { if (mg.phase !== 'idle') return; const it = mg.items[i]; it.picked = true; mg.cur = i; const q = it.f.good ? it.f.q : -1; it.liftT = mg.t;
+    this.miniSet('omen'); S.mini('tarot', 'lift'); SHOW.press(this, mg, 'card' + i, it.x, it.y, C.gold); MINI.tarot.tel(mg, 'charge');
+    if (q < 0) { SHOW.later(mg, 0.2, () => MINI.tarot.flip.call(this, mg)); return; }
+    SHOW.omen(this, mg, 0); it.q = 0;
+    SHOW.charge(this, mg, { x: it.x, y: it.y - 56, q, reveal: false, id: 'card' + i, onBeat: (b, tq, up) => { it.q = tq; mg.beatT = mg.t; S.mini('tarot', 'omen', b); if (up) it.crack = Math.min(1, it.crack + 0.5); },
+      onReveal: () => MINI.tarot.flip.call(this, mg) }); },
+  // the flip: it turns over (1 half-turn, epic 3, legendary 5) while it falls back to the cloth, then slams down face up
+  flip(mg) { const it = mg.items[mg.cur], q = it.f.good ? it.f.q : -1; it.flipT = mg.t; it.flipN = q < 0 ? 1 : [1, 1, 3, 5][q]; it.flipD = 0.2 + 0.1 * (it.flipN - 1); this.miniSet('flip'); S.mini('tarot', 'flip'); MINI.tarot.tel(mg, 'cast'); },
+  land(mg) {
+    const it = mg.items[mg.cur], q = it.f.good ? it.f.q : -1; it.done = true; it.open = 1; mg.slamT = mg.t; mg.from = { x: it.x, y: it.y }; SHOW.shake(mg, 6);
+    if (q >= 0) { const tier = q + 1, qc = QC(q), v = it.f.rv ? it.f.rv(mg) : 0; S.mini('tarot', 'good'); it.glowT = mg.t; MINI.tarot.tel(mg, 'hurt');
+      SHOW.win(this, mg, tier, { x: it.x, y: it.y - 20, col: q ? qc : it.f.c, v, label: WL(tier), id: 'card' + mg.cur });
+      SHOW.later(mg, tier === 4 ? 0.7 : 0.2, () => { const tx = it.f.f(this, mg); mg.got.push(tx); SHOW.items(this, mg, [{ text: '「' + it.f.n + '」', col: C.cream, size: 40 }, { text: tx, col: it.f.c, size: 34 }], { x: CX, y: SY + 600, dy: 44, gap: 0.2 }); });
+      mg.revAt = mg.pt + [0.9, 1.1, 1.7, 2.7][tier - 1]; }
+    else { const tx = it.f.f(this, mg); mg.got.push(tx); this.miniSay('「' + it.f.n + '」' + tx, it.f.c, true); S.mini('tarot', 'bad'); this.fx.kick(6); SHOW.flash(mg, C.red, 0.35); SHOW.shake(mg, 8); SHOW.lose(this, mg); it.badT = mg.t; MINI.tarot.tel(mg, 'recover'); mg.revAt = mg.pt + 0.45; }
+  },
+  btns(mg) { if (mg.phase === 'idle') return mg.items.map((it, i) => ({ t: ['左边', '中间', '右边'][i], sub: '翻开这张', fn: () => MINI.tarot.choose.call(this, mg, i) }));
+    if (mg.phase === 'shown') return [{ t: '离开', leave: 1, gold: 1, fn: () => { this.miniSet('leave'); MINI.tarot.tel(mg, 'death'); S.mini('tarot', 'leave'); SHOW.ambient(mg, null); } }]; return []; },
+  down(mg, px, py) { const i = mg.items.findIndex(it => Math.abs(px - it.x) < 84 && Math.abs(py - it.y) < 124); if (i >= 0 && mg.phase === 'idle') { MINI.tarot.choose.call(this, mg, i); return; } mg.tap = { x: K.ax(px), y: K.ay(py), n: (mg.tap ? mg.tap.n : 0) + 1 }; return false; },
   tick(mg) {
-    if (mg.phase === 'deal' && mg.pt > 0.9) this.miniSet('idle');
-    if (mg.phase === 'flip') { const it = mg.items[mg.cur], D = mg.omenD, q = it.f.good ? it.f.q : -1;
-      if (mg.path && mg.pt < D) { const k = Math.min(mg.path.length - 1, Math.floor(mg.pt / D * mg.path.length)); if (k !== mg.os) { mg.os = k; SHOW.promote(this, mg, it.x, it.y - 70, mg.path[k]); } }
-      if (mg.pt >= D && !mg.flipS) { mg.flipS = 1; S.mini('tarot', 'flip'); }
-      it.open = cl((mg.pt - D) / 0.2, 0, 1);
-      // 翻过来的一瞬间砸回桌面 → 近处火花 → 舞台中奖档 → 效果生效
-      if (it.open >= 1 && !it.done) { it.done = true; mg.slamT = mg.t; mg.from = { x: it.x, y: it.y };
-        if (q >= 0) { const tier = q + 1, qc = QC(q), v = it.f.rv ? it.f.rv(mg) : 0; S.mini('tarot', 'good'); this.fx.kick(3 + q * 2); this.fx.spark(it.x, it.y, qc, 12 + q * 6, { v: 600 }); this.fx.ring(it.x, it.y, 20, 180, it.f.c, 5, 0.3);
-          SHOW.later(mg, 0.07, () => SHOW.win(this, mg, tier, { x: it.x, y: it.y, col: q ? qc : it.f.c, v, label: WL(tier) }));
-          SHOW.later(mg, tier === 4 ? 0.7 : 0.15, () => { const tx = it.f.f(this, mg); mg.got.push(tx); this.miniSay('「' + it.f.n + '」' + tx, it.f.c, true); });
-          mg.revAt = mg.pt + [0.8, 1.0, 1.6, 2.6][tier - 1]; }
-        else { const tx = it.f.f(this, mg); mg.got.push(tx); this.miniSay('「' + it.f.n + '」' + tx, it.f.c, true); S.mini('tarot', 'bad'); this.fx.kick(6); this.fx.flash(C.red, 0.12); SHOW.lose(this, mg); mg.revAt = mg.pt + 0.45; } }
-      if (mg.revAt != null && mg.pt > mg.revAt) this.miniSet('reveal'); }
-    if (mg.phase === 'reveal') { mg.items.forEach((it, i) => { if (i !== mg.cur) it.open = cl((mg.pt - i * 0.2) / 0.4, 0, 1); }); if (mg.pt > 1.2) this.miniSet('shown'); }
+    const t = mg.t;
+    if (mg.phase === 'deal') { if (mg.pt > 1.1) { this.miniSet('idle'); MINI.tarot.tel(mg, 'idle'); } }
+    if (mg.phase === 'idle') { const h = mg.items.findIndex(it => Math.abs(mg.mx - it.x) < 84 && Math.abs(mg.my - it.y) < 124); if (h !== mg.hovI) { mg.hovI = h; if (h >= 0) { S.mini('tarot', 'hover', h); SHOW.hover(this, mg, 'card' + h, true); } } } else mg.hovI = -1;
+    if (mg.phase === 'flip') { const it = mg.items[mg.cur], u = t - it.flipT; it.flip = Math.min(it.flipN, it.flipN * eo(u / it.flipD)); if (u >= it.flipD && !it.done) MINI.tarot.land.call(this, mg); }
+    if (mg.phase === 'flip' && mg.revAt != null && mg.pt > mg.revAt) { this.miniSet('reveal'); if (mg.tel.st !== 'recover') MINI.tarot.tel(mg, 'idle'); }
+    if (mg.phase === 'reveal') { mg.items.forEach((it, i) => { if (i === mg.cur) return; const j = i < mg.cur ? i : i - 1, k = cl((mg.pt - j * 0.2) / 0.4, 0, 1); if (k > 0 && !it.flipS) { it.flipS = 1; S.mini('tarot', 'flip'); } it.flip = eo(k); if (k >= 1 && !it.done) { it.done = true; it.open = 1; it.glowT = t; SHOW.pop(mg, 'card' + i, { k0: 0.8 }); } });
+      if (mg.pt > 1.2) { this.miniSet('shown'); MINI.tarot.tel(mg, 'idle'); } }
+    if (mg.phase === 'leave' && mg.pt > 1.4 && !mg.left) { mg.left = 1; const it = mg.items[mg.cur]; this.miniFinish('你翻开了「' + it.f.n + '」：' + mg.got[0] + '。另外两张是「' + mg.items.filter((_, i) => i !== mg.cur).map(o => o.f.n).join('」「') + '」。', it.f.c); }
   },
   draw(x, mg) {
-    const t = mg.t; x.fillStyle = K.RG(x, CX, SY + 350, 40, 700, [[0, '#2a1440'], [1, '#08040e']]); x.fillRect(SX, SY, SW, SH);
-    K.EL(x, CX, FLOOR + 40, 560, 110, '#3a1a2a'); K.EL(x, CX, FLOOR + 30, 540, 96, '#5a2a3a');
-    for (let i = 0; i < 3; i++) { const cx0 = [SX + 110, SX + SW - 110, CX][i]; K.GL(x, cx0, FLOOR - 120, 60, '#ffb060', 0.6 + 0.2 * Math.sin(t * 7 + i)); K.R(x, cx0 - 8, FLOOR - 110, 16, 60, '#e8dcc4'); K.EL(x, cx0, FLOOR - 124 + Math.sin(t * 9 + i), 6, 12, '#ffcc33'); }
-    K.SP(x, 'old', CX, SY + 190, 150); K.GL(x, CX, SY + 120, 120, '#c890ff', 0.3);
-    mg.items.forEach((it, i) => { const q = mg.phase === 'deal' ? eb((mg.pt - i * 0.15) / 0.5) : 1; const ax = CX + (it.x - CX) * q, ay = it.y + (1 - q) * 300, sx = Math.abs(Math.cos(it.open * Math.PI)), face = it.open > 0.5, hov = mg.phase === 'idle' && Math.abs(mg.mx - it.x) < 110 && Math.abs(mg.my - it.y) < 160;
-      // 选中的牌：悬起来、亮预兆、发抖；翻开时砸回桌面
-      const sel = it.picked && mg.cur === i, om = sel && mg.phase === 'flip' && !it.done, lift = om ? eo(mg.pt / 0.25) * 70 : sel && mg.slamT != null ? 70 * (1 - eo((t - mg.slamT) / 0.12)) : 0, pop = sel && mg.slamT != null ? K.pop(t - mg.slamT) : 1, gq = it.f.good ? it.f.q : -1;
-      let jx = 0, jy = 0; if (om && mg.path) { const j = SHOW.aura(x, ax, ay - lift, 170, mg.path[mg.os], t, 0.3 + 0.7 * cl(mg.pt / mg.omenD, 0, 1)); jx = j.dx * 1.5; jy = j.dy * 1.5; }
-      if (sel && it.done && gq >= 0) K.GL(x, ax, ay, 230, QC(gq), 0.35 + 0.15 * Math.sin(t * 5));
-      x.save(); x.translate(ax + jx, ay - (hov ? 16 : 0) - lift + Math.sin(t * 2 + i) * 4 + jy); x.scale(Math.max(0.02, sx) * pop, pop); if (hov) K.GL(x, 0, 0, 200, C.violet, 0.5);
-      // 牌：金框 + 3px 墨边 + 9px 硬投影；牌面米色，牌背靛蓝
-      K.R(x, -94, -144, 206, 306, C.ink); U.box(x, -100, -150, 200, 300, C.gold); K.R(x, -92, -142, 184, 284, face ? K.LG(x, 0, -142, 0, 142, [[0, C.cream], [1, C.butter]]) : C.indigo);
-      if (face) { K.GL(x, 0, -20, 110, it.f.c, 0.5); K.IC(x, it.f.ic, 0, -30, 110); U.text(x, it.f.n, 0, 100, T.title, it.f.good ? C.umber : C.wine, { shadow: false }); if (it.picked) K.RR(x, -99, -149, 198, 298, 0, null, C.gold, 6); else K.R(x, -92, -142, 184, 284, 'rgba(7,6,15,0.45)'); }
-      else { for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4 + t * 0.3; K.LN(x, Math.cos(a) * 30, Math.sin(a) * 30, Math.cos(a) * 70, Math.sin(a) * 70, 3, C.gold); } K.CI(x, 0, 0, 26, C.gold); K.CI(x, 0, 0, 14, C.indigo); K.CI(x, 0, 0, 7, C.butter);
-        if (om && mg.path && mg.os > 0) CRK.slice(0, Math.min(4, mg.os * 2)).forEach(pts => crack(x, pts, QC(mg.path[mg.os]))); }
-      x.restore(); });
-  } };
+    const t = mg.t, TP = TRP(), cards = mg.items.map((it, i) => { const xf = SHOW.xf(mg, 'card' + i), sel = mg.cur === i && it.picked;
+      let lift = 0; if (sel && it.liftT != null) { const u = t - it.liftT; lift = !it.done ? 14 * eo(u / 0.25) : 14 * (1 - eo((t - mg.slamT) / 0.12)); } else if (mg.hovI === i) lift = 4;
+      return { face: TAROT.indexOf(it.f), flip: it.flip || 0, lift, hov: mg.hovI === i ? 1 : 0, lean: mg.hovI === i ? cl((mg.mx - it.x) / 84, -1, 1) : 0, press: xf.white, pop: xf.k - 1,
+        q: sel && !it.done ? it.q : sel && it.done && it.f.good ? it.f.q : -1, omen: sel && !it.done && it.q >= 0 ? 0.4 + 0.6 * cl((t - it.liftT) / 1.6, 0, 1) : 0, shake: sel && !it.done && it.q >= 0 ? 0.3 + 0.2 * it.q : 0, crack: it.crack || 0,
+        glow: it.glowT != null ? (i === mg.cur ? 0.6 + 0.4 * Math.max(0, 1 - (t - it.glowT)) : 0.3) : 0, dealt: mg.phase === 'deal' ? cl((mg.pt - i * 0.15) / 0.5, 0, 1) : mg.phase === 'leave' ? 1 - cl((mg.pt - i * 0.12) / 0.4, 0, 1) : 1 }; });
+    const it = mg.cur != null ? mg.items[mg.cur] : null, charging = mg.phase === 'omen' && it && it.q >= 0;
+    const o = { cards, ball: charging ? 0.35 + 0.6 * cl((t - it.liftT) / 1.6, 0, 1) : it && it.done && it.f.good ? Math.max(0.6, 1 - (t - mg.slamT) * 0.5) : 0.25,
+      stars: charging ? { spin: 0.6, q: it.q } : it && it.done && it.f.good ? { spin: 0.5, q: it.f.q } : { spin: 0.2, q: -1 }, cat: mg.hovI >= 0 || (mg.tap && mg.tap.n) ? 1 : 0.3,
+      tier: it && it.done && it.f.good ? it.f.q + 1 : 0, dim: SHOW.frozen(mg) ? 1 : 0, tap: mg.tap, frontI: mg.frontOK && mg.cur != null && mg.phase !== 'leave' ? mg.cur : undefined }; mg.tarO = o;
+    if (!K.pxr(x, 'mb_tarot', 0, 0, t, o)) { K.R(x, SX, SY, SW, SH, '#08040e'); return; }
+    // the fortune teller sits between the tent and the table (pcd module 'teller'; her dissolve is her death state)
+    const ts = mg.tel.st, tu = t - mg.tel.t0;
+    if (ts === 'idle' && mg.hovI >= 0) npc(x, 'teller', TELLER[0], TELLER[1], 'move', tu, { frames: [mg.hovI * 2, mg.hovI * 2 + 1] });   // she leans toward the card under the cursor
+    else npc(x, 'teller', TELLER[0], TELLER[1], ts, tu, ts === 'charge' ? { loop: [12, 15] } : ts === 'hurt' ? { f0: 5 } : ts === 'death' ? { f0: 5 } : null);
+    K.pxr(x, 'mb_tarot_fg', 0, 0, t, o, 'tarot_fg');
+    // the name on the plate of each face-up card
+    if (TP) mg.items.forEach((c, i) => { if (i === o.frontI) return; MINI.tarot.plate(x, c, cards[i]); });
+  },
+  plate(x, c, cd) { if (!(Math.round(cd.flip) % 2) || Math.abs(Math.cos(cd.flip * Math.PI)) < 0.8 || cd.dealt < 1 || Math.abs(cd.pop || 0) > 0.04) return; U.text(x, c.f.n, c.x, c.y + 96 - cd.lift * 4, 22, c.f.good ? C.umber : C.wine, { shadow: false }); },
+  // the card being revealed, above the show's dim and rays
+  front(x, mg) { mg.frontOK = true; const o = mg.tarO; if (!o || o.frontI == null) return; K.pxr(x, 'mb_tarot_card', 0, 0, mg.t, o, 'tarot_card'); MINI.tarot.plate(x, mg.items[o.frontI], o.cards[o.frontI]); } };
+
 const EGGS = [
   { n: '满满的积分', c: C.gold, ic: 'e_coin', q: 2, rv: (mg) => M.nice(mg.P * 12), f(g, mg) { const v = M.nice(mg.P * 12); g.award([{ k: 'wallet', v }], mg.from); return '积分 +' + v; } },
   { n: 'FEVER 预热', c: C.violet, ic: 'gem', q: 1, f(g) { g.run.mods.feverStart = (g.run.mods.feverStart || 0) + 0.15; return '本局每场战斗开局 FEVER 槽 +15%'; } },
@@ -252,111 +308,178 @@ const EGGS = [
   { n: '空的', c: C.lavender, ic: 'u_mask', q: -1, f() { return '什么也没有'; } },
   { n: '一条蛇', c: C.red, ic: 'r_demon', q: -1, f(g) { return '咬了领袖一口 ' + g.heroHurt(0.08); } }];
 const HS = 0.13; // 锤子落下要多久（和 eggs.hammer 的声音对齐）
+// Pixel stage mb_eggs (mc-pxroom-minib-eggs.js): a temple-fair night stage — red velvet, festoon bulbs, lanterns, a gong, three
+// embossed gold eggs on lacquer drums. The golden hammer follows the cursor; over an egg it rises and the egg rocks. Each blow is a
+// beat (SHOW.beat: harder each time, the omen colour leaking through the cracks, a tint flash on the blow that steps it up); the last
+// blow freezes a moment, then the shell bursts — the top half spins away, a pillar of light, confetti, the prize pops out spinning;
+// the gong rings for a big win, firecrackers go off for the blueprint. Empty and snake: one blow, one beat.
+const EGGY = K.ly(92), EGGX = (i) => CX - 300 + i * 300;
+const EGD = () => M.PXR && M.PXR.MINIB && M.PXR.MINIB.eggs;
 MINI.eggs = { title: '砸金蛋', img: 'e_egg', col: C.gold, text: '三只金蛋在台子上微微发烫。第一锤要钱，第二锤要双倍。',
-  init(mg) { pickInit(mg, EGGS, 3); mg.smash = 0; mg.hammer = null; },
-  cost(mg) { return mg.smash ? mg.pay * 2 : mg.pay; },
+  init(mg) { pickInit(mg, EGGS, 3); mg.items.forEach((it, i) => { it.x = EGGX(i); it.y = EGGY; it.hitT = -9; }); mg.smash = 0; mg.hovI = -1; mg.bulbs = { mode: 'idle', q: 0 }; },
+  EGGS, cost(mg) { return mg.smash ? mg.pay * 2 : mg.pay; },
   // 付一次钱，锤几下由里面是什么决定：空的和蛇一锤就碎；好东西先裂几道缝、缝里漏出预兆色（可能升格），最后一锤才碎
   hit(mg, i) { const it = mg.items[i]; if (mg.phase !== 'idle' || it.picked || mg.smash >= 2) return; if (!this.miniPay(MINI.eggs.cost(mg))) return; mg.smash++; it.picked = true; mg.cur = i;
-    const q = it.f.q; it.path = q >= 0 ? SHOW.omenPath(q) : null; it.n = q >= 0 ? 1 + it.path.length : 1; it.k = 0; it.cr = 0;
-    mg.st = [0]; for (let j = 1; j < it.n; j++) mg.st.push(mg.st[j - 1] + 0.34 + 0.08 * j + (j === it.n - 1 && q >= 2 ? 0.3 : 0)); mg.sw = 1; mg.idleAt = null;
-    this.miniSet('smash'); S.mini('eggs', 'hammer'); },
+    const q = it.f.q; it.path = q >= 0 ? SHOW.omenPath(q) : null; it.n = q >= 0 ? 1 + it.path.length : 1; it.k = 0; it.cr = 0; it.q = it.path ? it.path[0] : 0;
+    mg.st = [0]; for (let j = 1; j < it.n; j++) mg.st.push(mg.st[j - 1] + 0.34 + 0.08 * j + (j === it.n - 1 && q >= 2 ? 0.3 : 0)); mg.sw = 1; mg.idleAt = null; mg.bulbs = { mode: 'chase', q: 0 };
+    this.miniSet('smash'); S.mini('eggs', 'hammer', 0); SHOW.press(this, mg, 'egg' + i, it.x, it.y - 40, C.gold); },
   btns(mg) { if (mg.phase !== 'idle') return []; const b = mg.smash < 2 ? mg.items.map((it, i) => ({ t: '砸' + ['左', '中', '右'][i] + '蛋', sub: MINI.eggs.cost(mg) + ' 积分', dis: it.picked || this.run.wallet < MINI.eggs.cost(mg), why: it.picked ? '已经砸开了' : '积分不够', fn: () => MINI.eggs.hit.call(this, mg, i) })) : [];
-    b.push({ t: '离开', leave: 1, gold: mg.smash >= 2, fn: () => this.miniFinish(mg.got.length ? '蛋壳里是：' + mg.got.join('；') + '。' : '你没舍得砸。', mg.got.length ? '#ffcc33' : '#8d8496') }); return b; },
-  down(mg, px, py) { mg.items.forEach((it, i) => { if (Math.abs(px - it.x) < 110 && Math.abs(py - it.y) < 150) MINI.eggs.hit.call(this, mg, i); }); },
+    b.push({ t: '离开', leave: 1, gold: mg.smash >= 2, fn: () => { this.miniSet('leave'); mg.bulbs = { mode: 'off', q: 0 }; S.mini('eggs', 'leave'); SHOW.ambient(mg, null); } }); return b; },
+  down(mg, px, py) { const i = mg.items.findIndex(it => Math.abs(px - it.x) < 90 && Math.abs(py - it.y) < 110); if (i >= 0) { MINI.eggs.hit.call(this, mg, i); return; } mg.tap = { x: K.ax(px), n: (mg.tap ? mg.tap.n : 0) + 1 }; S.mini('eggs', 'tap'); return false; },
   impact(mg, it, j) {
-    const q = it.f.q; it.hitT = mg.t;
-    if (j < it.n - 1) { // 裂一道：蛋一缩、壳屑飞、缝里透出预兆色；最后一锤前停得最久
-      it.cr = j + 1; const qn = it.path[j]; this.fx.kick(3 + j * 2); this.fx.spark(it.x, it.y, C.gold, 6, { v: 380, w: 4 }); this.fx.spark(it.x, it.y, QC(qn), 6 + j * 4, { v: 300, w: 3 });
-      if (j === 0) SHOW.omen(this, mg, qn); else SHOW.promote(this, mg, it.x, it.y, qn);
-      if (j === it.n - 2 && q >= 2) SHOW.reach(this, mg, { x: it.x, y: it.y + 20, r: 150, lv: q >= 3 ? 2 : 1 });
+    const q = it.f.q, i = mg.cur; it.hitT = mg.t;
+    if (j < it.n - 1) { // 裂一道：蛋一缩、壳屑飞、缝里透出预兆色；一锤比一锤重，升一档那锤染色闪 + 白环
+      const qn = it.path[j], up = j > 0 && qn > it.path[j - 1]; it.cr = (j + 1) / (it.n - 1); it.q = qn; S.mini('eggs', 'hammer', j + 1);
+      SHOW.beat(this, mg, it.x, it.y - 30, j, qn, up || j === 0, 'egg' + i); this.fx.spark(it.x, it.y - 40, C.gold, 6, { v: 380, w: 4 });
+      if (j === 0) SHOW.omen(this, mg, qn);
+      if (j === it.n - 2 && q >= 2) SHOW.reach(this, mg, { x: it.x, y: it.y, r: 150, lv: q >= 3 ? 2 : 1 });
       return; }
-    it.done = true; it.open = 1; it.openT = mg.t; mg.from = { x: it.x, y: it.y }; S.mini('eggs', 'crack'); const good = q >= 0, qc = good ? QC(q) : C.gold;
-    it.shards = [...Array(good ? 14 + q * 8 : 10)].map(() => ({ x: it.x, y: it.y, vx: (rnd() - 0.5) * (700 + q * 200), vy: -300 - rnd() * (500 + q * 150), r: rnd() * 6, c: good && rnd() < 0.35 ? qc : C.gold }));
-    if (good) { const tier = q + 1, v = it.f.rv ? it.f.rv(mg) : 0; this.fx.kick(4 + q * 3); this.fx.spark(it.x, it.y, qc, 14 + q * 8, { v: 700 }); this.fx.ring(it.x, it.y, 20, 160 + q * 40, qc, 6, 0.3);
-      SHOW.later(mg, 0.07, () => SHOW.win(this, mg, tier, { x: it.x, y: it.y, col: q ? qc : it.f.c, v, label: WL(tier) }));
-      SHOW.later(mg, tier === 4 ? 0.7 : 0.15, () => { const tx = it.f.f(this, mg); mg.got.push(it.f.n + '：' + tx); this.miniSay(it.f.n + '！', it.f.c, true); S.mini('eggs', 'prize'); });
-      mg.idleAt = mg.pt + [0.7, 0.9, 1.5, 2.6][tier - 1]; }
-    else { const tx = it.f.f(this, mg); mg.got.push(it.f.n + '：' + tx); this.miniSay(it.f.n + '！', it.f.c, true); if (it.f.n === '一条蛇') { S.mini('eggs', 'snake'); this.fx.flash(C.red, 0.15); this.fx.kick(5); } else this.fx.kick(2); SHOW.lose(this, mg); mg.idleAt = mg.pt + 0.4; }
+    const good = q >= 0;
+    const burst = () => { it.done = true; it.open = 1; it.openT = mg.t; it.cr = 1; it.q = good ? q : 0; mg.from = { x: it.x, y: it.y }; S.mini('eggs', 'crack'); SHOW.calm(mg);
+      if (good) { const tier = q + 1, qc = QC(q), v = it.f.rv ? it.f.rv(mg) : 0; S.mini('eggs', 'burst', q); mg.bulbs = { mode: 'strobe', q }; mg.confT = mg.t; if (tier >= 3) mg.gongT = mg.t; if (tier >= 4) mg.popT = mg.t;
+        this.fx.kick(4 + q * 3); SHOW.later(mg, 0.02, () => { SHOW.win(this, mg, tier, { x: it.x, y: tier >= 4 ? it.y - 20 : it.y - 60, col: q ? qc : it.f.c, v: tier >= 4 ? v : 0, label: WL(tier) }); if (v && tier < 4) SHOW.roll(mg, v, it.x, it.y + 110, q ? qc : it.f.c, [0.4, 0.8, 1.3][tier - 1]); });   // the stamp sits above the floating prize, the number rolls under it
+        SHOW.later(mg, tier === 4 ? 0.7 : 0.25, () => { const tx = it.f.f(this, mg); mg.got.push(it.f.n + '：' + tx); S.mini('eggs', 'prize'); SHOW.items(this, mg, [{ text: it.f.n, col: C.cream, size: 40 }, { text: tx, col: it.f.c, size: 34 }], { x: CX, y: SY + 540, dy: 46, gap: 0.2 }); });
+        mg.idleAt = mg.pt + [0.9, 1.2, 1.8, 2.8][tier - 1]; }
+      else { const tx = it.f.f(this, mg); mg.got.push(it.f.n + '：' + tx); this.miniSay(it.f.n + '！' + (it.f.n === '一条蛇' ? tx : ''), it.f.c, true); mg.bulbs = { mode: 'idle', q: 0 };
+        if (it.f.n === '一条蛇') { S.mini('eggs', 'snake'); SHOW.flash(mg, C.red, 0.4); SHOW.shake(mg, 8); this.fx.kick(5); } else { S.mini('eggs', 'empty'); SHOW.burst(mg, it.x, it.y - 30, 14, { ramp: [C.cream, C.lavender, C.haze, C.indigo], sp: [40, 140], ang: -Math.PI / 2, spread: 1.6, life: [0.4, 0.8] }); this.fx.kick(2); }
+        SHOW.lose(this, mg); mg.idleAt = mg.pt + 0.4; } };
+    // 最后一锤：好东西先卡帧（全场压黑，只剩蛋），再碎开；空的和蛇直接碎
+    if (good) SHOW.hitstop(mg, 0.15, it.x, it.y - 20, burst); else burst();
   },
   tick(mg, dt) {
+    const t = mg.t;
+    if (mg.phase === 'idle') { const h = mg.items.findIndex(it => !it.picked && Math.abs(mg.mx - it.x) < 90 && Math.abs(mg.my - it.y) < 110); if (h !== mg.hovI) { mg.hovI = h; if (h >= 0) { S.mini('_', 'hover'); SHOW.hover(this, mg, 'egg' + h, true); } } } else mg.hovI = -1;
     if (mg.phase === 'smash') { const it = mg.items[mg.cur];
-      while (mg.sw < it.n && mg.pt >= mg.st[mg.sw]) { mg.sw++; S.mini('eggs', 'hammer'); }
+      while (mg.sw < it.n && mg.pt >= mg.st[mg.sw]) { mg.sw++; S.mini('eggs', 'swing'); }
       while (it.k < it.n && mg.pt >= mg.st[it.k] + HS) MINI.eggs.impact.call(this, mg, it, it.k++);
-      if (mg.idleAt != null && mg.pt > mg.idleAt) this.miniSet('idle'); }
-    mg.items.forEach(it => (it.shards || []).forEach(s => { s.vy += 1600 * dt; s.x += s.vx * dt; s.y += s.vy * dt; s.r += dt * 8; }));
+      if (mg.idleAt != null && mg.pt > mg.idleAt) { this.miniSet('idle'); if (mg.bulbs.mode === 'strobe') mg.bulbs = { mode: 'chase', q: mg.bulbs.q }; } }
+    if (mg.phase === 'leave' && mg.pt > 1.3 && !mg.left) { mg.left = 1; this.miniFinish(mg.got.length ? '蛋壳里是：' + mg.got.join('；') + '。' : '你没舍得砸。', mg.got.length ? '#ffcc33' : '#8d8496'); }
+  },
+  // the hammer: follows the cursor; over an egg it rises; during a smash it winds up and falls (accelerating, smeared), springs back
+  // between blows and flies up out of the light after the last
+  hammer(mg) {
+    const G = EGD(), t = mg.t; if (!G) return { show: false };
+    const idleP = { x: K.ax(mg.mx) + 6, y: K.ay(mg.my) + 14, a: 0.3, show: mg.phase !== 'leave' };
+    if (mg.phase === 'idle') { if (mg.hovI >= 0) return Object.assign({ show: true }, G.raise(mg.hovI)); return idleP; }
+    if (mg.phase !== 'smash') return idleP;
+    const it = mg.items[mg.cur], R = G.raise(mg.cur), Kp = G.strike(mg.cur); let j = 0; while (j + 1 < mg.st.length && mg.pt >= mg.st[j + 1]) j++;
+    const u = mg.pt - mg.st[j], last = j === mg.st.length - 1;
+    if (u < HS) { const p = (u / HS) * (u / HS); return { x: R.x + (Kp.x - R.x) * p, y: R.y + (Kp.y - R.y) * p, a: R.a + (Kp.a - R.a) * p, smear: p > 0.3 ? 1 : 0, w: -1, show: true }; }
+    if (!last) { const p = eo((u - HS) / 0.22); return { x: Kp.x + (R.x - Kp.x) * p, y: Kp.y + (R.y - Kp.y) * p, a: Kp.a + (R.a - Kp.a) * p, show: true }; }
+    const p = eo((u - HS) / 0.28); return { x: Kp.x + (R.x + 26 - Kp.x) * p, y: Kp.y + (R.y - 30 - Kp.y) * p, a: Kp.a + (R.a + 0.6 - Kp.a) * p, show: u - HS < 0.5 };
   },
   draw(x, mg) {
-    const t = mg.t; x.fillStyle = K.RG(x, CX, SY + 360, 40, 700, [[0, '#4a1a10'], [1, '#100604']]); x.fillRect(SX, SY, SW, SH);
-    for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2 + t * 0.1; x.fillStyle = U.pal('rgba(255,200,80,0.05)'); x.beginPath(); x.moveTo(CX, SY + 330); x.arc(CX, SY + 330, 900, a, a + 0.12); x.fill(); }
-    mg.items.forEach((it, i) => { K.RR(x, it.x - 90, it.y + 110, 180, 40, 6, C.wine, C.gold, 3); U.box(x, it.x - 70, it.y + 90, 140, 24, C.red);
-      const hov = mg.phase === 'idle' && !it.picked && Math.abs(mg.mx - it.x) < 110 && Math.abs(mg.my - it.y) < 150, wob = hov ? Math.sin(t * 20) * 0.05 : Math.sin(t * 2 + i) * 0.02;
-      if (!it.open) { const cr = it.cr || 0, hit = it.hitT != null ? Math.exp(-(t - it.hitT) * 14) : 0, qn = cr && it.path ? it.path[cr - 1] : 0; let jx = 0, jy = 0;
-        if (cr) { const j = SHOW.aura(x, it.x, it.y + 20, 120, qn, t, cr / (it.n - 1)); jx = j.dx; jy = j.dy; }
-        x.save(); x.translate(it.x + jx, it.y + 20 + jy); x.rotate(wob); x.scale(1 + 0.1 * hit, 1 - 0.1 * hit); K.GL(x, 0, 0, 160, '#ffcc33', hov ? 0.7 : 0.35); K.EL(x, 0, 0, 72, 92, '#c8900a'); K.EL(x, -4, -4, 66, 86, K.RG(x, -20, -30, 5, 90, [[0, '#fff2a0'], [0.4, '#ffcc33'], [1, '#b87a10']])); K.EL(x, -22, -34, 14, 24, 'rgba(255,255,255,0.55)', -0.3); for (let k = 0; k < 5; k++) K.CI(x, -40 + k * 20, 20 + (k % 2) * 8, 4, '#e04040');
-        if (cr) CRK.slice(0, Math.min(4, Math.ceil(cr * 4 / (it.n - 1)))).forEach(pts => crack(x, pts, QC(qn)));
-        x.restore(); }
-      else { const pop = it.openT != null ? K.pop(t - it.openT) : 1; if (it.f.q >= 0) K.GL(x, it.x, it.y, 200, QC(it.f.q), 0.3 + 0.15 * Math.sin(t * 5)); K.GL(x, it.x, it.y, 160, it.f.c, 0.6); K.EL(x, it.x, it.y + 70, 72, 30, '#c8900a'); K.PL(x, [[it.x - 72, it.y + 60], [it.x - 50, it.y + 40], [it.x - 30, it.y + 62], [it.x - 10, it.y + 38], [it.x + 12, it.y + 62], [it.x + 32, it.y + 40], [it.x + 50, it.y + 62], [it.x + 72, it.y + 60], [it.x + 60, it.y + 96], [it.x - 60, it.y + 96]], '#ffcc33'); K.IC(x, it.f.ic, it.x, it.y - 20 - Math.sin(t * 3) * 6, 100 * pop); K.chipC(x, it.f.n, it.x, it.y - 110, it.f.c); }
-      (it.shards || []).forEach(s => { x.save(); x.translate(s.x, s.y); x.rotate(s.r); K.PL(x, [[-10, -8], [12, -4], [4, 10]], s.c || '#ffcc33'); x.restore(); }); });
-    // 锤子：每一锤加速砸下，裂了就抬起来再砸；最后一锤砸碎后停一下收走
-    if (mg.phase === 'smash' && mg.st) { const it = mg.items[mg.cur]; let j = 0; while (j + 1 < mg.st.length && mg.pt >= mg.st[j + 1]) j++; const u = (mg.pt - mg.st[j]) / HS, fin = j === mg.st.length - 1, a = u < 1 ? -1.6 + 2.2 * u * u : fin ? 0.6 : 0.6 - 2.2 * eo((mg.pt - mg.st[j] - HS) / 0.22);
-      if (!(fin && mg.pt - mg.st[j] > HS + 0.35)) { x.save(); x.translate(it.x + 140, it.y - 130); x.rotate(a); K.R(x, -8, 0, 16, 150, '#8a5a2a'); K.RR(x, -50, -30, 100, 50, 8, '#c8d0dc', '#4a4a55', 3); x.restore(); } }
+    const t = mg.t, eggs = mg.items.map((it, i) => { const xf = SHOW.xf(mg, 'egg' + i); return { cr: it.cr || 0, q: it.q || 0, hit: Math.max(0, Math.exp(-(t - it.hitT) * 14)), wob: mg.hovI === i ? Math.sin(t * 20) * 0.6 : undefined, hov: mg.hovI === i ? 1 : xf.white > 0.1 ? 0.5 : 0,
+      open: !!it.open, openAge: it.openT != null ? t - it.openT : 0, prize: Math.max(0, EGGS.indexOf(it.f)) }; });
+    const o = { eggs, hammer: MINI.eggs.hammer(mg), bulbs: mg.bulbs, gong: mg.gongT != null ? cl(1 - (t - mg.gongT) / 2, 0, 1) : 0, pop: mg.popT != null ? cl(1 - (t - mg.popT) / 1.6, 0, 1) : 0, confetti: mg.confT != null ? cl(1 - (t - mg.confT) / 2.5, 0, 1) : 0,
+      tier: mg.got.length && mg.bulbs.mode !== 'idle' ? 2 : 0, leave: mg.phase === 'leave' ? cl(mg.pt / 1.2, 0, 1) : 0, tap: mg.tap, front: !!mg.frontOK };
+    mg.eggO = o; if (!K.pxr(x, 'mb_eggs', 0, 0, t, o)) K.R(x, SX, SY, SW, SH, '#100604');
+  },
+  // drawn after the show's dim and rays: the opened egg's pillar of light and its prize stay the brightest thing on stage
+  front(x, mg) { mg.frontOK = true; if (mg.eggO && mg.items.some(it => it.open)) K.pxr(x, 'mb_eggs_front', 0, 0, mg.t, mg.eggO, 'eggs_front');
   } };
 
 // ═════════════════════ 骰子对决 ═════════════════════
 const pips = { 1: [[0, 0]], 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]], 4: [[-1, -1], [1, -1], [-1, 1], [1, 1]], 5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], 6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]] };
 K.die = (x, a, b, s, v, rot, col) => { x.save(); x.translate(a, b); x.rotate(rot || 0); K.RR(x, -s / 2, -s / 2, s, s, s * 0.18, col || C.cream, C.ink, 3); (pips[v] || []).forEach(([i, j]) => K.CI(x, i * s * 0.26, j * s * 0.26, s * 0.09, v === 1 ? C.red : C.ink)); x.restore(); };
+// Pixel stage mb_dice (+ mb_dice_fg in front of him): an underground gambling den — the portrait whose eyes follow you, a clock at a
+// minute to midnight, bottles, a green-shaded lamp swinging over an oval felt table, chip stacks that follow your winnings. The dice
+// are real 3D bone cubes (MB.dice.orient / rot / teeter). He (pcd module 'tophat') sits between the halves. A round: your chips slide
+// to the pot, he shakes his cup and slams it; his dice show when it lifts; yours are thrown from your side and bounce (each bounce a
+// beat) — when your second die decides the round it rolls over a few more faces and teeters on an edge under the lamp he pulls over,
+// a frozen instant, then it falls on the real face. Win: the pot avalanches to you and he recoils; lose: he rakes it in, grinning.
+const DG = () => M.PXR && M.PXR.MINIB && M.PXR.MINIB.dice, DPRE = 0.55, TOPHAT = [150, 62], DCUPY = 73;   // DCUPY: where his cup's mouth meets the felt when he slams it
+const DTG = [[135, 84], [165, 84], [134, 128], [165, 128]], DFROM = [50, 150], DYAW = [0.4, -0.3, -0.5, 0.35];
+const dadj = (a, b) => a !== b && a + b !== 7;
 MINI.dice = { title: '骰子对决', img: 't_dice', col: C.cream, text: '一个戴高帽的影子把两颗骨骰推到你面前。「比大小，三局。」',
-  init(mg) { mg.round = 0; mg.max = 3; mg.net = 0; mg.wins = 0; mg.me = [3, 4]; mg.him = [5, 2]; mg.dice = []; },
+  init(mg) { mg.round = 0; mg.max = 3; mg.net = 0; mg.wins = 0; mg.me = [3, 4]; mg.him = [5, 2]; mg.chips = { mine: 12, his: 14, pot: 0 }; mg.slide = null; mg.tel = { st: 'idle', t0: 0 }; mg.hovC = false; },
+  tel(mg, st, o) { mg.tel = { st, t0: mg.t, o }; },
+  slide(mg, from, to, n, dur) { mg.slide = { from, to, n, t0: mg.t, d: dur || 0.5 }; S.mini('dice', 'chips', n); },
   roll(mg, big) { const stake = big ? M.nice(mg.pay * 2.5) : mg.pay; if (!this.miniPay(stake)) return; mg.stake = stake; mg.round++; mg.net -= stake; SHOW.calm(mg);
     const r = () => 1 + Math.floor(rnd() * 6); mg.me = [r(), r()]; mg.him = [r(), r()]; if (mg.luck && rnd() < mg.luck && mg.me[0] + mg.me[1] <= mg.him[0] + mg.him[1]) mg.me = [r(), r()];
-    // 点数这一刻就定了。他的两颗先停，你的第一颗再停；第二颗能决定胜负时，它多翻几面、在棱上打转 0.6 秒再倒——
-    // 棱的另一面正好是「差一点就……」的那一面（赢的时候是会输的那面，输的时候是会赢的那面）
-    const a0 = mg.me[0], b = mg.him[0] + mg.him[1], need = b - a0 + 1; mg.dec = a0 + 1 <= b && a0 + 6 > b; mg.tw = a0 + mg.me[1] > b ? need - 1 : need;
-    mg.ST = [1.15, 1.45, 0.75, 0.95]; mg.res = 0; mg.idleAt = null; mg.rw = 0;
-    mg.dice = [0, 1, 2, 3].map(i => ({ sx: i < 2 ? SX + 200 : SX + SW - 200, sy: i < 2 ? FLOOR - 40 : SY + 200, tx: CX + (i % 2 ? 60 : -60) + (rnd() - 0.5) * 30, ty: i < 2 ? SY + 480 : SY + 290, face: 1, rot: 0 }));
-    if (mg.dec) { let tt = mg.ST[1], f = r(); mg.ft = []; mg.fl = [f]; for (let k = 0; k < 4; k++) { tt += 0.12 + 0.05 * k; mg.ft.push(tt); let n2 = r(); while (n2 === f) n2 = r(); mg.fl.push(f = n2); } mg.tee0 = tt + 0.16; mg.tee1 = mg.tee0 + 0.6; mg.resAt = mg.tee1 + 0.2; }
+    mg.bigBet = big; MINI.dice.plan.call(this, mg); },
+  // 点数这一刻就定了。他的两颗先停，你的第一颗再停；第二颗能决定胜负时，它多翻几面、在棱上打转 0.6 秒再倒——
+  // 棱的另一面正好是「差一点就……」的那一面（赢的时候是会输的那面，输的时候是会赢的那面）
+  plan(mg) {
+    const r = () => 1 + Math.floor(rnd() * 6), big = mg.bigBet, a0 = mg.me[0], b = mg.him[0] + mg.him[1], need = b - a0 + 1; mg.dec = a0 + 1 <= b && a0 + 6 > b; mg.tw = a0 + mg.me[1] > b ? need - 1 : need;
+    if (mg.dec && !dadj(mg.tw, mg.me[1])) mg.dec = false;   // the near-miss face is the real face's opposite: no edge between them to teeter on
+    mg.ST = [1.15, 1.45, 0.75, 0.95].map(v => v + DPRE); mg.res = 0; mg.idleAt = null; mg.rw = 0; mg.beatN = 0;
+    // the faces the deciding die rolls over (each next to the one before), ending on the near-miss face it teeters from
+    if (mg.dec) { let tt = mg.ST[1]; mg.ft = []; mg.fl = [mg.tw]; for (let k = 0; k < 3; k++) { let f; do f = r(); while (!dadj(f, mg.fl[0])); mg.fl.unshift(f); }
+      for (let k = 0; k < 3; k++) { tt += 0.12 + 0.05 * k; mg.ft.push(tt); } mg.tee0 = tt + 0.16; mg.tee1 = mg.tee0 + 0.6; mg.resAt = mg.tee1 + 0.2; }
     else mg.resAt = mg.ST[1] + 0.2;
-    this.miniSet('roll'); S.mini('dice', 'roll'); },
-  btns(mg) { if (mg.phase !== 'idle') return []; const over = mg.round >= mg.max, big = M.nice(mg.pay * 2.5);
-    return [{ t: '小注', sub: mg.pay + ' 积分 · 赢了拿双倍', dis: over || this.run.wallet < mg.pay, why: over ? '三局打完了' : '积分不够', fn: () => MINI.dice.roll.call(this, mg, false) }, { t: '大注', sub: big + ' 积分 · 赢了拿双倍', gold: !over, dis: over || this.run.wallet < big, why: over ? '三局打完了' : '积分不够', fn: () => MINI.dice.roll.call(this, mg, true) }, { t: '离开', leave: 1, gold: over, fn: () => this.miniFinish(mg.net > 0 ? '影子把 ' + M.fmt(mg.net) + ' 积分推给了你，然后消失了。' : mg.net < 0 ? '影子收走了你 ' + M.fmt(-mg.net) + ' 积分。' : '你们握了握手。影子的手是冰的。', mg.net > 0 ? '#ffcc33' : '#8d8496') }]; },
-  settle(mg, d, k) { d.set = 1; d.sq = mg.t; S.mini('dice', 'clack'); this.fx.kick(k); this.fx.spark(d.x, d.gy + 36, C.tan, 5 + k, { v: 220, w: 3, dir: -Math.PI / 2, spread: 2.4 }); },
-  // 第二颗：一面一面慢慢翻（每翻一面响一下），然后立在棱上左右晃，最后倒向真实的那一面
-  teeter(mg, d) { const u = mg.pt, PI = Math.PI;
-    if (u < mg.tee0) { let k = 0; while (k < mg.ft.length && u >= mg.ft[k]) k++; if (k !== d.k) { d.k = k; if (k) { SHOW.crawl(this, mg, k); S.mini('dice', 'clack'); } } const t0 = k ? mg.ft[k - 1] : mg.ST[1], hp = cl((u - t0) / 0.14, 0, 1); d.face = mg.fl[k]; d.rot = (k + eo(hp)) * PI / 2; d.y = d.gy - Math.sin(hp * PI) * (22 - k * 3); return; }
-    if (u < mg.tee1) { const w = (u - mg.tee0) / (mg.tee1 - mg.tee0), up = eo(w / 0.15), wob = Math.sin(w * PI * 5 + PI) * 0.2 * up, f = wob >= 0 ? mg.tw : mg.me[1]; if (f !== d.face) { d.face = f; d.tc = (d.tc || 4) + 1; SHOW.crawl(this, mg, d.tc); } d.rot = PI / 4 * up + wob; d.y = d.gy - 16 * up; return; }
-    const p2 = cl((u - mg.tee1) / 0.12, 0, 1); d.face = mg.me[1]; d.rot = PI / 4 * (1 - p2 * p2); d.y = d.gy - 16 * (1 - p2 * p2); if (p2 >= 1 && !d.set) MINI.dice.settle.call(this, mg, d, 5); },
+    const n = big ? 5 : 3; mg.bet = n; mg.chips.mine = Math.max(0, mg.chips.mine - n); MINI.dice.slide(mg, 'me', 'pot', n, 0.45);
+    this.miniSet('roll'); S.mini('dice', 'shake'); MINI.dice.tel(mg, 'attack', { f0: 1 }); SHOW.press(this, mg, 'bet', K.lx(70), K.ly(140), C.gold); },
+  btns(mg) { if (mg.phase === 'leave') return []; if (mg.phase !== 'idle') return []; const over = mg.round >= mg.max, big = M.nice(mg.pay * 2.5);
+    return [{ t: '小注', sub: mg.pay + ' 积分 · 赢了拿双倍', dis: over || this.run.wallet < mg.pay, why: over ? '三局打完了' : '积分不够', fn: () => MINI.dice.roll.call(this, mg, false) }, { t: '大注', sub: big + ' 积分 · 赢了拿双倍', gold: !over, dis: over || this.run.wallet < big, why: over ? '三局打完了' : '积分不够', fn: () => MINI.dice.roll.call(this, mg, true) },
+      { t: '离开', leave: 1, gold: over, fn: () => { this.miniSet('leave'); MINI.dice.tel(mg, 'death', { f0: 4 }); S.mini('dice', 'leave'); SHOW.ambient(mg, null); } }]; },
+  down(mg, px, py) { mg.puff = { x: K.ax(px), y: K.ay(py), t0: mg.t }; if (mg.phase === 'idle') MINI.dice.tel(mg, 'move'); S.mini('dice', 'tap'); return false; },
+  // the pose of die i this frame (the real 3D cube): his come out from under the cup, yours fly and tumble in, the deciding one rolls
+  // over its faces, teeters, falls. Returns { x, y, h, m, glow } in art px, or null while it is hidden
+  die(mg, i) {
+    const D = DG(); if (!D) return null; const u = mg.pt, T = mg.ST, fin = i < 2 ? mg.him[i] : mg.me[i - 2], glow = i >= 2 && mg.rw && mg.me[0] === 6 && mg.me[1] === 6 ? 1 : 0;
+    if (mg.phase !== 'roll') return { x: DTG[i][0], y: DTG[i][1], h: 0, m: D.orient(fin, DYAW[i]), glow };
+    if (i < 2) return u >= T[2] ? { x: DTG[i][0], y: DTG[i][1], h: 0, m: D.orient(fin, DYAW[i]) } : null;
+    const k = i - 2, p = cl((u - DPRE) / (T[k] - DPRE), 0, 1);
+    if (u < DPRE) return { x: DTG[i][0], y: DTG[i][1], h: 0, m: D.orient(k ? mg.prev1 || 4 : mg.prev0 || 3, DYAW[i]), hidden: 1 };
+    const x = DFROM[0] + (DTG[i][0] - DFROM[0]) * eo(p), y = DFROM[1] + (DTG[i][1] - DFROM[1]) * eo(p), h = Math.abs(Math.sin(p * Math.PI * 3)) * 18 * (1 - p);
+    const face0 = i === 3 && mg.dec ? mg.fl[0] : fin;
+    if (p < 1) return { x, y, h, m: D.rot(D.orient(face0, DYAW[i]), [0.6, 1, 0.3 + k * 0.2], (1 - p) * 16) };
+    if (i !== 3 || !mg.dec) return { x, y, h: 0, m: D.orient(fin, DYAW[i]), glow };
+    if (u < mg.tee0) { let j = 0; while (j < mg.ft.length && u >= mg.ft[j]) j++; const t0 = j ? mg.ft[j - 1] : T[1], nx = mg.ft[j] == null ? mg.tee0 : mg.ft[j], hp = cl((u - t0) / Math.min(0.14, nx - t0), 0, 1);
+      return { x, y, h: 0, m: j < mg.fl.length - 1 ? D.teeter(mg.fl[j], mg.fl[j + 1], DYAW[i], -1 + 2 * eo(hp)) : D.orient(mg.fl[mg.fl.length - 1], DYAW[i]) }; }
+    if (u < mg.tee1) { const w = (u - mg.tee0) / (mg.tee1 - mg.tee0), up = eo(w / 0.15), wob = Math.sin(w * Math.PI * 5 + Math.PI) * 0.28 * up; return { x, y, h: 0, m: D.teeter(mg.tw, fin, DYAW[i], -1 + up + wob) }; }
+    const p2 = cl((u - mg.tee1) / 0.12, 0, 1); return { x, y, h: 0, m: D.teeter(mg.tw, fin, DYAW[i], p2 * p2), glow };
+  },
   tick(mg) {
+    const t = mg.t, u = mg.pt, D = DG(), sl = mg.slide;
+    // a stream of chips arrives: the stack it went to grows
+    if (sl && t - sl.t0 >= sl.d) { if (sl.to === 'me') mg.chips.mine = Math.min(20, mg.chips.mine + sl.n); else if (sl.to === 'him') mg.chips.his = Math.min(20, mg.chips.his + sl.n); else if (sl.to === 'pot') mg.chips.pot += sl.n; mg.slide = null; }
+    if (mg.phase === 'idle') { const on = K.ay(mg.my) > 118 && K.ax(mg.mx) < 120; if (on && !mg.hovC) S.mini('_', 'hover'); mg.hovC = on; if (on && mg.tel.st === 'idle') MINI.dice.tel(mg, 'move'); else if (!on && mg.tel.st === 'move' && t - mg.tel.t0 > 0.8) MINI.dice.tel(mg, 'idle'); }
+    if (mg.phase === 'leave') { if (mg.pt > 1.6 && !mg.left) { mg.left = 1; this.miniFinish(mg.net > 0 ? '影子把 ' + M.fmt(mg.net) + ' 积分推给了你，然后消失了。' : mg.net < 0 ? '影子收走了你 ' + M.fmt(-mg.net) + ' 积分。' : '你们握了握手。影子的手是冰的。', mg.net > 0 ? '#ffcc33' : '#8d8496'); } return; }
     if (mg.phase !== 'roll') return; const b = mg.him[0] + mg.him[1];
-    mg.dice.forEach((d, i) => { const T1 = mg.ST[i], p = cl(mg.pt / T1, 0, 1); d.gy = d.sy + (d.ty - d.sy) * eo(p); d.x = d.sx + (d.tx - d.sx) * eo(p); d.y = d.gy - Math.abs(Math.sin(p * Math.PI * 3)) * 70 * (1 - p);
-      if (p < 1) { d.rot = (1 - p) * 12 + i * 0.3; d.face = 1 + Math.floor((mg.pt * 17 + i * 3) % 6); if (Math.floor(mg.pt * 10) !== d.tk) { d.tk = Math.floor(mg.pt * 10); if (i === 0) S.mini('dice', 'clack'); } }
-      else if (i === 1 && mg.dec) MINI.dice.teeter.call(this, mg, d);
-      else if (!d.set) { d.rot = (i - 1.5) * 0.08; d.face = i < 2 ? mg.me[i] : mg.him[i - 2]; MINI.dice.settle.call(this, mg, d, 2);
-        if (i === 0 && mg.dec) SHOW.reach(this, mg, { x: mg.dice[1].tx, y: mg.dice[1].ty, r: 110, lv: mg.me[0] === 6 && b < 12 ? 2 : 1 }); } });
-    if (mg.pt >= mg.resAt && !mg.res) { mg.res = 1; mg.resT = mg.t; const a = mg.me[0] + mg.me[1], d1 = mg.dice[1]; let v = 0, tier = 0;
-      if (a > b) { const dbl = mg.me[0] === 6 && mg.me[1] === 6; v = mg.stake * (dbl ? 3 : 2); tier = dbl ? 2 : 1; mg.wins++; mg.rw = 1; this.miniSay((dbl ? '双六！×3 ' : '赢了！') + a + ' 比 ' + b, '#ffcc33', true); S.mini('dice', 'win'); this.fx.ring(CX, SY + 480, 10, 120, C.gold, 5, 0.3);
-        SHOW.later(mg, 0.06, () => SHOW.win(this, mg, tier, { x: CX, y: SY + 480, col: C.gold, v, label: dbl ? '×3' : '' })); }
-      else if (a === b) { v = mg.stake; this.miniSay('平局，退回赌注', '#e8dcc4'); S.mini('dice', 'tie'); if (mg.dec) SHOW.near(this, mg, d1.x, d1.y, '差一点！'); else SHOW.calm(mg); }
-      else { this.miniSay('输了 ' + a + ' 比 ' + b, '#ff6a5a'); S.mini('dice', 'lose'); if (mg.dec) SHOW.near(this, mg, d1.x, d1.y, '差一点！'); else SHOW.lose(this, mg); }
-      if (v) { mg.net += v; SHOW.later(mg, tier ? 0.14 : 0, () => this.award([{ k: 'wallet', v }], { x: CX, y: SY + 480 })); }
-      mg.idleAt = mg.pt + (tier ? 0.3 : 0.15);
-      // 三局打完还赚着：评级章砸下，再按全胜 / 小胜走中奖档，滚一遍总盈利
-      if (mg.round >= mg.max && mg.net > 0) { const gr = mg.wins >= 3 ? 'S' : mg.wins >= 2 ? 'A' : 'B'; mg.idleAt = mg.pt + 1.0;
-        SHOW.later(mg, 0.6, () => { SHOW.grade(this, mg, gr, SX + SW - 190, SY + 330); SHOW.win(this, mg, gr === 'S' ? 3 : 2, { x: CX, y: SY + 400, col: C.gold, v: mg.net, label: gr === 'S' ? '大赢' : '' }); }); } }
-    if (mg.idleAt != null && mg.pt >= mg.idleAt) this.miniSet('idle');
+    // his cup: shaken while the chips slide, slammed down, lifted when his dice settle
+    if (u >= DPRE - 0.25 && !mg.slammed) { mg.slammed = 1; MINI.dice.tel(mg, 'cast'); S.mini('dice', 'slam'); SHOW.shake(mg, 6); mg.puff = { x: TOPHAT[0] - 13, y: DCUPY + 3, t0: t }; }
+    if (u >= mg.ST[2] - 0.2 && !mg.lifted) { mg.lifted = 1; MINI.dice.tel(mg, 'recover', { f0: 1 }); S.mini('dice', 'clack'); }   // his lift frame (3) lands as his dice show
+    // your dice: every time one comes down on the felt it is a beat (a thud, a puff, a little harder each time)
+    [2, 3].forEach(i => { const k = i - 2, p = cl((u - DPRE) / (mg.ST[k] - DPRE), 0, 1), bounce = Math.floor(p * 3); const key = 'bn' + i; if (u > DPRE && p < 1 && bounce > (mg[key] || 0)) { mg[key] = bounce; const d = MINI.dice.die(mg, i); if (d) { mg.puff = { x: d.x, y: d.y, t0: t }; const n = mg.beatN++; S.mini('dice', 'bounce', n); SHOW.shake(mg, 1 + n); SHOW.ring(mg, K.lx(d.x), K.ly(d.y), 4, 34 + n * 6, C.cream, { life: 0.25 }); } } });
+    [0, 1, 2, 3].forEach(i => { const key = 'st' + i, at = i < 2 ? mg.ST[i + 2] : i === 3 && mg.dec ? mg.tee1 + 0.12 : mg.ST[i - 2]; if (u >= at && !mg[key]) { mg[key] = 1; const d = MINI.dice.die(mg, i); if (!d) return; S.mini('dice', 'clack'); SHOW.shake(mg, i === 3 && mg.dec ? 6 : 2); mg.puff = { x: d.x, y: d.y, t0: t };
+      if (i === 2 && mg.dec) { SHOW.reach(this, mg, { x: K.lx(DTG[3][0]), y: K.ly(DTG[3][1]), r: 110, lv: mg.me[0] === 6 && b < 12 ? 2 : 1 }); mg.lampTo = DTG[3]; } } });
+    // the deciding die: each face it rolls over is a beat; on the edge the heartbeat; the frozen instant before it falls
+    if (mg.dec) { let j = 0; while (j < mg.ft.length && u >= mg.ft[j]) j++; if (j !== mg.fj) { mg.fj = j; if (j) { SHOW.crawl(this, mg, j); S.mini('dice', 'clack'); } }
+      if (u >= mg.tee1 && !mg.froze) { mg.froze = 1; SHOW.hitstop(mg, 0.15, K.lx(DTG[3][0]), K.ly(DTG[3][1])); } }
+    if (u >= mg.resAt && !mg.res) { mg.res = 1; mg.resT = t; const a = mg.me[0] + mg.me[1]; let v = 0, tier = 0; mg.lampTo = null; const dx = K.lx(150), dy = K.ly(128);
+      if (a > b) { const dbl = mg.me[0] === 6 && mg.me[1] === 6; v = mg.stake * (dbl ? 3 : 2); tier = dbl ? 2 : 1; mg.wins++; mg.rw = 1; S.mini('dice', 'win'); MINI.dice.tel(mg, 'hurt', { f0: 4 }); mg.flareT = t;
+        mg.chips.his = Math.max(0, mg.chips.his - mg.bet * (dbl ? 2 : 1)); MINI.dice.slide(mg, 'pot', 'me', mg.bet * (dbl ? 3 : 2), 1.2); mg.chips.pot = 0;
+        SHOW.later(mg, 0.06, () => SHOW.win(this, mg, tier, { x: dx, y: dy, col: C.gold, v, label: dbl ? '×3' : '' })); SHOW.later(mg, 0.2, () => SHOW.items(this, mg, [{ text: a + ' 比 ' + b, col: C.gold, size: 44 }], { x: CX, y: SY + 300 })); }
+      else if (a === b) { v = mg.stake; S.mini('dice', 'tie'); MINI.dice.slide(mg, 'pot', 'me', mg.bet, 0.5); mg.chips.pot = 0; SHOW.items(this, mg, [{ text: a + ' 比 ' + b + '，平局', col: C.cream, size: 40 }], { x: CX, y: SY + 300 }); if (mg.dec) SHOW.near(this, mg, K.lx(DTG[3][0]), K.ly(DTG[3][1]), '差一点！'); else SHOW.calm(mg); }
+      else { S.mini('dice', 'lose'); MINI.dice.tel(mg, 'recover', { f0: 4, loop: [5, 8] }); mg.rakeT = t; MINI.dice.slide(mg, 'pot', 'him', mg.bet, 0.5); mg.chips.pot = 0; SHOW.items(this, mg, [{ text: a + ' 比 ' + b, col: C.red, size: 40 }], { x: CX, y: SY + 300 }); if (mg.dec) SHOW.near(this, mg, K.lx(DTG[3][0]), K.ly(DTG[3][1]), '差一点！'); else SHOW.lose(this, mg); }
+      if (v) { mg.net += v; SHOW.later(mg, tier ? 0.14 : 0, () => this.award([{ k: 'wallet', v }], { x: dx, y: dy })); }
+      mg.idleAt = mg.pt + (tier ? 1.2 : 0.6);
+      // 三局打完还赚着：评级章砸下，再按全胜 / 小胜走中奖档，滚一遍总盈利；全胜时他散成一缕烟，只剩帽子
+      if (mg.round >= mg.max && mg.net > 0) { const gr = mg.wins >= 3 ? 'S' : mg.wins >= 2 ? 'A' : 'B'; mg.idleAt = mg.pt + 1.8;
+        SHOW.later(mg, 0.8, () => { SHOW.grade(this, mg, gr, SX + SW - 190, SY + 330); SHOW.win(this, mg, gr === 'S' ? 3 : 2, { x: CX, y: SY + 400, col: C.gold, v: mg.net, label: gr === 'S' ? '大赢' : '' }); if (gr === 'S') MINI.dice.tel(mg, 'death', { f0: 4 }); }); } }
+    if (mg.idleAt != null && mg.pt >= mg.idleAt) { this.miniSet('idle'); ['bn2', 'bn3', 'st0', 'st1', 'st2', 'st3', 'slammed', 'lifted', 'froze', 'fj'].forEach(k => { mg[k] = 0; }); mg.prev0 = mg.me[0]; mg.prev1 = mg.me[1]; if (mg.tel.st !== 'death') MINI.dice.tel(mg, 'idle'); }
   },
   draw(x, mg) {
-    const t = mg.t; x.fillStyle = K.RG(x, CX, SY + 380, 40, 700, [[0, '#1a3a2a'], [1, '#06100a']]); x.fillRect(SX, SY, SW, SH);
-    K.EL(x, CX, SY + 390, 470, 230, C.umber); K.EL(x, CX, SY + 385, 450, 212, K.RG(x, CX, SY + 380, 30, 450, [[0, '#2a6a3a'], [1, '#12301a']]));
-    K.SP(x, 'musician', CX, SY + 190, 150); K.GL(x, CX - 20, SY + 90, 40, '#ff4a4a', 0.5 + 0.3 * Math.sin(t * 3)); K.GL(x, CX + 20, SY + 90, 40, '#ff4a4a', 0.5 + 0.3 * Math.sin(t * 3));
-    const show = mg.dice.length ? mg.dice : [{ x: CX - 60, y: SY + 480, face: mg.me[0] }, { x: CX + 60, y: SY + 480, face: mg.me[1] }, { x: CX - 60, y: SY + 290, face: mg.him[0] }, { x: CX + 60, y: SY + 290, face: mg.him[1] }];
-    // 骰子：地上一块影子（跳得越高越小），落地压扁一下；这一局赢了你的两颗发金光
-    show.forEach((d, i) => { const gy = d.gy == null ? d.y : d.gy, h = gy - d.y, sq = d.sq != null ? Math.exp(-(t - d.sq) * 16) : 0;
-      K.EL(x, d.x, gy + 42, Math.max(12, 40 - h * 0.25), 9, 'rgba(0,0,0,0.4)');
-      if (i < 2 && mg.rw && mg.res && t - mg.resT < 2.5) K.GL(x, d.x, d.y, 90, C.gold, 0.45 + 0.25 * Math.sin(t * 8));
-      x.save(); x.translate(d.x, d.y + 38); x.scale(1 + 0.14 * sq, 1 - 0.14 * sq); K.die(x, 0, -38, 76, d.face, d.rot || 0, i < 2 ? C.cream : C.silver); x.restore(); });
-    // 点数：大号数码，揭晓时弹一下；你 / 他 是签；局数小牌；盈亏金色，亏了红色
-    if ((mg.phase !== 'roll' || mg.res) && mg.round) { const pt = t - (mg.resT || 0); K.big(x, String(mg.me[0] + mg.me[1]), CX + 170, SY + 480, T.num, C.gold, pt, { num: true }); K.big(x, String(mg.him[0] + mg.him[1]), CX + 170, SY + 290, T.num, C.pink, pt, { num: true }); }
-    K.chipC(x, '你', CX - 170, SY + 480, C.gold, T.item); K.chipC(x, '他', CX - 170, SY + 290, C.pink, T.item);
+    const t = mg.t, D = DG(), u = mg.pt, sl = mg.slide, sp = sl ? cl((t - sl.t0) / sl.d, 0, 1) : 1;
+    const roll = mg.phase === 'roll', cupShake = roll && u < DPRE - 0.25;
+    // his cup sits by his elbow until his hands hold it: then its mouth follows the frame's focus (the hands); let go, it hops back
+    const th = npcFrame('tophat', mg.tel.st, t - mg.tel.t0, mg.tel.o), f = th && th.focus && [th.focus[0] / K.ART, th.focus[1] / K.ART], hold = !!(f && f[1] > -15), rest = D ? { x: D.cup[0], y: D.cup[1], lift: 0 } : null;
+    let cup = null; if (D) { const tg = hold ? { x: TOPHAT[0] + f[0], y: DCUPY, lift: cl((DCUPY - TOPHAT[1] - f[1]) / 26, 0, 1) } : rest;
+      if (hold !== !!mg.cupH) { mg.cupH = hold; mg.cupFrom = mg.cupNow || rest; mg.cupT = t; }
+      const cp = eo(cl((t - (mg.cupT || 0)) / (hold ? 0.08 : 0.3), 0, 1)), cf = mg.cupFrom || rest;
+      cup = { x: cf.x + (tg.x - cf.x) * cp, y: cf.y + (tg.y - cf.y) * cp, lift: cf.lift + (tg.lift - cf.lift) * cp + (hold ? 0 : Math.sin(Math.PI * cp) * 0.25), shake: cupShake ? 1 : 0, tilt: cupShake ? 0.15 * Math.sin(t * 38) : 0 }; mg.cupNow = cup; }
+    const o = { dice: D ? [0, 1, 2, 3].map(i => MINI.dice.die(mg, i)).filter(d => d && !d.hidden) : [], cup,
+      chips: { mine: mg.chips.mine, his: mg.chips.his, pot: mg.chips.pot, hov: mg.phase === 'idle' && mg.hovC ? 1 : 0, slide: sl && sp < 1 ? { from: sl.from, to: sl.to, n: sl.n, p: sp } : null }, rake: mg.rakeT != null && t - mg.rakeT < 0.8 ? (t - mg.rakeT < 0.25 ? eo((t - mg.rakeT) / 0.25) : 1 - eo((t - mg.rakeT - 0.25) / 0.5)) : 0,
+      lamp: { to: mg.lampTo ? { x: mg.lampTo[0], y: mg.lampTo[1] } : null, flare: mg.flareT != null ? cl(1 - (t - mg.flareT) * 0.8, 0, 1) : 0 }, eyes: { x: K.ax(mg.mx), y: K.ay(mg.my) },
+      puff: mg.puff ? { x: mg.puff.x, y: mg.puff.y, age: t - mg.puff.t0 } : null, tier: mg.rw && mg.res && t - mg.resT < 3 ? 2 : 0 };
+    if (!K.pxr(x, 'mb_dice', 0, 0, t, o)) { K.R(x, SX, SY, SW, SH, '#06100a'); return; }
+    // he sits between the room and the table (pcd module 'tophat'; three rounds lost or you leaving: his dissolve)
+    npcDraw(x, th, TOPHAT[0], TOPHAT[1]);
+    K.pxr(x, 'mb_dice_fg', 0, 0, t, o, 'dice_fg');
+    // the sums beside each pair, popping in when the round is decided; the round and the running net on the wall
+    if ((mg.phase !== 'roll' || mg.res) && mg.round) { const pt = t - (mg.resT || 0); K.big(x, String(mg.me[0] + mg.me[1]), K.lx(196), K.ly(128), T.num, C.gold, pt, { num: true }); K.big(x, String(mg.him[0] + mg.him[1]), K.lx(196), K.ly(82), T.num, C.pink, pt, { num: true }); }
     K.sign(x, '第 ' + Math.min(mg.max, Math.max(1, mg.round)) + ' / ' + mg.max + ' 局', SX + 150, SY + 150, { kind: 'indigo', size: T.body }); U.text(x, (mg.net >= 0 ? '+' : '') + M.fmt(mg.net), SX + SW - 150, SY + 150, T.title, mg.net >= 0 ? C.gold : C.red, { num: true });
   } };
 

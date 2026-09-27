@@ -44,6 +44,11 @@ mc-pxmarket.js
 mc-pxroom-mini-d.js
 mc-pxchest.js
 mc-pxroom-minib.js
+mc-pxroom-minib-pachinko.js
+mc-pxroom-minib-tree.js
+mc-pxroom-minib-eggs.js
+mc-pxroom-minib-tarot.js
+mc-pxroom-minib-dice.js
 mc-game-a.js
 mc-game-b.js
 mc-game-c.js
