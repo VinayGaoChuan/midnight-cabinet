@@ -21,7 +21,7 @@ A.draw = function (x, key, ax, ay, t, o, id) {
   const w = d.size ? d.size[0] : 150, h = d.size ? d.size[1] : 105, sm = x.imageSmoothingEnabled; x.imageSmoothingEnabled = false;
   x.drawImage(s.cv, 0, 0, w, h, SX + ax * ART, SY + ay * ART, w * ART, h * ART); x.imageSmoothingEnabled = sm; return s;
 };
-A.slot = (key, id) => X.slots[id || 'mc_' + key];
+A.slot = (key, id) => X.slots['_mg:' + (id || key)] || X.slots[id || 'mc_' + key];   // K.pxr keeps its slots under '_mg:' + id
 // a pixel-cast character (pcd) standing on the stage: feet at art (ax, ay), 4× like the stage; st idle / move / hurt…; t seconds
 A.cast = function (x, key, ax, ay, st, t, flip, tint) {
   const P = M.PCDG; if (!P || !P.has(key)) return null; const b = P.body(key), n = st === 'idle' ? b.nIdle : st === 'hurt' ? b.nHurt : 8, fi = Math.floor((t || 0) * 12) % Math.max(1, n);
@@ -444,9 +444,11 @@ A.def('mini_granny', {
     if (pat) {
       for (let k = 0; k <= 160; k++) { const q = k / 160, p = GR.seam(q); if (k % 4 < 2) D.px(p.x, p.y + 2, 'lav', q <= u ? 8 : 4.5, q <= u ? { e: 255 } : undefined); }
       // sewn thread: a glowing violet line behind the needle
-      for (let k = 0; k <= 200; k++) { const q = k / 200; if (q > u) break; const p = GR.seam(q); D.px(p.x, p.y - 1, 'arcane', 8 + (u - q < 0.05 ? 3 : 0), { e: 255 }); }
+      const thF = o.thread || 0; for (let k = 0; k <= 200; k++) { const q = k / 200; if (q > u) break; const p = GR.seam(q); D.px(p.x, p.y - 1, 'arcane', 8 + (u - q < 0.05 ? 3 : 0) + thF * 3, { e: 255 }); }
+      if (thF > 0.1) { const p = GR.seam(u); A.glow(rs, p.x, p.y, 40, '#c8a0ff', thF); }
+      (o.knots || []).forEach(kn => { const p = GR.seam(kn.u); for (let j = 0; j < 9; j++) D.px(p.x + Math.round(Math.cos(j * 2.3) * (1 + j % 3)), p.y + Math.round(Math.sin(j * 2.3) * (1 + j % 2)), 'arcane', 6 + (j % 2), { e: 255 }); });
       // six pins with glass heads; a stitched one leaves a gold X
-      (o.marks || DEMO_GR.marks).forEach((m, i) => { const p = GR.seam(m.u), x = Math.round(p.x), y = Math.round(p.y); if (m.ok) { D.line(x - 2, y - 2, x + 2, y + 2, 'gold', 10, { e: 255 }); D.line(x + 2, y - 2, x - 2, y + 2, 'gold', 10, { e: 255 }); return; }
+      (o.marks || DEMO_GR.marks).forEach((m, i) => { const p = GR.seam(m.u), x = Math.round(p.x), y = Math.round(p.y); if (m.ok) { const lt = m.lightT != null ? Math.max(0, 1 - (t - m.lightT) / 0.6) : 0, r = lt > 0.3 ? 3 : 2; D.line(x - r, y - r, x + r, y + r, 'gold', 10 + lt, { e: 255 }); D.line(x + r, y - r, x - r, y + r, 'gold', 10 + lt, { e: 255 }); if (lt > 0) A.glow(rs, x, y, 24, '#ffcf4a', lt); return; }
         const hm = ['red', 'gold', 'teal', 'arcane', 'candy', 'screen'][i]; D.beg(); D.line(x, y, x + 3, y + 5, 'iron', 9); D.ell(x, y, 1.6, 1.6, m.gone ? 'stone' : hm, m.gone ? 3 : 8, { dome: 1 }); D.end(); });
       // the needle: long, bright, eye at the back, riding the seam
       const p = GR.seam(u), q = GR.seam(Math.min(1, u + 0.01)), ang = Math.atan2(q.y - p.y, q.x - p.x) - 0.8; D.beg(); for (let k = -3; k < 13; k++) { const x = p.x - Math.cos(ang) * k, y = p.y - Math.sin(ang) * k; D.px(x, y, 'iron', k < 0 ? 11 : 9 - k * 0.2, { e: k < 1 ? 255 : 0 }); } D.end();
@@ -512,6 +514,10 @@ A.def('mini_well', {
     if (pow > 0) A.glow(rs, px0 + 4, py0 + ph - fh, 18, '#6fd0ff', 0.6);
     // the throw preview: a dotted arc of pixel beads into the well mouth, breathing
     if (o.preview !== false && o.phase !== 'fly') for (let k = 1; k < 18; k++) { const q = k / 18, x = WL.hero + 14 + (WL.x - WL.hero - 14) * (0.35 + pow * 0.8) * q, y = 102 - Math.sin(q * Math.PI) * (55 + pow * 40) + q * 4; if ((k + Math.floor(t * 8)) % 3) D.px(x, y, 'gold', 8 + (k % 2), { e: 255 }); }
+    // the coin: a gold disc seen edge-on as it spins, a glint on its rim; glows when the throw is true
+    if (o.coin) { const c = o.coin, w = Math.abs(Math.cos(c.spin)); D.beg(); for (let y = -3; y <= 3; y++) { const hw = Math.round(Math.sqrt(Math.max(0, 9 - y * y)) * (0.25 + 0.75 * w)); for (let dx = -hw; dx <= hw; dx++) D.px(c.x + dx, c.y + y, 'gold', 7 - y * 0.5 + (dx === -hw ? 2 : 0) - (dx === hw && hw > 0 ? 2 : 0), c.glow ? { e: 255 } : undefined); } D.end(); if (w > 0.9) D.px(c.x - 1, c.y - 2, 'gold', 11, { e: 255 }); if (c.glow) A.glow(rs, c.x, c.y, 26, '#ffcf4a', 0.9); }
+    // ripples: the moon in the water breaks into rings after the splash
+    if (o.splT != null && o.tier) { const se = t - o.splT; if (se >= 0 && se < 1.4) for (let i = 0; i < 3; i++) { const r = se * 22 * (1 + i * 0.45); if (r > 30) continue; for (let a = 0; a < 40; a++) { const an = a / 40 * Math.PI * 2; D.px(WL.x + Math.cos(an) * r, WL.mouth + 1 + Math.sin(an) * r * 0.16, 'water', 10 - se * 4, { e: 255 }); } } }
     // water glints on the well's surface
     if (Math.random() < 0.08) rs.burst('glint', WL.x - 20 + Math.random() * 40, WL.mouth + 2, 1, { sp: 2, life: 0.5 });
   },
@@ -549,12 +555,16 @@ A.def('mini_child', {
     rs.mul[1] = g.lk == null ? 1 : g.lk; const L = X.defs.mini_child; L.__gl = g;
     // her lantern moves the light: nudge the def's light to where she stands
     const B = rs; B.dl.push({ x: g.x + 3, y: g.y - 8, z: 10, r: 60 + 40 * (g.lk || 1), i: 0.9 * (g.lk || 1), rgb: [255, 192, 96], tint: 0.6 });
+    // the hollow birch she leads you to at the end: white bark, black scars, a dark hollow that fills with the omen colour
+    if (o.hollow > 0) { const hx = 206, k = o.hollow; D.lay('mid'); D.beg(); for (let y = 40; y < 150; y++) for (let x = 0; x < 16; x++) { const u = x / 15 * 2 - 1; D.px(hx + x, y, 'bone', 8.5 - Math.abs(u) * 2 - (u > 0.4 ? 1.5 : 0) + (hash(hx + x, y >> 1, 9) > 0.93 ? -6 : 0) + ((y + 5) % 13 < 2 && x > 1 && x < 15 ? -5.5 : 0), { n: [u * 0.8, 0] }); } D.end({ lit: 1 });
+      for (let y = 112; y < 138; y++) { const hw = Math.round(Math.sqrt(Math.max(0, 1 - Math.pow((y - 125) / 13, 2))) * 5); for (let x = -hw; x <= hw; x++) D.px(hx + 8 + x, y, o.hollowC ? 'gold' : 'ink', o.hollowC ? 4 + k * 6 - Math.abs(x) * 0.6 : 0.5, o.hollowC ? { e: 255 } : undefined); }
+      if (o.hollowC) A.glow(rs, hx + 8, 125, 30 + 40 * k, o.hollowC, 1.2 * k); }
     // footprints: small pressed hollows; the real side glows in her lantern's colour, the other side is cold and dim
     const pr = o.prints || { real: 1, vis: 0.8, decoy: 0.2 };
     [0, 1].forEach(side => { const a = side === pr.real ? pr.vis : Math.min(pr.vis, pr.decoy), sd = side ? 1 : -1, lit = side === pr.real;
       for (let i = 0; i < 6; i++) { const q = 0.08 + i * 0.15, p = CH.br(sd, q), off = (i % 2 ? 2 : -2), x = Math.round(p.x), y = Math.round(p.y + off), w = i < 2 ? 2 : 1;
         D.rect(x - w, y, w * 2 + 1, 2, 'ice', 3.4); D.hl(x - w, y + 2, w * 2 + 1, 'ice', 8.5); D.px(x + sd * (w + 1), y + 1, 'ice', 3.8);
-        if (a > 0.05) { D.rect(x - w + 1, y, Math.max(1, w * 2 - 1), 1, lit ? 'lamp' : 'ice', lit ? 6 + a * 5 : 5 + a * 3, { e: 255 }); if (lit && a > 0.3) A.glow(rs, x, y, 10, '#ffc060', 0.45 * a); } } });
+        const seq = o.walked && o.walked.side === side ? clamp(o.walked.k * 7 - i, 0, 1) : 0, aa = Math.max(a, seq); if (aa > 0.05) { const lt = lit || seq > 0; D.rect(x - w + 1, y, Math.max(1, w * 2 - 1), 1, lt ? 'lamp' : 'ice', lt ? 6 + aa * 5 : 5 + aa * 3, { e: 255 }); if (lt && aa > 0.3) A.glow(rs, x, y, 10, '#ffc060', 0.45 * aa); } } });
   },
 });
 
@@ -612,6 +622,10 @@ A.def('mini_grave', {
       if (lid > 0 && o.coffinC) { for (let x = px0 + 10; x < px0 + pw - 10; x++) D.px(x, 172 - Math.round(lid * 4), 'gold', 9 + lid * 2, { e: 255 }); A.glow(rs, 160, 170, 40 + 40 * lid, o.coffinC, 1.2 * lid); } }
     // the spoil heap beside the pit grows with every shovelful
     const ph = Math.round(3 + dep * 16); D.beg(); for (let y = 0; y < ph; y++) { const hw = Math.sqrt(Math.max(0, 1 - Math.pow(y / ph, 2))) * (10 + dep * 22); for (let x = -Math.round(hw); x <= Math.round(hw); x++) D.px(GV.pile[0] + x, GV.pile[1] - y, 'earth', 4.6 + (y === ph - 1 ? 1 : 0) - Math.abs(x) / hw * 1.5 + (hash(x, y, 8) - 0.5), { n: [x / hw * 0.6, -0.5] }); } D.end({ lit: 1 });
+    // the leader's shovel: ash handle, iron blade, swung down on every dig
+    if (o.shovel !== false) { const sw = o.sw || 0, a = -0.5 + sw * 1.5, hx = GV.hero + 8, hy = 128, ex = hx + Math.sin(a) * 26, ey = hy + Math.cos(a) * 26; D.beg(); D.line(hx, hy, ex, ey, 'wood', 6, { w: 2 }); const bx = Math.round(ex), by = Math.round(ey); D.rect(bx - 2, by, 5, 6, 'iron', 7); D.hl(bx - 2, by, 5, 'iron', 10); D.vl(bx + 2, by + 1, 5, 'iron', 4); D.end(); }
+    // the hand: grey-green, rotten, clawing up out of the pit
+    if (o.hand > 0) { const hy = 174 - Math.round(o.hand * 26), hx = 160; D.beg(); D.rect(hx - 3, hy + 8, 7, 22, 'moss', 6); D.vl(hx - 3, hy + 8, 22, 'moss', 8); for (let f = 0; f < 4; f++) { const fx = hx - 4 + f * 3, fl = 7 + (f % 2) * 2; D.rect(fx, hy + 8 - fl, 2, fl, 'moss', 6.5 + (f === 0 ? 1 : 0)); D.px(fx, hy + 8 - fl, 'bone', 8); } D.rect(hx + 4, hy + 10, 3, 2, 'moss', 5); D.px(hx, hy + 16, 'red', 5); D.px(hx + 1, hy + 20, 'bone', 7); D.end(); A.glow(rs, hx, hy + 10, 40, '#ff3a2a', 0.9 * o.hand); }
     // the candle: shorter as it burns, the flame steady → guttering and leaning, wax running
     const [cx, cyTop] = GV.candle, hgt = Math.max(1, Math.round(14 * life)), base = GV.stone[1] + 11; D.beg(); D.rect(cx - 2, base - hgt, 5, hgt, 'bone', 8.5); D.vl(cx - 2, base - hgt, hgt, 'bone', 10); D.vl(cx + 2, base - hgt, hgt, 'bone', 6.5); D.px(cx + 1, base - hgt + 2, 'bone', 7); D.end();
     if (life > 0) { const s = 4 + life * 3, lean = Math.round(wob * 2 * Math.sin(t * 29)), hh = Math.round(s * (0.8 + 0.3 * n1(t * (9 + wob * 20)))); for (let k = 0; k < hh; k++) { const q = k / hh, w = Math.max(1, Math.round((1 - q * q) * s * 0.42)); for (let i = -w + 1; i < w; i++) D.px(cx + i + Math.round(lean * q), base - hgt - 1 - k, 'fire', clamp(11 - q * 6 - Math.abs(i) * 2.2, 3, 11), { e: 255 }); } D.px(cx, base - hgt, 'ink', 1); }
@@ -752,6 +766,19 @@ A.def('mini_peddler', {
     S.beg(); S.vl(20, 40, 50, 'wood', 5); S.end();
     // lantern paper globes with ribs (the flame inside glows with its light)
     [[62, 44], [118, 46], [182, 46], [238, 44]].forEach(([x, y], i) => { S.beg(); S.vl(x, 40, y - 40 - 4, 'ink', 2); S.ell(x, y + 3, 6, 7, 'red', 7, { e: i + 1 }); for (let k = -5; k <= 5; k += 2.5) S.vl(Math.round(x + k), y - 3, 12, 'red', 5, { e: i + 1 }); S.rect(x - 3, y - 5, 7, 2, 'ink', 2); S.rect(x - 3, y + 10, 7, 2, 'ink', 2); S.px(x, y + 13, 'gold', 7); S.vl(x, y + 14, 4, 'gold', 6); S.end(); });
+  },
+  anim(D, t, rs, o) {
+    o = o || {}; rs.mul[4] = o.revK || 0;
+    // lantern sway (a few pixels of tassel) and a pinwheel spinning on the left pole
+    D.lay('back'); const a = t * 3; for (let k = 0; k < 4; k++) { const b = a + k * Math.PI / 2; D.line(20, 40, 20 + Math.cos(b) * 5, 40 + Math.sin(b) * 5, ['red', 'gold', 'teal', 'candy'][k], 7); } D.ell(20, 40, 1, 1, 'iron', 8);
+  },
+});
+// the foreground of the stall (cart, velvet, banner, the three gourds) on a see-through canvas: the peddler stands between
+A.def('mini_peddler_fg', {
+  clear: 1, noFloor: 1, amb: [0.24, 0.3],
+  paint(S, sc) {
+    [[62, 44], [118, 46], [182, 46], [238, 44]].forEach(([x, y], i) => sc.light({ x, y, z: 12, r: 90, i: 0.85, c: '#ff9a48', fl: 'candle', ph: i * 1.7, tint: 0.5 }));
+    sc.light({ x: 150, y: 100, z: 16, r: 90, i: 1.2, c: '#ffffff', tint: 0, bake: false });
     S.lay('mid');
     // the cart: counter with a crimson velvet cloth, a hanging banner with 货, a spoked wheel, shafts on the ground
     S.beg(); S.box(40, PD.top, 220, 6, 'wood', 5.5, { top: 3 }); S.box(46, PD.top + 6, 208, 26, 'wood', 4.2); for (let x = 50; x < 250; x += 16) S.vl(x, PD.top + 7, 24, 'wood', 3); S.end();
@@ -763,15 +790,14 @@ A.def('mini_peddler', {
   },
   anim(D, t, rs, o) {
     o = o || DEMO_PD; rs.mul[4] = o.revK || 0; if (o.revC && o.revK) A.glow(rs, o.revX || 150, PD.top - 6, 50, o.revC, o.revK);
-    // lantern sway (a few pixels of tassel) and a pinwheel spinning on the left pole
-    D.lay('back'); const a = t * 3; for (let k = 0; k < 4; k++) { const b = a + k * Math.PI / 2; D.line(20, 40, 20 + Math.cos(b) * 5, 40 + Math.sin(b) * 5, ['red', 'gold', 'teal', 'candy'][k], 7); } D.ell(20, 40, 1, 1, 'iron', 8);
     D.lay('mid');
-    // three upturned gourds on the velvet: tan skin with a highlight and a red cord at the waist
+    // three upturned gourds on the velvet: tan skin with a highlight and a red cord at the waist; afterimages when they are swapped fast
     (o.gourds || DEMO_PD.gourds).forEach((g, i) => { const x = Math.round(g.x), yb = Math.round(PD.top - 1 - (g.lift || 0) + (g.dy || 0)), sq = g.sy || 1;
       if (g.prize && (g.lift || 0) > 4) { D.beg(); D.ell(x, PD.top - 4, 4, 3, g.gem || 'arcane', 9, { e: 255, dome: 1 }); D.px(x - 1, PD.top - 6, 'linen', 11, { e: 255 }); D.end(); A.glow(rs, x, PD.top - 4, 30, g.gemC || '#b86bff', 0.8); }
       if ((g.lift || 0) > 0 && (g.lift || 0) < 6 && g.crackC) { for (let dx = -8; dx <= 8; dx++) D.px(x + dx, PD.top - 1, 'gold', 10, { e: 255 }); A.glow(rs, x, PD.top - 2, 30, g.crackC, 0.9); }
-      D.beg(); const rows = circleRows(10, 9.5, 0, 17).concat([6, 6]).concat(circleRows(6.4, 5.8, 0, 11)).concat([2, 2]), n = Math.round(rows.length * sq);
-      for (let k = 0; k < n; k++) { const hw = rows[Math.min(rows.length - 1, Math.floor(k / sq))]; for (let dx = -hw; dx <= hw; dx++) { const u = dx / (hw + 0.5), cord = k === Math.round(18 * sq) || k === Math.round(19 * sq); D.px(x + dx, yb - k, cord ? 'red' : 'sand', cord ? 6.5 - u : 6.8 - u * 2.2 - (k < 2 ? 1.5 : 0) + (dx === -Math.round(hw * 0.5) && k > 3 && k < n - 4 ? 3 : 0) + (hash(dx, k, i) > 0.92 ? -1 : 0), { n: [u * 0.85, -0.2] }); } }
+      const rows = circleRows(10, 9.5, 0, 17).concat([6, 6]).concat(circleRows(6.4, 5.8, 0, 11)).concat([2, 2]), n = Math.round(rows.length * sq);
+      if (g.vx) { const sp = Math.min(1, Math.abs(g.vx) / 160), dir = Math.sign(g.vx); for (let k = 1; k <= 2; k++) { const gx = Math.round(x - dir * k * 7 * sp); for (let kk = 0; kk < n; kk += 2) { const hw = rows[Math.min(rows.length - 1, Math.floor(kk / sq))]; for (let dx = -hw; dx <= hw; dx += 2) if (X.bayer(gx + dx, yb - kk) < 0.5 / k) D.px(gx + dx, yb - kk, 'sand', 5); } } for (let k = 0; k < 4; k++) D.hl(Math.round(dir > 0 ? x - 14 - 18 * sp : x + 14), yb - 8 - k * 8, Math.round(4 + 18 * sp), 'lav', 7, { e: 255 }); }
+      D.beg(); for (let k = 0; k < n; k++) { const hw = rows[Math.min(rows.length - 1, Math.floor(k / sq))]; for (let dx = -hw; dx <= hw; dx++) { const u = dx / (hw + 0.5), cord = k === Math.round(18 * sq) || k === Math.round(19 * sq); D.px(x + dx, yb - k, cord ? 'red' : 'sand', cord ? 6.5 - u : 6.8 - u * 2.2 - (k < 2 ? 1.5 : 0) + (dx === -Math.round(hw * 0.5) && k > 3 && k < n - 4 ? 3 : 0) + (hash(dx, k, i) > 0.92 ? -1 : 0) + (g.hov ? 1 : 0), { n: [u * 0.85, -0.2] }); } }
       D.end({ lit: 1 }); });
   },
 });

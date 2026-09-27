@@ -60,7 +60,7 @@ MINI.musician = { title: '流浪乐师', img: 'musician', col: C.gold, text: '�
   key(mg, k, down) { const l = { l0: 0, l1: 1, l2: 2, left: 0, down: 1, up: 1, right: 2 }[k]; if (l != null && mg.phase === 'play') { if (down) MINI.musician.hit.call(this, mg, l); return true; } },
   down(mg, px, py) { if (mg.phase === 'play') { const l = px < CX - 85 ? 0 : px > CX + 85 ? 2 : 1; return MINI.musician.hit.call(this, mg, l); }
     // 演奏前点舞台：水面一圈涟漪、一声曼陀林
-    if (mg.phase === 'idle') { const sl = muSlot(); if (sl) sl.burst('glint', MUA.ax(px), Math.max(150, Math.min(172, MUA.ay(py))), 3, { sp: 8, life: 0.6 }); S.mini('musician', 'pluck'); } },
+    if (mg.phase === 'idle') { SHW.tap(this, mg, px, py); const sl = muSlot(); if (sl) sl.burst('glint', MUA.ax(px), Math.max(150, Math.min(172, MUA.ay(py))), 3, { sp: 8, life: 0.6 }); S.mini('musician', 'pluck'); } },
   btns(mg) { if (mg.phase !== 'idle') return []; return [{ t: '接过琴弓合奏', sub: '按 Q W E（或点三条音轨）跟上音符', gold: 1, fn: () => MINI.musician.start.call(this, mg) }, { t: '扔一枚硬币', sub: '免费 · 他会回赠物资', fn: () => this.miniFinish('他点点头，从琴盒里拿出一袋东西给你。', '#caa84a', [{ k: 'rsup', v: 15 }]) }, { t: '离开', leave: 1, fn: () => this.miniFinish('琴声在你背后停了。', '#8d8496') }]; },
   tick(mg, dt) {
     mg.laneF = mg.laneF.map(f => Math.max(0, f - dt * 4)); mg.laneBad = mg.laneBad.map(f => Math.max(0, f - dt * 5)); mg.lampK += (1 - mg.lampK) * Math.min(1, dt * 1.5);
@@ -78,8 +78,8 @@ MINI.musician = { title: '流浪乐师', img: 'musician', col: C.gold, text: '�
   tally(mg, dt) { const T = mg.tally; T.t += dt; const p = Math.min(T.pct, T.t / 1.3 * Math.max(0.3, T.pct)); T.shown = p;
     if (Math.floor(p * 20) !== T.tick) { T.tick = Math.floor(p * 20); S.mini('musician', 'tick', T.tick); }
     [0.3, 0.55, 0.8].forEach((v, k) => { if (p >= v && T.cross <= k) { T.cross = k + 1; SHW.stamp(mg, 'CBAS'[k + 1], SX + 80 + Math.round(300 * v), SY + 190, [C.teal, C.magenta, C.gold][k], 60 + k * 14, 0.9); this.fx.flash('#ffffff', 0.12 + k * 0.06); this.fx.kick(3 + k * 3); S.mini('musician', 'cross', k); } });
-    if (T.t > 1.3 && !T.done) { T.done = 1; mg.holdT = mg.t; SHW.slowmo(mg, 0.04, 0.15); SHW.later(mg, 0.16, () => MINI.musician.pay.call(this, mg));
-      [['完成度 ' + Math.round(T.pct * 100) + '%', C.cream], ['最大连击 ' + mg.maxCombo, C.gold], ['PERFECT ' + mg.perf, C.magenta]].forEach(([w, c], i) => SHW.later(mg, 0.3 + i * 0.22, () => { SHW.stamp(mg, w, SX + SW - 270, SY + 250 + i * 64, c, 40, 2.4); S.mini('musician', 'tick', 14 + i * 3); this.fx.kick(2); })); } },
+    if (T.t > 1.3 && !T.done) { T.done = 1; SHW.hitstop(mg, 0.15, SX + 80 + Math.round(300 * T.pct), SY + 130, () => { MINI.musician.pay.call(this, mg);
+      SHW.items(this, mg, [{ text: '完成度 ' + Math.round(T.pct * 100) + '%', col: C.cream, size: 40 }, { text: '最大连击 ' + mg.maxCombo, col: C.gold, size: 40 }, { text: 'PERFECT ' + mg.perf, col: C.magenta, size: 40 }], { x: SX + SW - 270, y: SY + 250, dy: 64, gap: 0.22, t0: 0.3 }); }); } },
   pay(mg) { const N = mg.notes.length, pct = mg.score / (N * 2); let tx, col, g = [], gr, ev;
     if (pct >= 0.8) { this.run.runBuff.unitAtk = (this.run.runBuff.unitAtk || 0) + 0.08; g.push({ k: 'wallet', v: M.nice(mg.P * 6) }); tx = '乐师第一次笑了（如果那算笑的话）。本局部队攻击 +8%。'; col = '#ffcc33'; gr = 'S'; ev = 'great'; }
     else if (pct >= 0.55) { this.run.runBuff.unitAtk = (this.run.runBuff.unitAtk || 0) + 0.1; tx = '部队听得热血沸腾。本局部队攻击 +10%。'; col = '#f2c14e'; gr = 'A'; ev = 'ok'; }
@@ -90,7 +90,7 @@ MINI.musician = { title: '流浪乐师', img: 'musician', col: C.gold, text: '�
   draw(x, mg) {
     if (mg.phase === 'play') mg.song = songAt(mg);
     const song = mg.song == null ? -9 : mg.song, beat = song / (mg.B || 0.4545), bp = beat - Math.floor(beat), pulse = song > 0 ? Math.max(0, 1 - bp * 4) : 0;
-    MUA.draw(x, 'mini_musician', 0, 0, mg.t, { song, beat, layers: mg.layer, laneF: mg.laneF, laneG: mg.laneG, laneBad: mg.laneBad, notes: mg.phase === 'play' || mg.phase === 'tally' ? mg.notes : [], lampK: mg.lampK, bulbsK: mg.bulbsK, crowd: mg.crowd }, 'mc_mus');
+    K.pxr(x, 'mini_musician', 0, 0, mg.t, { song, beat, layers: mg.layer, laneF: mg.laneF, laneG: mg.laneG, laneBad: mg.laneBad, notes: mg.phase === 'play' || mg.phase === 'tally' ? mg.notes : [], lampK: mg.lampK, bulbsK: mg.bulbsK, crowd: mg.crowd }, 'mc_mus');
     // 乐师（像素人物做好之前是剪影）和领袖：都踩着拍子
     MINI.musician.npc(x, mg, pulse); MUA.cast(x, heroSp(this), 256, 148 - (mg.phase === 'play' ? Math.round(pulse) : 0), 'idle', mg.t, true);
     // Q W E 键帽：按下先压扁再弹大
@@ -98,7 +98,6 @@ MINI.musician = { title: '流浪乐师', img: 'musician', col: C.gold, text: '�
     if (mg.phase === 'play' || mg.phase === 'tally') { const shown = mg.phase === 'tally' ? mg.tally.shown : mg.score / (mg.notes.length * 2);
       U.bar(x, SX + 80, SY + 120, 300, 18, shown, { col: C.gold }); [0.3, 0.55, 0.8].forEach(v => K.R(x, SX + 80 + Math.round(300 * v) - 1, SY + 112, 3, 34, C.white)); U.text(x, '完成度', SX + 230, SY + 160, T.cap, C.lavender);
       if (mg.phase === 'play') K.sign(x, '连击 ' + mg.combo, SX + SW - 200, SY + 140, { kind: 'dark', size: T.btn, minW: 180 }); }
-    if (mg.holdT != null && mg.t - mg.holdT < 0.15) { x.save(); x.globalAlpha = 0.6; K.R(x, SX, SY, SW, SH, C.ink); x.restore(); }
   },
   // 乐师的剪影占位：宽檐帽、苍白的脸、长大衣，踩拍子一沉一起（像素人物做好后换成 pcd 角色）
   npc(x, mg, pulse) { const bob = mg.phase === 'play' ? Math.round(pulse) : Math.round(Math.sin(mg.t * 2) * 0.5 + 0.5), ax = 44, feet = 148;
@@ -108,44 +107,75 @@ MINI.musician = { title: '流浪乐师', img: 'musician', col: C.gold, text: '�
 };
 
 // ═════════════════════ 裁缝老太 · sew a soldier into your shadow ═════════════════════
+// 选人是晾衣绳上的布样；剪下来的布样变成一张纸样钉进墙上领袖的影子里，针沿纸样的弧边走，六根大头针是下针点
+const GRA = M.MCPX.GRANNY, grSlot = () => M.MCPX.slot('mini_granny', 'mc_granny');
+const grPt = (u) => { const p = GRA.seam(u); return { x: M.MCPX.lx(p.x), y: M.MCPX.ly(p.y) }; };
+function castAt(x, key, lx, ly, h, flip) { const P = M.PCDG; if (P && P.has(key)) { const c = P.bodyFrame(key, 'idle', 0, '', 2); if (c) { x.save(); x.translate(Math.round(lx), Math.round(ly)); if (flip) x.scale(-1, 1); x.imageSmoothingEnabled = false; x.drawImage(c, -c.cx, -c.footY, c.width, c.height); x.restore(); return; } } K.SP(x, key, lx, ly, h, flip); }
 MINI.granny = { title: '裁缝老太', img: 'old', col: C.violet, text: '她能把一名部队缝进你的影子里，让你的伤口合上。针脚越齐，伤好得越快。',
   init(mg) { mg.marks = [0.12, 0.27, 0.42, 0.57, 0.72, 0.87].map(u => ({ u, ok: 0, gone: 0 })); mg.good = 0; },
-  cards(mg) { const R = this.run.roster.slice(0, 8), n = R.length, w = 120; return R.map((u, i) => ({ u, x: CX - (n - 1) * (w + 14) / 2 + i * (w + 14), y: SY + 350 })); },
-  down(mg, px, py) { if (mg.phase === 'select') { const c = MINI.granny.cards.call(this, mg).find(c => Math.abs(px - c.x) < 60 && Math.abs(py - c.y) < 80); if (c) { mg.pick = c.u; this.run.roster = this.run.roster.filter(u => u !== c.u); S.whoosh(0.4); this.fx.explode(c.x, c.y, '#d0a0ff', 1); this.miniSet('thread'); } } else if (mg.phase === 'sew') MINI.granny.stitch.call(this, mg); },
-  stitch(mg) { const u = cl(mg.pt / 4, 0, 1); let best = null, bd = 0.035; mg.marks.forEach(m => { if (m.ok || m.gone) return; const d = Math.abs(m.u - u); if (d < bd) { bd = d; best = m; } }); const p = MINI.granny.path(u);
-    if (best) { best.ok = 1; mg.good++; S.mini('granny', 'stitch', mg.good); this.fx.spark(p.x, p.y, '#d0a0ff', 10, { dir: -Math.PI / 2, spread: 2, v: 400 }); this.fx.ring(p.x, p.y, 12, 70, C.violet, 4, 0.25); combo(this, mg, p.x, p.y - 80, bd < 0.012 ? 'PERFECT' : bd < 0.024 ? 'GREAT' : 'GOOD'); if (best === mg.marks[5]) SHW.calm(mg); }
-    else { S.mini('granny', 'miss'); mg.miss = (mg.miss || 0) + 1; this.fx.kick(3); miss(this, mg, p.x, p.y - 80); } },
-  path(u) { return { x: SX + 160 + u * (SW - 320), y: SY + 360 + Math.sin(u * Math.PI * 3) * 70 }; },
+  cards(mg) { const R = this.run.roster.slice(0, 8), n = R.length; return R.map((u, i) => { const ax = Math.round(150 + (i - (n - 1) / 2) * 27); return { u, ax, x: M.MCPX.lx(ax), y: M.MCPX.ly(72) }; }); },
+  down(mg, px, py) {
+    if (mg.phase === 'select') { const c = MINI.granny.cards.call(this, mg).find(c => Math.abs(px - c.x) < 50 && Math.abs(py - c.y) < 70); if (c) { mg.pick = c.u; mg.pickAx = c.ax; this.run.roster = this.run.roster.filter(u => u !== c.u); S.mini('granny', 'snip'); SHW.later(mg, 0.15, () => S.mini('granny', 'thread')); const sl = grSlot(); if (sl) sl.burst('thread', c.ax, 56, 10, { sp: 24, life: 0.9 }); this.fx.kick(2); this.miniSet('thread'); } return; }
+    if (mg.phase === 'sew') return MINI.granny.stitch.call(this, mg);
+    // 点空白：墙上的影子抖一下、飘一粒布屑
+    if (mg.phase === 'idle') { SHW.tap(this, mg, px, py); mg.shake = mg.t; const sl = grSlot(); if (sl) sl.burst('thread', M.MCPX.ax(px), M.MCPX.ay(py), 2, { sp: 8, life: 1 }); } },
+  stitch(mg) { const u = cl(mg.pt / 4, 0, 1); let best = null, bd = 0.035; mg.marks.forEach(m => { if (m.ok || m.gone) return; const d = Math.abs(m.u - u); if (d < bd) { bd = d; best = m; } }); const p = grPt(u), sp = GRA.seam(u), sl = grSlot(); mg.stabT = mg.t;
+    if (best) { best.ok = 1; best.okT = mg.t; mg.good++; S.mini('granny', 'stitch', mg.good); const bp = GRA.seam(best.u); if (sl) { sl.burst('glint', bp.x, bp.y, 3, { sp: 14, life: 0.5 }); sl.burst('thread', bp.x, bp.y, 6, { sp: 26, life: 0.8 }); sl.burst('spark', bp.x, bp.y, 4, { sp: 30, life: 0.4, floor: 148 }); } mg.threadF = 1;
+      this.fx.ring(p.x, p.y, 12, 70, C.violet, 4, 0.25); combo(this, mg, p.x, p.y - 80, bd < 0.012 ? 'PERFECT' : bd < 0.024 ? 'GREAT' : 'GOOD'); if (best === mg.marks[5]) SHW.calm(mg); }
+    else { S.mini('granny', 'miss'); mg.miss = (mg.miss || 0) + 1; mg.knots = (mg.knots || []).concat([{ u, t: mg.t }]); if (sl) sl.burst('thread', sp.x, sp.y, 8, { sp: 10, life: 0.6 }); this.fx.kick(3); miss(this, mg, p.x, p.y - 80); } },
+  path(u) { return grPt(u); },
   key(mg, k, down) { if (k === 'act' && down && mg.phase === 'sew') { MINI.granny.stitch.call(this, mg); return true; } },
   btns(mg) { if (mg.phase === 'idle') return [{ t: '献出一名部队', sub: this.run.roster.length ? '然后跟着针脚下针' : '你没有部队', gold: 1, dis: !this.run.roster.length, why: '你没有部队', fn: () => this.miniSet('select') }, { t: '离开', leave: 1, fn: () => this.miniFinish('她继续缝着什么。', '#8d8496') }];
     if (mg.phase === 'select') return [{ t: '算了', leave: 1, fn: () => this.miniFinish('她继续缝着什么。', '#8d8496') }]; if (mg.phase === 'sew') return [{ t: '下针', sub: '空格 / 点击', gold: 1, fn: () => MINI.granny.stitch.call(this, mg) }]; return []; },
-  tick(mg) { if (mg.phase === 'thread' && mg.pt > 1.2) this.miniSet('sew');
+  tick(mg, dt) { mg.threadF = Math.max(0, (mg.threadF || 0) - dt * 4);
+    if (mg.phase === 'thread' && mg.pt > 1.2) this.miniSet('sew');
+    if (mg.phase === 'close') return MINI.granny.close.call(this, mg);
     if (mg.phase !== 'sew') return; const u = cl(mg.pt / 4, 0, 1), last = mg.marks[5];
-    mg.marks.forEach(m => { if (!m.ok && !m.gone && u > m.u + 0.035) { m.gone = 1; const p = MINI.granny.path(m.u); miss(this, mg, p.x, p.y - 80); if (m === last) SHW.calm(mg); } });
+    mg.marks.forEach(m => { if (!m.ok && !m.gone && u > m.u + 0.035) { m.gone = 1; const p = grPt(m.u); miss(this, mg, p.x, p.y - 80); if (m === last) SHW.calm(mg); } });
     // 最后一针：聚光罩住它；前五针全中就是超级听牌
-    if (!mg.reached && u > last.u - 0.12 && mg.marks.every(m => m === last || m.ok || m.gone)) { mg.reached = 1; const p = MINI.granny.path(last.u); SHW.reach(this, mg, { x: p.x, y: p.y, r: 110, lv: mg.good === 5 ? 2 : 1 }); }
-    if (mg.pt > 4.1) { this.miniSet('end'); const pct = 0.15 + mg.good * 0.06, v = Math.round(M.heroMaxHp(this.run.hero, this.meta) * pct), gr = mg.good >= 6 ? 'S' : mg.good === 5 ? 'A' : mg.good >= 3 ? 'B' : 'C';
-      // 回血总是有的，C 也走小中
-      payout(this, mg, { grade: gr, tier: Math.max(1, GT[gr]), x: SX + SW - 220, y: FLOOR - 160, gx: CX - 120, gy: SY + 280, col: C.lime, v, heal: pct, tx: M.DB[mg.pick.type].n + ' 被缝进了你的影子。' + mg.good + ' / 6 针落在点上，回复 ' + v + ' 生命。', tc: mg.good >= 5 ? '#9ccc6a' : '#d0a0ff' }); } },
+    if (!mg.reached && u > last.u - 0.12 && mg.marks.every(m => m === last || m.ok || m.gone)) { mg.reached = 1; const p = grPt(last.u); SHW.reach(this, mg, { x: p.x, y: p.y, r: 110, lv: mg.good === 5 ? 2 : 1 }); }
+    if (mg.pt > 4.1) { SHW.calm(mg); this.miniSet('close'); mg.lit = 0; } },
+  // 缝完：纸样沉进影子，落了针的针脚一个接一个亮（一拍比一拍强）→ 卡帧 → 影子吸一口气 → 评级 → 治疗飞进生命条
+  close(mg) { const ok = mg.marks.filter(m => m.ok), step = 0.2, sl = grSlot();
+    mg.sunk = cl(mg.pt / 0.6, 0, 1);
+    const k = Math.floor((mg.pt - 0.3) / step); if (k >= 0 && k < ok.length && k >= mg.lit) { mg.lit = k + 1; const m = ok[k], p = grPt(m.u); m.lightT = mg.t; S.mini('granny', 'light', k); this.fx.flash('#ffffff', 0.06 + k * 0.03); this.fx.kick(1 + k); if (sl) sl.burst('glint', GRA.seam(m.u).x, GRA.seam(m.u).y, 2 + k, { sp: 16, life: 0.6 }); }
+    const tEnd = 0.3 + ok.length * step + 0.1; if (mg.pt > tEnd && !mg.closed) { mg.closed = 1; if (mg.good === 6) S.mini('granny', 'whole'); SHW.hitstop(mg, 0.15, CX, SY + 250, () => { mg.breathT = mg.t; MINI.granny.pay.call(this, mg); }); } },
+  pay(mg) { const pct = 0.15 + mg.good * 0.06, v = Math.round(M.heroMaxHp(this.run.hero, this.meta) * pct), gr = mg.good >= 6 ? 'S' : mg.good === 5 ? 'A' : mg.good >= 3 ? 'B' : 'C'; this.miniSet('end');
+    // 回血总是有的，C 也走小中
+    payout(this, mg, { grade: gr, tier: Math.max(1, GT[gr]), x: SX + SW - 220, y: FLOOR - 160, gx: CX - 120, gy: SY + 280, col: C.lime, v, heal: pct, tx: M.DB[mg.pick.type].n + ' 被缝进了你的影子。' + mg.good + ' / 6 针落在点上，回复 ' + v + ' 生命。', tc: mg.good >= 5 ? '#9ccc6a' : '#d0a0ff' }); },
   draw(x, mg) {
-    const t = mg.t, fev = mg.sh && mg.sh.fever > 0; night(x, '#2a1a2a', '#0c080c'); K.GL(x, CX, SY + 200, 360, '#ffc080', 0.2);
-    K.SP(x, 'old', SX + 170, FLOOR - 10, 190); K.SP(x, heroSp(this), SX + SW - 180, FLOOR - 10, 180, true);
-    const sh = SX + SW - 180; K.EL(x, sh + 40, FLOOR, 120, 20, 'rgba(0,0,0,0.6)');
-    if (mg.phase === 'select' || mg.phase === 'idle') { MINI.granny.cards.call(this, mg).forEach(c => { const q = M.DB[c.u.type].q, hov = mg.phase === 'select' && Math.abs(mg.mx - c.x) < 60 && Math.abs(mg.my - c.y) < 80; K.card(x, c.x - 60, c.y - 80 - (hov ? 12 : 0), 120, 160, M.QUALITY[q].c, hov, C.abyss); K.SP(x, c.u.type, c.x, c.y + 60 - (hov ? 12 : 0), 110); }); if (mg.phase === 'select') K.sign(x, '选一名部队', CX, SY + 200, { kind: 'wine', size: T.title }); }
-    if (mg.phase === 'thread') { const q = cl(mg.pt / 1.2, 0, 1); for (let i = 0; i < 20; i++) { const u = (i / 20 + q) % 1; K.CI(x, CX + (sh - CX) * u, SY + 350 + Math.sin(u * 9 + t * 5) * 40, 4, C.violet); } K.GL(x, CX + (sh - CX) * q, SY + 350, 80, C.violet, 0.7); }
-    if (mg.phase === 'sew' || mg.phase === 'end') { x.strokeStyle = U.pal('rgba(208,160,255,0.35)'); x.lineWidth = 3; x.setLineDash([12, 10]); x.beginPath(); for (let u = 0; u <= 1.001; u += 0.02) { const p = MINI.granny.path(u); u ? x.lineTo(p.x, p.y) : x.moveTo(p.x, p.y); } x.stroke(); x.setLineDash([]);
-      // 针脚点：方块，白 / 紫圈 + 墨边，落针后打叉；错过的变灰
-      mg.marks.forEach(m => { const p = MINI.granny.path(m.u), px = Math.round(p.x), py = Math.round(p.y); U.box(x, px - 18, py - 18, 36, 36, m.ok ? C.white : m.gone ? C.slate : C.violet); K.R(x, px - 15, py - 15, 30, 30, m.ok ? C.violet : C.abyss); if (m.ok) { K.LN(x, px - 9, py - 9, px + 9, py + 9, 3, C.white); K.LN(x, px + 9, py - 9, px - 9, py + 9, 3, C.white); } });
-      const u = mg.phase === 'end' ? 1 : cl(mg.pt / 4, 0, 1), p = MINI.granny.path(u); x.strokeStyle = fev ? C.gold : C.red; x.lineWidth = 3; x.beginPath(); for (let v = 0; v <= u; v += 0.01) { const q = MINI.granny.path(v); v ? x.lineTo(q.x, q.y - 4) : x.moveTo(q.x, q.y - 4); } x.stroke(); x.save(); x.translate(p.x, p.y); x.rotate(-0.8); K.IC(x, 'e_needle', 0, -20, 70); x.restore(); U.text(x, mg.good + ' / 6', CX, SY + 170, T.num, C.violet, { num: true, outline: true }); }
-  } };
+    const t = mg.t, ph = mg.phase, sewing = ph === 'sew' || ph === 'thread' || ph === 'close' || ph === 'end', cards = ph === 'idle' || ph === 'select' ? MINI.granny.cards.call(this, mg) : [];
+    const hov = ph === 'select' ? cards.findIndex(c => Math.abs(mg.mx - c.x) < 50 && Math.abs(mg.my - c.y) < 70) : -1;
+    const breath = mg.breathT != null ? Math.max(0, Math.sin(cl((t - mg.breathT) / 0.9, 0, 1) * Math.PI)) : 0, shk = mg.shake != null && t - mg.shake < 0.3 ? Math.sin((t - mg.shake) * 60) * 0.6 : 0;
+    const u = ph === 'sew' ? cl(mg.pt / 4, 0, 1) : ph === 'close' || ph === 'end' ? 1 : 0;
+    K.pxr(x, 'mini_granny', 0, 0, mg.t, { phase: sewing ? 'sew' : 'select', u, marks: mg.marks, cards: cards.map((c, i) => ({ ax: c.ax, hov: i === hov })), breath: breath + shk, sunk: mg.sunk || 0, thread: mg.threadF, knots: mg.knots }, 'mc_granny');
+    // 布样上绣着部队的像
+    cards.forEach((c, i) => castAt(x, c.u.type, c.x + (i === hov ? 4 : 0), M.MCPX.ly(84), 64));
+    // 穿线：选中的布样飞上墙，一根发光的紫线从它飞进针眼
+    if (ph === 'thread') { const q = eo(cl(mg.pt / 0.8, 0, 1)), sx = M.MCPX.lx(mg.pickAx || 150) + (CX - M.MCPX.lx(mg.pickAx || 150)) * q, sy = M.MCPX.ly(70) + (M.MCPX.ly(80) - M.MCPX.ly(70)) * q; x.save(); x.globalAlpha = 1 - q * 0.7; castAt(x, mg.pick.type, sx, sy + 40, 64); x.restore();
+      const n0 = grPt(0); for (let i = 0; i < 16; i++) { const k = i / 16, w = cl(mg.pt / 1.1, 0, 1); if (k > w) break; K.R(x, Math.round(sx + (n0.x - sx) * k), Math.round(sy + (n0.y - sy) * k - Math.sin(k * Math.PI) * 60), 6, 6, C.violet); } }
+    // 老太（像素人物做好之前是剪影）和领袖
+    MINI.granny.npc(x, mg); M.MCPX.cast(x, heroSp(this), 262, 148, 'idle', t, true);
+    if (sewing) U.text(x, mg.good + ' / 6', CX, SY + 170, T.num, C.violet, { num: true, outline: true });
+    if (ph === 'select') K.sign(x, '选一名部队', CX, SY + 150, { kind: 'wine', size: T.title });
+  },
+  npc(x, mg) { const bob = mg.stabT != null && mg.t - mg.stabT < 0.15 ? 1 : 0, ax = 40, feet = 148, px = (a, b, c) => { x.fillStyle = U.pal(c); x.fillRect(M.MCPX.lx(a), M.MCPX.ly(b), 4, 4); };
+    for (let k = 0; k < 28; k++) { const y = feet - 1 - k + (k > 12 ? bob : 0), q = k / 28, off = q > 0.55 ? Math.round((q - 0.55) * 12) : 0; let hw = q > 0.84 ? 3 : q > 0.78 ? 2 : 6 - q * 2; for (let d = -Math.round(hw); d <= Math.round(hw); d++) px(ax + d + off, y, d === Math.round(hw) ? '#ffb860' : '#12101e'); } },
+};
 
 // ═════════════════════ 许愿井 · hold to throw a coin ═════════════════════
-const WX = SX + SW - 300, WY = SY + 400;
+// 硬币、水花、井里的月光和回应的光柱都画在舞台里（同一套灯光）；蓄力计是领袖身边刻槽的石柱
+const WLA = M.MCPX.WELL, WX = M.MCPX.lx(WLA.x), WY = M.MCPX.ly(WLA.mouth), wlSlot = () => M.MCPX.slot('mini_well', 'mc_well');
+const wlTraj = (s, q) => { const hx = M.MCPX.lx(WLA.hero), tx = hx + 60 + (WX - hx - 60) * (0.35 + s * 0.8) * q, h = 220 + s * 160; return { x: tx, y: FLOOR - 190 - Math.sin(q * Math.PI) * h + q * (WY - 40 - (FLOOR - 190)) }; };
 MINI.well = { title: '许愿井', img: 'well', col: C.teal, text: '井底有东西在回应你的脚步声。硬币扔得越准，回应越慷慨。',
   init(mg) { mg.throws = 0; mg.max = 2; mg.got = []; mg.band = 0.45 + rnd() * 0.3; mg.pow = 0; },
-  down(mg) { if (mg.phase === 'ready') { this.miniSet('charge'); S.mini('well', 'charge', 0); } },
+  down(mg, px, py) { if (mg.phase === 'ready') { this.miniSet('charge'); S.mini('well', 'charge', 0); return; }
+    // 点空白：草丛里一闪、一声轻响
+    if (mg.phase === 'idle') { SHW.tap(this, mg, px, py); const sl = wlSlot(); if (sl) sl.burst('firefly', M.MCPX.ax(px), Math.max(120, M.MCPX.ay(py)), 2, { sp: 10, life: 1.4 }); S.mini('well', 'flick'); } },
   // 松手那一刻准头就定了：先给手感章，结果在落水时端出来
-  up(mg) { if (mg.phase === 'charge') { mg.shot = mg.pow; mg.acc = 1 - Math.abs(mg.shot - mg.band) / 0.32; mg.slo = 0; this.miniSet('fly'); S.mini('well', 'toss'); const sx = SX + 344, sy = FLOOR - 400; if (mg.acc > 0.2) combo(this, mg, sx, sy, mg.acc > 0.8 ? 'PERFECT' : mg.acc > 0.5 ? 'GREAT' : 'GOOD'); else miss(this, mg, sx, sy); } },
+  up(mg) { if (mg.phase === 'charge') { mg.shot = mg.pow; mg.acc = 1 - Math.abs(mg.shot - mg.band) / 0.32; mg.slo = 0; mg.relT = mg.t; this.miniSet('fly'); S.mini('well', 'toss'); S.mini('well', 'flick'); const sx = SX + 344, sy = FLOOR - 400;
+      const sl = wlSlot(); if (sl) sl.burst(mg.acc > 0.8 ? 'glint' : 'spark', WLA.meter[0] + 4, WLA.meter[1] + WLA.meter[3] * (1 - mg.shot), mg.acc > 0.8 ? 6 : 3, { sp: 18, life: 0.5, floor: 148 });
+      if (mg.acc > 0.2) combo(this, mg, sx, sy, mg.acc > 0.8 ? 'PERFECT' : mg.acc > 0.5 ? 'GREAT' : 'GOOD'); else miss(this, mg, sx, sy); } },
   btns(mg) { if (mg.phase === 'idle') { const over = mg.throws >= mg.max; return [{ t: '拿出一枚硬币', sub: mg.pay + ' 积分 · 按住蓄力，松手扔出', gold: !over, dis: over || this.run.wallet < mg.pay, why: over ? '井水平静了' : '积分不够', fn: () => { if (!this.miniPay(mg.pay)) return; mg.throws++; mg.band = 0.4 + rnd() * 0.38; this.miniSet('ready'); } }, { t: '离开', leave: 1, gold: over, fn: () => this.miniFinish(mg.got.length ? '井底回应了你：' + mg.got.join('；') + '。' : '你没有许愿。', mg.got.length ? '#6fd0ff' : '#8d8496') }]; }
     if (mg.phase === 'ready' || mg.phase === 'charge') return [{ t: '按住空格 / 鼠标蓄力', sub: '在金色区域松手', dis: 1, why: '按住画面' }]; return []; },
   tick(mg, dt) {
@@ -154,137 +184,138 @@ MINI.well = { title: '许愿井', img: 'well', col: C.teal, text: '井底有东�
       // 扔得准：硬币快到水面时放慢；准到正中还压暗、聚光罩住井口
       if (!mg.slo && mg.acc > 0.5 && mg.pt > (mg.acc > 0.8 ? 0.68 : 0.74)) { mg.slo = 1; SHW.slowmo(mg, mg.acc > 0.8 ? 0.35 : 0.55, mg.acc > 0.8 ? 0.7 : 0.4); if (mg.acc > 0.8) SHW.reach(this, mg, { x: WX, y: WY - 60, r: 180 }); }
       if (mg.pt > 0.95) MINI.well.land.call(this, mg); }
-    if (mg.phase === 'answer') { omen(this, mg, mg.om, WX, WY - 20); if (mg.pt > mg.om.at + mg.om.dur + 0.1) MINI.well.pay.call(this, mg); }
+    if (mg.phase === 'answer') { const q0 = mg.om.q; omen(this, mg, mg.om, WX, WY - 20); if (mg.om.q != null && mg.om.q !== q0) { S.mini('well', 'rise', mg.om.q); const sl = wlSlot(); if (sl) sl.burst('firefly', WLA.x, 60, 4, { sp: 16, life: 1.6, w: 20, h: 40 }); }
+      if (mg.pt > mg.om.at + mg.om.dur + 0.1 && !mg.held) { mg.held = 1; SHW.hitstop(mg, 0.15, WX, WY - 60, () => { mg.held = 0; MINI.well.pay.call(this, mg); }); } }
     if (mg.phase === 'miss' && mg.pt > 0.4) this.miniSet('idle');
+    // 余韵：回应之后萤火虫绕着井口飞一会儿
+    if (mg.after && mg.t - mg.after < 3) { const sl = wlSlot(); if (sl && rnd() < 0.15) sl.burst('firefly', WLA.x + (rnd() - 0.5) * 50, 70 + rnd() * 30, 1, { sp: 8, life: 2 }); }
   },
   land(mg) { const acc = mg.acc, run = this.run; let tx, col, g = [], tier = 0;
     if (acc > 0.8) { g.push(rnd() < 0.5 ? K.bp(null, 1) : K.item(run, mg.P)); tx = '正中井心！金光从井底涌上来'; col = '#ffcc33'; tier = 3; }
     else if (acc > 0.5) { g.push({ k: 'wallet', v: mg.pay * 2 }, { k: 'vision', v: 1 }); tx = '扑通。井水映出了前面的路，还吐出双倍积分'; col = '#6fd0ff'; tier = 2; }
     else if (acc > 0.2) { g.push({ k: 'rsup', v: 20 }); tx = '硬币擦着井沿掉了进去，捞上来一袋物资'; col = '#caa84a'; tier = 1; }
     else { tx = '硬币弹在井沿上，滚走了'; col = '#8d8496'; }
-    mg.res = { g, tx, col, tier }; mg.splT = mg.t;
-    if (!tier) { S.mini('well', 'miss'); SHW.lose(this, mg); mg.got.push(tx); this.miniSay(tx, col); this.fx.spark(WX - 130, WY - 30, C.silver, 10, { v: 400 }); this.fx.kick(2); this.miniSet('miss'); return; }
-    S.mini('well', 'splash'); this.fx.ring(WX, WY - 20, 12, 150 + tier * 30, C.ice, 5, 0.4); this.fx.spark(WX, WY - 20, C.ice, 10 + tier * 6, { dir: -Math.PI / 2, spread: 1.3, v: 500 + tier * 100 }); this.fx.kick(2 + tier);
+    mg.res = { g, tx, col, tier }; mg.splT = mg.t; const sl = wlSlot();
+    if (!tier) { S.mini('well', 'miss'); SHW.lose(this, mg); mg.got.push(tx); this.miniSay(tx, col); if (sl) sl.burst('spark', WLA.x - 34, WLA.mouth - 2, 8, { sp: 30, life: 0.5, floor: 148 }); this.fx.kick(2); this.miniSet('miss'); return; }
+    S.mini('well', 'splash'); if (sl) { sl.burst('water', WLA.x, WLA.mouth, 10 + tier * 6, { sp: 40 + tier * 12, ang: 0, spread: 0.9, life: 0.9, floor: WLA.mouth + 2 }); sl.burst('glint', WLA.x, WLA.mouth, 3 + tier, { sp: 20, life: 0.6 }); } this.fx.kick(2 + tier);
     // 井的回应：水面先亮品质色，越好亮得越久，正中还可能升格
     mg.om = { path: tier === 3 ? SHW.omenPath(3) : [tier - 1], at: 0.05, dur: [0, 0.3, 0.5, 1.0][tier] }; this.miniSet('answer'); },
-  pay(mg) { const r = mg.res, wv = r.g.find(o => o.k === 'wallet'); this.miniSet('paid');
+  pay(mg) { const r = mg.res, wv = r.g.find(o => o.k === 'wallet'); this.miniSet('paid'); mg.after = mg.t;
     payout(this, mg, { grade: ['C', 'B', 'A', 'S'][r.tier], tier: r.tier, x: WX, y: WY - 60, gx: CX - 150, gy: SY + 250, col: SHW.QC(mg.om.q), v: wv && wv.v, gains: r.g,
       snd: () => { if (r.tier === 3) S.mini('well', 'great'); else if (r.tier === 2) S.mini('well', 'ok'); this.miniSay(r.tx, r.col, r.tier >= 3); },
       done: (got) => { mg.got.push(r.tx + (got.length ? '（' + got.join('、') + '）' : '')); this.miniSet('idle'); } }); },
   draw(x, mg) {
-    const t = mg.t, wx = WX, wy = WY; night(x, '#0e1a2e', '#060a12'); K.CI(x, SX + 200, SY + 140, 40, '#f5e8c0'); K.CI(x, SX + 186, SY + 130, 36, '#0e1a2e');
-    K.R(x, SX, FLOOR, SW, SH - (FLOOR - SY), '#1a2418');
-    // 井的回应：一道品质色的光柱从井口升起
-    const ans = (mg.phase === 'answer' || mg.phase === 'paid') && mg.om && mg.om.q != null, ak = ans ? (mg.phase === 'paid' ? 1 : omK(mg, mg.om)) : 0;
-    if (ans && mg.om.q >= 1) { x.save(); x.globalAlpha = 0.15 + 0.2 * ak; K.R(x, wx - 50, SY + 110, 100, wy - 20 - SY - 110, SHW.QC(mg.om.q)); x.restore(); }
-    K.RR(x, wx - 150, wy - 20, 300, FLOOR - wy + 20, 10, '#5a5a66'); for (let r = 0; r < 4; r++) for (let c = 0; c < 5; c++) K.RR(x, wx - 146 + c * 59 + (r % 2) * 20, wy - 14 + r * 44, 54, 38, 4, ['#6a6a78', '#5a5a68'][(r + c) % 2]); K.EL(x, wx, wy - 20, 150, 34, '#4a4a55'); K.EL(x, wx, wy - 20, 126, 24, '#050810'); K.GL(x, wx, wy - 20, 120, '#6fd0ff', 0.2 + 0.1 * Math.sin(t * 2));
-    if (ans) SHW.aura(x, wx, wy - 20, 120, mg.om.q, t, ak);
-    K.R(x, wx - 160, wy - 220, 12, 200, '#5a3a22'); K.R(x, wx + 148, wy - 220, 12, 200, '#5a3a22'); K.PL(x, [[wx - 190, wy - 210], [wx, wy - 290], [wx + 190, wy - 210]], C.wine);
-    const hx = SX + 220; K.SP(x, heroSp(this), hx, FLOOR, 180);
-    // 蓄力条：墨槽，琥珀色目标区 + 金线，青色往上涨
-    const mx = hx + 110, my = FLOOR - 300, mh = 260, bY = Math.round(my + mh * (1 - mg.band)); U.box(x, mx, my, 28, mh, C.ink); K.R(x, mx, bY - Math.round(mh * 0.08), 28, Math.round(mh * 0.16), C.amber); K.R(x, mx, bY - 3, 28, 6, C.gold);
-    if (mg.phase === 'charge' || mg.phase === 'ready') { const fh = Math.round(mh * mg.pow); if (fh > 0) { K.R(x, mx, my + mh - fh, 28, fh, C.teal); K.R(x, mx, my + mh - fh, 28, 3, C.ice); } K.sign(x, mg.phase === 'ready' ? '按住蓄力' : '松手！', mx + 14, my - 40, { kind: mg.phase === 'ready' ? 'indigo' : 'gold', size: T.body }); }
-    // coin
-    const traj = (s, q) => { const tx = hx + 60 + (wx - hx - 60) * (0.35 + s * 0.8) * q, h = 220 + s * 160; return { x: tx, y: FLOOR - 190 - Math.sin(q * Math.PI) * h + q * (wy - 40 - (FLOOR - 190)) }; };
-    if (mg.phase === 'charge') { x.setLineDash([8, 10]); x.strokeStyle = U.pal('rgba(255,224,138,0.4)'); x.lineWidth = 3; x.beginPath(); for (let q = 0; q <= 1; q += 0.05) { const p = traj(mg.pow, q); q ? x.lineTo(p.x, p.y) : x.moveTo(p.x, p.y); } x.stroke(); x.setLineDash([]); }
-    if (mg.phase === 'fly') { const q = cl(mg.pt / 0.95, 0, 1), p = traj(mg.shot, q); x.save(); x.translate(p.x, p.y); x.scale(Math.abs(Math.cos(mg.pt * 18)) * 0.8 + 0.2, 1); K.IC(x, 'e_coin', 0, 0, 40); x.restore(); if (mg.slo) K.GL(x, p.x, p.y, 70, C.gold, 0.5); }
-    // 落空：硬币从井沿弹开滚走
-    if (mg.phase === 'miss') { const q = cl(mg.pt / 0.4, 0, 1); x.save(); x.translate(Math.round(wx - 130 - q * 260), Math.round(wy - 40 - Math.sin(q * Math.PI) * 80 + q * 60)); x.rotate(q * 9); K.IC(x, 'e_coin', 0, 0, 36); x.restore(); }
-    // 水花：落水后三圈往外扩
-    const se = mg.splT != null ? mg.t - mg.splT : 9; if (se < 0.8 && mg.res && mg.res.tier) { for (let i = 0; i < 3; i++) { x.strokeStyle = U.pal('rgba(143,224,255,' + cl(1 - se / 0.8, 0, 1) + ')'); x.lineWidth = 3; x.beginPath(); x.ellipse(wx, wy - 20, 20 + se * 120 * (1 + i * 0.4), 6 + se * 30, 0, 0, 7); x.stroke(); } }
+    const t = mg.t, ph = mg.phase, ans = (ph === 'answer' || ph === 'paid') && mg.om && mg.om.q != null, ak = ans ? (ph === 'paid' ? Math.max(0, 1 - mg.pt / 2) : omK(mg, mg.om)) : 0;
+    // the coin: along its arc (thrown), bouncing off the rim (missed), or spinning faster in the hand as the charge rises
+    let coin = null; if (ph === 'fly') { const q = cl(mg.pt / 0.95, 0, 1), p = wlTraj(mg.shot, q); coin = { x: M.MCPX.ax(p.x), y: M.MCPX.ay(p.y), spin: mg.pt * 18, glow: mg.slo ? 1 : 0 }; }
+    else if (ph === 'miss') { const q = cl(mg.pt / 0.4, 0, 1); coin = { x: WLA.x - 33 - q * 65, y: WLA.mouth - 10 - Math.sin(q * Math.PI) * 20 + q * 15, spin: q * 9 }; }
+    else if (ph === 'charge' || ph === 'ready') coin = { x: WLA.hero + 10, y: 116, spin: t * (4 + mg.pow * 22) };
+    K.pxr(x, 'mini_well', 0, 0, mg.t, { band: mg.band, pow: ph === 'charge' || ph === 'ready' ? mg.pow : 0, preview: ph === 'charge', q: ans ? mg.om.q : null, col: ak, coin, splT: mg.splT, tier: mg.res && mg.res.tier }, 'mc_well');
+    M.MCPX.cast(x, heroSp(this), WLA.hero, 148, 'idle', t);
+    if (ph === 'ready' || ph === 'charge') K.sign(x, ph === 'ready' ? '按住蓄力' : '松手！', M.MCPX.lx(WLA.meter[0] + 4), M.MCPX.ly(WLA.meter[1]) - 40, { kind: ph === 'ready' ? 'indigo' : 'gold', size: T.body });
     for (let i = 0; i < mg.max; i++) K.IC(x, 'e_coin', SX + 80 + i * 50, SY + 130, 40 * (i < mg.max - mg.throws ? 1 : 0.5));
   } };
 
 // ═════════════════════ 迷路的孩子 · follow the footprints ═════════════════════
+// 下雪的白桦林：小路在中景分岔，脚印是雪地上压实的小坑，真的一边顺着她的灯光亮一下；走的时候镜头往前推
+const CHA = M.MCPX.CHILD, chSlot = () => M.MCPX.slot('mini_child', 'mc_child');
 MINI.child = { title: '迷路的孩子', img: 'child', col: C.butter, text: '她提着灯走在前面。每到岔口，她的脚印只亮一下。',
   init(mg) { mg.j = 0; mg.ok = 0; mg.ans = [0, 1, 2].map(() => rnd() < 0.5 ? 0 : 1); mg.walk = 0; },
-  girl(mg) { const vy = SY + 280, dist = 1 - mg.ok * 0.15 + (mg.j - mg.ok) * 0.25, cy = vy + 60 + 40 / dist, cs = 110 / dist; return { dist, cy, cs, x: CX + 30, y: cy - cs * 0.7 }; },
-  choose(mg, d) { if (mg.phase !== 'choose') return; const ok = d === mg.ans[mg.j], dx = CX + (d ? 300 : -300); mg.last = ok; SHW.calm(mg);
-    if (ok) { mg.ok++; S.mini('child', 'step', mg.ok); this.miniSay('灯光近了一点', '#ffe08a'); combo(this, mg, dx, SY + 170, mg.pt < 0.7 ? 'PERFECT' : mg.pt < 1.5 ? 'GREAT' : 'GOOD');
-      // 选对的那一边脚印一个接一个亮过去
-      for (let i = 0; i < 6; i++) { const q = i / 6, px = CX + (d ? 1 : -1) * (40 + q * 240), py = FLOOR + 40 - q * 260; SHW.later(mg, i * 0.04, () => { this.fx.spark(px, py, C.butter, 4, { v: 200, g: 0 }); this.fx.ring(px, py, 6, 40, C.butter, 3, 0.25); }); } }
-    else { S.mini('child', 'wrong'); this.miniSay('她的灯更远了……', '#8d8496'); miss(this, mg, dx, SY + 170); }
+  // 她站在岔口；走丢一次就远一截、灯暗一档
+  girl(mg) { const lost = mg.j - mg.ok, fade = mg.phase === 'end' && mg.ok < 2 ? cl(1 - mg.pt / 0.5, 0, 1) : 1; return { ax: 150, ay: 124 - lost * 7, h: Math.max(12, 20 - lost * 3), lk: Math.max(0.15, 1 - lost * 0.3) * fade, x: M.MCPX.lx(150), y: M.MCPX.ly(124 - lost * 7) - 40 }; },
+  choose(mg, d) { if (mg.phase !== 'choose') return; const ok = d === mg.ans[mg.j], dx = CX + (d ? 300 : -300), sl = chSlot(); mg.last = ok; SHW.calm(mg); mg.pickT = mg.t; mg.pickSide = d;
+    if (sl) sl.burst('snow', 150 + (d ? 40 : -40), 130, 8, { sp: 20, ang: 0, spread: 1.5, life: 1 });
+    if (ok) { mg.ok++; S.mini('child', 'step', mg.ok); this.miniSay('灯光近了一点', '#ffe08a'); combo(this, mg, dx, SY + 170, mg.pt < 0.7 ? 'PERFECT' : mg.pt < 1.5 ? 'GREAT' : 'GOOD'); mg.walked = { side: d, t: mg.t };
+      for (let i = 0; i < 6; i++) SHW.later(mg, 0.05 + i * 0.07, () => S.mini('child', 'step', mg.ok + i * 0.34)); }
+    else { S.mini('child', 'wrong'); this.miniSay('她的灯更远了……', '#8d8496'); miss(this, mg, dx, SY + 170); mg.gustT = mg.t; if (sl) sl.burst('snow', 300, 90, 40, { sp: 70, ang: -Math.PI / 2, spread: 0.4, life: 1.2, h: 60 }); }
     mg.j++; this.miniSet(mg.j >= 3 ? 'end' : 'walk'); },
   key(mg, k, down) { if (!down || mg.phase !== 'choose') return; if (k === 'left') { MINI.child.choose.call(this, mg, 0); return true; } if (k === 'right') { MINI.child.choose.call(this, mg, 1); return true; } },
+  down(mg, px, py) { if (mg.phase === 'choose') return MINI.child.choose.call(this, mg, px < CX ? 0 : 1);
+    // 点空白：雪地上一个小坑、几片雪扬起
+    if (mg.phase === 'idle') { SHW.tap(this, mg, px, py); const sl = chSlot(); if (sl) sl.burst('snow', M.MCPX.ax(px), Math.max(100, M.MCPX.ay(py)), 5, { sp: 14, ang: 0, spread: 1.2, life: 0.8 }); S.mini('child', 'crunch'); } },
   btns(mg) { if (mg.phase === 'idle') return [{ t: '带她回家', sub: '跟着她的脚印走', gold: 1, fn: () => this.miniSet('walk') }, { t: '无视', leave: 1, fn: () => this.miniFinish('她一直看着你走远。', '#8d8496') }]; if (mg.phase === 'choose') return [{ t: '← 左边', fn: () => MINI.child.choose.call(this, mg, 0) }, { t: '右边 →', fn: () => MINI.child.choose.call(this, mg, 1) }]; return []; },
   tick(mg, dt) {
-    if (mg.phase === 'walk') { mg.walk += dt; if (mg.pt > 1.3) { this.miniSet('prints'); } }
+    if (mg.phase === 'walk') { mg.walk += dt; if (mg.pt > 1.3) { this.miniSet('prints'); mg.walked = null; } if (Math.floor(mg.pt * 3) !== mg.stp) { mg.stp = Math.floor(mg.pt * 3); S.mini('child', 'crunch'); } }
     // 前两个岔口都走对：最后一个岔口压暗、聚光、心跳
-    if (mg.phase === 'prints') { if (!mg.reached && mg.j === 2 && mg.ok === 2) { mg.reached = 1; SHW.reach(this, mg, { x: CX, y: SY + 330, r: 380 }); } if (mg.pt > 1.0 + mg.j * 0.15) this.miniSet('choose'); }
+    if (mg.phase === 'prints') { if (!mg.reached && mg.j === 2 && mg.ok === 2) { mg.reached = 1; SHW.reach(this, mg, { x: CX, y: SY + 480, r: 380 }); } if (mg.pt > 1.0 + mg.j * 0.15) this.miniSet('choose'); }
     if (mg.phase === 'end') { const gp = MINI.child.girl(mg);
-      // 走到头：她的灯先亮品质色（三步全对可能升格），再端出奖励；走丢了一拍带过
-      if (!mg.endGo) { mg.endGo = 1; if (mg.ok >= 2) mg.om = { path: mg.ok === 3 ? SHW.omenPath(3) : [1], at: 0.1, dur: mg.ok === 3 ? 0.8 : 0.35 }; if (mg.ok === 3) SHW.reach(this, mg, { x: gp.x, y: gp.cy - gp.cs * 0.4, r: 200, label: '' }); }
-      if (mg.om) omen(this, mg, mg.om, gp.x, gp.y);
-      if (mg.pt > (mg.ok === 3 ? 1.05 : mg.ok === 2 ? 0.5 : 0.1) && !mg.fin) { mg.fin = true; let tx, col, g = [], gr, ev;
-        if (mg.ok === 3) { g.push({ k: 'rsup', v: 30 }, K.item(this.run, mg.P)); tx = '她把你带到一个藏东西的地方，回头笑了笑，不见了。'; col = '#9ccc6a'; gr = 'S'; ev = 'found'; }
-        else if (mg.ok === 2) { g.push({ k: 'rsup', v: 20 }); tx = '走丢了一次，但最后还是找到了她的家。门口放着一袋东西。'; col = '#caa84a'; gr = 'B'; ev = 'found'; }
-        else if (mg.ok === 1) { tx = '一转身她就不见了。'; col = '#8d8496'; gr = 'C'; ev = 'lost'; }
-        else { tx = '你迷路了。你总觉得背后有人。生命 -' + this.heroHurt(0.08) + '。'; col = '#d0453c'; gr = 'C'; ev = 'lost'; }
-        payout(this, mg, { grade: gr, tier: GT[gr], x: gp.x, y: gp.y, gx: CX - 330, gy: SY + 260, col: mg.om ? SHW.QC(mg.om.q) : C.butter, gains: g, tx, tc: col, snd: () => S.mini('child', ev) }); } }
+      // 走到头：她的灯先亮品质色（三步全对可能升格），她把你带到一棵空心老树前，树洞亮起来；走丢了一拍带过
+      if (!mg.endGo) { mg.endGo = 1; if (mg.ok >= 2) mg.om = { path: mg.ok === 3 ? SHW.omenPath(3) : [1], at: 0.1, dur: mg.ok === 3 ? 0.8 : 0.35 }; if (mg.ok === 3) SHW.reach(this, mg, { x: M.MCPX.lx(214), y: M.MCPX.ly(125), r: 200, label: '' }); }
+      if (mg.om) omen(this, mg, mg.om, M.MCPX.lx(214), M.MCPX.ly(125));
+      const due = mg.ok === 3 ? 1.05 : mg.ok === 2 ? 0.5 : 0.1;
+      if (mg.pt > due && !mg.held) { mg.held = 1; if (mg.ok >= 2) SHW.hitstop(mg, 0.15, M.MCPX.lx(214), M.MCPX.ly(125), () => MINI.child.pay.call(this, mg)); else MINI.child.pay.call(this, mg); } }
   },
+  pay(mg) { if (mg.fin) return; mg.fin = true; let tx, col, g = [], gr, ev; const hx = M.MCPX.lx(214), hy = M.MCPX.ly(125);
+    if (mg.ok === 3) { g.push({ k: 'rsup', v: 30 }, K.item(this.run, mg.P)); tx = '她把你带到一个藏东西的地方，回头笑了笑，不见了。'; col = '#9ccc6a'; gr = 'S'; ev = 'found'; }
+    else if (mg.ok === 2) { g.push({ k: 'rsup', v: 20 }); tx = '走丢了一次，但最后还是找到了她的家。门口放着一袋东西。'; col = '#caa84a'; gr = 'B'; ev = 'found'; }
+    else if (mg.ok === 1) { tx = '一转身她就不见了。'; col = '#8d8496'; gr = 'C'; ev = 'lost'; }
+    else { tx = '你迷路了。你总觉得背后有人。生命 -' + this.heroHurt(0.08) + '。'; col = '#d0453c'; gr = 'C'; ev = 'lost'; }
+    mg.after = mg.ok >= 2 ? mg.t : null; payout(this, mg, { grade: gr, tier: GT[gr], x: hx, y: hy, gx: CX - 330, gy: SY + 260, col: mg.om ? SHW.QC(mg.om.q) : C.butter, gains: g, tx, tc: col, snd: () => S.mini('child', ev) }); },
   draw(x, mg) {
-    const t = mg.t, fwd = mg.phase === 'walk' ? mg.pt / 1.3 : 0; night(x, '#0c0a14', '#040306');
-    // corridor in perspective
-    const vx = CX, vy = SY + 280; x.fillStyle = C.abyss; x.beginPath(); x.moveTo(SX, FLOOR + 110); x.lineTo(vx - 90, vy + 60); x.lineTo(vx + 90, vy + 60); x.lineTo(SX + SW, FLOOR + 110); x.fill();
-    for (let i = 0; i < 8; i++) { const z = ((i + fwd) / 8), yy = vy + 60 + (FLOOR + 110 - vy - 60) * z * z; K.R(x, SX, yy, SW, 2, 'rgba(255,224,138,' + 0.06 * z + ')'); }
-    x.fillStyle = C.night; x.beginPath(); x.moveTo(SX, SY); x.lineTo(vx - 90, vy - 120); x.lineTo(vx - 90, vy + 60); x.lineTo(SX, FLOOR + 110); x.fill(); x.beginPath(); x.moveTo(SX + SW, SY); x.lineTo(vx + 90, vy - 120); x.lineTo(vx + 90, vy + 60); x.lineTo(SX + SW, FLOOR + 110); x.fill();
-    const fork = mg.phase === 'prints' || mg.phase === 'choose';
-    if (fork) { [[-1, CX - 300], [1, CX + 300]].forEach(([s, dx]) => { K.RR(x, dx - 70, SY + 200, 140, 220, 8, C.ink, C.dusk, 3); K.GL(x, dx, SY + 310, 100, C.butter, 0.05); });
-      const real = mg.ans[mg.j], vis = mg.phase === 'prints' ? cl(1 - (mg.pt - 0.5) / 0.5, 0, 1) : 0, decoy = 0.15 + mg.j * 0.12;
-      [0, 1].forEach(side => { const a = side === real ? vis : Math.min(vis, decoy); for (let i = 0; i < 6; i++) { const q = i / 6, px = CX + (side ? 1 : -1) * (40 + q * 240), py = FLOOR + 40 - q * 260; x.globalAlpha = a * (side === real ? 1 : 0.9); K.EL(x, px + (i % 2 ? 10 : -10), py, 9, 14, '#ffe08a', side ? 0.4 : -0.4); K.GL(x, px, py, 26, '#ffe08a', a * 0.6); } x.globalAlpha = 1; });
-      if (mg.phase === 'choose') K.sign(x, '她往哪边走了？', CX, SY + 140, { kind: 'wine', size: T.btn }); }
-    // the girl & lantern ahead；走到头时灯先亮品质色
-    const gp = MINI.child.girl(mg), dist = gp.dist, cy = gp.cy, cs = gp.cs;
-    if (!fork) { const j = mg.phase === 'end' && mg.om && mg.om.q != null ? SHW.aura(x, gp.x, gp.y, 160 / dist, mg.om.q, t, omK(mg, mg.om)) : { dx: 0, dy: 0 }; K.GL(x, CX + 30, cy - cs * 0.7, 160 / dist, '#ffcf70', 0.6); K.SP(x, 'child', CX + j.dx, cy + j.dy, cs); }
-    K.SP(x, heroSp(this), CX - 240, FLOOR + 60, 200);
+    const t = mg.t, ph = mg.phase, fork = ph === 'prints' || ph === 'choose', gp = MINI.child.girl(mg), real = mg.ans[Math.min(2, mg.j)];
+    const vis = ph === 'prints' ? cl(1 - (mg.pt - 0.5) / 0.5, 0, 1) : 0, decoy = 0.15 + mg.j * 0.12;
+    const hollow = ph === 'end' && mg.ok >= 2 ? cl(mg.pt / 0.4, 0, 1) : 0, hc = mg.om && mg.om.q != null ? SHW.QC(mg.om.q) : null;
+    const o = { girl: { x: 150, y: gp.ay, lk: gp.lk }, prints: fork ? { real, vis, decoy } : { real, vis: 0, decoy: 0 }, walked: mg.walked ? { side: mg.walked.side, k: cl((t - mg.walked.t) / 0.5, 0, 1) } : null, hollow, hollowC: hollow > 0 ? hc : null };
+    // 走：镜头往岔口推近一截，新的岔口出来时一下拉回
+    const push = ph === 'walk' ? eio(cl(mg.pt / 1.3, 0, 1)) * 0.14 : 0; x.save(); if (push) { const fx = M.MCPX.lx(150), fy = M.MCPX.ly(124); x.translate(fx, fy); x.scale(1 + push, 1 + push); x.translate(-fx, -fy); }
+    K.pxr(x, 'mini_child', 0, 0, mg.t, o, 'mc_child');
+    if (!(ph === 'end' && mg.ok < 2 && mg.pt > 0.5)) MINI.child.npc(x, mg, gp);
+    x.restore();
+    M.MCPX.cast(x, heroSp(this), 64, 170, ph === 'walk' ? 'move' : 'idle', t);
+    if (mg.gustT != null && t - mg.gustT < 0.5) { const q = (t - mg.gustT) / 0.5; x.save(); x.globalAlpha = 0.25 * (1 - q); K.R(x, SX, SY, SW, SH, '#bff7f0'); x.restore(); }
+    if (ph === 'choose') K.sign(x, '她往哪边走了？', CX, SY + 140, { kind: 'wine', size: T.btn });
     for (let i = 0; i < 3; i++) K.pip(x, SX + 90 + i * 40, SY + 140, 24, i < mg.j ? (i < mg.ok ? C.butter : C.slate) : null);
-  } };
+  },
+  // 她（像素人物做好之前是剪影）：红兜帽的尖、比头还大的提灯
+  npc(x, mg, gp) { const ax = 150, feet = gp.ay, h = gp.h, px = (a, b, c) => { x.fillStyle = U.pal(c); x.fillRect(M.MCPX.lx(a), M.MCPX.ly(b), 4, 4); }, bob = Math.round(Math.sin(mg.t * 3) * 0.5 + 0.5);
+    for (let k = 0; k < h; k++) { const q = k / h, hw = q > 0.9 ? 1 : q > 0.7 ? 3 : 2 + (1 - q) * 2; for (let d = -Math.round(hw); d <= Math.round(hw); d++) px(ax + d, feet - 1 - k, q > 0.62 ? (d === -Math.round(hw) ? '#ff7e68' : '#aa262e') : '#12101e'); }
+    if (gp.lk > 0.05) { x.save(); x.globalAlpha = Math.min(1, gp.lk + 0.2); px(ax + 4, feet - Math.round(h * 0.5) + bob, '#ffcf4a'); px(ax + 4, feet - Math.round(h * 0.5) + 1 + bob, '#fff3b0'); x.restore(); } },
+};
 
 // ═════════════════════ 无名墓碑 · dig before the candle dies ═════════════════════
+// 山坡上的墓园；碑顶的蜡烛是计时器也是唯一的暖光——越烧越短、光圈越小、雾越浓。每挖过四分之一是一次「破层」
+const GVA = M.MCPX.GRAVE, gvSlot = () => M.MCPX.slot('mini_grave', 'mc_grave'), PIT = { x: M.MCPX.lx(160), y: M.MCPX.ly(154) };
 MINI.grave = { title: '无名墓碑', img: 'tomb', col: C.lavender, text: '墓碑上没有名字，土是新翻的。蜡烛烧完之前挖到底。',
-  init(mg) { mg.need = 14 + Math.floor(rnd() * 7) - Math.round(mg.luck * 10); mg.dig = 0; mg.burn = 5.2; mg.dirt = []; mg.sw = 0; },
-  shovel(mg) { if (mg.phase !== 'dig') return; mg.dig++; mg.sw = 1; S.mini('grave', 'dig'); this.fx.kick(3); for (let i = 0; i < 5; i++) mg.dirt.push({ x: CX + 40, y: FLOOR - 40, vx: 200 + rnd() * 300, vy: -300 - rnd() * 300, t: 0 });
+  init(mg) { mg.need = 14 + Math.floor(rnd() * 7) - Math.round(mg.luck * 10); mg.dig = 0; mg.burn = 5.2; mg.sw = 0; },
+  shovel(mg) { if (mg.phase !== 'dig') return; mg.dig++; mg.sw = 1; S.mini('grave', 'dig', mg.dig / mg.need); this.fx.kick(3); const sl = gvSlot();
+    if (sl) { sl.burst('dirt', 150 + rnd() * 20, 152, 5, { sp: 60, ang: 0.9, spread: 0.7, life: 1.1, floor: 150 }); sl.burst('spark', 108, 152, 1, { sp: 30, life: 0.3, floor: 152 }); }
+    // 破层：每挖过四分之一深度一声闷响、一大把土、震屏
+    const layer = Math.floor(mg.dig / mg.need * 4); if (layer > (mg.layer || 0) && mg.dig < mg.need) { mg.layer = layer; S.mini('grave', 'break', layer); this.fx.kick(6 + layer * 2); if (sl) sl.burst('dirt', 160, 158, 14, { sp: 80, ang: 0.3, spread: 1.6, life: 1.2, floor: 150 }); SHW.shake(mg, 4 + layer * 2); }
     // 连击看手速：两铲间隔越短越高
     const gap = mg.t - (mg.lastDig == null ? -9 : mg.lastDig); mg.lastDig = mg.t; combo(this, mg, CX + 210, FLOOR - 190, gap < 0.13 ? 'PERFECT' : gap < 0.2 ? 'GREAT' : 'GOOD');
     if (mg.dig >= mg.need) { this.miniSet('coffin'); S.mini('grave', 'coffin'); MINI.grave.open.call(this, mg); } },
   // 挖到底：按剩下的烛火评级；棺材里是什么这一刻就定了（概率同原来）
-  open(mg) { const lf = mg.burn / 5.2, gr = lf >= 0.45 ? 'S' : lf >= 0.25 ? 'A' : lf >= 0.1 ? 'B' : 'C'; SHW.calm(mg); SHW.grade(this, mg, gr, CX - 330, SY + 250); this.fx.explode(CX + 40, FLOOR + 90, C.tan || C.gold, 0.6);
+  open(mg) { const lf = mg.burn / 5.2, gr = lf >= 0.45 ? 'S' : lf >= 0.25 ? 'A' : lf >= 0.1 ? 'B' : 'C'; SHW.calm(mg); SHW.grade(this, mg, gr, CX - 330, SY + 250); this.fx.explode(PIT.x, PIT.y + 60, C.tan || C.gold, 0.6);
     mg.treasure = rnd() < 0.5 + mg.luck;
-    if (mg.treasure) { mg.om = { path: SHW.omenPath(3), at: 0.35, dur: 0.9 }; SHW.later(mg, 0.3, () => { S.mini('grave', 'lid'); SHW.reach(this, mg, { x: CX + 40, y: FLOOR + 100, r: 190, label: '' }); }); } },
-  down(mg) { MINI.grave.shovel.call(this, mg); },
+    // 铁锹「咚」地碰到木头：卡帧，看见棺材盖
+    SHW.hitstop(mg, 0.15, PIT.x, PIT.y + 40);
+    if (mg.treasure) { mg.om = { path: SHW.omenPath(3), at: 0.35, dur: 0.9 }; SHW.later(mg, 0.3, () => { S.mini('grave', 'lid'); SHW.reach(this, mg, { x: PIT.x, y: PIT.y + 60, r: 190, label: '' }); }); } },
+  down(mg, px, py) { if (mg.phase === 'dig') return MINI.grave.shovel.call(this, mg);
+    // 挖之前点空白：墓碑前的土抖一下
+    if (mg.phase === 'idle') { SHW.tap(this, mg, px, py); const sl = gvSlot(); if (sl) sl.burst('dirt', M.MCPX.ax(px), Math.max(146, M.MCPX.ay(py)), 3, { sp: 20, ang: 0, spread: 1, life: 0.6, floor: 150 }); } },
   key(mg, k, down) { if (k === 'act' && down) { MINI.grave.shovel.call(this, mg); return true; } },
   btns(mg) { if (mg.phase === 'idle') return [{ t: '挖开', sub: '疯狂点击 / 连按空格', gold: 1, fn: () => { this.miniSet('dig'); S.mini('grave', 'candle'); } }, { t: '默哀', sub: '物资 +15', leave: 1, fn: () => this.miniFinish('你站了一会儿。墓碑后面有人留下了东西。', '#caa84a', [{ k: 'rsup', v: 15 }]) }]; if (mg.phase === 'dig') return [{ t: '挖！', sub: '点击 / 空格', gold: 1, fn: () => MINI.grave.shovel.call(this, mg) }]; return []; },
   tick(mg, dt) {
-    mg.sw = Math.max(0, mg.sw - dt * 6); mg.dirt.forEach(d => { d.vy += 1600 * dt; d.x += d.vx * dt; d.y += d.vy * dt; d.t += dt; }); mg.dirt = mg.dirt.filter(d => d.t < 1);
+    mg.sw = Math.max(0, mg.sw - dt * 6);
     if (mg.phase === 'dig') { mg.burn -= dt; const near = mg.dig / mg.need, per = 0.8 - near * 0.5;
       if (!SHW.tense(mg) && mg.pt - (mg.hb || 0) > per) { mg.hb = mg.pt; S.heart(); }   // 听牌以后心跳交给演出工具包
       if (mg.lastDig != null && mg.t - mg.lastDig > 0.5 && SHW.state(mg).combo) SHW.comboBreak(mg);
       // 挖得差不多、蜡烛也快烧完：聚光罩住坑口；再近一步换超级（红金频闪）
-      if (!mg.rl && near >= 0.6 && mg.burn < 2.2) { mg.rl = 1; SHW.reach(this, mg, { x: CX + 40, y: FLOOR - 40, r: 210, label: '' }); }
-      if (mg.rl === 1 && near >= 0.85 && mg.burn < 1.2) { mg.rl = 2; SHW.reach(this, mg, { x: CX + 40, y: FLOOR - 40, r: 210, lv: 2, label: '听牌！' }); }
+      if (!mg.rl && near >= 0.6 && mg.burn < 2.2) { mg.rl = 1; SHW.reach(this, mg, { x: PIT.x, y: PIT.y, r: 210, label: '' }); }
+      if (mg.rl === 1 && near >= 0.85 && mg.burn < 1.2) { mg.rl = 2; SHW.reach(this, mg, { x: PIT.x, y: PIT.y, r: 210, lv: 2, label: '听牌！' }); }
       if (mg.burn <= 0) { this.miniSet('out'); S.mini('grave', 'out'); SHW.lose(this, mg); this.heroHurt(0.05); } }
     if (mg.phase === 'out' && mg.pt > 0.4 && !mg.fin) { mg.fin = true; this.miniFinish('蜡烛灭了。黑暗里有什么东西碰了碰你的手。', '#d0453c'); }
     if (mg.phase === 'coffin' && !mg.fin) {
-      if (mg.treasure) { omen(this, mg, mg.om, CX + 40, FLOOR + 100); if (mg.pt > 1.35) { mg.fin = true; const wv = M.nice(mg.P * 4); payout(this, mg, { tier: 3, x: CX + 40, y: FLOOR + 60, col: C.gold, v: wv, gains: [K.bp(null, 1), { k: 'wallet', v: wv }], tx: '棺材里躺着一张图纸，还有一枚戒指。', tc: '#ffcc33', snd: () => S.mini('grave', 'treasure') }); } }
-      else if (mg.pt > 0.3) { mg.fin = true; mg.hand = mg.pt; this.miniSay('土里伸出了手！', '#d0453c', true); S.mini('grave', 'hand'); SHW.lose(this, mg); this.fx.flash('#ff2a2a', 0.2); this.fx.kick(10); SHW.later(mg, 0.6, () => this.mini === mg && this.miniBattle('normal')); } }
+      if (mg.treasure) { omen(this, mg, mg.om, PIT.x, PIT.y + 60); if (mg.pt > 1.35) { mg.fin = true; const wv = M.nice(mg.P * 4); payout(this, mg, { tier: 3, x: PIT.x, y: PIT.y + 20, col: C.gold, v: wv, gains: [K.bp(null, 1), { k: 'wallet', v: wv }], tx: '棺材里躺着一张图纸，还有一枚戒指。', tc: '#ffcc33', snd: () => S.mini('grave', 'treasure') }); } }
+      else if (mg.pt > 0.3) { mg.fin = true; mg.hand = mg.pt; this.miniSay('土里伸出了手！', '#d0453c', true); S.mini('grave', 'hand'); SHW.lose(this, mg); this.fx.flash('#ff2a2a', 0.2); this.fx.kick(10); const sl = gvSlot(); if (sl) sl.burst('dirt', 160, 166, 20, { sp: 90, ang: 0, spread: 1.4, life: 1, floor: 150 }); SHW.later(mg, 0.6, () => this.mini === mg && this.miniBattle('normal')); } }
   },
   draw(x, mg) {
-    const t = mg.t, dep = cl(mg.dig / mg.need, 0, 1); night(x, '#101828', '#05070c'); K.CI(x, SX + SW - 180, SY + 150, 46, '#e8f0ff'); K.GL(x, SX + SW - 180, SY + 150, 160, '#8fb0ff', 0.25);
-    K.R(x, SX, FLOOR - 40, SW, SH, '#1a1410'); for (let i = 0; i < 6; i++) K.RR(x, SX + 60 + i * 190, FLOOR - 120 - (i % 2) * 20, 70, 90, 30, '#2a2a33');
-    K.RR(x, CX - 90, FLOOR - 260, 180, 230, 80, '#5a5a66'); K.RR(x, CX - 80, FLOOR - 250, 160, 220, 72, '#6a6a78'); U.text(x, '?', CX, FLOOR - 170, T.hero, C.indigo, { shadow: false });
-    // hole
-    K.EL(x, CX + 40, FLOOR + 10, 150, 26, '#0a0806'); K.R(x, CX - 110, FLOOR + 10, 300, dep * 150, '#0a0806'); const pile = dep * 90; K.EL(x, CX + 300, FLOOR - 10, 60 + pile, 20 + pile * 0.6, '#3a2a1a');
-    if (mg.phase === 'coffin') { K.R(x, CX - 80, FLOOR + 90, 240, 60, '#3a2616');
-      // 有宝：棺盖一点点撬开，缝里先透出品质色（可能升格）；是手：红光一闪，手直接伸出来
-      if (mg.treasure) { const k = omK(mg, mg.om), j = k ? SHW.aura(x, CX + 40, FLOOR + 100, 150, mg.om.q, t, k) : { dx: 0, dy: 0 }, lid = eio(cl((mg.pt - 0.3) / 1.0, 0, 1)); x.save(); x.translate(Math.round(CX - 80 + j.dx), Math.round(FLOOR + 84 + j.dy - lid * 26)); x.rotate(-0.35 * lid); K.R(x, 0, 0, 240, 14, '#5a3a22'); K.R(x, 0, 0, 240, 3, '#7a5a3a'); x.restore(); }
-      else { K.R(x, CX - 80, FLOOR + 84, 240, 14, '#5a3a22'); if (mg.hand) { K.GL(x, CX + 40, FLOOR + 100, 160, '#ff3a2a', 0.6); const hy = Math.round(FLOOR + 50 - eo(cl((mg.pt - mg.hand) / 0.25, 0, 1)) * 60); K.R(x, CX + 20, hy + 14, 18, 70, '#8aa074'); for (let i = 0; i < 4; i++) K.R(x, CX + 14 + i * 7, hy, 5, 18, '#8aa074'); } } }
-    mg.dirt.forEach(d => K.R(x, d.x, d.y, 8, 8, '#4a3a2a'));
-    K.SP(x, heroSp(this), CX - 250, FLOOR + 10, 180); x.save(); x.translate(CX - 160, FLOOR - 90); x.rotate(-0.4 + mg.sw * 1.2); K.R(x, -5, 0, 10, 120, '#6a4a2a'); K.RR(x, -22, 110, 44, 40, 6, '#9aa0aa'); x.restore();
-    // candle：越烧越短，火苗越晃越凶
-    const cx0 = CX + 60, cy0 = FLOOR - 270, life = cl(mg.phase === 'dig' ? mg.burn / 5.2 : mg.phase === 'out' ? 0 : 1, 0, 1), dz = mg.phase === 'dig' ? 1 - life : 0; K.R(x, cx0 - 10, cy0 - 50 * life, 20, 50 * life + 10, '#e8dcc4');
-    if (life > 0) { const f = 0.8 + (0.3 + 0.4 * dz) * Math.sin(t * (20 + 24 * dz)), wob = Math.round(dz * 7 * Math.sin(t * 29)); K.GL(x, cx0 + wob, cy0 - 60 * life, 120 * life + 30, '#ffb060', 0.7); K.EL(x, cx0 + wob, cy0 - 50 * life - 14, 7 * f, 16 * f, '#ffcc33'); }
-    if (mg.phase === 'dig') { U.bar(x, SX + 80, SY + 130, 320, 20, dep, { col: C.gold }); U.text(x, '深度', SX + 240, SY + 170, T.cap, C.lavender); }
-    if (mg.phase === 'out') K.R(x, SX, SY, SW, SH, 'rgba(7,6,15,' + cl(mg.pt * 2.5, 0, 0.85) + ')');
+    const t = mg.t, ph = mg.phase, dep = cl(mg.dig / mg.need, 0, 1), life = cl(ph === 'dig' ? mg.burn / 5.2 : ph === 'out' ? 0 : ph === 'idle' ? 1 : Math.max(0.05, mg.burn / 5.2), 0, 1);
+    const k = ph === 'coffin' && mg.treasure ? omK(mg, mg.om) : 0, lid = ph === 'coffin' && mg.treasure ? eio(cl((mg.pt - 0.3) / 1.0, 0, 1)) : 0;
+    K.pxr(x, 'mini_grave', 0, 0, mg.t, { life, dep: ph === 'coffin' ? 1 : dep, wob: ph === 'dig' ? 1 - life : 0, sw: mg.sw, coffin: ph === 'coffin', lid, coffinC: k > 0 ? SHW.QC(mg.om.q == null ? 0 : mg.om.q) : null, coffinK: k, hand: mg.hand != null ? eo(cl((t - mg.hand) / 0.25, 0, 1)) : 0 }, 'mc_grave');
+    M.MCPX.cast(x, heroSp(this), GVA.hero, 152 + (mg.sw > 0.6 ? 1 : 0), 'idle', t);
+    if (ph === 'dig') { U.bar(x, SX + 80, SY + 130, 320, 20, dep, { col: C.gold }); [0.25, 0.5, 0.75].forEach(v => K.R(x, SX + 80 + Math.round(320 * v) - 1, SY + 124, 3, 32, C.white)); U.text(x, '深度', SX + 240, SY + 170, T.cap, C.lavender); }
+    if (ph === 'out') K.R(x, SX, SY, SW, SH, 'rgba(7,6,15,' + cl(mg.pt * 2.5, 0, 0.85) + ')');
   } };
 
 // ═════════════════════ 废弃医务室 · pick bottles off the shelf ═════════════════════
@@ -312,7 +343,7 @@ MINI.clinic = { title: '废弃医务室', img: 'gurney', col: C.ice, text: '药�
     if (b.q >= 2) SHW.reach(this, mg, { x: clX(i), y: clY - 70, r: 130, lv: b.q >= 3 ? 2 : 1, label: '' }); },
   down(mg, px, py) { if (mg.phase !== 'idle') return; const i = clHit(mg, px, py); if (i >= 0) return MINI.clinic.open.call(this, mg, i);
     // 点空白：瓷砖墙一声回响、一小撮灰落下
-    const sl = clSlot(); if (sl) sl.burst('dust', PXA.ax(px), Math.min(PXA.ay(py), 140), 5, { sp: 10, life: 1.2, w: 4 }); S.mini('clinic', 'hover', 5); },
+    SHW.tap(this, mg, px, py); const sl = clSlot(); if (sl) sl.burst('dust', PXA.ax(px), Math.min(PXA.ay(py), 140), 5, { sp: 10, life: 1.2, w: 4 }); S.mini('clinic', 'hover', 5); },
   btns(mg) { if (mg.phase !== 'idle') return []; return [{ t: '收手', leave: 1, gold: mg.opened >= 3, sub: '已试 ' + mg.opened + ' / 3 · 点击药瓶试喝', fn: () => this.miniFinish(mg.got.length ? '你试了：' + mg.got.join('；') + '。' : '你一瓶都没敢碰。', mg.got.length ? '#8fe0ff' : '#8d8496') }]; },
   tick(mg, dt) {
     const sl = clSlot();
@@ -326,7 +357,7 @@ MINI.clinic = { title: '废弃医务室', img: 'gurney', col: C.ice, text: '药�
       const sh = Math.round((rnd() - 0.5) * (1 + (mg.om.q || 0)) * k * 1.6); b.dx = sh; b.dy = Math.round((rnd() - 0.5) * k);
       // 糊了血的瓶子：升格那一下血痂一片片裂开掉下来
       if (b.dark) { const n = mg.om.path.length, stage = mg.om.i == null ? 0 : mg.om.i; b.crack = n > 1 ? stage / (n - 1) * 0.85 + 0.15 * k : 0.2 * k; if (sl && rnd() < 0.3 * k) sl.burst('blood', CLI.x[mg.cur] + (rnd() - 0.5) * 10, CLI.y - b.lift - 12, 1, { sp: 10, life: 0.5, floor: CLI.y }); }
-      if (mg.pt > mg.om.at + mg.om.dur + 0.12) { mg.holdT = mg.t; SHW.slowmo(mg, 0.04, 0.15); this.miniSet('uncork'); } }
+      if (mg.pt > mg.om.at + mg.om.dur + 0.12 && !mg.held) { mg.held = 1; SHW.hitstop(mg, 0.15, clX(mg.cur), clY - 60, () => { mg.held = 0; this.miniSet('uncork'); }); } }
     if (mg.phase === 'uncork') { const b = mg.bt[mg.cur], bad = b.q < 0, u0 = bad ? 0.15 : 0.3, x0 = CLI.x[mg.cur], yb = CLI.y - b.lift;
       if (!b.popped && mg.pt > 0.02) { b.popped = 1; S.mini('clinic', 'pop'); if (b.dark) { b.crack = 1; b.dark = false; } if (sl) sl.burst('vap_' + LIQS[b.liq], x0, yb - 30, 10, { sp: 18, ang: 0, spread: 1.4, life: 1.1 }); }
       b.open = cl(mg.pt / u0, 0, 1);
@@ -341,29 +372,34 @@ MINI.clinic = { title: '废弃医务室', img: 'gurney', col: C.ice, text: '药�
     if (mg.after && sl && mg.t - mg.after.t < 3 && rnd() < 0.05 + 0.08 * mg.after.q) sl.burst('glint', 80 + rnd() * 140, 50 + rnd() * 70, 1, { sp: 4, life: 0.8 });
   },
   draw(x, mg) {
-    PXA.draw(x, 'mini_clinic', 0, 0, mg.t, mg, 'mc_clinic');
+    K.pxr(x, 'mini_clinic', 0, 0, mg.t, mg, 'mc_clinic');
     // 图例：墙上病历表的六行字（小瓶子图标是画在纸上的）
     const [cx0, cy0] = CLI.chart; MEDS.forEach((m, r) => U.text(x, m.d, PXA.lx(cx0 + 11), PXA.ly(cy0 + 11 + Math.round(r * 7.6)), 20, r === 4 ? C.red : '#3a2c28', { align: 'left', shadow: false }));
-    // 揭晓前卡帧：压暗 0.15 秒；毒药：舞台染一下病绿
-    if (mg.holdT != null && mg.t - mg.holdT < 0.15) { x.save(); x.globalAlpha = 0.55; K.R(x, SX, SY, SW, SH, C.ink); x.restore(); }
+    // 毒药：舞台染一下病绿
     if (mg.sickT != null && mg.t - mg.sickT < 0.4) { x.save(); x.globalAlpha = 0.28 * (1 - (mg.t - mg.sickT) / 0.4); K.R(x, SX, SY, SW, SH, '#6fd46a'); x.restore(); }
   } };
 const LIQS = ['screen', 'water', 'gold', 'bone', 'red', 'arcane'];
 
 // ═════════════════════ 落地镜 · repeat the reflection's moves ═════════════════════
-const ARW = { up: '↑', down: '↓', left: '←', right: '→' }, MRX = CX + 200, MRY = SY + 380;
+// 旧卧室里的镀金落地镜：镜面里是左右颠倒、更冷的屋子和领袖的倒影；示范时倒影自己动，照做时倒影慢半拍才跟
+const MRA = M.MCPX.MIRROR, ARW = { up: '↑', down: '↓', left: '←', right: '→' }, MRX = M.MCPX.lx(200), MRY = M.MCPX.ly(92);
+const mrSlot = () => M.MCPX.slot('mini_mirror', 'mc_mirror');
+// 领袖做一个动作：跳、蹲、左倾、右倾（像素角色整体位移 / 缩放，按 4 像素取整）
+function heroPose(x, key, lx, ly, p, flip, t) { const P = M.PCDG; let dx = 0, dy = 0, sx = 1, sy = 1, rot = 0; if (p) { const q = Math.sin(cl(p.t / 0.5, 0, 1) * Math.PI); if (p.d === 'up') dy = -60 * q; if (p.d === 'down') { sy = 1 - 0.3 * q; sx = 1 + 0.15 * q; } if (p.d === 'left') { dx = -36 * q; rot = -0.2 * q; } if (p.d === 'right') { dx = 36 * q; rot = 0.2 * q; } }
+  if (!P || !P.has(key)) { x.save(); x.translate(lx + dx * (flip ? -1 : 1), ly + dy); x.rotate(rot * (flip ? -1 : 1)); x.scale(sx, sy); K.SP(x, key, 0, 0, 170, flip); x.restore(); return; }
+  const b = P.body(key), c = P.bodyFrame(key, 'idle', Math.floor(t * 12) % b.nIdle, '', 4); x.save(); x.translate(K.snap(lx + dx * (flip ? -1 : 1)), K.snap(ly + dy)); x.rotate(rot * (flip ? -1 : 1)); x.scale(sx * (flip ? -1 : 1), sy); x.imageSmoothingEnabled = false; x.drawImage(c, -c.cx, -c.footY, c.width, c.height); x.restore(); }
 MINI.mirror = { title: '落地镜', img: 'mirror', col: C.blue, text: '镜子里的你慢了半拍才动。它在示范什么——跟着做一遍。',
   init(mg) { mg.round = 0; mg.got = []; },
   begin(mg) { mg.round++; mg.seq = [...Array(3 + mg.round)].map(() => M.pick(['up', 'down', 'left', 'right'])); mg.inp = []; mg.perf = 0; mg.lastIn = 0; mg.om = null; this.miniSet('show'); },
-  input(mg, d) { if (mg.phase !== 'input') return; mg.inp.push(d); mg.pose = { d, t: 0 }; const i = mg.inp.length - 1, sx = CX - 280, sy = FLOOR - 250;
+  input(mg, d) { if (mg.phase !== 'input') return; mg.inp.push(d); mg.pose = { d, t: 0 }; const i = mg.inp.length - 1, sx = M.MCPX.lx(MRA.hero), sy = FLOOR - 250;
     if (mg.seq[i] !== d) { S.mini('mirror', 'wrong'); miss(this, mg, sx, sy); SHW.lose(this, mg); this.miniSet('fail'); return; }
     S.mini('mirror', 'tone', ['up', 'down', 'left', 'right'].indexOf(d));
-    const gap = mg.pt - mg.lastIn, w = gap < 0.45 ? 'PERFECT' : gap < 0.9 ? 'GREAT' : 'GOOD'; mg.lastIn = mg.pt; if (w === 'PERFECT') mg.perf++; combo(this, mg, sx, sy, w); this.fx.ring(MRX, MRY - 30, 20, 140, C.blue, 4, 0.25);
+    const gap = mg.pt - mg.lastIn, w = gap < 0.45 ? 'PERFECT' : gap < 0.9 ? 'GREAT' : 'GOOD'; mg.lastIn = mg.pt; if (w === 'PERFECT') mg.perf++; combo(this, mg, sx, sy, w); this.fx.ring(MRX, MRY - 30, 20, 140, C.blue, 4, 0.25); const sl = mrSlot(); if (sl) { sl.burst('glint', 200, 92, w === 'PERFECT' ? 6 : 3, { sp: 20, life: 0.6, w: 40, h: 60 }); sl.burst('ember', 170 + mg.inp.length * 12, 26, 3, { sp: 10, ang: 0, spread: 0.6, life: 0.8 }); }
     // 只差最后一个动作：聚光罩住镜子；第二轮是超级听牌
     if (mg.inp.length === mg.seq.length - 1) SHW.reach(this, mg, { x: MRX, y: MRY - 30, r: 250, lv: mg.round >= 2 ? 2 : 1 });
     if (mg.inp.length === mg.seq.length) { S.mini('mirror', 'pass'); MINI.mirror.win.call(this, mg); } },
   // 做完就定下镜子里走出什么；镜面先亮它的品质色，再端出来
-  win(mg) { this.miniSet('win'); SHW.calm(mg); const run = this.run, u = M.pick(run.roster);
+  win(mg) { this.miniSet('win'); SHW.calm(mg); const sl = mrSlot(); if (sl) sl.burst('glint', 200, 92, 10, { sp: 26, life: 0.9, w: 50, h: 80 }); const run = this.run, u = M.pick(run.roster);
     mg.rw = mg.round === 1 && u && M.canAdd(run, u.type) ? { k: 'unit', type: u.type } : K.item(run, mg.P);
     const q = mg.rw.k === 'unit' ? M.DB[mg.rw.type].q || 0 : mg.rw.k === 'item' ? mg.rw.q || 0 : 0, gr = mg.perf >= mg.seq.length ? 'S' : mg.perf * 2 >= mg.seq.length ? 'A' : 'B';
     mg.rtx = mg.rw.k === 'unit' ? '另一个' + M.DB[mg.rw.type].n : mg.rw.k === 'item' ? M.ITEMS[mg.rw.key].name : '积分 +' + M.fmt(mg.rw.v);
@@ -381,101 +417,105 @@ MINI.mirror = { title: '落地镜', img: 'mirror', col: C.blue, text: '镜子里
     if (mg.phase === 'fail' && mg.pt > 0.4 && !mg.fin) { mg.fin = true; const run = this.run, u = M.pick(run.roster); if (u) { run.roster = run.roster.filter(v => v !== u); this.award([{ k: 'vision', v: -1 }]); this.miniFinish('动作错了。镜子里的你停住了——' + M.DB[u.type].n + ' 走进了镜子，没有回来。雾从镜子里漫了出来，视野 -1。' + (mg.got.length ? '（之前得到：' + mg.got.join('、') + '）' : ''), '#d0453c'); } else { this.heroHurt(0.1); this.miniFinish('动作错了。镜子里的你伸手掐住了你。', '#d0453c'); } }
   },
   draw(x, mg) {
-    const t = mg.t; night(x, '#1a1a2a', '#08080e'); const mx = MRX, my = MRY;
-    // 镜框：金框 + 墨边，框上一圈方灯珠（跟着演出跑）
-    U.box(x, mx - 170, my - 260, 340, 460, C.gold); K.R(x, mx - 150, my - 240, 300, 420, K.LG(x, 0, my - 240, 0, my + 180, [[0, '#2a3a5a'], [1, '#0e1420']]));
-    K.bulbs(x, mx - 160, my - 250, 320, 440, 0, C.gold, 14);
-    const pose = (p, bx, by, flip, tint) => { let dx = 0, dy = 0, sx = 1, sy = 1, rot = 0; if (p) { const q = Math.sin(cl(p.t / 0.5, 0, 1) * Math.PI); if (p.d === 'up') dy = -60 * q; if (p.d === 'down') { sy = 1 - 0.35 * q; sx = 1 + 0.2 * q; } if (p.d === 'left') { dx = -40 * q; rot = -0.25 * q; } if (p.d === 'right') { dx = 40 * q; rot = 0.25 * q; } }
-      x.save(); x.translate(bx + dx * (flip ? -1 : 1), by + dy); x.rotate(rot * (flip ? -1 : 1)); x.scale(sx, sy); if (tint) x.globalAlpha = 0.7; K.SP(x, heroSp(this), 0, 0, 190, flip); x.restore(); };
-    // 镜面裁剪：K.RR 现在只画硬边矩形、不留路径，这里自己建矩形路径
-    x.save(); x.beginPath(); x.rect(mx - 150, my - 240, 300, 420); x.clip(); pose(mg.mpose || (mg.phase === 'input' || mg.phase === 'win' ? mg.pose : null), mx, my + 150, true, 1); K.R(x, mx - 150, my - 240, 300, 420, 'rgba(80,120,200,0.25)');
-    if (mg.phase === 'win' && mg.om && mg.om.q != null) SHW.aura(x, mx, my - 30, 160, mg.om.q, t, omK(mg, mg.om));
-    if (mg.phase === 'fail') K.R(x, mx - 150, my - 240, 300, 420, 'rgba(232,67,79,' + cl(mg.pt * 2.5, 0, 0.5) + ')'); x.restore();
-    if (mg.mpose && mg.mpose.t < 0.6) K.big(x, ARW[mg.mpose.d], mx, my - 170, 96, C.blue, mg.mpose.t); // 示范的方向：大箭头压在镜面上沿，不和说明文字叠在一起
-    pose(mg.phase === 'show' ? null : mg.pose, CX - 280, FLOOR, false, 0);
-    // 动作序列：小方格，做对的格子填满
-    if (mg.seq) { mg.seq.forEach((d, i) => { const done = mg.inp && i < mg.inp.length, bx = SX + 70 + i * 64; U.box(x, bx, SY + 110, 54, 54, done ? C.blue : C.abyss); if (!done) K.RR(x, bx, SY + 110, 54, 54, 0, null, C.blue, 3); U.text(x, done || mg.phase === 'fail' ? ARW[d] : '?', bx + 27, SY + 137, T.btn, done ? C.ink : C.blue, { shadow: !done }); }); }
-    if (mg.phase === 'input') K.sign(x, '轮到你了', CX - 280, SY + 200, { kind: 'gold', size: T.btn });
-    if (mg.phase === 'fail') { for (let i = 0; i < 8; i++) K.LN(x, mx, my - 30, mx + Math.cos(i * 0.8) * 200, my - 30 + Math.sin(i * 0.8) * 260, 3, 'rgba(255,255,255,0.7)'); }
+    const t = mg.t, ph = mg.phase, [gx, gy, gw, gh] = MRA.glass, win = ph === 'win' || ph === 'won', k = ph === 'win' && mg.om && mg.om.q != null ? omK(mg, mg.om) : ph === 'won' ? 0.3 : 0;
+    const lit = win ? (mg.seq ? mg.seq.length : 0) : mg.inp ? mg.inp.length : 0, crack = ph === 'fail' ? cl(mg.pt * 2.5, 0, 1) : 0;
+    K.pxr(x, 'mini_mirror', 0, 0, mg.t, { moves: mg.seq ? mg.seq.length : 5, lit, ripple: ph === 'win' ? k : 0, omenK: k, omenC: k > 0 && mg.om && mg.om.q != null ? SHW.QC(mg.om.q) : null, crack }, 'mc_mirror');
+    // 倒影：示范时自己做动作；照做时慢半拍才跟；做错时停住
+    const key = heroSp(this), rp = mg.mpose || (ph === 'input' || win ? (mg.pose && mg.pose.t > 0.25 ? { d: mg.pose.d, t: mg.pose.t - 0.25 } : null) : null);
+    x.save(); x.beginPath(); x.rect(M.MCPX.lx(gx), M.MCPX.ly(gy), gw * 4, gh * 4); x.clip(); x.globalAlpha = 0.85; heroPose(x, key, MRX, M.MCPX.ly(146), ph === 'fail' ? null : rp, true, t); x.globalAlpha = 1;
+    if (ph === 'fail') { x.globalAlpha = cl(mg.pt * 2.5, 0, 0.5); K.R(x, M.MCPX.lx(gx), M.MCPX.ly(gy), gw * 4, gh * 4, C.red); } x.restore();
+    if (mg.mpose && mg.mpose.t < 0.6) K.big(x, ARW[mg.mpose.d], MRX, MRY - 170, 96, C.blue, mg.mpose.t); // 示范的方向：大箭头压在镜面上沿
+    heroPose(x, key, M.MCPX.lx(MRA.hero), M.MCPX.ly(148), ph === 'show' ? null : mg.pose, false, t);
+    // 动作序列：顶上一排小镜片，做对的映出箭头
+    if (mg.seq) { mg.seq.forEach((d, i) => { const done = mg.inp && i < mg.inp.length, bx = SX + 70 + i * 64; U.box(x, bx, SY + 110, 54, 54, done ? C.blue : C.abyss); if (!done) K.RR(x, bx, SY + 110, 54, 54, 0, null, C.blue, 3); U.text(x, done || ph === 'fail' ? ARW[d] : '?', bx + 27, SY + 137, T.btn, done ? C.ink : C.blue, { shadow: !done }); }); }
+    if (ph === 'input') K.sign(x, '轮到你了', M.MCPX.lx(MRA.hero), SY + 200, { kind: 'gold', size: T.btn });
   } };
 
 // ═════════════════════ 血祭坛 · hold to pour ═════════════════════
+// 地下礼拜堂：红玫瑰窗、黑石祭坛、金圣杯；高高的白蜡烛就是风险表。每倒满一档，地上的符文圈亮一格
+const ALA = M.MCPX.ALTAR, alSlot = () => M.MCPX.slot('mini_altar', 'mc_altar'), CUP = { x: M.MCPX.lx(ALA.cup[0]), y: M.MCPX.ly(ALA.cup[1] - 20) };
 MINI.altar = { title: '血祭坛', img: 'candle', col: C.red, text: '一滴血，一分力。倒得越多，这一趟部队的攻击越高——但蜡烛随时可能被血浇灭。',
-  init(mg) { mg.poured = 0; mg.th = 0.14 + rnd() * 0.26 + mg.luck * 0.2; mg.gain = 0; },
-  down(mg) { if (mg.phase === 'ready' || mg.phase === 'pour') { this.miniSet('pour'); } },
+  init(mg) { mg.poured = 0; mg.th = 0.14 + rnd() * 0.26 + mg.luck * 0.2; mg.gain = 0; mg.fire = 0; },
+  down(mg, px, py) { if (mg.phase === 'ready' || mg.phase === 'pour') { if (mg.phase === 'ready') { SHW.press(this, mg, 'cup', CUP.x, CUP.y, C.red); const sl = alSlot(); if (sl) sl.burst('blood', ALA.hero + 12, 118, 6, { sp: 30, ang: 0.6, spread: 0.8, life: 0.5 }); } this.miniSet('pour'); return; }
+    // 点空白：烛火一歪
+    if (mg.phase === 'idle') { SHW.tap(this, mg, px, py); mg.nudge = mg.t; } },
   up(mg) { if (mg.phase === 'pour') MINI.altar.stop.call(this, mg); },
   stop(mg) { const h = this.run.hero, mx = M.heroMaxHp(h, this.meta), lost = Math.round(mx * mg.poured); this.fx.flash('#ff2a2a', 0.2); const p = this.fxPos('hp'); if (p) this.fx.pop(p.x, p.y - 30, '-' + lost, '#ff5a4a', 40, { num: 1 }); this.pulse.hp = performance.now();
     if (mg.out) { this.miniSet('done'); this.miniSay('蜡烛灭了', '#8d8496', true); SHW.lose(this, mg); SHW.later(mg, HOLD[0], () => this.mini === mg && this.miniFinish('血太多了，蜡烛被浇灭。祭坛什么也没给你。你流了 ' + lost + ' 点血。', '#8d8496')); return; }
     const lv = Math.floor(mg.poured / 0.04), tier = lv >= 6 ? 3 : lv >= 3 ? 2 : lv >= 1 ? 1 : 0;
-    mg.gain = lv * 0.02; this.run.runBuff.unitAtk = (this.run.runBuff.unitAtk || 0) + mg.gain; S.mini('altar', mg.gain ? 'win' : 'flicker'); this.miniSet('done'); this.miniSay('本局部队攻击 +' + Math.round(mg.gain * 100) + '%', '#ffcc33', true);
-    // 倍率越高演得越响：倒到六成以上是大赢；一滴没到数一拍带过
-    if (tier) SHW.win(this, mg, tier, { x: CX, y: FLOOR - 300, col: tier >= 3 ? C.gold : C.magenta }); else SHW.lose(this, mg);
-    SHW.later(mg, HOLD[tier], () => this.mini === mg && this.miniFinish(mg.gain ? '蜡烛亮了一截。你流了 ' + lost + ' 点血，本局部队攻击 +' + Math.round(mg.gain * 100) + '%。' : '你只滴了几滴，祭坛没有理你。', mg.gain ? '#ffcc33' : '#8d8496')); },
+    mg.gain = lv * 0.02; this.run.runBuff.unitAtk = (this.run.runBuff.unitAtk || 0) + mg.gain; this.miniSet('done');
+    if (!tier) { S.mini('altar', 'flicker'); SHW.lose(this, mg); SHW.later(mg, HOLD[0], () => this.mini === mg && this.miniFinish('你只滴了几滴，祭坛没有理你。', '#8d8496')); return; }
+    // 松手：卡帧 → 圣杯一亮、血槽里的血烧成红金色的火往上窜，倍率越高演得越响
+    SHW.hitstop(mg, 0.15, CUP.x, CUP.y, () => { S.mini('altar', 'win'); mg.fire = 1; mg.fireT = mg.t; K.pxrFlash('mc_altar', 4, 1.5); const sl = alSlot(); if (sl) { sl.burst('ember', ALA.cup[0], ALA.cup[1] - 20, 14 + tier * 8, { sp: 40, ang: 0, spread: 1, life: 1.4 }); sl.burst('glint', ALA.cup[0], ALA.cup[1] - 22, 6, { sp: 20, life: 0.7 }); }
+      this.miniSay('本局部队攻击 +' + Math.round(mg.gain * 100) + '%', '#ffcc33', true); SHW.win(this, mg, tier, { x: CX, y: FLOOR - 300, col: tier >= 3 ? C.gold : C.magenta, id: 'cup' });
+      SHW.later(mg, HOLD[tier], () => this.mini === mg && this.miniFinish('蜡烛亮了一截。你流了 ' + lost + ' 点血，本局部队攻击 +' + Math.round(mg.gain * 100) + '%。', '#ffcc33')); }); },
   btns(mg) { if (mg.phase === 'idle') return [{ t: '献血', sub: '按住倒血，松手停下', danger: 1, fn: () => this.miniSet('ready') }, { t: '离开', leave: 1, fn: () => this.miniFinish('烛火跟着你晃了一下。', '#8d8496') }]; if (mg.phase === 'ready') return [{ t: '按住空格 / 鼠标', sub: '倒血', dis: 1, why: '按住画面' }]; return []; },
   tick(mg, dt) {
+    mg.fire = Math.max(0, mg.fire - dt * 0.5);
     if (mg.phase !== 'pour') return; const h = this.run.hero, mx = M.heroMaxHp(h, this.meta), step = 0.1 * dt; if (h.hp - mx * step <= 1) return MINI.altar.stop.call(this, mg); h.hp -= mx * step; mg.poured += step;
-    if (Math.floor(mg.poured / 0.04) !== mg.lv) { mg.lv = Math.floor(mg.poured / 0.04); S.mini('altar', 'pour', cl(mg.poured / 0.4, 0, 1)); if (mg.lv > 0) { SHW.crawl(this, mg, mg.lv); this.fx.spark(CX, FLOOR - 290, C.magenta, 6 + mg.lv, { v: 300, dir: -Math.PI / 2, spread: 1.4 }); } }
+    if (Math.floor(mg.poured / 0.04) !== mg.lv) { mg.lv = Math.floor(mg.poured / 0.04); S.mini('altar', 'pour', cl(mg.poured / 0.4, 0, 1)); if (mg.lv > 0) { SHW.crawl(this, mg, mg.lv); S.mini('altar', 'rune', mg.lv); const sl = alSlot(); if (sl) sl.burst('ember', 150 + Math.cos(mg.lv / 12 * Math.PI * 2) * 78, 161 + Math.sin(mg.lv / 12 * Math.PI * 2) * 9, 6, { sp: 18, ang: 0, spread: 0.8, life: 0.9 }); } }
     // 越倒越紧：倒到两档聚光 + 心跳，倒到五档换超级（红金频闪、心跳更急）
     if (!mg.rl && mg.lv >= 2) { mg.rl = 1; SHW.reach(this, mg, { x: CX + 90, y: FLOOR - 220, r: 240, label: '' }); }
     if (mg.rl === 1 && mg.lv >= 5) { mg.rl = 2; SHW.reach(this, mg, { x: CX + 90, y: FLOOR - 220, r: 240, lv: 2, label: '' }); }
-    if (mg.poured > mg.th) { mg.out = true; S.mini('altar', 'out'); MINI.altar.stop.call(this, mg); }
+    if (mg.poured > mg.th) { mg.out = true; S.mini('altar', 'out'); const sl = alSlot(); if (sl) sl.burst('steam', ALA.candle[0], 76, 8, { sp: 10, ang: 0, spread: 0.4, life: 1.6 }); MINI.altar.stop.call(this, mg); }
   },
   draw(x, mg) {
-    const t = mg.t; night(x, '#2a0a0a', '#080202'); K.GL(x, CX, SY + 300, 420, '#ff3a2a', 0.15);
-    U.box(x, CX - 260, FLOOR - 140, 520, 140, C.wine); U.box(x, CX - 280, FLOOR - 150, 560, 20, C.red);
-    const gx = CX, gy = FLOOR - 150; K.PL(x, [[gx - 70, gy - 140], [gx + 70, gy - 140], [gx + 40, gy - 60], [gx - 40, gy - 60]], '#caa84a'); K.R(x, gx - 8, gy - 60, 16, 44, '#caa84a'); K.EL(x, gx, gy - 10, 50, 12, '#caa84a');
-    const lvl = cl(mg.poured / 0.4, 0, 1); x.save(); x.beginPath(); x.moveTo(gx - 66, gy - 136); x.lineTo(gx + 66, gy - 136); x.lineTo(gx + 40, gy - 62); x.lineTo(gx - 40, gy - 62); x.clip(); K.R(x, gx - 70, gy - 62 - lvl * 76, 140, lvl * 80, C.red); x.restore();
-    // 烛火：离熄灭越近越抖（原本的提示），倒得越多也越晃
-    const cx0 = CX + 180, near = cl((mg.poured / mg.th - 0.55) / 0.45, 0, 1), risk = mg.phase === 'pour' ? lvl : 0, fl = mg.out ? 0 : 1 + (near * 0.5 + risk * 0.25) * Math.sin(t * (40 + risk * 20)), wob = (near * 8 + risk * 5) * Math.sin(t * 31);
-    K.R(x, cx0 - 14, FLOOR - 250, 28, 100, '#e8dcc4'); if (!mg.out) { K.GL(x, cx0 + wob, FLOOR - 270, 140 * fl, '#ff8a3a', 0.6); K.EL(x, cx0 + wob, FLOOR - 272, 9 * fl, 22 * fl, '#ffcc33'); K.EL(x, cx0 + wob, FLOOR - 268, 4 * fl, 10 * fl, '#fff6c0'); } else K.LN(x, cx0, FLOOR - 255, cx0 + 10, FLOOR - 320, 3, 'rgba(160,160,170,0.5)');
-    const hx = CX - 330; K.SP(x, heroSp(this), hx, FLOOR, 190);
-    if (mg.phase === 'pour') { x.strokeStyle = C.red; x.lineWidth = 6; x.beginPath(); x.moveTo(hx + 50, FLOOR - 110); x.quadraticCurveTo(gx - 120, gy - 260, gx, gy - 130); x.stroke(); for (let i = 0; i < 4; i++) K.CI(x, gx + Math.sin(t * 20 + i) * 8, gy - 140 + i * 10, 4, '#d01a1a'); }
+    const t = mg.t, lvl = cl(mg.poured / 0.4, 0, 1), near = cl((mg.poured / mg.th - 0.55) / 0.45, 0, 1), nudge = mg.nudge != null && t - mg.nudge < 0.4 ? 0.6 : 0;
+    K.pxr(x, 'mini_altar', 0, 0, mg.t, { lvl, lv: Math.floor(mg.poured / 0.04), near: Math.max(near, nudge, mg.phase === 'pour' ? lvl * 0.4 : 0), out: !!mg.out, pour: mg.phase === 'pour', fire: mg.fire }, 'mc_altar');
+    M.MCPX.cast(x, heroSp(this), ALA.hero, 148 + (mg.phase === 'pour' ? Math.round(Math.sin(t * 20) * 0.5 + 0.5) : 0), 'idle', t);
     // 部队攻击读数：品红大字，每涨一档弹一下；流血量红字
-    K.big(x, '部队攻击 +' + (Math.floor(mg.poured / 0.04) * 2) + '%', CX, SY + 160, T.num, C.magenta, mg.phase === 'pour' ? (mg.poured % 0.04) / 0.1 : 9); U.text(x, '已流血 ' + Math.round(mg.poured * 100) + '%', CX, SY + 215, T.body, C.red);
-    if (mg.phase === 'ready') K.sign(x, '按住倒血', CX, SY + 272, { kind: 'red', size: T.btn });
+    K.big(x, '部队攻击 +' + (Math.floor(mg.poured / 0.04) * 2) + '%', CX, SY + 180, T.num, C.magenta, mg.phase === 'pour' ? (mg.poured % 0.04) / 0.1 : 9); U.text(x, '已流血 ' + Math.round(mg.poured * 100) + '%', CX, SY + 232, T.body, C.red);
+    if (mg.phase === 'ready') K.sign(x, '按住倒血', CX, SY + 290, { kind: 'red', size: T.btn });
   } };
 
-// ═════════════════════ 货郎 · shell game with bottles ═════════════════════
-// 选中的瓶子先只抬起一条缝（猜中的话缝里先透出品质色），最后一下才整个掀开
+// ═════════════════════ 货郎 · shell game with gourds ═════════════════════
+// 夜市角落的货郎摊：「三个瓶子」画成三只倒扣的葫芦；货郎站在摊子后面（背景和前景之间）
+// 选中的葫芦先只抬起一条缝（猜中的话缝里先透出品质色），最后一下才整个掀开
+const PDA = M.MCPX.PEDDLER, pdSlot = () => M.MCPX.slot('mini_peddler_fg', 'mc_ped_fg');
 const pedLift = (pt) => (pt < 0.75 ? 0.05 * eo(pt / 0.75) : 0.05 + 0.95 * eb(cl((pt - 0.75) / 0.2, 0, 1)));
 MINI.peddler = { title: '货郎', img: 'stall', col: C.violet, text: '货郎掀开布：「三个瓶子，一个有货。眼睛跟得上，东西归你。」',
   init(mg) { mg.slot = [0, 1, 2]; mg.prize = Math.floor(rnd() * 3); mg.rounds = 0; mg.lift = [0, 0, 0]; mg.got = []; },
-  sx(i) { return CX - 240 + i * 240; },
+  sx(i) { return M.MCPX.lx(PDA.x[i]); },
   start(mg) { if (!this.miniPay(mg.pay)) return; mg.rounds++; mg.prize = Math.floor(rnd() * 3); mg.slot = [0, 1, 2]; mg.swaps = [...Array(6 + mg.rounds * 2)].map(() => { const a = Math.floor(rnd() * 3); let b = Math.floor(rnd() * 2); if (b >= a) b++; return [a, b]; }); mg.si = 0; mg.judged = false; this.miniSet('show'); },
   guess(mg, s) { if (mg.phase !== 'guess') return; mg.pick = s; mg.right = mg.slot[s] === mg.prize; mg.it = { k: 'item', key: M.pick(Object.keys(M.ITEMS)), q: Math.min(3, M.rollTier2(this.run) + 1) }; mg.om = mg.right ? { path: SHW.omenPath(mg.it.q), at: 0.3, dur: 0.45 } : null; this.miniSet('reveal'); S.mini('peddler', 'lift');
-    SHW.reach(this, mg, { x: MINI.peddler.sx(s), y: SY + 360, r: 150, lv: mg.right && mg.it.q >= 3 ? 2 : 1, label: '' }); },
-  down(mg, px, py) { if (mg.phase !== 'guess') return; for (let s = 0; s < 3; s++) if (Math.abs(px - MINI.peddler.sx(s)) < 90 && Math.abs(py - (SY + 380)) < 120) MINI.peddler.guess.call(this, mg, s); },
-  btns(mg) { if (mg.phase === 'idle') { const over = mg.rounds >= 2, buy = M.nice(mg.pay * 1.5); return [{ t: '押一局', sub: mg.pay + ' 积分 · 猜中赢积分', gold: !over, dis: over || this.run.wallet < mg.pay, why: over ? '货郎不跟你玩了' : '积分不够', fn: () => MINI.peddler.start.call(this, mg) }, { t: '离开', leave: 1, fn: () => this.miniFinish(mg.got.length ? '你赢走了：' + mg.got.join('、') + '。' : '货郎把布盖了回去。', mg.got.length ? '#b86bff' : '#8d8496') }]; }
+    SHW.press(this, mg, 'g' + s, MINI.peddler.sx(s), M.MCPX.ly(PDA.top - 20), C.gold);
+    SHW.reach(this, mg, { x: MINI.peddler.sx(s), y: M.MCPX.ly(PDA.top - 20), r: 150, lv: mg.right && mg.it.q >= 3 ? 2 : 1, label: '' }); },
+  down(mg, px, py) { if (mg.phase === 'guess') { for (let s = 0; s < 3; s++) if (Math.abs(px - MINI.peddler.sx(s)) < 70 && Math.abs(py - M.MCPX.ly(PDA.top - 18)) < 90) return MINI.peddler.guess.call(this, mg, s); }
+    // 点空白：绒布上一圈褶子、铜铃一响
+    SHW.tap(this, mg, px, py); S.mini('peddler', 'bell'); },
+  btns(mg) { if (mg.phase === 'idle') { const over = mg.rounds >= 2; return [{ t: '押一局', sub: mg.pay + ' 积分 · 猜中赢积分', gold: !over, dis: over || this.run.wallet < mg.pay, why: over ? '货郎不跟你玩了' : '积分不够', fn: () => MINI.peddler.start.call(this, mg) }, { t: '离开', leave: 1, fn: () => this.miniFinish(mg.got.length ? '你赢走了：' + mg.got.join('、') + '。' : '货郎把布盖了回去。', mg.got.length ? '#b86bff' : '#8d8496') }]; }
     if (mg.phase === 'guess') return ['左', '中', '右'].map((n, s) => ({ t: n, sub: '选这个瓶子', fn: () => MINI.peddler.guess.call(this, mg, s) })); return []; },
   tick(mg, dt) {
     if (mg.phase === 'show') { mg.lift[mg.slot.indexOf(mg.prize)] = Math.sin(cl(mg.pt / 1.2, 0, 1) * Math.PI); if (mg.pt > 1.3) { mg.lift = [0, 0, 0]; this.miniSet('shuffle'); } }
     // 洗牌时灯珠跟着越跑越快
-    if (mg.phase === 'shuffle') { SHW.state(mg).lamp = { t: 0.2, col: mg.si % 2 ? C.violet : C.gold, sp: 3 + mg.si * 0.6 }; const D = Math.max(0.16, 0.36 - mg.si * 0.02); if (mg.pt >= D) { const [a, b] = mg.swaps[mg.si]; const t0 = mg.slot[a]; mg.slot[a] = mg.slot[b]; mg.slot[b] = t0; mg.si++; mg.pt = 0; S.mini('peddler', 'shuffle'); if (mg.si >= mg.swaps.length) this.miniSet('guess'); } }
+    if (mg.phase === 'shuffle') { SHW.state(mg).lamp = { t: 0.2, col: mg.si % 2 ? C.violet : C.gold, sp: 3 + mg.si * 0.6 }; const D = Math.max(0.16, 0.36 - mg.si * 0.02); if (mg.pt >= D) { const [a, b] = mg.swaps[mg.si]; const t0 = mg.slot[a]; mg.slot[a] = mg.slot[b]; mg.slot[b] = t0; mg.si++; mg.pt = 0; S.mini('peddler', 'shuffle', mg.si); if (mg.si >= mg.swaps.length) this.miniSet('guess'); } }
     if (mg.phase === 'reveal') { const ps = mg.slot.indexOf(mg.prize), px = MINI.peddler.sx(mg.pick);
-      if (!mg.judged) { mg.lift[mg.pick] = pedLift(mg.pt); if (mg.om) omen(this, mg, mg.om, px, SY + 330);
+      if (!mg.judged) { mg.lift[mg.pick] = pedLift(mg.pt); if (mg.om) omen(this, mg, mg.om, px, M.MCPX.ly(PDA.top - 20));
         if (mg.pt > 0.95) { mg.judged = true; mg.jt = mg.pt;
-          if (mg.right) { const it = mg.it; payout(this, mg, { tier: Math.min(4, it.q + 1), x: px, y: SY + 300, col: SHW.QC(it.q), gains: [it], snd: () => { this.miniSay('猜中了！', '#ffcc33', true); S.mini('peddler', 'win'); }, done: (got) => { mg.got.push(...got); mg.judged = false; mg.lift = [0, 0, 0]; this.miniSet('idle'); } }); }
+          if (mg.right) { const it = mg.it; SHW.hitstop(mg, 0.15, px, M.MCPX.ly(PDA.top - 30), () => { const sl = pdSlot(); if (sl) sl.burst('glint', PDA.x[mg.pick], PDA.top - 8, 10, { sp: 30, life: 0.8 }); payout(this, mg, { tier: Math.min(4, it.q + 1), x: px, y: M.MCPX.ly(PDA.top - 40), col: SHW.QC(it.q), gains: [it], snd: () => { this.miniSay('猜中了！', '#ffcc33', true); S.mini('peddler', 'win'); }, done: (got) => { mg.got.push(...got); mg.judged = false; mg.lift = [0, 0, 0]; this.miniSet('idle'); } }); }); }
           // 猜错：有货的那个瓶子马上弹起来；就在隔壁的话打「差一点！」
-          else { this.miniSay('空的。货郎咧嘴笑了', '#8d8496'); S.mini('peddler', 'lose'); if (Math.abs(mg.pick - ps) === 1) SHW.near(this, mg, MINI.peddler.sx(ps), SY + 355, '差一点！'); else SHW.lose(this, mg); } } }
+          else { this.miniSay('空的。货郎咧嘴笑了', '#8d8496'); S.mini('peddler', 'lose'); if (Math.abs(mg.pick - ps) === 1) SHW.near(this, mg, MINI.peddler.sx(ps), M.MCPX.ly(PDA.top - 20), '差一点！'); else SHW.lose(this, mg); } } }
       else if (!mg.right) { mg.lift[ps] = eo(cl((mg.pt - mg.jt) / 0.12, 0, 1)); if (mg.pt > mg.jt + 0.4) { mg.judged = false; mg.lift = [0, 0, 0]; this.miniSet('idle'); } } }
   },
   draw(x, mg) {
-    const t = mg.t; night(x, '#1e1628', '#08060c'); K.SP(x, 'stall', CX, SY + 250, 150); K.R(x, CX - 380, SY + 440, 760, 30, '#6a4a2a'); K.R(x, CX - 360, SY + 470, 20, 160, '#4a3220'); K.R(x, CX + 340, SY + 470, 20, 160, '#4a3220'); K.R(x, CX - 380, SY + 430, 760, 14, '#8a2a3a');
-    K.bulbs(x, CX - 370, SY + 446, 740, 22, t, C.gold, 28);
-    // positions: slot s holds cup id; animate the current swap
-    const cupX = {}, arc = {}, vel = {}; mg.slot.forEach((id, s) => cupX[id] = MINI.peddler.sx(s));
-    if (mg.phase === 'shuffle' && mg.si < mg.swaps.length) { const [a, b] = mg.swaps[mg.si], D = Math.max(0.16, 0.36 - mg.si * 0.02), p = mg.pt / D, q = eio(p), ia = mg.slot[a], ib = mg.slot[b], dx = MINI.peddler.sx(b) - MINI.peddler.sx(a); cupX[ia] = MINI.peddler.sx(a) + dx * q; cupX[ib] = MINI.peddler.sx(b) - dx * q; arc[ia] = -Math.sin(q * Math.PI) * 40; arc[ib] = Math.sin(q * Math.PI) * 30;
+    const t = mg.t, ph = mg.phase;
+    // positions: slot s holds gourd id; animate the current swap (arc over / under, a speed for the afterimages)
+    const gx = {}, arc = {}, vel = {}; mg.slot.forEach((id, s) => gx[id] = PDA.x[s]);
+    if (ph === 'shuffle' && mg.si < mg.swaps.length) { const [a, b] = mg.swaps[mg.si], D = Math.max(0.16, 0.36 - mg.si * 0.02), p = mg.pt / D, q = eio(p), ia = mg.slot[a], ib = mg.slot[b], dx = PDA.x[b] - PDA.x[a]; gx[ia] = PDA.x[a] + dx * q; gx[ib] = PDA.x[b] - dx * q; arc[ia] = -Math.sin(q * Math.PI) * 10; arc[ib] = Math.sin(q * Math.PI) * 2;
       const v = (eio(Math.min(1, p + 0.05)) - eio(Math.max(0, p - 0.05))) / 0.1 * dx / D; vel[ia] = v; vel[ib] = -v; }
-    const cup = (hov) => { K.PL(x, [[-60, 0], [60, 0], [40, -150], [-40, -150]], C.violetDeep); K.PL(x, [[-50, -10], [-20, -10], [-24, -140], [-34, -140]], 'rgba(255,255,255,0.15)'); K.R(x, -20, -176, 40, 30, C.brown); U.box(x, -62, -8, 124, 12, C.violet); if (hov) K.GL(x, 0, -80, 140, C.violet, 0.4); };
-    [0, 1, 2].forEach(id => { const s = mg.slot.indexOf(id), lx = cupX[id], ly = SY + 430 + (arc[id] || 0), lift = mg.lift[s] || 0, hov = mg.phase === 'guess' && Math.abs(mg.mx - lx) < 90 && Math.abs(mg.my - (SY + 380)) < 120, vx = vel[id] || 0;
-      // 洗牌的速度线和残影：越快拖得越长
-      if (vx) { const sp = Math.min(1, Math.abs(vx) / 2400), dir = Math.sign(vx), len = Math.round(40 + 120 * sp); x.save(); for (let k = 1; k <= 3; k++) { x.globalAlpha = 0.28 * sp / k; x.save(); x.translate(Math.round(lx - dir * k * 26 * sp), Math.round(ly)); cup(false); x.restore(); } x.globalAlpha = 0.7 * sp; for (let k = 0; k < 4; k++) K.R(x, Math.round(dir > 0 ? lx - 70 - len - k * 10 : lx + 70 + k * 10), Math.round(ly - 30 - k * 34), len, 4, C.lavender); x.restore(); }
-      // 选中的瓶子：抖，猜中的话缝里先透出品质色（可能升格）
-      let j = { dx: 0, dy: 0 }; const sel = mg.phase === 'reveal' && s === mg.pick && !mg.judged; if (sel) { if (mg.om && mg.om.q != null) j = SHW.aura(x, lx, ly - 10, 90, mg.om.q, t, omK(mg, mg.om)); j.dx += Math.round(Math.sin(t * 47) * 2); }
-      if (id === mg.prize && lift > 0.1) { K.GL(x, lx, ly - 30, 90, mg.phase === 'reveal' && mg.right ? SHW.QC(mg.it.q) : '#ffcc33', 0.7); K.IC(x, 'gem', lx, ly - 34, 56); }
-      x.save(); x.translate(Math.round(lx + j.dx), Math.round(ly - lift * 120 - (hov ? 10 : 0) + j.dy)); cup(hov); x.restore(); });
-    if (mg.phase === 'guess') K.sign(x, '在哪个瓶子里？', CX, SY + 560, { kind: 'wine', size: T.btn }); // 放在桌下，不挡货郎
-  } };
+    const hov = ph === 'guess' ? [0, 1, 2].findIndex(s => Math.abs(mg.mx - MINI.peddler.sx(s)) < 70 && Math.abs(mg.my - M.MCPX.ly(PDA.top - 18)) < 90) : -1;
+    const gourds = [0, 1, 2].map(id => { const s = mg.slot.indexOf(id), sel = ph === 'reveal' && s === mg.pick && !mg.judged, k = sel && mg.om && mg.om.q != null ? omK(mg, mg.om) : 0, lift = (mg.lift[s] || 0) * 30 + (s === hov ? 2 : 0);
+      return { x: gx[id] + (sel ? Math.round(Math.sin(t * 47)) : 0), lift, dy: Math.round(arc[id] || 0), vx: vel[id] || 0, prize: id === mg.prize, gem: mg.right && ph === 'reveal' ? ['linen', 'teal', 'arcane', 'gold'][mg.it.q] : 'gold', gemC: mg.right && ph === 'reveal' ? SHW.QC(mg.it.q) : '#ffcf4a', crackC: k > 0 ? SHW.QC(mg.om.q) : null, hov: s === hov }; });
+    const revK = ph === 'reveal' && mg.om && mg.om.q != null ? omK(mg, mg.om) : 0;
+    K.pxr(x, 'mini_peddler', 0, 0, mg.t, { revK }, 'mc_ped');
+    MINI.peddler.npc(x, mg);
+    K.pxr(x, 'mini_peddler_fg', 0, 0, mg.t, { gourds, revK, revC: revK ? SHW.QC(mg.om.q) : null, revX: PDA.x[mg.pick || 0] }, 'mc_ped_fg');
+    if (ph === 'guess') K.sign(x, '在哪个瓶子里？', CX, SY + 600, { kind: 'wine', size: T.btn }); // 放在桌下，不挡货郎
+  },
+  // 货郎（像素人物做好之前是剪影）：斗笠、咧嘴、两只长手；洗牌时手按着葫芦来回
+  npc(x, mg) { const ax = 150, feet = 124, px = (a, b, c) => { x.fillStyle = U.pal(c); x.fillRect(M.MCPX.lx(a), M.MCPX.ly(b), 4, 4); }, sh = mg.phase === 'shuffle' ? Math.round(Math.sin(mg.t * 30)) : 0;
+    for (let k = 0; k < 60; k++) { const y = feet - 1 - k, q = k / 60; let hw = q > 0.93 ? 12 - (q - 0.93) * 120 : q > 0.9 ? 12 : q > 0.8 ? 4 : 9; if (q > 0.97) hw = 2; for (let d = -Math.round(hw); d <= Math.round(hw); d++) px(ax + d + (q > 0.8 ? sh : 0), y, d === -Math.round(hw) ? '#ff9a48' : q > 0.8 && q < 0.86 && Math.abs(d) < 3 && d !== 0 ? '#fff3b0' : '#12101e'); } },
+};
 })();
 
 ;
