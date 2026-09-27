@@ -41,7 +41,7 @@ G.view = function () {
       pwN: String(M.unitPower(c.type)),
       // the tag under the card: 「购买 N」 (a phone shows only the price until the card is picked)
       buyT: !two || picked ? '购买' : '', buyK: !ok ? 'dis' : !two || picked ? 'gold' : 'dark', buyOn: !c.sold,
-      onBuy: (e) => press(this, i, e),
+      onBuy: (e) => press(this, i, e), bi: i,
       // evolution in words: 已有 n/3, and the card that makes three says so in gold (no blinking ring over the card)
       evoTxt: n === (M.EVO_NEED || 3) - 1 ? '买下就进化' : '已有 ' + n + '/' + (M.EVO_NEED || 3), evoTc: n === (M.EVO_NEED || 3) - 1 ? '#ffcf4a' : '#a9a3c9', evoGo: false,
       evoPips: [0, 1, 2].map(k => ({ c: k < n ? '#ffcf4a' : '#3a3450' })),
