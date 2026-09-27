@@ -79,7 +79,7 @@ const CONCEPTS = [
   { id: 'mmfold', cat: '出征', icon: 'e_path', title: '收起小地图', line: '收起后只留路线名和第几站。', scr: 'world', sel: '[data-g="w-mm"]' },
   { id: 'canevo', cat: '夜市', icon: 'u_star', title: '可进化', line: '这种部队还能进化：3 支相同的进化一次。', scr: 'shop', sel: '[data-tip="s-evo"]' },
   { id: 'wpower', cat: '出征', icon: 'u_star', title: '战斗力', line: '敌人头上是它的战斗力，你头上是你的。颜色：绿稳赢，黄有风险，红很危险。', scr: 'world', sel: '[data-tip="w-power"]' },
-  { id: 'gogo', cat: '出征', icon: 'u_star', title: 'GOGO 灯', line: '水果机顶上的灯。拉杆时亮了，这一把一定中铃铛以上。', scr: 'world', at: (g) => g.mini && g.mini.kind === 'fruit' ? { x: 1110, y: 202, w: 100, h: 64 } : null },
+  { id: 'gogo', cat: '出征', icon: 'u_star', title: 'GOGO 灯', line: '水果机顶上的灯。拉杆时亮了，这一把一定中铃铛以上。', scr: 'world', at: (g) => g.mini && g.mini.kind === 'fruit' ? { x: 1136, y: 214, w: 80, h: 48 } : null },
   { id: 'legion', cat: '领袖', icon: 't_skill', title: '被动技能', line: '领袖一直生效的本事，每个领袖不同，随等级变强。', scr: ['base', 'world'], sel: '[data-tip="tal-root"],[data-g="w-skill"]' },
   // ── 战斗 ──
   { id: 'bmode', cat: '战斗', icon: 't_sword', title: '战斗目标', line: '普通战：消灭所有敌人；坚守战：撑过倒计时。', scr: 'battle', sel: '[data-tip="b-mode"]', freeze: 1 },

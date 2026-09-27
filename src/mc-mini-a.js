@@ -135,6 +135,8 @@ M.drawMini = function (ctx, g) {
   x.save(); if (pz && pz.k !== 1) { x.translate(pz.x, pz.y); x.scale(pz.k, pz.k); x.translate(-pz.x, -pz.y); }
   try { mg.D.draw.call(g, x, mg); } catch (e) { (window.__mcErrs = window.__mcErrs || []).push('mini ' + mg.kind + ': ' + e.message); } x.restore();
   try { SW_ && SW_.draw(x, mg); } catch (e) { (window.__mcErrs = window.__mcErrs || []).push('show ' + mg.kind + ': ' + e.message); }
+  // D.front: what is being revealed stays bright on top of the show's dim and rays (same camera as D.draw)
+  if (mg.D.front) { x.save(); if (pz && pz.k !== 1) { x.translate(pz.x, pz.y); x.scale(pz.k, pz.k); x.translate(-pz.x, -pz.y); } try { mg.D.front.call(g, x, mg); } catch (e) { (window.__mcErrs = window.__mcErrs || []).push('mini ' + mg.kind + ': ' + e.message); } x.restore(); }
   x.restore(); x.restore();
   if (L) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = false; ctx.drawImage(L, 0, 0, L.width, L.height, 0, 0, 1920, 1080); ctx.restore(); }
   frameDeco(ctx, mg);
@@ -142,7 +144,8 @@ M.drawMini = function (ctx, g) {
 // ───────── input ─────────
 const padHeld = () => { try { const P = M.settings.pad, gp = [...(navigator.getGamepads ? navigator.getGamepads() : [])].find(Boolean); return !!(gp && P && gp.buttons[P.confirm] && gp.buttons[P.confirm].pressed); } catch (e) { return false; } };
 G.miniPt = function (cx, cy) { const st = this.ui.stage(); if (!st) return { x: 960, y: 540 }; const r = st.getBoundingClientRect(), s = this.ui.scale(); return { x: (cx - r.left) / s, y: (cy - r.top) / s }; };
-G.miniDown = function (x, y, src) { const mg = this.mini; if (!mg || this.reel) return false; mg.mx = x; mg.my = y; if (mg.D.down) { mg.holding = src; mg.D.down.call(this, mg, x, y, src); this.bump(); return true; } return false; };
+// D.down may return false: the press was not for the game (then the framework's empty-stage feedback runs)
+G.miniDown = function (x, y, src) { const mg = this.mini; if (!mg || this.reel) return false; mg.mx = x; mg.my = y; if (mg.D.down) { mg.holding = src; const used = mg.D.down.call(this, mg, x, y, src); this.bump(); if (used === false) { mg.holding = null; return false; } return true; } return false; };
 // a click on the stage the game did not use: a ripple and a light tick (feedback floor: nothing is ever dead to the touch)
 G.miniTap = function (x, y) { const mg = this.mini; if (!mg || this.reel || !M.SHOW || x < SX || y < SY || x > SX + SW || y > SY + SH) return; M.SHOW.tap(this, mg, x, y); this.bump(); };
 G.miniUp = function (src) { const mg = this.mini; if (!mg || !mg.holding || (src && mg.holding !== src)) return; mg.holding = null; if (mg.D.up) mg.D.up.call(this, mg); this.bump(); };
@@ -321,22 +324,20 @@ MINI.roulette = { title: '午夜转盘', img: 'e_wheel', col: C.red, text: '荷�
   } };
 
 // ═════════════════════ 水果机 · slot machine ═════════════════════
-const SYM = ['cherry', 'lemon', 'bell', 'bar', 'seven', 'skull'], SW8 = [30, 26, 18, 12, 6, 8], STRIP = [0, 1, 2, 0, 3, 1, 4, 0, 2, 5, 1, 3];
-K.sym = function (x, k, a, b, s) {
-  const u = s / 100; x.save(); x.translate(a, b); x.scale(u, u);
-  if (k === 'cherry') { x.strokeStyle = C.greenDeep; x.lineWidth = 6; x.lineCap = 'square'; x.beginPath(); x.moveTo(-18, 10); x.quadraticCurveTo(-6, -30, 14, -38); x.moveTo(20, 16); x.quadraticCurveTo(14, -20, 14, -38); x.stroke(); K.EL(x, 22, -38, 14, 7, C.green, -0.4); K.CI(x, -20, 18, 22, C.red); K.CI(x, 20, 24, 22, C.red); K.CI(x, -27, 10, 6, C.pink); K.CI(x, 13, 16, 6, C.pink); }
-  else if (k === 'lemon') { K.EL(x, 0, 0, 40, 30, C.gold, -0.3); K.EL(x, -10, -10, 16, 8, C.butter, -0.3); K.CI(x, 38, -14, 6, C.amber); }
-  else if (k === 'bell') { K.PL(x, [[-34, 26], [-26, -10], [-14, -34], [14, -34], [26, -10], [34, 26]], C.gold); K.R(x, -40, 22, 80, 10, C.amber); K.CI(x, 0, 38, 9, C.brown); K.R(x, -18, -26, 8, 40, C.butter); }
-  else if (k === 'bar') { K.RR(x, -46, -24, 92, 48, 6, C.ink, C.gold, 3); U.text(x, 'BAR', 0, 2, T.item, C.gold, { num: true, shadow: false }); }
-  else if (k === 'seven') { U.text(x, '7', 4, 4, 100, C.wine, { num: true, shadow: false }); U.text(x, '7', 0, 0, 100, C.red, { num: true, shadow: false }); }
-  else if (k === 'skull') { K.CI(x, 0, -6, 32, C.cream); K.R(x, -18, 18, 36, 18, C.cream); K.CI(x, -12, -6, 9, C.ink); K.CI(x, 12, -6, 9, C.ink); K.PL(x, [[0, 6], [-5, 14], [5, 14]], C.ink); for (let i = 0; i < 3; i++) K.R(x, -12 + i * 10, 26, 3, 10, C.ink); }
-  x.restore();
-};
+// 舞台是后街游戏厅角落里的一台老虎机（mc-minipx-a.js 的 _mg_fruit：霓虹 LUCKY 777、GOGO 灯、圆柱滚筒、墙上的赔率板、出币盘、拉杆、插在墙上的电源线）。
+// 规则和概率不变；拉杆也能直接点。硬币真的掉进出币盘，一局下来越堆越高。
+const SW8 = [30, 26, 18, 12, 6, 8], STRIP = M.FRUIT_STRIP = [0, 1, 2, 0, 3, 1, 4, 0, 2, 5, 1, 3];
+const FRP = () => M.FRUIT_PX, fReelX = (i) => K.lx((FRP().RW[i][0] + FRP().RW[i][1]) / 2), fLineY = () => K.ly(FRP().line);
+const fKnob = (mg) => { const P = FRP(), la = 0.18 + (mg.lever || 0) * 2.2; return { x: K.lx(P.lever[0] + Math.sin(la) * 34), y: K.ly(P.lever[1] - Math.cos(la) * 34) }; };
+// the pay board's rows: 7 ×25 · BAR ×10 · 铃铛 ×6 · 三连水果 ×4 · 两颗樱桃 ×2 · 骷髅 伤身
+const PAYT = ['×25', '×10', '×6', '×4', '2个 ×2', '伤身'];
+const payRow = (r) => { const same = r[0] === r[1] && r[1] === r[2]; if (same) return r[0] === 4 ? 0 : r[0] === 3 ? 1 : r[0] === 2 ? 2 : r[0] === 5 ? 5 : 3; if (r.filter(v => v === 0).length >= 2) return 4; if (r.filter(v => v === 5).length === 2) return 5; return null; };
 MINI.fruit = { title: '水果机', img: 'e_fruit', col: C.magenta, text: '一台还插着电的老虎机。投币口旁边刻着：三个七，带你回家。',
-  init(mg) { mg.reels = [0, 1, 2].map(() => ({ pos: Math.floor(rnd() * 12), f: 0, s0: 0, done: true, bt: 9 })); mg.pulls = 0; mg.max = 5; mg.lever = 0; mg.win = 0; mg.flash = 0; mg.gogo = 0; mg.winT = -1; mg.winK = []; },
+  init(mg) { mg.reels = [0, 1, 2].map(() => ({ pos: Math.floor(rnd() * 12), f: 0, s0: 0, done: true, bt: 9, sf: 0 })); mg.pulls = 0; mg.max = 5; mg.lever = 0; mg.win = 0; mg.flash = 0; mg.gogo = 0; mg.winT = -1; mg.winK = []; mg.drops = []; mg.pile = 0; mg.dark = 0; mg.ins = null; mg.payHit = null; },
   // 结果在拉杆这一刻就定了（概率不变）；下面只挑怎么演：听牌、差一格、先告灯
   pull(mg) {
-    if (!this.miniPay(mg.pay)) return; mg.pulls++; mg.win = 0; mg.winT = -1; mg.winK = []; M.SHOW.calm(mg);
+    if (!this.miniPay(mg.pay)) return; mg.pulls++; mg.win = 0; mg.winT = -1; mg.winK = []; mg.payHit = null; M.SHOW.calm(mg); M.SHOW.ambient(mg, null);
+    const kn = fKnob(mg); M.SHOW.press(this, mg, 'lever', kn.x, kn.y, C.red); M.SHOW.shake(mg, 4); M.SHOW.zoom(mg, 0.015, K.lx(150), fLineY()); mg.ins = 0;
     let res = [0, 1, 2].map(() => M.wpick([0, 1, 2, 3, 4, 5], i => SW8[i])); if (mg.luck && rnd() < mg.luck) res[2] = res[1] = res[0];
     const same = res[0] === res[1] && res[1] === res[2];
     mg.reachLv = res[0] === res[1] && res[0] !== 5 ? (res[0] === 4 ? 2 : 1) : 0;   // 前两个一样（骷髅不算）就听牌；两个 7 是超级听牌
@@ -359,73 +360,76 @@ MINI.fruit = { title: '水果机', img: 'e_fruit', col: C.magenta, text: '一台
     for (let i = 1; i < n; i++) starts.push(starts[i - 1] + 0.17 + 0.08 * i + (i === n - 1 ? 0.3 : 0));
     r.mode = 'reach'; r.t0 = mg.pt; r.s0 = r.pos; r.starts = starts; r.n = n; r.Tc = fast; r.D = fast + starts[n - 1] + 0.14; r.step = -1;
     let f = Math.floor(r.s0 + fast * 17) + n; while (((f % 12) + 12) % 12 !== r.j) f++; r.f = f;
-    const bx = CX - 330, wx = bx + 40 + 2 * 170 + 75, wy = SY + 150 + 110 + 125;
-    M.SHOW.reach(this, mg, { x: wx, y: wy, r: 150, lv, label: lv >= 2 ? '777 REACH' : '听牌！' });
+    M.SHOW.reach(this, mg, { x: fReelX(2), y: fLineY(), r: 120, lv, label: lv >= 2 ? '777 REACH' : '听牌！' });
   },
   btns(mg) { if (mg.phase !== 'idle') return []; const over = mg.pulls >= mg.max; return [{ t: '拉杆', sub: mg.pay + ' 积分 · 剩 ' + (mg.max - mg.pulls) + ' 次', gold: !over, dis: over || this.run.wallet < mg.pay, why: over ? '机器吐出一张「今日已满」' : '积分不够', fn: () => MINI.fruit.pull.call(this, mg) }, { t: '离开', leave: 1, gold: over, fn: () => this.miniFinish(mg.total > 0 ? '机器吐了 ' + M.fmt(mg.total) + ' 积分给你。' : '机器吞掉了你的硬币，发出满足的嗡嗡声。', mg.total > 0 ? '#ffcc33' : '#8d8496') }]; },
+  // 拉杆也能直接抓：点拉杆 / 空格 = 拉一下；点别处不算（框架给点空白的反馈）
+  onLever(mg, x, y) { const kn = fKnob(mg), P = FRP(); return x > K.lx(P.lever[0]) - 44 && x < kn.x + 48 && y > kn.y - 48 && y < K.ly(P.lever[1] + 14); },
+  down(mg, x, y, src) {
+    if (src !== 'key' && !MINI.fruit.onLever(mg, x, y)) return false;
+    const b = (MINI.fruit.btns.call(this, mg) || [])[0]; if (!b) return true;
+    if (b.dis) { this.deny(b.why, '#8d8496'); return true; } S.click(); b.fn(); return true;
+  },
   tick(mg, dt) {
-    mg.lever = mg.phase === 'spin' ? Math.max(0, 1 - mg.pt * 3) : 0; mg.flash = Math.max(0, mg.flash - dt); mg.reels.forEach(r => r.bt += dt);
-    if (mg.gogo && mg.gogo < 1 && mg.phase === 'spin' && mg.pt > 0.3) { mg.gogo = 1; mg.gogoT = mg.t; M.SHOW.omen(this, mg, 3); S.mini('fruit', 'gogo'); this.fx.flash(C.gold, 0.18); this.fx.kick(6); const gx = CX - 330 + 560 - 40, gy = SY + 150 - 30; this.fx.spark(gx, gy, C.gold, 20, { v: 700 }); this.fx.rays(gx, gy, C.gold, 1.2, { r: 220 }); }
+    const SHW = M.SHOW;
+    mg.lever = mg.phase === 'spin' ? (mg.pt < 0.08 ? mg.pt / 0.08 : Math.max(0, 1 - (mg.pt - 0.08) / 0.35)) : 0; mg.flash = Math.max(0, mg.flash - dt); mg.dark = Math.max(0, mg.dark - dt * 1.5); mg.reels.forEach(r => { r.bt += dt; r.sf = Math.max(0, (r.sf || 0) - dt * 5); });
+    if (mg.ins != null) { mg.ins += dt * 4; if (mg.ins >= 1) mg.ins = null; }
+    SHW.hover(this, mg, 'lever', mg.phase === 'idle' && mg.pulls < mg.max && MINI.fruit.onLever(mg, mg.mx, mg.my));
+    // coins drop out of the chute and land on the pile (art px)
+    const top = 138 - Math.floor(Math.min(96, mg.pile) / 16); mg.drops.forEach(c => { c.vy += 420 * dt; c.x += c.vx * dt; c.y += c.vy * dt; if (c.y >= top && c.vy > 0) { c.done = true; mg.pile++; S.mini('fruit', 'drop', mg.pile); } }); mg.drops = mg.drops.filter(c => !c.done);
+    // 先告灯 GOGO：拉杆后一亮就一定是铃铛以上
+    if (mg.gogo && mg.gogo < 1 && mg.phase === 'spin' && mg.pt > 0.3) { mg.gogo = 1; mg.gogoT = mg.t; SHW.omen(this, mg, 3); S.mini('fruit', 'gogo'); const P = FRP(), gx = K.lx(P.gogo[0]), gy = K.ly(P.gogo[1]); SHW.white(mg, 0.3); SHW.flash(mg, C.gold, 0.2); SHW.shake(mg, 8); SHW.ring(mg, gx, gy, 10, 180, C.gold, { w: 2, life: 0.45 }); SHW.burst(mg, gx, gy, 26, { col: C.gold, sp: [200, 600], life: [0.3, 0.7] }); SHW.rays(mg, gx, gy, C.gold, { n: 12, life: 0.9, r: 300 }); this.fx.kick(6); }
     if (mg.phase !== 'spin') return;
     mg.reels.forEach((r, i) => {
       if (r.done) return;
+      const stop = (big) => { r.pos = r.f; r.done = true; r.bt = 0; r.sf = 1; mg.stopped++; S.mini('fruit', 'stop', i); this.fx.kick(big ? 5 : 3); SHW.shake(mg, 3 + i * 1.5 + (big ? 3 : 0)); SHW.ring(mg, fReelX(i), fLineY(), 10, 80, C.cream, { life: 0.25 }); SHW.burst(mg, fReelX(i), K.ly(FRP().ry0), 5, { col: C.gold, sp: [60, 160], ang: -Math.PI / 2, spread: 1.2, life: [0.2, 0.4] }); };
       if (r.mode === 'ease') { const u = cl(mg.pt - r.go, 0, r.d - r.go), R = 0.12, v = (r.f - r.s0) / (r.d - r.go - R / 2); r.pos = r.s0 + (u < R ? v * u * u / (2 * R) : v * (u - R / 2));
-        if (mg.pt >= r.d) { r.pos = r.f; r.done = true; r.bt = 0; mg.stopped++; S.mini('fruit', 'stop', i); this.fx.kick(3); if (i === 1 && mg.reachLv) MINI.fruit.reach.call(this, mg); } }
+        if (mg.pt >= r.d) { stop(false); if (i === 1 && mg.reachLv) MINI.fruit.reach.call(this, mg); } }
       else if (r.mode === 'reach') { const tt = mg.pt - r.t0;
         if (tt < r.Tc) r.pos = r.s0 + (r.f - r.n - r.s0) * (tt / r.Tc);
         else { let k = 0; while (k + 1 < r.n && tt >= r.Tc + r.starts[k + 1]) k++;
-          if (k !== r.step) { r.step = k; M.SHOW.crawl(this, mg, k); }
+          if (k !== r.step) { r.step = k; SHW.crawl(this, mg, k); }
           r.pos = r.f - r.n + k + eb(cl((tt - r.Tc - r.starts[k]) / 0.12, 0, 1)); }
-        if (tt >= r.D) { r.pos = r.f; r.done = true; r.bt = 0; mg.stopped++; S.mini('fruit', 'stop', i); this.fx.kick(5); if (mg.nearMiss) mg.nudge = 0; } }
+        if (tt >= r.D) { stop(true); if (mg.nearMiss) mg.nudge = 0; } }
     });
     // 差一格：第三轮往上蹭了一下，又落回去
     if (mg.nudge >= 0) { mg.nudge += dt; const r = mg.reels[2], q = cl(mg.nudge / 0.42, 0, 1); r.pos = r.f + 0.34 * Math.sin(q * Math.PI) * (1 - q * 0.3); if (q >= 1) { r.pos = r.f; mg.nudge = -1; mg.nudged = true; } else return; }
     if (mg.stopped >= 3 && !mg.resolved) {
       mg.resolved = true;
-      const r = mg.res, c = (k) => r.filter(v => v === k).length, same = r[0] === r[1] && r[1] === r[2], P = mg.pay, bx = CX - 330, wy = SY + 150 + 110 + 125; let v = 0, bp = false, text = '', tier = 0, win = [];
+      const r = mg.res, c = (k) => r.filter(v => v === k).length, same = r[0] === r[1] && r[1] === r[2], P = mg.pay, X0 = K.lx(150), wy = fLineY(); let v = 0, bp = false, text = '', tier = 0, win = [];
       if (same && r[0] === 4) { v = P * 25; bp = true; text = '777！大奖！'; tier = 4; } else if (same && r[0] === 3) { v = P * 10; text = '三个 BAR ×10'; tier = 3; } else if (same && r[0] === 2) { v = P * 6; text = '三个铃铛 ×6'; tier = 2; } else if (same && r[0] < 2) { v = P * 4; text = '三连水果 ×4'; tier = 2; } else if (same && r[0] === 5) { this.heroHurt(0.15); text = '三个骷髅……'; S.mini('fruit', 'skulls'); } else if (c(0) >= 2) { v = P * 2; text = '两颗樱桃 ×2'; tier = 1; } else if (c(5) === 2) { this.heroHurt(0.06); text = '两个骷髅，机器电了你一下'; S.mini('fruit', 'skulls'); } else { text = '没中'; S.mini('fruit', 'nomatch'); }
       if (same) win = [0, 1, 2]; else if (tier === 1) win = [0, 1, 2].filter(i => r[i] === 0);
+      mg.payHit = payRow(r);
       if (v) { mg.total = (mg.total || 0) + v; mg.winT = mg.t; mg.winK = win; mg.flash = 1.2 + tier * 0.4;
-        const later = tier === 4 ? 0.7 : 0.15; M.SHOW.later(mg, later, () => this.award([{ k: 'wallet', v }].concat(bp ? [K.bp()] : []), { x: CX - 50, y: wy }));
-        M.SHOW.win(this, mg, tier, { x: CX - 50, y: wy, v, col: tier >= 3 ? C.gold : C.magenta, label: tier === 4 ? '大奖' : tier === 3 ? '大赢' : tier === 2 ? '×' + v / P : '' });
+        win.forEach((i, k) => SHW.later(mg, 0.06 * k, () => SHW.pop(mg, 'r' + i, { k0: 0.6 })));
+        const later = tier === 4 ? 0.7 : 0.15; SHW.later(mg, later, () => this.award([{ k: 'wallet', v }].concat(bp ? [K.bp()] : []), { x: X0, y: wy }));
+        SHW.win(this, mg, tier, { x: X0, y: wy, v, col: tier >= 3 ? C.gold : C.magenta, label: tier === 4 ? '大奖' : tier === 3 ? '大赢' : tier === 2 ? '×' + v / P : '' });
+        // the machine pays out for real: coins drop into the tray (777 overflows and sprays the stage)
+        const n = [0, 4, 10, 18, 36][tier]; for (let k = 0; k < n; k++) SHW.later(mg, (tier === 4 ? 0.6 : 0.12) + k * 0.05, () => mg.drops.push({ x: 146 + rnd() * 8, y: 129, vx: (rnd() - 0.5) * 60, vy: 5 + rnd() * 20 }));
+        if (tier === 4) SHW.later(mg, 0.7, () => SHW.burst(mg, K.lx(150), K.ly(134), 70, { ramp: [C.white, C.butter, C.gold, C.amber], sp: [300, 900], ang: -Math.PI / 2, spread: 2.2, g: 900, drag: 0.6, life: [0.9, 1.5], size: [2, 3] }));
         if (tier === 4) S.mini('fruit', 'jackpot'); else S.mini('fruit', 'win'); }
-      else if (mg.nudged) { M.SHOW.near(this, mg, bx + 40 + 2 * 170 + 75, wy + 110, '差一格！'); text = '差一格就是' + (r[0] === 4 ? ' 777' : '三连') + '！'; }
-      else M.SHOW.lose(this, mg);
+      else if (same && r[0] === 5 || c(5) === 2) { // 骷髅：机身冒电火花、灯一黑、领袖被电一下（一拍带过）
+        mg.dark = same ? 0.6 : 0.4; S.mini('fruit', 'zap'); SHW.lose(this, mg); SHW.shake(mg, same ? 10 : 6); SHW.flash(mg, C.teal, 0.3);
+        [FRP().x0, FRP().x1].forEach(ax => SHW.burst(mg, K.lx(ax), K.ly(80), same ? 16 : 10, { ramp: [C.white, C.ice, C.teal, C.tealDeep], sp: [250, 700], life: [0.12, 0.3], h: 160 })); }
+      else if (mg.nudged) { SHW.near(this, mg, fReelX(2), wy + 110, '差一格！'); text = '差一格就是' + (r[0] === 4 ? ' 777' : '三连') + '！'; }
+      else SHW.lose(this, mg);
       mg.nudged = false;
-      const say = () => this.miniSay(text, v ? '#ffcc33' : same && r[0] === 5 ? '#ff5a4a' : '#8d8496', tier >= 3); if (tier === 4) M.SHOW.later(mg, 0.75, say); else say();   // 大奖：字砸下来之后再出提示，不剧透
+      const say = () => this.miniSay(text, v ? '#ffcc33' : same && r[0] === 5 ? '#ff5a4a' : '#8d8496', tier >= 3); if (tier === 4) SHW.later(mg, 0.75, say); else say();   // 大奖：字砸下来之后再出提示，不剧透
       this.miniSet('idle');
     }
   },
   draw(x, mg) {
-    const t = mg.t, bx = CX - 330, by = SY + 150, bw = 560, bh = 480, shw = mg.sh || {};
-    x.fillStyle = K.RG(x, CX, SY + 350, 50, 700, [[0, '#3a1030'], [1, '#0e0610']]); x.fillRect(SX, SY, SW, SH);
-    // pay table：机箱面板，倍数品红、伤身红；中了的那一行亮起来
-    const PT = [['seven', '×25', 4], ['bar', '×10', 3], ['bell', '×6', 2], ['lemon', '×4', 1], ['cherry', '2个 ×2', 0], ['skull', '伤身', 5]], hit = mg.winT >= 0 && t - mg.winT < 3 ? mg.res : null;
-    U.plate(x, SX + 40, SY + 110, 190, 440, { shadow: 9 }); PT.forEach(([k, s], i) => { const on = hit && ((hit[0] === hit[1] && hit[1] === hit[2] && (hit[0] === PT[i][2] || (PT[i][2] === 1 && hit[0] < 2))) || (PT[i][2] === 0 && hit.filter(v => v === 0).length === 2)); if (on && Math.floor(t * 8) % 2) K.R(x, SX + 50, SY + 132 + i * 70, 170, 56, C.gold); K.sym(x, k, SX + 90, SY + 160 + i * 70, 44); U.text(x, s, SX + 170, SY + 160 + i * 70, T.cap, on ? C.ink : k === 'skull' ? C.red : C.magenta); });
-    // cabinet：拉杆那一下机箱往上跳两下
-    x.save(); x.translate(0, mg.phase === 'spin' ? -Math.round(M.curve(M.CURVE.jolt, mg.pt) * 0.7) : 0);
-    U.box(x, bx - 20, by - 60, bw + 40, bh + 80, C.wine); K.R(x, bx - 10, by - 50, bw + 20, bh + 60, K.LG(x, 0, by - 50, 0, by + bh, [[0, C.red], [1, C.wine]])); K.bulbs(x, bx, by - 40, bw, bh + 20, t + (mg.flash ? t * 3 : 0), C.gold, 30);
-    K.sign(x, 'LUCKY 777', CX - 50, by, { kind: 'dark', size: T.title, num: true, minW: bw - 120, h: 60, ring: C.gold, col: mg.flash && Math.floor(t * 12) % 2 ? C.white : C.gold });
-    // 先告灯 GOGO：拉杆后亮起就一定有铃铛以上的奖
-    { const gx = bx + bw - 40, gy = by - 30, on = mg.gogo >= 1, bl = on && Math.floor(t * 10) % 2; U.box(x, gx - 44, gy - 26, 88, 52, C.ink); K.R(x, gx - 38, gy - 20, 76, 40, on ? (bl ? C.gold : C.red) : '#2a1020'); U.text(x, 'GOGO', gx, gy + 1, T.cap, on ? C.ink : '#4a2030', { num: true, shadow: false }); if (on) K.GL(x, gx, gy, 110, C.gold, 0.5 + 0.3 * Math.sin(t * 20)); }
-    const wy = by + 110, ww = 150, wh = 250; for (let i = 0; i < 3; i++) { const wx = bx + 40 + i * (ww + 20), r = mg.reels[i]; K.R(x, wx - 6, wy - 6, ww + 12, wh + 12, C.ink); K.R(x, wx, wy, ww, wh, K.LG(x, 0, wy, 0, wy + wh, [[0, C.steel], [0.2, C.cream], [0.8, C.cream], [1, C.steel]]));
-      const reachSpin = r.mode === 'reach' && !r.done && mg.pt - r.t0 < r.Tc;
-      x.save(); x.beginPath(); x.rect(wx, wy, ww, wh); x.clip(); const fast = mg.phase === 'spin' && !r.done && (r.mode === 'reach' ? reachSpin : mg.pt >= r.go + 0.06); const base = Math.floor(r.pos), fr = r.pos - base;
-      // 停下的一瞬间整条往回弹一点（卡皮的停轮曲线）
-      const bounce = -M.curve(M.CURVE.stop, r.bt) * 660, won = mg.winK.includes(i) && mg.winT >= 0 && t - mg.winT < 3;
-      for (let k = -2; k <= 2; k++) { const s = STRIP[(((base + k) % 12) + 12) % 12], yy = wy + wh / 2 + (k - fr) * 110 + bounce;
-        if (fast) { const n = reachSpin ? 4 : 3; for (let g2 = n - 1; g2 >= 0; g2--) { x.globalAlpha = g2 ? (reachSpin ? 0.3 : 0.4) / g2 : 0.85; x.save(); x.translate(wx + ww / 2, yy + g2 * (reachSpin ? 30 : 22)); x.scale(1, 1.17); K.sym(x, SYM[s], 0, 0, 84); x.restore(); } x.globalAlpha = 1; }   // 拖影：本体拉长，残影拖在身后（下方）
-        else { const pulse = won && k === 0 ? 1 + 0.14 * Math.abs(Math.sin((t - mg.winT) * 7)) : 1; if (won && k === 0) K.GL(x, wx + ww / 2, yy, 90, C.gold, 0.6); K.sym(x, SYM[s], wx + ww / 2, yy, 90 * pulse); } }
-      x.fillStyle = K.LG(x, 0, wy, 0, wy + wh, [[0, 'rgba(7,6,15,0.5)'], [0.25, 'rgba(7,6,15,0)'], [0.75, 'rgba(7,6,15,0)'], [1, 'rgba(7,6,15,0.5)']]); x.fillRect(wx, wy, ww, wh);
-      if (reachSpin) { x.globalAlpha = 0.25 + 0.15 * Math.sin(t * 40); K.R(x, wx, wy, ww, wh, mg.reachLv >= 2 ? C.red : C.gold); x.globalAlpha = 1; }
-      x.restore();
-      if (won) { const on = Math.floor((t - mg.winT) * 8) % 2; x.save(); x.strokeStyle = U.pal(on ? C.gold : C.white); x.lineWidth = 6; x.strokeRect(wx - 3, wy - 3, ww + 6, wh + 6); x.restore(); } }
-    K.R(x, bx + 30, wy + wh / 2 - 3, bw - 60, 6, mg.flash ? (Math.floor(t * 12) % 2 ? C.white : C.gold) : shw.tense ? C.gold : C.red);
-    K.sign(x, '剩余 ' + (mg.max - mg.pulls), CX - 50, by + bh - 85, { kind: 'dark', size: T.body, minW: bw - 240, h: 50, col: C.butter });
-    // lever
-    const lx = bx + bw + 60, ly = by + 260, la = -1.1 + (mg.lever > 0 ? 2.0 * mg.lever : 0); U.box(x, lx - 18, ly - 20, 36, 90, C.steel); x.save(); x.translate(lx, ly); x.rotate(la * 0.6 + (mg.phase === 'spin' ? 1.2 * Math.max(0, 1 - mg.pt * 2) : 0)); K.R(x, -6, -170, 12, 170, C.silver); K.CI(x, 0, -176, 28, C.red); K.CI(x, -8, -184, 9, C.pink); x.restore();
-    if (mg.flash) K.GL(x, CX - 50, wy + wh / 2, 380, C.gold, Math.min(1, mg.flash) * 0.5);
-    x.restore();
+    const t = mg.t, P = FRP(), sh = mg.sh || {}, SHW = M.SHOW;
+    const reels = mg.reels.map((r, i) => { const reachSpin = r.mode === 'reach' && !r.done && mg.pt - r.t0 < r.Tc, fast = mg.phase === 'spin' && !r.done && (r.mode === 'reach' ? reachSpin : mg.pt >= r.go + 0.06), won = mg.winK.includes(i) && mg.winT >= 0 && t - mg.winT < 3;
+      return { pos: r.pos - M.curve(M.CURVE.stop, r.bt) * 6, fast, win: won, k: SHW.xf(mg, 'r' + i).k, sf: r.sf, reachSpin }; });
+    const lv = SHW.xf(mg, 'lever');
+    K.pxr(x, '_mg_fruit', 0, 0, t, { reels, flash: mg.flash > 0 ? 1 : 0, tense: !!sh.tense, gogo: mg.gogo >= 1, neon: sh.tense && sh.tense.lv >= 2 ? 'strobe' : 'on', dark: mg.dark, payHit: mg.winT >= 0 && t - mg.winT < 3 ? mg.payHit : null,
+      ins: mg.ins, pile: mg.pile, drops: mg.drops, lever: mg.lever, sway: mg.phase === 'idle' ? Math.sin(t * 1.6) * 0.03 : 0, leverW: lv.white, knob: lv.k, L: K.lampFx }, 'fruit');
+    // the third reel re-accelerating for a reach glows through (flat, in hard steps)
+    const r2 = reels[2]; if (r2.reachSpin) { x.save(); x.globalAlpha = Math.round((0.25 + 0.15 * Math.sin(t * 40)) * 8) / 8; K.R(x, K.lx(P.RW[2][0]), K.ly(P.ry0), (P.RW[2][1] - P.RW[2][0]) * 4, (P.ry1 - P.ry0) * 4, mg.reachLv >= 2 ? C.red : C.gold); x.restore(); }
+    // the pay board's multipliers and the LCD's pulls left (crisp text over the pixels)
+    PAYT.forEach((s, i) => { const on = mg.payHit === i && mg.winT >= 0 && t - mg.winT < 3; U.text(x, s, K.lx(P.pay.tx), K.ly(P.pay.y + i * P.pay.dy), 22, on ? C.gold : i === 5 ? C.red : C.pink, { align: 'center' }); });
+    U.text(x, '剩余 ' + (mg.max - mg.pulls), K.lx(P.lcd[0] + P.lcd[2] / 2), K.ly(P.lcd[1] + P.lcd[3] / 2), 20, C.lime, { align: 'center', shadow: false });
   } };
 
 // ═════════════════════ 抓娃娃 · claw machine ═════════════════════

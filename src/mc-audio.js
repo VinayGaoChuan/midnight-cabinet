@@ -1334,6 +1334,11 @@ Object.assign(MINI._, {
   exit: (t) => { tone(t, 'p25', 1200, .22, .035, { to: 150, slide: .22, crush: 1 }); nz(t, .2, 'bandpass', 2000, 1, .05); },
   enter: (t) => { nz(t, .12, 'lowpass', 500, .7, .1); thud(t, 110, 50, .12, .18); tone(t + .05, 'p25', 1319, .05, .02, { crush: 1 }); },
 });
+// 水果机：硬币一枚枚掉进出币盘（音高随堆高轮换）、骷髅的电火花
+Object.assign(MINI.fruit, {
+  drop: (t, x) => ring(t, 2400 + ((x | 0) % 6) * 160, .12, .028, { parts: [[1, 1], [2.4, .4], [3.9, .15]], pan: rnd(-.4, .4) }),
+  zap: (t) => { for (let i = 0; i < 7; i++) nz(t + i * .028, .025, 'bandpass', 2600 + rnd(0, 2600), 2, .08); tone(t, 'sawtooth', 110, .3, .05, { vib: [60, 40, .02], lp: 2000 }); },
+});
 
 // ── 世界主题传送门：每个世界一段招牌小曲 ──
 Object.assign(WORLD, {
