@@ -10,12 +10,21 @@ const PR = (x, a, b, w, h, c) => { x.fillStyle = c; x.fillRect(E(a), E(b), E(w),
 // 站点类型 → 调色板含义色（撤离青、首领红、商店金、奇遇紫……）
 const NODE_C = { extract: 'teal', hold: 'amber',   /* only 撤离 is teal (2026-09-26: 坚守战 looked like an extraction) */ camp: 'amber', chest: 'gold', shop: 'gold', boss: 'red', elite: 'red', event: 'violet', recruit: 'blue', normal: 'pink', start: 'cream' };
 // 站牌：夜色底 + 墨框 + 右下硬投影 + 左侧含义色条；像素字 24（= 字库原生 12px × 2，最清楚）
+// what a stop pays, as little pictures after its name (2026-09-27 feedback: 「分叉主要看节点名称，不容易判断走哪边更划算……箭头
+// 旁写清已知敌人强度和奖励类型，未知内容继续保留」): fights pay points and supplies, elites and bosses also a blueprint now
+// and then; a chest, a camp's rest, a recruit. Unseen stops keep their ？？？. '@' = an icon, else a sprite.
+const REW = { normal: ['coin', 'sack'], hold: ['coin', 'sack'], score: ['coin', 'sack'], holdScore: ['coin', 'sack'], elite: ['coin', 'sack', 'scroll'], boss: ['coin', 'sack', 'scroll'], chest: ['chest'], camp: ['r_heart'], recruit: ['@v_warrior'] };
+M.nodeRew = (n) => (n && n.seen && REW[n.type]) || [];
+const REW_N = { coin: '积分', sack: '物资', chest: '宝箱', r_heart: '回复生命', '@v_warrior': '一名部队' };
+M.nodeRewTxt = (run, n) => M.nodeRew(n).map(k => (k === 'scroll' ? '图纸 ' + Math.round(100 * (M.bpChance ? M.bpChance(run, n.type) : 0)) + '%' : REW_N[k])).join(' · ');
+const rewImg = (k) => { try { return k[0] === '@' ? M.iconCanvas(k.slice(1), 2) : M.spriteCanvas(k, 3); } catch (e) { return null; } };
 function nodeTag(ctx, n, p) {
-  const U = M.UI, lab = M.nodeLabel(n), fs = 24, h = 40, w = E(U.measure(ctx, lab, fs) + 38), x0 = E(p.x - w / 2), y0 = E(p.y + 36);
+  const U = M.UI, lab = M.nodeLabel(n), fs = 24, h = 40, rw = M.nodeRew(n), RS = 26, w = E(U.measure(ctx, lab, fs) + 38 + (rw.length ? rw.length * (RS + 4) + 6 : 0)), x0 = E(p.x - w / 2), y0 = E(p.y + 36);
   const acc = n.seen ? P[NODE_C[n.type]] || P.cream : P.dusk, tc = n.seen ? (n.type === 'extract' ? P.teal : n.type === 'boss' || n.type === 'elite' ? P.red : P.cream) : P.lavender;
   PR(ctx, x0 + 2, y0 + 2, w + 8, h + 8, P.ink); PR(ctx, x0 - 4, y0 - 4, w + 8, h + 8, P.ink);
   PR(ctx, x0, y0, w, h, P.night); PR(ctx, x0, y0, w, 2, P.dusk); PR(ctx, x0, y0 + h - 4, w, 4, P.abyss); PR(ctx, x0, y0, 6, h, acc);
-  U.text(ctx, lab, x0 + 20, y0 + 28, fs, tc, { align: 'left', base: 'alphabetic', u: 2 });
+  const tw = U.text(ctx, lab, x0 + 20, y0 + 28, fs, tc, { align: 'left', base: 'alphabetic', u: 2 });
+  rw.forEach((k, i) => { const im = rewImg(k); if (!im || !im.height) return; const s = RS / Math.max(im.width, im.height), dw = Math.round(im.width * s), dh = Math.round(im.height * s), ix = E(x0 + 20 + tw + 10 + i * (RS + 4) + (RS - dw) / 2), iy = E(y0 + (h - dh) / 2); const sm = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = false; ctx.drawImage(im, ix, iy, dw, dh); ctx.imageSmoothingEnabled = sm; });
 }
 // 方向键：金色街机键（上黄油高光、下琥珀暗阶、墨框、垂直硬投影），悬停抬起 4px、白框；箭头用像素块拼
 const ARW = ['....#...', '....##..', '#######.', '########', '#######.', '....##..', '....#...'];

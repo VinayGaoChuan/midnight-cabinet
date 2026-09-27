@@ -68,7 +68,7 @@ const CONCEPTS = [
   { id: 'rarity', cat: '标签与品质', icon: 'u_star', title: '品质', line: '白 普通 · 绿 优质 · 蓝 稀有 · 紫 史诗 · 橙 传说 · 红 神话；领袖、精英和首领还有暗金的不朽。', scr: ['base', 'shop'], sel: '[data-tip="hs-rar"],[data-g="shop-units"]' },
   { id: 'defend', cat: '混沌来袭', icon: 't_shield', title: '混沌来袭', line: '每天夜里怪物攻打主基地：驻军迎敌，领袖在屋顶射箭。驻军败退，剩下的怪物打主基地。', scr: 'base', sel: '[data-g="raidprep"]' },
   // ── 出征 ──
-  { id: 'nodes', cat: '出征', icon: 'e_path', title: '地图节点', line: '图标就是这一站的内容：战斗、夜市、营火、宝箱、奇遇……鼠标悬浮看详情。', scr: 'world', at: nextNode },
+  { id: 'nodes', cat: '出征', icon: 'e_path', title: '地图节点', line: '图标是这一站的内容，站牌后面的小图是在这里能拿到的东西。', scr: 'world', at: nextNode },
   { id: 'chest', cat: '出征', img: () => sprite('chest'), title: '宝箱', line: '捆着铁链的宝箱：链条越多，里面的东西越好。', scr: 'world', at: () => null },
   { id: 'whp', cat: '出征', icon: 't_heart', title: '领袖生命', line: '不会自动回复：靠营火、奇遇，或者回基地后的医疗建筑。归零就探索失败，基地核心献出一颗心救回领袖。', scr: 'world', sel: '[data-tip="w-hp"]' },
   { id: 'wallet', cat: '出征', img: () => sprite('coin', 4), title: '积分', line: '这一趟的钱：打赢战斗得到，在夜市和奇遇里花；回基地就清零。', scr: 'world', sel: '[data-tip="w-wallet"]' },
@@ -77,6 +77,7 @@ const CONCEPTS = [
   { id: 'items', cat: '出征', icon: 't_chest', title: '支援道具', line: '战斗中按 Q W E 由领袖放出。用的时候转一下，转出这次的效果；图片下面写着它是哪一类。', scr: ['world', 'battle'], sel: '[data-tip="b-items"]' },
   { id: 'banners', cat: '出征', img: () => sprite('flag'), title: '战旗', line: '整支部队的常驻加成，比如「射手战旗」让所有射手更强。', scr: ['world', 'shop'], sel: '[data-fx="banners"],[data-g="shop-banners"]' },
   { id: 'minimap', cat: '出征', icon: 'e_path', title: '小地图', line: '整条路线的缩略图。越往右越深，最右边是首领。', scr: 'world', at: () => Object.assign({}, M.MMAP || { x: 1320, y: 48 }, { w: 560, h: 250 }), when: (g) => g.run && !g.run.tut },
+  { id: 'tripbuff', cat: '出征', icon: 'e_path', title: '这一趟的加成', line: '途中拿到的加成，回到基地时清空。', scr: 'world', sel: '[data-g="w-trip"]' },
   { id: 'mmfold', cat: '出征', icon: 'e_path', title: '收起小地图', line: '收起后只留路线名和第几站。', scr: 'world', sel: '[data-g="w-mm"]' },
   { id: 'canevo', cat: '夜市', icon: 'u_star', title: '进化进度', line: '队伍里已有几支这种部队；凑齐 3 支就进化成更强的一支。', scr: 'shop', sel: '[data-tip="s-evo"]' },
   { id: 'wpower', cat: '出征', icon: 'u_star', title: '战斗力', line: '敌人头上是它的战斗力，你头上是你的。颜色：绿稳赢，黄有风险，红很危险。', scr: 'world', sel: '[data-tip="w-power"]' },

@@ -19,9 +19,18 @@ G.view = function () {
   const v = oView.call(this), m = this.meta;
   v.restSub = ''; v.restC = '#e8dcc4';
   if (m && this.screen === 'base' && M.nightPower && M.garrisonPower) { try { const e = M.nightPower(m), a = M.garrisonPower(m); v.restSub = '今晚 ★' + e + ' · 驻军 ★' + a; v.restC = a && M.oddsCol ? M.oddsCol(a, e) : '#ff6a5a'; } catch (err) {} }
+  // the map: what this trip picked up on the way, always in sight (2026-09-27 feedback: 「事件结束后，不容易找到刚拿到的加成……
+  // 地图加“本次出征加成”，列出效果、数值和何时消失」); the tip says they end when the trip does
+  const run = this.run;
+  if (v.w && run && this.screen === 'world') { const tl = run.region && run.region.tut ? [] : M.tripLines(run); v.w.tbOn = tl.length > 0; v.w.tbTxt = tl.join(' · '); v.w.tbImg = v.w.tbImg || M.iconURL('e_path', 2); }
   // a caption belongs to the screen it was raised on: the map's departure line does not follow into a shop or an event
   if (this.toastData && this.toastData.scr && this.toastData.scr !== this.screen) v.toastOn = false;
   return v;
+};
+const oTip = G.tipFor;
+G.tipFor = function (key) {
+  if (key === 'w-trip' && this.run) return { title: '这一趟的加成', c: '#5fd0c0', d: '途中奇遇、营火给的加成，回到基地时清空。', lines: M.tripLines(this.run).map(t => ({ t, c: '#bff7f0' })) };
+  return oTip ? oTip.apply(this, arguments) : null;
 };
 const oToast = G.toast;
 G.toast = function () { const r = oToast.apply(this, arguments); if (this.toastData) this.toastData.scr = this.screen; return r; };
@@ -50,6 +59,8 @@ G.runWin = function () {
 // what the way gave
 const oBR = G.buffRun;
 if (oBR) G.buffRun = function (k, v) { const run = this.run; if (run && k !== 'unitAtk' && k !== 'heroAtk' && k !== 'mult') { run.gotMods = run.gotMods || {}; run.gotMods[k] = (run.gotMods[k] || 0) + v; } return oBR.apply(this, arguments); };
+const TRIP_TX = { unitAtk: '部队攻击 +{p}%', heroAtk: '领袖攻击 +{p}%', unitHp: '部队生命 +{p}%', mult: '积分倍率 +{p}%', feverStart: 'FEVER 槽开局 +{p}%', eventLuck: '奇遇好运 +{p}%', baseScore: '击杀积分 +{p}%' };
+M.tripLines = (run) => { const tb = M.tripBuffs(run); return Object.keys(TRIP_TX).filter(k => tb[k] > 0.0001).map(k => TRIP_TX[k].replace('{p}', Math.round(tb[k] * 100))); };
 M.tripBuffs = (run) => { const o = {}; if (!run) return o; [run.runBuff, run.gotMods].forEach(x => { if (x) Object.keys(x).forEach(k => { if (typeof x[k] === 'number' && x[k]) o[k] = (o[k] || 0) + x[k]; }); }); return o; };
 // the fight's opening chips: wonders, the god, the way
 const oBoons = M.boonsOf;
@@ -59,8 +70,7 @@ if (oBoons) M.boonsOf = function (run) {
   if (ws.length) out.push({ n: '奇观 ×' + ws.length, ic: 'u_star', c: '#ffd970', t: ws.slice(0, 3).map(k => W[k].n).join('、') });
   const god = M.GODS && m.god && M.GODS[m.god], lv = m.godLv || 0;
   if (god && lv > 0) out.push({ n: god.n + ' Lv' + lv, ic: 'f_faith', c: god.c || '#ffe6a0', t: String((god.lv[lv - 1] || {}).t || '').replace(/。$/, '') });
-  const tb = M.tripBuffs(run), TX = { unitAtk: '部队攻击 +{p}%', heroAtk: '领袖攻击 +{p}%', unitHp: '部队生命 +{p}%', feverStart: 'FEVER 槽开局 +{p}%', eventLuck: '奇遇好运 +{p}%', baseScore: '击杀积分 +{p}%' };
-  const tt = Object.keys(TX).filter(k => tb[k] > 0.0001).map(k => TX[k].replace('{p}', Math.round(tb[k] * 100)));
+  const tt = M.tripLines(run);
   if (tt.length && !run.raid) out.push({ n: '这一趟途中', ic: 'e_path', c: '#5fd0c0', t: tt.slice(0, 3).join('、') });
   return out.slice(0, 7);
 };
