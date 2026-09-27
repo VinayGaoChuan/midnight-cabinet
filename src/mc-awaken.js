@@ -59,7 +59,7 @@ const TR = {
   SummonGhostWalkerTrait: ['stealth', '受到的普通攻击伤害减少'], SummonDeathStareTrait: ['curse', '盯住一个目标越打越痛'], SummonSummonFroggoTrait: ['summon', '召唤蛙人'],
   SummonPotOHoneyTrait: ['heal', '死亡时为身边友军回血'], SummonLeadershipAuraTrait: ['aura_atk', '让身边友军伤害提高，但更脆'], SummonSafetyAuraTrait: ['aura_guard', '让身边友军受到的伤害减少'],
   SummonPlunderTrait: ['gold', '击杀时抢积分'], SummonDiabolicDuoTrait: ['summon', '成对出现'], SummonHealingAuraTrait: ['aura_heal', '让身边友军持续回血'], SummonMaulTrait: ['curse', '攻击会减慢目标的攻速'],
-  SummonSelfDestructInfantryTrait: ['fire', '冲上去自爆'], SummonRaiseImpTrait: ['summon', '召唤小鬼'], JadeBeastTrait: ['gold', '场上商人越多，积分倍率越高'],
+  SummonSelfDestructInfantryTrait: ['fire', '冲上去自爆'], SummonRaiseImpTrait: ['summon', '召唤小鬼'], JadeBeastTrait: ['gold', '场上商人越多，击杀积分越高'],
 };
 M.TRAIT_AW = TR;
 // what the no-trait units are for, by vocation

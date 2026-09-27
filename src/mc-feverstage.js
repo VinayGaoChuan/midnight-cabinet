@@ -28,7 +28,9 @@ const FX = M.FEVER_FX = {
   frame: { list: [['GrayWolf'], ['GrayWolf', 'GrayWolf'], ['GrayWolf', 'GrayWolf', 'DireWolf'], ['DireWolf', 'VengefulDragon'], ['BoneDragon', 'DireWolf', 'DireWolf', 'VengefulDragon'], ['BoneDragon', 'BoneDragon', 'VengefulDragon', 'VengefulDragon', 'DireWolf', 'DireWolf']] },
   bell: { stun: [1, 1.5, 2, 3.5, 0, 1.5], charm: [0, 0, 0, 0, 5, 8] },
   horn: { add: [0.08, 0.12, 0.16, 0.22, 0.3, 0.45] },
+  pillar: { pct: [0.25, 0.35, 0.45, 0.6, 0.8, 1] },   // boss fights: light from the sky on every ally
 };
+const PILLAR = { name: '天降光柱', icon: 'u_star', tiers: FX.pillar.pct.map(p => (p >= 1 ? '全队回满生命' : '全队回复 ' + Math.round(p * 100) + '% 生命')) };
 const F4 = [0, 0, 1, 2, 3, 3];
 const I = M.ITEMS, nm = (k) => (DB[k] && DB[k].n) || k;
 if (I) {
@@ -56,10 +58,10 @@ G.fvStageStart = function (key, tier, b) {
   const f = F4[tier] || 0, myth = tier >= 5;
   const st = this.fvStage = { key, tier, f, myth, b, t: 0, last: now(), ev: [], holes: [], flyers: [], marks: [], bolts: [], arcs: [], pillars: [], waves: [], hit: new Set(), end: 1.4, prop: null, spot: null };
   const on = (t, fn) => st.ev.push({ t, fn });
-  const Ix = I[key], tc = M.TIERS[tier].c;
+  const Ix = key === 'pillar' ? PILLAR : I[key], tc = M.TIERS[tier].c;
   st.title = { n: Ix.name, sub: Ix.tiers[tier], c: tc, ic: Ix.icon };
-  S.whoosh && S.whoosh(0.5); S.itemUse && S.itemUse(key === 'horn' ? 'bell' : key, f);
-  const g = this, foes = () => b.ents.filter(e => e.alive && e.side === 'E' && e.x < 1900 && (b.t >= (e.entryT || 0)));
+  S.whoosh && S.whoosh(0.5); S.itemUse && S.itemUse(key === 'horn' ? 'bell' : key === 'pillar' ? 'heal' : key, f);
+  const g = this, foes = () => b.ents.filter(e => e.alive && e.side === 'E' && !e.boss && e.x < 1900 && (b.t >= (e.entryT || 0)));   // never a boss
   if (key === 'bolt') {
     const n = FX.bolt.n[tier], dmg = FX.bolt.dmg[tier] * Math.max(200, ((b.cfg && b.cfg.budget) || 100) * 2.4) * (b.ek || 1) * (M.feverPow ? M.feverPow(b) : 1), gap = n > 8 ? 0.11 : n > 5 ? 0.15 : 0.24, struck = new Set();
     for (let i = 0; i < n; i++) on(0.5 + i * gap, () => {
@@ -72,6 +74,12 @@ G.fvStageStart = function (key, tier, b) {
         F.forEach(o => { if (o !== tg && Math.hypot(o.x - tg.x, o.y - tg.y) < r) { b.deal(b.hero, o, dmg * (f === 3 ? 0.6 : 0.4), { skill: 1, col: '#e0e8ff' }); if (f === 3) { o.stun = Math.max(o.stun || 0, 1); st.marks.push({ e: o, kind: 'stun', t0: st.t }); } st.holes.push({ e: o, r: 85, t0: st.t, life: 0.6 }); } }); }
     });
     st.end = 0.5 + (n - 1) * gap + 0.35;   // the last bolt's flash, then straight on (2026-09-26)
+  } else if (key === 'pillar') {
+    // a pillar of light falls on each ally, left to right, and heals it (the leader half as much)
+    const pct = FX.pillar.pct[tier], A = b.ents.filter(e => e.alive && e.side === 'A').sort((a, c) => a.x - c.x);
+    A.forEach((o, i) => on(0.35 + i * 0.09, () => { if (!o.alive) return; const q = bodyAt(g, o), h0 = o.hp; st.pillars.push({ x: q.x, y: q.y, t0: st.t }); b.heal(o, o.maxHp * (o.isHero ? pct * 0.5 : pct), '#fff3b0'); st.holes.push({ e: o, r: 110, t0: st.t, life: 99 });
+      g.fx.pop(q.x, q.y - 70, '+' + M.fmt(Math.round(Math.max(0, o.hp - h0))), '#9cff7a', 36, { rise: 50 }); S.heal && S.heal(); }));
+    st.end = 0.35 + A.length * 0.09 + 0.8;
   } else if (key === 'heal') {
     const pct = FX.heal.pct[tier], C = { x: 960, y: 330 }, A = b.ents.filter(e => e.alive && e.side === 'A' && !e.isHero).sort((a, c) => a.x - c.x);
     st.prop = { kind: 'candle', x: C.x, y: C.y, t0: 0 };
@@ -116,7 +124,7 @@ G.tick = function (dt) {
   const r = oTick.apply(this, arguments), st = this.fvStage; if (!st) return r;
   const b = st.b; if (this.battle !== b || this.screen !== 'battle' || b.over) { this.fvStage = null; if (this.feverFx) this.feverFx.timeAt = now(); return r; }
   const t1 = now(), d = Math.min(0.05, (t1 - st.last) / 1000); st.last = t1; st.t += d;
-  st.ev.sort((a, c) => a.t - c.t); while (st.ev.length && st.ev[0].t <= st.t) { const e = st.ev.shift(); try { e.fn(); } catch (err) { (window.__mcErrs = window.__mcErrs || []).push('fever stage: ' + err.message); } }
+  st.ev.sort((a, c) => a.t - c.t); while (st.ev.length && st.ev[0].t <= st.t) { const e = st.ev.shift(); try { const pc = b._inCast; b._inCast = b.hero || { fever: 1 }; try { e.fn(); } finally { b._inCast = pc; } } catch (err) { (window.__mcErrs = window.__mcErrs || []).push('fever stage: ' + err.message); } }
   st.flyers.forEach(f => { if (!f.done && st.t - f.t0 >= f.dur) { f.done = true; try { f.land(); } catch (err) { (window.__mcErrs = window.__mcErrs || []).push('fever stage: ' + err.message); } } });
   // the bell: every enemy the first ring reaches is caught
   if (st.bellOn) st.waves.forEach(w => { const R = (st.t - w.t0) * 1500; b.ents.forEach(e => { if (!e.alive || e.side !== 'E' || st.hit.has(e.id) || e.x >= 1900) return; const p = bodyAt(this, e); if (Math.hypot(p.x - 960, p.y - 250) > R) return; st.hit.add(e.id);

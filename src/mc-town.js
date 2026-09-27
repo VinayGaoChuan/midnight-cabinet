@@ -13,7 +13,7 @@
 // outermost (the strongest outside). Only they fall in a raid, and lie in ruins until their room is repaired.
 // People live in it: workers go out to gather and come back with a sack, smiths and trainers work at their doors, the
 // rest wander their street; when a 混沌来袭 starts everyone runs inside and the tower crews show up on their towers. The
-// leader stands on the roof of the main base. Any room can be demolished (a day and 50 supplies; the blueprint comes back).
+// leader guards the portal, on the ground beside the main base's arch. Any room can be demolished (a day and 50 supplies; the blueprint comes back).
 const M = window.MC, G = M.Game.prototype, S = M.Sfx, U = M.UI, P = M.PJ.PAL, B_ = M.BUILDINGS, now = () => performance.now();
 const cl = (v, a, b) => Math.max(a, Math.min(b, v)), eo = (q) => 1 - Math.pow(1 - q, 3), RM = () => !!M.PJ.reduced;
 const GEO = M.BASE_GEO, DOOR_X = GEO.DOOR_X, MB = M.MAIN_BASE, SP = M.STYLE_PAL, CW = GEO.CW, CH = GEO.CH, TOP = GEO.TOP;
@@ -362,15 +362,25 @@ function drawCrew(ctx, v, n, t, raid) {
   const im = M.P16 && M.P16.img(n.key, st, f, null, 60); if (!im) return;
   ctx.save(); ctx.translate(Math.round(v.x + v.side * 4), v.y + top + 6); if (v.side < 0) ctx.scale(-1, 1); ctx.drawImage(im, -im.cx, -im.footY); ctx.restore();
 }
-// the leader on the roof of the main base: watching; in a raid, commanding
+// the leader guards the portal: it stands on the ground beside the arch (2026-09-27: 「英雄，平时不要站在基地的房顶，而是要站在传送门旁边，
+// 表示守卫传送门，选好场景进入的时候，英雄会跳入传送门中。混沌战斗开始的时候，英雄会进入基地房间中，不再出现。战斗结束后，再出来」):
+// setting off, it leaps into the portal; while a raid is on it is inside the main base (its arrows come out of a window), and when
+// the fight is over it steps back out of the door
 function drawLeader(ctx, g, t, raid, lights) {
   const h = g.meta.heroes[0]; if (!h) return; const H = M.HEROES[h.cls]; if (!H) return;
-  const cmd = raid && !raid.over, st = cmd ? (Math.floor(t * 1.25) % 3 === 0 ? 'cast' : 'charge') : 'idle', f = Math.floor(t * (cmd ? 6 : 2.5));
-  const im = M.P16 && M.P16.img(H.sprite, st, f, null, 96); if (!im) return; const x = DOOR_X + 200, y = MB.top - 70;
-  ctx.save(); ctx.translate(x, y); ctx.drawImage(im, -im.cx, -im.footY); ctx.restore();
-  ctx.fillStyle = P.ink; ctx.fillRect(x + 40, y - 150, 5, 150); ctx.fillStyle = P.red; const wv = RM() ? 0 : Math.sin(t * 5) * 3; ctx.fillRect(x + 45, y - 150 + wv, 44, 26); ctx.fillStyle = P.gold; ctx.fillRect(x + 45, y - 150 + wv, 44, 5);
+  if (raid && !raid.over) return;
+  const now = performance.now(), leap = g.leapT != null ? (now - g.leapT) / 700 : -1; if (leap >= 1) return;
+  const X0 = DOOR_X + 150, Y0 = -8, out = raid && raid.over ? Math.min(1, (raid.overT || 0) / 0.6) : 1;
+  let x = DOOR_X + (X0 - DOOR_X) * out, y = Y0, k = 1, a = out < 1 ? out : 1;
+  if (leap >= 0) { const q = Math.min(1, leap), e = q * q; x = X0 + (DOOR_X - X0) * q; y = Y0 + (-125 - Y0) * e - Math.sin(q * Math.PI) * 120; k = 1 - 0.8 * e; a = 1 - Math.max(0, (q - 0.7) / 0.3); }
+  const st = leap >= 0 ? 'move' : 'idle', f = Math.floor(t * (leap >= 0 ? 10 : 2.5));
+  const im = M.P16 && M.P16.img(H.sprite, st, f, null, 96); if (!im) return;
+  ctx.save(); ctx.globalAlpha *= a; ctx.translate(x, y); ctx.scale(k, k); ctx.drawImage(im, -im.cx, -im.footY); ctx.restore();
+  if (leap < 0) { ctx.fillStyle = P.ink; ctx.fillRect(x + 40, y - 150, 5, 150); ctx.fillStyle = P.red; const wv = RM() ? 0 : Math.sin(t * 5) * 3; ctx.fillRect(x + 45, y - 150 + wv, 44, 26); ctx.fillStyle = P.gold; ctx.fillRect(x + 45, y - 150 + wv, 44, 5); }
   if (lights) lights.push({ x, y: y - 50, r: 180, c: '#ffe6b0', f: 1 });
 }
+{ const oLaunch = G.launch; G.launch = function () { const r = oLaunch.apply(this, arguments); if (!this.panel) this.leapT = performance.now(); return r; };
+  const oGo = G.go; G.go = function (s) { if (s !== 'base') this.leapT = null; return oGo.apply(this, arguments); }; }
 M.BASE_HOOKS.push(function (ctx, meta, bv, lights, phase, opts) {
   const g = M._g; if (!g || g.meta !== meta) return;
   if (phase === 'cells') return drawCells(ctx, meta, bv, lights);

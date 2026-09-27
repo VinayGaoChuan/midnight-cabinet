@@ -50,8 +50,11 @@ function checkMeta(raw) {
   const rid = new Set(relics.map(r => r.id));
   // leaders
   const okHero = (h) => {
-    if (!isObj(h) || !M.HEROES[h.cls] || !intIn(h.rarity, 0, 3) || !intIn(h.lv, 1, M.LV_MAX || 20) || !isNum(h.exp) || !isNum(h.hp) || typeof h.name !== 'string') return false;
+    if (!isObj(h) || !M.HEROES[h.cls] || !intIn(h.rarity, 0, 3) || !intIn(h.lv, 1, Math.max(40, M.LV_MAX || 20)) || !isNum(h.exp) || !isNum(h.hp) || typeof h.name !== 'string') return false;
     return true;   // talents: a broken or old-style tree is replaced below, not a reason to drop the leader
+    // (the level bound is the highest any difficulty allows, 40: M.LV_MAX is still 20 while this runs, before the save says which
+    // difficulty is open — a leader past Lv 20 used to fail here and the whole save was shredded on every start, 2026-09-27:
+    // 「粉碎存档后，必定复现」)
   };
   relics.forEach(r => { if (r.lines.some(l => l.k === 'shortRed')) { r.lines = M.relicLines(r.key, r.q); mig = true; } });
   const heroes = m.heroes.filter(okHero);
@@ -157,7 +160,7 @@ M.saveCheck = { checkMeta, checkProfile };
 // again; a shredder rises from the bottom of the screen and eats the four pieces one by one, spitting strips; a last
 // crunch bursts the confetti; then the cabinet spits the compensation, coin by coin, into a counter. Click to go on.
 const U = M.UI, P = M.PJ.PAL, RM = () => !!M.PJ.reduced, st4 = (v) => cl(v, 0, 1), ei = (p) => p * p * p;
-const snd = (F, k, fn) => { if (!F.s[k]) { F.s[k] = 1; try { fn(); } catch (e) {} } };
+const snd = (F, k, fn) => { if (!F.s[k]) { F.s[k] = 1; if (F.hush && now() < F.hush) return; try { fn(); } catch (e) {} } };   // a skip hushes the blows it jumped over
 const PW = 520, PH = 640, PX0 = 960, PY0 = 470;                 // the sheet, and where it rests
 const SLOT_Y = 790, T = { drop: 0.45, scan0: 0.6, scan1: 1.45, stamp: 1.55, hit: 1.78, tear: 2.15, split: 2.7, tear2: 3.05, shUp: 3.2, feed: 3.75, crunch: 5.05, coin: 5.5 };
 function paperOf(F) {
@@ -216,7 +219,7 @@ function shredder(ctx, F, t) {
 const drawSave = function (ctx, g) {
   const F = g.saveFx; if (!F) return; const t = (now() - F.t0) / 1000;
   if (F.out != null && t - F.out > 0.45) { g.saveFx = null; if (M.saveReport) M.saveReport.done = true; g.bump && g.bump(); return; }
-  if (t > 12) F.out = F.out == null ? t : F.out;
+  if (t > T.coin + 2.6) F.out = F.out == null ? t : F.out;   // leaves by itself soon after the coins
   const out = F.out != null ? st4((t - F.out) / 0.45) : 0, wipe = F.rep.wiped;
   ctx.save(); ctx.globalAlpha = 1; M.fxDim(ctx, st4(t / 0.3) * (1 - out)); ctx.globalAlpha = 1 - out;
   // the screen shakes with the blows
@@ -297,7 +300,9 @@ const drawSave = function (ctx, g) {
 };
 // the effects layer sits under the intro scene by default; lift it while the shredding plays, and take the clicks
 const oView = G.view;
-G.view = function () { const v = oView.call(this); if (this.saveFx) { v.fxZ = 90; v.coverOn = true; v.coverClick = () => { const F = this.saveFx; if (!F) return; const t = (now() - F.t0) / 1000; if (!F.rep.wiped || t > T.coin + 1.2) { if (F.out == null) { F.out = t; S.click && S.click(); } } }; } return v; };
+G.view = function () { const v = oView.call(this); if (this.saveFx) { v.fxZ = 90; v.coverOn = true; v.coverClick = () => { const F = this.saveFx; if (!F) return; const t = (now() - F.t0) / 1000;
+    // a click never waits (2026-09-27: 「粉碎存档……卡很久」): during the shredding it jumps to the coins, after that it goes on
+    if (F.rep.wiped && t < T.coin) { F.t0 -= (T.coin - t) * 1000; F.hush = now() + 120; S.click && S.click(); return; } if (F.out == null) { F.out = t; S.click && S.click(); } }; } return v; };
 const oTick = G.tick;
 G.tick = function (dt) {
   oTick.call(this, dt); const fc = this.ui && this.ui.cv('fx');

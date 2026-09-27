@@ -47,7 +47,8 @@ const COLW = 520, ROWH = 270, Y0 = 700, STUB = 130;
 // many bosses it has. A segment is a few random columns, then a shop (every road meets it: the last chance to spend
 // before the fight), then the boss. Right after a boss that is not the last one, the next column offers 撤离 (the only
 // place it ever appears) next to the road on. At most 2 elites in a segment. Rows, links and stop types are random.
-const MIDW = { normal: 26, hold: 9, shop: 4, camp: 6, chest: 9, event: 16, recruit: 6 };
+// no 坚守 stops any more (2026-09-27: 「把防御战去掉，只有撤退的时候，才是防御战斗」): the only fight against the clock is 撤离
+const MIDW = { normal: 35, shop: 4, camp: 6, chest: 9, event: 16, recruit: 6 };
 M.genMap2 = function (run, meta) {
   const R = run.region, tut = R.tut;
   let L = run.len;
@@ -88,6 +89,25 @@ M.genMap2 = function (run, meta) {
     // nothing is left cut off (never needed with the lanes the columns get, kept as a guard)
     B.forEach(b => { if (!A.some(a => a.out.some(e => edges[e].b === b.id))) { const a = A.slice().sort((x, y) => Math.abs(x.row - b.row) - Math.abs(y.row - b.row))[0]; if (a) link(a, b, true); } });
   }
+  // what is drawn can be walked (2026-09-27: 「地图是连通的，但是走到那里后，却没出现对应的箭头……只要你的地图是连通的，那么就必须能走」):
+  // in a gap every turning road bends on the same line (x + STUB), so roads that touch there join. A stop gets a road to every stop
+  // its roads reach along that line; a join that cannot be a road of its own (one lane, one road per direction) loses the turning
+  // road that makes it, as long as nothing is stranded without it.
+  const liveOut = (n) => n.out.filter(ei => !edges[ei].dead), inDeg = (b) => edges.filter(e => !e.dead && e.b === b.id).length;
+  for (let c = 0; c < cols - 1; c++) {
+    for (let it = 0; it < 12; it++) {
+      const A = byCol[c].filter(n => n.type !== 'extract' && liveOut(n).length), B = byCol[c + 1];
+      const segs = []; A.forEach(a => liveOut(a).forEach(ei => { const b = nodes[edges[ei].b]; if (b.row !== a.row) segs.push({ lo: Math.min(a.row, b.row), hi: Math.max(a.row, b.row), ei }); }));
+      const span = (r) => { let lo = r, hi = r, g = true; while (g) { g = false; segs.forEach(q => { if (q.hi >= lo && q.lo <= hi && (q.lo < lo || q.hi > hi)) { lo = Math.min(lo, q.lo); hi = Math.max(hi, q.hi); g = true; } }); } return [lo, hi]; };
+      let bad = null;
+      for (const a of A) { const [lo, hi] = span(a.row); for (const b of B) if (b.row >= lo && b.row <= hi && inDeg(b) && !liveOut(a).some(ei => edges[ei].b === b.id)) { bad = { a, b }; break; } if (bad) break; }
+      if (!bad || link(bad.a, bad.b)) { if (!bad) break; continue; }
+      const cut = segs.filter(q => { const e = edges[q.ei]; return liveOut(nodes[e.a]).length > 1 && inDeg(nodes[e.b]) > 1; }).sort((x, y) => (edges[x.ei].a === bad.a.id) - (edges[y.ei].a === bad.a.id))[0];
+      if (cut) { const e = edges[cut.ei]; e.dead = true; nodes[e.a].out = nodes[e.a].out.filter(x => x !== cut.ei); continue; }
+      if (!link(bad.a, bad.b, true)) break;
+    }
+  }
+  if (edges.some(e => e.dead)) { const keep = [], at = {}; edges.forEach((e, i) => { if (!e.dead) { at[i] = keep.length; keep.push(e); } }); nodes.forEach(n => { n.out = n.out.map(i => at[i]); }); edges.length = 0; keep.forEach(e => edges.push(e)); }
   // types
   nodes.forEach(n => {
     const P = plan[n.col];
@@ -149,7 +169,9 @@ M.Walker2 = class {
     this.follow(dt);
   }
   follow(dt) {
-    const tx = this.x + 260 + (this.edge ? this.v * 0.25 : 0), ty = this.y;
+    // a dragged map stays where it was put until the explorer sets off, then eases back (2026-09-27: 「点住地图，拖拽后，要能拖动地图」)
+    if (this.edge && !this.dragging) { const f = Math.exp(-dt * 3); this.panX = (this.panX || 0) * f; this.panY = (this.panY || 0) * f; }
+    const tx = this.x + 260 + (this.edge ? this.v * 0.25 : 0) + (this.panX || 0), ty = this.y + (this.panY || 0);
     const k = 1 - Math.exp(-dt * 3.5);
     this.camX += (tx - this.camX) * k; this.camY += (ty - this.camY) * k;
     this.dust = this.dust.filter(d => this.t - d.t0 < 0.5);
@@ -292,7 +314,7 @@ M.worldPick = function (run, walker, sx, sy) {
 // the minimap sits top-right, level with the leader panel (user ruling 2026-09-25)
 M.MMAP = { x: 1320, y: 48, w: 560, h: 250 };
 // it folds away (user ruling 2026-09-26: 「小地图设计一个收起和展开的功能，很多时候是不看小地图的」): folded, only its title plate stays
-M.mmOff = () => !!(M.settings && M.settings.mmOff);
+M.mmOff = () => true;   // the minimap is gone (2026-09-27: 「去掉小地图」): only its plate (area · stop n / N) is drawn
 M.drawMinimap2 = function (ctx, run, walker) {
   const map = run.map, X = M.MMAP.x, Y = M.MMAP.y, Wd = 560, Ht = 250;
   ctx.setTransform(1, 0, 0, 1, 0, 0);

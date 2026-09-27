@@ -135,7 +135,7 @@ M.talentBase = function (m) {
 M.talPower = (h) => (Array.isArray(h.taken) ? h.taken.reduce((a, i) => a + (h.tree[i] ? 40 * TIER[h.tree[i].L] : 0), 0) : 0);
 // saves: a tree of the old three-branch kind is replaced by a new one and every point comes back
 M.talValid = (h) => Array.isArray(h.tree) && Array.isArray(h.taken) && h.tree.length > 0 && h.tree.every((n, i) => n && T[n.f] && Number.isInteger(n.L) && n.L >= 1 && n.L <= 6 && tiersOf(n.f).includes(n.L) && Number.isInteger(n.p) && n.p < i && (n.p < 0 || h.tree[n.p].L === n.L - 1) && (!T[n.f].voc || VK[n.voc])) && h.taken.every(i => Number.isInteger(i) && h.tree[i]) && new Set(h.taken).size === h.taken.length;
-M.talReset = function (h) { h.tree = M.talentTree(h.rarity); h.taken = []; h.points = Math.max(0, h.lv - 1); };
+M.talReset = function (h) { h.tree = M.talentTree(h.rarity); h.taken = []; h.points = M.talPts ? M.talPts(h) : Math.max(0, h.lv - 1); };
 
 // ───────── base-wide talents flow into the base modifiers ─────────
 const oBM = M.baseMods;

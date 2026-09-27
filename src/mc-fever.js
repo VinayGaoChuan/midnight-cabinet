@@ -88,7 +88,9 @@ const pickEffectOld = (b) => {
 // start together.
 G.feverGo = function (b) {
   const F = b.fever; F.pending = false; F.v = 0;
-  const key = pickEffect(b), tier = Math.max(F.n === 1 ? F.q0 : 0, M.rollTier2(this.run, 0)), who = F.who && F.who.alive ? F.who : null; F.who = null;
+  // FEVER does nothing to a boss (2026-09-27: 「Fever对Boss无效，如果是Boss战，Fever会变成天降光柱，给全员回血」)
+  const bossFight = !!((b.cfg && b.cfg.type === 'boss') || b.ents.some(e => e.boss && e.side === 'E'));
+  const key = bossFight ? 'pillar' : pickEffect(b), tier = Math.max(F.n === 1 ? F.q0 : 0, M.rollTier2(this.run, 0)), who = F.who && F.who.alive ? F.who : null; F.who = null;
   this.feverFx = { t0: now(), key, tier, b, who, quick: 1, rolled: true, seed: Math.random() * 100 };
   S.fanfare && S.fanfare(); b.flash = 0.35; b.flashCol = '#fff3b0'; this.fx.kick && this.fx.kick(8);
   if (who && b.burst) { b.burst(who.x, who.y - 40 * (who.sz || 1), '#ffcf4a', 24); b.ring && b.ring(who.x, who.y - 30, 10, 220, '#ffcf4a', 10, 0.5); }
@@ -152,7 +154,7 @@ M.drawFever = function (x, g) {
     const p = e && M.feverBody ? M.feverBody(g, e) : { x: 960, y: 420 };
     x.save(); x.globalAlpha = a; M.glow && M.glow(x, p.x, p.y, 150, P.gold, 0.5);
     U.text(x, 'FEVER!', p.x, p.y - 110 - up * 30, 56, P.gold, { num: true, outline: true, u: 4 });
-    U.text(x, (I ? I.name : '') + ' · ' + M.TIERS[X.tier].n, p.x, p.y - 58 - up * 30, 30, M.TIERS[X.tier].c, { outline: true });
+    U.text(x, (X.key === 'pillar' ? '天降光柱' : I ? I.name : '') + ' · ' + M.TIERS[X.tier].n, p.x, p.y - 58 - up * 30, 30, M.TIERS[X.tier].c, { outline: true });
     x.restore();
   }
   // FEVER TIME: the word small at the top, a bar that runs out

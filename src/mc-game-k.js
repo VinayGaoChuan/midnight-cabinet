@@ -87,13 +87,13 @@ G.tipFor = function (key) {
     if (key === 'tal-root') return { title: '「' + Hc.skill.n + '」', c: '#ffe08a', kind: '主动技能 · 已点亮', d: M.skillDesc(h), icon: SKILL_IC[h.cls] || 't_skill', lines: [{ t: '每场战斗 1 次，一开战就能用', c: '#a89ca8' }, { t: '效果随等级提升。天赋从这里长出来。', c: '#a89ca8' }] };
     let mm = /^tal-(\d+)$/.exec(key);
     if (mm) { const i = +mm[1], T = h.tree[i]; if (!T) return null; const Sc = M.talScope(T), taken = M.talTaken(h, i), open = M.talOpen(h, i);
-      const st = taken ? '已学会' : open && h.points > 0 ? '按住学习' : open ? '升级获得天赋点' : '先学会下面连着的天赋';
+      const full = !taken && !open && M.talLayerN && M.talLayerN(h, T.L) >= (M.TAL_LAYER || 99), st = taken ? '已学会' : open && h.points > 0 ? '按住学习' : open ? '升级获得天赋点' : full ? '这一层已经学了两个' : '先学会下面连着的天赋';
       return { title: M.talName(T), c: Sc.c, kind: '第 ' + T.L + ' 层 · ' + Sc.n, d: M.talDesc(T), icon: M.talIcon(T), lines: [{ t: st, c: taken ? Sc.c : '#a89ca8' }] }; }
     mm = /^talq-(\d+)$/.exec(key);
     if (mm) return { title: '第 ' + mm[1] + ' 层', c: '#ffcf4a', d: '升到 Lv ' + (M.talLvFor ? M.talLvFor(+mm[1]) : +mm[1] + 1) + ' 展开。', icon: 't_orb' };
     if (key === 'hs-rar') return { title: R.n + '领袖', c: R.c, d: '属性 ×' + R.stat + '，天赋树 ' + M.talHeight(h) + ' 层。' };
     if (key === 'hs-lv') return { title: '等级 ' + h.lv + ' / ' + (M.LV_MAX || 10), c: '#9cff7a', d: h.lv >= (M.LV_MAX || 10) ? '已经满级。' : '经验 ' + h.exp + ' / ' + M.expNeed(h.lv) + '。', icon: 't_orb' };
-    if (key === 'hs-pts') return { title: '天赋点 ' + h.points, c: '#ffe08a', d: h.points ? '按住发光的天赋学习。' : '升级获得。', icon: 't_skill' };
+    if (key === 'hs-pts') return { title: '天赋点 ' + h.points, c: '#ffe08a', d: h.points ? '按住发光的天赋学习。' : '每升两级得一点；启示卷轴也给一点。', icon: 't_skill' };
     if (key === 'hs-hp') return { title: '生命 ' + Math.round(h.hp) + ' / ' + mx, c: '#9cff7a', d: '不会自动恢复，医疗建筑每天治疗。', icon: 't_heart' };
     if (key === 'hs-atk') return { title: '攻击 ' + Math.round(M.heroAtk(h, m)), c: '#ff9a6a', d: '亲自上场时的攻击力。', icon: 't_sword' };
     if (key === 'hs-slot') return { title: '宝物格 ' + M.relicSlots(h, m), c: '#ffcc33', d: '出征能带的宝物数。', icon: 't_chest' };

@@ -77,7 +77,6 @@ const CONCEPTS = [
   { id: 'roster', cat: '出征', icon: 'v_warrior', title: '部队', line: '战斗里自动作战。在夜市买、招募旗领；三支相同的会进化。', scr: 'world', sel: '[data-tip="w-roster"]' },
   { id: 'items', cat: '出征', icon: 't_chest', title: '支援道具', line: '战斗中按 Q W E 由领袖放出。用的时候转一下，转出这次的效果；图片下面写着它是哪一类。', scr: ['world', 'battle'], sel: '[data-tip="b-items"]' },
   { id: 'banners', cat: '出征', img: () => sprite('flag'), title: '战旗', line: '整支部队的常驻加成，比如「射手战旗」让所有射手更强。', scr: ['world', 'shop'], sel: '[data-fx="banners"],[data-g="shop-banners"]' },
-  { id: 'minimap', cat: '出征', icon: 'e_path', title: '小地图', line: '整条路线的缩略图。越往右越深，最右边是首领。', scr: 'world', at: () => Object.assign({}, M.MMAP || { x: 1320, y: 48 }, { w: 560, h: 250 }), when: (g) => g.run && !g.run.tut },
   { id: 'tripbuff', cat: '出征', icon: 'e_path', title: '这一趟的加成', line: '途中拿到的加成，回到基地时清空。', scr: 'world', sel: '[data-g="w-trip"]' },
   { id: 'mmfold', cat: '出征', icon: 'e_path', title: '收起小地图', line: '收起后只留路线名和第几站。', scr: 'world', sel: '[data-g="w-mm"]' },
   { id: 'canevo', cat: '夜市', icon: 'u_star', title: '进化进度', line: '队伍里已有几支这种部队；凑齐 3 支就进化成更强的一支。', scr: 'shop', sel: '[data-tip="s-evo"]' },
@@ -205,6 +204,22 @@ G.view = function () {
       close: (e) => { if (e && e.stopPropagation) e.stopPropagation(); M.Sfx.click(); this.guideClose(); } };
   }
   v.gl = glossary();
+  return v;
+};
+
+// the 玩法说明 page: the cards by category on the left, the chosen one on the right (its picture, name and line; the animations
+// are gone, 2026-09-27: 「引导视频都删了吧」)
+const oHelpView = G.view;
+G.view = function () {
+  const v = oHelpView.call(this);
+  if (this.rulesOpen && v.gl) {
+    const PAL = M.PJ.PAL, cats = (v.gl.cats || []).map(ct => { const cs = CONCEPTS.filter(c => c.cat === ct.n); return { n: ct.n, items: ct.items.map((it, i) => Object.assign({}, it, { id: cs[i] && cs[i].id })) }; });
+    const all = cats.reduce((a, ct) => a.concat(ct.items), []);
+    if (!all.some(it => it.id === this.helpSel)) this.helpSel = all.length ? all[0].id : null;
+    const sel = all.find(it => it.id === this.helpSel);
+    v.hsel = { t: sel ? sel.t : '', d: sel ? sel.d : '', img: sel ? sel.img : '', hasImg: !!(sel && sel.img) };
+    v.gl2 = cats.map(ct => ({ n: ct.n, items: ct.items.map(it => { const on = it.id === this.helpSel; return { t: it.t, img: it.img, bg: on ? PAL.indigo : 'transparent', col: on ? '#ffe08a' : '#f4efe0', pick: () => { if (this.helpSel !== it.id) { this.helpSel = it.id; M.Sfx.hover && M.Sfx.hover(); this.bump(); } } }; }) }));
+  }
   return v;
 };
 })();

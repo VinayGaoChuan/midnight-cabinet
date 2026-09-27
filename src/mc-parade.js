@@ -54,7 +54,14 @@ function card(ctx, c, i, T, F, g) {
   [[-CW / 2 + 5, -CH / 2 + 5, CW - 10, bw], [-CW / 2 + 5, CH / 2 - 5 - bw, CW - 10, bw], [-CW / 2 + 5, -CH / 2 + 5, bw, CH - 10], [CW / 2 - 5 - bw, -CH / 2 + 5, bw, CH - 10]].forEach(r => U.R(ctx, r[0], r[1], r[2], r[3], hov ? P.butter : qc));
   const im = c.img; if (im) { const f = Math.min(230 / im.width, 200 / im.height, 3.4), w = Math.max(2, Math.round(3 / f)), o = c.q > 0 ? outlined(im, qc, w) : im; ctx.save(); ctx.imageSmoothingEnabled = false; ctx.translate(0, -120); ctx.scale(f, f); ctx.drawImage(o, -o.width / 2, -o.height / 2); ctx.restore(); }
   U.text(ctx, d.n, 0, 36, 36, qc, { outline: true });
-  U.text(ctx, Q[c.q].n + (d.voc ? ' · ' + d.voc : '') + '　★ ' + pw(u), 0, 80, 26, (M.VOCS && M.VOCS[d.voc]) || P.cream);
+  // vocation icon + vocation in its colour, then ★ power in the tooltip's gold — no quality word, the colours say it
+  // (2026-09-27: 「不要加普通……这些名词，因为通过颜色就能看出来了。而且职业前面要加icon……战斗力的颜色，要跟局内鼠标悬浮到部队上面后，
+  // 信息显示中的战斗力一个颜色」)
+  { const vt = d.voc && M.TAG && M.TAG.voc(d.voc), vc = (vt && vt.c) || (M.VOCS && M.VOCS[d.voc]) || P.cream, ps = String(pw(u)), FS = 26, IZ = 30, GP = 8, SEP = 26;
+    const w1 = vt ? IZ + GP + U.measure(ctx, d.voc, FS) : 0, w2 = IZ + GP + U.measure(ctx, ps, FS); let x0 = -(w1 + (w1 ? SEP : 0) + w2) / 2;
+    const ico = (key, x) => { const cv = M.iconCanvas && M.iconCanvas(key, 2); if (cv) { ctx.save(); ctx.imageSmoothingEnabled = false; ctx.drawImage(cv, Math.round(x), 80 - IZ / 2, IZ, IZ); ctx.restore(); } };
+    if (vt) { ico(vt.icon, x0); U.text(ctx, d.voc, x0 + IZ + GP, 80, FS, vc, { align: 'left' }); x0 += w1 + SEP; }
+    ico('u_star', x0); U.text(ctx, ps, x0 + IZ + GP, 80, FS, '#ffe08a', { align: 'left' }); }
   // what it does, and what the garrison already has of its kind (2026-09-27 feedback: 「别让选择只剩比战力……旁边展示基地已有
   // 阵容、缺什么职业，以及候选单位的技能」)
   wrap(ctx, M.unitLine ? M.unitLine(u.type) : '', CW - 44, 22).slice(0, 2).forEach((ln, j) => U.text(ctx, ln, 0, 124 + j * 30, 22, P.cream));

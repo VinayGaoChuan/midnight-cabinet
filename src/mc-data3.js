@@ -236,7 +236,7 @@ M.newHero = function (meta, cls, rarity) {
   cls = cls || pick(Object.keys(HEROES));
   rarity = rarity == null ? RARITY.indexOf(wpick(RARITY, r => r.w)) : rarity;
   const h = { id: M.rid(), cls, name: HEROES[cls].n, rarity, lv: 1, exp: 0, points: 0, tree: M.talentTree(rarity), taken: [], relics: [], status: null, hp: 0, runs: 0 };
-  const lv = meta ? (M.baseMods(meta).newHeroLv || 0) : 0; for (let i = 0; i < lv; i++) { h.lv++; h.points++; }
+  const lv = meta ? (M.baseMods(meta).newHeroLv || 0) : 0; for (let i = 0; i < lv; i++) { h.lv++; if (h.lv % 2 === 0) h.points++; }
   h.hp = M.heroMaxHp(h, meta);
   return h;
 };

@@ -73,7 +73,7 @@ P.fireCast = function (e) {
 const oldDeal = P.deal;
 P.deal = function (src, tg, amt, o = {}) {
   const d = oldDeal.call(this, src, tg, amt, o);
-  if (d > 0 && o.skill && src && src.side === 'A' && this.meter && this.t - this.meter.last < 1.4) { this.meter.total += d; this.meter.last = this.t; }
+  if (d > 0 && this._inCast && src && src.side === 'A' && this.meter && this.t - this.meter.last < 1.4) { this.meter.total += d; this.meter.last = this.t; }
   return d;
 };
 // stacked damage numbers: consecutive hits on the same spot climb in a column

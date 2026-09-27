@@ -29,11 +29,14 @@ const W = M.WONDERS = {
   zeus:       { n: '奥林匹亚宙斯神像', style: 'fantasy', kind: 'base', d: '所有职业的进化上限 +1。' },
   pyramids:   { n: '金字塔', style: 'fantasy', kind: 'base', d: '建筑下单当天就建好。' },
   gardens:    { n: '空中花园', style: 'nature', kind: 'base', d: '凯旋时可以带回两支部队。' },
-  library:    { n: '亚历山大图书馆', style: 'magic', kind: 'base', d: '领袖每升一级多给 1 个天赋点。' },
+  library:    { n: '亚历山大图书馆', style: 'magic', kind: 'base', d: '领袖每一级都得天赋点（平时两级一点）。' },
   bigben:     { n: '大本钟', style: 'steam', kind: 'base', d: '每 5 天多来一个来访者。' },
   potala:     { n: '布达拉宫', style: 'magic', kind: 'base', d: '信仰值获得翻倍。', part: 'shrine' },
 };
-const KIND_N = { night: '守夜', run: '出征', base: '基地' }, KIND_C = { night: '#ff7a5a', run: '#5fd0c0', base: '#9cff7a' };
+const KIND_N = { night: '守夜', run: '出征', base: '基地' };
+// wonders have no ranks between them: all of them wear 不朽's dark gold (2026-09-27: 「繁荣度带来的奇观，是不是没有高下之分，如果没有，
+// 那他们的颜色应该统一……都可以是不朽品质的颜色」); the kind tag says what it is for, in plain cream
+const WC = () => ((M.QUALITY && M.QUALITY[6]) || { c: '#c9a24a' }).c;
 const STYLE_DIR = { steam: 'industry', medieval: 'fort', water: 'market', nature: 'pastoral', fantasy: 'holy', magic: 'arcane', scifi: 'future', cartoon: 'fun' };
 const wl = (m) => (m && Array.isArray(m.wonders) ? m.wonders : []);
 M.wondersOf = wl;
@@ -58,7 +61,7 @@ G.dirTake = function (k) {
   // it rises beside the main base (mc-town.js brings a new building up out of the ground); the camera goes to see it
   this.dirFx = { k: STYLE_DIR[W[k].style] || 'city', lv: 1, t0: now(), wonder: k }; if (this.town) { this.town.lookFx = { k: this.dirFx.k, from, t: 0 }; }
   if (this.bv) { this.bv.keepFree && this.bv.keepFree(); this.bv.sel = null; this.bv.tx = DOOR_X; this.bv.ty = -200; this.bv.tz = Math.max(0.5, Math.min(0.62, 1920 / ((M.townSpan || 1600) + 700))); }
-  this.banner && this.banner({ kind: 'win', text: '奇观 · ' + W[k].n, col: '#ffd970', col2: '#6a4a0a', sub: W[k].d, life: 2.6, y: 300 });
+  this.banner && this.banner({ kind: 'win', text: '奇观 · ' + W[k].n, col: WC(), col2: '#4a3410', sub: W[k].d, life: 2.6, y: 300 });
   S.up && S.up(3); S.fanfare && S.fanfare(); this.fx && this.fx.kick && this.fx.kick(14);
   try { M.T && M.T.ev('wonder', { k, lv: M.prosLv(m) }); } catch (e) {}
   this.bump();
@@ -83,14 +86,14 @@ G.view = function () {
   if (v.dirOn) {
     const ready = now() - P.at > 500;
     v.dp = { title: '繁荣度 Lv' + P.lv, line: '选一座奇观', cards: P.ks.map((k, i) => { const w = W[k], st = M.tagIc ? M.tagIc('style', w.style) : null;
-      return { n: w.n, c: KIND_C[w.kind], t: w.d, tags: [{ img: '', n: KIND_N[w.kind], c: KIND_C[w.kind], tip: '' }].concat(st ? [{ img: st.img, n: st.n + '风格', c: st.c, tip: st.tip }] : []), hasTags: true, hasHave: false, have: '', blds: [], sub: '', hasSub: false, img: M.wonderPic(k), op: ready ? 1 : 0.6, onPick: () => this.dirTake(k), fx: 'dir' + i }; }) };
+      return { n: w.n, c: WC(), t: w.d, tags: [{ img: '', n: KIND_N[w.kind], c: '#e8dcc4', tip: '' }].concat(st ? [{ img: st.img, n: st.n + '风格', c: st.c, tip: st.tip }] : []), hasTags: true, hasHave: false, have: '', blds: [], sub: '', hasSub: false, img: M.wonderPic(k), op: ready ? 1 : 0.6, onPick: () => this.dirTake(k), fx: 'dir' + i }; }) };
   }
   return v;
 };
 const oTip = G.tipFor;
 G.tipFor = function (key) {
   const t = oTip.apply(this, arguments), m = this.meta;
-  if (key === 'b-pros' && t && m) { t.lines = (t.lines || []).filter(l => !(l.rich && l.rich[0] && /化/.test(l.rich[0].t || ''))).concat(wl(m).map(k => ({ rich: [{ t: W[k].n + '　', c: KIND_C[W[k].kind] }, { t: W[k].d, c: '#e8dcc4' }] }))); }
+  if (key === 'b-pros' && t && m) { t.lines = (t.lines || []).filter(l => !(l.rich && l.rich[0] && /化/.test(l.rich[0].t || ''))).concat(wl(m).map(k => ({ rich: [{ t: W[k].n + '　', c: WC() }, { t: W[k].d, c: '#e8dcc4' }] }))); }
   return t;
 };
 if (M.GUIDE) { const i = M.GUIDE.findIndex(x => x && x.id === 'dirs'); if (i >= 0) M.GUIDE.splice(i, 1);
@@ -116,7 +119,7 @@ M.townLayout = function (m) {
   const L = oLay.apply(this, arguments), ws = wl(m); if (!ws.length) return L;
   const E0 = MB.w / 2, cur = { L: E0 + 100, R: E0 + 40 };   // room on the left for the god's statue (mc-gods.js)
   ws.forEach((k, i) => { const sd = i % 2 ? 'R' : 'L', s = sd === 'L' ? -1 : 1, f = M.townFoot(k), w = f.w * WK;
-    const o = { k: 'w:' + k, c: -1, r: -1, key: k, role: 'wonder', fight: false, front: true, fort: 0, B: B[k] || { q: 5, style: W[k].style }, site: false, ruin: false, demo: false, fix: false, w: f.w, h: f.h, side: s, depth: -1, ty: -4, sc: WK, dk: 0, tx: DOOR_X + s * (cur[sd] + w / 2), wonder: 1 };
+    const o = { k: 'w:' + k, c: -1, r: -1, key: k, role: 'wonder', fight: false, front: true, fort: 0, B: Object.assign({}, B[k] || { style: W[k].style }, { q: 6 }), site: false, ruin: false, demo: false, fix: false, w: f.w, h: f.h, side: s, depth: -1, ty: -4, sc: WK, dk: 0, tx: DOOR_X + s * (cur[sd] + w / 2), wonder: 1 };
     cur[sd] += w + 36; L.items.push(o); });
   ['L', 'R'].forEach(sd => { const s = sd === 'L' ? -1 : 1, e = DOOR_X + s * (cur[sd] + 20); if (s < 0 ? e < L.edge.L : e > L.edge.R) { L.edge[sd] = e; L.guard[sd] = e + s * 24; } });
   L.span = L.edge.R - L.edge.L; return L;
@@ -157,7 +160,7 @@ M.startBuild = function (m, c, r, key) {
 };
 // 亚历山大图书馆: one talent point more for every level
 const oXP = M.addExp;
-M.addExp = function (h) { const ups = oXP.apply(this, arguments); if (ups > 0 && hasNow('library')) h.points = (h.points || 0) + ups; return ups; };
+M.addExp = function (h) { const ups = oXP.apply(this, arguments); if (ups > 0 && hasNow('library')) { let add = 0; for (let l = h.lv - ups + 1; l <= h.lv; l++) if (l % 2) add++; h.points = (h.points || 0) + add; } return ups; };   // the odd levels too (a point every level)
 // 大本钟: two visitors a stretch (mc-timeline.js)
 M.visitN = (m) => (hasW(m, 'bigben') ? 2 : 1);
 // 布达拉宫: faith twice over

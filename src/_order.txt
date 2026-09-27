@@ -159,6 +159,5 @@ mc-swap.js
 mc-synergy.js
 mc-shopcard.js
 mc-report.js
-mc-demo.js
 mc-tutor.js
 mc-perf.js

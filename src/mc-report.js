@@ -4,7 +4,8 @@
 // 伤亡是否恢复、谁输出高、谁扛伤、治疗多少」). Each fighter counts the life it took from foes (its summons count for it), the
 // life it lost, and the life it gave back to its own side (the fighter whose trait, attack or skill was running when the heal
 // came). The page shows the best of each among the army's own units, and how many fell — in a won fight every one of them is
-// back for the next (checked in the settlement code: nobody is taken off the roster).
+// back for the next (checked in the settlement code: nobody is taken off the roster). Hovering a unit shows what it is; the
+// 「倒下 N 支 · 下一仗全部归队」 line is gone (2026-09-27: 「这个文字删掉」).
 const M = window.MC, G = M.Game.prototype, BP = M.Battle3.prototype, DB = M.DB;
 const who = (e) => (e && e.owner ? e.owner : e);
 const acting = (name) => { const o = BP[name]; if (!o) return; BP[name] = function (e) { const p = this._actor; this._actor = e; try { return o.apply(this, arguments); } finally { this._actor = p; } }; };
@@ -26,17 +27,35 @@ BP.summon = function (key, side, x, y, life, src) { const e = oSum.apply(this, a
 M.battleReport = function (b) {
   if (!b || !b.ents) return null;
   const us = b.ents.filter(e => e.side === 'A' && !e.isHero && !e.summon && DB[e.kind]);
-  const row = (k, lab, col) => { const e = us.filter(x => (x[k] || 0) >= 1).sort((a, c) => c[k] - a[k])[0]; return e ? { lab, col, n: DB[e.kind].n, qc: M.qc(DB[e.kind].q | 0), v: M.fmt(Math.round(e[k])), img: M.spriteURL(e.kind, 4) } : null; };
+  const row = (k, lab, col) => { const e = us.filter(x => (x[k] || 0) >= 1).sort((a, c) => c[k] - a[k])[0]; return e ? { lab, col, k: e.kind, n: DB[e.kind].n, qc: M.qc(DB[e.kind].q | 0), v: M.fmt(Math.round(e[k])), img: M.spriteURL(e.kind, 4) } : null; };
   const rows = [row('stDmg', '输出最高', '#ff8a6a'), row('stTaken', '承伤最高', '#6fd0ff'), row('stHeal', '治疗最多', '#9cff7a')].filter(Boolean);
-  const fell = (b.deadUids || []).length;
-  return rows.length || fell ? { rows, fell: fell ? '倒下 ' + fell + ' 支 · 下一仗全部归队' : '' } : null;
+  // every unit's numbers, for the panel behind the chart button
+  const all = us.map(e => ({ k: e.kind, n: DB[e.kind].n, qc: M.qc(DB[e.kind].q | 0), img: M.spriteURL(e.kind, 4), dmg: Math.round(e.stDmg || 0), taken: Math.round(e.stTaken || 0), heal: Math.round(e.stHeal || 0), fell: !e.alive }));
+  return rows.length ? { rows, all } : null;
 };
 const oSS = G.startSettle;
-G.startSettle = function () { const rep = M.battleReport(this.battle), r = oSS.apply(this, arguments); if (this.settle && rep && this.settle.good) this.settle.rep = rep; return r; };
+G.startSettle = function () { const rep = M.battleReport(this.battle), r = oSS.apply(this, arguments); this.repPanel = null; if (this.settle && rep && this.settle.good) this.settle.rep = rep; return r; };
+// the chart button's icon: three bars
+if (M.IC) M.IC.u_bars = (x) => { x.fillStyle = '#07060f'; x.fillRect(3, 27, 26, 3); [[5, 16, '#ff8a6a'], [13, 7, '#6fd0ff'], [21, 12, '#9cff7a']].forEach(([X, Y, c]) => { x.fillStyle = '#07060f'; x.fillRect(X - 1, Y - 1, 8, 28 - Y); x.fillStyle = c; x.fillRect(X, Y, 6, 27 - Y); }); };
+// the panel (2026-09-27: 「战报需要一个面板，里面显示了每个角色的进度条，输出，承伤，治疗，要能排序……入口就是一个类似柱状图的UI图标，
+// 在继续前进右边」): shut by default; every unit a row with three bars, a column header sorts by it (again: the other way)
+const COLS = [['dmg', '输出', '#ff8a6a'], ['taken', '承伤', '#6fd0ff'], ['heal', '治疗', '#9cff7a']];
+const stop = (e) => { if (e && e.stopPropagation) e.stopPropagation(); };
+G.repOpen = function (e) { stop(e); const st = this.settle; if (!st || !st.rep) return; this.repPanel = { sort: 'dmg', desc: true }; M.Sfx.click && M.Sfx.click(); this.tipData = null; this.bump(); };
+G.repClose = function (e) { stop(e); this.repPanel = null; M.Sfx.click && M.Sfx.click(); this.bump(); };
+G.repSort = function (k, e) { stop(e); const P = this.repPanel; if (!P) return; if (P.sort === k) P.desc = !P.desc; else { P.sort = k; P.desc = true; } M.Sfx.click && M.Sfx.click(); this.bump(); };
 const oView = G.view;
 G.view = function () {
   const v = oView.call(this), st = this.settle;
-  if (v.st && st) { const rep = st.rep; v.st.repOn = !!(rep && v.st.btnOn); v.st.rep = rep ? rep.rows : []; v.st.fell = rep ? rep.fell : ''; v.st.hasFell = !!(rep && rep.fell); }
+  if (v.st && st) { const rep = st.rep; v.st.repOn = !!(rep && v.st.btnOn); v.st.rep = rep ? rep.rows.map(r => Object.assign({}, r, { tipOn: this.tipFn(() => M.unitTip(r.k)) })) : []; v.st.repIc = M.iconURL('u_bars', 2); v.st.repGo = (e) => this.repOpen(e); }
+  const P = this.repPanel, rep = st && st.rep; v.rpOn = !!(P && rep);
+  if (v.rpOn) {
+    const mx = {}; COLS.forEach(([k]) => { mx[k] = Math.max(1, ...rep.all.map(r => r[k])); });
+    const rows = rep.all.slice().sort((a, b) => (P.desc ? b[P.sort] - a[P.sort] : a[P.sort] - b[P.sort]));
+    v.rp = { close: (e) => this.repClose(e), keep: stop,
+      heads: COLS.map(([k, n, c]) => ({ n: n + (P.sort === k ? (P.desc ? ' ▼' : ' ▲') : ''), c: P.sort === k ? c : '#a9a3c9', go: (e) => this.repSort(k, e) })),
+      rows: rows.map(r => ({ img: r.img, n: r.n, qc: r.qc, op: r.fell ? 0.6 : 1, tipOn: this.tipFn(() => M.unitTip(r.k)), cells: COLS.map(([k, , c]) => ({ w: Math.round(200 * r[k] / mx[k]), c, v: M.fmt(r[k]) })) })) };
+  } else v.rp = { heads: [], rows: [] };
   return v;
 };
 // what a fight on the map brings (the plan's 「悬浮战斗节点时显示敌人特点，例如群攻、治疗、厚甲、远程」; 2026-09-27 feedback:
@@ -54,5 +73,5 @@ G.worldMove = function () { const r = oWM.apply(this, arguments), n = M._tipNode
   if (n && run && this.tipData && n.seen && FIGHT[n.type] && !(run.region && run.region.tut)) { const ks = M.foeKinds(run, n); if (ks.length) this.tipData = Object.assign({}, this.tipData, { lines: (this.tipData.lines || []).concat([{ t: '敌人：' + ks.join(' · '), c: '#ff9a8a' }]) }); }
   return r; };
 const oTip = G.tipFor;
-G.tipFor = function (key) { if (key === 'st-report') return { title: '战报', c: '#ffe08a', d: '这一仗谁出力最多；倒下的部队下一仗全部归队。' }; return oTip ? oTip.apply(this, arguments) : null; };
+G.tipFor = function (key) { if (key === 'st-report') return { title: '战报', c: '#ffe08a', d: '这一仗谁出力最多。' }; if (key === 'st-stats') return { title: '战报详情', c: '#ffe08a', d: '每支部队的输出、承伤和治疗。' }; return oTip ? oTip.apply(this, arguments) : null; };
 })();

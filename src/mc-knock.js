@@ -41,7 +41,10 @@ BP.kbImpact = function (src, tg, I, level) {
 };
 BP.knock = function (src, tg, dealt, o, from) {
   if (M.KB.off || !tg || immune(tg) || !(dealt > 0) || o.silent || o.reflect || o.noKb) return;
-  if (!o.skill && !from) return;   // only skills and blasts throw (user ruling 2026-09-26: 「去掉普通攻击的击退，击飞，击倒（保留技能的）」)
+  // only a real skill — one that spent something: the mana bar, the FEVER gauge — or a boss throws (2026-09-26: 「去掉普通攻击的击退，击飞，
+  // 击倒（保留技能的）」; 2026-09-27: 「除了Boss以外，溅射效果，不算释放技能，不能进行击退，击飞，击倒……技能必须是消耗什么才能使用的，这种
+  // 无消耗，常态化的，都不是技能，都是普通攻击」): splashes, traits that go off by themselves and their blasts never do
+  if (!(src && src.boss) && !this._inCast) return;
   const T = this.t, killed = !tg.alive;
   const fx = from ? from.x : src ? src.x : tg.x - M.faceOf(tg), fy = from ? from.y : src ? src.y : tg.y;
   let dx = tg.x - fx, dy = (tg.y - fy) * 0.5; const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;
@@ -51,7 +54,7 @@ BP.knock = function (src, tg, dealt, o, from) {
   const dir = dx >= 0 ? 1 : -1;
   if (killed) {
     // a big killing blow throws the body; otherwise it went down where it stood (M.kbDie)
-    if (I >= M.KB.down * 0.8) { const Ik = Math.max(I, 0.4), vz = Math.min(1050, 480 + Ik * 700), vx = Math.min(420, 160 + Ik * 320);
+    if (I >= M.KB.down * 0.8 && src && src.boss) { const Ik = Math.max(I, 0.4), vz = Math.min(1050, 480 + Ik * 700), vx = Math.min(420, 160 + Ik * 320);
       tg.down = null; tg.air = { z: 0, vz, vx: dx * vx, vy: dy * vx * 0.4, rot: 0, tilt: dir * LIE, bounced: 0 }; tg.trail = []; tg.landT = null;
       if (Ik > 0.7) this.kbImpact(src, tg, Ik, 2); }
     return;
@@ -59,8 +62,11 @@ BP.knock = function (src, tg, dealt, o, from) {
   if (tg.casting) I *= 0.4;                                    // a unit mid-cast only sways
   if (tg.air) { const a = tg.air; a.vz = Math.max(a.vz, 0) + Math.min(420, I * 600); a.vx += dx * Math.min(160, I * 240); tg.kbLock = Math.max(tg.kbLock || 0, T + 0.2); return; }   // juggled
   if (I < M.KB.slide) return;
-  if (I < M.KB.down) {   // 击退
-    const v0 = 230 + I * 900; tg.slide = { vx: dx * v0, vy: dy * v0 * 0.6, t0: T, dir }; tg.kbLock = Math.max(tg.kbLock || 0, T + 0.06 + I * 0.3);
+  // a unit only ever knocks back — a stronger blow slides further; knocking down and launching are a boss's (2026-09-27:
+  // 「部队（不是Boss）造成的击退，击倒，击飞效果，统一都改成击退，不再击倒击飞了」)
+  const unitBlow = !(src && src.boss);
+  if (I < M.KB.down || unitBlow) {   // 击退
+    const Ik = Math.min(I, M.KB.launch), v0 = 230 + Ik * 900; tg.slide = { vx: dx * v0, vy: dy * v0 * 0.6, t0: T, dir }; tg.kbLock = Math.max(tg.kbLock || 0, T + 0.06 + Ik * 0.3);
     this.skid(tg.x, tg.y, dx); if (I > 0.2) this.fxp({ k: 'kbhit', x: tg.x, y: tg.y - 40 * (tg.sz || 1), r: 18 + I * 30, life: 0.16 }); return;
   }
   if (I < M.KB.launch) {   // 击倒
@@ -198,6 +204,13 @@ M.drawFxPx = function (ctx, f, T, b) {
   if (f.k === 'skid') return true;
   return oFx ? oFx.apply(this, arguments) : false;
 };
+
+// ───────── what is a skill: a cast that spent the mana bar (its hits now, later, and by what it fired carry this._inCast) ─────────
+const inCast = (b, who, fn) => { const p = b._inCast; b._inCast = who; try { return fn(); } finally { b._inCast = p; } };
+M.inCast = inCast;
+{ const o = BP.fireCast; if (o) BP.fireCast = function (e) { const a = arguments; return inCast(this, e, () => o.apply(this, a)); }; }
+{ const o = BP.later; if (o) BP.later = function (dt, fn) { const c = this._inCast; return o.call(this, dt, c ? () => inCast(this, c, fn) : fn); }; }
+['shootP', 'shell'].forEach(k => { const o = BP[k]; if (!o) return; BP[k] = function () { const n = this.proj.length, r = o.apply(this, arguments); if (this._inCast) for (let i = n; i < this.proj.length; i++) this.proj[i]._cast = this._inCast; return r; }; });
 })();
 
 ;

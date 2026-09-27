@@ -41,7 +41,22 @@ function tuneBoss(run, node, cfg) {
   const f = +((lo + hi) / 2).toFixed(3), fb = !!(node.fb || (node.final && !run.chap)), k = fb ? M.FB_SKEW : 1;
   bs.forEach(s => { s.hpMul = +(f * k).toFixed(3); s.atkMul = +(f / k).toFixed(3); }); return cfg;
 }
-const rollCfg = (run, node) => { const cfg = oCfg.call(M, run, node); return node && node.type === 'boss' ? tuneBoss(run, node, cfg) : cfg; };
+// 撤离 comes right after a boss, so it is never easier than that boss (2026-09-27: 「撤退的难度要提高。撤退的难度由于在Boss后面，所以
+// 不能比Boss低。而且可以加一些精英」): two elites join its waves, then every enemy is scaled until the shown power is at least the
+// boss's that stands before it: 1.05–1.3 times it
+function tuneExtract(run, node, cfg) {
+  if (run.region.tut || !run.map || !run.map.nodes) return cfg;
+  const boss = run.map.nodes.find(n => n.type === 'boss' && n.col === node.col - 1); if (!boss) return cfg;
+  const waves = cfg.list.length ? Math.max(...cfg.list.map(s => s.spawn || 0)) : 30;
+  for (let i = 0; i < 2; i++) { const el = M.pickWave(cfg.budget * 0.6, { elite: true }).find(s => s.elite); if (el) cfg.list.push(Object.assign(el, { spawn: 6 + i * Math.max(8, waves * 0.45), y: 120 + Math.random() * 480 })); }
+  cfg.list.sort((a, b) => a.spawn - b.spawn);
+  // between 1.05 and 1.3 times the boss: harder than it, never a wall
+  const shown = (c) => M.powerOf(M.sideE(run, c)) * 0.7 * (M.E_SHOW || 1), bp = M.nodePower(run, boss), now0 = shown(cfg);
+  if (!(bp > 0) || (now0 >= bp * 1.05 && now0 <= bp * 1.3)) return cfg; const target = now0 < bp * 1.05 ? bp * 1.05 : bp * 1.3;
+  let lo = 0.15, hi = 12; for (let k = 0; k < 18; k++) { const f = (lo + hi) / 2; cfg.list.forEach(s => { s.hpMul = f; s.atkMul = f; }); if (shown(cfg) > target) hi = f; else lo = f; }
+  const f = +hi.toFixed(3); cfg.list.forEach(s => { s.hpMul = f; s.atkMul = f; }); cfg.xk = f; return cfg;
+}
+const rollCfg = (run, node) => { const cfg = oCfg.call(M, run, node); return node && node.type === 'boss' ? tuneBoss(run, node, cfg) : node && node.type === 'extract' ? tuneExtract(run, node, cfg) : cfg; };
 // a fight on the map is rolled once, the first time anything looks at it: the number shown is the fight you get
 M.makeBattleCfg = function (run, node) {
   if (node && node.id != null && run && run.map && run.map.nodes && run.map.nodes[node.id] === node) { if (!node._cfg) node._cfg = rollCfg(run, node); return JSON.parse(JSON.stringify(node._cfg)); }

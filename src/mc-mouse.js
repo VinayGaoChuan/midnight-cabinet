@@ -54,6 +54,24 @@ G.view = function () {
   if (this.screen === 'world' && this.lastInput !== 'pad' && this.lastInput !== 'touch' && v.worldHint != null && !/点击/.test(v.worldHint)) v.worldHint = '点击箭头或下一站前进（也可以按 → ↑ ↓） · 右键 / Esc 返回 · 走过的路不能回头 · 鼠标悬浮节点查看详情';
   return v;
 };
+
+// ───────── dragging the map (2026-09-27: 「点住地图，拖拽后，要能拖动地图，以前是不让拖动地图，错了」) ─────────
+// press on the map and move more than a few pixels: the view follows the pointer (within the map); letting go keeps it there and
+// swallows the click, so a drag never sets off. Setting off eases the view back onto the explorer (mc-world2.js follow).
+{
+  let D = null;
+  const onMap = (e) => e.target && e.target.closest && e.target.closest('[data-g="worldcv"]');
+  window.addEventListener('pointerdown', (e) => { const g = M._g; if (!g || g.screen !== 'world' || !g.walker || e.button > 0 || !onMap(e) || !g.miniPt) return; const p = g.miniPt(e.clientX, e.clientY); D = { x: p.x, y: p.y, px: g.walker.panX || 0, py: g.walker.panY || 0, on: false, id: e.pointerId }; }, true);
+  window.addEventListener('pointermove', (e) => {
+    const g = M._g; if (!D || !g || g.screen !== 'world' || !g.walker || e.pointerId !== D.id) return; const p = g.miniPt(e.clientX, e.clientY), dx = p.x - D.x, dy = p.y - D.y;
+    if (!D.on && Math.hypot(dx, dy) < 14) return; D.on = true; const w = g.walker, map = g.run && g.run.map; w.dragging = true;
+    const xs = map ? map.nodes.map(n => n.x) : [w.x], ys = map ? map.nodes.map(n => n.y) : [w.y], base = w.x + 260;
+    const px = Math.max(Math.min(...xs) - base, Math.min(Math.max(...xs) - base, D.px - dx)), py = Math.max(Math.min(...ys) - 200 - w.y, Math.min(Math.max(...ys) + 200 - w.y, D.py - dy));
+    w.camX += px - (w.panX || 0); w.camY += py - (w.panY || 0); w.panX = px; w.panY = py; g.tipData = null; g.bump();
+  }, true);
+  const up = (e) => { const g = M._g; if (!D) return; if (D.on && g) { g.swallowClick = performance.now(); if (g.walker) g.walker.dragging = false; } D = null; };
+  window.addEventListener('pointerup', up, true); window.addEventListener('pointercancel', up, true);
+}
 })();
 
 ;

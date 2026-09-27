@@ -133,6 +133,8 @@ M.rollShop = function (run) {
   for (let i = units.length; i < 5; i++) { const c = M.rollUnitCard(run, { hold }); if (!c) break; const d = DB[c.type]; units.push({ kind: 'unit', type: c.type, q: d.q, cost: Math.max(5, Math.round(d.cost * pm)) }); }
   run.shop = { units, banners: [], items: [] };
   if (M.talShopExtra) try { M.talShopExtra(run); } catch (e) {}
+  // 货郎's extra cards come from the pool's copies too
+  for (let i = 5; i < run.shop.units.length; i++) { const x = run.shop.units[i]; if (!x || x.kind !== 'unit') continue; const c = M.rollUnitCard(run, { hold }); if (!c) { run.shop.units.length = i; break; } const d = DB[c.type]; x.type = c.type; x.q = d.q; x.cost = Math.max(5, Math.round(d.cost * pm)); }
   if (!tut && rnd() < SALE_ANY) { const c = pick(units.filter(x => x.cost > 0)); if (c) { c.off = SALE_OFF; c.cost = Math.max(1, Math.round(c.cost * (1 - SALE_OFF))); } }
 };
 // every stall is the general one; the stall it looks like stays (mc-pxmarket.js draws run.shopLook)
@@ -228,4 +230,33 @@ G.steleTip = function (k) {
 // 霓虹招牌 (a cabinet part) used to open the two shops with a catch; with one kind of shop it makes each shop's first refresh free
 if (M.PARTS) { const np = M.PARTS.find(p => p.k === 'neon'); if (np) np.d = '每家夜市第一次刷新免费。'; }
 const oRC = M.refreshCost; M.refreshCost = (run) => (run && !run.refreshN && M.hasPart && M.hasPart('neon') ? 0 : oRC(run));
+
+// ───────── nothing joins from outside the pool (2026-09-27: 「所有部队都要从池中随机，不能出现池以外的」) ─────────
+// The recruit flag's three figures, every gift, talent and building that hands out a unit: a unit whose line is not in the
+// pool, or that the pool has no copies left for, becomes the same line a tier lower, else a pool line of the same role
+// (front or back), never better than it was; nothing left at all → it does not come.
+M.poolFit = function (run, type) {
+  const d = DB[type]; if (!run || !run.pool || !d || !d.line) return type;
+  const lines = run.pool.lines || [], capQ = M.stageOf(run).capQ;
+  const best = (line) => { for (let q = Math.min(d.q | 0, capQ); q >= 0; q--) { const k = M.lineKey(line, q + 1); if (DB[k] && M.poolAvail(run, line) >= copiesOf(k)) return k; } return null; };
+  if (lines.includes(d.line)) { const k = best(d.line); if (k) return k; }
+  const ok = lines.filter(l => l !== d.line && M.poolAvail(run, l) >= 1), same = ok.filter(l => front(l) === !!FRONT[d.voc]);
+  for (const l of (same.length ? same : ok).sort(() => rnd() - 0.5)) { const k = best(l); if (k) return k; }
+  return null;
+};
+const oAdd = M.addUnit;
+M.addUnit = function (run, type) { if (run && run.pool) { const k = M.poolFit(run, type); if (!k) return null; type = k; } return oAdd.call(this, run, type); };
+// the recruit flag: three figures from the pool (the old one took two of them from every unit in the game)
+M.recruitTrio = function (run) {
+  const hold = {}, out = [];
+  for (let i = 0; i < 16 && out.length < 3; i++) { const c = run && run.pool ? M.rollUnitCard(run, { hold }) : null; if (!c) break; if (!out.includes(c.type)) out.push(c.type); }
+  while (out.length < 3) out.push(M.pickUnitQ(run));
+  return out;
+};
+// a gift names the unit that really comes (its picture flies, its name is said)
+const oAward = G.award;
+G.award = function (list, from) {
+  const run = this.run; if (run && run.pool && Array.isArray(list)) list = list.filter(g => { if (!g || g.k !== 'unit') return true; const k = M.poolFit(run, g.type); if (!k) return false; g.type = k; return true; });
+  return oAward.call(this, list, from);
+};
 })();

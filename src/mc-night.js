@@ -250,7 +250,8 @@ M.NightRaid = class extends Siege {
       this.ents.push({ side: 'A', guard: 1, gar: u.uid, sprite: u.type, s: 4, x: home, home, home0: home, y: -18 - (k % 3) * 10, hp, max: hp, atk, cd: 100 / Math.max(20, (d.as || 100) * (1 + V.as)), range: ranged ? 320 : 70, spd: 170, ranged, t: Math.random() * 0.5, alive: true, face: -side });
     });
     const h = meta.heroes[0], H = h && M.HEROES[h.cls];
-    this.roof = h && H ? { x: DOOR_X, y: MB.top - 70, dmg: M.heroAtk(h, meta) * M.NIGHT.ROOF, cd: H.cd || 1, range: M.NIGHT.ROOF_R, t: 0.6 } : null;
+    this.roof = h && H ? { x: DOOR_X + 120, y: MB.top + 90,   // the leader is inside the main base: its arrows leave a window (mc-town.js)
+       dmg: M.heroAtk(h, meta) * M.NIGHT.ROOF, cd: H.cd || 1, range: M.NIGHT.ROOF_R, t: 0.6 } : null;
     const cfg = M.makeRaidCfg(meta);
     this.list = cfg.list.map((x, i) => ({ t: 1 + x.spawn * 1.2, type: x.type, elite: x.elite, champ: x.champ, nm: x.nm, hpMul: x.hpMul, atkMul: x.atkMul, side: x.champ ? (rnd() < 0.5 ? -1 : 1) : i % 2 ? 1 : -1 })).sort((a, b) => a.t - b.t);
     this.spawnI = 0; this.total = this.list.length; this.target = cfg.night; this.foe = cfg.foe; this.zones = [];
@@ -419,6 +420,24 @@ if (M.GUIDE) {
   G2.push(
     { id: 'garrison', cat: '基地', icon: 't_shield', title: '驻军', line: '每趟出征最后带回一支部队，留在基地守夜，不再出征；三支相同的也会进化。', scr: 'base', sel: '[data-fx="mgar"]' },
     { id: 'evobld', cat: '基地', icon: 'u_star', title: '进化建筑', line: '每座让一个职业的部队在夜市里更常出高品质；同一种只能建一座。', scr: 'base', sel: '[data-g="bld"]' });
+}
+
+// ───────── 商人 at night (asked 2026-09-27: 「在混沌侵袭中，商人的特性是怎么触发的，例如“死亡掉落积分”这种」) ─────────
+// the night's fight runs without traits and there are no 积分 at the base, so the garrison's merchants trade in 物资 instead:
+// one that falls drops half its price, and when the night is held every merchant still standing brings a fifth of its price
+if (M.NightRaid) {
+  const NRM = M.NightRaid, merch = (e) => !!(e && e.gar && DB[e.sprite] && DB[e.sprite].voc === '商人'), val = (e, k) => Math.max(1, Math.round((DB[e.sprite].cost || 10) * k));
+  M.NightRaid = class extends NRM {
+    damage(e, d, col, src) {
+      const was = e && e.alive, r = super.damage(e, d, col, src);
+      if (was && !e.alive && merch(e) && this.meta) { const v = val(e, 0.5); this.meta.supplies = (this.meta.supplies || 0) + v; this.merchSup = (this.merchSup || 0) + v; this.float(e.x, e.y - 130, '+' + v + ' 物资', '#c98f5a', 28); }
+      return r;
+    }
+    step(dt) {
+      super.step(dt);
+      if (this.over === 'win' && !this.merchPaid && this.meta) { this.merchPaid = 1; const ms = this.ents.filter(e => e.alive && merch(e)); if (ms.length) { const v = ms.reduce((a, e) => a + val(e, 0.2), 0); this.meta.supplies = (this.meta.supplies || 0) + v; this.merchSup = (this.merchSup || 0) + v; this.float(DOOR_X, -300, '商人 +' + v + ' 物资', '#c98f5a', 34); } }
+    }
+  };
 }
 })();
 

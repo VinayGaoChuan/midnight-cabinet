@@ -5,8 +5,8 @@
 // were switched off on 2026-09-24 (too busy).
 // · A step lights one thing: the rest of the screen dims, a gold frame pulses round it, a gold arrow bobs over it and one short
 //   sentence sits beside it. While a step is forced, a press anywhere outside the frame does nothing (keys still work).
-// · Where the idea behind the press is not obvious, the step first plays that card's animation (mc-demo.js) in the middle of
-//   the screen with one sentence under it; a click goes on.
+// · No animations (2026-09-27: 「你的教学示例视频，都是抽象的，这种不行……如果做不好，就不要这个功能了，引导的时候，直接强制引导操作就
+//   完了」, then 「引导视频都删了吧，就用强制引导挺好」): every step is the frame, the arrow and its one sentence.
 // · A step is done once its situation has passed (it was shown and its condition no longer holds); a step whose target
 //   cannot be found for 5 s is skipped, and 「跳过引导」 in the corner switches the whole guide off — nobody gets stuck.
 // · It runs once per player (the profile remembers each step), through the 序章, the first day at the base and the first
@@ -39,65 +39,62 @@ function buyIdx(g) {
   return best;
 }
 const shopSold = (g) => !!(g.run && g.run.shop && g.run.shop.units && g.run.shop.units.some(c => c.sold));
-// the steps, in order; say = one short sentence, demo / cap = the animation first (in the middle of the screen)
+// the steps, in order; say = one short sentence
 const STEPS = [
   { id: 'walk', say: '点箭头往前走', force: 1, when: (g) => g.screen === 'world' && tutRun(g) && g.walker && !g.walker.edge && g.run.map.nodes[g.walker.node].col === 0, at: arrowsRect },
   { id: 'settle', say: '收下，继续前进', force: 1, free: 1, when: (g) => g.screen === 'battle' && tutRun(g) && g.settle && g.settle.t > 1.9 && !g.settle.final, at: (g) => stageRect(g, '[data-g="st-next"]') },
-  { id: 'fork', demo: 'nodes', cap: '岔路选一条：站牌后面的小图是能拿到的东西', say: '选一条路', force: 1, when: (g) => g.screen === 'world' && tutRun(g) && g.walker && !g.walker.edge && M.nodeAhead(g.run.map, g.walker.node).length > 1, at: arrowsRect },
-  { id: 'buy', demo: 'canevo', cap: '三支相同的部队会进化成更强的一支', say: '买下它', force: 1, when: (g) => g.screen === 'shop' && tutRun(g) && !shopSold(g) && buyIdx(g) >= 0, at: (g) => stageRect(g, '[data-g="buy"][data-bi="' + buyIdx(g) + '"]') },
+  { id: 'fork', say: '选一条路', force: 1, when: (g) => g.screen === 'world' && tutRun(g) && g.walker && !g.walker.edge && M.nodeAhead(g.run.map, g.walker.node).length > 1, at: arrowsRect },
+  { id: 'buy', say: '买下它', force: 1, when: (g) => g.screen === 'shop' && tutRun(g) && !shopSold(g) && buyIdx(g) >= 0, at: (g) => stageRect(g, '[data-g="buy"][data-bi="' + buyIdx(g) + '"]') },
   { id: 'leave', say: '离开夜市', when: (g) => g.screen === 'shop' && tutRun(g) && shopSold(g), at: (g) => stageRect(g, '[data-g="shop-leave"]') },
-  { id: 'dig', demo: 'rock', cap: '挖开岩层，才有地方建房间', say: '点这块岩层', force: 1, when: (g) => g.screen === 'base' && g.meta && g.meta.tutDone && !g.panel && !(g.portalOn && g.portalOn()) && !anyJob(g), at: digRect },
+  { id: 'dig', say: '点这块岩层', force: 1, when: (g) => g.screen === 'base' && g.meta && g.meta.tutDone && !g.panel && !(g.portalOn && g.portalOn()) && !anyJob(g), at: digRect },
   { id: 'digGo', say: '挖开', force: 1, when: (g) => g.screen === 'base' && g.panel && g.panel.kind === 'dig', at: (g) => stageRect(g, '[data-g="dig"]') },
-  { id: 'rest', demo: 'rest', cap: '结束白天，今晚怪物来攻城，驻军守城', say: '结束白天', force: 1, when: (g) => g.screen === 'base' && g.meta && g.meta.tutDone && !g.panel && anyJob(g) && !(g.meta.raids > 0), at: (g) => stageRect(g, '[data-tip="b-rest"]') },
-  { id: 'portal', demo: 'portal', cap: '出征：每一趟最后只带回一支部队守夜', say: '从这里出征', force: 1, when: (g) => g.screen === 'base' && g.meta && g.meta.raids > 0 && !g.panel && !(g.portalOn && g.portalOn()), at: portalRect },
+  { id: 'rest', say: '结束白天', force: 1, when: (g) => g.screen === 'base' && g.meta && g.meta.tutDone && !g.panel && anyJob(g) && !(g.meta.raids > 0), at: (g) => stageRect(g, '[data-tip="b-rest"]') },
+  { id: 'portal', say: '从这里出征', force: 1, when: (g) => g.screen === 'base' && g.meta && g.meta.raids > 0 && !g.panel && !(g.portalOn && g.portalOn()), at: portalRect },
   { id: 'stele', say: '选一个世界', force: 1, when: (g) => g.screen === 'base' && g.portalOn && g.portalOn() && !g.panel, at: steleRect },
   { id: 'launch', say: '出发', force: 1, when: (g) => g.screen === 'base' && g.panel && g.panel.kind === 'loadout', at: (g) => stageRect(g, '[data-g="launch"]') },
-  { id: 'chap', demo: 'chapcap', cap: '从第 1 章起最多带 6 支部队，序章的部队不会跟过来', when: (g) => g.screen === 'world' && g.run && !tutRun(g) },
 ];
 function anyJob(g) { const m = g.meta; if (!m || !m.base) return false; return m.base.cells.some(row => row.some(x => x && x.job)); }
 M.TUTOR = STEPS;
 // only new players get it: a profile that already has a game past its first day starts with the guide off
 const prof = (g) => { const p = g.prof; if (!p) return null; if (!p.tutor) { const m = g.meta, old = !!(m && m.tutDone && ((m.raids || 0) > 0 || (m.day || 1) > 2)); p.tutor = { done: {}, off: old ? 1 : 0 }; } return p.tutor; };
 const save = (g) => { try { g.saveProfile && g.saveProfile(); } catch (e) {} };
-const TU = { step: null, since: 0, seenAt: 0, missSince: 0, demoOn: false, demoT0: 0, rect: null };
-M.tutorOff = (g) => { const p = prof(g); if (p) { p.off = 1; save(g); } TU.step = null; TU.demoOn = false; g.bump(); };
+const TU = { step: null, since: 0, seenAt: 0, missSince: 0, rect: null };
+M.tutorOff = (g) => { const p = prof(g); if (p) { p.off = 1; save(g); } TU.step = null; g.bump(); };
 M.tutorReset = (g) => { const p = prof(g); if (p) { p.done = {}; p.off = 0; save(g); } };
-function finish(g, st) { const p = prof(g); if (p && st) { p.done[st.id] = 1; save(g); } TU.step = null; TU.demoOn = false; TU.rect = null; }
+function finish(g, st) { const p = prof(g); if (p && st) { p.done[st.id] = 1; save(g); } TU.step = null; TU.rect = null; }
 G.tutorTick = function () {
-  const p = prof(this); if (!p || p.off) { if (TU.step) { TU.step = null; TU.demoOn = false; } return; }
+  const p = prof(this); if (!p || p.off) { if (TU.step) TU.step = null; return; }
   const t = now(), cur = TU.step;
   if (cur) {
     // its situation passed: done; still here: follow the target (skip it if it has been gone 5 s)
     if (!cur.when(this)) { finish(this, cur); this.bump(); return; }
-    if (TU.demoOn) return;
     if (!cur.at) { finish(this, cur); return; }
     const r = cur.at(this); if (r) { TU.rect = r; TU.missSince = 0; } else { if (!TU.missSince) TU.missSince = t; if (t - TU.missSince > 5000) { finish(this, cur); this.bump(); } TU.rect = null; }
     return;
   }
   for (const st of STEPS) {
     if (p.done[st.id] || !st.when(this)) continue; if (!st.free && busy(this)) return;
-    TU.step = st; TU.since = t; TU.missSince = 0; TU.rect = st.at ? st.at(this) : null; TU.demoOn = !!st.demo; TU.demoT0 = t; if (st.demo) { M.Sfx.whoosh && M.Sfx.whoosh(0.3); } this.bump(); return;
+    TU.step = st; TU.since = t; TU.missSince = 0; TU.rect = st.at ? st.at(this) : null; this.bump(); return;
   }
 };
 const oTick = G.tick;
 G.tick = function () {
   const r = oTick.apply(this, arguments);
   try { this.tutorTick(); } catch (e) { (window.__mcErrs = window.__mcErrs || []).push('tutor: ' + e.message); TU.step = null; }
-  if (TU.demoOn && TU.step) { const cv = document.querySelector('[data-g="tutor-cv"]'); if (cv) M.demoDraw(cv, TU.step.demo, (now() - TU.demoT0) / 1000); }
   // the frame follows its target smoothly; a new position is a new render (tickless while it stands still)
-  if (TU.step && TU.rect && !TU.demoOn) { const k = [TU.rect.x, TU.rect.y, TU.rect.w, TU.rect.h].map(Math.round).join(','); if (k !== TU.key) { TU.key = k; this.bump(); } }
+  if (TU.step && TU.rect) { const k = [TU.rect.x, TU.rect.y, TU.rect.w, TU.rect.h].map(Math.round).join(','); if (k !== TU.key) { TU.key = k; this.bump(); } }
   return r;
 };
 // a forced step: presses outside its frame (and the skip key) do nothing
 const inside = (r, x, y, pad) => r && x >= r.x - pad && x <= r.x + r.w + pad && y >= r.y - pad && y <= r.y + r.h + pad;
 const SKIP = { x: 860, y: 1030, w: 200, h: 46 };   // 「跳过引导」, bottom middle
 ['pointerdown', 'mousedown', 'mouseup', 'pointerup', 'click', 'touchstart'].forEach(type => window.addEventListener(type, (e) => {
-  const g = M._g, st = TU.step; if (!g || !st || TU.demoOn || !st.force) return; if (e.target && e.target.closest && e.target.closest('[data-g="tutor-skip"]')) return;
+  const g = M._g, st = TU.step; if (!g || !st || !st.force) return; if (e.target && e.target.closest && e.target.closest('[data-g="tutor-skip"]')) return;
   const pt = e.touches && e.touches[0] ? e.touches[0] : e; if (pt.clientX == null) return; const p = g.miniPt(pt.clientX, pt.clientY);
   if (inside(TU.rect, p.x, p.y, 14) || inside(SKIP, p.x, p.y, 0)) return;
   e.stopPropagation(); e.preventDefault && e.cancelable && e.preventDefault();
 }, true));
-// the look: dim with a hole, a gold frame, a bobbing arrow, one sentence; the animation card in the middle
+// the look: dim with a hole, a gold frame, a bobbing arrow, one sentence
 try { const st = document.createElement('style'); st.textContent = '@keyframes tuBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}@keyframes tuPulse{0%,100%{outline-color:#ffcf4a}50%{outline-color:#fff3b0}}'; document.head.appendChild(st); } catch (e) {}
 const oView = G.view;
 G.view = function () {
@@ -105,9 +102,7 @@ G.view = function () {
   M._tu = TU;
   if (p && !p.off && v.worldHint) v.worldHint = '';   // the guide shows the way; the old how-to line under the map goes
   v.tuSkipOn = !!(st && p && !p.off); v.tuSkip = (e) => { if (e && e.stopPropagation) e.stopPropagation(); M.Sfx.click(); M.tutorOff(this); };
-  v.tcOn = !!(st && TU.demoOn);
-  if (v.tcOn) { const ok = now() - TU.demoT0 > 1500; v.tc = { say: st.cap || '', op: ok ? 1 : 0, close: (e) => { if (e && e.stopPropagation) e.stopPropagation(); if (now() - TU.demoT0 < 1500) return; M.Sfx.click(); TU.demoOn = false; if (!st.at) finish(this, st); this.bump(); } }; }
-  const r = TU.rect; v.tuOn = !!(st && !TU.demoOn && r && st.say);
+  const r = TU.rect; v.tuOn = !!(st && r && st.say);
   if (v.tuOn) {
     const pad = 10, x = Math.round(r.x - pad), y = Math.round(r.y - pad), w = Math.round(r.w + pad * 2), h = Math.round(r.h + pad * 2), above = y > 170;
     v.tu = { x, y, w, h, dim: st.force ? 0.62 : 0.35, ax: Math.round(x + w / 2 - 24), ay: above ? y - 70 : y + h + 10, rot: above ? 0 : 180, say: st.say,

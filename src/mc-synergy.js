@@ -61,7 +61,7 @@ if (BP) {
       const hm = syn['人类'] && this.synT ? this.synT.morale * SYN['人类'].lv[syn['人类'] - 1] : 0;
       if (hm) k += src._syn === '人类' ? hm : syn['人类'] >= 3 ? hm * 0.5 : 0;
       if (this.synT && this.synT.horn) k += 0.2;
-      if (src._syn === '异界' && o.skill) k += SYN['异界'].sk[src._synL - 1];
+      if (src._syn === '异界' && this._inCast === src) k += SYN['异界'].sk[src._synL - 1];
       amt *= k;
     }
     if (tg && tg._synTaken) amt *= 1 + tg._synTaken;

@@ -19,6 +19,7 @@ G.view = function () {
     v.menuGo = () => this.menuGo();
   } else v.mn = { on: false };
   v.abandon = () => { M.Sfx.click(); this.askAbandon(); };
+  v.menuWipe = () => this.askWipe();
   return v;
 };
 G.menuGo = function () {
@@ -103,4 +104,23 @@ if (!M.META_ROOM && M.GUIDE) for (let i = M.GUIDE.length - 1; i >= 0; i--) if (M
     }
     return r;
   };
+
+// ───────── 删除存档 on the title menu (2026-09-27: 「游戏开始的时候，加一个按钮，删除存档，我要把包括局外成长的，新手引导的，所有记录全删除，
+// 我要重新过一遍整个的流程」) ─────────
+// everything the game keeps on this device goes: the base and its leaders, the cabinet and its records, the first-time cards,
+// the guide, the hints — only the player's settings stay. Steam's save file follows (mc:flush-save), then the page starts over.
+const SETTINGS = 'midnight-cabinet-settings-v1';
+M.wipeAll = function () {
+  try { const ks = []; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.indexOf('midnight-cabinet-') === 0 && k !== SETTINGS) ks.push(k); } ks.forEach(k => localStorage.removeItem(k)); } catch (e) {}
+  // nothing may write a save again before the reload
+  try { const o = Storage.prototype.setItem; Storage.prototype.setItem = function (k, v) { if (String(k).indexOf('midnight-cabinet-') === 0 && k !== SETTINGS) return; return o.call(this, k, v); }; } catch (e) {}
+  try { window.dispatchEvent(new Event('mc:flush-save')); } catch (e) {}
+};
+G.askWipe = function () {
+  if (this.menuDive || this.modal) return; M.Sfx.click && M.Sfx.click();
+  const back = () => { this.modal = null; this.bump(); };
+  this.modal = { title: '删除存档？', text: '基地、领袖、机台、成就和新手引导的记录全部删掉，从开场重新开始。删了就找不回来。', border: '#d0453c', img: 'skull', back,
+    choices: [{ t: '全部删除', danger: 1, fn: () => { this.modal = null; M.wipeAll(); M.Sfx.stamp && M.Sfx.stamp(); setTimeout(() => { try { location.reload(); } catch (e) {} }, 200); } }, { t: '算了', fn: back }] };
+  this.bump();
+};
 })();

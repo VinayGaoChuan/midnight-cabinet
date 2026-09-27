@@ -61,6 +61,40 @@ const oTF = G.tipFor;
 G.tipFor = function (key) { if (key === 'b-power' && this.panel && this.panel.kind === 'room') { const p = this.panel, pw = M.roomPw(this.meta, p.c, p.r, p.key); return { title: pw >= 0 ? '电力 +' + pw : '耗电 ' + (-pw), c: pw >= 0 ? '#9cff7a' : '#ff9a6a', d: pw >= 0 ? '这个房间向基地供电。' : '这个房间运转要消耗电力。电力不够时，新的耗电建筑建不了。', icon: 'f_power' }; } return oTF.call(this, key); };
 // mini-game recruit cards and claw prizes speak the same language
 if (M.MINI && M.MINI.recruit) { const D = M.MINI.recruit, oB = D.btns; D.btns = function (mg) { const b = oB.call(this, mg); (b || []).forEach((x, i) => { const c = mg.cards && mg.cards[i]; if (c && x.t && x.t.startsWith('选 ')) { x.t = '选 ' + M.qn(M.DB[c.k].n, M.DB[c.k].q); x.c = M.qc(M.DB[c.k].q | 0); } }); return b; }; }
+
+// ───────── a unit's name inside a sentence is in its quality colour too (2026-09-27: 「一句话里的部队名也要找到，并且加上品质色」) ─────────
+// every player unit's name (a name that is also a vocation, a race or a chapter modifier stays plain: 祭司, 老兵 …); canvas text
+// and the event and toast lines split around them
+let NAMES = null, NRE = null;
+const names = () => {
+  if (NAMES) return NAMES; const skip = new Set(Object.keys(M.VOCS || {}).concat(Object.keys(M.RACES || {}), ['老兵']));
+  NAMES = {}; Object.keys(M.DB).forEach(k => { const d = M.DB[k]; if (d && d.line && d.n && d.n.length >= 2 && !skip.has(d.n)) NAMES[d.n] = M.qc(d.q | 0); });
+  const ks = Object.keys(NAMES).sort((a, b) => b.length - a.length).map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')); NRE = ks.length ? new RegExp(ks.join('|'), 'g') : null; return NAMES;
+};
+const segC = new Map(), CJK = /[一-鿿]/;
+M.nameSegs = function (text, base) {
+  const s = String(text == null ? '' : text); if (s.length < 2 || !CJK.test(s)) return null; names(); if (!NRE) return null;
+  const key = s + '\u0001' + (base || ''); if (segC.has(key)) return segC.get(key);
+  const out = []; let last = 0, m; NRE.lastIndex = 0;
+  while ((m = NRE.exec(s))) { if (m.index > last) out.push({ t: s.slice(last, m.index), c: base }); out.push({ t: m[0], c: NAMES[m[0]] }); last = m.index + m[0].length; }
+  if (out.length && last < s.length) out.push({ t: s.slice(last), c: base });
+  const r = out.length ? out : null; if (segC.size > 1500) segC.clear(); segC.set(key, r); return r;
+};
+{ const U = M.UI, oText = U && U.text;
+  if (oText) U.text = function (x, s, a, b, size, col, o) {
+    o = o || {}; const sg = !o.ramp && typeof s === 'string' ? M.nameSegs(s, col) : null;
+    if (!sg || (sg.length === 1 && sg[0].c === col)) return oText.apply(this, arguments);
+    const w = U.measure(x, s, size, o.num), al = o.align || 'center', o2 = Object.assign({}, o, { align: 'left' }); let cx = al === 'center' ? a - w / 2 : al === 'right' ? a - w : a;
+    sg.forEach(p => { cx += oText.call(this, x, p.t, cx, b, size, p.c || col, o2); });
+    return w;
+  }; }
+const oViewN = G.view;
+G.view = function () {
+  const v = oViewN.call(this);
+  if (v.md) v.md.segs = M.nameSegs(v.md.text, '#f4efe0') || [{ t: v.md.text || '', c: '#f4efe0' }];
+  if (v.toast) v.toast.segs = M.nameSegs(v.toast.text, v.toast.c) || [{ t: v.toast.text || '', c: v.toast.c }];
+  return v;
+};
 })();
 
 ;

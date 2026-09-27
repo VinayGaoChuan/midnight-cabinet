@@ -16,7 +16,7 @@ const GODS = M.GODS = {
     L_('部队攻击 +8%。', null, { unitAtk: 0.08 }), L_('精英战和首领战开局，部队攻速 +50%，持续 8 秒。', null, null, 'haste'), L_('部队攻击再 +8%。', null, { unitAtk: 0.08 }),
     L_('驻军攻击 +20%。', { defDmg: 0.2 }), L_('部队暴击率 +15%。', null, { crit: 0.15 })] },
   moon:    { n: '月神', c: '#9fc8ff', icon: 'DarkFang_T6', mat: 'stone', d: '夜里守得更稳。', lv: [
-    L_('驻军生命 +10%。', { garHp: 0.1 }), L_('领袖屋顶的箭 +30%。', null, null, 'roof'), L_('驻军攻击 +15%。', { defDmg: 0.15 }),
+    L_('驻军生命 +10%。', { garHp: 0.1 }), L_('领袖的箭 +30%。', null, null, 'roof'), L_('驻军攻击 +15%。', { defDmg: 0.15 }),
     L_('主基地耐久 +25%。', { portalHp: 0.25 }), L_('夜里倒下的驻军，一半会在月光下站起来再打。', null, null, 'rise')] },
   death:   { n: '冥神', c: '#b86bff', icon: 'Mage_T6', mat: 'stone', d: '倒下不是结束。', lv: [
     L_('部队倒下时有 20% 化成幽灵，再打 6 秒。', null, null, 'ghost'), L_('出征失败时经验全部留下。', { failExp: 0.5 }), L_('化成幽灵的概率变成 40%。', null, null, 'ghost'),

@@ -266,11 +266,11 @@ class B3 extends M.Battle2 {
     act.forEach(e => { e.y = clamp(e.y, 60, 700); e.x = clamp(e.x, 170, FW - 40); });   // on screen (2026-09-27: 2050 let a knocked unit fight on, unseen, past the right edge)
     for (let i = this.proj.length - 1; i >= 0; i--) {
       const p = this.proj[i];
-      if (p.arc) { const q = (T - p.t0) / p.dur; p.trail.unshift([p.x, p.y]); if (p.trail.length > 6) p.trail.pop(); if (q >= 1) { this.proj.splice(i, 1); p.fn && p.fn(); continue; } p.x = p.x0 + (p.tx - p.x0) * q; p.y = p.y0 + (p.ty - p.y0) * q - Math.sin(q * Math.PI) * 220; continue; }
+      if (p.arc) { const q = (T - p.t0) / p.dur; p.trail.unshift([p.x, p.y]); if (p.trail.length > 6) p.trail.pop(); if (q >= 1) { this.proj.splice(i, 1); if (p.fn) { const pc = this._inCast; this._inCast = p._cast || null; try { p.fn(); } finally { this._inCast = pc; } } continue; } p.x = p.x0 + (p.tx - p.x0) * q; p.y = p.y0 + (p.ty - p.y0) * q - Math.sin(q * Math.PI) * 220; continue; }
       if (!p.tgt.alive) { this.proj.splice(i, 1); continue; }
       const tx = p.tgt.x, ty = p.tgt.y - 36 * p.tgt.sz, dx = tx - p.x, dy = ty - p.y, d = Math.hypot(dx, dy), v = p.speed * dt;
       p.trail.unshift([p.x, p.y]); if (p.trail.length > 6) p.trail.pop();
-      if (d <= v + 8) { this.proj.splice(i, 1); Sfx.proj(Sfx.projKind(p.style), Sfx.panX(tx)); if (p.dmg != null) this.deal(p.src, p.tgt, p.dmg, { skill: p.skill, col: p.col, ranged: 1, small: 1 }); else this.strike(p.src, p.tgt, true); }
+      if (d <= v + 8) { this.proj.splice(i, 1); Sfx.proj(Sfx.projKind(p.style), Sfx.panX(tx)); const pc = this._inCast; this._inCast = p._cast || null; try { if (p.dmg != null) this.deal(p.src, p.tgt, p.dmg, { skill: p.skill, col: p.col, ranged: 1, small: 1 }); else this.strike(p.src, p.tgt, true); } finally { this._inCast = pc; } }
       else { p.x += dx / d * v; p.y += dy / d * v; }
     }
     this.shake = Math.max(0, this.shake - dt * 60); this.flash = Math.max(0, this.flash - dt * 3);
@@ -320,7 +320,7 @@ class B3 extends M.Battle2 {
     if (tg.shield > 0) { const a = Math.min(tg.shield, d); tg.shield -= a; d -= a; if (a > 0 && Math.random() < 0.3) this.fxp({ k: 'dome', ent: tg, col: '#9fe0ff', life: 0.2 }); }
     tg.hp -= d; if (!o.silent) { tg.flash = 0.08; tg.kb = this.t; tg.kbDir = src ? Math.sign(tg.x - src.x) || 1 : 1; }
     if (tg.isHero) this.heroDmgTaken += d;
-    if (!o.silent && (o.skill || o.crit || o.big || Math.random() < 0.5)) this.float(tg.x + (Math.random() - 0.5) * 30, tg.y - 70 * tg.sz, fmt(d), o.crit ? '#ff5a4a' : o.col || (o.skill ? '#d890ff' : tg.side === 'A' ? '#ff8a8a' : '#ffffff'), o.big || o.crit ? 40 : o.small ? 20 : 26, true);
+    if (!o.silent && (o.skill || o.crit || o.big || Math.random() < 0.5)) this.float(tg.x + (Math.random() - 0.5) * 30, tg.y - 70 * tg.sz, fmt(d), o.crit ? '#ff5a4a' : o.col || (o.skill && this._inCast ? '#d890ff' : tg.side === 'A' ? '#ff8a8a' : '#ffffff'), o.big || o.crit ? 40 : o.small ? 20 : 26, true);
     if (!o.silent && !o.small) for (let i = 0; i < 3; i++) { const a = Math.random() * Math.PI * 2, v = 200 + Math.random() * 260; this.fxp({ k: 'pt', x: tg.x, y: tg.y - 40, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 100, col: o.col || (tg.side === 'E' ? '#ffd080' : '#8fc8ff'), life: 0.35 }); }
     if (o.crit || o.big) { Sfx.critAt(Sfx.panX(tg.x)); this.shake = Math.max(this.shake, 8); this.ring(tg.x, tg.y - 40, 10, 110, o.col || '#ffe08a', 7, 0.25); } else if (!o.silent && !o.small) { if (tg.shield > 0 || (tg.au && tg.au.flat)) Sfx.armorHit(Sfx.panX(tg.x)); else Sfx.hitAt(Sfx.panX(tg.x), o.ranged ? .6 : 1, src && src.d ? this.atkSnd(src) : null); }
     if (src && src.alive && src.au && src.au.leech && !o.reflect) { const h = d * src.au.leech; src.hp = Math.min(src.maxHp, src.hp + h); if (Math.random() < 0.15) this.fxp({ k: 'orb', x1: tg.x, y1: tg.y - 40, x2: src.x, y2: src.y - 40, col: '#ff4a5a', life: 0.3 }); }

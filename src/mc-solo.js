@@ -13,7 +13,7 @@ M.SOLO_R = 3;                                               // the one leader gr
 if (M.RARITY && M.RARITY[3]) M.RARITY[3].stat = 1.15;
 M.addExp = function (h, amt) {
   let ups = 0; h.exp += Math.round(amt);
-  while (h.lv < M.LV_MAX && h.exp >= M.expNeed(h.lv)) { h.exp -= M.expNeed(h.lv); h.lv++; h.points++; ups++; }
+  while (h.lv < M.LV_MAX && h.exp >= M.expNeed(h.lv)) { h.exp -= M.expNeed(h.lv); h.lv++; if (h.lv % 2 === 0) h.points++; ups++; }   // a point every second level (below)
   if (h.lv >= M.LV_MAX) h.exp = Math.min(h.exp, M.expNeed(M.LV_MAX));
   return ups;
 };
@@ -99,12 +99,35 @@ M.soloFix = function (m) {
     const h = m.heroes[0];
     if (h.rarity !== M.SOLO_R) { const back = Array.isArray(h.taken) ? h.taken.length : 0; h.rarity = M.SOLO_R; h.tree = M.talentTree(M.SOLO_R); h.taken = []; h.points = Math.min(30, (h.points || 0) + back); ch = true; }
     if ((m.orbs || 0) > 0) { M.addExp(h, m.orbs); ch = true; }
+    // talents v2 (a point every second level, two per layer): the old tree's points come back under the new rule
+    if (h.talV !== 2) { h.taken = []; h.points = M.talPts(h); h.talV = 2; ch = true; }
   }
   if (m.orbs) { m.orbs = 0; ch = true; }
   ['freeRecruit', 'recruitMinOnce'].forEach(k => { if (m[k]) { delete m[k]; ch = true; } });
   if (m.base && m.base.cells) m.base.cells.forEach(row => row.forEach(x => { if (x && (x.b === 'altar' || x.b === 'tavern')) { x.b = 'hospital'; ch = true; } if (x && x.job && x.job.kind === 'build' && (x.job.key === 'altar' || x.job.key === 'tavern')) { x.job.key = 'hospital'; ch = true; } }));
   if (m.inv) ['altar', 'tavern'].forEach(k => { if (m.inv['bbp:' + k]) { m.supplies = (m.supplies || 0) + 60 * m.inv['bbp:' + k]; delete m.inv['bbp:' + k]; ch = true; } });
   return ch;
+};
+
+// ───────── talents stay a choice (2026-09-27: 「如果天赋点太多，那英雄的天赋就没有选择的意义了，因为所有的天赋一定会点亮，那还选择什么」) ─────────
+// a point every second level (Lv 2, 4, 6 … : 10 at Lv 20, 20 at Lv 40) and each 启示卷轴 read; at most two talents of a layer can
+// be learned (the tree has 19–23, at most 12 can ever be lit), so a leader is what its player picked
+M.TAL_LAYER = 2;
+M.talPts = (h) => Math.floor((h.lv || 1) / 2) + (h.scrolls || 0);
+M.talLayerN = (h, L) => (Array.isArray(h.taken) ? h.taken.filter(i => h.tree[i] && h.tree[i].L === L).length : 0);
+const oOpen = M.talOpen;
+M.talOpen = (h, i) => { const n = h.tree && h.tree[i]; return !!n && oOpen(h, i) && M.talLayerN(h, n.L) < M.TAL_LAYER; };
+M.talCan = (h, i) => h.points > 0 && M.talOpen(h, i);
+M.canTake = M.talCan;
+// 启示卷轴 (不朽): only the first time a chapter's final boss falls on each game difficulty — never from a random drop
+if (M.GIFTS && M.GIFTS.talent) { const K = M.GIFTS.talent; K.w = 0; K.d = '带着它回来的领袖多 1 个天赋点。每一章的最终首领在每个难度下第一次倒下时给一张。';
+  K.apply = function (g, m, run) { const h = (run && m.heroes.includes(run.hero)) ? run.hero : M.pick(m.heroes); if (!h) return { t: '没有领袖可以读它' }; h.points++; h.scrolls = (h.scrolls || 0) + 1; return { t: M.heroN(h) + ' 天赋点 +1', hero: h.id }; }; }
+const oSS = G.startSettle;
+G.startSettle = function () {
+  oSS.apply(this, arguments); const st = this.settle, run = this.run, n = this.node, m = this.meta;
+  if (!st || !st.good || !run || run.tut || (run.region && run.region.tut) || !n || n.type !== 'boss' || !n.final || !m || !st.tiles) return;
+  const key = ((m.gd || 0) | 0) + ':' + (run.regionKey || ''); m.scrollGot = m.scrollGot || {}; if (m.scrollGot[key]) return; m.scrollGot[key] = 1;
+  const k = 'gift:talent', I = M.itemInfo(k); if (!I) return; this.hold('rbp', run.loot.bp.length); run.loot.bp.push(k); st.tiles.push({ icon: I.icon, v: 1, c: I.c, to: 'rbp', n: I.n, key: k });
 };
 })();
 

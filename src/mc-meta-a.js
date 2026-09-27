@@ -140,7 +140,7 @@ G.newGame = function (kits) {
   const rock = []; for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) { const x = m.base.cells[r][c]; if (!x.dug && !x.tile && r <= 2) rock.push([c, r]); }
   rock.sort(() => rnd() - 0.5).slice(0, P.startTiles || 0).forEach(([c, r]) => m.base.cells[r][c].tile = M.rollTile ? M.rollTile(r) : M.pick(Object.keys(M.TILES)));
   if (P.coreLey) { const x = M.cell(m, M.CORE.c, M.CORE.r + 1); if (x && !x.dug) x.tile = 'ley'; }
-  const h = m.heroes[0]; for (let i = 0; i < (P.startHeroLv || 0); i++) { h.lv++; h.points++; } h.hp = M.heroMaxHp(h, m);
+  const h = m.heroes[0]; for (let i = 0; i < (P.startHeroLv || 0); i++) { h.lv++; if (h.lv % 2 === 0) h.points++; } h.hp = M.heroMaxHp(h, m);
   (kits || []).forEach(k => {
     if (k === 'build') { M.invAdd(m, wonderBp(1), 1); M.invAdd(m, M.dropBp(0.5).replace(/^rbp:.*/, wonderBp(1)), 1); M.invAdd(m, wonderBp(1), 1); }
     if (k === 'arms') { const rs = M.relicPool(); for (let i = 0; i < 3; i++) M.invAdd(m, 'rbp:' + M.pick(rs), 1); if (M.craftRelic3) { const r = M.craftRelic3(m, M.pick(rs), { qUp: 1 }); if (r && !m.relics.includes(r)) m.relics.push(r); } }
