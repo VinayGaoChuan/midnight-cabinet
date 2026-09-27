@@ -42,9 +42,14 @@ BP.spawnEnemy = function (s) {
 function riseY(e, T) { const A = e.ai; if (!A) return 0; if (A.st === 'rise') { const q = clamp((T - A.t0) / 2.2, 0, 1), k = 1 - Math.pow(1 - q, 3); return (1 - k) * 520; } if (A.st === 'dead') { const q = clamp((T - A.t0) / 2.4, 0, 1); return q * q * 560; } return 0; }
 
 // ───────── the final boss ─────────
+// 2026-09-27 (a player stuck for minutes: one unit at the bottom of the arena's edge, the boss casting 天降 over and over,
+// never hitting it): a melee unit walks to the edge at the height it started from, and the three lanes (270 / 390 / 510)
+// and the string of marks (from x 1330 leftward) left the top and bottom of the edge where no blow could land. Five lanes
+// now reach the whole edge, and the string starts under the unit it aims at.
+const LANES = [170, 270, 390, 510, 620];
 function pickLane(b, e) {
   const us = b.ents.filter(u => b.active(u) && u.side === 'A'); let best = 0, bn = -1;
-  [270, 390, 510].forEach(y => { const n = us.filter(u => inRing(u, SLAM_X, y, FBK.slamR)).length; if (n > bn || (n === bn && y === 390)) { bn = n; best = y - FB_Y; } });
+  LANES.forEach(y => { const n = us.filter(u => inRing(u, SLAM_X, y, FBK.slamR)).length; if (n > bn || (n === bn && y === 390)) { bn = n; best = y - FB_Y; } });
   return bn > 0 ? best : null;
 }
 // who the string of marks runs through: the units standing on the field (not the ones still in the air)
@@ -57,7 +62,7 @@ BP.fbBegin = function (e, k) {
   else if (k === 'sweep') { A.t = T + FBK.windSweep; A.om = this.omen({ shape: 'sector', x: EDGE + 40, y: FB_Y, r: FBK.sweepR, half: FBK.sweepHalf, dir: -1, t0: T, until: A.t, col, src: e, keep: 1 }); }
   else if (k === 'rain') {
     const us = standing(this), n = FBK.rainN;
-    const y0 = us.length ? us[Math.floor(Math.random() * us.length)].y : FB_Y, y1 = 120 + Math.random() * 480, x0 = EDGE - 150, x1 = 320;
+    const tu = us.length ? us[Math.floor(Math.random() * us.length)] : null, y0 = tu ? tu.y : FB_Y, y1 = 120 + Math.random() * 480, x0 = tu ? clamp(tu.x, 420, EDGE - 20) : EDGE - 150, x1 = Math.min(320, x0 - 600);
     A.marks = []; for (let i = 0; i < n; i++) { const q = i / (n - 1), x = x0 + (x1 - x0) * q, y = clamp(y0 + (y1 - y0) * q + Math.sin(q * 9 + A.n) * 100, 110, 660); A.marks.push(this.omen({ shape: 'circle', x, y, r: FBK.rainR, t0: T + i * 0.1, until: T + FBK.windRain + i * 0.12, col, src: e, keep: 1, rain: e.fb.rain || 'meteor' })); }
     A.t = T + FBK.windRain + (n - 1) * 0.12 + 0.05; A.hit = 0;
   }

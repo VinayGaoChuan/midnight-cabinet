@@ -263,7 +263,7 @@ class B3 extends M.Battle2 {
       }
     }
     for (let i = 0; i < act.length; i++) for (let j = i + 1; j < act.length; j++) { const a = act[i], b = act[j]; if (a.side !== b.side) continue; const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, m = 50 * (a.sz + b.sz) / 2; if (d < m) { const p = (m - d) * 0.5 / d; a.x -= dx * p; a.y -= dy * p; b.x += dx * p; b.y += dy * p; } }
-    act.forEach(e => { e.y = clamp(e.y, 60, 700); e.x = clamp(e.x, 170, 2050); });
+    act.forEach(e => { e.y = clamp(e.y, 60, 700); e.x = clamp(e.x, 170, FW - 40); });   // on screen (2026-09-27: 2050 let a knocked unit fight on, unseen, past the right edge)
     for (let i = this.proj.length - 1; i >= 0; i--) {
       const p = this.proj[i];
       if (p.arc) { const q = (T - p.t0) / p.dur; p.trail.unshift([p.x, p.y]); if (p.trail.length > 6) p.trail.pop(); if (q >= 1) { this.proj.splice(i, 1); p.fn && p.fn(); continue; } p.x = p.x0 + (p.tx - p.x0) * q; p.y = p.y0 + (p.ty - p.y0) * q - Math.sin(q * Math.PI) * 220; continue; }
