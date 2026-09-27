@@ -1067,7 +1067,7 @@
 | V136 | `Sfx.raidWin` | 守城 | 1 |
 | V137 | `Sfx.rankStamp` | 守城 | 0 |
 | V138 | `Sfx.portalCollapse` | 守城 | 1 |
-| V139 | `Sfx.mini` | 小游戏 | 218 |
+| V139 | `Sfx.mini` | 小游戏 | 219 |
 | V140 | `Sfx.introToll` | 开场演出 | 0 |
 | V141 | `Sfx.coinRoll` | 开场演出 | 0 |
 | V142 | `Sfx.spook` | 开场演出 | 0 |

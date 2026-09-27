@@ -62,7 +62,12 @@ G.miniStart = function (kind, o) {
 };
 G.miniSet = function (phase) { const mg = this.mini; if (mg) { mg.phase = phase; mg.pt = 0; } };
 G.miniSay = function (text, col, big) { const mg = this.mini; if (mg) mg.msg = { text, col: col || '#ffe08a', t: 0, big: !!big }; };
-G.miniFinish = function (text, col, gains) { const mg = this.mini; this.mini = null; if (!this.modal) this.modal = { kind: 'event', title: mg.title, img: mg.img, at: now(), choices: [] }; else Object.assign(this.modal, { title: mg.title, img: mg.img }); this.evResult(text, col, gains); };
+// 退场：机箱熄灯、缩下去、散一把粒子、一声（0.35 秒），然后才出结果；这段时间里小玩法不再走、不收输入，重复的 finish 不算
+const EXIT = 0.35;
+function finishNow(g, mg, text, col, gains) { g.mini = null; if (!g.modal) g.modal = { kind: 'event', title: mg.title, img: mg.img, at: now(), choices: [] }; else Object.assign(g.modal, { title: mg.title, img: mg.img }); g.evResult(text, col, gains); }
+G.miniFinish = function (text, col, gains) { const mg = this.mini; if (!mg || mg._exit) return; if (M.PJ && M.PJ.reduced) return finishNow(this, mg, text, col, gains);
+  mg._exit = { t0: mg.t, text, col, gains }; mg.msg = null; mg.holding = null; if (M.SHOW) { M.SHOW.calm(mg); M.SHOW.ambient(mg, null); M.SHOW.burst(mg, CX, SY + SH / 2, 28, { ramp: [C.white, C.lavender, C.haze, C.indigo], sp: [180, 480], life: [0.3, 0.6], w: SW * 0.6, h: SH * 0.5 }); } S.mini('_', 'exit'); this.bump(); };
+const exitK = (mg) => (mg._exit ? cl((mg.t - mg._exit.t0) / EXIT, 0, 1) : 0);
 G.miniBattle = function (type) { const n = this.node; this.mini = null; this.modal = null; n.type = type || 'normal'; this.trans = { kind: 'out', t: 0, node: n }; S.mini('_', 'battle'); this.fx.kick(20); this.bump(); };
 G.miniPay = function (v) { const run = this.run; if (run.wallet < v) { this.deny('积分不够', '#d0453c'); return false; } this.hold('wallet', run.wallet); run.wallet -= v; this.release('wallet'); S.mini('_', 'pay'); return true; };
 // rewards shared by the games
@@ -75,9 +80,9 @@ G.buffRun = function (k, v, label, col) { const run = this.run; if (k === 'unitA
 // 入场分层：压暗 → 机箱从上落下弹一下（0.38 秒）→ 招牌砸下（0.36 秒起）→ 舞台里的灯一盏盏亮（像素舞台的 boot）
 const dropY = (mg) => (M.PJ && M.PJ.reduced ? 0 : -K.snap(90 * (1 - eb(mg.t / 0.38))));
 function frameBegin(x, mg) {
-  const a = cl(mg.t / 0.25, 0, 1), D = mg.D, sh = mg.sh || {};
-  x.save(); x.globalAlpha = a * 0.84; K.R(x, 0, 0, 1920, 1080, '#07060f'); x.restore();
-  x.save(); x.globalAlpha = cl(mg.t / 0.12, 0, 1); x.translate(sh.sx || 0, dropY(mg) + (sh.sy || 0));
+  const a = cl(mg.t / 0.25, 0, 1), D = mg.D, sh = mg.sh || {}, ex = exitK(mg), ek = 1 - 0.08 * eo(ex);
+  x.save(); x.globalAlpha = a * 0.84 * (1 - ex * 0.4); K.R(x, 0, 0, 1920, 1080, '#07060f'); x.restore();
+  x.save(); x.globalAlpha = cl(mg.t / 0.12, 0, 1) * (1 - ex); x.translate(sh.sx || 0, dropY(mg) + (sh.sy || 0) + K.snap(ex * ex * 40)); if (ex > 0) { x.translate(CX, SY + SH / 2); x.scale(ek, ek); x.translate(-CX, -(SY + SH / 2)); }
   x.fillStyle = D.bg ? D.bg(x) : K.LG(x, 0, SY, 0, SY + SH, [[0, '#1a1640'], [1, '#0d0b1e']]); x.fillRect(SX, SY, SW, SH);
   x.save(); x.beginPath(); x.rect(SX, SY, SW, SH); x.clip();
 }
@@ -112,10 +117,10 @@ function bezelDef(ramp) {
   return key;
 }
 function frameDeco(x, mg) {
-  const a = cl(mg.t / 0.12, 0, 1), sh = mg.sh || {}; x.save(); x.globalAlpha = a; x.translate(sh.sx || 0, dropY(mg) + (sh.sy || 0));
+  const ex = exitK(mg), ek = 1 - 0.08 * eo(ex), a = cl(mg.t / 0.12, 0, 1) * (1 - ex), sh = mg.sh || {}; x.save(); x.globalAlpha = a; x.translate(sh.sx || 0, dropY(mg) + (sh.sy || 0) + K.snap(ex * ex * 40)); if (ex > 0) { x.translate(CX, SY + SH / 2); x.scale(ek, ek); x.translate(-CX, -(SY + SH / 2)); }
   const ink = '#07060f', X = M.PXR;
   K.R(x, SX + SW + 24, SY - 12, 12, SH + 48, ink); K.R(x, SX - 12, SY + SH + 24, SW + 48, 12, ink);   // hard shadow, right and below
-  if (X) { const L = K.lampFx, key = bezelDef(mg.bzR || (mg.bzR = nearRamp(mg.col, BZ_R))), lamp = L && L.col ? nearRamp(L.col, ['lamp', 'red', 'pink', 'teal', 'gold', 'arcane', 'leaf', 'ice', 'fire', 'candy']) : 'lamp';
+  if (X) { const L = ex > 0 ? { sp: 0.01, col: null } : K.lampFx, key = bezelDef(mg.bzR || (mg.bzR = nearRamp(mg.col, BZ_R))), lamp = L && L.col ? nearRamp(L.col, ['lamp', 'red', 'pink', 'teal', 'gold', 'arcane', 'leaf', 'ice', 'fire', 'candy']) : 'lamp';
     const s = X.pixels(key, mg.t, { L, lamp }, '_mg:bezel') && X.slots['_mg:bezel']; if (s && s.cx) { s.cx.putImageData(s.img, 0, 0); x.imageSmoothingEnabled = false; x.drawImage(s.cv, SX - BZ * 4, SY - BZ * 4, BW * 4, BH * 4); } }
   // the title sign slams down onto the top edge
   const mt = mg.t - 0.24; if (mt > 0 && U) { const q = cl(mt / 0.14, 0, 1), k = q < 1 ? 1.9 - 0.9 * eb(q) : 1; x.save(); x.translate(CX, SY - 6); x.scale(k, k); x.translate(-CX, -(SY - 6)); U.marquee(x, mg.title, CX, SY - 6, { size: 52, t: mg.t, minW: 380 }); x.restore(); }
@@ -145,14 +150,14 @@ M.drawMini = function (ctx, g) {
 const padHeld = () => { try { const P = M.settings.pad, gp = [...(navigator.getGamepads ? navigator.getGamepads() : [])].find(Boolean); return !!(gp && P && gp.buttons[P.confirm] && gp.buttons[P.confirm].pressed); } catch (e) { return false; } };
 G.miniPt = function (cx, cy) { const st = this.ui.stage(); if (!st) return { x: 960, y: 540 }; const r = st.getBoundingClientRect(), s = this.ui.scale(); return { x: (cx - r.left) / s, y: (cy - r.top) / s }; };
 // D.down may return false: the press was not for the game (then the framework's empty-stage feedback runs)
-G.miniDown = function (x, y, src) { const mg = this.mini; if (!mg || this.reel) return false; mg.mx = x; mg.my = y; if (mg.D.down) { mg.holding = src; const used = mg.D.down.call(this, mg, x, y, src); this.bump(); if (used === false) { mg.holding = null; return false; } return true; } return false; };
+G.miniDown = function (x, y, src) { const mg = this.mini; if (!mg || this.reel || mg._exit) return false; mg.mx = x; mg.my = y; if (mg.D.down) { mg.holding = src; const used = mg.D.down.call(this, mg, x, y, src); this.bump(); if (used === false) { mg.holding = null; return false; } return true; } return false; };
 // a click on the stage the game did not use: a ripple and a light tick (feedback floor: nothing is ever dead to the touch)
 G.miniTap = function (x, y) { const mg = this.mini; if (!mg || this.reel || !M.SHOW || x < SX || y < SY || x > SX + SW || y > SY + SH) return; M.SHOW.tap(this, mg, x, y); this.bump(); };
 G.miniUp = function (src) { const mg = this.mini; if (!mg || !mg.holding || (src && mg.holding !== src)) return; mg.holding = null; if (mg.D.up) mg.D.up.call(this, mg); this.bump(); };
 const KEYMAP = { Space: 'act', Enter: 'act', NumpadEnter: 'act', KeyQ: 'l0', KeyW: 'up', KeyE: 'l2', ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', KeyA: 'left', KeyD: 'right', KeyS: 'down', Escape: 'back' };
 const oldKey = G.handleKey;
 G.handleKey = function (ev) {
-  const mg = this.mini; if (!mg || this.reel) return oldKey.call(this, ev);
+  const mg = this.mini; if (!mg || this.reel) return oldKey.call(this, ev); if (mg._exit) { if (KEYMAP[ev.code]) ev.preventDefault(); return; }
   const k = KEYMAP[ev.code], down = ev.type === 'keydown'; if (!k) return; ev.preventDefault(); if (down && ev.repeat) return;
   mg.keys[k] = down; if (down) this.lastInput = 'kbm';
   if (mg.D.key && mg.D.key.call(this, mg, k, down) === true) { this.bump(); return; }
@@ -176,6 +181,7 @@ G.tick = function (dt) {
   const mg = this.mini;
   if (!mg) M.MK.lampFx = null;
   if (mg && !this.reel && !this.fx.frozen) { const d0 = Math.min(dt, 0.05), d = d0 * (M.SHOW ? M.SHOW.slowK(mg) : 1); if (M.SHOW) M.SHOW.tick(this, mg, d0); if (M.SHOW && M.SHOW.frozen(mg)) { this.bump(); return; }   // 卡帧：整个小玩法停住
+    if (mg._exit) { mg.t += d0; if (mg.t - mg._exit.t0 >= EXIT) { const e = mg._exit; finishNow(this, mg, e.text, e.col, e.gains); } this.bump(); return; }
     if (!mg.signed && mg.t + d0 >= 0.38) { mg.signed = 1; if (M.SHOW) M.SHOW.shake(mg, 6); S.mini('_', 'slam', 0); }
     mg.t += d0; mg.pt += d; if (mg.msg) mg.msg.t += d0; if (mg.holding === 'pad' && !padHeld()) this.miniUp('pad'); if (this.cur && M.inputMode(this) === 'pad' && this.cur.shown) { mg.mx = this.cur.x; mg.my = this.cur.y; } try { mg.D.tick && mg.D.tick.call(this, mg, d); } catch (e) { (window.__mcErrs = window.__mcErrs || []).push('mini ' + mg.kind + ': ' + e.message); } this.bump(); }
 };
@@ -185,7 +191,7 @@ G.view = function () {
   const v = oldView.call(this), mg = this.mini;
   v.miniOn = !!mg && !this.reel;
   if (mg) { v.modalOn = false; v.tipOn = false; v.coachOn = false; if (!this.reel) v.coverOn = true;
-    const bs = mg.D.btns ? mg.D.btns.call(this, mg) || [] : [];
+    const bs = mg._exit ? [] : mg.D.btns ? mg.D.btns.call(this, mg) || [] : [];
     v.mini = { btns: bs.map(b => ({ t: b.t, sub: b.sub || '', hasSub: !!b.sub, op: b.dis ? 0.45 : 1, k: b.dis ? 'dis' : b.gold ? 'gold' : b.danger ? 'red' : 'dark', bg: b.dis ? '#15111a' : b.gold ? 'linear-gradient(180deg,#ffe08a,#d4982e)' : b.danger ? 'linear-gradient(180deg,#e05a4a,#8a2020)' : 'linear-gradient(180deg,#2e2436,#1a1420)', color: b.dis ? '#6b6570' : b.gold ? '#1a0e08' : '#f5ead4', border: b.dis ? '#2a2230' : b.gold ? '#fff3c4' : b.danger ? '#ff9a8a' : '#8a6a3a', glow: b.gold && !b.dis ? 'rgba(255,200,90,0.45)' : 'rgba(0,0,0,0)',
       onClick: () => { if (!this.mini) return; if (b.dis) { this.deny(b.why || '现在不行', '#8d8496'); return; } M.Sfx.click(); b.fn(); this.bump(); } })) };
   }
