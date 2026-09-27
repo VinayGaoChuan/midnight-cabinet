@@ -35,7 +35,7 @@ const oView = G.view;
 G.view = function () {
   const v = oView.call(this), e = this.endInfo;
   if (v.end && e && e.merged && this.screen === 'end') {
-    v.end.title = ''; v.fxZ = 70;
+    v.end.title = ''; v.fxZ = Math.max(v.fxZ || 0, 70);   // a story over the page keeps its own, higher layer
     const t = (now() - (e.at || 0)) / 1000;
     (v.end.tiles || []).forEach((tl, i) => { const q = Math.max(0, Math.min(1, (t - 1.2 - i * 0.14) / 0.35)); tl.op = q; tl.sc = (0.2 + 0.8 * q).toFixed(3); });
   }

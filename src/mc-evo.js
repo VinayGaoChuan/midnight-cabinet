@@ -83,7 +83,8 @@ M.evoFind = function (run, hide) {
 };
 M.evoMerge = function (run, three, to) {
   const V = three.reduce((a, u) => a + M.evoValue(u), 0), evo = Math.max(0, ((DB[to] && DB[to].tier) || 1) - 1);
-  const ek = Math.max(1, Math.round(M.EVO_PAY * V / ((DB[to] && DB[to].cost) || 10) * 100) / 100), sum = (f) => three.reduce((a, u) => a + (u[f] || 0), 0);
+  // a merged unit is exactly the one the shop sells (2026-09-27: 「都是老兵，一个130，1个133」 — the hidden ×1.02 it used to carry looked like a bug)
+  const ek = 1, sum = (f) => three.reduce((a, u) => a + (u[f] || 0), 0);
   let at = run.roster.length; three.forEach(u => { const i = run.roster.indexOf(u); if (i >= 0) { at = Math.min(at, i); run.roster.splice(i, 1); } });
   const nu = { uid: M.rid(), type: to, star: 1, bAtk: sum('bAtk'), bHp: sum('bHp'), lv: 1, battles: Math.max(...three.map(u => u.battles || 0)), kills: sum('kills'), mana: 0, bonusAtk: 0, evo, ek, from: three[0].type };
   run.roster.splice(at, 0, nu); M.poolAdd(run, to); run.evoN = (run.evoN || 0) + 1; if (tutOf(run)) run.tutEvo = 1;
@@ -239,7 +240,7 @@ G.view = function () {
   // the diamonds show how many of it the army already has
   if (v.s && run.shop && this.screen === 'shop') (v.s.units || []).forEach((cv, i) => { const c = (run.shop.units || [])[i], n = c ? have[c.type] || 0 : 0; cv.evoOn = !!c && !c.sold && (!M.evoOpen || M.evoOpen(run.M, c.type)); cv.evoPips = n > 0 ? pips(Math.min(2, n), 3, P.gold, '#3a3450') : []; cv.evoGo = !!c && !c.sold && n % M.EVO_NEED === M.EVO_NEED - 1 && (!M.evoOpen || M.evoOpen(run.M, c.type)); });
   // the area's pool, under the minimap
-  v.w.poolOn = this.screen === 'world' && !!run.pool;
+  v.w.poolOn = false;   // the pool is not shown any more (2026-09-27: 「部队池不要显示出来」)
   if (v.w.poolOn) {
     const pu = this.pulse && this.pulse.pool ? cl((now() - this.pulse.pool) / 900, 0, 1) : 1;
     v.w.poolSc = pu < 1 ? (1 + 0.12 * Math.sin(pu * Math.PI)).toFixed(3) : 1;
@@ -258,8 +259,7 @@ G.tipFor = function (key) {
   return oTip.apply(this, arguments);
 };
 if (M.GUIDE) M.GUIDE.push(
-  { id: 'evo', cat: '出征', icon: 'u_star', title: '进化', line: '同一种部队凑齐三支，就进化成同一条链的下一档；默认最高到稀有，再往上要建进化建筑。', scr: 'world', sel: '[data-fx="roster"]' },
-  { id: 'pool', cat: '出征', icon: 'e_card', title: '部队池', line: '每个场景每个职业一条进化链，商店和招募都从里面来。', scr: 'world', sel: '[data-tip="w-pool"]' });
+  { id: 'evo', cat: '出征', icon: 'u_star', title: '进化', line: '同一种部队凑齐三支，就进化成同一条链的下一档；默认最高到稀有，再往上要建进化建筑。', scr: 'world', sel: '[data-fx="roster"]' });
 })();
 
 ;

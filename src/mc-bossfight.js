@@ -104,9 +104,9 @@ BP.fbTick = function (e) {
   if (A.st === 'rise') { if (T >= A.t) { A.st = 'idle'; A.t = T + 0.6; } else if (Math.random() < 0.3) this.shake = Math.max(this.shake, 6); return; }
   if (this.opening || !e.alive) return;
   if (A.phase === 1 && !this.noP2 && e.hp < e.maxHp * 0.5 && (A.st === 'idle' || A.st === 'recover')) {   // 普通 difficulty: one phase only (mc-gdiff.js)
-    A.phase = 2; A.st = 'roar'; A.t0 = T; A.t = T + 1.5; this.shake = Math.max(this.shake, 22); this.flash = Math.max(this.flash, 0.4); this.flashCol = '#ff4a3a';
-    this.fxp({ k: 'ctitle', ent: e, text: (e.fb.names || {}).roar || '狂暴', col: FOE, tier: 3, side: 'E', life: 1.9 }); if (this.arena) this.arena.heat = 1; S.impact && S.impact();
-    if (M.TITAN && M.TITAN.impact) M.TITAN.impact(this, e, 'roar', e.x + FB_DX, FB_Y - 200);
+    // the second phase begins with its own show (2026-09-27: 「boss进2阶段的时候，要有个伟大的仪式感，然后再继续战斗」): the fight stands
+    // still while it plays (P2_LEN real seconds, drawn by the game over the field); then only 扫臂 and 震击 are left
+    A.phase = 2; A.st = 'roar'; A.t0 = T; A.t = Infinity; this.p2 = { e, t: 0, fired: {} }; if (this.arena) this.arena.heat = 1;
     return;
   }
   if (A.st === 'roar') { if (T >= A.t) { A.st = 'idle'; A.t = T + 0.3; } else if (Math.random() < 0.25) this.shake = Math.max(this.shake, 10); return; }
@@ -219,4 +219,46 @@ if (M.GUIDE) M.GUIDE.push(
   { id: 'elite', cat: '战斗', icon: 'u_star', title: '精英', line: '不朽的敌人，更强，打倒它积分更多。', scr: 'battle', freeze: 1, at: (g) => { const b = g.battle, e = b && b.ents.find(u => u.alive && u.elite && !u.boss && b.t > (u.entryT || 0) + 1); if (!e) return null; const h = 88 * e.sz; return fieldRect(e.x - 60, e.y - h - 80, e.x + 60, e.y + 10); } },
   { id: 'fboss', cat: '战斗', icon: 'e_skull', title: '最终首领', line: '区域尽头的首领，站在自己的地形里；血条过半进入第二阶段。', scr: 'battle', freeze: 1, at: (g) => { const b = g.battle, e = b && b.ents.find(u => u.fb && u.alive && u.ai && u.ai.st === 'idle'); return e ? fieldRect(EDGE, 60, 1910, 700) : null; } },
 );
+
+// ───────── 第二阶段的仪式 (real time, over the frozen fight) ─────────
+// 0.0 the fight stops, the screen dims, red cracks run out of the boss, a heartbeat · 0.7 the roar: white-red flash, three
+// shock rings, the army is shoved back, a hard shake · 0.9 「第二阶段」 drops in letter by letter, its roar name under it ·
+// 2.6 the dim lifts and the fight goes on
+const P2_LEN = 2.9;
+BP.step = (function (o) { return function () { if (this.p2) return; return o.apply(this, arguments); }; })(BP.step);
+const G = M.Game && M.Game.prototype;
+if (G) {
+  const FIELD_Y = 180, U = M.UI, now = () => performance.now();
+  const at = (g, e) => { const p = g.camField ? g.camField(e.x + FB_DX, FB_Y - 170) : { x: e.x, y: e.y - 160 }; return { x: p.x, y: p.y + FIELD_Y }; };
+  const once = (P, k, t, fn) => { if (P.t >= t && !P.fired[k]) { P.fired[k] = 1; try { fn(); } catch (err) {} } };
+  const oTick = G.tick;
+  G.tick = function (dt) {
+    const r = oTick.apply(this, arguments), b = this.battle, P = b && b.p2; if (!P) return r;
+    if (this.screen !== 'battle' || b.over || !P.e.alive) { b.p2 = null; if (P.e.ai) { P.e.ai.st = 'idle'; P.e.ai.t = b.t + 0.3; } return r; }
+    const t1 = now(); P.t += Math.min(0.05, (t1 - (P.last || t1)) / 1000); P.last = t1;
+    once(P, 'beat', 0.05, () => { S.heart ? S.heart() : S.tick && S.tick(6); this.fx.kick && this.fx.kick(6); });
+    once(P, 'beat2', 0.4, () => { S.heart ? S.heart() : S.tick && S.tick(8); this.fx.kick && this.fx.kick(8); });
+    once(P, 'roar', 0.7, () => { S.impact && S.impact(); S.boom && S.boom(); this.fx.kick && this.fx.kick(26); b.flash = 0.6; b.flashCol = '#ff4a3a';
+      if (M.TITAN && M.TITAN.impact) M.TITAN.impact(b, P.e, 'roar', P.e.x + FB_DX, FB_Y - 200);
+      b.ents.forEach(u => { if (u.alive && u.side !== P.e.side) { u.x = Math.max(170, u.x - 90); u.kb = b.t; u.kbDir = -1; } }); });
+    once(P, 'title', 0.9, () => { S.stamp && S.stamp(); });
+    const fc = this.ui && this.ui.cv && this.ui.cv('fx');
+    if (fc) { const g = fc.getContext('2d'), c = at(this, P.e), T = P.t, fade = Math.min(1, T / 0.25) * Math.min(1, (P2_LEN - T) / 0.35);
+      g.save(); g.setTransform(1, 0, 0, 1, 0, 0);
+      g.globalAlpha = 0.62 * fade; g.fillStyle = '#07060f'; g.fillRect(0, 0, 1920, 1080);
+      // red glow and cracks out of the boss
+      g.globalAlpha = fade; const gr = g.createRadialGradient(c.x, c.y, 0, c.x, c.y, 420); gr.addColorStop(0, 'rgba(255,74,58,0.55)'); gr.addColorStop(1, 'rgba(255,74,58,0)'); g.globalCompositeOperation = 'lighter'; g.fillStyle = gr; g.fillRect(c.x - 420, c.y - 420, 840, 840); g.globalCompositeOperation = 'source-over';
+      const cr = Math.min(1, T / 0.7); g.strokeStyle = '#ff5a3a'; g.lineWidth = 6; for (let i = 0; i < 9; i++) { let a = i * 0.7 + 0.3, x = c.x, y = c.y; g.beginPath(); g.moveTo(x, y); for (let k = 0; k < 6 * cr; k++) { a += (k % 2 ? 0.35 : -0.35); x += Math.cos(a) * 60; y += Math.sin(a) * 40; g.lineTo(x, y); } g.stroke(); }
+      // the roar's rings
+      if (T > 0.7) for (let k = 0; k < 3; k++) { const q = (T - 0.7 - k * 0.12) / 0.8; if (q <= 0 || q >= 1) continue; g.globalAlpha = fade * (1 - q); g.strokeStyle = k === 1 ? '#ffffff' : '#ff4a3a'; g.lineWidth = 14 - k * 3; g.beginPath(); g.ellipse(c.x, c.y, 40 + q * 1100, 30 + q * 620, 0, 0, 7); g.stroke(); }
+      if (T > 0.7 && T < 0.9) { g.globalAlpha = (0.9 - T) / 0.2 * 0.7; g.fillStyle = '#ffe6d8'; g.fillRect(0, 0, 1920, 1080); }
+      // 第二阶段, letter by letter, and the boss's own roar under it
+      if (T > 0.9 && U) { const w = '第二阶段', n = w.length; for (let i = 0; i < n; i++) { const q = (T - 0.9 - i * 0.1) / 0.18; if (q <= 0) continue; const k = q < 1 ? 1 + 1.4 * (1 - q) : 1; g.globalAlpha = fade * Math.min(1, q * 2); g.save(); g.translate(960 + (i - (n - 1) / 2) * 130, 420); g.scale(k, k); U.text(g, w[i], 0, 0, 120, '#ff4a3a', { outline: true }); g.restore(); }
+        if (T > 1.4) { g.globalAlpha = fade * Math.min(1, (T - 1.4) / 0.3); U.text(g, (P.e.fb && P.e.fb.names && P.e.fb.names.roar) || '狂暴', 960, 540, 44, '#ffe08a', { outline: true }); } }
+      g.restore(); }
+    if (P.t >= P2_LEN) { b.p2 = null; const A = P.e.ai; if (A) { A.st = 'idle'; A.t = b.t + 0.3; } }
+    return r;
+  };
+  const oLS = G.longShow; if (oLS) G.longShow = function () { return !!(this.battle && this.battle.p2) || oLS.apply(this, arguments); };
+}
 })();

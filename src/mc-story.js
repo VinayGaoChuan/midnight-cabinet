@@ -109,7 +109,9 @@ G.storyClick = function () { const F = this.storyFx; if (!F || F.out != null) re
 const oView = G.view;
 G.view = function () { const v = oView.call(this); if (this.storyFx) { v.fxZ = 88; v.coverOn = true; v.coverClick = () => this.storyClick(); } return v; };
 const oLS = G.longShow; if (oLS) G.longShow = function () { return !!this.storyFx || oLS.apply(this, arguments); };
-const oBusy = G.baseBusy; if (oBusy) G.baseBusy = function () { return !!this.storyFx || oBusy.apply(this, arguments); };
+// only the base is locked while a story plays (on the chapter's end page the story's own click layer takes the clicks —
+// 2026-09-27: after 守墓人 the base lock sat over the end page and swallowed every click)
+const oBusy = G.baseBusy; if (oBusy) G.baseBusy = function () { return (!!this.storyFx && this.screen === 'base') || oBusy.apply(this, arguments); };
 // the map does not walk on while a story is told
 const oWT = G.worldTap; if (oWT) G.worldTap = function () { if (this.storyFx) return false; return oWT.apply(this, arguments); };
 // keys and pads: Enter / Space / Esc go on, like a click

@@ -60,7 +60,7 @@ const wrap = (obj, name, before, after) => { const o = obj[name]; if (typeof o !
 // ───────── session & game ─────────
 let started = false;
 wrap(G, 'tick', null, function () {
-  if (!started) { started = true; const p = this.prof || {}; T.ev('session', { plat: M.platform, input: M.inputMode ? M.inputMode(this) : '', w: innerWidth, h: innerHeight, lang: navigator.language, host: location.hostname || 'file', prof: { games: (p.stats || {}).games || 0, tokens: p.tokens || 0, furn: p.furn || {}, ach: Object.keys(p.ach || {}).length }, save: { day: this.meta.day, tut: !!this.meta.tutDone } }); }
+  if (!started) { started = true; const p = this.prof || {}; T.ev('session', { plat: M.platform, input: M.inputMode ? M.inputMode(this) : '', w: innerWidth, h: innerHeight, boot: Math.round(performance.now()),   /* ms from opening the page to the first frame: a slow start shows up here */ lang: navigator.language, host: location.hostname || 'file', prof: { games: (p.stats || {}).games || 0, tokens: p.tokens || 0, furn: p.furn || {}, ach: Object.keys(p.ach || {}).length }, save: { day: this.meta.day, tut: !!this.meta.tutDone } }); }
   const errs = window.__mcErrs || []; if (errs.length > (T.errN || 0)) { errs.slice(T.errN || 0).forEach(e => T.ev('error', { msg: String(e).slice(0, 300) })); T.errN = errs.length; }
   T.frames = (T.frames || 0) + 1; const now = Date.now(); if (!T.perfT) T.perfT = now; if (now - T.perfT > 30000) { T.ev('perf', { fps: Math.round(T.frames * 1000 / (now - T.perfT)) }); T.frames = 0; T.perfT = now; }
   if (now - T.lastFlush > 45000) T.flush('timer');

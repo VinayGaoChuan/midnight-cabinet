@@ -62,7 +62,7 @@ M.genMap2 = function (run) { if (run && run.len && !(run.region && run.region.tu
 const oSpawn = BP.spawnEnemy;
 BP.spawnEnemy = function () { const e = oSpawn.apply(this, arguments), k = this.run && this.run.M ? gdOf(this.run.M).eliteK : 1; if (e && e.elite && !e.boss && k !== 1) { e.hp *= k; e.maxHp *= k; e.atk *= k; } return e; };
 const oInit = BP.init;
-BP.init = function (run) { const r = oInit.apply(this, arguments), D = run && run.M ? gdOf(run.M) : GD[1]; this.noP2 = !D.p2; this.fbFast = D.fast || 0; return r; };
+BP.init = function (run) { const r = oInit.apply(this, arguments), D = run && run.M ? gdOf(run.M) : GD[1]; this.noP2 = false;   /* every difficulty has the second phase (2026-09-27) */ this.fbFast = D.fast || 0; return r; };
 // the chapters are played at their plain difficulty; what the game's difficulty pays comes on top
 const DIFF0 = M.DIFFS && M.DIFFS[0];
 if (DIFF0) M.diffOf = (m) => { const D = gdOf(m); return Object.assign({}, DIFF0, { loot: D.loot, exp: D.loot, bb: D.bb }); };
