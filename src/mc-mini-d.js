@@ -94,7 +94,7 @@ MINI.spring = { title: '地下温泉', img: 'e_spring', col: C.teal, text: '泉�
 // 走到最后一列：逐拍加码（箱子在品质色里抖、箱缝漏光，升档那拍撬开一条缝）→ 卡帧 → 箱盖飞开、品质色光柱冲天 → 奖励逐项砸出；
 // 然后没踩到的雷一颗颗亮红灯，一颗都没踩就变成烟花升空
 const TC = 6, TR = 3, TW = 148, TH = 128, TRX0 = K.lx(39), TRY0 = K.ly(43), TCHEST = { x: K.lx(278), y: K.ly(91) };
-const trapQC = [['linen', 10, [244, 239, 224]], ['teal', 9, [71, 214, 193]], ['arcane', 9, [184, 107, 255]], ['lamp', 10, [255, 207, 74]]];
+const trapQC = [['linen', 10, [244, 239, 224]], ['water', 9, [79, 143, 255]], ['arcane', 9, [184, 107, 255]], ['fire', 9, [255, 154, 60]]];   // the show's four steps in stage materials (M.QUALITY 普通 / 稀有 / 史诗 / 传说)
 const trapSlot = () => M.PXR && M.PXR.slots['_mg:mini_trap'];
 const tileC = (r, c) => ({ x: TRX0 + c * TW + TW / 2, y: TRY0 + r * TH + TH / 2 });
 MINI.trap = { title: '地雷阵', img: 'e_trap', col: C.amber, text: '对面有个箱子。地上的数字告诉你周围埋了几颗雷。一次走一格。',
@@ -433,38 +433,40 @@ MINI.arena = { title: '斗兽场', img: 'e_arena', col: C.red, text: '两头怪�
   } };
 
 // ═════════════════════ 营火 · rest through the night, or sharpen on the beat ═════════════════════
-// 安静、暖：歇完火星往上飘、小中一档、心飞向生命条；磨刀每一刀下在点上是连击，火星一刀比一刀多
+// 像素舞台（mc-pxroom-mini-d.js 的 mini_camp）：林间空地，帐篷、原木、营火和吊锅、萤火虫、架在两个树桩上的长磨刀石。
+// 休息：领袖钻进帐篷，月亮在 2.2 秒里划过夜空、火烧成余烬、东边天空亮成黎明，心从炊烟里飞向生命条。
+// 磨刀：刀在磨刀石上来回滑，刀身上那一点小亮点正好在石头中间的旧磨痕上时下刀：一大把火花、营火蹿一下、刀刃烧红一格，连击往上；
+// 没在点上：钝响、几颗暗火星。前四刀全中时第五刀听牌；第五刀之后卡帧揭晓：全中时刀光从刀根扫到刀尖、营火蹿起火柱
+const CPS = { x: K.lx(226), y: K.ly(142) }, CPF = { x: K.lx(128), y: K.ly(140) };
 MINI.camp = { title: '营火', img: 'e_camp', col: C.amber, text: '火堆还温着。歇一夜，或者就着火光把刀磨快。',
-  init(mg) { mg.hits = 0; mg.strokes = 0; mg.spark = 0; },
-  stroke(mg) { if (mg.phase !== 'sharpen') return; const q = (mg.pt * 1.1) % 1, e = Math.abs(q - 0.5), ok = e < 0.09; mg.strokes++; mg.spark = 1;
-    if (ok) { mg.hits++; S.tone(1800, 0.12, 'triangle', 0.1); this.fx.spark(CX + 80, SY + 250, '#ffe08a', 14, { dir: -Math.PI / 2, spread: 2, v: 700 });
-      const n = SHOW.combo(this, mg, CX, SY + 190, e < 0.03 ? 'PERFECT' : null); this.fx.spark(CX + 80, SY + 250, C.amber, 4 * n, { dir: -Math.PI / 2, spread: 2.4, v: 500 + n * 120 }); if (n >= 3) this.fx.flare(CX + 80, SY + 250, 120 + n * 20, C.butter, 0.18); }
-    else { S.tone(300, 0.08, 'square', 0.05); SHOW.comboBreak(mg); SHOW.stamp(mg, 'MISS', CX, SY + 190, C.steel, 40, 0.5); }
-    if (mg.strokes >= 5) { this.miniSet('sharpDone'); MINI.camp.sharpEnd.call(this, mg); } },
-  sharpEnd(mg) { const run = this.run, k = 0.05 + mg.hits * 0.04, tier = mg.hits >= 5 ? 2 : mg.hits ? 1 : 0; run.runBuff.heroAtk = (run.runBuff.heroAtk || 0) + k; S.mini('camp', 'sharpen');
-    if (tier) SHOW.later(mg, 0.35, () => { SHOW.win(this, mg, tier, { x: CX + 80, y: SY + 280, v: Math.round(k * 100), col: C.amber, label: tier === 2 ? 'PERFECT' : '' }); embers(this, 12 + tier * 10); });
+  init(mg) { mg.hits = 0; mg.strokes = 0; mg.spark = 0; mg.flare = 0; mg.q = 0.5; },
+  stroke(mg) { if (mg.phase !== 'sharpen') return; const q = (mg.pt * 1.1) % 1, e = Math.abs(q - 0.5), ok = e < 0.09; mg.strokes++; mg.spark = 1; mg.strokeT = mg.t; const s = M.PXR && M.PXR.slots['_mg:mini_camp'], tipX = K.ax(CPS.x) + (q - 0.5) * 60;
+    if (ok) { mg.hits++; mg.flare = 1; S.tone(1800, 0.12, 'triangle', 0.1); S.mini('camp', 'clang', mg.hits); if (s) { s.burst('spark', tipX, 140, 16 + mg.hits * 4, { sp: 60, ang: 0, spread: 1.6, life: 0.9, floor: 146 }); s.flash(0, 0.6); }
+      const n = SHOW.combo(this, mg, CPS.x, CPS.y - 200, e < 0.03 ? 'PERFECT' : null); SHOW.burst(mg, K.lx(tipX), CPS.y - 12, 6 + n * 3, { ramp: [C.white, C.butter, C.gold, C.amber], sp: [200, 520], life: [0.2, 0.5], ang: -Math.PI / 2, spread: 1.6, g: 600 }); SHOW.shake(mg, 2 + n);
+      if (mg.hits === 4 && mg.strokes === 4) SHOW.reach(this, mg, { x: CPS.x, y: CPS.y - 10, r: 120, col: C.gold, label: '' }); }
+    else { S.tone(300, 0.08, 'square', 0.05); S.mini('camp', 'scrape'); SHOW.comboBreak(mg); SHOW.calm(mg); SHOW.stamp(mg, 'MISS', CPS.x, CPS.y - 200, C.steel, 40, 0.5); if (s) s.burst('spark', tipX, 140, 3, { sp: 20, ang: 0, spread: 1, life: 0.3 }); }
+    if (mg.strokes >= 5) { this.miniSet('sharpDone'); mg.doneT = mg.t; MINI.camp.sharpEnd.call(this, mg); } },
+  sharpEnd(mg) { const run = this.run, k = 0.05 + mg.hits * 0.04, tier = mg.hits >= 5 ? 2 : mg.hits ? 1 : 0; run.runBuff.heroAtk = (run.runBuff.heroAtk || 0) + k; S.mini('camp', 'sharpen'); SHOW.calm(mg);
+    if (tier) SHOW.hitstop(mg, 0.12, CPS.x, CPS.y - 12, () => { if (tier >= 2) { mg.flare = 2; SHOW.reveal(this, mg, 2, { x: CPS.x, y: CPS.y - 20, col: C.gold }); } SHOW.later(mg, 0.2, () => { SHOW.win(this, mg, tier, { x: CPS.x, y: CPS.y - 60, v: Math.round(k * 100), col: C.amber, label: tier === 2 ? 'PERFECT' : '' }); embers(this, 12 + tier * 10, CPF.x, CPF.y); SHOW.items(this, mg, [{ text: '领袖攻击 +' + Math.round(k * 100) + '%', col: C.gold, size: 40 }], { x: CX, y: SY + 420 }); }); });
     else SHOW.state(mg).gray = 0.6;
-    endIn(this, mg, tier ? 0.35 + TIER_END[tier - 1] + 0.1 : 0.6, mg.hits + ' / 5 刀磨在点上。本局领袖攻击 +' + Math.round(k * 100) + '%。', '#f2c14e'); },
-  down(mg) { MINI.camp.stroke.call(this, mg); },
+    endIn(this, mg, tier ? 0.47 + TIER_END[tier - 1] + 0.1 : 0.6, mg.hits + ' / 5 刀磨在点上。本局领袖攻击 +' + Math.round(k * 100) + '%。', '#f2c14e'); },
+  down(mg, px, py) { if (mg.phase === 'sharpen') MINI.camp.stroke.call(this, mg); else { SHOW.tap(this, mg, px, py); const s = M.PXR && M.PXR.slots['_mg:mini_camp']; if (s) s.burst('ember', 128, 134, 4, { sp: 16, ang: 0, spread: 0.8, life: 1.2 }); S.mini('camp', 'pop'); } },
   key(mg, k, down) { if (k === 'act' && down && mg.phase === 'sharpen') { MINI.camp.stroke.call(this, mg); return true; } },
-  btns(mg) { const run = this.run; if (mg.phase === 'idle') return [{ t: '休息', sub: '领袖回复 ' + (run.mods.campHalf ? 12 : 30) + '% 生命', gold: 1, fn: () => { this.miniSet('rest'); S.mini('camp', 'rest'); } }, { t: '磨刀', sub: '火星飞到正中时下刀 · 5 次', fn: () => this.miniSet('sharpen') }];
+  btns(mg) { const run = this.run; if (mg.phase === 'idle') return [{ t: '休息', sub: '领袖回复 ' + (run.mods.campHalf ? 12 : 30) + '% 生命', gold: 1, fn: () => { this.miniSet('rest'); S.mini('camp', 'rest'); } }, { t: '磨刀', sub: '刀上的亮点到石头中间的磨痕时下刀 · 5 次', fn: () => this.miniSet('sharpen') }];
     if (mg.phase === 'sharpen') return [{ t: '下刀', sub: '空格 / 点击 · ' + mg.strokes + ' / 5', gold: 1, fn: () => MINI.camp.stroke.call(this, mg) }]; return []; },
-  tick(mg, dt) { mg.spark = Math.max(0, mg.spark - dt * 4); const run = this.run;
-    if (mg.phase === 'rest' && mg.pt > 2.2 && !mg.fin) { mg.fin = true; const pct = run.mods.campHalf ? 0.12 : 0.3, from = { x: CX - 220, y: FLOOR - 110 }; embers(this, 26); this.fx.ring(CX, FLOOR - 50, 10, 200, C.amber, 4, 0.6);
+  tick(mg, dt) { mg.spark = Math.max(0, mg.spark - dt * 4); mg.flare = Math.max(0, mg.flare - dt * 2.5); if (mg.phase === 'sharpen') mg.q = (mg.pt * 1.1) % 1; const run = this.run;
+    if (mg.phase === 'rest' && mg.pt > 2.2 && !mg.fin) { mg.fin = true; const pct = run.mods.campHalf ? 0.12 : 0.3, from = { x: K.lx(44), y: K.ly(110) }; embers(this, 26, CPF.x, CPF.y); SHOW.ring(mg, CPF.x, CPF.y, 10, 200, C.amber, { life: 0.6 });
       SHOW.win(this, mg, 1, { x: from.x, y: from.y, v: hpPct(this, pct), col: C.lime }); healFly(this, mg, pct, from); endIn(this, mg, 1.25, () => '你在火边睡了一夜。回复 ' + mg.healV + ' 生命。', '#9ccc6a'); } },
   draw(x, mg) {
-    const t = mg.t, rest = mg.phase === 'rest', nq = rest ? cl(mg.pt / 2.6, 0, 1) : 0; bgv(x, rest ? '#0a0c20' : '#12101e', '#040306');
-    const ma = Math.PI + nq * Math.PI; K.CI(x, CX + Math.cos(ma) * 480, SY + 330 + Math.sin(ma) * 220, 34, '#f5e8c0'); for (let i = 0; i < 30; i++) K.R(x, SX + (i * 97) % SW, SY + 70 + (i * 53) % 260, 2, 2, 'rgba(255,255,255,' + (0.3 + 0.3 * Math.sin(t * 2 + i)) + ')');
-    const warm = mg.fin && rest ? 0.2 : 0, fev = mg.sh && mg.sh.fever ? 0.15 : 0;
-    K.R(x, SX, FLOOR, SW, SH, '#141008'); const fx0 = CX, fy0 = FLOOR - 10; K.GL(x, fx0, fy0 - 60, 360 + 120 * (warm + fev), '#ff8a3a', 0.5 + warm + fev + 0.1 * Math.sin(t * 9)); K.LN(x, fx0 - 60, fy0 + 10, fx0 + 60, fy0 - 10, 12, C.brown); K.LN(x, fx0 - 60, fy0 - 10, fx0 + 60, fy0 + 10, 12, C.umber);
-    for (let i = 0; i < 3; i++) { const f = (0.8 + 0.25 * Math.sin(t * 13 + i * 2)) * (1 + warm + fev); x.fillStyle = [C.amber, C.gold, C.butter][i]; x.beginPath(); x.moveTo(fx0 - 40 + i * 12, fy0); x.quadraticCurveTo(fx0 - 30 + i * 10, fy0 - 60 * f, fx0 + Math.sin(t * 7 + i) * 8, fy0 - (120 - i * 30) * f); x.quadraticCurveTo(fx0 + 30 - i * 10, fy0 - 60 * f, fx0 + 40 - i * 12, fy0); x.fill(); }
-    for (let i = 0; i < 10; i++) { const q = (t * 0.6 + i / 10) % 1; K.R(x, fx0 + Math.sin(i * 3 + q * 5) * 40, fy0 - 60 - q * 300, 3, 3, 'rgba(255,200,90,' + (1 - q) + ')'); }
-    // 睡觉的 Z：冰蓝像素字，边往上飘边淡掉
-    if (rest) { K.SP(x, heroSp(this), CX - 220, FLOOR + 10, 150); for (let i = 0; i < 3; i++) { const q = (t * 0.5 + i / 3) % 1; x.save(); x.globalAlpha *= 1 - q; U.text(x, 'Z', Math.round((CX - 200 + q * 60)), Math.round((FLOOR - 170 - q * 90)), [T.cap, T.btn, T.title][i], C.ice, { num: true }); x.restore(); } }
-    else { K.SP(x, heroSp(this), CX - 230, FLOOR, 180); }
-    // 磨刀条：石板槽 + 琥珀目标区 + 奶油中线，火星是方块
-    if (mg.phase === 'sharpen' || mg.phase === 'sharpDone') { const q = (mg.pt * 1.1) % 1, bx = Math.round(CX - 260 + q * 520); U.box(x, CX - 280, SY + 300, 560, 40, C.slate); K.R(x, CX - 42, SY + 300, 84, 40, C.amber); K.R(x, CX - 3, SY + 296, 6, 48, C.butter);
-      if (mg.phase === 'sharpen') { K.GL(x, bx, SY + 320, 40, C.butter, 0.8); U.box(x, bx - 9, SY + 311, 18, 18, C.white); } x.save(); x.translate(CX + 80, SY + 250); x.rotate(-0.3 - mg.spark * 0.3); if (fev) K.GL(x, 0, 0, 160, C.butter, 0.3 + 0.2 * Math.sin(t * 14)); K.PL(x, [[-160, -8], [60, -14], [80, 0], [60, 14], [-160, 8]], C.silver); K.R(x, -200, -10, 40, 20, C.brown); x.restore(); U.text(x, mg.hits + ' / ' + mg.strokes, CX, SY + 390, T.title, C.gold, { num: true }); }
+    const t = mg.t, rest = mg.phase === 'rest';
+    if (!K.pxr(x, 'mini_camp', 0, 0, t, { mg, t })) bgv(x, '#12101e', '#040306');
+    const hk = catHero(this);
+    // 领袖：坐在原木边烤火；休息时走进帐篷（帐篷口飘出 Z）；磨刀时站在磨刀石右端，每一刀出手一下
+    if (rest) { const q = cl(mg.pt / 0.8, 0, 1), lx = K.lx(96) - q * (K.lx(96) - K.lx(46)); if (q < 1 && hk) { x.save(); x.globalAlpha = 1 - q * 0.9; M.PXR.MINI_D.cast(x, hk, lx, K.ly(146), 'move', Math.floor(t * 12) % 8, true); x.restore(); }
+      for (let i = 0; i < 3; i++) { const z = (t * 0.5 + i / 3) % 1; if (mg.pt < 0.8) continue; x.save(); x.globalAlpha = 1 - z; U.text(x, 'Z', K.snap(K.lx(50) + z * 60), K.snap(K.ly(104) - z * 90), [T.cap, T.btn, T.title][i], C.ice, { num: true }); x.restore(); } }
+    else if (mg.phase === 'sharpen' || mg.phase === 'sharpDone') { const st = mg.strokeT != null ? t - mg.strokeT : 9, b = hk && M.PCDG.body(hk), sf = b ? Math.max(1, Math.round(b.strike * 12)) : 2; if (hk) M.PXR.MINI_D.cast(x, hk, K.lx(288), K.ly(150), st < 0.2 ? 'attack' : 'idle', st < 0.2 ? sf : Math.floor(t * 12) % 24, true); }
+    else if (hk) M.PXR.MINI_D.cast(x, hk, K.lx(96), K.ly(146), 'idle', Math.floor(t * 12) % 24, false); else K.SP(x, heroSp(this), CX - 230, FLOOR, 180);
+    if (mg.phase === 'sharpen' || mg.phase === 'sharpDone') U.text(x, mg.hits + ' / ' + mg.strokes, CPS.x, CPS.y + 70, T.title, C.gold, { num: true });
   } };
 
 // ═════════════════════ 招募旗 · curtains lift one by one ═════════════════════
@@ -480,43 +482,54 @@ M.recruitTrio = function (run) {
   }
   return out;
 };
-// 掀帘前每个人影先在帘子后亮品质色（越好亮得越久、抖得越凶），三个里最好的那个可能升格；帘子一下掀上去；
-// 选中的那张砸一下，按品质走中奖档（传说 4 · 史诗 3 · 稀有 2 · 普通 1），人飞进队伍栏
+// 像素舞台（mc-pxroom-mini-d.js 的 mini_recruit）：十字路口的募兵站，大战旗下三个皮影棚。和夜市抽卡分开：这里没有卡牌，是面试——
+// 帆布上映着应征者自己的剪影；棚后的油灯逐拍亮起品质色（拍数 = 3 + 品质，一拍比一拍快、剪影一拍比一拍抖得凶），升档那一拍
+// 灯芯蹿高、帆布边烧焦；卡帧 → 幕布落下 → 应征者当场亮一手（它自己的攻击动作，史诗以上再接施放）→ 名字、职业、战斗力逐项砸出。
+// 选中：它往前一步，另外两棚的灯暗下去，它跑进队伍栏
+const RBX = [K.lx(68), K.lx(150), K.lx(232)], RBF = K.ly(138), RBTOP = K.ly(44), RBBOT = K.ly(140);
+const showQ = (q) => q <= 1 ? 0 : q === 2 ? 1 : q === 3 ? 2 : 3;   // M.QUALITY (6 steps) → the show's 4 steps
 MINI.recruit = { title: '招募旗', img: 'e_flag', col: C.blue, text: '旗子下面站着三个人影。帘子一掀开，只有一个能跟你走。',
-  init(mg) { const run = this.run; if (this.node) run.lastL = M.levelAt(run, this.node); mg.pool = M.recruitTrio(run); mg.cards = mg.pool.map((k, i) => ({ k, x: CX - 330 + i * 330, y: SY + 380, lift: 0, q: M.DB[k].q | 0, s: -1 }));
-    const best = Math.max(...mg.cards.map(c => c.q)), bi = mg.cards.findIndex(c => c.q === best); let t0 = 0.45;
-    mg.cards.forEach((c, i) => { c.path = i === bi ? SHOW.omenPath(c.q) : [c.q]; c.t0 = t0; c.od = 0.3 + 0.18 * c.q + (c.path.length - 1) * 0.32; c.la = t0 + c.od; t0 = c.la + 0.12; }); },
-  take(mg, i) { if (mg.phase !== 'idle') return; const c = mg.cards[i], run = this.run; if (!M.canAdd(run, c.k)) { S.mini('recruit', 'full'); this.deny('队伍满了', '#d0453c'); return; } mg.cur = i; this.miniSet('take'); S.up(2); this.fx.rays(c.x, c.y - 60, M.QUALITY[M.DB[c.k].q].c, 1, { r: 260 });
-    const tier = c.q + 1, from = { x: c.x, y: c.y - 40 }, fly = tier === 4 ? 0.8 : 0.3; mg.cards.forEach((o, j) => { if (o.la > mg.t) o.la = mg.t + (j === i ? 0 : 0.1); });   // 还没掀开的帘子：选中的马上掀
-    this.fx.kick(4 + tier * 2); this.fx.ring(c.x, c.y, 20, 200, QC(c.q), 6, 0.3);
-    SHOW.later(mg, 0.1, () => SHOW.win(this, mg, tier, { x: c.x, y: c.y - 20, col: tier >= 3 ? C.gold : QC(c.q), label: tier === 4 ? '大奖' : tier === 3 ? '大赢' : '' }));
+  init(mg) { const run = this.run; if (this.node) run.lastL = M.levelAt(run, this.node); mg.pool = M.recruitTrio(run); mg.cards = mg.pool.map((k, i) => ({ k, x: RBX[i], y: SY + 380, lift: 0, q: showQ(M.DB[k].q | 0), s: -1, shake: 0, lampK: 0 }));
+    const best = Math.max(...mg.cards.map(c => c.q)), bi = mg.cards.findIndex(c => c.q === best); let t0 = 0.5;
+    mg.cards.forEach((c, i) => { c.path = i === bi ? SHOW.omenPath(c.q) : [c.q]; c.t0 = t0; c.od = 0.55 + 0.25 * c.q + (c.path.length - 1) * 0.35; c.la = t0 + c.od; t0 = c.la + 0.35;
+      const n = 3 + c.q; c.beats = []; for (let k = 0; k < n; k++) c.beats.push(c.t0 + c.od * (1 - Math.pow(0.78, k + 1)) / (1 - Math.pow(0.78, n))); c.bi = 0; }); },
+  take(mg, i) { if (mg.phase !== 'idle') return; const c = mg.cards[i], run = this.run; if (!M.canAdd(run, c.k)) { S.mini('recruit', 'full'); c.nope = mg.t; this.deny('队伍满了', '#d0453c'); return; } mg.cur = i; this.miniSet('take'); S.up(2);
+    const tier = c.q + 1, from = { x: c.x, y: RBF - 60 }, fly = tier === 4 ? 0.8 : 0.4; mg.cards.forEach((o, j) => { if (j !== i) o.dim = 1; if (o.la > mg.t) o.la = mg.t + (j === i ? 0 : 0.1); });   // 还没掀开的帘子：选中的马上掀
+    c.stepT = mg.t; this.fx.kick(4 + tier * 2); SHOW.white(mg, 0.25); SHOW.ring(mg, c.x, from.y, 20, 200, QC(c.q), { life: 0.3 }); S.mini('recruit', 'salute');
+    SHOW.later(mg, 0.1, () => SHOW.win(this, mg, tier, { x: c.x, y: from.y, col: tier >= 3 ? C.gold : QC(c.q), label: tier === 4 ? '大奖' : tier === 3 ? '大赢' : '' }));
     SHOW.later(mg, fly, () => { c.gone = mg.t; give(this, mg, [{ k: 'unit', type: c.k }], from); });
     endIn(this, mg, fly + [0.6, 0.9, 1.5, 2.3][tier - 1], M.DB[c.k].n + ' 跟上了你。', QC(c.q)); },
-  down(mg, px, py) { mg.cards.forEach((c, i) => { if (Math.abs(px - c.x) < 130 && Math.abs(py - c.y) < 190) MINI.recruit.take.call(this, mg, i); }); },
-  btns(mg) { if (mg.phase !== 'idle') return []; return mg.cards.map((c, i) => ({ t: '选 ' + M.DB[c.k].n, sub: (M.DB[c.k].voc || '') + ' · 战力 ' + M.unitPower(c.k), dis: !M.canAdd(this.run, c.k), why: '队伍满了', fn: () => MINI.recruit.take.call(this, mg, i) })).concat([{ t: '都不要', leave: 1, fn: () => this.miniFinish('旗子在风里响了一会儿。', '#8d8496') }]); },
-  tick(mg) {
-    mg.cards.forEach(c => { const k = mg.t - c.t0;
-      if (k >= 0 && mg.t < c.la) { const s = Math.min(c.path.length - 1, Math.floor(k / (c.od / c.path.length))); if (s !== c.s) { if (c.s < 0) SHOW.omen(this, mg, c.path[s]); else SHOW.promote(this, mg, c.x, c.y - 40, c.path[s]); c.s = s; } }
+  down(mg, px, py) { let hit = false; mg.cards.forEach((c, i) => { if (Math.abs(px - c.x) < 124 && py > RBTOP - 30 && py < RBBOT + 60) { hit = true; MINI.recruit.take.call(this, mg, i); } }); if (!hit) SHOW.tap(this, mg, px, py); },
+  btns(mg) { if (mg.phase !== 'idle') return []; return mg.cards.map((c, i) => ({ t: '选 ' + M.DB[c.k].n, sub: (M.DB[c.k].voc || '') + ' · 战力 ' + M.unitPower(c.k), dis: !M.canAdd(this.run, c.k), why: '队伍满了', fn: () => MINI.recruit.take.call(this, mg, i) })).concat([{ t: '都不要', leave: 1, fn: () => { mg.cards.forEach(c => { c.dim = 1; }); S.mini('recruit', 'none'); this.miniSet('none'); SHOW.later(mg, 0.4, () => { if (this.mini === mg) this.miniFinish('旗子在风里响了一会儿。', '#8d8496'); }); } }]); },
+  tick(mg, dt) {
+    mg.cards.forEach(c => { c.shake = Math.max(0, c.shake - dt * 3); c.lampK = Math.max(0, c.lampK - dt * 3);
+      // 逐拍加码：灯一拍比一拍亮、剪影一拍比一拍抖，拍到升档那一拍：灯芯蹿高、帆布边烧焦
+      while (c.bi < c.beats.length && mg.t >= c.beats[c.bi] && mg.t < c.la) { const k = c.bi++, n = c.beats.length, s = Math.min(c.path.length - 1, Math.floor(k * c.path.length / n)), up = s > c.s && c.s >= 0;
+        if (c.s < 0) SHOW.omen(this, mg, c.path[s]); c.s = s; c.shake = 1 + k * 0.5; c.lampK = 0.6 + k * 0.25; SHOW.beat(this, mg, c.x, RBF - 150, k, c.path[s], up); S.mini('recruit', 'lamp', c.path[s]);
+        if (up) { c.scorch = 1; c.flareT = mg.t; S.mini('recruit', 'flare'); } }
       c.lift = cl((mg.t - c.la) / 0.28, 0, 1);
-      if (mg.t >= c.la && !c.snd) { c.snd = 1; const last = c.path.length - 1; if (c.s >= 0 && c.s < last) SHOW.promote(this, mg, c.x, c.y - 40, c.path[last]); c.s = last; c.pop = mg.t;
-        S.mini('recruit', 'curtain'); S.mini('recruit', 'reveal'); const col = QC(c.q); this.fx.burst(c.x, c.y - 180, col, 10 + 6 * c.q); this.fx.kick(2 + c.q * 2); if (c.q >= 3) this.fx.rays(c.x, c.y - 40, col, 0.8, { r: 200 + 40 * c.q }); } }); },
+      if (mg.t >= c.la && !c.snd) { c.snd = 1; c.s = c.path.length - 1; const cc = c;
+        SHOW.hitstop(mg, 0.12, c.x, RBF - 150, () => { cc.dropT = mg.t; cc.showT = mg.t; S.mini('recruit', 'curtain'); S.mini('recruit', 'reveal'); SHOW.reveal(this, mg, cc.q, { x: cc.x, y: RBF - 110 });
+          const s2 = M.PXR && M.PXR.slots['_mg:mini_recruit']; if (s2) s2.burst('dust', K.ax(cc.x), 138, 14, { sp: 18, spread: 3, ang: 0, life: 1.2, w: 50 });
+          const D = M.DB[cc.k]; SHOW.items(this, mg, [{ text: D.n, col: QC(cc.q), size: 34 }, { text: (D.voc || '') + ' · 战力 ' + M.unitPower(cc.k), col: C.cream, size: 26 }], { x: cc.x, y: SY + 600, dy: 40, gap: 0.16 });
+          if (mg.cards.every(o => o.dropT != null)) SHOW.ambient(mg, Math.max(...mg.cards.map(o => o.q))); }); } }); },
   draw(x, mg) {
-    const t = mg.t; bgv(x, '#141a2a', '#06080e'); K.R(x, SX, FLOOR - 20, SW, 140, '#2a2018');
-    mg.cards.forEach((c, i) => { const D = M.DB[c.k], Q = M.QUALITY[D.q], hov = mg.phase === 'idle' && Math.abs(mg.mx - c.x) < 130 && Math.abs(mg.my - c.y) < 190, sel = mg.phase === 'take' && mg.cur === i, dim = mg.phase === 'take' && mg.cur !== i;
-      x.save(); if (dim) x.globalAlpha = 0.35; const slam = sel ? 30 * Math.max(0, 1 - mg.pt / 0.18) : 0, y = c.y - (hov || sel ? 16 : 0) + slam, pk = c.pop != null ? 1 + 0.08 * Math.exp(-(t - c.pop) * 8) : 1;
-      x.translate(c.x, y); x.scale(pk, pk); x.translate(-c.x, -y);
-      // 卡：品质色框 + 墨边 + 9px 硬投影；名字是品质色签；帘子酒红，杆子金色
-      K.card(x, c.x - 130, y - 200, 260, 380, Q.c, hov || sel, C.abyss); K.GL(x, c.x, y + 20, 200, Q.c, 0.3 * c.lift);
-      if (!c.gone) K.SP(x, c.k, c.x, y + 110, 210); else { x.save(); x.globalAlpha *= cl(1 - (t - c.gone) / 0.2, 0, 1); K.SP(x, c.k, c.x, y + 110, 210); x.restore(); }
-      const tv = M.TAG.voc(D.voc); if (tv) K.IC(x, tv.icon, c.x + 100, y - 170, 44);
-      K.chipC(x, D.n, c.x, y + 150, Q.c, T.body);
-      // 帘子后面的人影在品质色里亮、帘子跟着抖，底边漏出一道光；掀的时候一下弹上去
-      const cu = 1 - eo(c.lift); if (cu > 0) { const om = c.s >= 0 && mg.t < c.la + 0.28, oq = om ? c.path[c.s] : 0, ok = om ? cl((t - c.t0) / c.od, 0.2, 1) : 0; let jd = { dx: 0, dy: 0 };
-        x.save(); if (om) { jd = SHOW.aura(x, c.x, y - 10, 150, oq, t, ok); x.translate(jd.dx, jd.dy); }
-        const ch = Math.round(372 * cu); K.R(x, c.x - 126, y - 196, 252, ch, K.LG(x, c.x - 126, 0, c.x + 126, 0, [[0, C.umber], [0.5, C.wine], [1, C.umber]])); for (let k = 0; k < 6; k++) K.R(x, c.x - 120 + k * 42, y - 196, 4, ch, 'rgba(0,0,0,0.25)');
-        if (om) { x.save(); x.globalAlpha *= 0.35 + 0.35 * ok; K.R(x, c.x - 126, y - 196 + ch - 8, 252, 8, QC(oq)); x.restore(); K.GL(x, c.x, y - 10, 110, QC(oq), 0.25 * ok); }
-        U.box(x, c.x - 130, y - 206, 260, 14, C.gold); x.restore(); }
-      x.restore(); });
+    const t = mg.t;
+    if (!K.pxr(x, 'mini_recruit', 0, 0, t, { mg, t })) bgv(x, '#141a2a', '#06080e');
+    mg.cards.forEach((c, i) => { const D = M.DB[c.k], hov = mg.phase === 'idle' && Math.abs(mg.mx - c.x) < 124 && mg.my > RBTOP - 30 && mg.my < RBBOT + 60, sel = mg.phase === 'take' && mg.cur === i;
+      if (hov && !c.hovWas) S.mini('_', 'hover'); c.hovWas = hov; if (hov) c.lampK = Math.max(c.lampK, 0.3);
+      const rev = c.dropT != null, st2 = rev ? t - c.showT : 0, nope = c.nope != null && t - c.nope < 0.3 ? Math.round(Math.sin((t - c.nope) * 50) * 2) * 4 : 0;
+      if (c.gone != null && t - c.gone > 0.2) return;
+      x.save(); if (c.dim && !sel) x.globalAlpha = 0.45; if (c.gone != null) x.globalAlpha *= cl(1 - (t - c.gone) / 0.2, 0, 1);
+      if (!rev) { // 剪影：它自己的像素剪影映在帆布上，悬停时往前凑
+        const jx = Math.round(Math.sin(t * 60 + i) * c.shake) * 4, lit = c.s >= 0; x.save(); x.beginPath(); x.rect(c.x - 120, RBTOP, 240, RBBOT - RBTOP); x.clip(); x.globalAlpha *= lit ? 0.9 : 0.55;
+        if (!M.PXR.MINI_D.cast(x, c.k, c.x + jx, RBF - (hov ? 4 : 0), 'idle', Math.floor(t * 12 + i * 5) % 24, false, '#0d0b1e')) K.SP(x, c.k, c.x, RBF, 180, false, '#0d0b1e'); x.restore(); }
+      else { // 亮一手：攻击动作一遍（史诗以上再接施放），然后待机；选中的往前一步
+        let s = 'idle', fi = Math.floor(t * 12 + i * 5) % 24; if (st2 < 0.75) { s = 'attack'; fi = Math.min(8, Math.floor(st2 * 12)); } else if (c.q >= 2 && st2 < 1.25) { s = 'cast'; fi = Math.min(5, Math.floor((st2 - 0.75) * 12)); }
+        const fwd = sel ? Math.min(1, (t - c.stepT) / 0.2) * 24 : 0; if (sel && t - c.stepT < 0.2) { s = 'move'; fi = Math.floor(t * 12) % 8; }
+        if (!M.PXR.MINI_D.cast(x, c.k, c.x + nope, RBF + fwd, s, fi, false, st2 < 0.05 ? '#ffffff' : null)) K.SP(x, c.k, c.x, RBF + fwd, 180); }
+      x.restore();
+      const tv = M.TAG.voc(D.voc); K.chipC(x, D.n, c.x, RBBOT + 56, QC(c.q), T.body); if (tv) K.IC(x, tv.icon, c.x + 96, RBBOT + 56, 40); });
   } };
 
 // ───────── node metadata for the new events (map icon, label, blurb) ─────────

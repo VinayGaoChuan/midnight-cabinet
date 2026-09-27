@@ -19,13 +19,13 @@ MD.draw = function (x, key, t, o, ax, ay) {
   x.drawImage(s.cv, 0, 0, w, h, 360 + (ax || 0) * 4, 110 + (ay || 0) * 4, w * 4, h * 4); x.imageSmoothingEnabled = sm; return s;
 };
 MD.slot = (key) => X.slots['mini_' + key];
-// a pixel-cast character standing with its feet at logical (lx, ly), 4× like the stage; st: idle / move / attack / hurt …, fi 12 fps frame
+// a pixel-cast character (evolution-line units such as …_T1 are drawn by their base character) standing with its feet at logical (lx, ly), 4× like the stage; st: idle / move / attack / hurt …, fi 12 fps frame
 MD.cast = function (x, key, lx, ly, st, fi, flip, tint, clipY) {
-  const P = M.PCDG; if (!P || !P.has(key)) return null; const c = P.bodyFrame(key, st || 'idle', fi || 0, tint || null, 4); if (!c) return null;
+  const P = M.PCDG; if (M.artOf) key = M.artOf(key); if (!P || !P.has(key)) return null; const c = P.bodyFrame(key, st || 'idle', fi || 0, tint || null, 4); if (!c) return null;
   x.save(); x.imageSmoothingEnabled = false; if (clipY != null) { x.beginPath(); x.rect(0, 0, 1920, clipY); x.clip(); }
   x.translate(Math.round(lx / 4) * 4, Math.round(ly / 4) * 4); if (flip) x.scale(-1, 1); x.drawImage(c, -c.cx, -c.footY, c.width, c.height); x.restore(); return c;
 };
-MD.frames = (key, st) => { const P = M.PCDG, b = P && P.has(key) ? P.body(key) : null; return !b ? 8 : st === 'idle' ? b.nIdle : st === 'hurt' ? b.nHurt : Math.max(1, Math.round((b.dur[{ move: 1, attack: 2, charge: 3, cast: 4, recover: 5, hurt: 6, death: 7 }[st] || 0] || 0.75) * 12)); };
+MD.frames = (key, st) => { const P = M.PCDG; if (M.artOf) key = M.artOf(key); const b = P && P.has(key) ? P.body(key) : null; return !b ? 8 : st === 'idle' ? b.nIdle : st === 'hurt' ? b.nHurt : Math.max(1, Math.round((b.dur[{ move: 1, attack: 2, charge: 3, cast: 4, recover: 5, hurt: 6, death: 7 }[st] || 0] || 0.75) * 12)); };
 
 // a hanging paper lantern: string, black caps, a glowing ribbed body that follows light li, a gold tassel; sw = sway in px
 function lantern(D, x, y, li, sw, big) {
@@ -255,7 +255,6 @@ X.def('mini_cat', {
 // right wall (glass tube, jade marks for the sweet spot, a bulb that glows the heat's colour, a relief valve that hisses).
 const SP = { pool: [150, 128, 104, 16], tube: [262, 32.5, 100], zone: [0.55, 0.78] };
 const spY = (h) => SP.tube[1] + SP.tube[2] * (1 - h);
-const heatRGB = (h) => { const a = [[70, 214, 193], [255, 190, 80], [255, 70, 60]], k = h < 0.6 ? 0 : 1, q = clamp(h < 0.6 ? h / 0.6 : (h - 0.6) / 0.4, 0, 1); return a[k].map((v, i) => Math.round(v + (a[k + 1][i] - v) * q)); };
 // cave rock: a jittered grid of facets (nearest-seed cells), each tilted its own way, dark cracks between them
 function facets(S, x0, y0, w, h, m, t, cell, seed, o) {
   o = o || {}; const r = X.rng(seed || 3), gw = Math.ceil(w / cell) + 2, gh = Math.ceil(h / cell) + 2, pts = [];
@@ -288,6 +287,9 @@ X.def('mini_spring', {
     sc.light({ x: 38, y: 92, z: 16, r: 44, i: 0.8, c: '#ffa050', fl: 'candle', ph: 4, tint: 0.5 });   // 4 stone lantern
     [[48, 80], [238, 64], [86, 22]].forEach(([x, y], i) => sc.light({ x, y, z: 10, r: 46, i: 0.85, c: '#6ad6c0', fl: 'pulse', amp: 0.15, sp: 1 + i * 0.4, ph: i, tint: 0.55 }));   // 5–7 crystals
     sc.light({ x: 116, y: 40, z: 12, r: 30, i: 0.3, c: '#bff7f0', tint: 0.3 });   // 8 the hot fall's sheen
+    sc.light({ x: 150, y: 128, z: 4, r: 96, i: 1, c: '#ffb050', tint: 0.55, bake: false });   // 9 the pool warming (its strength follows the heat)
+    sc.light({ x: 150, y: 128, z: 4, r: 96, i: 1, c: '#ff4a40', tint: 0.6, bake: false });    // 10 the pool over the top
+    sc.light({ x: 262, y: 141, z: 8, r: 40, i: 1, c: '#ffc860', tint: 0.6, bake: false });    // 11 the thermometer bulb
     // ── rock: layered strata, darker toward the back of the cave, a ceiling of stalactites ──
     S.lay('wall'); facets(S, 0, 0, W, FY, 'mstone', 5.6, 24, 21); S.noise(0, 0, W, FY, 0.6, 2, 22, { only: 'mstone' });
     for (let x = 60; x < 244; x++) for (let y = 20; y < 110; y++) { const d = Math.hypot((x - 150) / 90, (y - 70) / 50); if (d < 1 && S.at(x, y)) S.tone(x, y, -1.2 * (1 - d)); }   // the far back is deeper
@@ -339,7 +341,7 @@ X.def('mini_spring', {
     D.lay('back'); for (let y = 40; y < py0 - pry + 2; y++) { const w = 3 + Math.floor((y - 40) / 18); for (let j = -w; j <= w; j++) { const s2 = Math.floor((y * 1.0 - T * 40 + j * 7) / 3); D.px(116 + j, y, 'ice', (s2 % 4 === 0 ? 10 : 8) - Math.abs(j) / (w + 1) * 3, { e: 8 + 1 }); } }
     for (let j = -8; j <= 8; j++) if ((j + Math.floor(T * 14)) % 3) D.px(116 + j, py0 - pry + 2 + (Math.abs(j) > 5 ? 1 : 0), 'linen', 10, { e: 255 });
     // the surface: moving glints, rings where things hit the water, and a light that follows the heat
-    const c = heatRGB(h); rs.dl.push({ x: px0, y: py0 + 6, z: 2, r: 80 + h * 30, i: 0.35 + h * 0.9, rgb: c, tint: 0.55 });
+    const over = h > SP.zone[1] ? (h - SP.zone[1]) / (1 - SP.zone[1]) : 0; rs.mul[9] = clamp((h - 0.25) / 0.45, 0, 1) * 0.8 * (1 - over * 0.6); rs.mul[10] = over * 1.1; rs.mul[11] = soak || mg.phase === 'done' ? 0.25 + h * 0.8 : 0;
     D.lay('mid'); for (let k = 0; k < 26; k++) { const x0 = px0 - prx + ((k * 37 + Math.floor(T * (8 + k % 5))) % (prx * 2)), y0 = py0 - pry + 2 + (k * 5) % (pry * 2 - 3), u = (x0 - px0) / prx, v = (y0 - py0) / pry; if (u * u + v * v > 0.86) continue; D.hl(x0, y0, 2 + (k % 3), 'teal', 9 + (k % 2), { e: 255 }); }
     (mg.rip || []).forEach(r => { const a = T - r.t; if (a < 0 || a > 1.2) return; const rr = 3 + a * (r.big ? 30 : 16); for (let k = 0; k < 40; k++) { const th2 = k / 40 * Math.PI * 2, x = r.x + Math.cos(th2) * rr, y = r.y + Math.sin(th2) * rr * 0.28; const u = (x - px0) / prx, v = (y - py0) / pry; if (u * u + v * v < 0.95) D.px(x, y, 'teal', 10 - a * 5, { e: 255 }); } });
     // bubbles and steam climb with the heat; over the top the water blushes red
@@ -350,7 +352,7 @@ X.def('mini_spring', {
     D.lay('back'); const hm = h < 0.6 ? 'teal' : h < 0.8 ? 'lamp' : 'fire';
     for (let y = top; y < tt + th; y++) { D.px(tx - 1, y, hm, 7, { e: 255 }); D.px(tx, y, hm, 9, { e: 255 }); D.px(tx + 1, y, hm, 7.5, { e: 255 }); }
     if (h > 0.01) { D.hl(tx - 1, top, 3, hm, 11, { e: 255 }); }
-    const bt = tt + th + 8; D.ell(tx + 0.5, bt, 4.2, 3.8, hm, 7 + h * 3, { e: 255 }); D.px(tx - 1, bt - 2, hm, 11, { e: 255 }); rs.dl.push({ x: tx, y: bt, z: 8, r: 24 + h * 20, i: 0.5 + h * 0.8, rgb: c, tint: 0.6 });
+    const bt = tt + th + 8; D.ell(tx + 0.5, bt, 4.2, 3.8, hm, 7 + h * 3, { e: 255 }); D.px(tx - 1, bt - 2, hm, 11, { e: 255 });
     const zT = mg.zoneT != null ? T - mg.zoneT : 9, zy0 = Math.round(spY(SP.zone[1])), zy1 = Math.round(spY(SP.zone[0]));
     if (inZ || zT < 0.4) for (let y = zy0; y <= zy1; y++) { const lit = zT < 0.4 ? y >= zy1 - (zy1 - zy0) * zT / 0.12 : true; if (!lit) continue; D.px(tx - 5, y, 'teal', 10, { e: 255 }); D.px(tx + 5, y, 'teal', 10, { e: 255 }); }
     // the brass pointer on the left follows the column; after the release it clamps (a bright notch)
@@ -698,7 +700,7 @@ MD.GYM = GY;
 X.def('mini_gym', {
   size: [W, H], fy: FY, noFrame: 1, amb: [0.2, 0.24],
   paint(S, sc) {
-    sc.light({ x: 160, y: 30, z: 30, r: 130, i: 1.2, c: '#ffd890', fl: 'buzz', ph: 1, tint: 0.35, bake: false });   // 0 the caged lamp (moved each frame by its swing: see anim)
+    sc.light({ x: 160, y: 30, z: 30, r: 130, i: 1.1, c: '#ffd890', fl: 'buzz', ph: 1, tint: 0.35 });   // 0 the caged lamp (its swing adds a small moving light in anim)
     sc.light({ x: 286, y: 60, z: 16, r: 40, i: 0.4, c: '#ffcf70', tint: 0.4 });                                      // 1 the bell's brass (kicked when it rings)
     sc.light({ x: 40, y: 20, z: 40, r: 80, i: 0.3, c: '#8898ff', tint: 0.3 });                                        // 2 a cold window high on the left
     // ── wall ──
@@ -734,7 +736,7 @@ X.def('mini_gym', {
     D.lay('mid'); D.beg(); for (let k = 0; k < L; k += 2) D.px(lx0 + Math.sin(sw) * k, ly0 + Math.cos(sw) * k, 'iron', 5 + (k % 4 ? 0 : 2)); D.end({ none: 1 });
     D.beg(); D.box(bx - 4, by - 1, 9, 2, 'iron', 6); for (let k = 0; k < 6; k++) { D.px(bx - 4, by + 1 + k, 'iron', 4); D.px(bx + 4, by + 1 + k, 'iron', 4); if (k % 2) D.hl(bx - 4, by + 1 + k, 9, 'iron', 3); } D.hl(bx - 4, by + 7, 9, 'iron', 5); D.end();
     const bulb = red && Math.floor(T * 8) % 2 ? 'red' : 'lamp'; D.ell(bx, by + 4, 2.4, 2.6, bulb, 11, { e: 255 });
-    rs.dl.push({ x: bx, y: by + 6, z: 30, r: 120, i: 0.25, rgb: red ? [255, 90, 70] : [255, 220, 150], tint: 0.3 });
+    rs.dl.push({ x: bx, y: by + 6, z: 24, r: 56, i: 0.35, rgb: red ? [255, 90, 70] : [255, 220, 150], tint: 0.3 });
     // cigar smoke drifting in the cone
     if (Math.random() < 0.3) rs.burst('steam', 250 + Math.random() * 10, 92, 1, { sp: 3, ang: -0.4, spread: 0.5, life: 4 });
     // the tally board: one chalk stroke per punch, bundled by five
@@ -826,7 +828,7 @@ X.def('mini_arena', {
 // canvas tent (lit on the fire side), a log to sit on, the campfire (a heat automaton), a pot on a tripod, fireflies in the
 // grass, and a long whetstone on two stumps. Resting: the moon crosses the sky, the fire burns down to embers and the east
 // goes dawn-pink. Sharpening: a sword slides along the stone; every stroke on the worn middle throws sparks and heats the blade.
-const CP = { fire: [128, 146], stone: [176, 276, 146], moon: [70, 36], sky: new Array(300).fill(104) };
+const CP = { fire: [128, 146], stone: [176, 276, 146], moon: [70, 36], sky: new Array(300).fill(104) }; CP.groove = CP.stone[0] + 6 + 30 + 17;   // blade notch at q = 0.5
 MD.CAMP = CP;
 function campFire(st, w, h, t, heat) {
   if (!st.f || st.f.length !== w * h) { st.f = new Uint8Array(w * h); st.ft = t - 1; } const f = st.f; let n = Math.min(4, Math.floor((t - st.ft) * 30)); if (n < 0) { st.ft = t; n = 0; } st.ft += n / 30;
@@ -858,7 +860,7 @@ X.def('mini_camp', {
     // ── the log seat, the whetstone on its stumps ──
     S.lay('mid'); S.beg(); S.hcyl(70, 140, 40, 7, 'wood', 5, { rim: 2 }); S.ell(110, 143.5, 2, 3.5, 'wood', 8); S.ell(110, 143.5, 1, 2, 'wood', 5); S.end();
     const [s0, s1, sy] = CP.stone; [s0 + 8, s1 - 12].forEach(x => { S.beg(); S.cyl(x, sy + 4, 12, 14, 'wood', 4.6, { rim: 2 }); S.ell(x + 6, sy + 4, 6, 1.4, 'wood', 7.5); S.end(); });
-    S.beg(); S.box(s0, sy - 3, s1 - s0, 7, 'stone', 6.2, { top: 1 }); for (let x = s0 + 2; x < s1 - 2; x += 3) S.px(x, sy - 1 + (x % 2), 'stone', 4.4); const mid = (s0 + s1) / 2; S.rect(mid - 10, sy - 3, 20, 2, 'stone', 4.2); S.hl(mid - 9, sy - 3, 18, 'fire', 4.4); S.end();
+    S.beg(); S.box(s0, sy - 3, s1 - s0, 7, 'stone', 6.2, { top: 1 }); for (let x = s0 + 2; x < s1 - 2; x += 3) S.px(x, sy - 1 + (x % 2), 'stone', 4.4); const mid = CP.groove; S.rect(mid - 6, sy - 3, 12, 2, 'stone', 4); S.hl(mid - 5, sy - 3, 11, 'fire', 4.6); S.px(mid, sy - 3, 'fire', 6.4); S.end();   // the worn middle: the stroke lands when the blade's notch is over it
     // ── the fire's ring of stones and logs, the tripod and pot ──
     const [fx, fy] = CP.fire; S.beg(); for (let k = 0; k < 9; k++) { const a = Math.PI * (1 + k / 8), x = fx + Math.cos(a) * 16, y = fy + 2 + Math.sin(a) * -3; blob(S, x, y + 3, 3.4, 2.4, 'stone', 5, { k: 2 }); } S.end();
     S.beg(); S.line(fx - 12, fy + 2, fx + 10, fy - 4, 'wood', 4, { w: 2 }); S.line(fx - 10, fy - 4, fx + 12, fy + 2, 'wood', 3.4, { w: 2 }); S.end();
@@ -881,9 +883,61 @@ X.def('mini_camp', {
     for (let i = 0; i < 8; i++) { const r = X.rng(200 + i), x = r() * 300 + Math.sin(T * 0.4 + i) * 12, y = 112 + r() * 40 + Math.sin(T * 0.7 + i * 2) * 5, on = Math.sin(T * 2 + i * 1.3) > 0.2; if (on && nq < 0.8) { D.lay('front'); D.px(x, y, 'screen', 10, { e: 255 }); } }
     // the sword on the whetstone: slides with the stroke clock; the edge heats one step per clean stroke
     if (mg.phase === 'sharpen' || mg.phase === 'sharpDone') { const [s0, s1, sy] = CP.stone, q = mg.q != null ? mg.q : 0.5, bx = Math.round(s0 + 6 + q * (s1 - s0 - 40)), heatB = Math.min(5, mg.hits || 0), sk = mg.spark || 0;
-      D.lay('front'); D.beg(); D.rect(bx, sy - 6 - (sk > 0.5 ? 1 : 0), 34, 2, 'iron', 8); D.hl(bx, sy - 6 - (sk > 0.5 ? 1 : 0), 34, 'iron', 10); D.px(bx + 34, sy - 6, 'iron', 7); D.rect(bx - 2, sy - 9, 2, 8, 'brass', 7); D.rect(bx - 10, sy - 6, 8, 2, 'leather', 5); D.px(bx - 11, sy - 6, 'brass', 7); D.end();
+      D.lay('front'); D.beg(); D.rect(bx, sy - 6 - (sk > 0.5 ? 1 : 0), 34, 2, 'iron', 8); D.hl(bx, sy - 6 - (sk > 0.5 ? 1 : 0), 34, 'iron', 10); D.px(bx + 34, sy - 6, 'iron', 7); D.rect(bx - 2, sy - 9, 2, 8, 'brass', 7); D.rect(bx - 10, sy - 6, 8, 2, 'leather', 5); D.px(bx - 11, sy - 6, 'brass', 7); D.end(); D.px(bx + 17, sy - 7 - (sk > 0.5 ? 1 : 0), 'lamp', 10, { e: 255 });
       if (heatB) for (let k = 0; k < 34; k++) if (k > 34 - heatB * 7) D.px(bx + k, sy - 5, 'fire', 6 + heatB, { e: 255 });
       if (mg.phase === 'sharpDone' && mg.hits >= 5) { const sw = ((T - (mg.doneT || T)) * 1.4) % 1; D.px(bx + Math.round(sw * 34), sy - 6, 'linen', 11, { e: 255 }); } }
+  },
+});
+
+// ═════════════════════ 招募旗 · the recruiting post at a crossroads ═════════════════════
+// night sky, a road running off between dark hills to a signpost, a tall war banner waving over three shadow-play booths
+// (a timber frame, a canvas screen, an oil lamp behind it; the applicant's own silhouette is cast on the canvas), a notice
+// board full of bills, torches at both ends. Each lamp lights up in the applicant's quality colour beat by beat (the canvas
+// takes the colour, the shadow trembles); a tier-up flares the wick and scorches the canvas edge; then the screen drops.
+const RB = { x: [68, 150, 232], top: 44, bot: 140, w: 62 };
+MD.RECRUIT = RB;
+const RQM = [['linen', 9], ['water', 8.5], ['arcane', 8], ['fire', 9]];   // matches M.QUALITY: 普通 · 稀有 blue · 史诗 violet · 传说 orange   // canvas lit by the lamp, per quality step
+X.def('mini_recruit', {
+  size: [W, H], fy: FY, noFrame: 1, amb: [0.16, 0.22],
+  paint(S, sc) {
+    RB.x.forEach((x, i) => sc.light({ x, y: 96, z: 6, r: 58, i: 0.35, c: '#ffd8a0', fl: 'candle', ph: i * 2, tint: 0.5, bake: false }));   // 0–2 the booth lamps (their colour is live)
+    [[8, 70], [292, 70]].forEach(([x, y], i) => sc.light({ x, y, z: 20, r: 90, i: 1, c: '#ff9040', fl: 'fire', ph: i * 3, tint: 0.55 }));   // 3–4 torches
+    sc.light({ x: 150, y: 10, z: 60, r: 150, i: 0.3, c: '#a8b8ff', tint: 0.2 });   // 5 moonlight on the banner
+    // ── sky, hills, the road to a signpost ──
+    S.lay('wall'); S.vgrad(0, 0, W, 90, 'night', 0.7, 3.2, { e: 255 }); for (let i = 0; i < 60; i++) S.px(S.r() * W, S.r() * 70, 'linen', 5 + S.r() * 4, { e: 255 });
+    for (let x = 0; x < W; x++) { const h = 78 + Math.round(Math.sin(x * 0.02) * 6 + Math.sin(x * 0.07) * 2); for (let y = h; y < 104; y++) S.px(x, y, 'night', 1.6 + (y - h) * 0.02, { e: 255 }); }
+    S.rect(0, 100, W, H - 100, 'earth', 3.4); S.noise(0, 100, W, H - 100, 1, 3, 91, { only: 'earth' });
+    for (let y = 100; y < H; y++) { const w = 6 + (y - 100) * 0.9; for (let x = 150 - w; x < 150 + w; x++) S.px(x, y, 'sand', 3.6 + (y - 100) * 0.02 + ((x * 3 + y) % 7 === 0 ? 0.8 : 0)); }
+    S.beg(); S.rect(149, 86, 2, 16, 'wood', 4); S.rect(143, 88, 10, 3, 'wood', 5); S.rect(149, 92, 9, 3, 'wood', 4.6); S.end();
+    // ── the war banner on its tall pole (the cloth is live) ──
+    S.lay('back'); S.beg(); S.rect(149, 2, 3, 44, 'wood', 5); S.ell(150.5, 2, 2, 2, 'gold', 8, { dome: 1 }); S.end();
+    // ── notice board on the left, torches ──
+    S.lay('back'); S.beg(); S.box(4, 96, 26, 22, 'wood', 4.6); S.rect(8, 118, 2, 26, 'wood', 4); S.rect(24, 118, 2, 26, 'wood', 4); [[6, 98, 8, 9], [15, 99, 9, 8], [8, 108, 10, 8], [19, 108, 8, 9]].forEach(([x, y, w, h], k) => { S.rect(x, y, w, h, 'paper', 8 - k * 0.4); S.hl(x + 1, y + 2, w - 2, 'paper', 5); S.hl(x + 1, y + 4, w - 3, 'paper', 5); S.px(x + w / 2, y, 'red', 6); }); S.end();
+    [8, 292].forEach(x => { S.lay('mid'); S.beg(); S.rect(x - 1, 72, 3, 76, 'wood', 4.6); S.box(x - 3, 70, 7, 3, 'iron', 5); S.end(); });
+    // ── three booths: posts, a crossbar with a little roof, the lamp hook; the canvas and lamp are live ──
+    RB.x.forEach((x, i) => { const x0 = x - RB.w / 2, x1 = x + RB.w / 2; S.lay('mid'); S.beg(); S.rect(x0 - 3, RB.top - 4, 4, RB.bot - RB.top + 8, 'wood', 5.4); S.rect(x1 - 1, RB.top - 4, 4, RB.bot - RB.top + 8, 'wood', 4.4);
+      S.poly([[x0 - 6, RB.top - 4], [x1 + 6, RB.top - 4], [x1 + 2, RB.top - 11], [x0 - 2, RB.top - 11]], 'crimson', 4.6, { n: [0, -0.6] }); for (let k = x0 - 4; k < x1 + 4; k += 4) S.vl(k, RB.top - 10, 6, 'crimson', 6); S.hl(x0 - 6, RB.top - 4, x1 - x0 + 12, 'gold', 6); S.end();
+      S.lay('wall'); S.rect(x0 + 1, RB.top, RB.w - 2, RB.bot - RB.top, 'night', 0.6, { e: 255 }); });
+  },
+  anim(D, t, rs, o) {
+    const mg = (o && o.mg) || {}, T = o && o.t != null ? o.t : t, tq = q12(T), cards = mg.cards || [];
+    // torches
+    [8, 292].forEach((x, i) => flame(D, x, 69, 7, T, i * 2));
+    // the banner: a gold device on crimson, swinging in the wind, swallowtails flapping
+    D.lay('back'); D.beg(); for (let y = 0; y < 30; y++) { const wv = Math.round(Math.sin(T * 3 - y * 0.25) * 1.5), len = 34 - (y > 22 ? Math.abs(y - 26) * 2 : 0); for (let x = 0; x < len; x++) { const ph = Math.sin(T * 4 - x * 0.3) * 1.2; D.px(152 + x, 4 + y + wv + Math.round(ph * x / 34), 'crimson', 5.4 + (ph > 0.4 ? 1.2 : ph < -0.4 ? -1 : 0) - x / 60, { n: [0, ph * 0.3] }); } } D.end();
+    D.ell(168, 18 + Math.round(Math.sin(T * 3 - 3.5) * 1.5), 6, 6, 'gold', 7.5, { ring: 1.5 }); D.rect(166, 15 + Math.round(Math.sin(T * 3 - 3.5) * 1.5), 5, 6, 'gold', 8);
+    // booths: the canvas lit in the omen colour with the applicant's shadow (drawn over the stage by the game), scorched after a
+    // tier-up, dropped at the reveal (it slides down and heaps at the foot); the lamp swings and glows
+    cards.forEach((c, i) => { const x = RB.x[i], x0 = x - RB.w / 2 + 1, w = RB.w - 2, h0 = RB.bot - RB.top, drop = c.dropT != null ? clamp((T - c.dropT) / 0.3, 0, 1) : 0, hdn = Math.round(h0 * (1 - drop * drop)), q = c.s != null && c.s >= 0 ? c.path[c.s] : -1, lit = q >= 0 && !drop;
+      const [m, tn] = q >= 0 ? RQM[q] : ['linen', 4], sk = c.shake || 0, jx = Math.round(Math.sin(T * 60) * sk * 0.5);
+      if (hdn > 0) { D.lay('back'); for (let y = 0; y < hdn; y++) for (let xx = 0; xx < w; xx++) { const u = Math.abs(xx - w / 2) / (w / 2), fold = (xx % 8 === 0) ? -1 : 0, burnt = c.scorch && (u > 0.86 || y < 3 || y > hdn - 3) && ((xx * 7 + y * 3) % 5 < 3); D.px(x0 + xx + jx, RB.top + (h0 - hdn) * 0 + y + (drop ? Math.round(drop * h0 * 0.9) : 0), burnt ? 'hair' : lit ? m : 'linen', burnt ? 3 : (lit ? tn - u * 2 + fold : 3.4 - u + fold), lit && !burnt ? { e: 255 } : undefined); } }
+      if (drop > 0) { D.lay('mid'); const heap = Math.round(drop * 8); for (let k = 0; k < heap; k++) D.hl(x0 + k * 2, RB.bot - k, w - k * 4, 'linen', 4 + (k % 2)); }
+      // the lamp behind the screen (seen through it as a hot spot, then bare once the screen is down)
+      const lampQ = q >= 0 ? q : 0, lc = [[255, 240, 220], [110, 160, 255], [200, 140, 255], [255, 170, 80]][lampQ], lamp = (c.lampK || 0) + (lit ? 0.6 : 0.25) + (c.dim ? -0.5 : 0);
+      rs.dl.push({ x, y: 100, z: 4, r: 50 + lampQ * 8, i: Math.max(0, lamp), rgb: lc, tint: 0.6 }); rs.mul[i] = Math.max(0, lamp);
+      if (drop > 0.5) { D.lay('back'); D.rect(x - 2, 58, 5, 6, 'iron', 4); D.ell(x, 62, 2, 2, lit || drop ? RQM[lampQ][0] : 'lamp', 10, { e: 255 }); D.line(x, RB.top, x, 58, 'iron', 5); }
+      if (c.flareT != null && T - c.flareT < 0.4) rs.burst('spark', x, 96, 3, { sp: 40, ang: 0, spread: 1.4, life: 0.5 });
+    });
   },
 });
 })();
