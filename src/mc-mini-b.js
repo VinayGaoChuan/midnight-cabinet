@@ -146,12 +146,12 @@ MINI.pachinko = { title: '弹珠台', img: 'e_pachinko', col: C.gold, text: '钢
 // q = 揭晓时按哪一档品质演（只管演出）；rv = 落地时舞台上滚的数字
 const FRUITS = [
   { n: '生命果', c: C.pink, ic: 't_heart', q: 0, d: '领袖回复 40% 生命', f(g) { return '回复 ' + g.heroHeal(0.4) + ' 生命'; } },
-  { n: '力量果', c: C.amber, ic: 't_sword', q: 1, d: '本局部队攻击 +12%', f(g) { return g.buffRun('unitAtk', 0.12, '部队攻击 +12%', C.amber); } },
-  { n: '坚韧果', c: C.blue, ic: 't_shieldHeart', q: 1, d: '本局部队生命 +15%', f(g) { return g.buffRun('unitHp', 0.15, '部队生命 +15%', C.blue); } },
+  { n: '力量果', c: C.amber, ic: 't_sword', q: 1, d: '这一趟部队攻击 +12%', f(g) { return g.buffRun('unitAtk', 0.12, '部队攻击 +12%', C.amber); } },
+  { n: '坚韧果', c: C.blue, ic: 't_shieldHeart', q: 1, d: '这一趟部队生命 +15%', f(g) { return g.buffRun('unitHp', 0.15, '部队生命 +15%', C.blue); } },
   { n: '智慧果', c: C.lime, ic: 't_orb', q: 0, rv: () => 70, d: '经验 +70', f(g, mg) { return g.giveExp(70, mg.from); } },
   { n: '灵魂果', c: C.violet, ic: 't_shard', q: 1, rv: () => 25, d: '灵魂碎片 +25', f(g, mg) { return g.giveShards(25, mg.from); } },
   { n: '黄金果', c: C.gold, ic: 't_coin', q: 2, rv: (mg) => M.nice(mg.P * 10), d: '积分 +', f(g, mg) { g.award([{ k: 'wallet', v: M.nice(mg.P * 10) }], mg.from); return '积分 +' + M.nice(mg.P * 10); } },
-  { n: '幸运果', c: C.green, ic: 't_clover', q: 2, d: '本局事件好运 +10%，FEVER 好效果 +5%', f(g) { g.run.mods.tier = (g.run.mods.tier || 0) + 0.05; return g.buffRun('eventLuck', 0.1, '好运 +10%', C.green); } }];
+  { n: '幸运果', c: C.green, ic: 't_clover', q: 2, d: '这一趟事件好运 +10%，FEVER 好效果 +5%', f(g) { g.run.mods.tier = (g.run.mods.tier || 0) + 0.05; return g.buffRun('eventLuck', 0.1, '好运 +10%', C.green); } }];
 const TRG = () => M.PXR && M.PXR.MINIB && M.PXR.MINIB.tree;
 const TREE_HANG = [[95, 62.5], [150, 47.5], [205, 62.5], [150, 82.5]], TREE_LAND = 140;
 MINI.tree = { title: '世界树', img: 'e_tree', col: C.green, text: '树根扎进每一个世界。它结的果子，只允许你摘一个。',
@@ -165,7 +165,7 @@ MINI.tree = { title: '世界树', img: 'e_tree', col: C.green, text: '树根扎�
   water(mg) { const run = this.run; this.hold('rsup', run.loot.supplies); run.loot.supplies -= 30; this.release('rsup'); mg.watered = true; mg.allow++;
     mg.fr.push({ f: mg.spare, k: FRUITS.indexOf(mg.spare), x: K.lx(TREE_HANG[3][0]), y: K.ly(TREE_HANG[3][1]), gone: false, grow: 0, q: 0, crack: 0 }); this.miniSet('water'); S.mini('tree', 'water'); SHOW.ring(mg, CX, K.ly(146), 10, 260, C.teal, { life: 0.5 }); },
   btns(mg) { if (mg.phase !== 'idle') return []; const b = mg.fr.map((F, i) => ({ t: '摘 ' + F.f.n, sub: F.f.d, dis: F.gone, why: '已经摘了', fn: () => MINI.tree.pick.call(this, mg, i) }));
-    b.push({ t: '浇灌', sub: '-30 本局物资 · 再结一个，能多摘一个', dis: mg.watered || this.run.loot.supplies < 30, why: mg.watered ? '已经浇过了' : '本局物资不够 30', fn: () => MINI.tree.water.call(this, mg) });
+    b.push({ t: '浇灌', sub: '-30 这一趟的物资 · 再结一个，能多摘一个', dis: mg.watered || this.run.loot.supplies < 30, why: mg.watered ? '已经浇过了' : '这一趟的物资不够 30', fn: () => MINI.tree.water.call(this, mg) });
     b.push({ t: '砍树枝', sub: '得到自然风格图纸，可能被诅咒', danger: 1, dis: mg.picks > 0, why: '树不再理你了', fn: () => { this.miniSet('cut'); S.mini('tree', 'swing'); } });
     return b; },
   // a fruit under the cursor or the pointer: click to pick it; anywhere else the fireflies scatter
@@ -214,7 +214,7 @@ MINI.tree = { title: '世界树', img: 'e_tree', col: C.green, text: '树根扎�
 
 // ═════════════════════ 塔罗 / 砸金蛋 · pick from covered things ═════════════════════
 const TAROT = [
-  { n: '太阳', c: C.gold, ic: 'u_star', good: 1, q: 3, f(g) { return g.buffRun('unitAtk', 0.08, '本局部队攻击 +8%', C.gold); } },
+  { n: '太阳', c: C.gold, ic: 'u_star', good: 1, q: 3, f(g) { return g.buffRun('unitAtk', 0.08, '这一趟部队攻击 +8%', C.gold); } },
   { n: '月亮', c: C.ice, ic: 't_eye', good: 1, q: 1, f(g) { return g.buffRun('eventLuck', 0.15, '事件好运 +15%', C.ice); } },
   { n: '星星', c: C.violet, ic: 'gem', good: 1, q: 2, f(g, mg) { const got = g.award([K.item(g.run, mg.P)], mg.from); return got.join(''); } },
   { n: '力量', c: C.amber, ic: 't_sword', good: 1, q: 1, f(g) { return g.buffRun('unitAtk', 0.1, '部队攻击 +10%', C.amber); } },
@@ -302,7 +302,7 @@ MINI.tarot = { title: '占卜摊', img: 'e_card', col: C.violet, text: '蒙着�
 
 const EGGS = [
   { n: '满满的积分', c: C.gold, ic: 'e_coin', q: 2, rv: (mg) => M.nice(mg.P * 12), f(g, mg) { const v = M.nice(mg.P * 12); g.award([{ k: 'wallet', v }], mg.from); return '积分 +' + v; } },
-  { n: 'FEVER 预热', c: C.violet, ic: 'gem', q: 1, f(g) { g.run.mods.feverStart = (g.run.mods.feverStart || 0) + 0.15; return '本局每场战斗开局 FEVER 槽 +15%'; } },
+  { n: 'FEVER 预热', c: C.violet, ic: 'gem', q: 1, f(g) { g.run.mods.feverStart = (g.run.mods.feverStart || 0) + 0.15; return '这一趟每场战斗开局 FEVER 槽 +15%'; } },
   { n: '一张图纸', c: C.butter, ic: 'scroll', q: 3, f(g, mg) { return g.award([K.bp()], mg.from).join(''); } },
   { n: '一只雏鸟', c: C.green, ic: 'r_beast', q: 1, f(g, mg) { const t = M.pickUnitQ(g.run); if (!M.canAdd(g.run, t)) return '它飞走了'; g.award([{ k: 'unit', type: t }], mg.from); return M.DB[t].n + ' 认你做了主人'; } },
   { n: '空的', c: C.lavender, ic: 'u_mask', q: -1, f() { return '什么也没有'; } },
@@ -592,14 +592,14 @@ MINI.fate = { title: '命运之轮', img: 'e_fate', col: C.red, text: '石头做
   resolve(mg, idx) {
     const run = this.run, P = mg.P; let tx = '', col = FATE[idx].c; const g = [];
     if (idx === 0) tx = '石轮停在空白处。血白流了。';
-    if (idx === 1) { run.runBuff.unitAtk = (run.runBuff.unitAtk || 0) + 0.08; tx = '本局部队攻击 +8%。'; }
+    if (idx === 1) { run.runBuff.unitAtk = (run.runBuff.unitAtk || 0) + 0.08; tx = '这一趟部队攻击 +8%。'; }
     if (idx === 2) { const t = M.pickUnitQ(run); if (M.canAdd(run, t)) { g.push({ k: 'unit', type: t }); tx = '石轮上走下来一个 ' + M.DB[t].n + '。'; } else { g.push({ k: 'wallet', v: M.nice(P * 6) }); tx = '队伍满了，名字化成了积分。'; } }
-    if (idx === 3) { run.mods.feverStart = (run.mods.feverStart || 0) + 0.2; tx = '石轮发烫。本局每场战斗开局 FEVER 槽 +20%。'; }
+    if (idx === 3) { run.mods.feverStart = (run.mods.feverStart || 0) + 0.2; tx = '石轮发烫。这一趟每场战斗开局 FEVER 槽 +20%。'; }
     if (idx === 4) { g.push(K.bp(null, 1)); tx = '一张刻在石片上的图纸。'; }
     if (idx === 5) { g.push({ k: 'wallet', v: M.nice(P * 16) }); tx = '血变成了金子。'; }
     if (idx === 6) { tx = '石轮记住了你的名字。生命 -' + this.heroHurt(0.15) + '。'; }
     const got = g.length ? this.award(g, { x: FSEC.x, y: FSEC.y }) : []; mg.fin = [tx + (got.length ? '\n获得：' + got.join('、') : ''), col];
-    mg.items = [FATE[idx].n].concat(got.length ? got : idx === 1 ? ['本局部队攻击 +8%'] : idx === 3 ? ['开局 FEVER 槽 +20%'] : []);
+    mg.items = [FATE[idx].n].concat(got.length ? got : idx === 1 ? ['这一趟部队攻击 +8%'] : idx === 3 ? ['开局 FEVER 槽 +20%'] : []);
   },
   finish(mg) { if (this.mini === mg && mg.fin) this.miniFinish(mg.fin[0], mg.fin[1]); },
   draw(x, mg) {

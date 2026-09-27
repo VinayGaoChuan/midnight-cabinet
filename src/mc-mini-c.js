@@ -63,7 +63,7 @@ MINI.musician = { title: '流浪乐师', img: 'musician', col: C.gold, text: '�
   down(mg, px, py) { if (mg.phase === 'play') { const l = px < CX - 85 ? 0 : px > CX + 85 ? 2 : 1; return MINI.musician.hit.call(this, mg, l); }
     // 演奏前点舞台：水面一圈涟漪、一声曼陀林
     if (mg.phase === 'idle') { SHW.tap(this, mg, px, py); const sl = muSlot(); if (sl) sl.burst('glint', MUA.ax(px), Math.max(150, Math.min(172, MUA.ay(py))), 3, { sp: 8, life: 0.6 }); S.mini('musician', 'pluck'); } },
-  btns(mg) { if (mg.phase !== 'idle') return []; return [{ t: '接过琴弓合奏', sub: '按 Q W E（或点三条音轨）跟上音符', gold: 1, fn: () => MINI.musician.start.call(this, mg) }, { t: '扔一枚硬币', sub: '免费 · 他会回赠物资', fn: () => this.miniFinish('他点点头，从琴盒里拿出一袋东西给你。', '#caa84a', [{ k: 'rsup', v: 15 }]) }, { t: '离开', leave: 1, fn: () => this.miniFinish('琴声在你背后停了。', '#8d8496') }]; },
+  btns(mg) { if (mg.phase !== 'idle') return []; return [{ t: '接过琴弓合奏', sub: '按 Q W E（或点三条音轨）跟上音符', gold: 1, fn: () => MINI.musician.start.call(this, mg) }, { t: '听他拉完一曲', sub: '免费 · 他会回赠物资', fn: () => this.miniFinish('他点点头，从琴盒里拿出一袋东西给你。', '#caa84a', [{ k: 'rsup', v: 15 }]) }, { t: '离开', leave: 1, fn: () => this.miniFinish('琴声在你背后停了。', '#8d8496') }]; },
   tick(mg, dt) {
     mg.laneF = mg.laneF.map(f => Math.max(0, f - dt * 4)); mg.laneBad = mg.laneBad.map(f => Math.max(0, f - dt * 5)); mg.lampK += (1 - mg.lampK) * Math.min(1, dt * 1.5);
     mg.bulbsK = cl(mg.bulbsK + (mg.layer >= 2 ? dt * 1.2 : -dt * 3), 0, 1); mg.crowd = cl(mg.crowd + (mg.layer >= 3 ? dt * 1.5 : -dt * 2), 0, 1);
@@ -83,8 +83,8 @@ MINI.musician = { title: '流浪乐师', img: 'musician', col: C.gold, text: '�
     if (T.t > 1.3 && !T.done) { T.done = 1; SHW.hitstop(mg, 0.15, SX + 80 + Math.round(300 * T.pct), SY + 130, () => { MINI.musician.pay.call(this, mg);
       SHW.items(this, mg, [{ text: '完成度 ' + Math.round(T.pct * 100) + '%', col: C.cream, size: 40 }, { text: '最大连击 ' + mg.maxCombo, col: C.gold, size: 40 }, { text: 'PERFECT ' + mg.perf, col: C.magenta, size: 40 }], { x: SX + SW - 270, y: SY + 250, dy: 64, gap: 0.22, t0: 0.3 }); }); } },
   pay(mg) { const N = mg.notes.length, pct = mg.score / (N * 2); let tx, col, g = [], gr, ev;
-    if (pct >= 0.8) { this.run.runBuff.unitAtk = (this.run.runBuff.unitAtk || 0) + 0.08; g.push({ k: 'wallet', v: M.nice(mg.P * 6) }); tx = '乐师第一次笑了（如果那算笑的话）。本局部队攻击 +8%。'; col = '#ffcc33'; gr = 'S'; ev = 'great'; }
-    else if (pct >= 0.55) { this.run.runBuff.unitAtk = (this.run.runBuff.unitAtk || 0) + 0.1; tx = '部队听得热血沸腾。本局部队攻击 +10%。'; col = '#f2c14e'; gr = 'A'; ev = 'ok'; }
+    if (pct >= 0.8) { this.run.runBuff.unitAtk = (this.run.runBuff.unitAtk || 0) + 0.08; g.push({ k: 'wallet', v: M.nice(mg.P * 6) }); tx = '乐师第一次笑了（如果那算笑的话）。这一趟部队攻击 +8%。'; col = '#ffcc33'; gr = 'S'; ev = 'great'; }
+    else if (pct >= 0.55) { this.run.runBuff.unitAtk = (this.run.runBuff.unitAtk || 0) + 0.1; tx = '部队听得热血沸腾。这一趟部队攻击 +10%。'; col = '#f2c14e'; gr = 'A'; ev = 'ok'; }
     else if (pct >= 0.3) { g.push({ k: 'rsup', v: 15 }); tx = '勉强能听。他还是给了你一点东西。'; col = '#caa84a'; gr = 'B'; ev = 'poor'; }
     else { tx = '琴弦断了一根。他默默收起了琴。'; col = '#8d8496'; gr = 'C'; ev = 'snap'; }
     const wv = g.find(o => o.k === 'wallet'); mg.after = { q: GT[gr], t: mg.t }; S.song.stop();
@@ -328,7 +328,7 @@ const MEDS = [
   { n: '金色药水', c: C.gold, d: '宝贝', q: 3, f(g, mg) { return g.award([mg.it || K.item(g.run, mg.P)], mg.from).join(''); } },
   { n: '白色药片', c: C.white, d: '物资', q: 0, f(g, mg) { return g.award([{ k: 'rsup', v: 25 }], mg.from).join(''); } },
   { n: '红色药水', c: C.red, d: '剧毒', q: -1, f(g) { S.mini('clinic', 'bad'); return '中毒 -' + g.heroHurt(0.1); } },
-  { n: '紫色药水', c: C.violet, d: '部队攻击', q: 2, f(g) { g.run.runBuff.unitAtk = (g.run.runBuff.unitAtk || 0) + 0.05; S.mini('clinic', 'mult'); return '本局部队攻击 +5%'; } }];
+  { n: '紫色药水', c: C.violet, d: '部队攻击', q: 2, f(g) { g.run.runBuff.unitAtk = (g.run.runBuff.unitAtk || 0) + 0.05; S.mini('clinic', 'mult'); return '这一趟部队攻击 +5%'; } }];
 const PXA = M.MCPX, CLI = PXA.CLINIC, clX = (i) => PXA.lx(CLI.x[i]), clY = PXA.ly(CLI.y);
 const clSlot = () => PXA.slot('mini_clinic', 'mc_clinic');
 const clHit = (mg, px, py) => mg.bt.findIndex((b, i) => !b.opened && Math.abs(px - clX(i)) < 46 && py < clY + 10 && py > clY - 150);
@@ -449,8 +449,8 @@ MINI.altar = { title: '血祭坛', img: 'candle', col: C.red, text: '一滴血�
     if (!tier) { S.mini('altar', 'flicker'); SHW.lose(this, mg); SHW.later(mg, HOLD[0], () => this.mini === mg && this.miniFinish('你只滴了几滴，祭坛没有理你。', '#8d8496')); return; }
     // 松手：卡帧 → 圣杯一亮、血槽里的血烧成红金色的火往上窜，倍率越高演得越响
     SHW.hitstop(mg, 0.15, CUP.x, CUP.y, () => { S.mini('altar', 'win'); mg.fire = 1; mg.fireT = mg.t; K.pxrFlash('mc_altar', 4, 1.5); const sl = alSlot(); if (sl) { sl.burst('ember', ALA.cup[0], ALA.cup[1] - 20, 14 + tier * 8, { sp: 40, ang: 0, spread: 1, life: 1.4 }); sl.burst('glint', ALA.cup[0], ALA.cup[1] - 22, 6, { sp: 20, life: 0.7 }); }
-      this.miniSay('本局部队攻击 +' + Math.round(mg.gain * 100) + '%', '#ffcc33', true); SHW.win(this, mg, tier, { x: CX, y: FLOOR - 300, col: tier >= 3 ? C.gold : C.magenta, id: 'cup' });
-      SHW.later(mg, HOLD[tier], () => this.mini === mg && this.miniFinish('蜡烛亮了一截。你流了 ' + lost + ' 点血，本局部队攻击 +' + Math.round(mg.gain * 100) + '%。', '#ffcc33')); }); },
+      this.miniSay('这一趟部队攻击 +' + Math.round(mg.gain * 100) + '%', '#ffcc33', true); SHW.win(this, mg, tier, { x: CX, y: FLOOR - 300, col: tier >= 3 ? C.gold : C.magenta, id: 'cup' });
+      SHW.later(mg, HOLD[tier], () => this.mini === mg && this.miniFinish('蜡烛亮了一截。你流了 ' + lost + ' 点血，这一趟部队攻击 +' + Math.round(mg.gain * 100) + '%。', '#ffcc33')); }); },
   btns(mg) { if (mg.phase === 'idle') return [{ t: '献血', sub: '按住倒血，松手停下', danger: 1, fn: () => this.miniSet('ready') }, { t: '离开', leave: 1, fn: () => this.miniFinish('烛火跟着你晃了一下。', '#8d8496') }]; if (mg.phase === 'ready') return [{ t: '按住空格 / 鼠标', sub: '倒血', dis: 1, why: '按住画面' }]; return []; },
   tick(mg, dt) {
     mg.fire = Math.max(0, mg.fire - dt * 0.5);

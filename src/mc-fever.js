@@ -213,5 +213,5 @@ const oNR2 = M.newRun3;
 M.newRun3 = function (meta, hero, worldKey) { const run = oNR2.apply(this, arguments); const th = WT && WT[worldKey]; if (th && th.loot && th.loot.fever) run.mods.feverRate = (run.mods.feverRate || 0) + th.loot.fever; return run; };
 // the first-look cards: items and banners out, FEVER in
 if (M.GUIDE) { for (let i = M.GUIDE.length - 1; i >= 0; i--) if (['items', 'banners', 'refill'].includes(M.GUIDE[i].id)) M.GUIDE.splice(i, 1);
-  M.GUIDE.push({ id: 'fever', cat: '战斗', icon: 't_mult', title: 'FEVER', line: '部队越打越热，槽满了自动爆发一次随机效果，接着 8 秒部队攻速更快。职业越多、前后排齐全，涨得越快。', scr: 'battle', sel: '[data-tip="b-fever"]' }); }
+  M.GUIDE.push({ id: 'fever', cat: '战斗', icon: 't_mult', title: 'FEVER', line: '部队越打越热，槽满了落下一阵闪电，接着 8 秒部队攻速更快；职业越多、前后排齐全，涨得越快。', scr: 'battle', sel: '[data-tip="b-fever"]' }); }
 })();

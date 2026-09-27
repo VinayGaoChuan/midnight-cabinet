@@ -83,15 +83,15 @@ G.tipFor = function (key) {
     'w-hero': () => run && this.heroTip(run.hero),
     'w-hp': () => ({ title: '领袖生命', c: '#f2c14e', d: '不会自动恢复，归零领袖永久死亡。' }),
     'w-wallet': () => ({ title: '积分', c: '#ffcc33', d: '这次出征的钱，回基地后清空。' }),
-    'w-rsup': () => ({ title: '本局物资', c: '#e8c86a', d: '撤离后带回基地；领袖阵亡则丢失。' }),
-    'w-rexp': () => ({ title: '本局经验', c: '#9cff7a', d: '撤离后给领袖。' }),
+    'w-rsup': () => ({ title: '这一趟的物资', c: '#e8c86a', d: '撤离后带回基地；领袖阵亡则丢失。' }),
+    'w-rexp': () => ({ title: '这一趟的经验', c: '#9cff7a', d: '撤离后给领袖。' }),
     'w-rshard': () => ({ title: '灵魂碎片', c: '#d8a0ff', d: '撤离后带回基地。' }),
     'w-roster': () => ({ title: '部队 ' + (run ? run.roster.length : 0), c: '#6fa8dc' }),
     'b-day': () => ({ title: '第 ' + m.day + ' 天', c: '#ffe08a', d: '出征一次，过去 1 天。' }),
     'b-herocap': () => ({ title: '领袖 ' + m.heroes.length + ' / ' + M.heroCap(m), c: '#ffe08a', d: '领袖数 / 上限。' }),
     's-refresh': () => ({ title: '刷新', c: '#e8dcc4', d: '花积分换一批货，每次涨价。' }),
     's-leave': () => ({ title: '离开夜市', c: '#ffe08a', d: '回到地图，不能再回来。' }),
-    'b-rest': () => ({ title: '休整一天', c: '#cfc6b8', d: '不出征，直接过一天。' }),
+    'b-rest': () => ({ title: '结束白天', c: '#cfc6b8', d: '不出征，直接进入今晚的混沌来袭。', lines: M.raidOddsLine && this.meta ? [M.raidOddsLine(this.meta)] : [] }),
   };
   const f = T[key]; return f ? f() : null;
 };
@@ -196,7 +196,7 @@ G.settleNext = function () {
 };
 // the reward cards on the victory stage (mc-bigfx.js): 168×200, 28 apart, 7 to a row, the band starts at y 392
 M.settleCardPos = function (i, n) { const row = Math.floor(i / 7), len = Math.min(7, n - row * 7); return { x: 960 + (i % 7 - (len - 1) / 2) * 196, y: 392 + 30 + 100 + row * 228 }; };
-const TILE_N = { coin: '积分', sack: '物资', orb: '经验', shard: '灵魂碎片', r_heart: '生命' };
+const TILE_N = { coin: '这一趟积分', sack: '物资', orb: '经验', shard: '灵魂碎片', r_heart: '生命' };
 // the world HUD now also shows run exp and shards
 const oldView = G.view;
 G.view = function () {

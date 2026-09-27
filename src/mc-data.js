@@ -76,7 +76,7 @@ const TAGS = {
   '灵': { color:'#b86bff', th:[2,4], desc:['召唤物属性 +50%', '每波开始召唤 2 只怨灵'] },
 };
 const UNITS = {
-  nail:{ name:'锈钉兵', tags:['铁'], tier:1, hp:130, atk:12, cd:0.9, range:55, spd:95, desc:'击杀后攻击 +2（本局永久）' },
+  nail:{ name:'锈钉兵', tags:['铁'], tier:1, hp:130, atk:12, cd:0.9, range:55, spd:95, desc:'击杀后攻击 +2（这一趟永久）' },
   wick:{ name:'烛芯术士', tags:['火'], tier:1, hp:60, atk:8, cd:1.1, range:420, spd:70, ranged:1, desc:'攻击会点燃敌人' },
   hound:{ name:'缝合犬', tags:['兽'], tier:1, hp:85, atk:10, cd:0.6, range:50, spd:170, desc:'专咬血量最低的敌人' },
   dice:{ name:'骨牌赌徒', tags:['赌'], tier:1, hp:60, atk:9, cd:1.0, range:400, spd:70, ranged:1, desc:'每次攻击 1/6 概率造成 6 倍伤害' },

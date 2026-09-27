@@ -50,7 +50,7 @@ Object.assign(G, {
         items: run.items.map((k, i) => ({ has: !!k && !this.hideI.has(i), img: k ? M.spriteURL(M.ITEMS[k].icon, 5) : '', border: k ? M.ITEM_C : '#3a3040', tipOn: this.tipFn(k ? this.itemTip(k, run.itemQ[i]) : { title: '空道具栏', d: '宝箱、商店、事件都能获得支援道具。' }) })),
         region: run.region.n };
       v.skillTip = this.tipFn(() => this.skillTipOf(h));
-      v.bpTip = this.tipFn(() => ({ title: '本局收获', c: '#e0904a', kind: '撤离或通关后带回基地', d: run.loot.bp.length ? '' : '还没有找到图纸。', lines: run.loot.bp.map(k => { const I = M.itemInfo(k); return { t: I.n, c: I.c }; }) }));
+      v.bpTip = this.tipFn(() => ({ title: '这一趟的收获', c: '#e0904a', kind: '撤离或通关后带回基地', d: run.loot.bp.length ? '' : '还没有找到图纸。', lines: run.loot.bp.map(k => { const I = M.itemInfo(k); return { t: I.n, c: I.c }; }) }));
     }
     // ── battle ──
     if (s === 'battle' && this.battle) {

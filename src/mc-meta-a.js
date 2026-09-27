@@ -227,7 +227,7 @@ G.runFail = function () {
   if ((m.catSaves || 0) > 0 && !run.tut) {
     // the black cat drags the leader home: the expedition is lost, the leader is not
     m.catSaves--; const mx = M.heroMaxHp(h, m); h.hp = Math.max(1, Math.round(mx * 0.1)); h.relics = []; m.runs++; this.pendingDay = true; this.save(); M.Sfx.lose();
-    this.endInfo = { title: '黑猫叼回了领袖', color: '#c890ff', sub: h.name + ' 倒下的时候，一只黑猫把他拖回了传送门。本局收获全部丢失，但他还活着。（本局还剩 ' + m.catSaves + ' 次）', tiles: [], lines: [{ k: '基地核心', v: '未受损 · ' + m.core + ' / 3', c: '#ff8ab0' }], at: now(), gain: {} };
+    this.endInfo = { title: '黑猫叼回了领袖', color: '#c890ff', sub: h.name + ' 倒下的时候，一只黑猫把他拖回了传送门。这一趟的收获全部丢失，但他还活着。（这一趟还剩 ' + m.catSaves + ' 次）', tiles: [], lines: [{ k: '基地核心', v: '未受损 · ' + m.core + ' / 3', c: '#ff8ab0' }], at: now(), gain: {} };
     return this.go('end');
   }
   const P = M.perks(); let invested = h.exp; for (let l = 1; l < h.lv; l++) invested += M.expNeed(l);

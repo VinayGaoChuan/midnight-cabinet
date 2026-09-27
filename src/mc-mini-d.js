@@ -53,9 +53,9 @@ MINI.spring = { title: '地下温泉', img: 'e_spring', col: C.teal, text: '泉�
         this.miniSay('刚刚好', col, true); endIn(this, mg, [1.35, 1.6, 2.4][tier - 1], () => '刚刚好。回复 ' + mg.healV + ' 生命。', col); }); }
     else if (h > b) { const v = this.heroHurt(0.05), tx = '泡太久，晕了过去，醒来时头撞破了（-' + v + '）。'; mg.faintT = mg.t; S.mini('spring', 'hot'); SHOW.lose(this, mg); splash(this, mg, SPW.x, SPW.y, 14); this.miniSay(tx.split('。')[0], '#ff6a5a', true); endIn(this, mg, 0.6, tx, '#ff6a5a'); }
     else { const v = this.heroHeal(0.12), tx = '还没泡热就起来了。回复 ' + v + ' 生命。'; mg.coolT = mg.t; S.mini('spring', 'cool'); if (h > a - 0.08) SHOW.near(this, mg, SPG.x, spY(a), '差一点！'); else SHOW.lose(this, mg); SHOW.burst(mg, SPW.x, SPW.y - 60, 10, { ramp: [C.white, C.ice, C.teal, C.tealDeep], sp: [80, 200], life: [0.3, 0.5], g: 600 }); this.miniSay(tx.split('。')[0], '#9ccc6a', true); endIn(this, mg, 0.7, tx, '#9ccc6a'); } },
-  btns(mg) { if (mg.phase === 'idle') return [{ t: '领袖泡一泡', sub: '按住泡，温度到绿色区域时松手', gold: 1, fn: () => this.miniSet('ready') },
-    { t: '让部队泡', sub: '本局部队生命 +10%', fn: () => { this.buffRun('unitHp', 0.1, '部队生命 +10%', '#6fd0ff'); this.miniSet('troops'); mg.splashT = mg.t; splash(this, mg, SPOOL.x, SPOOL.y, 30, 1); S.mini('spring', 'plunge'); SHOW.later(mg, 0.3, () => { SHOW.win(this, mg, 1, { x: CX, y: FLOOR - 110, col: C.teal }); }); endIn(this, mg, 1.4, '部队泡得满脸通红。本局部队生命 +10%。', '#6fd0ff'); } },
-    { t: '装一桶泉水', sub: '领袖回复 30% 生命', fn: () => { this.miniSet('bucket'); mg.bucketT = mg.t; S.mini('spring', 'drop'); SHOW.later(mg, 0.3, () => { splash(this, mg, K.lx(60), SPOOL.y, 12); S.mini('spring', 'bubble'); }); SHOW.later(mg, 0.55, () => { if (this.mini !== mg) return; this.heroHeal(0.3); this.miniFinish('你装了一桶还在冒泡的泉水，领袖喝了一口。', '#6fd0ff'); }); } }];
+  btns(mg) { const full = !!(M.heroFull && M.heroFull(this)); if (mg.phase === 'idle') return [{ t: '领袖泡一泡', sub: full ? '领袖已满血' : '领袖回复生命，泡得正好回得最多', gold: full ? 0 : 1, dis: full ? 1 : 0, why: full ? '领袖已满血' : '', fn: () => this.miniSet('ready') },
+    { t: '让部队泡', sub: '这一趟部队生命 +10%', fn: () => { this.buffRun('unitHp', 0.1, '部队生命 +10%', '#6fd0ff'); this.miniSet('troops'); mg.splashT = mg.t; splash(this, mg, SPOOL.x, SPOOL.y, 30, 1); S.mini('spring', 'plunge'); SHOW.later(mg, 0.3, () => { SHOW.win(this, mg, 1, { x: CX, y: FLOOR - 110, col: C.teal }); }); endIn(this, mg, 1.4, '部队泡得满脸通红。这一趟部队生命 +10%。', '#6fd0ff'); } },
+    { t: '装一桶泉水', sub: full ? '领袖已满血' : '领袖回复 30% 生命', dis: full ? 1 : 0, why: full ? '领袖已满血' : '', fn: () => { this.miniSet('bucket'); mg.bucketT = mg.t; S.mini('spring', 'drop'); SHOW.later(mg, 0.3, () => { splash(this, mg, K.lx(60), SPOOL.y, 12); S.mini('spring', 'bubble'); }); SHOW.later(mg, 0.55, () => { if (this.mini !== mg) return; this.heroHeal(0.3); this.miniFinish('你装了一桶还在冒泡的泉水，领袖喝了一口。', '#6fd0ff'); }); } }];
     if (mg.phase === 'ready') return [{ t: '按住空格 / 鼠标', sub: '下水', dis: 1, why: '按住画面' }]; return []; },
   tick(mg, dt) { if (mg.phase !== 'soak') return; const [a, b] = mg.band;
     mg.heat = cl(mg.heat + dt * (0.22 + mg.heat * 0.25), 0, 1); if (Math.floor(mg.heat * 10) !== mg.tk) { mg.tk = Math.floor(mg.heat * 10); S.mini('spring', 'tick', mg.heat); }
@@ -138,7 +138,7 @@ MINI.trap = { title: '地雷阵', img: 'e_trap', col: C.amber, text: '对面有�
     endIn(this, mg, T + TIER_END[tier - 1] + 0.3, clean ? '一颗雷都没踩！箱子里的东西全归你。' : '你带着一身灰摸到了箱子。', '#ff9a4a'); },
   down(mg, px, py) { const c = Math.floor((px - TRX0) / TW), r = Math.floor((py - TRY0) / TH); if (r >= 0 && r < TR && c >= 0 && c < TC) MINI.trap.step.call(this, mg, r, c); else SHOW.tap(this, mg, px, py); },
   key(mg, k, down) { if (!down || mg.phase !== 'idle') return; const a = mg.at || { r: 1, c: -1 }, d = { up: [-1, 0], down: [1, 0], left: [0, -1], right: [0, 1] }[k]; if (d) { const r = cl(a.r + d[0], 0, TR - 1), c = a.c + d[1]; if (c >= 0 && c < TC) MINI.trap.step.call(this, mg, r, c); return true; } },
-  btns(mg) { if (mg.phase !== 'idle') return []; return [{ t: '绕路', sub: mg.at ? '已经走进来了' : '-20 本局物资', leave: 1, dis: !!mg.at && false, fn: () => { const run = this.run; const v = Math.min(20, run.loot.supplies); this.hold('rsup', run.loot.supplies); run.loot.supplies -= v; this.release('rsup'); this.miniFinish('你绕了一大圈，丢了 ' + v + ' 物资。', '#8d8496'); } }]; },
+  btns(mg) { if (mg.phase !== 'idle') return []; return [{ t: '绕路', sub: mg.at ? '已经走进来了' : '-20 这一趟的物资', leave: 1, dis: !!mg.at && false, fn: () => { const run = this.run; const v = Math.min(20, run.loot.supplies); this.hold('rsup', run.loot.supplies); run.loot.supplies -= v; this.release('rsup'); this.miniFinish('你绕了一大圈，丢了 ' + v + ' 物资。', '#8d8496'); } }]; },
   draw(x, mg) {
     const t = mg.t, sh = mg.sh;
     // 悬停：能走的格子抬起一格（石板本身画在舞台里）
@@ -171,7 +171,7 @@ const catSlot = () => M.PXR && M.PXR.slots['_mg:mini_cat'];
 MINI.cat = { title: '招财猫', img: 'e_cat', col: C.gold, text: '猫爪一招，天上就下钱。接住金币和金条，躲开炸弹。',
   init(mg) { mg.px = CX; mg.items = []; mg.sum = 0; mg.spawn = 0; mg.left = 8; mg.bombs = 0; mg.pop = 0; mg.boom = 0; mg.ups = []; mg.spill = []; mg.dir = 1; mg.run = 0; },
   btns(mg) { if (mg.phase === 'idle') return [{ t: '摸摸猫爪', sub: mg.pay + ' 积分 · 8 秒接钱（鼠标 / ← →）', gold: 1, dis: this.run.wallet < mg.pay, why: '积分不够', fn: () => { if (!this.miniPay(mg.pay)) return; this.miniSet('rain'); mg.px = CX; mg.startT = mg.t; mg.flickT = mg.t; S.mini('cat', 'wave'); S.mini('cat', 'bell'); this.fx.kick(4); const s = catSlot(); if (s) { s.flash('all', 0.6); s.burst('glint', 150, 62, 10, { sp: 30, life: 0.6, w: 30, h: 24 }); } } },
-    { t: '给猫鞠个躬', sub: '免费 · 本局事件好运 +5%', fn: () => { this.buffRun('eventLuck', 0.05, '好运 +5%', '#ffcc33'); this.miniSet('bow'); mg.bowT = mg.t; S.mini('cat', 'bell'); const s = catSlot(); if (s) { s.flash(0, 1.2); s.burst('glint', 150, 60, 14, { sp: 24, life: 0.8, w: 40, h: 30 }); } SHOW.later(mg, 0.75, () => { if (this.mini === mg) this.miniFinish('猫眯起了眼睛。你觉得运气好了一点。', '#ffcc33'); }); } },
+    { t: '给猫鞠个躬', sub: '免费 · 这一趟事件好运 +5%', fn: () => { this.buffRun('eventLuck', 0.05, '好运 +5%', '#ffcc33'); this.miniSet('bow'); mg.bowT = mg.t; S.mini('cat', 'bell'); const s = catSlot(); if (s) { s.flash(0, 1.2); s.burst('glint', 150, 60, 14, { sp: 24, life: 0.8, w: 40, h: 30 }); } SHOW.later(mg, 0.75, () => { if (this.mini === mg) this.miniFinish('猫眯起了眼睛。你觉得运气好了一点。', '#ffcc33'); }); } },
     { t: '离开', leave: 1, fn: () => this.miniFinish('猫爪还在一下一下地招。', '#8d8496') }]; return []; },
   // 点空白（开始前）：地毯上弹起一枚铜钱
   down(mg, px, py) { if (mg.phase !== 'idle' || px < SX || px > SX + SW || py < SY || py > SY + SH) { SHOW.tap(this, mg, px, py); return; } mg.spill.push({ x: K.ax(px), y: 166, vx: (rnd() - 0.5) * 40, vy: -90, r: rnd() * 6, a: 1.4 }); S.mini('cat', 'clink'); SHOW.burst(mg, px, K.ly(166), 6, { col: C.gold, sp: [60, 160], life: [0.2, 0.4] }); },
@@ -327,7 +327,7 @@ MINI.trainer = { title: '地下拳馆', img: 'e_trainer', col: C.amber, text: '�
         const tier = SHOW.grade(this, mg, gr, CX, SY + 280);
         if (tier) SHOW.later(mg, 0.3, () => SHOW.win(this, mg, tier, { x: from.x, y: from.y, v: Math.round(k * 100), col: C.amber, label: tier === 3 ? '大赢' : '' }));
         SHOW.later(mg, tier ? 0.4 : 0.1, () => hearts(this, from, C.lime, () => { if (this.held && this.held.hp != null) this.release('hp'); }));
-        endIn(this, mg, tier ? 0.4 + TIER_END[tier - 1] + 0.1 : 0.6, mg.hits + ' 拳！领袖本局攻击 +' + Math.round(k * 100) + '%，回复 ' + heal + ' 生命。', '#ff8a3a'); })); } },
+        endIn(this, mg, tier ? 0.4 + TIER_END[tier - 1] + 0.1 : 0.6, mg.hits + ' 拳！领袖这一趟攻击 +' + Math.round(k * 100) + '%，回复 ' + heal + ' 生命。', '#ff8a3a'); })); } },
   draw(x, mg) {
     const t = mg.t, fev = mg.sh && mg.sh.fever;
     if (!K.pxr(x, 'mini_gym', 0, 0, t, { mg, t })) bgv(x, '#2a1a10', '#0c0806');
@@ -374,7 +374,7 @@ MINI.statue = { title: '沉睡的古像', img: 'e_statue', col: C.teal, text: '�
       onReveal: () => { this.miniSet('wake'); S.mini('statue', 'eyes'); SHOW.reveal(this, mg, 2, { x: CX, y: STEYE, col: C.teal }); K.pxrFlash('mini_statue', 'all', 1.2); SHOW.stamp(mg, '大赢', CX, STEYE + 150, C.teal, 110, 1.8);
         const s = M.PXR && M.PXR.slots['_mg:mini_statue']; if (s) s.burst('dust', 150, 60, 40, { sp: 20, life: 1.6, w: 100, h: 30 });
         SHOW.later(mg, 0.7, () => { this.buffRun('unitAtk', 0.1, '部队攻击 +10%', '#8fe0ff'); this.run.mods.unitHp = (this.run.mods.unitHp || 0) + 0.1; SHOW.items(this, mg, [{ text: '部队攻击 +10%', col: C.ice, size: 40 }, { text: '部队生命 +10%', col: C.gold, size: 40 }], { x: CX, y: SY + 560, dy: 58 }); SHOW.ambient(mg, 2); }); } });
-    endIn(this, mg, T + 2.4, '石像睁开了眼睛，向你的部队点了点头。本局部队攻击、生命各 +10%。', '#8fe0ff'); },
+    endIn(this, mg, T + 2.4, '石像睁开了眼睛，向你的部队点了点头。这一趟部队攻击、生命各 +10%。', '#8fe0ff'); },
   btns(mg) { if (mg.phase !== 'idle') return []; return [0, 1, 2].map(i => ({ t: ['转外圈', '转中圈（会带动内圈）', '转内圈'][i], sub: '剩 ' + mg.moves + ' 次', fn: () => MINI.statue.turn.call(this, mg, i) })).concat([{ t: '离开', leave: 1, fn: () => this.miniFinish('石像继续睡着。', '#8d8496') }]); },
   down(mg, px, py) { const i = stRing(px, py); if (i >= 0) MINI.statue.turn.call(this, mg, i); else SHOW.tap(this, mg, px, py); },
   tick(mg, dt) { mg.anim = mg.anim.map(a => Math.max(0, a - dt * 4)); mg.lk = mg.lk.map(a => Math.max(0, a - dt * 3)); },
@@ -454,10 +454,10 @@ MINI.camp = { title: '营火', img: 'e_camp', col: C.amber, text: '火堆还温�
   sharpEnd(mg) { const run = this.run, k = 0.05 + mg.hits * 0.04, tier = mg.hits >= 5 ? 2 : mg.hits ? 1 : 0; run.runBuff.heroAtk = (run.runBuff.heroAtk || 0) + k; S.mini('camp', 'sharpen'); SHOW.calm(mg);
     if (tier) SHOW.hitstop(mg, 0.12, CPS.x, CPS.y - 12, () => { if (tier >= 2) { mg.flare = 2; SHOW.reveal(this, mg, 2, { x: CPS.x, y: CPS.y - 20, col: C.gold }); } SHOW.later(mg, 0.2, () => { SHOW.win(this, mg, tier, { x: CPS.x, y: CPS.y - 60, v: Math.round(k * 100), col: C.amber, label: tier === 2 ? 'PERFECT' : '' }); embers(this, 12 + tier * 10, CPF.x, CPF.y); SHOW.items(this, mg, [{ text: '领袖攻击 +' + Math.round(k * 100) + '%', col: C.gold, size: 40 }], { x: CX, y: SY + 420 }); }); });
     else SHOW.state(mg).gray = 0.6;
-    endIn(this, mg, tier ? 0.47 + TIER_END[tier - 1] + 0.1 : 0.6, mg.hits + ' / 5 刀磨在点上。本局领袖攻击 +' + Math.round(k * 100) + '%。', '#f2c14e'); },
+    endIn(this, mg, tier ? 0.47 + TIER_END[tier - 1] + 0.1 : 0.6, mg.hits + ' / 5 刀磨在点上。这一趟领袖攻击 +' + Math.round(k * 100) + '%。', '#f2c14e'); },
   down(mg, px, py) { if (mg.phase === 'sharpen') MINI.camp.stroke.call(this, mg); else { SHOW.tap(this, mg, px, py); const s = M.PXR && M.PXR.slots['_mg:mini_camp']; if (s) s.burst('ember', 128, 134, 4, { sp: 16, ang: 0, spread: 0.8, life: 1.2 }); S.mini('camp', 'pop'); } },
   key(mg, k, down) { if (k === 'act' && down && mg.phase === 'sharpen') { MINI.camp.stroke.call(this, mg); return true; } },
-  btns(mg) { const run = this.run; if (mg.phase === 'idle') return [{ t: '休息', sub: '领袖回复 ' + (run.mods.campHalf ? 12 : 30) + '% 生命', gold: 1, fn: () => { this.miniSet('rest'); S.mini('camp', 'rest'); } }, { t: '磨刀', sub: '刀上的亮点到石头中间的磨痕时下刀 · 5 次', fn: () => this.miniSet('sharpen') }];
+  btns(mg) { const run = this.run, full = !!(M.heroFull && M.heroFull(this)); if (mg.phase === 'idle') return [{ t: '休息', sub: full ? '领袖已满血' : '领袖回复 ' + (run.mods.campHalf ? 12 : 30) + '% 生命', gold: full ? 0 : 1, dis: full ? 1 : 0, why: full ? '领袖已满血' : '', fn: () => { this.miniSet('rest'); S.mini('camp', 'rest'); } }, { t: '磨刀', sub: '这一趟领袖攻击 +5%～25%', gold: full ? 1 : 0, fn: () => this.miniSet('sharpen') }];
     if (mg.phase === 'sharpen') return [{ t: '下刀', sub: '空格 / 点击 · ' + mg.strokes + ' / 5', gold: 1, fn: () => MINI.camp.stroke.call(this, mg) }]; return []; },
   tick(mg, dt) { mg.spark = Math.max(0, mg.spark - dt * 4); mg.flare = Math.max(0, mg.flare - dt * 2.5); if (mg.phase === 'sharpen') mg.q = (mg.pt * 1.1) % 1; const run = this.run;
     if (mg.phase === 'rest' && mg.pt > 2.2 && !mg.fin) { mg.fin = true; const pct = run.mods.campHalf ? 0.12 : 0.3, from = { x: K.lx(44), y: K.ly(110) }; embers(this, 26, CPF.x, CPF.y); SHOW.ring(mg, CPF.x, CPF.y, 10, 200, C.amber, { life: 0.6 });

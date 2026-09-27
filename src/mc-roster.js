@@ -200,7 +200,6 @@ G.beginBattle = function (n) {
 if (M.GUIDE) M.GUIDE.push(
   { id: 'rostercap', cat: '出征', icon: 't_command', title: '上场人数', line: '一趟最多带这么多部队；满了还能买能凑成三合一的，别的要替换一支。', scr: 'shop', sel: '[data-tip="w-roster"]' },
   { id: 'swap', cat: '夜市', icon: 'e_market', title: '替换', line: '队伍满了时点卡片，再点一支要放走的部队，它退一半积分。', scr: 'shop', sel: '[data-tip="w-roster"]' },
-  { id: 'bppick', cat: '基地', icon: 'g_scroll', title: '图纸三选一', line: '区域最终首领和繁荣度升级各给一次，从三张建筑图纸里选一张。', scr: 'base', sel: '[data-fx="core"]' },
   { id: 'garup', cat: '基地', icon: 'u_star', title: '驻军升档', line: '进化建筑每天能花灵魂碎片，让一支这个职业的驻军升一档。', scr: 'base', sel: '[data-fx="mgar"]' });
 })();
 

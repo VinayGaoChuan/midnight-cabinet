@@ -67,7 +67,7 @@ G.tick = function (dt) {
   const fc = this.ui && this.ui.cv && this.ui.cv('fx'); if (fc) { try { draw(fc.getContext('2d'), F, T); } catch (e) { (window.__mcErrs = window.__mcErrs || []).push('boons: ' + e.message); this.boonFx = null; } }
   return r;
 };
-if (M.GUIDE) M.GUIDE.push({ id: 'boons', cat: '战斗', icon: 'u_star', title: '局外加成', line: '开战时左边亮出这一仗吃到的基地、方向、宗教、天赋和宝物加成。', scr: 'battle', sel: '[data-fx="bbase"]' });
+if (M.GUIDE) M.GUIDE.push({ id: 'boons', cat: '战斗', icon: 'u_star', title: '局外加成', line: '开战时左边亮出这一仗吃到的建筑、奇观、守护神、天赋、宝物和这一趟途中得到的加成。', scr: 'battle', sel: '[data-fx="bbase"]' });
 })();
 
 ;

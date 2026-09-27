@@ -152,4 +152,5 @@ mc-roster.js
 mc-opening.js
 mc-gacha.js
 mc-endone.js
+mc-clarity.js
 mc-perf.js
