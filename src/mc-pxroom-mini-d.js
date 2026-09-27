@@ -11,7 +11,21 @@ const q12 = (t) => Math.floor(t * 12 + 1e-6) / 12;             // poses step at 
 const steps = (t, per) => ((t % per) + per) % per / per;        // 0…1 phase of a repeating cycle
 const W = 300, H = 175, FY = 148;
 const art = (wx, wy) => [(wx - 360) / 4, (wy - 110) / 4];       // logical stage point → art px
-X.MINI_D = { W, H, FY, art };
+const MD = X.MINI_D = { W, H, FY, art };
+// draw a def at 4× onto the stage (whole stage by default; ax / ay = its top-left in art px); returns the slot (flash, burst)
+MD.draw = function (x, key, t, o, ax, ay) {
+  const d = X.defs[key]; if (!d) return null; const id = 'mini_' + key; X.pixels(key, t, o || {}, id); const s = X.slots[id]; if (!s || !s.cx) return s; s.cx.putImageData(s.img, 0, 0);
+  const w = d.size ? d.size[0] : 150, h = d.size ? d.size[1] : 105, sm = x.imageSmoothingEnabled; x.imageSmoothingEnabled = false;
+  x.drawImage(s.cv, 0, 0, w, h, 360 + (ax || 0) * 4, 110 + (ay || 0) * 4, w * 4, h * 4); x.imageSmoothingEnabled = sm; return s;
+};
+MD.slot = (key) => X.slots['mini_' + key];
+// a pixel-cast character standing with its feet at logical (lx, ly), 4× like the stage; st: idle / move / attack / hurt …, fi 12 fps frame
+MD.cast = function (x, key, lx, ly, st, fi, flip, tint, clipY) {
+  const P = M.PCDG; if (!P || !P.has(key)) return null; const c = P.bodyFrame(key, st || 'idle', fi || 0, tint || null, 4); if (!c) return null;
+  x.save(); x.imageSmoothingEnabled = false; if (clipY != null) { x.beginPath(); x.rect(0, 0, 1920, clipY); x.clip(); }
+  x.translate(Math.round(lx / 4) * 4, Math.round(ly / 4) * 4); if (flip) x.scale(-1, 1); x.drawImage(c, -c.cx, -c.footY, c.width, c.height); x.restore(); return c;
+};
+MD.frames = (key, st) => { const P = M.PCDG, b = P && P.has(key) ? P.body(key) : null; return !b ? 8 : st === 'idle' ? b.nIdle : st === 'hurt' ? b.nHurt : Math.max(1, Math.round((b.dur[{ move: 1, attack: 2, charge: 3, cast: 4, recover: 5, hurt: 6, death: 7 }[st] || 0] || 0.75) * 12)); };
 
 // a hanging paper lantern: string, black caps, a glowing ribbed body that follows light li, a gold tassel; sw = sway in px
 function lantern(D, x, y, li, sw, big) {
@@ -227,6 +241,118 @@ X.def('mini_cat', {
       else { bomb(D, ax, ay, T); rs.dl.push({ x: ax + 2, y: ay - 9, z: 12, r: 12, i: 0.7, rgb: [255, 150, 60], tint: 0.5 }); if (Math.floor(T * 30) % 3 === 0) rs.burst('spark', ax + 2, ay - 9, 1, { sp: 14, ang: 0, spread: 1.6, life: 0.3 }); } });
     // coins knocked out of the tray, rolling on the carpet
     (mg.spill || []).forEach(p => { if (p.a > 0) coin(D, p.x, p.y, p.r, 7); });
+  },
+});
+
+// ═════════════════════ 地下温泉 · the hot-spring grotto ═════════════════════
+// warm layered rock, dripping stalactites, a hot fall out of a crack, teal crystals, a stone lantern and a paper-lantern
+// rope; a boulder-rimmed pool whose light walks from teal to amber to red with the heat; a brass thermometer bolted to the
+// right wall (glass tube, jade marks for the sweet spot, a bulb that glows the heat's colour, a relief valve that hisses).
+const SP = { pool: [150, 128, 104, 16], tube: [262, 32.5, 100], zone: [0.55, 0.78] };
+const spY = (h) => SP.tube[1] + SP.tube[2] * (1 - h);
+const heatRGB = (h) => { const a = [[70, 214, 193], [255, 190, 80], [255, 70, 60]], k = h < 0.6 ? 0 : 1, q = clamp(h < 0.6 ? h / 0.6 : (h - 0.6) / 0.4, 0, 1); return a[k].map((v, i) => Math.round(v + (a[k + 1][i] - v) * q)); };
+// cave rock: a jittered grid of facets (nearest-seed cells), each tilted its own way, dark cracks between them
+function facets(S, x0, y0, w, h, m, t, cell, seed, o) {
+  o = o || {}; const r = X.rng(seed || 3), gw = Math.ceil(w / cell) + 2, gh = Math.ceil(h / cell) + 2, pts = [];
+  for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) pts.push({ x: x0 + (i - 0.5 + r()) * cell, y: y0 + (j - 0.5 + r() * 0.8) * cell * 0.8, nx: (r() - 0.5) * 1.4, ny: -0.2 - r() * 0.7, dt: (r() - 0.5) * 1.6 });
+  for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) {
+    if (o.mask && !o.mask(x, y)) continue; let b1 = 1e9, b2 = 1e9, bp = null; const gi = Math.floor((x - x0) / cell), gj = Math.floor((y - y0) / (cell * 0.8));
+    for (let dj = -1; dj <= 2; dj++) for (let di = -1; di <= 2; di++) { const q = pts[(gj + dj) * gw + gi + di]; if (!q) continue; const d = (x - q.x) ** 2 + ((y - q.y) * 1.25) ** 2; if (d < b1) { b2 = b1; b1 = d; bp = q; } else if (d < b2) b2 = d; }
+    const edge = Math.sqrt(b2) - Math.sqrt(b1), crack = ((bp.x * 7 + bp.y * 13) | 0) % 3 !== 0; let tt = t + bp.dt - (bp.nx * 0.9 + bp.ny * 1.1) * 0.8 + ((y - bp.y) > cell * 0.25 ? -0.6 : 0); if (edge < (crack ? 1.1 : 0.5)) tt -= crack ? 2.4 : 1.2; else if (edge < 2.4 && y < bp.y) tt += 1.1;
+    S.px(x, y, m, tt, { n: [bp.nx * 0.6, bp.ny * 0.6] });
+  }
+}
+function boulder(S, x, y, rx, ry, t, moss) {
+  S.beg(); blob(S, x, y, rx, ry, 'rock', t, { k: 2.2 }); S.end();
+  if (moss) for (let i = -rx + 1; i < rx - 1; i++) { const top = y - Math.round(ry * Math.sqrt(Math.max(0, 1 - (i / rx) ** 2))); if ((i * 7 + x) % 5 < 3) S.px(x + i, top + 1, 'moss', 5 + ((i + x) % 3)); if ((i * 3 + x) % 7 === 0) S.px(x + i, top + 2, 'moss', 4); }
+  S.px(x - Math.round(rx * 0.4), y - Math.round(ry * 0.55), 'rock', t + 3.5, { n: [-0.5, -0.6] });
+}
+X.def('mini_spring', {
+  size: [W, H], fy: FY, noFrame: 1, amb: [0.22, 0.22],
+  paint(S, sc) {
+    sc.light({ x: 150, y: 124, z: 6, r: 118, i: 0.85, c: '#47d6c1', fl: 'pulse', amp: 0.08, sp: 1.2, tint: 0.5 });   // 0 the pool's own glow
+    [[62, 36], [112, 42], [172, 42]].forEach(([x, y], i) => sc.light({ x, y: y + 8, z: 22, r: 84, i: 1.25, c: '#ff8a48', fl: 'candle', ph: i * 2.1, tint: 0.6 }));   // 1–3 paper lanterns
+    sc.light({ x: 38, y: 92, z: 16, r: 44, i: 0.8, c: '#ffa050', fl: 'candle', ph: 4, tint: 0.5 });   // 4 stone lantern
+    [[48, 80], [238, 64], [86, 22]].forEach(([x, y], i) => sc.light({ x, y, z: 10, r: 46, i: 0.85, c: '#6ad6c0', fl: 'pulse', amp: 0.15, sp: 1 + i * 0.4, ph: i, tint: 0.55 }));   // 5–7 crystals
+    sc.light({ x: 116, y: 40, z: 12, r: 30, i: 0.3, c: '#bff7f0', tint: 0.3 });   // 8 the hot fall's sheen
+    // ── rock: layered strata, darker toward the back of the cave, a ceiling of stalactites ──
+    S.lay('wall'); facets(S, 0, 0, W, FY, 'mstone', 5.6, 24, 21); S.noise(0, 0, W, FY, 0.6, 2, 22, { only: 'mstone' });
+    for (let x = 60; x < 244; x++) for (let y = 20; y < 110; y++) { const d = Math.hypot((x - 150) / 90, (y - 70) / 50); if (d < 1 && S.at(x, y)) S.tone(x, y, -1.2 * (1 - d)); }   // the far back is deeper
+    S.ao(0, 0, 36, FY, 'l', 1.5); S.ao(W - 36, 0, 36, FY, 'r', 1.5); S.ao(0, 0, W, 26, 't', 2.4);
+    for (let i = 0; i < 30; i++) { const x = 4 + i * 10 + Math.floor(S.r() * 6), len = 6 + Math.floor(S.r() * (i % 3 === 0 ? 22 : 12)), w0 = 2 + Math.floor(S.r() * 3);
+      S.lay('back'); S.beg(); for (let k = 0; k < len; k++) { const w = Math.max(0, Math.round(w0 * (1 - k / len))); for (let j = -w; j <= w; j++) S.px(x + j, k, 'rock', 7 + (j < 0 ? 1.6 : j > 0 ? -1.4 : 0.6) - k / len * 1.5, { n: [j / (w + 1) * 0.7, 0.2] }); } S.px(x, len, 'water', 9, { e: 255 }); S.end(); }
+    // the crack the hot fall comes out of
+    S.lay('wall'); S.poly([[108, 26], [124, 26], [120, 40], [112, 40]], 'rock', 0.6);
+    // ── crystals: tall teal prisms that glow with their light ──
+    const crystal = (x, y, s, li) => { S.lay('back'); [[0, 1, 10], [-3, 0.8, 7], [3, 0.9, 8], [-5, 0.6, 5]].forEach(([dx, k, h]) => { const hh = Math.round(h * s), w = Math.max(1, Math.round(1.6 * s * k)); S.beg();
+      for (let yy = 0; yy < hh; yy++) { const ww = yy < w ? yy + 0.5 : w; for (let j = -Math.floor(ww); j <= Math.floor(ww); j++) S.px(x + dx + j, y - hh + yy, 'teal', (j < 0 ? 9 : j > 0 ? 6 : 10) - yy / hh * 3, { e: li + 1 }); } S.end(); }); };
+    crystal(48, 90, 1.1, 5); crystal(238, 72, 1, 6); crystal(86, 30, 0.8, 7);
+    // ── stone lantern on the left rim ──
+    S.lay('mid'); S.beg(); S.box(32, 102, 12, 6, 'stone', 5, { top: 1 }); S.box(35, 92, 6, 10, 'stone', 6); S.box(30, 86, 16, 3, 'stone', 7, { top: 1 }); S.poly([[29, 86], [47, 86], [38, 79]], 'stone', 6.5, { n: [0, -0.6] }); S.rect(35, 94, 6, 5, 'fire', 8, { e: 5 }); S.rect(37, 95, 2, 3, 'fire', 10, { e: 5 }); S.end();
+    // ── the pool: boulders behind, the water, boulders in front ──
+    const [px0, py0, prx, pry] = SP.pool;
+    S.lay('back'); for (let i = 0; i < 17; i++) { const a = Math.PI + i / 16 * Math.PI, x = px0 + Math.cos(a) * (prx + 6), y = py0 + Math.sin(a) * (pry + 4); boulder(S, x, y - 2, 8 + (i % 3) * 2, 6 + (i % 2) * 2, 6 + (i % 4) * 0.4, 1); }
+    S.lay('mid'); for (let y = Math.floor(py0 - pry); y <= py0 + pry; y++) for (let x = Math.floor(px0 - prx); x <= px0 + prx; x++) { const u = (x + 0.5 - px0) / prx, v = (y + 0.5 - py0) / pry, d = u * u + v * v; if (d > 1) continue;
+      S.px(x, y, 'teal', 4.2 + v * 0.8 - d * 1.2 + ((x * 3 + y * 7) % 11 === 0 ? 1 : 0), { n: [0, -0.9] }); }
+    S.lay('front'); for (let i = 0; i < 15; i++) { const a = i / 14 * Math.PI, x = px0 + Math.cos(a) * (prx + 4), y = py0 + Math.sin(a) * (pry + 5); boulder(S, x, y + 4, 9 + (i % 3) * 2, 6 + (i % 2), 6.6 + (i % 3) * 0.5, i % 2); }
+    // stone steps into the water on the right, a bucket and a folded towel on the left
+    S.beg(); S.box(214, 150, 26, 6, 'stone', 6, { top: 1 }); S.box(222, 156, 24, 6, 'stone', 5.4, { top: 1 }); S.end();
+    S.beg(); S.cyl(14, 150, 14, 14, 'wood', 5.4, { rim: 2.4 }); S.hcyl(14, 153, 14, 2, 'brass', 6); S.hcyl(14, 160, 14, 2, 'brass', 5); S.ell(21, 150, 7, 1.6, 'teal', 5, { n: [0, -0.9] }); S.end();
+    S.beg(); S.box(32, 160, 20, 3, 'linen', 8.5, { top: 1 }); S.box(33, 157, 18, 3, 'linen', 9.2, { top: 1 }); S.hl(33, 158, 18, 'red', 6); S.end();
+    // floor: wet rock, a few puddles catching the light
+    S.lay('wall'); facets(S, 0, FY, W, H - FY, 'rock', 5.4, 10, 23);
+    [[70, 166, 10], [196, 170, 8], [124, 172, 6]].forEach(([x, y, r]) => S.ell(x, y, r, 1.2, 'water', 4.5, { n: [0, -0.9] }));
+    // ── the thermometer: brass case, glass tube, jade marks, bulb, relief valve ──
+    const [tx, tt, th] = SP.tube, zy0 = Math.round(spY(SP.zone[1])), zy1 = Math.round(spY(SP.zone[0]));
+    S.lay('back'); S.beg(); S.box(tx - 8, tt - 7, 17, th + 13, 'brass', 5.4, { top: 1, side: 1 }); S.rect(tx - 5, tt - 4, 11, th + 7, 'brass', 3.4);
+    for (let y = tt; y < tt + th; y += 10) { S.hl(tx - 7, Math.round(y), 3, 'brass', 8); S.hl(tx + 5, Math.round(y), 3, 'brass', 7); }
+    [[tx - 6, tt - 5], [tx + 6, tt - 5], [tx - 6, tt + th + 3], [tx + 6, tt + th + 3]].forEach(([x, y]) => TX.rivet(S, x, y, 'brass', 7));
+    S.rect(tx - 3, tt - 1, 7, th + 2, 'glass', 2.4); S.vl(tx - 2, tt, th, 'glass', 7, { n: [-0.6, -0.4] });
+    for (let y = zy0; y <= zy1; y++) { S.px(tx - 5, y, 'teal', y === zy0 || y === zy1 ? 9 : 6); S.px(tx + 5, y, 'teal', y === zy0 || y === zy1 ? 9 : 6); } S.hl(tx - 7, zy0, 15, 'teal', 8); S.hl(tx - 7, zy1, 15, 'teal', 7);
+    S.end();
+    S.beg(); S.ell(tx + 0.5, tt + th + 8, 7.5, 7, 'brass', 6, { dome: 1 }); S.ell(tx + 0.5, tt + th + 8, 5, 4.6, 'glass', 3, { dome: 1 }); S.end();
+    S.beg(); S.rect(tx - 1, tt - 16, 3, 9, 'copper', 6); S.ell(tx + 0.5, tt - 17, 4, 1.5, 'copper', 7.5, { ring: 1 }); S.hl(tx - 3, tt - 17, 8, 'copper', 5); S.px(tx + 4, tt - 13, 'copper', 5); S.px(tx + 5, tt - 13, 'copper', 4); S.end();
+    // steam and drips that are always there
+    sc.emit({ k: 'steam', x: 116, y: 112, w: 10, rate: 3, sp: 5, ang: 0, spread: 0.7, life: 3.2 });
+    sc.emit({ k: 'drip', x: 150, y: 20, w: 240, rate: 0.8, sp: 0, life: 3 });
+    sc.field({ x0: 44, y0: 40, x1: 256, y1: 112, lay: 'wall', fn: (x, y, t) => { const v = Math.sin(x * 0.23 + t * 1.8 + Math.sin(y * 0.3 + t) * 1.5) * Math.sin(y * 0.41 - t * 1.2 + x * 0.07); return v > 0.55 ? 0.22 : 0; } });
+  },
+  anim(D, t, rs, o) {
+    const mg = (o && o.mg) || {}, T = o && o.t != null ? o.t : t, tq = q12(T), h = mg.heat || 0, soak = mg.phase === 'soak', hot = soak && h > SP.zone[1], [px0, py0, prx, pry] = SP.pool;
+    // lanterns on their rope
+    D.lay('front'); D.beg(); for (let x = 20; x < 210; x++) { const y = 22 + Math.round(((x - 20) / 190) * 8 + Math.sin((x - 20) / 190 * Math.PI) * 10); D.px(x, y, 'wood', 3); } D.end({ none: 1 });
+    [[62, 36], [112, 42], [172, 42]].forEach(([x, y], i) => lantern(D, x, y, 1 + i, Math.round(Math.sin(T * 1.1 + i * 2) * (hot ? 2 : 1)), i === 1));
+    // the hot fall: a sheet of water that scrolls, white foam where it hits
+    D.lay('back'); for (let y = 40; y < py0 - pry + 2; y++) { const w = 3 + Math.floor((y - 40) / 18); for (let j = -w; j <= w; j++) { const s2 = Math.floor((y * 1.0 - T * 40 + j * 7) / 3); D.px(116 + j, y, 'ice', (s2 % 4 === 0 ? 10 : 8) - Math.abs(j) / (w + 1) * 3, { e: 8 + 1 }); } }
+    for (let j = -8; j <= 8; j++) if ((j + Math.floor(T * 14)) % 3) D.px(116 + j, py0 - pry + 2 + (Math.abs(j) > 5 ? 1 : 0), 'linen', 10, { e: 255 });
+    // the surface: moving glints, rings where things hit the water, and a light that follows the heat
+    const c = heatRGB(h); rs.dl.push({ x: px0, y: py0 + 6, z: 2, r: 80 + h * 30, i: 0.35 + h * 0.9, rgb: c, tint: 0.55 });
+    D.lay('mid'); for (let k = 0; k < 26; k++) { const x0 = px0 - prx + ((k * 37 + Math.floor(T * (8 + k % 5))) % (prx * 2)), y0 = py0 - pry + 2 + (k * 5) % (pry * 2 - 3), u = (x0 - px0) / prx, v = (y0 - py0) / pry; if (u * u + v * v > 0.86) continue; D.hl(x0, y0, 2 + (k % 3), 'teal', 9 + (k % 2), { e: 255 }); }
+    (mg.rip || []).forEach(r => { const a = T - r.t; if (a < 0 || a > 1.2) return; const rr = 3 + a * (r.big ? 30 : 16); for (let k = 0; k < 40; k++) { const th2 = k / 40 * Math.PI * 2, x = r.x + Math.cos(th2) * rr, y = r.y + Math.sin(th2) * rr * 0.28; const u = (x - px0) / prx, v = (y - py0) / pry; if (u * u + v * v < 0.95) D.px(x, y, 'teal', 10 - a * 5, { e: 255 }); } });
+    // bubbles and steam climb with the heat; over the top the water blushes red
+    if (soak && Math.random() < 0.2 + h * 1.4) rs.burst('bubble', px0 + (Math.random() - 0.5) * prx * 1.4, py0 + 4, 1, { sp: 6, life: 0.8, floor: py0 - pry });
+    if (Math.random() < 0.08 + h * 0.6) rs.burst('steam', px0 + (Math.random() - 0.5) * prx * 1.6, py0 - 4, 1, { sp: 6, ang: 0, spread: 0.6, life: 2.4 + h });
+    // the thermometer: the column in the heat's colour, a bright meniscus; the jade marks light up while you are in the zone
+    const [tx, tt, th] = SP.tube, top = Math.round(spY(h)), inZ = h >= SP.zone[0] && h <= SP.zone[1];
+    D.lay('back'); const hm = h < 0.6 ? 'teal' : h < 0.8 ? 'lamp' : 'fire';
+    for (let y = top; y < tt + th; y++) { D.px(tx - 1, y, hm, 7, { e: 255 }); D.px(tx, y, hm, 9, { e: 255 }); D.px(tx + 1, y, hm, 7.5, { e: 255 }); }
+    if (h > 0.01) { D.hl(tx - 1, top, 3, hm, 11, { e: 255 }); }
+    const bt = tt + th + 8; D.ell(tx + 0.5, bt, 4.2, 3.8, hm, 7 + h * 3, { e: 255 }); D.px(tx - 1, bt - 2, hm, 11, { e: 255 }); rs.dl.push({ x: tx, y: bt, z: 8, r: 24 + h * 20, i: 0.5 + h * 0.8, rgb: c, tint: 0.6 });
+    const zT = mg.zoneT != null ? T - mg.zoneT : 9, zy0 = Math.round(spY(SP.zone[1])), zy1 = Math.round(spY(SP.zone[0]));
+    if (inZ || zT < 0.4) for (let y = zy0; y <= zy1; y++) { const lit = zT < 0.4 ? y >= zy1 - (zy1 - zy0) * zT / 0.12 : true; if (!lit) continue; D.px(tx - 5, y, 'teal', 10, { e: 255 }); D.px(tx + 5, y, 'teal', 10, { e: 255 }); }
+    // the brass pointer on the left follows the column; after the release it clamps (a bright notch)
+    const py = Math.round(spY(mg.phase === 'done' ? mg.lockH != null ? mg.lockH : h : h)), pc = hot ? 'red' : inZ ? 'teal' : 'brass';
+    D.beg(); for (let k = 0; k < 5; k++) D.vl(tx - 13 + k, py - (4 - k), 1 + (4 - k) * 2, pc, pc === 'brass' ? 8 : 9); D.end();
+    if (mg.clampT != null && T - mg.clampT < 0.5) { D.hl(tx - 4, py, 9, 'linen', 11, { e: 255 }); }
+    // the relief valve hisses harder as it heats
+    if (soak && Math.random() < h * h * 1.6) rs.burst('steam', tx + 5, tt - 13, 1, { sp: 20 + h * 30, ang: 1.1, spread: 0.3, life: 0.9 });
+    // PERFECT: a geyser out of the middle of the pool, a pixel rainbow in the mist
+    const gz = mg.geyserT != null ? T - mg.geyserT : 9;
+    if (gz < 2.2) { const hh = Math.round(Math.min(1, gz / 0.25) * 96 * (gz > 1.4 ? Math.max(0, 1 - (gz - 1.4) / 0.8) : 1)); D.lay('front');
+      for (let y = 0; y < hh; y++) { const w = 3 + Math.round(Math.sin(y * 0.5 + T * 20) * 1) + (y < 6 ? 2 : 0); for (let j = -w; j <= w; j++) D.px(px0 + j, py0 - y, y > hh - 5 ? 'linen' : 'water', y > hh - 5 ? 11 : 9 + (j === -1 ? 1.5 : 0) - Math.abs(j) / w * 2, { e: 255 }); }
+      if (gz < 1.8 && Math.random() < 0.9) rs.burst('drip', px0 + (Math.random() - 0.5) * 20, py0 - hh, 2, { sp: 40, spread: 2.4, life: 1.4, floor: py0 });
+      if (gz > 0.3) { const ra = Math.min(1, (gz - 0.3) / 0.4) * (gz > 1.8 ? Math.max(0, 1 - (gz - 1.8) / 0.4) : 1), R0 = 58, cols = [['red', 8], ['fire', 8], ['lamp', 9], ['leaf', 9], ['teal', 8], ['water', 8], ['arcane', 7]];
+        D.lay('wall'); if (ra > 0.1) cols.forEach(([m, tn], i) => { const r = R0 - i * 2; for (let a = 0; a < Math.PI * ra; a += 0.5 / r) { const x = Math.round(px0 - Math.cos(a) * r * 1.3), y = Math.round(py0 - 16 - Math.sin(a) * r * 0.9); if (y > 18) { D.px(x, y, m, tn, { e: 255 }); D.px(x, y + 1, m, tn - 1, { e: 255 }); } } }); } }
   },
 });
 })();

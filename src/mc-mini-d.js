@@ -5,6 +5,7 @@ const M = window.MC, G = M.Game.prototype, S = M.Sfx, K = M.MK, MINI = M.MINI;
 const { SX, SY, SW, SH, CX, FLOOR, cl, eo, eio, eb, rnd } = K;
 const U = M.UI, C = M.PJ.PAL, T = U.T; // 画面内界面件按设计稿 §11.5（调色板色、字号阶梯）
 const heroSp = (g) => M.HEROES[g.run.hero.cls].sprite;
+const catHero = (g) => { const k = heroSp(g); return M.PCDG && M.PCDG.has(k) ? k : null; };   // the leader's pixel-cast key, when it has one
 const bgv = (x, top, bot) => { x.fillStyle = K.LG(x, 0, SY, 0, SY + SH, [[0, top], [1, bot]]); x.fillRect(SX, SY, SW, SH); };
 const PENTA = [392, 440, 523, 587, 659, 784, 880, 1047];
 // ───────── 演出（§7.5.1）：结果先定，演出只挑怎么端出来 ─────────
@@ -25,45 +26,64 @@ const TIER_END = [0.9, 1.3, 1.9, 3.0];   // 揭晓后各档留多久再出结算
 const embers = (g, n, x, y) => g.fx.spark(x == null ? CX : x, y == null ? FLOOR - 50 : y, C.amber, n, { dir: -Math.PI / 2, spread: 1.1, v: 520, w: 4, life: 1.1, g: -60 });
 
 // ═════════════════════ 温泉 · hold to soak, release in the sweet spot ═════════════════════
-// 逼近绿区就听牌（聚光罩住温度计）；松在绿区按离正中多近给 GOOD / GREAT / PERFECT；过热一拍带过
+// 像素溶洞舞台（mc-pxroom-mini-d.js 的 mini_spring）：按住，领袖扑通下水；温度一格格涨（液柱跳、音阶爬、气泡和蒸汽越来越密、
+// 池水的光从青走到琥珀再到红）；逼近绿区就听牌，之后每涨 0.05 一拍加码；松手：铜指针夹住、卡帧，按离正中多近揭晓
+// GOOD（水花）/ GREAT（灯笼齐亮）/ PERFECT（池中心冲起间歇泉、雾里一道彩虹），心从蒸汽里飞向生命条；过热一拍带过
 const SPG = { x: SX + SW - 140, y: SY + 130, h: 400 }, spY = (h) => Math.round(SPG.y + SPG.h * (1 - h));
+const SPW = { x: CX, y: K.ly(126) }, SPOOL = { x: CX, y: K.ly(128) };   // the leader's waterline; the pool's middle
+const springRip = (mg, x, y, big) => { (mg.rip = mg.rip || []).push({ x: K.ax(x), y: K.ay(y), t: mg.t, big }); if (mg.rip.length > 10) mg.rip.shift(); };
+const splash = (g, mg, x, y, n, big) => { springRip(mg, x, y, big); SHOW.burst(mg, x, y, n, { ramp: [C.white, C.ice, C.teal, C.tealDeep], sp: [120, 360], life: [0.35, 0.7], g: 700, ang: -Math.PI / 2, spread: 1.4 }); const s = M.PXR && M.PXR.slots['_mg:mini_spring']; if (s) s.burst('drip', K.ax(x), K.ay(y) - 2, Math.round(n / 3), { sp: 40, spread: 2, life: 0.9, floor: K.ay(y) + 1 }); };
 MINI.spring = { title: '地下温泉', img: 'e_spring', col: C.teal, text: '泉水冒着热气。泡到刚刚好最舒服——泡过头会晕。',
-  init(mg) { mg.heat = 0; mg.band = [0.55, 0.78]; mg.soaks = 0; },
-  down(mg) { if (mg.phase === 'ready') { this.miniSet('soak'); S.mini('spring', 'bubble'); } },
+  init(mg) { mg.heat = 0; mg.band = [0.55, 0.78]; mg.soaks = 0; mg.rip = []; mg.bi = -1; },
+  down(mg, px, py) { if (mg.phase === 'ready') { this.miniSet('soak'); mg.inT = mg.t; S.mini('spring', 'bubble'); S.mini('spring', 'plunge'); splash(this, mg, SPW.x, SPW.y, 26, 1); SHOW.shake(mg, 4); return; }
+    if (mg.phase !== 'soak') { const inPool = ((K.ax(px) - 150) / 104) ** 2 + ((K.ay(py) - 128) / 16) ** 2 < 1; if (inPool) { splash(this, mg, px, py, 8); S.mini('spring', 'drop'); } else SHOW.tap(this, mg, px, py); } },
   up(mg) { if (mg.phase === 'soak') MINI.spring.judge.call(this, mg); },
-  judge(mg) { if (mg.phase !== 'soak') return; const h = mg.heat, [a, b] = mg.band, gy = spY(h), pool = { x: CX, y: FLOOR - 110 }; this.miniSet('done');
-    if (h >= a && h <= b) { const d = Math.abs(h - (a + b) / 2) / ((b - a) / 2), tier = d < 0.3 ? 3 : d < 0.65 ? 2 : 1, v = hpPct(this, 0.3), col = '#6fd0ff'; S.mini('spring', 'good'); mg.win = tier;
-      // 先是温度计上停住的那一格，再到水面，最后几颗心飞向生命条
-      this.fx.ring(SPG.x, gy, 8, 80, C.green, 5, 0.3); this.fx.spark(SPG.x, gy, C.lime, 6 + tier * 4, { v: 500 });
-      if (tier < 3) SHOW.stamp(mg, tier === 2 ? 'GREAT' : 'GOOD', SPG.x - 160, gy, tier === 2 ? C.gold : C.lime, 48 + tier * 8, 1);
-      SHOW.later(mg, 0.08, () => { SHOW.win(this, mg, tier, { x: pool.x, y: pool.y, v, col: tier >= 3 ? C.gold : C.teal, label: tier === 3 ? 'PERFECT' : '' }); this.fx.spark(pool.x, pool.y, C.ice, 10 + tier * 8, { dir: -Math.PI / 2, spread: 1.4, v: 600 + tier * 150 }); });
-      SHOW.later(mg, 0.2, () => healFly(this, mg, 0.3, pool));
-      this.miniSay('刚刚好', col, true); endIn(this, mg, [1.35, 1.6, 2.2][tier - 1], () => '刚刚好。回复 ' + mg.healV + ' 生命。', col); }
-    else if (h > b) { const v = this.heroHurt(0.05), tx = '泡太久，晕了过去，醒来时头撞破了（-' + v + '）。'; S.mini('spring', 'hot'); SHOW.lose(this, mg); this.miniSay(tx.split('。')[0], '#ff6a5a', true); endIn(this, mg, 0.6, tx, '#ff6a5a'); }
-    else { const v = this.heroHeal(0.12), tx = '还没泡热就起来了。回复 ' + v + ' 生命。'; S.mini('spring', 'cool'); if (h > a - 0.08) SHOW.near(this, mg, SPG.x, spY(a), '差一点！'); else SHOW.lose(this, mg); this.miniSay(tx.split('。')[0], '#9ccc6a', true); endIn(this, mg, 0.7, tx, '#9ccc6a'); } },
-  btns(mg) { if (mg.phase === 'idle') return [{ t: '领袖泡一泡', sub: '按住泡，温度到绿色区域时松手', gold: 1, fn: () => this.miniSet('ready') }, { t: '让部队泡', sub: '本局部队生命 +10%', fn: () => { this.buffRun('unitHp', 0.1, '部队生命 +10%', '#6fd0ff'); this.miniSet('troops'); SHOW.later(mg, 0.3, () => { SHOW.win(this, mg, 1, { x: CX, y: FLOOR - 110, col: C.teal }); this.fx.spark(CX, FLOOR - 90, C.ice, 18, { dir: -Math.PI / 2, spread: 1.6, v: 600 }); }); endIn(this, mg, 1.4, '部队泡得满脸通红。本局部队生命 +10%。', '#6fd0ff'); } }, { t: '装一桶泉水', sub: '领袖回复 30% 生命', fn: () => { this.heroHeal(0.3); this.miniFinish('你装了一桶还在冒泡的泉水，领袖喝了一口。', '#6fd0ff'); } }];
+  judge(mg) { if (mg.phase !== 'soak') return; const h = mg.heat, [a, b] = mg.band, gy = spY(h), pool = SPOOL; this.miniSet('done'); mg.lockH = h; mg.clampT = mg.t; S.mini('spring', 'clamp');
+    if (h >= a && h <= b) { const d = Math.abs(h - (a + b) / 2) / ((b - a) / 2), tier = d < 0.3 ? 3 : d < 0.65 ? 2 : 1, col = '#6fd0ff'; mg.win = tier;
+      // 铜指针夹住 → 卡帧 → 按档揭晓；心从蒸汽里飞向生命条
+      SHOW.hitstop(mg, 0.15, SPG.x, gy, () => { S.mini('spring', 'good');
+        if (tier === 3) { mg.geyserT = mg.t; S.mini('spring', 'geyser'); SHOW.reveal(this, mg, 3, { x: pool.x, y: pool.y - 60, col: C.teal }); K.pxrFlash('mini_spring', 'all', 1.4); }
+        else if (tier === 2) { SHOW.reveal(this, mg, 1, { x: pool.x, y: pool.y, col: C.teal }); [1, 2, 3, 4].forEach(i => K.pxrFlash('mini_spring', i, 1.4)); splash(this, mg, pool.x, pool.y, 30, 1); }
+        else { SHOW.ring(mg, SPG.x, gy, 8, 90, C.green, { life: 0.35 }); splash(this, mg, pool.x, pool.y, 18, 1); }
+        if (tier < 3) SHOW.stamp(mg, tier === 2 ? 'GREAT' : 'GOOD', SPG.x - 170, gy, tier === 2 ? C.gold : C.lime, 48 + tier * 8, 1);
+        SHOW.later(mg, 0.08, () => SHOW.win(this, mg, tier, { x: pool.x, y: pool.y - 20, v: hpPct(this, 0.3), col: tier >= 3 ? C.gold : C.teal, label: tier === 3 ? 'PERFECT' : '' }));
+        SHOW.later(mg, 0.25, () => { healFly(this, mg, 0.3, { x: pool.x, y: pool.y - 90 }); mg.sighT = mg.t + 0.3; });
+        this.miniSay('刚刚好', col, true); endIn(this, mg, [1.35, 1.6, 2.4][tier - 1], () => '刚刚好。回复 ' + mg.healV + ' 生命。', col); }); }
+    else if (h > b) { const v = this.heroHurt(0.05), tx = '泡太久，晕了过去，醒来时头撞破了（-' + v + '）。'; mg.faintT = mg.t; S.mini('spring', 'hot'); SHOW.lose(this, mg); splash(this, mg, SPW.x, SPW.y, 14); this.miniSay(tx.split('。')[0], '#ff6a5a', true); endIn(this, mg, 0.6, tx, '#ff6a5a'); }
+    else { const v = this.heroHeal(0.12), tx = '还没泡热就起来了。回复 ' + v + ' 生命。'; mg.coolT = mg.t; S.mini('spring', 'cool'); if (h > a - 0.08) SHOW.near(this, mg, SPG.x, spY(a), '差一点！'); else SHOW.lose(this, mg); SHOW.burst(mg, SPW.x, SPW.y - 60, 10, { ramp: [C.white, C.ice, C.teal, C.tealDeep], sp: [80, 200], life: [0.3, 0.5], g: 600 }); this.miniSay(tx.split('。')[0], '#9ccc6a', true); endIn(this, mg, 0.7, tx, '#9ccc6a'); } },
+  btns(mg) { if (mg.phase === 'idle') return [{ t: '领袖泡一泡', sub: '按住泡，温度到绿色区域时松手', gold: 1, fn: () => this.miniSet('ready') },
+    { t: '让部队泡', sub: '本局部队生命 +10%', fn: () => { this.buffRun('unitHp', 0.1, '部队生命 +10%', '#6fd0ff'); this.miniSet('troops'); mg.splashT = mg.t; splash(this, mg, SPOOL.x, SPOOL.y, 30, 1); S.mini('spring', 'plunge'); SHOW.later(mg, 0.3, () => { SHOW.win(this, mg, 1, { x: CX, y: FLOOR - 110, col: C.teal }); }); endIn(this, mg, 1.4, '部队泡得满脸通红。本局部队生命 +10%。', '#6fd0ff'); } },
+    { t: '装一桶泉水', sub: '领袖回复 30% 生命', fn: () => { this.miniSet('bucket'); mg.bucketT = mg.t; S.mini('spring', 'drop'); SHOW.later(mg, 0.3, () => { splash(this, mg, K.lx(60), SPOOL.y, 12); S.mini('spring', 'bubble'); }); SHOW.later(mg, 0.55, () => { if (this.mini !== mg) return; this.heroHeal(0.3); this.miniFinish('你装了一桶还在冒泡的泉水，领袖喝了一口。', '#6fd0ff'); }); } }];
     if (mg.phase === 'ready') return [{ t: '按住空格 / 鼠标', sub: '下水', dis: 1, why: '按住画面' }]; return []; },
   tick(mg, dt) { if (mg.phase !== 'soak') return; const [a, b] = mg.band;
     mg.heat = cl(mg.heat + dt * (0.22 + mg.heat * 0.25), 0, 1); if (Math.floor(mg.heat * 10) !== mg.tk) { mg.tk = Math.floor(mg.heat * 10); S.mini('spring', 'tick', mg.heat); }
-    // 逼近绿区：压暗、聚光罩住温度计、心跳；进绿区闪一圈；冲过头就松开（过热不演）
     if (!mg.rch && mg.heat >= a - 0.13) { mg.rch = 1; SHOW.reach(this, mg, { x: SPG.x, y: spY((a + b) / 2), r: 150, col: C.teal }); }
-    if (!mg.zone && mg.heat >= a) { mg.zone = 1; S.mini('spring', 'zone'); this.fx.ring(SPG.x, spY(mg.heat), 10, 80, C.green, 4, 0.25); this.fx.kick(2); }
-    if (!mg.hot && mg.heat > b) { mg.hot = 1; SHOW.calm(mg); this.fx.kick(3); }
+    // 听牌之后每涨 0.05 一拍：一拍比一拍重，镜头往温度计推（手上功夫的玩法不减速）
+    if (mg.rch && mg.heat <= b) { const i = Math.floor((mg.heat - (a - 0.13)) / 0.05); if (i > mg.bi) { mg.bi = i; SHOW.beat(this, mg, SPG.x, spY(mg.heat), Math.min(i, 6), mg.heat >= a ? 1 : 0, false); } }
+    if (!mg.zone && mg.heat >= a) { mg.zone = 1; mg.zoneT = mg.t; S.mini('spring', 'zone'); SHOW.ring(mg, SPG.x, spY(mg.heat), 10, 90, C.green, { life: 0.3 }); SHOW.flash(mg, C.teal, 0.2); }
+    if (!mg.hot && mg.heat > b) { mg.hot = 1; SHOW.calm(mg); SHOW.shake(mg, 3); }
     if (mg.heat >= 1) MINI.spring.judge.call(this, mg); },
   draw(x, mg) {
-    const t = mg.t, [a, b] = mg.band, over = mg.phase === 'soak' && mg.heat > b ? (mg.heat - b) / (1 - b) : 0; bgv(x, '#12202a', '#060a0e'); for (let i = 0; i < 16; i++) K.EL(x, SX + (i * 83) % SW, SY + 80 + (i % 4) * 30, 90, 40, 'rgba(40,50,60,0.6)');
-    K.EL(x, CX, FLOOR - 40, 460, 110, '#3a3a44'); K.EL(x, CX, FLOOR - 50, 430, 90, K.RG(x, CX, FLOOR - 50, 20, 430, [[0, C.ice], [0.5, C.teal], [1, C.tealDeep]]));
-    // 泡过头：领袖左右晃（晕了），水面泛红
-    const inW = mg.phase === 'soak' || mg.phase === 'done' || mg.phase === 'troops', dz = Math.sin(t * 34) * 10 * over; x.save(); x.beginPath(); x.rect(SX, SY, SW, FLOOR - 70 - SY); x.clip(); if (mg.phase === 'troops') { this.run.roster.slice(0, 5).forEach((u, i) => K.SP(x, u.type, CX - 240 + i * 120, FLOOR - 20 + Math.sin(t * 3 + i) * 4, 110)); } else K.SP(x, heroSp(this), CX + dz, FLOOR + (inW ? 40 : -40), 180); x.restore();
-    if (over > 0) { x.save(); x.globalAlpha = 0.3 * over; K.EL(x, CX, FLOOR - 50, 430, 90, C.red); x.restore(); }
-    for (let i = 0; i < 26; i++) { const q = (t * (0.3 + 0.4 * over) + i / 26) % 1; x.globalAlpha = (1 - q) * (0.2 + mg.heat * 0.5); K.CI(x, CX - 400 + (i * 37) % 800 + Math.sin(q * 6 + i) * 20, FLOOR - 80 - q * 380, 20 + q * 40, '#e8f4ff'); } x.globalAlpha = 1;
-    // 温度计：夜色外壳 + 墨槽，绿色是该松手的区域；底部方形温度泡，过热变红；左边的箭头指着现在的温度
-    if (mg.phase !== 'idle' && mg.phase !== 'troops') { const gx = SPG.x, gy = SPG.y, gh = SPG.h, ht = Math.round(gh * mg.heat), b0 = spY(b), b1 = spY(a), hot = mg.heat > b, inZ = mg.heat >= a && !hot, hy = spY(mg.heat);
-      if (inZ) K.GL(x, gx, hy, 110, C.green, 0.3 + 0.2 * Math.sin(t * 14));
-      U.box(x, gx - 24, gy - 9, 48, gh + 18, C.night); K.R(x, gx - 14, gy, 28, gh, C.ink); K.R(x, gx - 14, b0, 28, b1 - b0, C.greenDeep); K.R(x, gx - 14, b0, 28, 3, C.green); K.R(x, gx - 14, b1 - 3, 28, 3, C.green);
-      if (ht > 0) { K.R(x, gx - 14, gy + gh - ht, 28, ht, K.LG(x, 0, gy + gh, 0, gy, [[0, C.teal], [0.6, C.gold], [1, C.red]])); K.R(x, gx - 14, gy + gh - ht, 28, 3, C.white); }
-      K.PL(x, [[gx - 46, hy - 11], [gx - 26, hy], [gx - 46, hy + 11]], hot ? C.red : inZ ? C.lime : C.white);
-      U.box(x, gx - 30, gy + gh + 2, 60, 56, hot ? C.red : C.teal); K.R(x, gx - 30, gy + gh + 2, 60, 3, hot ? C.pink : C.ice); U.text(x, Math.round(30 + mg.heat * 40) + '°', gx, gy + gh + 30, T.body, C.ink, { shadow: false }); }
+    const t = mg.t, [a, b] = mg.band, over = mg.phase === 'soak' && mg.heat > b ? (mg.heat - b) / (1 - b) : 0;
+    if (!K.pxr(x, 'mini_spring', 0, 0, t, { mg, t })) bgv(x, '#12202a', '#060a0e');
+    const hk = catHero(this), inW = mg.phase === 'soak' || mg.phase === 'done';
+    if (mg.phase === 'troops') { this.run.roster.slice(0, 5).forEach((u, i) => { const k = u.type, bob = Math.round(Math.sin(t * 3 + i) * 1) * 4; if (!M.PXR.MINI_D.cast(x, k, CX - 240 + i * 120, SPW.y + 64 + bob, 'idle', Math.floor(t * 12 + i * 5) % 12, i % 2 === 1, null, SPW.y)) K.SP(x, k, CX - 240 + i * 120, FLOOR - 20, 110); }); }
+    else if (hk) {
+      // 下水前站在左边的池沿上；泡着时只露出水面以上（晕了就左右晃、沉下去再冒出来，太早起来就哆嗦）
+      const fT = mg.faintT != null ? t - mg.faintT : 9, cT = mg.coolT != null ? t - mg.coolT : 9, inT = mg.inT != null ? t - mg.inT : 9, sink = fT < 0.5 ? Math.sin(fT / 0.5 * Math.PI) * 60 : 0, bob = inT < 0.3 ? (1 - inT / 0.3) * -40 : 0;
+      const dz = Math.round((Math.sin(t * 34) * 10 * over + (cT < 0.4 ? Math.sin(t * 90) * 6 : 0)) / 4) * 4;
+      if (inW) M.PXR.MINI_D.cast(x, hk, SPW.x + dz, SPW.y + 44 + sink + bob, 'idle', Math.floor(t * 12) % 24, false, null, SPW.y);
+      else M.PXR.MINI_D.cast(x, hk, K.lx(228), K.ly(150), 'idle', Math.floor(t * 12) % 24, true);   // 站在右边下水的石阶上
+      if (inW) for (let k = -5; k <= 5; k++) { const yy = (Math.abs(k) + Math.floor(t * 6)) % 3 === 0 ? SPW.y - 4 : SPW.y; K.R(x, K.snap(SPW.x + dz) + k * 8, yy, 8, 4, (k + Math.floor(t * 8)) % 3 ? C.ice : C.white); }   // 水线上的一圈白沫
+      // 泡过头：头顶转晕星
+      if (over > 0.2 || fT < 0.6) for (let k = 0; k < 3; k++) { const a2 = t * 6 + k * 2.1; K.R(x, K.snap(SPW.x + Math.cos(a2) * 44 - 4), K.snap(SPW.y - 150 + Math.sin(a2) * 10), 8, 8, k === 1 ? C.gold : C.butter); }
+      // 松手后往后一靠，头顶冒一团「呼——」的汽
+      if (mg.sighT != null && t > mg.sighT && t - mg.sighT < 1.2) { const q = (t - mg.sighT) / 1.2; x.save(); x.globalAlpha = 1 - q; for (let k = 0; k < 4; k++) K.R(x, K.snap(SPW.x - 20 + k * 12), K.snap(SPW.y - 170 - q * 60 - (k % 2) * 8), 12, 8, C.cream); x.restore(); }
+    } else K.SP(x, heroSp(this), CX + Math.sin(t * 34) * 10 * over, FLOOR + (inW ? 40 : -40), 180);
+    // 木桶：从左下飞到池边舀一下
+    if (mg.phase === 'bucket') { const q = cl((t - mg.bucketT) / 0.5, 0, 1), bx = K.lx(20) + (K.lx(60) - K.lx(20)) * eo(Math.min(1, q * 1.6)), by = K.ly(150) - Math.sin(Math.min(1, q * 1.6) * Math.PI) * 60 + (q > 0.6 ? 12 : 0); K.R(x, K.snap(bx) - 24, K.snap(by) - 24, 48, 44, C.umber); K.R(x, K.snap(bx) - 24, K.snap(by) - 24, 48, 4, C.brown); K.R(x, K.snap(bx) - 24, K.snap(by) - 12, 48, 4, C.gold); K.R(x, K.snap(bx) - 20, K.snap(by) - 20, 40, 4, q > 0.6 ? C.teal : C.ink); }
+    // 温度读数：压在温度计球泡左边的清晰数字
+    if (mg.phase !== 'idle' && mg.phase !== 'troops' && mg.phase !== 'bucket') { const hot = mg.heat > b, inZ = mg.heat >= a && !hot; U.text(x, Math.round(30 + mg.heat * 40) + '°', SPG.x - 70, SPG.y + SPG.h + 36, T.num, hot ? C.red : inZ ? C.lime : C.cream, { outline: true }); }
     if (mg.phase === 'ready') K.sign(x, '按住下水', CX, SY + 170, { kind: 'teal', size: T.btn });
   } };
 
@@ -120,15 +140,14 @@ MINI.trap = { title: '地雷阵', img: 'e_trap', col: C.amber, text: '对面有�
 // 接一下是连击（逢 5 砸字、5 连进狂热：猫睁眼、举起小判、身后金光转起来）；炸弹把盘里的钱炸飞一把、在地毯上滚走；
 // 时间到先「称重」（盘里的钱一层层亮，拍数按评级），再砸评级章、按评级走中奖档，钱一枚枚飞进钱包
 const CATY = K.FLOOR - 40, CAT_PAW = [174, 50];
-const catSlot = () => M.PXR && M.PXR.slots['mini_mini_cat'];
-const catHero = (g) => { const k = heroSp(g); return M.PCDG && M.PCDG.has(k) ? k : null; };
+const catSlot = () => M.PXR && M.PXR.slots['_mg:mini_cat'];
 MINI.cat = { title: '招财猫', img: 'e_cat', col: C.gold, text: '猫爪一招，天上就下钱。接住金币和金条，躲开炸弹。',
   init(mg) { mg.px = CX; mg.items = []; mg.sum = 0; mg.spawn = 0; mg.left = 8; mg.bombs = 0; mg.pop = 0; mg.boom = 0; mg.ups = []; mg.spill = []; mg.dir = 1; mg.run = 0; },
   btns(mg) { if (mg.phase === 'idle') return [{ t: '摸摸猫爪', sub: mg.pay + ' 积分 · 8 秒接钱（鼠标 / ← →）', gold: 1, dis: this.run.wallet < mg.pay, why: '积分不够', fn: () => { if (!this.miniPay(mg.pay)) return; this.miniSet('rain'); mg.px = CX; mg.startT = mg.t; mg.flickT = mg.t; S.mini('cat', 'wave'); S.mini('cat', 'bell'); this.fx.kick(4); const s = catSlot(); if (s) { s.flash('all', 0.6); s.burst('glint', 150, 62, 10, { sp: 30, life: 0.6, w: 30, h: 24 }); } } },
     { t: '给猫鞠个躬', sub: '免费 · 本局事件好运 +5%', fn: () => { this.buffRun('eventLuck', 0.05, '好运 +5%', '#ffcc33'); this.miniSet('bow'); mg.bowT = mg.t; S.mini('cat', 'bell'); const s = catSlot(); if (s) { s.flash(0, 1.2); s.burst('glint', 150, 60, 14, { sp: 24, life: 0.8, w: 40, h: 30 }); } SHOW.later(mg, 0.75, () => { if (this.mini === mg) this.miniFinish('猫眯起了眼睛。你觉得运气好了一点。', '#ffcc33'); }); } },
     { t: '离开', leave: 1, fn: () => this.miniFinish('猫爪还在一下一下地招。', '#8d8496') }]; return []; },
   // 点空白（开始前）：地毯上弹起一枚铜钱
-  down(mg, px, py) { if (mg.phase !== 'idle' || px < SX || px > SX + SW || py < SY || py > SY + SH) return; const [ax] = M.PXR.MINI_D.art(px, py); mg.spill.push({ x: ax, y: 166, vx: (rnd() - 0.5) * 40, vy: -90, r: rnd() * 6, a: 1.4 }); S.mini('cat', 'clink'); },
+  down(mg, px, py) { if (mg.phase !== 'idle' || px < SX || px > SX + SW || py < SY || py > SY + SH) { SHOW.tap(this, mg, px, py); return; } mg.spill.push({ x: K.ax(px), y: 166, vx: (rnd() - 0.5) * 40, vy: -90, r: rnd() * 6, a: 1.4 }); S.mini('cat', 'clink'); SHOW.burst(mg, px, K.ly(166), 6, { col: C.gold, sp: [60, 160], life: [0.2, 0.4] }); },
   tick(mg, dt) {
     mg.pop = Math.max(0, mg.pop - dt * 5); mg.boom = Math.max(0, mg.boom - dt * 4);
     // 滚在地毯上的钱：抛物线落地、弹两下、滚一段、淡掉
@@ -155,24 +174,17 @@ MINI.cat = { title: '招财猫', img: 'e_cat', col: C.gold, text: '猫爪一招�
     const sec = Math.ceil(mg.left); if (mg.left < 3 && mg.left > 0 && sec !== mg.sec) { mg.sec = sec; mg.secT = mg.t; SHOW.crawl(this, mg, 4 - sec); const s = catSlot(); if (s) s.flash('all', 0.5); }
     if (mg.left <= 0 && !mg.fin) { mg.fin = true; this.miniSet('end'); const sum = mg.sum, v2 = M.nice(mg.P * 0.5 * sum), from = { x: mg.px, y: CATY - 20 }, col = v2 > mg.pay ? '#ffcc33' : '#caa84a', tx = '猫爪停了。你接住了 ' + sum + ' 份钱' + (mg.bombs ? '（被炸掉了一些）' : '') + '。';
       mg.items.forEach(it => this.fx.spark(it.x, it.y, it.k === 'bomb' ? C.slate : C.gold, 3, { v: 200 })); mg.items = [];
-      // 称重：盘里的钱一层层亮起来，一拍比一拍响，拍数按评级（C 一拍就过）
-      const gr = sum >= 45 ? 'S' : sum >= 30 ? 'A' : sum >= 16 ? 'B' : 'C', n = { S: 4, A: 3, B: 2, C: 1 }[gr], gap = 0.22, gains = v2 ? [{ k: 'wallet', v: v2 }] : [];
-      mg.weighT = mg.t; mg.weighN = n;
-      for (let i = 0; i < n; i++) SHOW.later(mg, i * gap, () => { S.mini('cat', 'weigh', i); this.fx.kick(2 + i * 2); this.fx.ring(mg.px, CATY - 10, 10, 90 + i * 30, C.gold, 4, 0.25); const s = catSlot(); if (s) { s.flash(8, 0.5 + i * 0.3); s.burst('glint', M.PXR.MINI_D.art(mg.px, 0)[0], 130, 3 + i * 2, { sp: 30, life: 0.5, w: 16 }); } });
-      const at = n * gap + (n > 1 ? 0.12 : 0);
-      SHOW.later(mg, at, () => { const tier = SHOW.grade(this, mg, gr, CX, SY + 250);
-        if (tier) { if (tier >= 3) { mg.joyT = mg.t; S.mini('cat', 'bell'); const s = catSlot(); if (s) { s.flash('all', 1.2); s.burst('glint', 150, 60, 24, { sp: 50, life: 1, w: 50, h: 40 }); } this.fx.coins(CX, SY + 230, 30, { v: 1100 }); }
-          SHOW.later(mg, 0.25, () => SHOW.win(this, mg, tier, { x: from.x, y: FLOOR - 20, v: v2, col: C.gold })); SHOW.later(mg, 0.4, () => give(this, mg, gains, from)); }
-        else give(this, mg, gains, from); });
-      endIn(this, mg, at + (gr === 'C' ? 0.5 : 0.4 + TIER_END[{ S: 3, A: 2, B: 1 }[gr] - 1]), tx, col); }
+      // 称重：盘里的钱一层层亮，逐拍加码（拍数按评级），卡帧，揭晓砸评级章；C 一拍带过
+      const gr = sum >= 45 ? 'S' : sum >= 30 ? 'A' : sum >= 16 ? 'B' : 'C', q = { S: 3, A: 2, B: 1, C: 0 }[gr], gains = v2 ? [{ k: 'wallet', v: v2 }] : [];
+      if (!q) { mg.weighI = 0; S.mini('cat', 'weigh', 0); SHOW.grade(this, mg, gr, CX, SY + 250); give(this, mg, gains, from); endIn(this, mg, 0.5, tx, col); return; }
+      const T = SHOW.charge(this, mg, { x: mg.px, y: CATY - 30, q, beats: q + 2, onBeat: (i) => { mg.weighI = i; S.mini('cat', 'weigh', i); K.pxrFlash('mini_cat', 8, 0.5 + i * 0.3); },
+        onReveal: () => { mg.weighI = null; const tier = SHOW.grade(this, mg, gr, CX, SY + 250); if (tier >= 3) { mg.joyT = mg.t; S.mini('cat', 'bell'); K.pxrFlash('mini_cat', 'all', 1.2); const s = catSlot(); if (s) s.burst('glint', 150, 60, 24, { sp: 50, life: 1, w: 50, h: 40 }); this.fx.coins(CX, SY + 230, 30, { v: 1100 }); }
+          SHOW.later(mg, 0.25, () => SHOW.win(this, mg, tier, { x: from.x, y: FLOOR - 20, v: v2, col: C.gold })); SHOW.later(mg, 0.4, () => give(this, mg, gains, from)); } });
+      endIn(this, mg, T + 0.4 + TIER_END[{ S: 3, A: 2, B: 1 }[gr] - 1], tx, col); }
   },
   draw(x, mg) {
     const t = mg.t, px = M.PXR;
-    if (px && px.has('mini_cat')) {
-      // 舞台：整张像素画，按 4 倍画上去（1 格 = 4 逻辑像素，和战斗角色一样大）
-      const id = 'mini_mini_cat'; px.pixels('mini_cat', t, { mg, t }, id); const s = px.slots[id]; s.cx.putImageData(s.img, 0, 0);
-      x.save(); x.imageSmoothingEnabled = false; x.drawImage(s.cv, 0, 0, s.cv.width, s.cv.height, SX, SY, SW, SH); x.restore();
-    } else bgv(x, '#3a1010', '#120404');
+    if (px && px.has('mini_cat')) { K.pxr(x, 'mini_cat', 0, 0, t, { mg, t }); } else bgv(x, '#3a1010', '#120404');
     // 领袖：接钱时头顶红漆盘跑（跑步动作、朝着跑的方向），不接钱时站在一边
     const hk = catHero(this), rain = mg.phase === 'rain' || mg.phase === 'end';
     if (hk) { const f = rain && mg.run > 0 ? ['move', Math.floor(t * 12) % 8] : ['idle', Math.floor(t * 12) % 24], c = M.PCDG.bodyFrame(hk, f[0], f[1], mg.boom > 0.6 ? '#ffffff' : null);
@@ -185,9 +197,9 @@ MINI.cat = { title: '招财猫', img: 'e_cat', col: C.gold, text: '猫爪一招�
   },
   // 红漆盘：金边、酒红漆身，盘里的钱越接越高（按整格画，和舞台同一个像素大小）；接到一下压一格再弹，称重时一层层亮
   tray(x, mg, hx) {
-    const P = 4, pk = mg.pop / (mg.popMax || 1), dy = pk > 0.72 ? 1 + (mg.popMax > 1.2 ? 1 : 0) : pk > 0.36 ? -1 : 0, hot = pk > 0.8, lean = Math.round((mg.lean || 0) * 2), n = Math.min(28, Math.round(mg.sum * 0.6)), wk = mg.weighT != null ? (mg.t - mg.weighT) / 0.22 : -1;
+    const P = 4, pk = mg.pop / (mg.popMax || 1), dy = pk > 0.72 ? 1 + (mg.popMax > 1.2 ? 1 : 0) : pk > 0.36 ? -1 : 0, hot = pk > 0.8, lean = Math.round((mg.lean || 0) * 2), n = Math.min(28, Math.round(mg.sum * 0.6)), wk = mg.weighI;
     const ox = Math.round(hx / P) * P, oy = CATY + dy * P, R = (a, b, w, h, c) => K.R(x, ox + a * P, oy + b * P, w * P, h * P, c);
-    for (let i = 0; i < n; i++) { const row = Math.floor((Math.sqrt(8 * i + 1) - 1) / 2), k = i - row * (row + 1) / 2, cx0 = -row * 2 + k * 4 + lean * (row > 1 ? 1 : 0), cy = -1 - row, lit = wk >= 0 && Math.floor(wk) === Math.min(mg.weighN - 1, Math.floor(row / 2));
+    for (let i = 0; i < n; i++) { const row = Math.floor((Math.sqrt(8 * i + 1) - 1) / 2), k = i - row * (row + 1) / 2, cx0 = -row * 2 + k * 4 + lean * (row > 1 ? 1 : 0), cy = -1 - row, lit = wk != null && wk === Math.floor(row / 1.5);
       R(cx0 - 1, cy, 3, 1, lit ? C.butter : (i % 3 ? C.gold : C.amber)); if ((i + row) % 4 === 0) R(cx0 - 1, cy, 1, 1, C.butter); }
     R(-12, 0, 24, 1, hot ? C.white : C.gold); R(-12, 0, 1, 1, C.butter); R(-11, 1, 22, 1, hot ? C.butter : C.red); R(-11, 2, 22, 1, C.wine); R(-10, 3, 20, 1, C.ink); R(-13, 0, 1, 2, C.amber); R(12, 0, 1, 2, C.amber);
     } };
