@@ -165,9 +165,11 @@ MINI.granny = { title: '裁缝老太', img: 'old', col: C.violet, text: '她能�
     const hov = ph === 'select' ? cards.findIndex(c => Math.abs(mg.mx - c.x) < 50 && Math.abs(mg.my - c.y) < 70) : -1;
     const breath = mg.breathT != null ? Math.max(0, Math.sin(cl((t - mg.breathT) / 0.9, 0, 1) * Math.PI)) : 0, shk = mg.shake != null && t - mg.shake < 0.3 ? Math.sin((t - mg.shake) * 60) * 0.6 : 0;
     const u = ph === 'sew' ? cl(mg.pt / 4, 0, 1) : ph === 'close' || ph === 'end' ? 1 : 0;
-    K.pxr(x, 'mini_granny', 0, 0, mg.t, { phase: sewing ? 'sew' : 'select', u, marks: mg.marks, cards: cards.map((c, i) => ({ ax: c.ax, hov: i === hov })), breath: breath + shk, sunk: mg.sunk || 0, thread: mg.threadF, knots: mg.knots }, 'mc_granny');
+    K.pxr(x, 'mini_granny', 0, 0, mg.t, { phase: sewing ? 'sew' : 'select', u, marks: mg.marks, cards: cards.map((c, i) => ({ ax: c.ax, hov: i === hov, q: (M.DB[c.u.type] && M.DB[c.u.type].q) | 0 })), breath: breath + shk, sunk: mg.sunk || 0, thread: mg.threadF, knots: mg.knots }, 'mc_granny');
     // 布样上绣着部队的像
-    cards.forEach((c, i) => castAt(x, c.u.type, c.x + (i === hov ? 4 : 0), M.MCPX.ly(84), 64));
+    cards.forEach((c, i) => { const d = M.DB[c.u.type], dx = i === hov ? 4 : 0; castAt(x, c.u.type, c.x + dx, M.MCPX.ly(84), 64);
+      // and its tags in the cloth's top corners (2026-09-27: 「旗面的底就是品质，然后还要在旗面上显示出部队的标签」)
+      const tr = d && M.TAG.race(d.race), tv = d && M.TAG.voc(d.voc); if (tr) K.IC(x, tr.icon, c.x + dx - 24, M.MCPX.ly(63), 30); if (tv) K.IC(x, tv.icon, c.x + dx + 24, M.MCPX.ly(63), 30); });
     // 穿线：选中的布样飞上墙，一根发光的紫线从它飞进针眼
     if (ph === 'thread') { const q = eo(cl(mg.pt / 0.8, 0, 1)), sx = M.MCPX.lx(mg.pickAx || 150) + (CX - M.MCPX.lx(mg.pickAx || 150)) * q, sy = M.MCPX.ly(70) + (M.MCPX.ly(80) - M.MCPX.ly(70)) * q; x.save(); x.globalAlpha = 1 - q * 0.7; castAt(x, mg.pick.type, sx, sy + 40, 64); x.restore();
       const n0 = grPt(0); for (let i = 0; i < 16; i++) { const k = i / 16, w = cl(mg.pt / 1.1, 0, 1); if (k > w) break; K.R(x, Math.round(sx + (n0.x - sx) * k), Math.round(sy + (n0.y - sy) * k - Math.sin(k * Math.PI) * 60), 6, 6, C.violet); } }

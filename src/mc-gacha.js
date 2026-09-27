@@ -626,7 +626,7 @@ const SLOT = '_shop';
 const kick = (a) => { const s = X.slots && X.slots[SLOT]; if (s) s.kick.all = Math.max(s.kick.all || 0, a); };
 let GAME = null;
 function drawMarket(g) {
-  const c = g.ui && g.ui.cv && g.ui.cv('shop'); if (!c) return; const run = g.run, key = '_mk_' + ((run && run.shopKind) || 'bazaar'); if (!X.has(key)) return;
+  const c = g.ui && g.ui.cv && g.ui.cv('shop'); if (!c) return; const run = g.run, key = '_mk_' + ((run && (run.shopLook || run.shopKind)) || 'bazaar'); if (!X.has(key)) return;
   const covered = R.on && WORLD.L && WORLD.out < 0 && WORLD.landed[0] && WORLD.landed[1];
   so.pity = Math.min(M.GA_PITY, (run && run.gaPity) || 0);
   let s = X.slots[SLOT];
@@ -709,8 +709,8 @@ const oView = G.view;
 G.view = function () {
   const v = oView.call(this), run = this.run;
   if (v.s && run && this.screen === 'shop') {
-    const pool = tradePool(run).filter(k => topOk(run, k)), maxQ = pool.length ? Math.max(...pool.map(k => DB[k].q)) : 0, free = !run.gaFreeUsed, p = M.gaPrice(run);
-    v.s.ga = { key: free ? '免费抽一包' : '抽一包', price: p, priceOn: !free, cls: free ? 'teal' : run.wallet >= p ? 'gold' : 'dis', rates: M.GA_RATES.map((r, i) => ({ t: String(r), c: i <= maxQ ? Q[i].lt : '#6a6394' })) };
+    const maxQ = M.stageOf ? M.stageOf(run).capQ : 4, free = !run.gaFreeUsed, p = M.gaPrice(run), RT = M.gaRates ? M.gaRates(run) : M.GA_RATES;
+    v.s.ga = { key: free ? '免费抽一包' : '抽一包', price: p, priceOn: !free, cls: free ? 'teal' : run.wallet >= p ? 'gold' : 'dis', rates: RT.map((r, i) => ({ t: String(r), c: i <= maxQ ? Q[i].lt : '#6a6394' })) };
     v.s.gaPull = () => { if (M.Sfx.init) M.Sfx.init(); this.gachaPull(); };
     v.s.gaOn = R.on; v.s.gaClick = () => this.gachaClick(this.mx, this.my);
     if (R.on) v.fxZ = 60;
@@ -721,7 +721,7 @@ G.view = function () {
 const oTip = G.tipFor;
 G.tipFor = function (key) {
   if (key === 's-ga') return { title: '午夜卡包', c: '#bff7f0', d: '抽一张这家店的部队，品质看运气。' };
-  if (key === 's-garate') return { title: '出货概率', c: '#bff7f0', d: '每包出各品质的概率；灰色的档位要等进化上限提高。', lines: M.GA_RATES.map((r, i) => ({ t: Q[i].n + ' ' + r + '%', c: Q[i].c })) };
+  if (key === 's-garate') return { title: '出货概率', c: '#bff7f0', d: '每包出各品质的概率；灰色的档位这一关出不了。', lines: (M.gaRates ? M.gaRates(this.run) : M.GA_RATES).map((r, i) => ({ t: Q[i].n + ' ' + r + '%', c: Q[i].c })) };
   if (key === 's-gapity') { const run = this.run, n = Math.min(M.GA_PITY, (run && run.gaPity) || 0); return { title: '保底灯 ' + n + ' / ' + M.GA_PITY, c: GOLD, d: '亮满 ' + M.GA_PITY + ' 盏，下一包必出稀有以上。' }; }
   return oTip ? oTip.apply(this, arguments) : null;
 };

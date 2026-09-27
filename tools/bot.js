@@ -67,6 +67,7 @@ window.__bot = async function (secs, opts = {}) {
       else if (g.storyFx) { g.storyFx.skip = true; g.storyClick(); for (let i = 0; i < 20 && g.storyFx; i++) g.tick(1 / 30); }   // a story (mc-story.js): the bot has read it
       else if (g.bigFx) { g.bigClick(); g.bigClick(); for (let i = 0; i < 20 && g.bigFx; i++) g.tick(1 / 30); }   // a great find (mc-bigloot.js)
       else if (g.parade) { g.paradeClick(); g.paradePick(opts.paradePick ? opts.paradePick(g) : g.paradeBest()); for (let i = 0; i < 120 && g.parade; i++) g.tick(1 / 30); }   // the homecoming (mc-parade.js): all three up, take the strongest
+      else if (g.swapFx) { const F = g.swapFx; if (F.ph === 'in') g.swapClick(); if (F.ph === 'pick') { let wi = 0, wp = 1e9; F.cards.forEach((c, i) => { const p = M.unitPower(c.u.type, c.u); if (p < wp) { wp = p; wi = i; } }); g.swapPick(wi); } for (let i = 0; i < 20; i++) g.tick(1 / 30); }   // the army is over its size (mc-swap.js): let the weakest go
       else if (g.coreFx || g.tear || g.rite || g.expand) { for (let i = 0; i < 20; i++) g.tick(1 / 30); }
       else if (s === 'end') { g.endBack(); log.push('end'); }
       else if (s === 'over') { log.push('over'); break; }

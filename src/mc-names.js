@@ -60,7 +60,7 @@ G.view = function () {
 const oTF = G.tipFor;
 G.tipFor = function (key) { if (key === 'b-power' && this.panel && this.panel.kind === 'room') { const p = this.panel, pw = M.roomPw(this.meta, p.c, p.r, p.key); return { title: pw >= 0 ? '电力 +' + pw : '耗电 ' + (-pw), c: pw >= 0 ? '#9cff7a' : '#ff9a6a', d: pw >= 0 ? '这个房间向基地供电。' : '这个房间运转要消耗电力。电力不够时，新的耗电建筑建不了。', icon: 'f_power' }; } return oTF.call(this, key); };
 // mini-game recruit cards and claw prizes speak the same language
-if (M.MINI && M.MINI.recruit) { const D = M.MINI.recruit, oB = D.btns; D.btns = function (mg) { const b = oB.call(this, mg); (b || []).forEach((x, i) => { const c = mg.cards && mg.cards[i]; if (c && x.t && x.t.startsWith('选 ')) x.t = '选 ' + M.qn(M.DB[c.k].n, M.DB[c.k].q); }); return b; }; }
+if (M.MINI && M.MINI.recruit) { const D = M.MINI.recruit, oB = D.btns; D.btns = function (mg) { const b = oB.call(this, mg); (b || []).forEach((x, i) => { const c = mg.cards && mg.cards[i]; if (c && x.t && x.t.startsWith('选 ')) { x.t = '选 ' + M.qn(M.DB[c.k].n, M.DB[c.k].q); x.c = M.qc(M.DB[c.k].q | 0); } }); return b; }; }
 })();
 
 ;

@@ -418,7 +418,7 @@ if (M.GUIDE) {
   const G2 = M.GUIDE;
   G2.push(
     { id: 'garrison', cat: '基地', icon: 't_shield', title: '驻军', line: '每趟出征最后带回一支部队，留在基地守夜，不再出征；三支相同的也会进化。', scr: 'base', sel: '[data-fx="mgar"]' },
-    { id: 'evobld', cat: '基地', icon: 'u_star', title: '进化建筑', line: '每座让一个职业的进化上限提高一档：一座到史诗，两座到传说；同一种只能建一座。', scr: 'base', sel: '[data-g="bld"]' });
+    { id: 'evobld', cat: '基地', icon: 'u_star', title: '进化建筑', line: '每座让一个职业的部队在夜市里更常出高品质；同一种只能建一座。', scr: 'base', sel: '[data-g="bld"]' });
 }
 })();
 

@@ -483,7 +483,7 @@ A.def('mini_granny', {
       A.glow(rs, p.x, p.y, 26, '#c8a0ff', 0.7); }
     // the unit swatches on the clothesline (choosing)
     if (ph === 'idle' || ph === 'select') { D.lay('mid'); for (let x = 30; x < 270; x++) D.px(x, 52 + Math.round(Math.sin((x - 30) / 240 * Math.PI) * 6), 'linen', 6);
-      (o.cards || DEMO_GR.cards).forEach((c, i) => { const x = c.ax, y = 52 + Math.round(Math.sin((x - 30) / 240 * Math.PI) * 6), sw = Math.round(Math.sin(t * 1.4 + i) * 1 + (c.hov ? 2 : 0)); const m = ['crimson', 'denim', 'leaf', 'lav', 'sand', 'candy', 'teal', 'copper'][i % 8];
+      (o.cards || DEMO_GR.cards).forEach((c, i) => { const x = c.ax, y = 52 + Math.round(Math.sin((x - 30) / 240 * Math.PI) * 6), sw = Math.round(Math.sin(t * 1.4 + i) * 1 + (c.hov ? 2 : 0)); const m = c.q != null ? ['linen', 'leaf', 'denim', 'arcane', 'copper', 'red'][Math.min(5, c.q)] : ['crimson', 'denim', 'leaf', 'lav', 'sand', 'candy', 'teal', 'copper'][i % 8];   // the cloth is the unit's quality
         D.beg(); for (let yy = 0; yy < 30; yy++) for (let xx = -11; xx <= 11; xx++) { const s2 = Math.round(sw * yy / 30); D.px(x + xx + s2, y + 3 + yy, m, 5 + ((xx + yy) % 4 === 0 ? 0.7 : 0) - (Math.abs(xx) === 11 ? 1.5 : 0) + (yy === 29 && xx % 2 ? -2 : 0)); } D.end();
         D.beg(); D.rect(x - 1, y - 2, 3, 6, 'wood', 7); D.end(); }); }
   },

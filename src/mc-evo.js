@@ -60,7 +60,6 @@ const oArr = G.arrive;
 G.arrive = function (n) {
   const ch = this.run && M.poolEnter(this.run, n);
   const r = oArr.apply(this, arguments);
-  if (ch) { this.pulse.pool = now(); this.toast && this.toast('新的场景，部队池换了一批', '#ffcf4a'); S.up && S.up(1); }
   return r;
 };
 // the prologue's shop always has the third 步卒
@@ -248,7 +247,7 @@ G.view = function () {
     const lines = run.pool.lines || [];
     v.w.pool = lines.map(l => { const ks = M.lineTiers(l), k1 = ks[0], d = DB[k1], n = Math.max(0, ...ks.map(k => (have[k] || 0) % M.EVO_NEED));
       return { img: M.spriteURL(k1, 3), c: Q[d.q].c, pipsOn: n > 0, pips: pips(n, 2, P.gold, '#3a3450'), tipOn: this.tipFn(() => { const t = M.unitTip(k1, null, run) || { title: d.n, lines: [] };
-        const cap = M.vocCap ? M.vocCap(run.M, d.voc) : 6; t.lines = (t.lines || []).concat([{ rich: [{ t: '进化　', c: '#ffcf4a', b: 1 }].concat(ks.slice(1).map((k, i) => ({ t: (i ? ' → ' : '') + DB[k].n, c: DB[k].tier > cap ? '#5a5670' : Q[DB[k].q].c, b: 1 }))) }]).concat(cap < 6 ? [{ t: '灰色的档位要在基地建' + d.voc + '的进化建筑', c: '#a9a3c9' }] : []); return t; }) }; });
+        const cap = M.buyCap ? M.buyCap(run.M, k1) : M.vocCap ? M.vocCap(run.M, d.voc) : 6; t.lines = (t.lines || []).concat([{ rich: [{ t: '进化　', c: '#ffcf4a', b: 1 }].concat(ks.slice(1).map((k, i) => ({ t: (i ? ' → ' : '') + DB[k].n, c: DB[k].tier > cap ? '#5a5670' : Q[DB[k].q].c, b: 1 }))) }]).concat(cap < 6 ? [{ t: '灰色的档位要在基地建' + d.voc + '的进化建筑', c: '#a9a3c9' }] : []); return t; }) }; });
   }
   return v;
 };
@@ -259,7 +258,7 @@ G.tipFor = function (key) {
   return oTip.apply(this, arguments);
 };
 if (M.GUIDE) M.GUIDE.push(
-  { id: 'evo', cat: '出征', icon: 'u_star', title: '进化', line: '同一种部队凑齐三支，就进化成同一条链的下一档；默认最高到稀有，再往上要建进化建筑。', scr: 'world', sel: '[data-fx="roster"]' });
+  { id: 'evo', cat: '出征', icon: 'u_star', title: '进化', line: '三支相同的部队合成高一档的一支，最高合到这一关能出的品质。', scr: 'world', sel: '[data-fx="roster"]' });
 })();
 
 ;

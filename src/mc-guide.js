@@ -93,7 +93,7 @@ const CONCEPTS = [
   { id: 'upower', cat: '标签与品质', icon: 'u_star', title: '战斗力', line: '部队有多强，就是它的价格：越贵越强。', scr: ['world'], sel: '[data-tip="w-power"]' },
   { id: 'report', cat: '战斗', icon: 't_sword', title: '战报', line: '这一仗输出最高、承伤最高、治疗最多的部队；倒下的下一仗全部归队。', scr: 'battle', sel: '[data-g="report"]' },
   // ── 夜市 ──
-  { id: 'shop', cat: '夜市', icon: 'e_market', title: '商店', line: '每家店卖的部队不一样，招牌旁边写着它的特点和代价。点自己的部队可以半价卖掉。', scr: 'shop', sel: '[data-g="shop-units"]' },
+  { id: 'shop', cat: '夜市', icon: 'e_market', title: '商店', line: '卖这一带的部队；右边的卡包可以抽。', scr: 'shop', sel: '[data-g="shop-units"]' },
   { id: 'shopnums', cat: '夜市', icon: 't_sword', title: '关键数值', line: '生命和它最拿手的那一项，高一档的同种部队数字更大。', scr: 'shop', sel: '[data-g="nums"]' },
   { id: 'shopbuy', cat: '夜市', img: () => sprite('coin', 4), title: '购买', line: '买下这支部队。', scr: 'shop', sel: '[data-g="buy"]' },
   { id: 'gacha', cat: '夜市', icon: 'g_pack', title: '午夜卡包', line: '每家夜市都有的抽卡机：一包出一支这家店卖的部队，每趟第一包免费。', scr: 'shop', sel: '[data-fx="gapull"]' },
@@ -151,7 +151,7 @@ const LOOP = [
   { icon: 'g_pack', t: '带回', d: '撤离或打败区域尽头的首领，把物资、经验、图纸和最强三支里的一支部队带回基地；出征失败只留下一半经验，基地核心献出一颗心救回领袖。' },
   { icon: 't_shield', t: '守夜', d: '每天夜里混沌来袭，出征带回来的部队守城；主基地被打破，这一局结束。' },
 ];
-const CATS = ['房间', '基地', '领袖', '出征', '战斗', '夜市', '混沌来袭', '标签与品质'];
+const CATS = ['房间', '基地', '领袖', '出征', '战斗', '羁绊', '夜市', '混沌来袭', '标签与品质'];
 let glossC = null;
 const glossary = () => glossC || (glossC = {
   loop: LOOP.map(s => ({ img: icon(s.icon), t: s.t, d: s.d })),

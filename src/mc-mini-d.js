@@ -430,7 +430,7 @@ MINI.arena = { title: '斗兽场', img: 'e_arena', col: C.red, text: '两头怪�
       if (i === mg.side && mg.phase === 'fight' && mg.cheer > 0.4) { x.save(); x.globalAlpha = 0.5 * mg.cheer; K.R(x, K.snap(x0 - 48), ARF + 4, 96, 8, C.gold); x.restore(); }
       if (!M.PXR.MINI_D.cast(x, b.k, x0, ARF + hop, st, fi, flip, b.hit > 0.8 ? '#ffffff' : null)) K.SP(x, b.k, x0, FLOOR + hop, 180, flip);
       if (mg.phase === 'idle') { for (let k = -3; k <= 3; k++) K.R(x, K.snap(ARG[i] + k * 16) - 4, K.ly(70), 8, K.ly(146) - K.ly(70), C.slate); for (let y = K.ly(74); y < K.ly(146); y += 32) K.R(x, ARG[i] - 60, y, 120, 8, C.steel); }
-      if (mg.phase !== 'idle') { U.bar(x, b.x - 70, FLOOR - 230, 140, 14, cl(b.hp, 0, 1), { col: i === mg.side ? C.gold : C.red }); K.chipC(x, M.DB[b.k].n, b.x, FLOOR - 256, i === mg.side ? C.gold : C.silver); } });
+      if (mg.phase !== 'idle') { U.bar(x, b.x - 70, FLOOR - 230, 140, 14, cl(b.hp, 0, 1), { col: i === mg.side ? C.gold : C.red }); K.chipC(x, M.DB[b.k].n, b.x, FLOOR - 256, M.qc(M.DB[b.k].q | 0)); } });
     // 押注：一袋钱从你那边扔进场子
     if (mg.bagT != null && t - mg.bagT < 0.6) { const q = (t - mg.bagT) / 0.35, bx = CX + (mg.side ? 160 : -160), by = K.ly(40) + Math.min(1, q) * (FLOOR - K.ly(40) - 20) - Math.sin(Math.min(1, q) * Math.PI) * 60; K.R(x, K.snap(bx) - 16, K.snap(by) - 20, 32, 28, C.tan); K.R(x, K.snap(bx) - 8, K.snap(by) - 28, 16, 8, C.brown); K.R(x, K.snap(bx) - 4, K.snap(by) - 8, 8, 8, C.gold); }
   } };
@@ -501,7 +501,7 @@ MINI.recruit = { title: '招募旗', img: 'e_flag', col: C.blue, text: '旗子�
     c.stepT = mg.t; this.fx.kick(4 + tier * 2); SHOW.white(mg, 0.25); SHOW.ring(mg, c.x, from.y, 20, 200, QC(c.q), { life: 0.3 }); S.mini('recruit', 'salute');
     SHOW.later(mg, 0.1, () => SHOW.win(this, mg, tier, { x: c.x, y: from.y, col: tier >= 3 ? C.gold : QC(c.q), label: tier === 4 ? '大奖' : tier === 3 ? '大赢' : '' }));
     SHOW.later(mg, fly, () => { c.gone = mg.t; give(this, mg, [{ k: 'unit', type: c.k }], from); });
-    endIn(this, mg, fly + [0.6, 0.9, 1.5, 2.3][tier - 1], M.DB[c.k].n + ' 跟上了你。', QC(c.q)); },
+    endIn(this, mg, fly + [0.6, 0.9, 1.5, 2.3][tier - 1], M.DB[c.k].n + ' 跟上了你。', M.qc(M.DB[c.k].q | 0)); },
   down(mg, px, py) { let hit = false; mg.cards.forEach((c, i) => { if (Math.abs(px - c.x) < 124 && py > RBTOP - 30 && py < RBBOT + 60) { hit = true; MINI.recruit.take.call(this, mg, i); } }); if (!hit) SHOW.tap(this, mg, px, py); },
   btns(mg) { if (mg.phase !== 'idle') return []; return mg.cards.map((c, i) => ({ t: '选 ' + M.DB[c.k].n, sub: (M.DB[c.k].voc || '') + ' · 战力 ' + M.unitPower(c.k), dis: !M.canAdd(this.run, c.k), why: '队伍满了', fn: () => MINI.recruit.take.call(this, mg, i) })).concat([{ t: '都不要', leave: 1, fn: () => { mg.cards.forEach(c => { c.dim = 1; }); S.mini('recruit', 'none'); this.miniSet('none'); SHOW.later(mg, 0.4, () => { if (this.mini === mg) this.miniFinish('旗子在风里响了一会儿。', '#8d8496'); }); } }]); },
   tick(mg, dt) {
@@ -514,7 +514,7 @@ MINI.recruit = { title: '招募旗', img: 'e_flag', col: C.blue, text: '旗子�
       if (mg.t >= c.la && !c.snd) { c.snd = 1; c.s = c.path.length - 1; const cc = c;
         SHOW.hitstop(mg, 0.12, c.x, RBF - 150, () => { cc.dropT = mg.t; cc.showT = mg.t; S.mini('recruit', 'curtain'); S.mini('recruit', 'reveal'); SHOW.reveal(this, mg, cc.q, { x: cc.x, y: RBF - 110 });
           const s2 = M.PXR && M.PXR.slots['_mg:mini_recruit']; if (s2) s2.burst('dust', K.ax(cc.x), 138, 14, { sp: 18, spread: 3, ang: 0, life: 1.2, w: 50 });
-          const D = M.DB[cc.k]; SHOW.items(this, mg, [{ text: D.n, col: QC(cc.q), size: 34 }, { text: (D.voc || '') + ' · 战力 ' + M.unitPower(cc.k), col: C.cream, size: 26 }], { x: cc.x, y: SY + 600, dy: 40, gap: 0.16 });
+          const D = M.DB[cc.k]; SHOW.items(this, mg, [{ text: D.n, col: M.qc(D.q | 0), size: 34 }, { text: (D.voc || '') + ' · 战力 ' + M.unitPower(cc.k), col: C.cream, size: 26 }], { x: cc.x, y: SY + 600, dy: 40, gap: 0.16 });
           if (mg.cards.every(o => o.dropT != null)) SHOW.ambient(mg, Math.max(...mg.cards.map(o => o.q))); }); } }); },
   draw(x, mg) {
     const t = mg.t;
@@ -532,7 +532,7 @@ MINI.recruit = { title: '招募旗', img: 'e_flag', col: C.blue, text: '旗子�
         const fwd = sel ? Math.min(1, (t - c.stepT) / 0.2) * 24 : 0; if (sel && t - c.stepT < 0.2) { s = 'move'; fi = Math.floor(t * 12) % 8; }
         if (!M.PXR.MINI_D.cast(x, c.k, c.x + nope, RBF + fwd, s, fi, false, st2 < 0.05 ? '#ffffff' : null)) K.SP(x, c.k, c.x, RBF + fwd, 180); }
       x.restore();
-      const tv = M.TAG.voc(D.voc); K.chipC(x, D.n, c.x, RBBOT + 56, QC(c.q), T.body); if (tv) K.IC(x, tv.icon, c.x + 96, RBBOT + 56, 40); });
+      const tv = M.TAG.voc(D.voc); K.chipC(x, D.n, c.x, RBBOT + 56, M.qc(D.q | 0), T.body); if (tv) K.IC(x, tv.icon, c.x + 96, RBBOT + 56, 40); });
   } };
 
 // ───────── node metadata for the new events (map icon, label, blurb) ─────────

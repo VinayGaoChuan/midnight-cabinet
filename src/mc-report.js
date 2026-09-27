@@ -26,7 +26,7 @@ BP.summon = function (key, side, x, y, life, src) { const e = oSum.apply(this, a
 M.battleReport = function (b) {
   if (!b || !b.ents) return null;
   const us = b.ents.filter(e => e.side === 'A' && !e.isHero && !e.summon && DB[e.kind]);
-  const row = (k, lab, col) => { const e = us.filter(x => (x[k] || 0) >= 1).sort((a, c) => c[k] - a[k])[0]; return e ? { lab, col, n: DB[e.kind].n, v: M.fmt(Math.round(e[k])), img: M.spriteURL(e.kind, 4) } : null; };
+  const row = (k, lab, col) => { const e = us.filter(x => (x[k] || 0) >= 1).sort((a, c) => c[k] - a[k])[0]; return e ? { lab, col, n: DB[e.kind].n, qc: M.qc(DB[e.kind].q | 0), v: M.fmt(Math.round(e[k])), img: M.spriteURL(e.kind, 4) } : null; };
   const rows = [row('stDmg', '输出最高', '#ff8a6a'), row('stTaken', '承伤最高', '#6fd0ff'), row('stHeal', '治疗最多', '#9cff7a')].filter(Boolean);
   const fell = (b.deadUids || []).length;
   return rows.length || fell ? { rows, fell: fell ? '倒下 ' + fell + ' 支 · 下一仗全部归队' : '' } : null;

@@ -13,6 +13,7 @@ mc-db.js
 mc-voc.js
 mc-units.js
 mc-lines.js
+mc-races.js
 mc-icons.js
 mc-fx.js
 mc-audio.js
@@ -153,6 +154,9 @@ mc-opening.js
 mc-gacha.js
 mc-endone.js
 mc-clarity.js
+mc-pool.js
+mc-swap.js
+mc-synergy.js
 mc-shopcard.js
 mc-report.js
 mc-demo.js

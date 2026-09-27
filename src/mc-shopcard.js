@@ -46,8 +46,11 @@ G.view = function () {
       evoTxt: n === (M.EVO_NEED || 3) - 1 ? '买下就进化' : '已有 ' + n + '/' + (M.EVO_NEED || 3), evoTc: n === (M.EVO_NEED || 3) - 1 ? '#ffcf4a' : '#a9a3c9', evoGo: false,
       evoPips: [0, 1, 2].map(k => ({ c: k < n ? '#ffcf4a' : '#3a3450' })),
     });
+    // the card that makes three: a gold frame and a gold banner over it (2026-09-27: 「能够3合1的单位要有提升……商店里的那个根本没有提示」)
+    su.mergeOn = !c.sold && n === (M.EVO_NEED || 3) - 1 && (!M.evoOpen || M.evoOpen(run.M, c.type)); if (su.mergeOn) su.evoOn = false;
   });
   v.s.starImg = M.iconURL('u_star', 2);
+  v.s.selOn = false;   // nothing is sold (2026-09-27: 「部队不允许卖，只允许替换」)
   return v;
 };
 const oTip = G.tipFor;

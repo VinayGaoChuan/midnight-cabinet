@@ -69,7 +69,7 @@ M.Raid = class extends Base {
       if (dmg <= 0) return 0; }
     return dmg;
   }
-  damage(e, d, col) { this.hurtT = this.t; return super.damage(e, d, col); }
+  damage(e, d, col, src) { this.hurtT = this.t; return super.damage(e, d, col, src); }   // src: who hit (the bonds need it, mc-synergy.js)
   hitPortal(dmg) { this.hurtT = this.t; dmg = this.absorb(DOOR_X, dmg); if (dmg <= 0) return; this.portal.hp -= dmg; this.portal.hit = this.t; this.shake = Math.max(this.shake, 6); this.float(this.portal.x + (Math.random() - 0.5) * 80, -260, '-' + fmt(dmg), '#ff6a6a', 30); }
   hitBld(b, dmg, col) {
     if (b.hp <= 0) return; this.hurtT = this.t; b.hitT = this.t; dmg = this.absorb(b.x, dmg); if (dmg <= 0) return; b.hp -= dmg; this.float(b.x + (Math.random() - 0.5) * b.w * 0.5, b.y - b.h - 20, '-' + fmt(dmg), col || '#ff8a6a', 26);
@@ -93,7 +93,7 @@ M.Raid = class extends Base {
         let tg = this.guardTarget ? this.guardTarget(e, foes) : null, bd = 360; if (!tg) foes.forEach(o => { const d = Math.abs(o.x - e.x); if (Math.abs(o.x - e.home) < 440 && d < bd) { bd = d; tg = o; } });
         const tx = tg ? tg.x : e.home, d = Math.abs(tx - e.x), reach = tg ? e.range : 4;
         if (d > reach) { e.x += Math.sign(tx - e.x) * Math.min(sp, d - reach + 1); e.face = Math.sign(tx - e.x) || e.face; e.walk = (e.walk || 0) + sp; }
-        else if (tg) { e.t -= dt; e.face = Math.sign(tg.x - e.x) || e.face; if (e.t <= 0) { e.t = e.cd; e.lunge = T; if (e.ranged) this.proj.push({ x: e.x, y: e.y - 40, tg, tx: tg.x, dmg: e.atk, col: '#ffe08a', src: e }); else { this.damage(tg, e.atk, '#fff'); this.fx.push({ k: 'slash', x: tg.x, y: tg.y - 40, t0: T, life: 0.14 }); S.hit(); } } }
+        else if (tg) { e.t -= dt; e.face = Math.sign(tg.x - e.x) || e.face; if (e.t <= 0) { e.t = e.cd; e.lunge = T; if (e.ranged) this.proj.push({ x: e.x, y: e.y - 40, tg, tx: tg.x, dmg: e.atk, col: '#ffe08a', src: e }); else { this.damage(tg, e.atk, '#fff', e); this.fx.push({ k: 'slash', x: tg.x, y: tg.y - 40, t0: T, life: 0.14 }); S.hit(); } } }
         continue;
       }
       // monsters: a guard in the way first, then the first building ahead, then the main base
@@ -104,7 +104,7 @@ M.Raid = class extends Base {
         e.t -= dt; e.face = dir; if (e.t > 0) continue; e.t = e.cd * (bb && bb.elder ? 1 + M.ELDER.roots : 1); e.lunge = T;   // the old tree's roots hold its attackers
         const dmg = e.atk * (tg ? 1 : M.SIEGE_K.bldAtk);
         if (e.ranged) this.proj.push({ x: e.x, y: e.y - 40, tg: tg || null, bb: bb || null, tx: tg ? tg.x : bb ? bb.x : DOOR_X, dmg, col: '#b0d040', src: e });
-        else if (tg) { this.damage(tg, dmg, '#ff6a6a'); this.fx.push({ k: 'slash', x: tg.x, y: tg.y - 40, t0: T, life: 0.14 }); S.hit(); }
+        else if (tg) { this.damage(tg, dmg, '#ff6a6a', e); this.fx.push({ k: 'slash', x: tg.x, y: tg.y - 40, t0: T, life: 0.14 }); S.hit(); }
         else if (bb) { this.hitBld(bb, dmg); this.fx.push({ k: 'slash', x: e.x + dir * 40, y: -60, t0: T, life: 0.14 }); S.hit(); }
         else { this.hitPortal(dmg); S.hit(); }
         if (e.boss) this.shake = Math.max(this.shake, 9);
@@ -114,7 +114,7 @@ M.Raid = class extends Base {
     for (let i = this.proj.length - 1; i >= 0; i--) {
       const p = this.proj[i]; if (p.k) continue; const tx = p.tg ? p.tg.x : p.bb ? p.bb.x : p.tx, ty = p.tg ? p.tg.y - 40 : p.bb ? p.bb.y - p.bb.h * 0.5 : -130;
       const dx = tx - p.x, dy = ty - p.y, d = Math.hypot(dx, dy), v = 900 * dt;
-      if (d <= v + 6 || (p.tg && !p.tg.alive) || (p.bb && p.bb.hp <= 0)) { this.proj.splice(i, 1); if (p.tg && p.tg.alive) this.damage(p.tg, p.dmg, p.src.side === 'E' ? '#ff6a6a' : '#fff'); else if (p.bb && p.bb.hp > 0) this.hitBld(p.bb, p.dmg); else if (!p.tg && !p.bb) this.hitPortal(p.dmg); }
+      if (d <= v + 6 || (p.tg && !p.tg.alive) || (p.bb && p.bb.hp <= 0)) { this.proj.splice(i, 1); if (p.tg && p.tg.alive) this.damage(p.tg, p.dmg, p.src.side === 'E' ? '#ff6a6a' : '#fff', p.src); else if (p.bb && p.bb.hp > 0) this.hitBld(p.bb, p.dmg); else if (!p.tg && !p.bb) this.hitPortal(p.dmg); }
       else { p.x += dx / d * v; p.y += dy / d * v; }
     }
     // towers and the main base's crossbows: the monster nearest the main base inside the reach

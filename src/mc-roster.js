@@ -90,7 +90,7 @@ G.view = function () {
   if (v.s && run && this.screen === 'shop' && run.shop && run.shop.units) {
     const full = run.roster.length >= M.rosterCap(run);
     (v.s.units || []).forEach((cv, i) => { const c = run.shop.units[i]; if (!c || c.sold) return;
-      if (full && !M.wouldMerge(run, c.type)) { cv.saleOn = true; cv.sale = '替换'; } });
+      /* a full army buys anyway and lets one go afterwards (mc-swap.js) */ });
     const R = this.replace, rc = R && run.shop.units[R.i];
     if (rc) { v.s.selOn = true; v.s.sell = '点一支部队换成' + DB[rc.type].n + ' · 点这里取消'; if (v.w && v.w.roster) { const on = Math.floor(T / 250) % 2; v.w.roster.forEach(r => { r.border = on ? '#ff5a4a' : '#7a2a2a'; }); } }
   }
@@ -199,7 +199,7 @@ G.beginBattle = function (n) {
 
 if (M.GUIDE) M.GUIDE.push(
   { id: 'rostercap', cat: '出征', icon: 't_command', title: '上场人数', line: '一趟最多带这么多部队；满了还能买能凑成三合一的，别的要替换一支。', scr: 'shop', sel: '[data-tip="w-roster"]' },
-  { id: 'swap', cat: '夜市', icon: 'e_market', title: '替换', line: '队伍满了时点卡片，再点一支要放走的部队，它退一半积分。', scr: 'shop', sel: '[data-tip="w-roster"]' },
+  { id: 'swap', cat: '出征', icon: 'e_market', title: '替换', line: '队伍满了还拿到部队时，全队摊开，选一支离队。', scr: 'world', sel: '[data-fx="roster"]' },
   { id: 'garup', cat: '基地', icon: 'u_star', title: '驻军升档', line: '进化建筑每天能花灵魂碎片，让一支这个职业的驻军升一档。', scr: 'base', sel: '[data-fx="mgar"]' });
 })();
 

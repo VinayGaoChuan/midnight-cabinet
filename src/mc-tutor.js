@@ -13,7 +13,7 @@
 //   chapter map.
 const M = window.MC, G = M.Game.prototype, now = () => performance.now();
 const tutRun = (g) => !!(g.run && g.run.region && g.run.region.tut);
-const busy = (g) => !!(g.guideBusy && g.guideBusy()) || !!(g.parade || g.evoFx || g.storyFx || g.homeQ || g.night || g.dirPick || g.relPick || g.lvFx || g.bpPick || g.trans || g.replace || g.tipLock) || !!(g.baseBusy && g.screen === 'base' && g.baseBusy());
+const busy = (g) => !!(g.guideBusy && g.guideBusy()) || !!(g.parade || g.evoFx || g.storyFx || g.homeQ || g.night || g.dirPick || g.relPick || g.lvFx || g.bpPick || g.trans || g.replace || g.tipLock || g.swapFx) || !!(g.baseBusy && g.screen === 'base' && g.baseBusy());
 const stageRect = (g, sel) => { const els = document.querySelectorAll(sel); let el = null; for (const e of els) { const r = e.getBoundingClientRect(); if (r.width > 2 && r.height > 2) { el = e; break; } } if (!el) return null;
   const st = g.ui && g.ui.stage && g.ui.stage(); if (!st) return null; const s = g.ui.scale(), sr = st.getBoundingClientRect(), r = el.getBoundingClientRect(); return { x: (r.left - sr.left) / s, y: (r.top - sr.top) / s, w: r.width / s, h: r.height / s }; };
 // the world's glowing arrows (where mc-world2.js draws them), all of them joined

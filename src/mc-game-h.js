@@ -117,15 +117,15 @@ G.arrive = function (n) { if (this.run) M.revealAhead(this.run.map, n.id, M.visi
 
 // ───────── worlds: a few random offers per day, each with its own loot and monsters ─────────
 const WT = {
-  town:    { races: ['人类', '僵尸', '骷髅'], style: 'medieval', loot: { sup: 1.35 }, tags: [['sack', '×1.35']], lootD: '物资收益 ×1.35。雾里的小镇到处是能拆的木料和铁钉。' },
-  forest:  { races: ['精灵', '自然', '野兽'], style: 'nature', loot: { exp: 1.6 }, tags: [['orb', '×1.6']], lootD: '经验收益 ×1.6。精灵之森的空气里都是灵气。' },
-  park:    { races: ['虚空', '不死', '混沌'], style: 'cartoon', loot: { wallet: 1.3, item: 0.25 }, tags: [['coin', '×1.3'], ['bell', '+']], lootD: '积分收益 ×1.3，战斗后常常捡到支援道具。' },
-  harbor:  { races: ['虚空', '野兽', '不死'], style: 'water', loot: { tile: 0.14, sup: 1.1 }, tags: [['gem', '+'], ['sack', '×1.1']], lootD: '常常打捞到地脉结晶，物资 ×1.1。' },
-  foundry: { races: ['科技', '兽人'], style: 'steam', loot: { rbp: 0.2 }, tags: [['r_gear', '+'], ['scroll', '+']], lootD: '经常掉落宝物图纸，偏向蒸汽建筑。' },
-  ward:    { races: ['不死', '骷髅', '僵尸'], style: 'scifi', loot: { heal: 0.06, exp: 1.2 }, tags: [['r_heart', '+6%'], ['orb', '×1.2']], lootD: '每场战斗后领袖回复 6% 生命，经验 ×1.2。' },
-  starship:{ races: ['科技', '虚空'], style: 'scifi', loot: { bpq: 1, tile: 0.08 }, tags: [['scroll', '★'], ['gem', '+']], lootD: '掉落的图纸品质更高，偶尔有地脉结晶。' },
+  town:    { races: ['人类', '亡灵', '僵尸', '骷髅'], style: 'medieval', loot: { sup: 1.35 }, tags: [['sack', '×1.35']], lootD: '物资收益 ×1.35。雾里的小镇到处是能拆的木料和铁钉。' },
+  forest:  { races: ['自然', '野兽', '精灵'], style: 'nature', loot: { exp: 1.6 }, tags: [['orb', '×1.6']], lootD: '经验收益 ×1.6。精灵之森的空气里都是灵气。' },
+  park:    { races: ['异界', '亡灵', '虚空', '不死', '混沌'], style: 'cartoon', loot: { wallet: 1.3, item: 0.25 }, tags: [['coin', '×1.3'], ['bell', '+']], lootD: '积分收益 ×1.3，战斗后常常捡到支援道具。' },
+  harbor:  { races: ['深海', '野兽', '虚空', '不死'], style: 'water', loot: { tile: 0.14, sup: 1.1 }, tags: [['gem', '+'], ['sack', '×1.1']], lootD: '常常打捞到地脉结晶，物资 ×1.1。' },
+  foundry: { races: ['异界', '人类', '科技', '兽人'], style: 'steam', loot: { rbp: 0.2 }, tags: [['r_gear', '+'], ['scroll', '+']], lootD: '经常掉落宝物图纸，偏向蒸汽建筑。' },
+  ward:    { races: ['亡灵', '不死', '骷髅', '僵尸'], style: 'scifi', loot: { heal: 0.06, exp: 1.2 }, tags: [['r_heart', '+6%'], ['orb', '×1.2']], lootD: '每场战斗后领袖回复 6% 生命，经验 ×1.2。' },
+  starship:{ races: ['异界', '科技', '虚空'], style: 'scifi', loot: { bpq: 1, tile: 0.08 }, tags: [['scroll', '★'], ['gem', '+']], lootD: '掉落的图纸品质更高，偶尔有地脉结晶。' },
   hell:    { races: ['恶魔', '混沌'], style: 'fantasy', loot: { shards: 1 }, tags: [['shard', '+']], lootD: '每场战斗都能收集灵魂碎片。' },
-  casino:  { races: ['人类', '虚空', '恶魔', '混沌'], style: 'fantasy', loot: { wallet: 2, bpq: 2 }, tags: [['coin', '×2'], ['scroll', '★★']], lootD: '积分收益 ×2，掉落的多是奇观图纸。' },
+  casino:  { races: ['人类', '深海', '虚空', '恶魔', '混沌'], style: 'fantasy', loot: { wallet: 2, bpq: 2 }, tags: [['coin', '×2'], ['scroll', '★★']], lootD: '积分收益 ×2，掉落的多是奇观图纸。' },
 };
 M.WTHEME = WT;
 const TIER_W = [['town', 'forest', 'park'], ['harbor', 'foundry', 'ward'], ['starship', 'hell']];

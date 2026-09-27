@@ -69,7 +69,7 @@ H.MoltenShield = { tick: manaT(0), hurt(b, e, s, d, v, c) { if (e.mana >= v[1]) 
 H.EnergyAddSurge = { atk(b, e, tg, v, c) { c.mul *= 1 + (100 - e.mana) / v[0] * v[1] / 100; } };
 H.Stimpack = { init(b, e, v) { if (Math.random() < v[0] / 100) { e.asB += v[1] / 100; e.range += v[2] * 0.35; e.st.stim = 1; } }, start(b, e) { if (e.st.stim) { b.float(e.x, e.y - 110, '兴奋剂！', '#9cff7a', 28); b.ring(e.x, e.y - 40, 10, 90, '#9cff7a', 6, 0.4); Sfx.up(0); } } };
 H.EnergySurge = { dealt(b, e, tg, d, v, c) { if (c.auto) b.mana(e, v[0]); }, full(b, e, v) { const tg = e.target; if (!tg || !tg.alive) { e.mana = 99; return; } b.fxp({ k: 'beam2', x1: e.x + 20, y1: e.y - 50, x2: tg.x, y2: tg.y - 40, col: '#b0a0ff', life: 0.45, w: 18 }); b.deal(e, tg, e.atk * v[1] / 100, { skill: 1, col: '#c8b0ff', big: 1 }); b.shake = Math.max(b.shake, 8); Sfx.bolt(0); } };
-H.Sputtering = { dealt(b, e, tg, d, v, c) { if (!c.auto) return; const r = radOf(c.T.d), col = /飞叶/.test(c.T.n) ? '#b8ff60' : e.d.race === '虚空' ? '#c890ff' : '#ffa040'; b.aoe(e, tg.x, tg.y, r, e.atk * v[0] / 100, col, null, tg); b.ring(tg.x, tg.y - 20, 10, r, col, 5, 0.25); } };
+H.Sputtering = { dealt(b, e, tg, d, v, c) { if (!c.auto) return; const r = radOf(c.T.d), col = /飞叶/.test(c.T.n) ? '#b8ff60' : (e.d.race0 || e.d.race) === '虚空' ? '#c890ff' : '#ffa040'; b.aoe(e, tg.x, tg.y, r, e.atk * v[0] / 100, col, null, tg); b.ring(tg.x, tg.y - 20, 10, r, col, 5, 0.25); } };
 H.PiercingPulse = { tick(b, e, v, dt, T) { e.st.pp = (e.st.pp || 0) + dt; if (e.st.pp < v[0]) return; e.st.pp = 0; const bomb = /投弹/.test(T.n); b.foes(e).filter(o => dist(o, e) < RL * 1.6).sort(() => Math.random() - 0.5).slice(0, v[1]).forEach(o => { if (bomb) { b.fxp({ k: 'bomb', x: o.x, y: o.y, life: 0.4 }); b.later(0.35, () => { b.deal(e, o, e.atk * v[2] / 100, { skill: 1, col: '#ffa040' }); b.fxp({ k: 'boom', x: o.x, y: o.y - 20, life: 0.35 }); }); } else b.shootP(e, o, { dmg: e.atk * v[2] / 100, skill: 1, style: 'bullet', col: '#fff2a0', speed: 2200 }); }); if (!bomb) Sfx.shoot(); } };
 H.AerialCommand = { aura: { r: RM, col: '#ff7a5a', ally: 1, fn(b, e, o, v) { o.au.dmg += v[0] / 100; } } };
 H.AttackSpeedAura = { aura: { r: RM, col: '#ffe060', ally: 1, fn(b, e, o, v) { o.au.as += v[0] / 100; } } };
@@ -163,7 +163,7 @@ class B3 extends M.Battle2 {
     e.pw = M.unitPower(key, u);
     if (L.shield) e.shield = e.maxHp * L.shield;
     if (md.shield) e.shield += e.maxHp * md.shield;
-    if (d.voc === '射手' && d.race === '科技') e.pstyle = 'bullet'; else if (d.voc === '射手') e.pstyle = 'arrow'; else if (d.voc === '法师') e.pstyle = 'orb'; else if (d.voc === '祭司' || d.voc === '牧师') e.pstyle = 'holy'; else if (d.voc === '召唤师') e.pstyle = 'orb'; else if (side === 'E') e.pstyle = 'acid'; else e.pstyle = 'orb';
+    if (d.voc === '射手' && (d.race0 || d.race) === '科技') e.pstyle = 'bullet'; else if (d.voc === '射手') e.pstyle = 'arrow'; else if (d.voc === '法师') e.pstyle = 'orb'; else if (d.voc === '祭司' || d.voc === '牧师') e.pstyle = 'holy'; else if (d.voc === '召唤师') e.pstyle = 'orb'; else if (side === 'E') e.pstyle = 'acid'; else e.pstyle = 'orb';
     traits.forEach(t => { const h = H[t.cls]; if (h && h.proj) e.pstyle = h.proj; });
     this.call(e, 'init');
     return e;
