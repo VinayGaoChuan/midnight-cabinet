@@ -79,7 +79,7 @@ function drawVictory(ctx, b) {
   // 声音逐拍跟着横幅的 t 走（胜利横幅可以点击快进）：白闪、每个字掉下和落地、火花、纸片、最后一个字落地后铜管收尾
   const s = b._s || (b._s = {}), beat = (key, at, fn) => { if (t >= at && !s[key]) { s[key] = 1; fn(); } };
   beat('flash', 0, () => S.vic('flash')); txt.forEach((ch, i) => { beat('d' + i, 0.08 + i * 0.1, () => S.vic('drop', i)); beat('l' + i, 0.36 + i * 0.1, () => S.vic('land', i)); });
-  beat('sparks', 0.3, () => S.vic('sparks')); beat('conf', 0.45, () => S.vic('confetti')); beat('phrase', 0.5 + (txt.length - 1) * 0.1, () => S.vic('phrase'));
+  if (!b.fail) { beat('sparks', 0.3, () => S.vic('sparks')); beat('conf', 0.45, () => S.vic('confetti')); } if (!b.quiet) beat('phrase', 0.5 + (txt.length - 1) * 0.1, () => S.vic('phrase'));   // the settlement page (mc-endone.js) brings its own music; a fall has no sparkle
   ctx.save();
   // the dark and the rays belong to the banner until the panel's stage fades in (it has its own)
   M.fxDim(ctx, 0.45 * eio(t / 0.2) * out * (1 - k));
@@ -96,7 +96,7 @@ function drawVictory(ctx, b) {
     const t0 = 0.08 + i * 0.1, q = (t - t0) / 0.28, cx = px + cw[i] / 2; px += cw[i]; if (q < 0) return;
     const y = OY - (1 - eback(q)) * 260, sc = q < 1 ? 1.8 - 0.8 * eback(q) : 1 + 0.05 * Math.sin((t - t0) * 10) * Math.exp(-(t - t0 - 0.28) * 4), wob = Math.sin(t * 3 + i) * 4 * eio((t - t0 - 0.3) / 0.3);
     if (q >= 1) rings.push([cx - OX, t - t0 - 0.28]);
-    o.save(); o.translate(cx, y + wob); o.scale(sc, sc); U.text(o, ch, 0, 0, size, gold, { outline: true, ramp: true }); o.restore();
+    o.save(); o.translate(cx, y + wob); o.scale(sc, sc); U.text(o, ch, 0, 0, size, gold, { outline: true, ramp: !b.fail }); o.restore();
   });
   // a shine sweeps across the letters, once after they land and then every 2.6 s
   const sp = t > 0.9 ? ((t - 0.9) % 2.6) / 0.7 : 2; if (sp < 1) { o.globalCompositeOperation = 'source-atop'; const sx = -300 + sp * (OW + 600), sg = o.createLinearGradient(sx - 120, 0, sx + 120, 0); sg.addColorStop(0, 'rgba(255,255,255,0)'); sg.addColorStop(0.5, 'rgba(255,255,255,0.75)'); sg.addColorStop(1, 'rgba(255,255,255,0)'); o.fillStyle = sg; o.save(); o.translate(sx, OY); o.transform(1, 0, -0.35, 1, 0, 0); o.fillRect(-120, -OY, 240, OH); o.restore(); o.globalCompositeOperation = 'source-over'; }
@@ -162,7 +162,7 @@ const oView = G.view;
 G.view = function () {
   const v = oView.call(this), e = this.endInfo;
   if (v.end && e && this.screen === 'end') {
-    const t = (performance.now() - (e.at || 0)) / 1000, col = e.color || '#ffd970', dead = /死亡/.test(e.title || '');
+    const t = (performance.now() - (e.at || 0)) / 1000, col = e.color || '#ffd970', dead = e.fail || /死亡|失败/.test(e.title || '');   // 「探索失败」 counts too (2026-09-27: it rained confetti)
     v.end.tsc = (t < 0.35 ? 2.6 - 1.6 * eback(t / 0.35) : 1 + 0.03 * Math.sin(t * 2.4)).toFixed(3); v.end.top = Math.round(dead ? 0 : -8 * Math.sin(t * 1.6));
     v.end.glow = rgba(col, dead ? 0.22 : 0.35); v.end.glowA = rgba(col, dead ? 0.28 : 0.42); v.end.col = col;
     if (!e._fx) { S.endScreen(dead || /失败/.test(e.title || '') ? 'dead' : /撤离/.test(e.title || '') ? 'evac' : 'clear', (v.end.tiles || []).map(tl => { const i = (M.QUALITY || []).findIndex(q => q.c === tl.c); return i >= 0 ? i : 1; })); }

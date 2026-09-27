@@ -301,6 +301,9 @@ const CSS = `
 [data-pj~=marquee]::before{top:-12px}[data-pj~=marquee]::after{bottom:-12px;animation-direction:reverse}
 [data-pj~=crt]{position:relative}
 [data-pj~=crt]::after{content:'';position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(7,6,15,.4) 0 3px,transparent 3px 6px);animation:pjScan .4s linear infinite}
+/* the settings panel stays still (user ruling 2026-09-27: 「设置页面里的流动太难受了，普通一些」): no rolling scanlines, no shine, no bobbing */
+[data-still] [data-pj~=crt]::after,[data-still] [data-pj~=cta]::after,[data-still] [data-pj~=marquee]::before,[data-still] [data-pj~=marquee]::after{display:none!important}
+[data-still] *{animation:none!important;transition:none!important}
 [data-pj~=ticket]{position:relative}
 [data-pj~=ticket]::after{content:'';position:absolute;left:0;right:0;bottom:-18px;height:18px;pointer-events:none;background:repeating-linear-gradient(135deg,#f4efe0 0 9px,transparent 9px 18px),repeating-linear-gradient(45deg,#f4efe0 0 9px,transparent 9px 18px)}
 [data-pj~=choice]:hover::before{content:'\\25B6';color:#ffcf4a;display:inline-block;animation:pjHop .6s ease-in-out infinite}
