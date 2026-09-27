@@ -325,6 +325,14 @@ SH.drawOver = function (x, h) {
   if (s.hit > 0) { box(C.ink, 0.9); return; }
   box(C.ink, s.dimA); box(s.tintC, s.tintA * 0.6); box(s.flashC, s.flashA * 0.85); if (s.black > 0) box(C.ink, s.black);
 };
+// any holder that is not a minigame (a full-screen show, the reel, a chest…): SH.box(h, …) once, SH.tick(g, h, dt) every frame
+// (freeze your own clock while SH.frozen(h)), SH.push(h) for the camera, then this after drawing your scene
+SH.drawAll = function (x, h) {
+  const s = h.sh; if (!s) return; if (!(s.hit > 0)) { const b = boxOf(s); if (s.dimA > 0.01) { x.save(); x.globalAlpha = Math.round(s.dimA * 8) / 8; x.fillStyle = U.pal(C.ink); x.fillRect(b.x, b.y, b.w, b.h); x.restore(); } }
+  SH.drawFx(x, h); const dimA = s.dimA; s.dimA = 0; SH.drawOver(x, h); s.dimA = dimA; if (s.hit > 0) SH.drawFx(x, h);
+  s.rolls.forEach(r => { const p = cl(r.t / r.dur, 0, 1), v = Math.round(r.v * (1 - Math.pow(1 - p, 2.2))), done = r.t >= r.dur, bump = done ? 1 + 0.25 * Math.exp(-(r.t - r.dur) * 10) : 1 + 0.04 * Math.sin(r.t * 40); x.save(); x.globalAlpha = cl((r.dur + 0.9 - r.t) / 0.3, 0, 1); x.translate(Math.round(r.x), Math.round(r.y - (done ? (r.t - r.dur) * 30 : 0))); x.scale(bump, bump); U.text(x, '+' + M.fmt(v), 0, 0, 64, r.col, { num: true, outline: true }); x.restore(); });
+  s.stamps.forEach(p => { const q = p.t / 0.14, k = q < 1 ? 2.4 - 1.4 * eb(q) : 1, al = cl((p.life - p.t) / 0.3, 0, 1); x.save(); x.globalAlpha = al; x.translate(Math.round(p.x), Math.round(p.y)); x.rotate(p.rot); x.scale(k, k); U.text(x, p.text, 0, 0, p.size, p.col, { outline: true }); x.restore(); });
+};
 SH.draw = function (x, mg) {
   const s = mg.sh; if (!s) return; const X0 = K.SX, Y0 = K.SY, W = K.SW, H = K.SH;
   if (s.gray > 0) { x.save(); x.globalAlpha = 0.9 * s.gray; x.globalCompositeOperation = 'saturation'; x.fillStyle = '#808080'; x.fillRect(X0, Y0, W, H); x.globalCompositeOperation = 'source-over'; x.globalAlpha = 0.25 * s.gray; x.fillStyle = U.pal(C.ink); x.fillRect(X0, Y0, W, H); x.restore(); }
