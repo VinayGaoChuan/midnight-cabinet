@@ -86,6 +86,9 @@
 | A42 | 守护神 · 升级与神像 | 信仰值攒够 | 横幅「神名 LvN」+ 这一级给什么；主基地左边地面上立着这位神的像，每升一级大一圈 | `mc-gods.js` `godUp`、`M.godStatue` |
 | A43 | 奇观守夜 | 混沌来袭时有守夜类奇观 | 罗德岛巨像：每 8 秒一只大脚踩在城门前最近的怪物身上，脚印 + 尘土 + 震屏；埃菲尔铁塔：一道探照灯光束锁住最强的怪物；兵马俑：城门前站出 8 个陶色的陶俑兵；自由女神像：主基地第一次掉到一半以下时火炬点亮、耐久回满；巨石阵：强敌和首领出场时头上「巨石阵 定住」；圣米歇尔山：左边没有怪物 | `mc-wonders.js` 的 `NightRaid` 子类 |
 | A44 | 通关 · 难度 | 守过这个难度的目标夜 | 横幅「通关 · 普通！」+「守过了第 15 夜」、号角、彩纸；然后弹出「继续守下去 / 收工结算」 | `mc-gdiff.js` |
+| A45 | 午夜卡包 · 抽卡揭晓（普通 → 传说） | 夜市里点抽卡键 | 抽卡键一压一弹 + 卡包掉进出货口 → 卡包飞到屏幕中间撕开，背面朝上的像素卡（75 列逐列透视、金边厚度、高光、随鼠标倾斜）等你点 → 心跳蓄力 1 / 2 / 3 / 5 / 6 拍（每拍一缩、裂纹长、光换色，只在结果更高时升档，夜市灯泡和机器霓虹跟着变色）→ 吸气、卡帧、黑白冲击帧 → 卡背炸成三角碎片 + 白闪 + 冲击环 + 震屏 + 镜头推近 → 这一档的像素世界从四面弹进来（月下草原 / 萤火林 / 极光雪峰 / 星渊浮岛 / 金色天城）→ 翻面、品质名逐字砸下、稀有以上部队跳出卡放一次技能 → 名字、职业、战斗力、一句话、菱形；传说加第二波金色冲击、孔明灯、烟花、金币喷泉；点一下三倍速快进，不跳过结果 | `mc-gacha.js` `R.start`、`revealTick`、`drawReveal` |
+| A45b | 午夜卡包 · 卡片详情 | 揭晓后点卡片 | 部队从卡里弹出（白闪、品质色冲击环、放射火花）放大站在左边，待机 → 攻击 → 待机 → 技能循环，出手有冲击环；右边面板一行一行弹出（名字、品质、职业那一句、战斗力数字滚动、特性、进化链逐档亮、队伍里几支），「收下」键；点面板外卡片落回 | `mc-gacha.js` `openInspect`、`inspectTick`、`drawInspect` |
+| A45c | 午夜卡包 · 收下 | 点卡片以外 | 品质世界退场、卡片收起，部队图标飞进左下部队栏；凑齐三支接着放进化演出；队伍满了进入替换（部队栏红框闪） | `mc-gacha.js` `gaGive` |
 
 ## B · 基地
 
@@ -146,7 +149,7 @@
 | C09 | 奖励转盘（通用） | 宝箱、道具使用等 | 拉杆时机箱往上跳两下；滚轮 0.15 秒起速后全速转（图案竖着拉长 + 身后两道残影），1.95 秒正好转到起点那格猛地停住、往前冲一点再弹回（一声停轮 + 小震；不升档就直接锁定）；升档时先冲出三分之一多、再慢慢挪到位略过头再回来。街机机箱（酒红、铆钉、12px 投影）+ 招牌灯箱标题 + 34 颗方形灯泡（奶油亮 / 棕暗，定格后亮成结果色）；深井窗口滚动，金色硬边中奖线 + 像素箭头，拉杆是像素块；停在结果上，可能「升品」；结果条 52px 描边字；每次往上冲之前 0.42 秒蓄力（灯珠全灭、窗口透出下一档的颜色、机箱越抖越厉害、两下心跳），每升一格比上一格更响（炸光、闪光、「稀有！」「史诗！！」大字逐级变大，第二格起加光芒）；「再上一格？」没冲上去一声「差一点」；锁定按结果分四档（普通一圈光 → 传说先黑场 0.18 秒再全屏金币雨和彩纸），普通 / 稀有的余韵缩到 0.9 秒 | `mc-game-a.js` `startReel`、`mc-fx.js` `drawReel`、`M.reelEv`、`mc-game-a.js` `reelTick` |
 | C10 | 奇遇场景 | 奇遇节点 | 上下黑边 + 网点压暗；左侧奇遇像素插画（26 张，缓慢两步上下浮）；底部机箱对话框：金色名牌逐字跳、34px 对白、末尾金色光标闪；右侧选项行，悬停时 ▶ 左右跳 | 模板 `modalOn`、`mc-game-d.js`、`src/mc-pj-art.js` |
 | C11 | 奇遇小游戏框架 | 进入奇遇 | 墨色压暗 + 机箱舞台（墨框、本玩法颜色内圈、铆钉、硬投影）+ 压在上沿的招牌灯箱标题（跑马灯、果汁色带逐字跳）+ 规则一句 + 提示小面板；舞台里的牌子、读数、量表用同一套组件，数字变化时 4 步弹一下（1.45 → 0.9 → 1.06 → 1）；28 个玩法见 G | `mc-mini-a.js` `frameBegin / frameDeco` |
-| C12 | 夜市 | 夜市节点 | 三个区的卡片（部队 / 战旗 / 道具），买下时卡片飞进对应栏位，卖出、刷新有反馈 | `mc-game-c.js` shop、`mc-game-f.js` |
+| C12 | 夜市 | 夜市节点 | 整屏一张 480×270 格的打光像素画：夜空、星星和流星、月亮、城市屋顶剪影、两串纸灯笼、条纹雨棚带灯泡串、货架、柜台、店主（六种店各自的雨棚颜色、店主、货）、隔壁冒热气的面摊、路灯、湿石板路、雨棚上走过的黑猫、绕灯的飞蛾；右边午夜卡包机（出货窗里的卡包、概率灯、保底灯、出货口）。五张部队卡一行摆在柜台上、价签吊在下面，买下飞进部队栏；店主对买下点头、积分不够摇头、刷新摊手、抽卡探身 | `mc-pxmarket.js`、`mc-gacha.js` `drawMarket`、`mc-game-f.js` |
 | C13 | 获得部队 / 战旗 / 道具 | 购买、招募旗、奇遇 | 图标飞向左下角部队栏、战旗栏或道具栏，栏位放大回弹 | `mc-game-a.js` `fly`、`mc-game-f.js` |
 | C14 | 撤离点 | 撤离节点 | 一场坚守战，成功后带着全部收获返回（A18） | `mc-game-c.js` |
 | C15 | 首领节点 | 最后一站 | 首领战（D06），打败后通关世界、核心 +1 | `mc-game-c.js`、`mc-meta-a.js` |
@@ -945,7 +948,7 @@
 | V014 | `Sfx.typeBlip` | 界面 | 0 |
 | V015 | `Sfx.tick` | 界面 | 12 |
 | V016 | `Sfx.numTick` | 界面 | 0 |
-| V017 | `Sfx.coin` | 界面 | 4 |
+| V017 | `Sfx.coin` | 界面 | 5 |
 | V018 | `Sfx.land` | 界面 | 8 |
 | V019 | `Sfx.fly` | 界面 | 0 |
 | V020 | `Sfx.bump` | 界面 | 0 |
@@ -1021,60 +1024,61 @@
 | V090 | `Sfx.reveal` | 演出 | 2 |
 | V091 | `Sfx.tear` | 演出 | 2 |
 | V092 | `Sfx.leaderDown` | 演出 | 0 |
-| V093 | `Sfx.chestShake` | 宝箱与转盘 | 0 |
-| V094 | `Sfx.knock` | 宝箱与转盘 | 0 |
-| V095 | `Sfx.itemReveal` | 宝箱与转盘 | 2 |
-| V096 | `Sfx.reelUp` | 宝箱与转盘 | 1 |
-| V097 | `Sfx.launch` | 出征地图 | 1 |
-| V098 | `Sfx.step` | 出征地图 | 1 |
-| V099 | `Sfx.nodeReveal` | 出征地图 | 0 |
-| V100 | `Sfx.arrive` | 出征地图 | 2 |
-| V101 | `Sfx.shopEnter` | 出征地图 | 0 |
-| V102 | `Sfx.buy` | 出征地图 | 4 |
-| V103 | `Sfx.sell` | 出征地图 | 0 |
-| V104 | `Sfx.refresh` | 出征地图 | 1 |
-| V105 | `Sfx.gain` | 出征地图 | 2 |
-| V106 | `Sfx.atk` | 战斗 | 1 |
-| V107 | `Sfx.proj` | 战斗 | 1 |
-| V108 | `Sfx.hitAt` | 战斗 | 1 |
-| V109 | `Sfx.critAt` | 战斗 | 1 |
-| V110 | `Sfx.killAt` | 战斗 | 1 |
-| V111 | `Sfx.armorHit` | 战斗 | 1 |
-| V112 | `Sfx.dodge` | 战斗 | 1 |
-| V113 | `Sfx.summonIn` | 战斗 | 2 |
-| V114 | `Sfx.allyDie` | 战斗 | 1 |
-| V115 | `Sfx.tomb` | 战斗 | 0 |
-| V116 | `Sfx.soul` | 战斗 | 0 |
-| V117 | `Sfx.entry` | 战斗 | 8 |
-| V118 | `Sfx.bossDrop` | 战斗 | 0 |
-| V119 | `Sfx.skillReady` | 战斗 | 0 |
-| V120 | `Sfx.skillTitle` | 战斗 | 1 |
-| V121 | `Sfx.scoreFly` | 战斗 | 0 |
-| V122 | `Sfx.legionCard` | 战斗 | 0 |
-| V123 | `Sfx.cutin` | 战斗 | 1 |
-| V124 | `Sfx.pause` | 战斗 | 0 |
-| V125 | `Sfx.speed` | 战斗 | 0 |
-| V126 | `Sfx.holdTick` | 战斗 | 0 |
-| V127 | `Sfx.waveHorn` | 战斗 | 0 |
-| V128 | `Sfx.settleTick` | 战斗 | 0 |
-| V129 | `Sfx.settleTotal` | 战斗 | 1 |
-| V130 | `Sfx.skillFx` | 技能 | 5 |
-| V131 | `Sfx.skill` | 技能 | 0 |
-| V132 | `Sfx.charFx` | 角色关键帧 | 2 |
-| V133 | `Sfx.itemUse` | 支援道具 | 6 |
-| V134 | `Sfx.weapon` | 守城 | 1 |
-| V135 | `Sfx.wallHit` | 守城 | 1 |
-| V136 | `Sfx.raidWin` | 守城 | 1 |
-| V137 | `Sfx.rankStamp` | 守城 | 0 |
-| V138 | `Sfx.portalCollapse` | 守城 | 1 |
-| V139 | `Sfx.mini` | 小游戏 | 228 |
-| V140 | `Sfx.introToll` | 开场演出 | 0 |
-| V141 | `Sfx.coinRoll` | 开场演出 | 0 |
-| V142 | `Sfx.spook` | 开场演出 | 0 |
-| V143 | `Sfx.musicBox` | 开场演出 | 0 |
-| V144 | `Sfx.reelSpin` | 开场演出 | 0 |
-| V145 | `Sfx.glitch` | 开场演出 | 0 |
-| V146 | `Sfx.jackpot` | 开场演出 | 0 |
+| V093 | `Sfx.ga` | 演出 | 1 |
+| V094 | `Sfx.chestShake` | 宝箱与转盘 | 0 |
+| V095 | `Sfx.knock` | 宝箱与转盘 | 0 |
+| V096 | `Sfx.itemReveal` | 宝箱与转盘 | 2 |
+| V097 | `Sfx.reelUp` | 宝箱与转盘 | 1 |
+| V098 | `Sfx.launch` | 出征地图 | 1 |
+| V099 | `Sfx.step` | 出征地图 | 1 |
+| V100 | `Sfx.nodeReveal` | 出征地图 | 0 |
+| V101 | `Sfx.arrive` | 出征地图 | 2 |
+| V102 | `Sfx.shopEnter` | 出征地图 | 0 |
+| V103 | `Sfx.buy` | 出征地图 | 4 |
+| V104 | `Sfx.sell` | 出征地图 | 0 |
+| V105 | `Sfx.refresh` | 出征地图 | 1 |
+| V106 | `Sfx.gain` | 出征地图 | 2 |
+| V107 | `Sfx.atk` | 战斗 | 1 |
+| V108 | `Sfx.proj` | 战斗 | 1 |
+| V109 | `Sfx.hitAt` | 战斗 | 1 |
+| V110 | `Sfx.critAt` | 战斗 | 1 |
+| V111 | `Sfx.killAt` | 战斗 | 1 |
+| V112 | `Sfx.armorHit` | 战斗 | 1 |
+| V113 | `Sfx.dodge` | 战斗 | 1 |
+| V114 | `Sfx.summonIn` | 战斗 | 2 |
+| V115 | `Sfx.allyDie` | 战斗 | 1 |
+| V116 | `Sfx.tomb` | 战斗 | 0 |
+| V117 | `Sfx.soul` | 战斗 | 0 |
+| V118 | `Sfx.entry` | 战斗 | 8 |
+| V119 | `Sfx.bossDrop` | 战斗 | 0 |
+| V120 | `Sfx.skillReady` | 战斗 | 0 |
+| V121 | `Sfx.skillTitle` | 战斗 | 1 |
+| V122 | `Sfx.scoreFly` | 战斗 | 0 |
+| V123 | `Sfx.legionCard` | 战斗 | 0 |
+| V124 | `Sfx.cutin` | 战斗 | 1 |
+| V125 | `Sfx.pause` | 战斗 | 0 |
+| V126 | `Sfx.speed` | 战斗 | 0 |
+| V127 | `Sfx.holdTick` | 战斗 | 0 |
+| V128 | `Sfx.waveHorn` | 战斗 | 0 |
+| V129 | `Sfx.settleTick` | 战斗 | 0 |
+| V130 | `Sfx.settleTotal` | 战斗 | 1 |
+| V131 | `Sfx.skillFx` | 技能 | 5 |
+| V132 | `Sfx.skill` | 技能 | 0 |
+| V133 | `Sfx.charFx` | 角色关键帧 | 2 |
+| V134 | `Sfx.itemUse` | 支援道具 | 6 |
+| V135 | `Sfx.weapon` | 守城 | 1 |
+| V136 | `Sfx.wallHit` | 守城 | 1 |
+| V137 | `Sfx.raidWin` | 守城 | 1 |
+| V138 | `Sfx.rankStamp` | 守城 | 0 |
+| V139 | `Sfx.portalCollapse` | 守城 | 1 |
+| V140 | `Sfx.mini` | 小游戏 | 228 |
+| V141 | `Sfx.introToll` | 开场演出 | 0 |
+| V142 | `Sfx.coinRoll` | 开场演出 | 0 |
+| V143 | `Sfx.spook` | 开场演出 | 0 |
+| V144 | `Sfx.musicBox` | 开场演出 | 0 |
+| V145 | `Sfx.reelSpin` | 开场演出 | 0 |
+| V146 | `Sfx.glitch` | 开场演出 | 0 |
+| V147 | `Sfx.jackpot` | 开场演出 | 0 |
 
 小游戏各自的一组（`Sfx.mini(小游戏, 事件)`）：`mine` pick / loosen / gem / cavein；`roulette` spin / click / bet / gold / win / skull / miss；`fruit` gogo / lever / spin / stop / jackpot / win / skulls / nomatch / drop / zap；`claw` move / drop / grab / lift / prize / slip / empty / bounce；`pachinko` launch / peg / slot / edge；`tree` curse / pick / water / cut / grow / fruit；`tarot` lift / shuffle / flip / good / bad；`eggs` hammer / crack / prize / snake；`dice` shake / roll / clack / win / lose / tie；`fate` cost / spin / click / stop；`musician` note / metro / miss / pluck / tick / cross / great / ok / poor / snap；`granny` stitch / miss / done / snip / thread / light / whole；`well` charge / flick / rise / toss / splash / great / ok / miss；`child` step / crunch / wrong / lost / found；`grave` lid / dig / break / candle / coffin / hand / out / treasure；`clinic` pick / drink / good / bad / mult / hover / pop / crack / fizz / omen；`mirror` tone / wrong / pass；`altar` pour / rune / flicker / out / win；`peddler` shuffle / bell / lift / win / lose；`spring` zone / bubble / tick / good / hot / cool / plunge / drop / clamp / geyser；`trap` step / num / boom / box / hop / nope / click / rattle / reveal / fireworks；`cat` wave / coin / bar / bomb / miss / flick / spill / weigh / bell / clink；`market` grab / swing / stamp / deal / miss / bell / cackle / slapScroll / seal / fade / tap / chain / coinbag；`trainer` bell / punch / done / whistle / windup / finisher / snap；`statue` eyes / turn / align / wake / fail / snuff；`arena` ko / open / roar / cheer / bet / hit / win / lose / gong / gate / hush / ooh / toss / boo；`camp` fire / rest / sharpen / clang / scrape / pop；`recruit` curtain / reveal / full / lamp / flare / salute / none；`chest` in / spot / land / lift / rattle / unlock / lockfall / riser / snap / slit / boom / fire / pop / drop / last / roll / wave2 / itemTap / rush / claim / close / mimic / fight。
 

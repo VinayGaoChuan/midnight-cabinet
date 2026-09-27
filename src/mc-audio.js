@@ -333,7 +333,7 @@ const PANARG = { proj: 1, atk: 1 };
 const STAGE = { battleIntro: 1.5, victory: 2, endScreen: 2.4, levelUp: 3.2, recruit: 3.4, leaderDown: 2.6, chaos: 2.4, tlEvent: 1.2, nfTitle: 1.6, raidWin: 2.4, portalCollapse: 3, cutin: 1.4, bossDrop: 1.2, launch: 1.4, fanfare: 1.2, win: 1, lose: 1.6, worldTheme: 2, steleHit: 1, chest: 1.2, settleTotal: 1 };
 const STAGE_MINI = { win3: 1.8, win4: 3.4, fever: 1.4 };
 const STAGE_GAME = { 'arena.ko': 1.4, 'statue.wake': 1.8 };
-const STAGE_BEAT = { lv: { in: 3.2 }, rc: { in: 3.4 }, vic: { flash: 1.8 }, tear: { in: 2.4 } };
+const STAGE_BEAT = { lv: { in: 3.2 }, rc: { in: 3.4 }, vic: { flash: 1.8 }, tear: { in: 2.4 }, ga: { press: 3, boom: 3 } };
 const DIR = S.dir = { stage: 0, recent: {}, vi: {}, last: {}, inside: 0, q: [], qOn: false, pq: [], pqOn: false, payRank: 0, payUntil: 0, lastAtk: 0, lastCombat: 0, stats: {}, introUntil: 0, lastSkill: 0, lastLeg: 0, soft: {} };
 let VARI = 0;
 // 变体：同一个名字连着响时轮换 0 / 1 / 2，不连续两次同一个
@@ -575,7 +575,7 @@ let lvG = null;
 // 游戏里逐拍调用 S.rc(拍, 参数)；S.recruit(品质) 是整段
 let rcG = null;
 // 领袖阵亡 · 卡片裂开：in 在卡片飞出来时（低沉的小调 + 钟声），rip 在卡片裂成两半时；中间的心跳由游戏按拍调用 heart
-reg('演出', ['battleIntro', 'introOut', 'vic', 'victory', 'endScreen', 'lv', 'levelUp', 'rc', 'recruit', 'reveal', 'tear', 'leaderDown']);
+reg('演出', ['battleIntro', 'introOut', 'vic', 'victory', 'endScreen', 'lv', 'levelUp', 'rc', 'recruit', 'reveal', 'tear', 'leaderDown', 'ga']);
 
 // ═════════ 宝箱与转盘 ═════════
 def('chestShake', 1, (t, k) => { const n = 3 + (k | 0); for (let i = 0; i < n; i++) { nz(t + i * .09, .04, 'bandpass', 700 * V(.2), 2, .08); thud(t + i * .09, 150, 90, .05, .08); } }, 80);
@@ -1204,6 +1204,59 @@ const RC2 = {
 def('rc', 2, (t, beat, x) => { const f = RC2[beat]; if (f) f(t, x); });
 def('recruit', 2, (t, rar) => { rar = Math.max(0, Math.min(3, rar | 0)); RC2.in(t); RC2.charge(t + .55, { dur: 1.2, rar }); for (let k = 0; k <= rar; k++) RC2.tier(t + .55 + k * 1.2 / (rar + 1), k); RC2.shatter(t + 1.75, rar); RC2.fly(t + 3); RC2.land(t + 3.7, rar); }, 800);
 def('reveal', 2, (t, q) => reveal2(t, q | 0), 300);
+// ── 午夜卡包（夜市的抽卡，src/mc-gacha.js）：干脆的芯片音。每一拍下面一记三角波掉音高的重低音 + 低通噪声「砰」，上面方波五声音阶；
+// 几乎不加混响，亮音只给一点回声。碎卡那一下按品质越来越重；卡帧时整组掐断。游戏逐拍调用 S.ga(拍, 参数…)。
+let gaG = null;
+const GA_ROOT = 65;   // F4
+const gs = (i) => mtof(deg(i, 0));
+const gq = (f, t, d, v, type, f2, o) => tone(t, type || 'square', f, d, v, Object.assign({ a: .002, hold: d * .55 }, f2 ? { to: f2, slide: d } : {}, o || {}));
+const gkick = (t, f0, v, d) => { gq(f0 || 170, t, d || .16, v || .5, 'triangle', 42); nz(t, .14, 'lowpass', 420, .8, (v || .5) * .85); };
+const GA = {
+  press: (t) => { gq(880, t, .03, .04); nz(t, .04, 'bandpass', 2400, 1, .2); gq(1975, t + .02, .05, .1); gq(2637, t + .08, .2, .09, 'square', 0, { dly: .2 }); for (let i = 0; i < 6; i++) { nz(t + .1 + i * .045, .02, 'bandpass', 2200 + i * 150, 1.2, .2); gq(600 + i * 60, t + .1 + i * .045, .015, .02); } },
+  thunk: (t) => { gkick(t, 180, .55, .14); gq(330, t + .02, .06, .04); },
+  whoosh: (t, k) => { gq(300, t, .18, .05, 'square', 2400 * (k || 1)); nz(t, .2, 'bandpass', 3000, 1, .15); },
+  foil: (t) => { for (let i = 0; i < 4; i++) nz(t + i * .03, .025, 'highpass', 6500, .7, .12); },
+  tear: (t) => { nz(t, .26, 'bandpass', 800, 1, .45, { to: 6000 }); for (let i = 0; i < 6; i++) gq(1200 + i * 220, t + i * .035, .03, .025); gkick(t + .2, 140, .3, .1); },
+  tap: (t) => { gq(2093, t, .03, .06); gq(2637, t + .03, .05, .055); nz(t, .04, 'bandpass', 2400, 1, .2); },
+  riser: (t, d) => { cut(gaG, t); gaG = grp(); duck(t, .7, (d || 1.5) + 3); gq(55, t, d, .15, 'triangle', 330, { dest: gaG }); },
+  beat: (t, i, tier, up) => { i = i | 0; tier = tier | 0; up = !!up; nz(t, .14, 'lowpass', 420, .8, .45); gq(175, t, .16, .5, 'triangle', 44); gq(60, t, .2, .25, 'sine', 35);
+    gq(gs(7 + tier * 3 + i), t, .1, .11); gq(gs(9 + tier * 3 + i), t + .05, .12, .085, 'square', 0, { dly: .2 });
+    if (up) { for (let k = 0; k < 6; k++) gq(gs(10 + tier * 3 + k), t + .06 + k * .035, .05, .08, 'square', 0, { dly: .2 }); nz(t, .3, 'highpass', 6000, .7, .16); } },
+  heart: (t) => { gq(62, t, .16, .6, 'sine', 40); gq(58, t + .2, .18, .5, 'sine', 38); },
+  zap: (t) => { const p = rnd(-.7, .7); gq(2400 + Math.random() * 1200, t, .05, .025, 'square', 300, { pan: p }); nz(t, .05, 'highpass', 5000, .7, .1, { pan: p }); },
+  suck: (t, d) => { d = d || .3; riser(t, t + d, 400, 7000, .5, { dest: gaG || undefined }); gq(110, t, d, .1, 'square', 1760, { dest: gaG || undefined }); },
+  cut: (t) => { cut(gaG, t, .008); gaG = null; },
+  boom: (t, q) => { q = Math.max(0, Math.min(4, q | 0)); const L = [.62, .7, .8, .9, 1][q];
+    nz(t, .9 + q * .2, 'lowpass', 700, .8, .75 * L); nz(t, .4, 'highpass', 6000, .7, .3 * L); gq(260, t, .6, .6 * L, 'triangle', 28); gq(120, t, .9 + q * .15, .45 * L, 'sine', 30);
+    if (q >= 3) { gq(90, t + .12, 1.2, .5, 'sine', 24); nz(t + .1, 1.4, 'lowpass', 250, .8, .35, { to: 60 }); }
+    const seq = [[523, 659, 784, 1047], [523, 659, 784, 1047, 1319], [523, 659, 784, 1047, 784, 1047, 1319, 1568], [523, 659, 784, 1047, 1319, 1047, 1319, 1568, 2093], [392, 523, 659, 784, 1047, 1319, 1568, 2093, 2637]][q];
+    seq.forEach((f, i) => gq(f, t + .08 + i * .055, .1, .1, 'square', 0, { dly: .2 }));
+    const end = t + .08 + seq.length * .055, top = seq[seq.length - 1]; gq(top, end, .9, .09); gq(top / 2, end, .9, .13, 'triangle'); gq(top * .75, end, .9, .05);
+    for (let i = 0; i < 6 + q * 3; i++) gq(gs(12 + (Math.random() * 8 | 0)), t + .05 + Math.random() * .5, .05, .022, 'square', 0, { dly: .2, pan: rnd(-.8, .8) }); },
+  wave2: (t) => { [1568, 2093, 2637, 3136, 4186].forEach((f, i) => gq(f, t + i * .05, .08, .045, 'square', 0, { dly: .2 })); nz(t, .4, 'lowpass', 800, .8, .45); gq(200, t, .5, .45, 'triangle', 30); },
+  slam: (t, i) => { i = i | 0; nz(t, .12, 'lowpass', 520, .8, .55); gq(175, t, .14, .6, 'triangle', 42); nz(t, .05, 'highpass', 5000, .7, .12); gq(gs(10 + i * 2), t, .08, .07); gq(gs(12 + i * 2), t + .04, .1, .05, 'square', 0, { dly: .2 }); },
+  world: (t, i) => { i = i | 0; gq(110 + i * 30, t, .16, .45, 'triangle', 42); nz(t, .12, 'lowpass', 380 + i * 90, .8, .32); },
+  name: (t) => { gq(1568, t, .06, .18); gq(2093, t + .05, .12, .18, 'square', 0, { dly: .2 }); },
+  pip: (t, i) => { const f = gs(12 + ((i | 0) * 2)); gq(f, t, .09, .22); gq(f * 1.5, t + .05, .16, .15, 'square', 0, { dly: .2 }); gq(f / 2, t, .12, .2, 'triangle'); },
+  seg: (t, k) => { k = k | 0; gq(1300 + k * 70, t, .04, .17); gq(650 + k * 35, t, .04, .1, 'triangle'); },
+  roll: (t, k) => gq(1300 + ((k | 0) % 16) * 60, t, .035, .14),
+  charpop: (t, q) => { nz(t, .6, 'lowpass', 700, .8, .5); gq(180, t, .4, .42, 'triangle', 40); [784, 988, 1175, 1568, 1976, 2349].forEach((f, i) => gq(f, t + .03 + i * .045, .08, .05, 'square', 0, { dly: .2 })); const e = t + .03 + 6 * .045; gq(2349, e, .5, .045); gq(1175, e, .5, .07, 'triangle'); gq(1568, e, .5, .03); },
+  panel: (t) => { gq(1047, t, .05, .08); gq(1568, t + .04, .07, .08); },
+  back: (t) => { gq(1600, t, .15, .05, 'square', 400); nz(t, .15, 'bandpass', 2000, 1, .1); },
+  fly: (t) => { gq(1200, t, .22, .05, 'square', 150); nz(t, .2, 'bandpass', 2000, 1, .1); },
+  // a firework: a deep boom rolling off, then sparse pops of a few milliseconds thinning out over a faint sizzle (never hiss)
+  fw: (t, big) => { const p = rnd(-.7, .7); nz(t, big ? 1.6 : 1.2, 'lowpass', 420, .8, big ? .5 : .36, { to: 90, pan: p }); gq(72, t, .7, big ? .42 : .3, 'sine', 30); gq(150, t, .18, .18, 'triangle', 60);
+    const n = big ? 42 : 26; for (let i = 0; i < n; i++) nz(t + .1 + Math.pow(Math.random(), 1.7) * (big ? 1.4 : 1), .006 + Math.random() * .006, 'bandpass', 1600 + Math.random() * 2600, 1.6, .1 + Math.random() * .12, { pan: p + rnd(-.3, .3) });
+    nz(t + .08, big ? 1.5 : 1.1, 'bandpass', 6500, 1, .03); },
+  launch: (t) => { gq(700, t, .45, .035, 'sine', 2600); gq(1400, t, .45, .01, 'triangle', 5200); nz(t, .4, 'bandpass', 3000, 1, .04); },
+  coins: (t, n) => { for (let i = 0; i < (n | 0); i++) gq(gs(12 + (i % 8)), t + i * .04, .05, .035, 'square', 0, { dly: .2, pan: rnd(-.6, .6) }); },
+  evo: (t) => { [0, 2, 4, 5, 7, 9].forEach((k, i) => gq(gs(10 + k), t + i * .05, .08, .06, 'square', 0, { dly: .2 })); gq(gs(20), t + .32, .6, .05); gq(gs(10), t + .32, .6, .08, 'triangle'); },
+  hum: (t) => { gq(120, t, .3, .04); gq(1568, t, .04, .03); },
+  coil: () => {},   // the press already carries the coin and the coil
+  tick: (t) => gq(2093, t, .025, .05),
+};
+def('ga', 2, (t, ev, a, b, c) => { const f = GA[ev]; if (f) f(t, a, b, c); });
+
 
 // ── 宝箱（2026-09-25 重做：层太多听不清）：一条线，每个时刻只有一个主角 ──
 // 开箱木头响 → 0.5 秒落地一声低响 → 抖动是一下下木头碰撞（越抖越急越亮）→ 1.5 秒打开：六个音的竖琴上行停在一个钟琴和弦上 →

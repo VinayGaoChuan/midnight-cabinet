@@ -40,6 +40,7 @@ mc-pxroom-t3.js
 mc-pxroom-base.js
 mc-pxroom-evo.js
 mc-pxroom-jobs.js
+mc-pxmarket.js
 mc-pxroom-mini-d.js
 mc-pxchest.js
 mc-game-a.js
@@ -143,3 +144,4 @@ mc-boons.js
 mc-q7.js
 mc-roster.js
 mc-opening.js
+mc-gacha.js
