@@ -88,6 +88,16 @@ try {
       await ev(`(async () => { const g = __mcg, b = g.bv, X = MC.BASE_GEO.DOOR_X; b.x = b.tx = X + 380; b.y = b.ty = -150; b.z = b.tz = 1.5; if (b.keepFree) b.keepFree(); await new Promise(r => setTimeout(r, 1500)); return 1; })()`);
       console.log(await shot(path.join(OUT, 'city-' + name + '-close.png')));
     }
+  } else if (MODE === 'dirs') {
+    // every 发展方向 (the city's look): the same city and camera, switch off and on → dir-<name>-<old|new>.png (the town band)
+    const DIRS = arg('dirs', 'none,city,fort,market,industry,army,pastoral,holy,arcane,future,fun').split(','), which = arg('which', 'old,new').split(',');
+    for (const [q, name] of [['', 'old'], ['?pxtown=1', 'new']].filter(a => which.includes(a[1]))) {
+      await open(q); await ev(CITY(5));
+      for (const d of DIRS) {
+        await ev('(async () => { const g = __mcg, m = g.meta, d = ' + JSON.stringify(d) + '; m.dirs = {}; m.dirOrd = []; if (d !== "none") { m.dirs[d] = 3; m.dirOrd = [d]; } g.town = null; g.townSync(true); const b = g.bv, X = MC.BASE_GEO.DOOR_X; b.x = b.tx = X + 250; b.y = b.ty = -170; b.z = b.tz = +' + JSON.stringify(arg('z', '0.95')) + '; await new Promise(r => setTimeout(r, 2500)); return 1; })()');
+        console.log(await shot(path.join(OUT, 'dir-' + d + '-' + name + '.png'), { x: 0, y: 60, width: 1600, height: 560 }));
+      }
+    }
   } else if (MODE === 'perf') {
     // the base's draw time with a full city (switch off / on), then (on) a site, a rise, an upgrade and a demolition played through it
     for (const q of ['', '?pxtown=1']) {

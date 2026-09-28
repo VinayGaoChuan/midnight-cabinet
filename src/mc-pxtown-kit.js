@@ -167,10 +167,10 @@ K.build = function (S, sc, G, P) {
   if (st >= 1) {
     const lx = dx - 2; K.lantern(S, sc, lx, gy - dh - 1);
     if (P.chimney !== false && /medieval|nature|steam|water|magic/.test(P.style || 'medieval')) K.chimney(S, sc, sd > 0 ? mx0 + 3 : mx1 - 8, top - Math.round(rh * 0.35), Math.round(rh * 0.6) + 4, st === 2 ? 'mstone' : 'brick', { k: P.smoke || 'steam' });
-    K.sign(S, G, dx + dw + 1, gy - dh - 2, P.icon, P.signM || 'wood');
-    K.barrel(S, dx + dw + 8 < mx1 ? dx + dw + 3 : mx0 + 1, gy); if (near) G.workers.push({ x: sd > 0 ? mx0 - 4 : mx1 + 4, dir: sd, act: P.act || 'work' });
+    if (!P.house) K.sign(S, G, dx + dw + 1, gy - dh - 2, P.icon, P.signM || 'wood');
+    K.barrel(S, dx + dw + 8 < mx1 ? dx + dw + 3 : mx0 + 1, gy); if (near && !P.house) G.workers.push({ x: sd > 0 ? mx0 - 4 : mx1 + 4, dir: sd, act: P.act || 'work' });
   }
-  if (st >= 2) {
+  if (st >= 2 && !P.house) {
     K.lantern(S, sc, dx + dw + 2, gy - dh - 1);
     // a tower on the wing's outer side, its own roof, a glowing window, the flag on top
     const tw = cl(Math.round(w * 0.14), 7, 11), tx = sd > 0 ? wx1 - tw : wx0, th = Math.round(sh * 1.2) + 4, tb = (B.wtop || top), tt = tb - th;
@@ -262,7 +262,7 @@ const ROOF_ALT = { medieval: [['brick', 5], ['tile', 5], ['wood', 5], ['moss', 5
 const BAN = ['crimson', 'tile', 'leaf', 'magic', 'brass', 'teal'];
 PT.spec = function (key, P0) {
   // resolved on first use: evolution buildings get their style and category later in the load (mc-night.js)
-  const A = PT.ART[key] = { icon: P0.icon, beam: P0.beam, prep() {
+  const A = PT.ART[key] = { icon: P0.icon, beam: P0.beam, foot: P0.foot, prep() {
     if (A.P) return; const B = M.BUILDINGS[key] || {}, hs = M.townHash ? M.townHash(key) : key.length * 7, P = A.P = Object.assign({ style: B.style || 'medieval' }, P0);
     const ra = ROOF_ALT[P.style] || ROOF_ALT.medieval; if (!P.roofM) P.roofM = ra[hs % ra.length]; if (!P.wing) P.wing = (hs >> 3) % 2 ? 'l' : 'r'; if (!P.bannerM) P.bannerM = BAN[(hs >> 5) % BAN.length];
     P.kind = P.kind || K.kindOf(key); P.col = P.col || COL[P.kind]; A.col = P.col; A.kind = P.kind; A.mat = (K.tier(P.style, 1).base || K.tier(P.style, 1).wall)[0]; },

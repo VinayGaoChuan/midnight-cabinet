@@ -106,7 +106,7 @@ function animSite(D, t, s, o, G, A) {
 const PADX = 10, PADT = 16, PADB = 3, DIM = {};
 function ensure(key, sc, dk, stage) {
   const id = '_tw:' + key + ':' + Math.round(sc * 100) + ':' + Math.round(dk * 100) + ':' + stage; if (X.has(id)) return id;
-  const A = ART[key]; if (A.prep) A.prep(); const f = M.townFoot(key), w = Math.round(f.w * sc / 2), h = Math.round(f.h * sc / 2), pt = PADT + (A.padt || 0);
+  const A = ART[key]; if (A.prep) A.prep(); const f = A.foot || M.townFoot(key), w = Math.round(f.w * sc / 2), h = Math.round(f.h * sc / 2), pt = PADT + (A.padt || 0);
   const W = w + PADX * 2, H = h + pt + PADB, G = { key, st: stage === 'site' ? 0 : stage, w, h, W, H, cx: W >> 1, gy: H - PADB, dk, s: sc };
   G.L = G.cx - (w >> 1); G.R = G.L + w;
   DIM[id] = G; const hz = A.wonder ? dk * 0.4 : dk;   // the wonders keep their stone pale in the haze: they are the skyline's show
