@@ -119,6 +119,10 @@ mc-dirs.js
 mc-town.js
 mc-townlook.js
 mc-pxtown.js
+mc-pxtown-kit.js
+mc-pxtown-props.js
+mc-pxtown-a.js
+mc-pxtown-w.js
 mc-siege.js
 mc-knock.js
 mc-omen.js

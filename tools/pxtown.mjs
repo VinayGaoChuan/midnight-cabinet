@@ -41,7 +41,21 @@ try {
   ws.addEventListener('message', (m) => { const d = JSON.parse(m.data); if (d.id && pend.has(d.id)) { pend.get(d.id)(d.result || d); pend.delete(d.id); } });
   await send('Page.enable'); await send('Runtime.enable');
   await send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false });
-  if (MODE === 'sheet') {
+  if (MODE === 'stages') {
+    // one image for a group: every building a row of its three stages on the near street (wonders: far, in their haze), two buildings a row
+    await open('?pxtown=1');
+    const url = await ev(`(() => { const M = MC, PT = M.PXTOWN, SC = 3, keys = ${JSON.stringify(KEYS)}.filter(k => PT.ART[k]); let n = 0;
+      const cell = (key, st) => { const far = !!(M.WONDER_Y && M.townRole && !M.BUILDINGS[key]) || key === 'lighthouse' || (PT.ART[key] && PT.ART[key].wonder), sc = far ? 1.4 : 0.84, f = M.townFoot(key), CW = Math.round(f.w * sc / 2) + 44, CH = Math.round(f.h * sc / 2) + 50, cv = document.createElement('canvas'); cv.width = CW; cv.height = CH; const x = cv.getContext('2d'), T1 = 20 + (++n) * 9;
+        PT.stageForce = st; const v = { key, k: 'st' + n, x: 0, y: 0, sc, dk: far ? 0.26 : 0.06, B: { q: 1 }, w: f.w, h: f.h, pxSt: st };
+        for (let t = T1 - 1.5; t <= T1 + 1e-6; t += 1 / 30) { x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = '#12132e'; x.fillRect(0, 0, CW, CH); x.fillStyle = '#1a1d45'; x.fillRect(0, CH - 10, CW, 10); x.setTransform(0.5, 0, 0, 0.5, CW / 2, CH - 10); x.imageSmoothingEnabled = false; PT.draw(x, v, t, null, null); }
+        PT.stageForce = null; return cv; };
+      const cells = keys.map(k => [0, 1, 2].map(st => cell(k, st))), fw = Math.max(...cells.flat().map(c => c.width)), fh = Math.max(...cells.flat().map(c => c.height)), gp = 4, per = 2, rows = Math.ceil(cells.length / per);
+      const cv = document.createElement('canvas'); cv.width = (fw * SC + gp) * 3 * per + gp * per; cv.height = (fh * SC + gp) * rows + gp; const x = cv.getContext('2d'); x.imageSmoothingEnabled = false; x.fillStyle = '#07060f'; x.fillRect(0, 0, cv.width, cv.height);
+      cells.forEach((r, i) => r.forEach((c, j) => { const ox = gp + (i % per) * ((fw * SC + gp) * 3 + gp) + j * (fw * SC + gp), oy = gp + Math.floor(i / per) * (fh * SC + gp); x.drawImage(c, ox + (fw - c.width) * SC / 2, oy + (fh - c.height) * SC, c.width * SC, c.height * SC); }));
+      x.font = '20px monospace'; x.fillStyle = '#ffd06a'; keys.forEach((k, i) => x.fillText(k + ' · ' + ((M.BUILDINGS[k] || {}).n || k), gp + (i % per) * ((fw * SC + gp) * 3 + gp) + 8, gp + Math.floor(i / per) * (fh * SC + gp) + 24));
+      return cv.toDataURL('image/png'); })()`);
+    if (typeof url !== 'string' || !url.startsWith('data:')) console.log('ERR', String(url).slice(0, 600)); else console.log(saveUrl(path.join(OUT, 'stages-' + arg('name', 'group') + '.png'), url));
+  } else if (MODE === 'sheet') {
     await open('?pxtown=1');
     for (const key of KEYS) {
       const url = await ev(`(() => { const M = MC, PT = M.PXTOWN, SC = 3, key = '${key}', far = key === 'lighthouse', f = M.townFoot(key); let n = 0;
@@ -79,13 +93,14 @@ try {
     for (const q of ['', '?pxtown=1']) {
       await open(q); await ev(CITY(5));
       const r = await ev(`(async () => { const g = __mcg, M = MC, o = M.drawBase, ts = [], sl = (ms) => new Promise(r => setTimeout(r, ms)); let errs = 0, last = '';
+        const oX = M.PXR.draw; let twMs = 0, rmMs = 0; M.PXR.draw = function (c, x, y, key, t, o, id) { const a = performance.now(); try { return oX.apply(this, arguments); } finally { const d = performance.now() - a; if (String(id).startsWith('tw:')) twMs += d; else rmMs += d; } };
         M.drawBase = function () { const a = performance.now(); try { return o.apply(this, arguments); } catch (e) { errs++; last = String(e && e.stack).slice(0, 300); } finally { ts.push(performance.now() - a); } };
-        const st = () => { const a = ts.slice().sort((x, y) => x - y); ts.length = 0; return { n: a.length, med: +(a[a.length >> 1] || 0).toFixed(2), p90: +(a[Math.floor(a.length * 0.9)] || 0).toFixed(2) }; };
+        const st = () => { const a = ts.slice().sort((x, y) => x - y), n0 = Math.max(1, ts.length), tw = +(twMs / n0).toFixed(2), rm = +(rmMs / n0).toFixed(2); ts.length = 0; twMs = rmMs = 0; return { tw, rm, n: a.length, med: +(a[a.length >> 1] || 0).toFixed(2), p90: +(a[Math.floor(a.length * 0.9)] || 0).toFixed(2) }; };
         await sl(3000); const wide = st(); const b = g.bv, X = M.BASE_GEO.DOOR_X; b.x = b.tx = X + 380; b.y = b.ty = -150; b.z = b.tz = 1.5; if (b.keepFree) b.keepFree(); await sl(3000); const close = st();
         const m = g.meta; let cell = null; for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) { const x = m.base.cells[r][c]; if (x.b === 'smithy') cell = x; }
         if (cell) { cell.b = null; cell.job = { kind: 'build', key: 'smithy', days: 1, total: 2 }; g.townSync(true); await sl(1500); cell.b = 'smithy'; cell.job = null; g.townSync(true); await sl(3000);
           const lv = m.prosLv; m.prosLv = 1; await sl(800); m.prosLv = lv; await sl(4500); cell.job = { kind: 'demolish', days: 1, total: 1 }; g.townSync(true); await sl(1000); }
-        const shows = st(); M.drawBase = o; return JSON.stringify({ wide, close, shows, errs, last, mcErrs: (window.__mcErrs || []).slice(0, 3) }); })()`, 60000);
+        const shows = st(); M.drawBase = o; M.PXR.draw = oX; return JSON.stringify({ wide, close, shows, errs, last, mcErrs: (window.__mcErrs || []).slice(0, 3) }); })()`, 60000);
       console.log(JSON.stringify({ q: q || 'off', r }));
     }
   } else if (MODE === 'check') {
