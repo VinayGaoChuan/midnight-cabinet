@@ -4861,7 +4861,9 @@ PCD.define('B_centaur', (E) => {
     bake(spr, RIM);
   }
   const PSPR = new Sprite(hero.w * 2, hero.h * 2, hero.ox * 2, hero.oy * 2);
-  function portrait() { const mv = MV; MV = 'roar'; poseAt(CAST, 2 / 12, 0); P.glow = 2; P.rim = 2; drawHero(PSPR, 2); bakeHero(PSPR, 2); MV = mv; return PSPR; }
+  function portrait() { const mv = MV; MV = 'roar'; poseAt(CAST, 2 / 12, 0); P.glow = 2; P.rim = 2; drawHero(PSPR, 2); bakeHero(PSPR, 2); MV = mv; headXf(); const c = B.at(20, -57); B.reset(); PHEAD = [c[0] * 2 + PSPR.ox, c[1] * 2 + PSPR.oy, 15 * 2]; return PSPR; }
+  let PHEAD = null;   
+  function headShot() { const mv = MV; MV = 'trample'; poseAt(IDLE, 0.4, 0); P.eyes = 2; P.glow = 2; P.rim = 1; drawHero(PSPR, 2); bakeHero(PSPR, 2); MV = mv; headXf(); const c = B.at(21, -58); B.reset(); PHEAD = [c[0] * 2 + PSPR.ox, c[1] * 2 + PSPR.oy, 16 * 2]; return PSPR; }   
   const T_STRIKE = 3 / 12;
   const sx = (px) => scrX(px), sy = (py) => HY + py;
   let crackT = 9, lastGal = -1;
@@ -4926,7 +4928,7 @@ PCD.define('B_centaur', (E) => {
       [CHARGE, [0, 0.25, 0.5, 0.58, 0.67], 'charge'], [CAST, [0, 1 / 12, 2 / 12, 3 / 12], 'charge'], [RECOVER, [0.08, 0.25, 0.5], 'charge'],
       [CHARGE, [0, 0.25, 0.5], 'roar'], [CAST, [0, 2 / 12], 'roar'], [RECOVER, [0.25, 0.6], 'roar'],
       [HURT, [0.3, 0.42, 0.55, 0.7]], [DEATH, [0.34, 0.5, 0.7, 0.9, 1.1, 1.4, 2.0, 2.3, 2.6]]],
-    portrait, poseAt, drawHero: () => drawHero(), bakeHero: () => bakeHero(), onEnter, onTime, stepFX, fxReset, fxBack,
+    portrait, headShot, portraitHead: () => PHEAD, poseAt, drawHero: () => drawHero(), bakeHero: () => bakeHero(), onEnter, onTime, stepFX, fxReset, fxBack,
   };
 }, { W: 200, H: 128 });
 ;
@@ -5142,8 +5144,9 @@ PCD.define('B_demon', (E) => {
   const PSPR = new Sprite(hero.w * 2, hero.h * 2, hero.ox * 2, hero.oy * 2);
   function portrait() {   
     const hot = HOT; HOT = 1; poseAt(IDLE, 0, 0); pose(K.idle, K.wide, 0.3); P.hd = 0.08; P.jaw = 2; P.eyes = 2; P.glow = 3; P.hot = 1; P.ws = 1; P.wf = 0.35; P.by = 0; P.breath = 0; P.drip = 2;
-    P.k1 = (P.k1 + 7) >>> 0; geo(); drawHero(PSPR, 2); bakeHero(PSPR, 2); HOT = hot; return PSPR;
+    P.k1 = (P.k1 + 7) >>> 0; geo(); drawHero(PSPR, 2); bakeHero(PSPR, 2); HOT = hot; headXf(); const c = B.at(4, -66); B.reset(); PHEAD = [c[0] * 2 + PSPR.ox, c[1] * 2 + PSPR.oy, 34 * 2]; return PSPR;
   }
+  let PHEAD = null;   
   const sx = (x) => scrX(x), sy = (y) => HY + y;
   let emT = 0;
   function onEnter(s) {
@@ -5191,7 +5194,7 @@ PCD.define('B_demon', (E) => {
       [CHARGE, [0, 0.35, 0.9], 'dSlam'], [CAST, [0, 2 / 12], 'dSlam'], [RECOVER, [0.3], 'dSlam'], [CHARGE, [0.6], 'poke'], [CAST, [0], 'poke'],
       [CHARGE, [0, 2 / 12, 4 / 12], 'rise'], [CAST, [2 / 12], 'rise'], [CHARGE, [0, 0.2, 0.36], 'p2'], [CAST, [2 / 12], 'p2'], [RECOVER, [1.2], 'p2'],
       [HURT, [0.3, 0.42, 0.6]], [DEATH, [0.34, 0.5, 0.9, 1.2, 1.5, 1.9, 2.3, 2.6]]],
-    portrait, poseAt, drawHero: () => drawHero(), bakeHero: () => bakeHero(), onEnter, onTime, stepFX, fxReset, fxBack,
+    portrait, portraitHead: () => PHEAD, poseAt, drawHero: () => drawHero(), bakeHero: () => bakeHero(), onEnter, onTime, stepFX, fxReset, fxBack,
   };
 }, { W: 220, H: 136 });
 ;

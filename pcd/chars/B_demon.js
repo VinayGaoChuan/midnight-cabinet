@@ -224,8 +224,9 @@ PCD.define('B_demon', (E) => {
   const PSPR = new Sprite(hero.w * 2, hero.h * 2, hero.ox * 2, hero.oy * 2);
   function portrait() {   // 立绘：正面压低头、张嘴露火、双爪半张、双翼全开，裂纹全亮（第二阶段的样子）
     const hot = HOT; HOT = 1; poseAt(IDLE, 0, 0); pose(K.idle, K.wide, 0.3); P.hd = 0.08; P.jaw = 2; P.eyes = 2; P.glow = 3; P.hot = 1; P.ws = 1; P.wf = 0.35; P.by = 0; P.breath = 0; P.drip = 2;
-    P.k1 = (P.k1 + 7) >>> 0; geo(); drawHero(PSPR, 2); bakeHero(PSPR, 2); HOT = hot; return PSPR;
+    P.k1 = (P.k1 + 7) >>> 0; geo(); drawHero(PSPR, 2); bakeHero(PSPR, 2); HOT = hot; headXf(); const c = B.at(4, -66); B.reset(); PHEAD = [c[0] * 2 + PSPR.ox, c[1] * 2 + PSPR.oy, 34 * 2]; return PSPR;
   }
+  let PHEAD = null;   // 立绘里头的位置（缓冲坐标）和半径：地图节点的头像从这里裁（连两只角）
 
   // ───── 特效（舞台坐标；游戏里只画身边的，砸在部队身上的由游戏画）─────
   const sx = (x) => scrX(x), sy = (y) => HY + y;
@@ -276,6 +277,6 @@ PCD.define('B_demon', (E) => {
       [CHARGE, [0, 0.35, 0.9], 'dSlam'], [CAST, [0, 2 / 12], 'dSlam'], [RECOVER, [0.3], 'dSlam'], [CHARGE, [0.6], 'poke'], [CAST, [0], 'poke'],
       [CHARGE, [0, 2 / 12, 4 / 12], 'rise'], [CAST, [2 / 12], 'rise'], [CHARGE, [0, 0.2, 0.36], 'p2'], [CAST, [2 / 12], 'p2'], [RECOVER, [1.2], 'p2'],
       [HURT, [0.3, 0.42, 0.6]], [DEATH, [0.34, 0.5, 0.9, 1.2, 1.5, 1.9, 2.3, 2.6]]],
-    portrait, poseAt, drawHero: () => drawHero(), bakeHero: () => bakeHero(), onEnter, onTime, stepFX, fxReset, fxBack,
+    portrait, portraitHead: () => PHEAD, poseAt, drawHero: () => drawHero(), bakeHero: () => bakeHero(), onEnter, onTime, stepFX, fxReset, fxBack,
   };
 }, { W: 220, H: 136 });

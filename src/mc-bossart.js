@@ -38,6 +38,34 @@ const purl = {};
 // { src, w, h } for the DOM (tooltips, boards)
 const pinfo = {};
 M.bossPortraitInfo = function (k, w, h) { const key = k + '|' + w + '|' + h; if (pinfo[key] !== undefined) return pinfo[key]; const c = M.bossPortrait(k, w, h); return (pinfo[key] = c ? { src: c.toDataURL('image/png'), w: c.width, h: c.height } : null); };
+// the head out of the portrait (the module says where: portraitHead() → [x, y, r] in the portrait's buffer), sized like the rest
+const hcache = {};
+M.bossHead = function (k, size) {
+  const key = k + '|' + size; if (hcache[key] !== undefined) return hcache[key];
+  const a = artOf(k); if (!a || !HAS_DOM) return (hcache[key] = null);
+  const mt = PCD.meta(a) || {}, g = PCD.createEngine({ game: true, W: mt.W, H: mt.H }); g.load(a);
+  const s = g.C.headShot ? g.C.headShot() : g.portrait(), hd = s && g.C.portraitHead && g.C.portraitHead(); if (!hd) return (hcache[key] = null);   // a module may draw its head shot in another pose than its portrait
+  const r = Math.round(hd[2]), x0 = Math.round(hd[0] - r), y0 = Math.round(hd[1] - r), n = r * 2, lut = g.lut;
+  const src = document.createElement('canvas'); src.width = n; src.height = n; const sx = src.getContext('2d'), im = sx.createImageData(n, n), px = new Uint32Array(im.data.buffer);
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) { const X = x0 + x, Y = y0 + y; if (X < 0 || Y < 0 || X >= s.w || Y >= s.h) continue; const c = s.out[Y * s.w + X]; if (c !== 255) px[y * n + x] = lut[c]; }
+  sx.putImageData(im, 0, 0);
+  const f = size / n, sc = f >= 1 ? Math.floor(f) : 1 / Math.ceil(1 / f), cv = document.createElement('canvas'); cv.width = Math.round(n * sc); cv.height = Math.round(n * sc);
+  const c2 = cv.getContext('2d'); c2.imageSmoothingEnabled = false; c2.drawImage(src, 0, 0, cv.width, cv.height); return (hcache[key] = cv);
+};
+// the map's boss node: the boss's own head; a boss not redrawn yet shows its own picture (a final boss: the top of its old
+// titan, a small boss: its unit sprite) instead of the stand-in
+const ncache = {};
+M.bossNodeImg = function (run, n) {
+  if (!n || !n.seen || n.type !== 'boss' || !HAS_DOM) return null;
+  const k = typeof n.fb === 'string' ? n.fb : ((M.miniOf && M.miniOf(run, n)) || {}).k; if (!k) return null;
+  if (ncache[k] !== undefined) return ncache[k];
+  let c = M.bossHead(k, 140);
+  if (!c && /^FB_/.test(k) && M.TITAN && M.TITAN.frame) { try { const F = M.TITAN.frame(k, 'idle', 0), w = F.bw || F.width, h = F.bh || F.height, g = F.getContext && F.getContext('2d'); if (g) { const d = g.getImageData(0, 0, w, h).data; let y0 = h, x0 = w, x1 = 0; for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 8) { if (y < y0) y0 = y; if (x < x0) x0 = x; if (x > x1) x1 = x; }
+    const side = Math.min(h - y0, Math.round((x1 - x0) * 0.62)), cx = Math.round((x0 + x1) / 2), sc2 = Math.max(1, Math.floor(128 / side)); const t = document.createElement('canvas'); t.width = side; t.height = side; t.getContext('2d').putImageData(g.getImageData(Math.round(cx - side / 2), y0, side, side), 0, 0);   // (a px canvas reports its scaled size: copy its pixels, not drawImage)
+    c = document.createElement('canvas'); c.width = side * sc2; c.height = side * sc2; const g2 = c.getContext('2d'); g2.imageSmoothingEnabled = false; g2.drawImage(t, 0, 0, c.width, c.height); } } catch (err) { c = null; } }
+  if (!c && M.spriteCanvas && M.PX16 !== false) { try { c = M.spriteCanvas(k, 8); } catch (err) { c = null; } }
+  return (ncache[k] = c || null);
+};
 M.bossPortraitURL = function (k, w, h, o) { const key = k + '|' + w + '|' + h + '|' + ((o && o.bust) || 0); if (purl[key] !== undefined) return purl[key]; const c = M.bossPortrait(k, w, h, o); return (purl[key] = c ? c.toDataURL('image/png') : null); };
 
 // ───────── small boss in battle ─────────

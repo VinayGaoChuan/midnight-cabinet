@@ -255,7 +255,7 @@ M.drawWorld2 = function (ctx, run, walker, opts = {}) {
       ctx.fillStyle = P.ink; ctx.fillRect(n.x - 64, n.y - 20, 128, 40); ctx.fillStyle = closed ? P.abyss : P.night; ctx.fillRect(n.x - 60, n.y - 16, 120, 32); ctx.fillStyle = closed ? P.night : P.dusk; ctx.fillRect(n.x - 60, n.y - 16, 120, 8);
       if (!n.seen) { const img = spriteCanvas('question', 8); ctx.globalAlpha = PJ.reduced ? 0.6 : 0.6 + 0.1 * Math.sin((T * 2 + n.id) * Math.PI); ctx.drawImage(img, n.x - img.width / 2, n.y - 40 - img.height); ctx.globalAlpha = 1; return; }
       const key = nodeSprite(n), big = ['stall', 'house', 'tent'].includes(key) ? 7 : key === 'tv' ? 8 : 8;
-      const img = spriteCanvas(key, big, closed && n.type !== 'shop' ? '#2a2632' : null);
+      const img = (n.type === 'boss' && !n.done && M.bossNodeImg && M.bossNodeImg(run, n)) || spriteCanvas(key, big, closed && n.type !== 'shop' ? '#2a2632' : null);   // a boss: its own head (mc-bossart.js)
       const bob = n.done || closed ? 0 : Math.round(Math.sin(T * 2.4 + n.id) * 5);
       ctx.drawImage(img, n.x - img.width / 2, n.y - 16 - img.height + bob);
       if (!closed && !n.done) {
