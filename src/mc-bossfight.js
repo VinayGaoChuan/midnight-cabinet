@@ -22,7 +22,8 @@ const inRing = (u, x, y, r) => Math.hypot(u.x - x, (u.y - y) * 1.2) < r;
 const inFan = (u, x, y, r, half) => { const dx = x - u.x, dy = (u.y - y) * 1.2, d = Math.hypot(dx, dy); return d < r && dx > 0 && Math.abs(Math.atan2(dy, dx)) < half; };
 // numbers (per target, × the boss's attack): tuned against the shown power (docs/design.md §8.3). 2026-09-26 (the slam
 // only hits its ring, the string is the first phase's, the sweep the second's): .ai/sim-boss3.js 400 fights a variant
-const FBK = M.FBK = { slam: 0.7, sweep: 0.25, rain: 0.4, windSlam: 1.45, windSweep: 1.55, windRain: 1.3, rest: 1.4, slamR: 250, sweepR: 820, sweepHalf: 1.08, rainN: 7, rainR: 118 };
+// p2As: the second phase's attack speed (2026-09-27: 「第2阶段后，Boss的攻速增加50%」): its wind-ups and rests are 1.5 times shorter
+const FBK = M.FBK = { p2As: 1.5, slam: 0.7, sweep: 0.25, rain: 0.4, windSlam: 1.45, windSweep: 1.55, windRain: 1.3, rest: 1.4, slamR: 250, sweepR: 820, sweepHalf: 1.08, rainN: 7, rainR: 118 };
 const MBK = M.MBK = { crush: 2.2, cleave: 1.65, every: 5.5, wind: [1.1, 1.2], crushR: 170, cleaveR: 300, cleaveHalf: 0.9 };
 
 // ───────── set-up ─────────
@@ -56,10 +57,10 @@ function pickLane(b, e) {
 const standing = (b) => b.ents.filter(u => b.active(u) && u.side === 'A' && !u.air);
 const fanHas = (b) => b.ents.some(u => b.active(u) && u.side === 'A' && inFan(u, EDGE + 40, FB_Y, FBK.sweepR, FBK.sweepHalf));
 BP.fbBegin = function (e, k) {
-  const A = e.ai, T = this.t, atk = e.atk; A.k = k; A.st = 'wind'; A.t0 = T; A.n++;
+  const A = e.ai, T = this.t, atk = e.atk, sp = A.phase === 2 ? FBK.p2As : 1; A.k = k; A.st = 'wind'; A.t0 = T; A.n++;
   const col = FOE;
-  if (k === 'slam') { A.lane = pickLane(this, e) || 0; A.t = T + FBK.windSlam; A.om = this.omen({ shape: 'circle', x: SLAM_X, y: FB_Y + A.lane, r: FBK.slamR, t0: T, until: A.t, col, src: e, keep: 1 }); }
-  else if (k === 'sweep') { A.t = T + FBK.windSweep; A.om = this.omen({ shape: 'sector', x: EDGE + 40, y: FB_Y, r: FBK.sweepR, half: FBK.sweepHalf, dir: -1, t0: T, until: A.t, col, src: e, keep: 1 }); }
+  if (k === 'slam') { A.lane = pickLane(this, e) || 0; A.t = T + FBK.windSlam / sp; A.om = this.omen({ shape: 'circle', x: SLAM_X, y: FB_Y + A.lane, r: FBK.slamR, t0: T, until: A.t, col, src: e, keep: 1 }); }
+  else if (k === 'sweep') { A.t = T + FBK.windSweep / sp; A.om = this.omen({ shape: 'sector', x: EDGE + 40, y: FB_Y, r: FBK.sweepR, half: FBK.sweepHalf, dir: -1, t0: T, until: A.t, col, src: e, keep: 1 }); }
   else if (k === 'rain') {
     const us = standing(this), n = FBK.rainN;
     const tu = us.length ? us[Math.floor(Math.random() * us.length)] : null, y0 = tu ? tu.y : FB_Y, y1 = 120 + Math.random() * 480, x0 = tu ? clamp(tu.x, 420, EDGE - 20) : EDGE - 150, x1 = Math.min(320, x0 - 600);
@@ -124,7 +125,7 @@ BP.fbTick = function (e) {
     if (A.k === 'rain') { this.fbRainTick(e); if (T >= A.t) { A.st = 'recover'; A.t = T + FBK.rest * 0.7; } return; }
     if (T >= A.t) this.fbStrike(e); return;
   }
-  if (A.st === 'strike' && T >= A.t) { A.st = 'recover'; A.t = T + FBK.rest * (A.phase === 2 && this.fbFast ? this.fbFast : 1); return; }
+  if (A.st === 'strike' && T >= A.t) { A.st = 'recover'; A.t = T + FBK.rest * (A.phase === 2 ? (this.fbFast || 1) / FBK.p2As : 1); return; }
   if (A.st === 'recover' && T >= A.t) { A.st = 'idle'; A.t = T + 0.15; }
 };
 

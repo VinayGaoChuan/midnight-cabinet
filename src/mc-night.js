@@ -180,11 +180,11 @@ M.nightPower = (m) => { const d = Math.max(1, (m && m.day) || 1), k = M.nightKin
 const sideOf = (list) => list.reduce((s, x) => { const d = DB[x.type]; if (!d) return s; const k = x.elite ? 1.15 : 1; s.hp += d.hp * k * (x.hpMul || 1); s.dps += d.atk * k * (x.atkMul || 1) * (d.as || 100) / 100; return s; }, { hp: 0, dps: 0 });
 // The night comes as one crowd (user ruling 2026-09-27: 「守城的时候，敌人数量太少了……敌人是要一次性一起出现的，而不是分波出现的。
 // 守城时，要有那种，人山人海的感觉，这种感觉应该从第1天就开始，敌人可以弱，但数量不能少」): 40 monsters on the first night, 5 more
-// every night, at most 140 (70 on phones). A few kinds of small monsters make the crowd, one bigger kind walks in it, and from
+// every night, at most 140. A few kinds of small monsters make the crowd, one bigger kind walks in it, and from
 // night 4 some of the bigger ones are elites. Everyone sets off at once from beyond both ends of the town, spread out in depth;
 // the night's strength (the power curve) is shared out over all of them, so each one is weak and the whole is as strong as before.
-M.RAID_CROWD = { n0: 40, perDay: 5, max: 140, maxLow: 70, deep: 760 };
-M.raidCount = (m) => { const C = M.RAID_CROWD, d = Math.max(1, (m && m.day) || 1); return Math.min(M.LOW_FX ? C.maxLow : C.max, C.n0 + C.perDay * (d - 1)); };
+M.RAID_CROWD = { n0: 40, perDay: 5, max: 140, deep: 760 };
+M.raidCount = (m) => { const C = M.RAID_CROWD, d = Math.max(1, (m && m.day) || 1); return Math.min(C.max, C.n0 + C.perDay * (d - 1)); };
 M.makeRaidCfg = function (m) {
   const day = (m && m.day) || 1, target = M.nightPower(m), N = M.raidCount(m), list = [], foe = M.nightFoe(m, day), C = M.RAID_CROWD;
   // the foe's share of the night's life and of its blows: a lot of the life, less of the blows (2026-09-26 night sims: a boss

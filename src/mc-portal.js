@@ -8,7 +8,7 @@ const M = window.MC, G = M.Game.prototype;
 const cl = (v, a, b) => Math.max(a, Math.min(b, v));
 const eo = (p) => 1 - Math.pow(1 - p, 3), eb = (p) => { const c = 1.7; return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };
 const DX = () => M.BASE_GEO.DOOR_X;
-const SW = 170, SH = 224, GAP = 250, TOPY = -612;   // stele size and where the row floats (base-world pixels)
+const SW = 170, SH = 224, GAP = 250, TOPY = -490;   // stele size and where the row floats (base-world pixels): its foot just over the durability bar on the clock tower (was −612 before the main base shrank)
 const PJ = M.PJ || {}, P = PJ.PAL || {};   // 调色板（界面件只用这 32 色）
 
 // ───────── danger: the strongest leader who can go vs. a plain leader of the level this world expects ─────────
@@ -41,7 +41,7 @@ const icURL = (k) => (M.IC && M.IC[k] && !(M.SP && M.SP[k])) ? M.iconURL(k, 2) :
 // ───────── state ─────────
 // It lives on the base view, which the drawing code gets directly: portalOpen · pickW (the chosen world while the
 // loadout panel is up) · drop (the chosen stele falling in) · shards · theme (the portal's look for the chosen world)
-const CAM = (bv) => { bv.sel = { door: 1 }; bv.tx = DX() + 120; bv.ty = -370; bv.tz = 1.2; };
+const CAM = (bv) => { bv.sel = { door: 1 }; bv.tx = DX() + 120; bv.ty = -290; bv.tz = 1.2; };
 const themeOut = (bv) => { if (bv.theme && bv.theme.out == null) bv.theme.out = bv.t; };
 G.portalOn = function () { return !!(this.bv && this.bv.portalOpen) && this.screen === 'base' && !this.raid; };
 G.openWorlds = function () {

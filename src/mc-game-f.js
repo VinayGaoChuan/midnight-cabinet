@@ -125,7 +125,7 @@ G.view = function () {
   const v = oldView.call(this);
   if (this.tipData && v.tip) v.tip.lines = (this.tipData.lines || []).map(l => ({ segs: l.rich || [{ t: l.t, c: l.c }] }));
   if (v.w && run) {
-    v.w.roster = run.roster.filter(u => !this.hideU.has(u.uid)).map(u => { const d = DB[u.type]; return { img: M.spriteURL(u.type, 4), q: d.q, bg: qBg(d.q), glow: qGlow(d.q), stars: u.lv > 1 ? 'Lv' + u.lv : '', tipOn: this.tipFn(() => M.unitTip(u.type, u, run)), border: this.sel === u.uid ? '#ffffff' : Q[d.q].c, onClick: () => { if (this.screen === 'shop') { this.sel = this.sel === u.uid ? null : u.uid; M.Sfx.click(); this.bump(); } } }; });
+    v.w.roster = run.roster.filter(u => !this.hideU.has(u.uid)).map(u => { const d = DB[u.type]; return { uid: u.uid, img: M.spriteURL(u.type, 4), q: d.q, bg: qBg(d.q), glow: qGlow(d.q), stars: u.lv > 1 ? 'Lv' + u.lv : '', tipOn: this.tipFn(() => M.unitTip(u.type, u, run)), border: this.sel === u.uid ? '#ffffff' : Q[d.q].c, onClick: () => { if (this.screen === 'shop') { this.sel = this.sel === u.uid ? null : u.uid; M.Sfx.click(); this.bump(); } } }; });
     v.w.items = run.items.map((k, i) => ({ type: k ? M.ITEMS[k].type || '' : '', has: !!k && !this.hideI.has(i), img: k ? M.spriteURL(M.ITEMS[k].icon, 5) : '', border: k ? M.ITEM_C : '#3a3040', bg: k ? ITEM_BG : '#100c14', glow: k ? ITEM_GLOW : 'none', tipOn: this.tipFn(k ? this.itemTip(k) : { title: '空道具栏', d: '宝箱、商店、事件都能获得支援道具。' }) }));
     v.w.rosterN = String(run.roster.length);
     v.w.banners = Object.keys(run.legion).map(k => { const L = M.LEGION[k]; return { n: L.name.replace('战旗', ''), tipOn: this.tipFn({ title: L.name, c: Q[L.q].c, d: L.desc }) }; });

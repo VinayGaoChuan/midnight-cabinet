@@ -160,7 +160,7 @@ const oView = G.view;
 G.view = function () {
   const v = oView.call(this), run = this.run;
   if (v.w && run && !run.raid) { const rows = synRows(run.roster.map(u => u.type)); v.w.synOn = rows.length > 0 && (this.screen === 'world' || this.screen === 'shop'); v.w.syn = rows;
-    (v.w.roster || []).forEach((r, i) => { const vis = run.roster.filter(u => !this.hideU.has(u.uid)); const u = vis[i], d = u && DB[u.type]; const tg = d && M.tagIc ? M.tagIc('race', d.race) : null; if (tg) { r.ri = tg; r.hasR = true; } }); }
+    (v.w.roster || []).forEach((r, i) => { const vis = run.roster.filter(u => !this.hideU.has(u.uid)); const u = (r.uid != null && vis.find(x => x.uid === r.uid)) || vis[i], d = u && DB[u.type]; const tg = d && M.tagIc ? M.tagIc('race', d.race) : null; if (tg) { r.ri = tg; r.hasR = true; } }); }
   if (v.s && run && run.shop && this.screen === 'shop') { const c0 = M.synCount(run.roster.map(u => u.type));
     (v.s.units || []).forEach((su, i) => { const c = run.shop.units[i], d = c && DB[c.type]; if (!d) return; const tg = M.tagIc ? M.tagIc('race', d.race) : null; if (tg) { su.ri = tg; su.hasR = true; }
       const has = run.roster.some(u => DB[u.type] && DB[u.type].line === d.line), n0 = c0[d.race] || 0, n1 = has ? n0 : n0 + 1;
@@ -170,8 +170,10 @@ G.view = function () {
 
 // ───────── the nights: the garrison has its bonds too (same count; the night's fight has no mana or skills, so 异界 there is
 // attack: +10% / +15% / +30%, and its echo hits a second time) ─────────
+// 2026-09-27: 「守城的时候，是不会触发羁绊效果的」 — the night's fight has no bonds; the code stays behind this switch
+M.SYN_NIGHT = false;
 const NRB = M.NightRaid;
-if (NRB) {
+if (NRB && M.SYN_NIGHT) {
   const DX = () => (M.BASE_GEO ? M.BASE_GEO.DOOR_X : 960);
   M.NightRaid = class extends NRB {
     constructor(meta) {

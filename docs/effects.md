@@ -994,7 +994,7 @@
 | V041 | `Sfx.cast` | 通用 | 3 |
 | V042 | `Sfx.bolt` | 通用 | 7 |
 | V043 | `Sfx.win` | 通用 | 0 |
-| V044 | `Sfx.fanfare` | 通用 | 24 |
+| V044 | `Sfx.fanfare` | 通用 | 25 |
 | V045 | `Sfx.lose` | 通用 | 9 |
 | V046 | `Sfx.die` | 通用 | 5 |
 | V047 | `Sfx.kill` | 通用 | 3 |
@@ -1097,7 +1097,7 @@
 | V144 | `Sfx.musicBox` | 开场演出 | 0 |
 | V145 | `Sfx.reelSpin` | 开场演出 | 0 |
 | V146 | `Sfx.glitch` | 开场演出 | 1 |
-| V147 | `Sfx.jackpot` | 开场演出 | 0 |
+| V147 | `Sfx.jackpot` | 开场演出 | 1 |
 
 小游戏各自的一组（`Sfx.mini(小游戏, 事件)`）：`mine` pick / loosen / gem / cavein；`roulette` spin / click / bet / gold / win / skull / miss；`fruit` gogo / lever / spin / stop / jackpot / win / skulls / nomatch / drop / zap；`claw` move / drop / grab / lift / prize / slip / empty / bounce；`pachinko` pour / reach / tulip / payout / out / off / launch / peg / slot / edge；`tree` ripe / snap / splat / bloom / chime / swing / rustle / curse / pick / water / cut / grow / fruit；`tarot` hover / omen / leave / lift / shuffle / flip / good / bad；`eggs` hammer / swing / burst / empty / tap / leave / crack / prize / snake；`dice` chips / slam / bounce / tap / leave / shake / roll / clack / win / lose / tie；`fate` cost / spin / click / stop / drip / flow / rune / creak / slip / back / gold / eye；`musician` note / metro / miss / pluck / tick / cross / great / ok / poor / snap；`granny` stitch / miss / done / snip / thread / light / whole；`well` charge / flick / rise / toss / splash / great / ok / miss；`child` step / crunch / wrong / lost / found；`grave` lid / dig / break / candle / coffin / hand / out / treasure；`clinic` pick / drink / good / bad / mult / hover / pop / crack / fizz / omen；`mirror` tone / wrong / pass；`altar` pour / rune / flicker / out / win；`peddler` shuffle / bell / lift / win / lose；`spring` zone / bubble / tick / good / hot / cool / plunge / drop / clamp / geyser；`trap` step / num / boom / box / hop / nope / click / rattle / reveal / fireworks；`cat` wave / coin / bar / bomb / miss / flick / spill / weigh / bell / clink；`market` grab / swing / stamp / deal / miss / bell / cackle / slapScroll / seal / fade / tap / chain / coinbag；`trainer` bell / punch / done / whistle / windup / finisher / snap；`statue` eyes / turn / align / wake / fail / snuff；`arena` ko / open / roar / cheer / bet / hit / win / lose / gong / gate / hush / ooh / toss / boo；`camp` fire / rest / sharpen / clang / scrape / pop；`recruit` curtain / reveal / full / lamp / flare / salute / none；`chest` in / spot / land / lift / rattle / unlock / lockfall / riser / snap / slit / boom / fire / pop / drop / last / roll / wave2 / itemTap / rush / claim / close / mimic / fight。
 

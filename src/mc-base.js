@@ -375,7 +375,7 @@ M.BaseView = class {
   pick(sx, sy) {
     const p = this.toWorld(sx, sy);
     if (Math.abs(p.x - DOOR_X) < 110 && p.y > -260 && p.y < 10) return { door: 1 };
-    if (Math.abs(p.x - DOOR_X) < MB.w / 2 && p.y > MB.top - 80 && p.y < 10) return { door: 1, wing: 1 };
+    // the wings (the 仓库 hall) answer nothing: only the portal is picked on the surface (2026-09-27: 「主基地仓库这个建筑，是不能被单独选中的，只有传送们能被选中」)
     const c = Math.floor(p.x / CW), r = Math.floor((p.y - TOP) / CH);
     if (c >= 0 && c < BCOLS && r >= 0 && r < BROWS) return { c, r };
     return null;
@@ -531,8 +531,10 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
       ctx.fillStyle = PP.ink; ctx.fillRect(cx + 1, b.y - pad - S - 3, S * 1.3 + 4, S + 6); ctx.fillStyle = PP.abyss; ctx.fillRect(cx + 4, b.y - pad - S, S * 1.3 - 2, S); M.pxNum(ctx, String(x.job.days), cx + 3 + S * 0.65, b.y - pad - S / 2, PP.gold, S / 26); }
   }
   // 传送门耐久：分格硬边条（低于 35% 变红）
-  const RS = M._g && M._g.raid && M.ROOF_SPOT, dp = bv.toScreen(DOOR_X, RS ? RS.y - 96 * RS.k - 70 : M.PXR && M.PXR.has('_mainbase') ? -372 : -300);   // above the clock tower's finial (in a raid: above the leader on it)
-  const bw = 200 * bv.z; if (U) U.bar(ctx, dp.x - bw / 2, dp.y + 15, bw, 10, pH, { col: pH < 0.35 ? PP.red : PP.teal, seg: 36 }); else { ctx.fillStyle = '#000'; ctx.fillRect(dp.x - bw / 2 - 3, dp.y + 12, bw + 6, 16); ctx.fillStyle = pH < 0.35 ? '#d0453c' : '#5fd0c0'; ctx.fillRect(dp.x - bw / 2, dp.y + 15, bw * clamp(pH, 0, 1), 10); }
+  // right over the clock tower's tip (2026-09-27: 「血条距离传送门图片，差太远了」; the art tops out at y −221); in a raid the leader
+  // stands there, so the bar sits on the lookout's stone face under its feet
+  const RS = M._g && M._g.raid && M.ROOF_SPOT, px = M.PXR && M.PXR.has('_mainbase'), dp = bv.toScreen(DOOR_X, RS ? RS.y + 4 : px ? -228 : -300);
+  const bw = (RS ? 110 : 170) * bv.z; if (U) U.bar(ctx, dp.x - bw / 2, RS ? dp.y : dp.y - 12, bw, 10, pH, { col: pH < 0.35 ? PP.red : PP.teal, seg: 36 }); else { ctx.fillStyle = '#000'; ctx.fillRect(dp.x - bw / 2 - 3, dp.y + 12, bw + 6, 16); ctx.fillStyle = pH < 0.35 ? '#d0453c' : '#5fd0c0'; ctx.fillRect(dp.x - bw / 2, dp.y + 15, bw * clamp(pH, 0, 1), 10); }
   if (M.drawSteles) M.drawSteles(ctx, meta, bv, null, 'top');
   (M.BASE_HOOKS || []).forEach(h => h(ctx, meta, bv, null, 'top', opts));   // screen space, after the light
   if (opts.raid) opts.raid.drawHud(ctx, bv);

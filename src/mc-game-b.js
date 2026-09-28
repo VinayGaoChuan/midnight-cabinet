@@ -10,7 +10,6 @@ Object.assign(G, {
   },
   cellTip(p) {
     const m = this.meta;
-    if (p.door && p.wing) return { title: '主基地 · 仓库', c: '#ffcf4a', kind: '耐久 ' + Math.round(m.portal.hp) + ' / ' + M.portalMax(m), d: '物资、图纸和宝物都在这里。被攻破，这一局结束。' };
     if (p.door) return { title: '主基地 · 传送门', c: '#5fd0c0', kind: '耐久 ' + Math.round(m.portal.hp) + ' / ' + M.portalMax(m), d: '点它选世界出征。' };
     const x = M.cell(m, p.c, p.r), T = x.tile ? M.TILES[x.tile] : null, tl = T ? [{ t: '特殊地格 · ' + T.n, c: T.c }, { t: T.d, c: '#cfc6b8' }] : [];
     if (x.b) return this.bldTip(x.b, p.c, p.r);
@@ -36,7 +35,7 @@ Object.assign(G, {
     if (this.raid || this.reel) return; if (this.dragEnd && now() - this.dragEnd < 350) return; M.Sfx.init(); this.lastPress = { el: null, x: sx, y: sy, t: now() };
     const p = this.bv.pick(sx, sy); if (!p) { this.closePanel(); return; }
     M.Sfx.click(); this.fx.clickBurst(sx, sy, '#ffe08a');
-    if (p.door) return p.wing ? this.openWarehouse() : this.openWorlds();
+    if (p.door) return this.openWorlds();
     const m = this.meta, x = M.cell(m, p.c, p.r);
     this.showReach = null;
     if (x.b) { this.bv.focus(p.c, p.r); this.openPanel({ kind: 'room', c: p.c, r: p.r, key: x.b }); if (M.BUILDINGS[x.b].weapon) this.showReach = { c: p.c, r: p.r }; if (x.b === 'core' && m.baseTut === 1) { m.baseTut = 2; this.coach('仓库里是你所有的物资、图纸和宝物，有多少显示多少。鼠标悬浮可以查看详情，点击画面其它地方就能关闭。', 700, 900); this.save(); } }

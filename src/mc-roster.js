@@ -146,9 +146,28 @@ const oEW = G.enterWorld;
 G.enterWorld = function () {
   const run = this.run;
   if (run && this._cntRun !== run) { this._cntRun = run; RUN_KEYS.forEach(k => { delete this.held[k]; delete this.tw[k]; delete this.twT[k]; });
-    // from a waypoint the expedition carries the army money it would have earned on the way (M.chapterGrant): say so once
-    if (run.grant > 0) setTimeout(() => { if (this.run === run && this.screen === 'world') { const p = this.fxPos('wallet') || { x: 300, y: 60 }; this.fx.pop && this.fx.pop(p.x, p.y + 60, '路标补给 +' + run.grant + ' 积分', '#ffcc33', 32, { rise: 30 }); this.pulse.wallet = now(); } }, 900); }
+    // the points it sets out with (路标补给 from a waypoint, M.chapterGrant; 钱庄): the big moment below, once the map is showing and no story plays
+    if (run.grant > 0 || run.startGift > 0) { const go = (n) => { if (this.run !== run || n < 0) return; if (this.screen !== 'world' || this.storyFx || (this.storyQ && this.storyQ.length)) { setTimeout(() => go(n - 1), 250); return; } this.startPtsFx(run); }; setTimeout(() => go(60), 700); } }
   return oEW.apply(this, arguments);
+};
+// the points an expedition sets out with, as a big moment (2026-09-27: 「进入场景后，每次都会送初始积分，这个效果，你现在显示在了屏幕左侧，
+// 根本就不明显，看不见，导致，我根本不知道，这个计分是多少哪来的，所以，进入场景的时候，需要有一个伟大的送计分的效果」): a gold flash and rays in
+// the middle of the screen, 「开局积分」 slams down over a huge +N, the sources under it, a fountain of coins; then ten coins fly into
+// the score counter, which counts up as they land
+G.startPtsFx = function (run) {
+  const parts = []; if (run.grant > 0) parts.push(['路标补给', run.grant]); if (run.startGift > 0) parts.push(['钱庄', run.startGift]);
+  const N = parts.reduce((a, x) => a + x[1], 0), fx = this.fx; if (!N || !fx) return;
+  const cx = 960, cy = 470, S = M.Sfx, GOLD = '#ffcc33';
+  this.hold('wallet', run.wallet - N);
+  fx.flash && fx.flash(GOLD, 0.4); fx.kick && fx.kick(12); fx.rays && fx.rays(cx, cy, GOLD, 2, { r: 640, n: 18 }); fx.ring && fx.ring(cx, cy, 30, 460, GOLD, 12, 0.6);
+  fx.pop(cx, cy - 150, '开局积分', '#fff2c0', 66, { slam: 1, life: 2.1, rise: 0 });
+  fx.pop(cx, cy + 10, '+' + M.fmt(N), '#ffe08a', 150, { num: 1, slam: 1, life: 2.1, rise: 0, delay: 0.12 });
+  fx.pop(cx, cy + 130, parts.map(x => x[0] + ' +' + x[1]).join('　·　'), '#e8dcc4', 36, { life: 2, rise: 0, delay: 0.3 });
+  setTimeout(() => { if (this.run === run && fx.coins) fx.coins(cx, cy + 60, 40, { v: 1000 }); }, 380);
+  try { S.jackpot ? S.jackpot() : S.fanfare && S.fanfare(); } catch (e) { /* a sound never stops the show */ }
+  const n = 10; for (let j = 0; j < n; j++) { const part = Math.round(N * (j + 1) / n) - Math.round(N * j / n);
+    this.fly('coin', { x: cx + (Math.random() - 0.5) * 300, y: cy + (Math.random() - 0.5) * 140 }, 'wallet', GOLD, j === n - 1 ? () => { if (this.held.wallet != null) this.release('wallet'); } : () => { if (this.held.wallet != null) { this.held.wallet += part; this.pulse.wallet = now(); } }, 1.5 + j * 0.08); }
+  setTimeout(() => { if (this.run === run && this.held.wallet != null) this.release('wallet'); }, 4500);
 };
 // and a shop always opens on the real score (a reward still flying in lands in the counter on its own)
 const oOpenS = G.openShop;

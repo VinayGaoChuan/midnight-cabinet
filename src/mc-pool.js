@@ -72,15 +72,26 @@ const FRONT = { 先锋: 1, 守护者: 1, 战士: 1, 圣骑士: 1 };
 const lineVoc = (l) => { const d = DB[M.lineKey(l, 1)]; return d ? d.voc : ''; };
 const front = (l) => !!FRONT[lineVoc(l)];
 const TUT_LINES = ['FootSoldier', 'Ranger', 'MageApprentice', 'YellowManeHorse', 'DesertBeliever'];
-// take n lines of a race (not in `have`), at least one front and one back when it can, a vocation at most twice in the pool
+// take n lines of a race (not in `have`), at least one front and one back when it can, a vocation at most twice in the pool, and
+// never two lines of one race with one vocation (2026-09-27: 「亡灵族，守护者，在同一个池子中，出现了两种，这是不对的。同一种族，
+// 同一职业，同一个池子中，只能出现1种」)
+const sameRV = (a, b) => M.RACE_OF[a] === M.RACE_OF[b] && lineVoc(a) === lineVoc(b);
 function takeRace(race, n, have) {
   const all = M.raceLines(race).filter(l => !have.includes(l)).sort(() => rnd() - 0.5), out = [];
-  const vocN = (l) => have.concat(out).filter(x => lineVoc(x) === lineVoc(l)).length;
+  const ok = (l) => { const got = have.concat(out); return got.filter(x => lineVoc(x) === lineVoc(l)).length < 2 && !got.some(x => sameRV(x, l)); };
   const fr = all.find(front), bk = all.find(l => !front(l));
-  [fr, bk].forEach(l => { if (l && out.length < n && vocN(l) < 2) out.push(l); });
-  all.forEach(l => { if (out.length < n && !out.includes(l) && vocN(l) < 2) out.push(l); });
+  [fr, bk].forEach(l => { if (l && out.length < n && ok(l)) out.push(l); });
+  all.forEach(l => { if (out.length < n && !out.includes(l) && ok(l)) out.push(l); });
   return out;
 }
+// a pool made before that rule loses its second line of a race and vocation (a line the army already fields stays)
+M.poolDedupe = function (run) {
+  const P = run && run.pool; if (!P || !Array.isArray(P.lines) || P.rvV === 1) return false; P.rvV = 1;
+  const army = new Set((run.roster || []).map(u => DB[u.type] && DB[u.type].line).filter(Boolean)), keep = [];
+  P.lines.slice().sort((a, b) => (army.has(b) ? 1 : 0) - (army.has(a) ? 1 : 0)).forEach(l => { if (army.has(l) || !keep.some(x => sameRV(x, l))) keep.push(l); });
+  const cut = P.lines.length - keep.length; if (!cut) return false;
+  P.lines = P.lines.filter(l => keep.includes(l)); P.types = typesOf(P.lines); return true;
+};
 M.poolLines = function (run, keepArmy) {
   if (run && ((run.region && run.region.tut) || run.tut)) return TUT_LINES.filter(l => DB[M.lineKey(l, 1)]);
   const races = M.RACE6.slice(), prev = (run && run.pool && run.pool.races) || [];
@@ -106,7 +117,8 @@ M.unitPool = function (run) {
 };
 // the pool object remembers its races (the next area picks a new one)
 const oEnter = M.poolEnter;
-M.poolEnter = function (run, node) { const r = oEnter.apply(this, arguments); if (r && run.pool) { run.pool.races = run._poolRaces || []; run.pool.types = typesOf(run.pool.lines); } return r; };
+M.poolEnter = function (run, node) { const r = oEnter.apply(this, arguments); if (r && run.pool) { run.pool.races = run._poolRaces || []; run.pool.types = typesOf(run.pool.lines); run.pool.rvV = 1; } return r; };
+{ const oTickP = G.tick; G.tick = function (dt) { const r = oTickP.apply(this, arguments); if (this.run && this.run.pool && this.run.pool.rvV !== 1 && M.poolDedupe(this.run)) this.save && this.save(); return r; }; }
 const oNR = M.newRun3;
 M.newRun3 = function () {
   const run = oNR.apply(this, arguments); if (!run || !run.pool) return run;
@@ -219,11 +231,18 @@ G.steleTip = function (k) {
   const bosses = segs.slice(from).map(s => (s.fb ? { n: (DB[s.fb] && DB[s.fb].n) || '首领', bb: M.BOSS_BLD && M.BOSS_BLD[s.fb] } : s.mb ? { n: s.mb.n } : null)).filter(Boolean);
   const ci = Math.max(1, (M.CHAPTER_ORDER || []).indexOf(k) + 1), L = ci + gdIdx(m) + cl(M.tierOf ? M.tierOf(m, k) : 0, 0, 2), uq = LQ(L), bq = Math.min(3, LQ(L + 2));
   const span = (hi) => [{ t: QN(0).n, c: QN(0).c, b: 1 }, { t: ' – ', c: '#8d8496' }, { t: QN(hi).n, c: QN(hi).c, b: 1 }];
-  const bl = [{ t: '首领 ' + bosses.length + '　', c: '#e8dcc4' }]; bosses.forEach((b, i) => { bl.push({ t: (i ? ' · ' : '') + b.n, c: '#ff8a6a', b: 1 }); if (b.bb) { const own = M.bbOwned && M.bbOwned(m, b.bb); bl.push({ t: own ? '（图纸已得）' : '（图纸未得）', c: own ? '#9cff7a' : '#8d8496' }); } });
-  const lines = [{ rich: bl },
-    { rich: [{ t: '战斗力　你 ', c: '#e8dcc4' }, { t: '★' + D.mine, c: '#ffe08a', b: 1 }, { t: '　敌人 ', c: '#e8dcc4' }, { t: '★' + D.first, c: '#ff8a8a', b: 1 }, { t: ' → 首领 ', c: '#e8dcc4' }, { t: '★' + D.boss, c: '#ff5a4a', b: 1 }] },
-    { rich: [{ t: '难度　', c: '#e8dcc4' }, { t: D.n, c: D.c, b: 1 }] },
-    { rich: [{ t: '掉落　部队 ', c: '#e8dcc4' }].concat(span(uq), [{ t: '　图纸 ', c: '#e8dcc4' }], span(bq)) }];
+  // one thing a line (2026-09-27: 「墓碑上面的文字，排列的时候，要换行……每个Boss都要换行显示，战斗力换行显示。掉落物换行显示」)
+  const H = (t) => ({ rich: [{ t, c: '#a89ca8' }] }), IN = '　';
+  const lines = [H('首领')];
+  bosses.forEach(b => { const r = [{ t: IN + b.n, c: '#ff8a6a', b: 1 }]; if (b.bb) { const own = M.bbOwned && M.bbOwned(m, b.bb); r.push({ t: own ? '（图纸已得）' : '（图纸未得）', c: own ? '#9cff7a' : '#8d8496' }); } lines.push({ rich: r }); });
+  lines.push(H('战斗力'),
+    { rich: [{ t: IN + '你 ', c: '#e8dcc4' }, { t: '★' + D.mine, c: '#ffe08a', b: 1 }] },
+    { rich: [{ t: IN + '敌人 ', c: '#e8dcc4' }, { t: '★' + D.first, c: '#ff8a8a', b: 1 }] },
+    { rich: [{ t: IN + '首领 ', c: '#e8dcc4' }, { t: '★' + D.boss, c: '#ff5a4a', b: 1 }] },
+    { rich: [{ t: '难度 ', c: '#a89ca8' }, { t: D.n, c: D.c, b: 1 }] },
+    H('掉落'),
+    { rich: [{ t: IN + '部队 ', c: '#e8dcc4' }].concat(span(uq)) },
+    { rich: [{ t: IN + '图纸 ', c: '#e8dcc4' }].concat(span(bq)) });
   return { title: t.title, c: t.c, lines };
 };
 

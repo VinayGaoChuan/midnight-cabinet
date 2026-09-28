@@ -232,7 +232,7 @@ G.view = function () {
   this._rosLay = { top: v.w.rosTop, fit: v.w.rosFit };
   // roster cards: one gold diamond per evolution
   const vis = run.roster.filter(u => !this.hideU.has(u.uid)), byPow = vis.map((u, i) => [u, M.unitPower(u.type, u), i]).sort((a, b) => b[1] - a[1] || a[2] - b[2]).map(x => x[0]);
-  (v.w.roster || []).forEach((r, i) => { const u = byPow[i], d = u && DB[u.type], e = d && d.tier ? d.tier - 1 : u ? u.evo || 0 : 0; r.evoOn = e > 0; r.evoPips = pips(e, e, P.gold, P.gold); if (e > 0) r.stars = ''; });
+  (v.w.roster || []).forEach((r, i) => { const u = (r.uid != null && vis.find(x => x.uid === r.uid)) || byPow[i], d = u && DB[u.type], e = d && d.tier ? d.tier - 1 : u ? u.evo || 0 : 0; r.evoOn = e > 0; r.evoPips = pips(e, e, P.gold, P.gold); if (e > 0) r.stars = ''; });
   // shop cards: how many of it the army holds; the card that makes three glows
   const have = {}; run.roster.forEach(u => { if (DB[u.type] && DB[u.type].next) have[u.type] = (have[u.type] || 0) + 1; });
   // every card that can still evolve says so (user ruling 2026-09-26: 「可进化的卡片上要有可进化的提示……这样我就能分清楚，哪些单位可以进化」);

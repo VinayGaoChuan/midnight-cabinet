@@ -3,6 +3,9 @@
 const M = window.MC;
 const DB = M.DB, TDB = M.TDB, { Sfx, fmt, pick, HEROES } = M;
 const FW = 1920, FH = 720, HERO_POS = { x: 90, y: 400 };
+// where feet may stand (2026-09-27: 「局内战斗的时候，部队可以走到地面外面……不能让部队骑在背景，只能走在路上」): the backdrop's
+// horizon is at y 168 (art row 104 × 2 − 40, mc-battle4.js), so the band starts a little under it and ends above the bottom edge
+const FY0 = 196, FY1 = 690; M.FIELD_Y = [FY0, FY1];
 const RX = 75, RS = 125, RM = 195, RL = 330;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const eo = (t) => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
@@ -132,12 +135,12 @@ class B3 extends M.Battle2 {
     const ranks = RX.map(() => []);
     run.roster.forEach(u => { const d = DB[u.type]; if (!d) return; const r = d.ranged === 2 ? 5 : RANK[d.voc] != null ? RANK[d.voc] : d.ranged ? 3 : 1; ranks[r].push(u); });
     const total = run.roster.length; let k = 0;
-    const place = (arr, x) => arr.forEach((u, i) => { const per = 8, n = Math.min(arr.length, per), col = Math.floor(i / per), j = i % per; this.addUnit(u, x + (j % 2) * 30 - col * 56, 110 + (j + 0.5) * (540 / n), k++ * Math.min(0.13, 2.4 / Math.max(1, total))); });
+    const place = (arr, x) => arr.forEach((u, i) => { const per = 8, n = Math.min(arr.length, per), col = Math.floor(i / per), j = i % per; this.addUnit(u, x + (j % 2) * 30 - col * 56, FY0 + (j + 0.5) * ((FY1 - FY0) / n), k++ * Math.min(0.13, 2.4 / Math.max(1, total))); });
     ranks.forEach((arr, r) => place(arr, RX[r]));
     // enemies take the field at the same time, on screen, in formation
     const L = cfg.list, opening = (s) => cfg.mode !== 'hold' || s.spawn < 3, first = L.filter(opening), later = L.filter(s => !opening(s));
     const em = first.filter(s => !s.boss && (DB[s.type] || {}).ranged !== 1), er = first.filter(s => !s.boss && (DB[s.type] || {}).ranged === 1);
-    const lay = (arr, x0) => arr.forEach((s, i) => { s.x = x0 + (i % 2) * 70 + Math.random() * 40; s.y = 110 + (i + 0.5) * (540 / arr.length); });
+    const lay = (arr, x0) => arr.forEach((s, i) => { s.x = x0 + (i % 2) * 70 + Math.random() * 40; s.y = FY0 + (i + 0.5) * ((FY1 - FY0) / arr.length); });
     lay(em, 1180); lay(er, 1480); first.filter(s => s.boss).forEach(s => { s.x = 1560; s.y = 390; });
     first.forEach((s, i) => { s.spawn = 0.35 + i * 0.11; }); const ke = first.length;
     this.entryEnd = 0.4 + Math.max(k, ke) * 0.12 + 0.9;
@@ -263,7 +266,7 @@ class B3 extends M.Battle2 {
       }
     }
     for (let i = 0; i < act.length; i++) for (let j = i + 1; j < act.length; j++) { const a = act[i], b = act[j]; if (a.side !== b.side) continue; const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, m = 50 * (a.sz + b.sz) / 2; if (d < m) { const p = (m - d) * 0.5 / d; a.x -= dx * p; a.y -= dy * p; b.x += dx * p; b.y += dy * p; } }
-    act.forEach(e => { e.y = clamp(e.y, 60, 700); e.x = clamp(e.x, 170, FW - 40); });   // on screen (2026-09-27: 2050 let a knocked unit fight on, unseen, past the right edge)
+    act.forEach(e => { e.y = clamp(e.y, FY0, FY1); e.x = clamp(e.x, 170, FW - 40); });   // on screen (2026-09-27: 2050 let a knocked unit fight on, unseen, past the right edge)
     for (let i = this.proj.length - 1; i >= 0; i--) {
       const p = this.proj[i];
       if (p.arc) { const q = (T - p.t0) / p.dur; p.trail.unshift([p.x, p.y]); if (p.trail.length > 6) p.trail.pop(); if (q >= 1) { this.proj.splice(i, 1); if (p.fn) { const pc = this._inCast; this._inCast = p._cast || null; try { p.fn(); } finally { this._inCast = pc; } } continue; } p.x = p.x0 + (p.tx - p.x0) * q; p.y = p.y0 + (p.ty - p.y0) * q - Math.sin(q * Math.PI) * 220; continue; }

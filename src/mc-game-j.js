@@ -51,7 +51,7 @@ G.view = function () {
     Object.assign(v.tip, this._tipV);
   }
   // world HUD roster: race top-left, vocation top-right
-  if (v.w && run && v.w.roster) { const vis = run.roster.filter(u => !this.hideU.has(u.uid)); v.w.roster.forEach((r, i) => { const d = vis[i] && DB[vis[i].type]; const ri = d && M.tagIc('race', d.race), vi = d && M.tagIc('voc', d.voc); Object.assign(r, { ri: ri || NIL, vi: vi || NIL, hasR: !!ri, hasV: !!vi }); }); }
+  if (v.w && run && v.w.roster) { const vis = run.roster.filter(u => !this.hideU.has(u.uid)); v.w.roster.forEach((r, i) => { const u = (r.uid != null && vis.find(x => x.uid === r.uid)) || vis[i], d = u && DB[u.type]; const ri = d && M.tagIc('race', d.race), vi = d && M.tagIc('voc', d.voc); Object.assign(r, { ri: ri || NIL, vi: vi || NIL, hasR: !!ri, hasV: !!vi }); }); }
   // shop cards
   if (v.s && run && run.shop) {
     (v.s.units || []).forEach((u, i) => { const c = run.shop.units[i], d = c && DB[c.type]; const ri = d && M.tagIc('race', d.race), vi = d && M.tagIc('voc', d.voc); Object.assign(u, { ri: ri || NIL, vi: vi || NIL, hasR: !!ri, hasV: !!vi }); });
