@@ -71,7 +71,6 @@ G.view = function () {
   });
   // layer numbers down the left edge, the level that opens the waiting row, and what the colours mean
   for (let L = 1; L <= Lo.rows; L++) { const y = rowY(L, Lo.dy); caps.push({ x: -22, y: Math.round(y - 12), t: L > Lo.shown ? 'Lv' + (M.talLvFor ? M.talLvFor(L) : L + 1) : String(L), c: L > Lo.shown ? '#ffcf4a' : '#6a6394' }); }
-  Object.keys(M.TAL_SC).forEach((k, j) => caps.push({ x: -16 + j * 56, y: 468, t: M.TAL_SC[k].n, c: M.TAL_SC[k].c }));
   pn.nodes = nodes; pn.links = links; pn.caps = caps; pn.noPts = pts <= 0; pn.hasPts = pts > 0;
   pn.holdHint = pts > 0 && NS < 60 && nodes.some(n => n.cursor === 'pointer');
   const nag = this.talNag && now() - this.talNag.at < 1600 ? this.talNag : null; pn.nagOn = !!nag; pn.nagX = nag ? nag.x : 0; pn.nagY = nag ? nag.y : 0;

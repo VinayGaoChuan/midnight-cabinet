@@ -110,9 +110,9 @@ M.soloFix = function (m) {
 };
 
 // ───────── talents stay a choice (2026-09-27: 「如果天赋点太多，那英雄的天赋就没有选择的意义了，因为所有的天赋一定会点亮，那还选择什么」) ─────────
-// a point every second level (Lv 2, 4, 6 … : 10 at Lv 20, 20 at Lv 40) and each 启示卷轴 read; at most two talents of a layer can
-// be learned (the tree has 19–23, at most 12 can ever be lit), so a leader is what its player picked
-M.TAL_LAYER = 2;
+// a point every second level (Lv 2, 4, 6 … : 10 at Lv 20, 20 at Lv 40) and each 启示卷轴 read, so a leader is what its player
+// picked; a layer has no cap of its own any more (2026-09-27: 「天赋同一层，没有只能学习几个限制，想学多少学多少」; was two)
+M.TAL_LAYER = Infinity;
 M.talPts = (h) => Math.floor((h.lv || 1) / 2) + (h.scrolls || 0);
 M.talLayerN = (h, L) => (Array.isArray(h.taken) ? h.taken.filter(i => h.tree[i] && h.tree[i].L === L).length : 0);
 const oOpen = M.talOpen;

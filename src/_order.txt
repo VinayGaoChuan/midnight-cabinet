@@ -160,6 +160,7 @@ mc-synergy.js
 mc-shopcard.js
 mc-report.js
 mc-bastion.js
+mc-hpbar.js
 mc-tutor.js
 mc-perf.js
 mc-boot.js

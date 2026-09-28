@@ -174,7 +174,7 @@ M.Raid = class extends Base {
       ctx.lineWidth = 2; for (let i = 1; i < 6; i++) { ctx.beginPath(); ctx.ellipse(D.x, 0, D.R * i / 6, ry, 0, Math.PI, 0); ctx.stroke(); } for (let j = 1; j < 4; j++) { const yy = -ry * j / 4, xx = D.R * Math.sqrt(1 - (j / 4) * (j / 4)); ctx.beginPath(); ctx.moveTo(D.x - xx, yy); ctx.lineTo(D.x + xx, yy); ctx.stroke(); }
       ctx.restore(); lights.push({ x: D.x, y: -ry * 0.5, r: D.R * 0.9, c: '#4af0ff', f: 0.3 + 0.4 * q }); });
     // building life bars, only once hurt (the dome shows its shield on its generator)
-    Object.values(this.bld).forEach(b => { if (b.hp <= 0 || b.hp >= b.max) return; const w = Math.max(60, b.w * 0.8), y = b.y - b.h - 30; if (U) U.bar(ctx, b.x - w / 2, y, w, 8, b.hp / b.max, { col: b.role === 'wall' ? P.silver : P.gold }); });
+    Object.values(this.bld).forEach(b => { if (b.hp <= 0 || b.hp >= b.max) return; const w = Math.max(60, b.w * 0.8), y = b.y - b.h - 30; if (M.hpBar) M.hpBar(ctx, b.x - w / 2, y, w, 8, b, { hp: b.hp, max: b.max, col: b.role === 'wall' ? P.silver : P.gold, T: this.t }); });
     this.domes.forEach(D => { if (D.b.hp <= 0 || D.pool >= D.max) return; const w = 120, y = D.b.y - D.b.h - 48; if (U) U.bar(ctx, D.x - w / 2, y, w, 8, D.pool / D.max, { col: '#4af0ff' }); });
   }
   drawHud(ctx, bv) {

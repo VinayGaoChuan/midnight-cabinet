@@ -28,7 +28,7 @@ const W = M.WONDERS = {
   opera:      { n: '悉尼歌剧院', style: 'cartoon', kind: 'run', d: '每场战斗的第一次 FEVER 必定是传说效果。', part: 'fever' },
   zeus:       { n: '奥林匹亚宙斯神像', style: 'fantasy', kind: 'base', d: '所有职业的进化上限 +1。' },
   pyramids:   { n: '金字塔', style: 'fantasy', kind: 'base', d: '建筑下单当天就建好。' },
-  gardens:    { n: '空中花园', style: 'nature', kind: 'base', d: '凯旋时可以带回两支部队。' },
+  gardens:    { n: '空中花园', style: 'nature', kind: 'base', d: '每第三次凯旋，多带回一支部队。' },
   library:    { n: '亚历山大图书馆', style: 'magic', kind: 'base', d: '领袖每一级都得天赋点（平时两级一点）。' },
   bigben:     { n: '大本钟', style: 'steam', kind: 'base', d: '每 5 天多来一个来访者。' },
   potala:     { n: '布达拉宫', style: 'magic', kind: 'base', d: '信仰值获得翻倍。', part: 'shrine' },
@@ -195,8 +195,10 @@ const oBM = M.baseMods;
 M.baseMods = function (m) { const o = oBM.apply(this, arguments); if (m && hasW(m, 'potala') && o.faithDaily) o.faithDaily *= 2; return o; };
 const oWin = G.runWin;
 G.runWin = function () { const run = this.run; if (run && run.loot && run.loot.faith && hasW(this.meta, 'potala')) run.loot.faith *= 2; return oWin.apply(this, arguments); };
-// 空中花园: the homecoming takes two (mc-parade.js reads M.paradePicks)
-M.paradePicks = (m) => (hasW(m, 'gardens') ? 2 : 1);
+// 空中花园: every third homecoming takes two (2026-09-27: 「返回时额外带回1个部队，削弱这个建筑，强度太离谱了」 — two every time doubled
+// the garrison's growth); M.paradePicks answers for the coming homecoming (mc-parade.js, the stele's line), m.homeN counts them
+M.paradePicks = (m) => (hasW(m, 'gardens') && ((m && m.homeN) || 0) % 3 === 2 ? 2 : 1);
+{ const oPS = G.paradeStart; if (oPS) G.paradeStart = function () { const r = oPS.apply(this, arguments); if (r && this.meta) this.meta.homeN = (this.meta.homeN || 0) + 1; return r; }; }
 
 // ───────── the night: wonders that fight ─────────
 const NR = M.NightRaid && M.NightRaid.prototype;

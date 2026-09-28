@@ -331,7 +331,7 @@ M.NightRaid = class extends Siege {
     U.text(ctx, (K ? K.n : '混沌来袭') + ' · 第 ' + this.meta.day + ' 夜', 960, 146, U.T.title, K ? K.c : PP.red, { outline: true });
     U.text(ctx, '剩余敌人 ' + left + '　·　驻军 ' + gar + '　·　主基地 ' + Math.max(0, Math.round(this.portal.hp)) + ' / ' + this.portal.max, 960, 190, U.T.body, PP.cream);
     // the foe's own bar under the plate, once it is on the field
-    const e = this.champ; if (e && e.alive) { const W = 700, X = 610, Y = 238, k = cl(e.hp / e.max, 0, 1); U.text(ctx, K.who + ' · ' + e.nm, 960, Y - 4, U.T.body, K.c, { outline: true }); U.R(ctx, X - 4, Y + 16, W + 8, 26, PP.ink); U.R(ctx, X, Y + 20, W, 18, PP.abyss); U.R(ctx, X, Y + 20, W * k, 18, PP.red); U.R(ctx, X, Y + 20, W * k, 4, PP.pink); }
+    const e = this.champ; if (e && e.alive) { const W = 700, X = 610, Y = 238, k = cl(e.hp / e.max, 0, 1); U.text(ctx, K.who + ' · ' + e.nm, 960, Y - 4, U.T.body, K.c, { outline: true }); M.hpBar(ctx, X, Y + 20, W, 18, e, { hp: e.hp, max: e.max, col: PP.red, hi: PP.pink, lo: PP.wine, T: this.t, ink: PP.ink }); }
   }
 };
 // 午夜钟楼: a boss stands still for a moment at the start of an expedition's boss fight

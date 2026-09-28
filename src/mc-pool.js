@@ -55,13 +55,14 @@ M.poolAvail = (run, line) => Math.max(0, M.stageOf(run).quota - M.poolUsed(run, 
 M.rollUnitCard = function (run, o) {
   o = o || {}; const st = M.stageOf(run), lines = (run.pool && run.pool.lines) || [], hold = o.hold || {};
   const left = (l) => M.poolAvail(run, l) - (hold[l] || 0);
-  const ok = (o.line ? [o.line] : lines).filter(l => DB[M.lineKey(l, 1)] && left(l) >= 1); if (!ok.length) return null;
+  const ok = (o.line ? [o.line] : lines).filter(l => DB[M.lineKey(l, 1)] && left(l) >= (o.q != null ? Math.pow(3, o.q) : 1) && (o.q == null || DB[M.lineKey(l, o.q + 1)])); if (!ok.length) return null;
   const line = pick(ok), d1 = DB[M.lineKey(line, 1)], area = (run.pool && run.pool.area) || 0;
   const P = st.tut ? 0 : st.L + 0.5 * area + vocRows(run.M, d1.voc) + (o.shift || 0);
   const w = M.qOdds(P, st.capQ), top = Math.min(st.capQ, Math.floor(Math.log(left(line) + 1e-9) / Math.log(3) + 1e-9));
   for (let i = w.length - 1; i > top; i--) { w[top] += w[i]; w[i] = 0; }
   let q = M.wpick([0, 1, 2, 3, 4, 5], i => (i >= (o.minQ || 0) && i <= top ? w[i] : 0));
   if (q == null || !(w[q] > 0)) q = Math.min(top, o.minQ || 0);
+  if (o.q != null) q = Math.min(o.q, top);   // a given quality (the recruit flag's three)
   const k = M.lineKey(line, q + 1); if (!DB[k]) return null;
   hold[line] = (hold[line] || 0) + copiesOf(k);
   return { type: k, line, q };
@@ -265,10 +266,11 @@ M.poolFit = function (run, type) {
 };
 const oAdd = M.addUnit;
 M.addUnit = function (run, type) { if (run && run.pool) { const k = M.poolFit(run, type); if (!k) return null; type = k; } return oAdd.call(this, run, type); };
-// the recruit flag: three figures from the pool (the old one took two of them from every unit in the game)
+// the recruit flag: three figures from the pool (the old one took two of them from every unit in the game), all three of the
+// quality the first one rolled (2026-09-27: 「招募旗，随机出来的单位，必须是相同品质的，否则，就变成必选了」) — the choice is the vocation
 M.recruitTrio = function (run) {
-  const hold = {}, out = [];
-  for (let i = 0; i < 16 && out.length < 3; i++) { const c = run && run.pool ? M.rollUnitCard(run, { hold }) : null; if (!c) break; if (!out.includes(c.type)) out.push(c.type); }
+  const hold = {}, out = []; let q0 = null;
+  for (let i = 0; i < 16 && out.length < 3; i++) { const c = run && run.pool ? M.rollUnitCard(run, q0 == null ? { hold } : { hold, q: q0 }) : null; if (!c) break; if (q0 == null) q0 = c.q; if (!out.includes(c.type)) out.push(c.type); }
   while (out.length < 3) out.push(M.pickUnitQ(run));
   return out;
 };

@@ -455,7 +455,7 @@ function drawBars(ctx, e, T, b) {
   const U = M.bUI, g2 = U.g2, H0 = e._pH || 88 * e.sz, w = g2(Math.max(40, 46 * e.sz)), kp = M.kbPose ? M.kbPose(e, T) : { rot: 0 }, x = g2(e.x + o.x - w / 2), top = g2(e.y + o.y - H0 - 14 - (e.air ? e.air.z : 0) + Math.abs(Math.sin(kp.rot)) * H0 * 0.6), cx = x + w / 2;   // the bar follows a body in the air or lying down
   const [hc, hh, hl] = e.side === 'A' ? (e.isHero ? [PL.gold, PL.butter, PL.amber] : [PL.green, PL.lime, PL.greenDeep]) : [PL.red, PL.pink, PL.wine];
   U.R(ctx, x - 2, top - 2, w + 4, e.hasMana ? 16 : 10, PL.ink);
-  const fw = w * clamp(e.hp / e.maxHp, 0, 1); if (fw > 0) { U.R(ctx, x, top, fw, 6, hc); U.R(ctx, x, top, fw, 2, hh); U.R(ctx, x, top + 4, fw, 2, hl); }
+  M.hpBar(ctx, x, top, w, 6, e, { hp: e.hp, max: e.maxHp, col: hc, hi: hh, lo: hl, T, frame: false });   // two layers and ticks (mc-hpbar.js)
   if (e.shield > 0) U.R(ctx, x, top, w * clamp(e.shield / e.maxHp, 0, 1), 2, PL.ice);
   if (e.hasMana) { const ch = b.skillCharge ? b.skillCharge(e) : e.mana, ready = ch >= 100 && !e.casting && e.alive;
     if (ready) { ctx.save(); ctx.globalAlpha *= 0.5 + 0.5 * Math.sin(T * 4 * Math.PI); U.R(ctx, x - 2, top + 6, w + 4, 8, PL.butter); U.R(ctx, x, top + 8, w, 4, PL.ink); ctx.restore(); }   // a ready skill waiting for its trigger: the bar's frame blinks

@@ -534,7 +534,7 @@ M.drawBase = function (ctx, meta, bv, opts = {}) {
   // right over the clock tower's tip (2026-09-27: 「血条距离传送门图片，差太远了」; the art tops out at y −221); in a raid the leader
   // stands there, so the bar sits on the lookout's stone face under its feet
   const RS = M._g && M._g.raid && M.ROOF_SPOT, px = M.PXR && M.PXR.has('_mainbase'), dp = bv.toScreen(DOOR_X, RS ? RS.y + 4 : px ? -228 : -300);
-  const bw = (RS ? 110 : 170) * bv.z; if (U) U.bar(ctx, dp.x - bw / 2, RS ? dp.y : dp.y - 12, bw, 10, pH, { col: pH < 0.35 ? PP.red : PP.teal, seg: 36 }); else { ctx.fillStyle = '#000'; ctx.fillRect(dp.x - bw / 2 - 3, dp.y + 12, bw + 6, 16); ctx.fillStyle = pH < 0.35 ? '#d0453c' : '#5fd0c0'; ctx.fillRect(dp.x - bw / 2, dp.y + 15, bw * clamp(pH, 0, 1), 10); }
+  const bw = (RS ? 110 : 170) * bv.z; if (M.hpBar) { const RD = M._g && M._g.raid, pe = RD ? RD.portal : meta.portal; M.hpBar(ctx, dp.x - bw / 2, RS ? dp.y : dp.y - 12, bw, 10, pe, { hp: pe.hp, max: RD ? RD.portal.max : M.portalMax(meta), col: pH < 0.35 ? PP.red : PP.teal, T: RD ? RD.t : bv.t }); } else if (U) U.bar(ctx, dp.x - bw / 2, RS ? dp.y : dp.y - 12, bw, 10, pH, { col: pH < 0.35 ? PP.red : PP.teal, seg: 36 }); else { ctx.fillStyle = '#000'; ctx.fillRect(dp.x - bw / 2 - 3, dp.y + 12, bw + 6, 16); ctx.fillStyle = pH < 0.35 ? '#d0453c' : '#5fd0c0'; ctx.fillRect(dp.x - bw / 2, dp.y + 15, bw * clamp(pH, 0, 1), 10); }
   if (M.drawSteles) M.drawSteles(ctx, meta, bv, null, 'top');
   (M.BASE_HOOKS || []).forEach(h => h(ctx, meta, bv, null, 'top', opts));   // screen space, after the light
   if (opts.raid) opts.raid.drawHud(ctx, bv);
@@ -637,7 +637,7 @@ M.Raid = class {
       ctx.save(); ctx.translate(x, e.y - bob); if (ps) { ctx.scale((e.face || 1) < 0 ? -dk : dk, dk); ctx.drawImage(img, -img.cx, -img.footY); } else { if (!e.alive) ctx.rotate(-Math.PI / 2 * (e.face || 1)); const need = (SPF(e.sprite) === 'R') !== (e.face > 0); if (need) ctx.scale(-1, 1); ctx.drawImage(img, -img.width / 2, -img.height); } ctx.restore();
       // 血条：墨框硬边小条（领袖金、民兵绿、敌人红）；人海里没受伤的小怪不挂血条
       const barOn = e.side === 'E' ? e.hp < e.max || e.elite || e.champ : !M.LOW_FX || e.hero || e.hp < e.max;
-      if (e.alive && barOn) { const bw = Math.max(40, img.S ? SH * 0.7 : img.width * 0.7),   /* phones: no bar on the unhurt (2026-09-27) */ top = e.y - (img.S ? SH * 1.12 : img.height) - 14, hc = e.side === 'A' ? (e.hero ? PP.gold : PP.green) : PP.red; if (M.UI) M.UI.bar(ctx, x - bw / 2, top, bw, 6, e.hp / e.max, { col: hc }); else { ctx.fillStyle = '#000'; ctx.fillRect(x - bw / 2 - 2, top - 2, bw + 4, 10); ctx.fillStyle = hc; ctx.fillRect(x - bw / 2, top, bw * clamp(e.hp / e.max, 0, 1), 6); } }
+      if (e.alive && barOn) { const bw = Math.max(40, img.S ? SH * 0.7 : img.width * 0.7),   /* phones: no bar on the unhurt (2026-09-27) */ top = e.y - (img.S ? SH * 1.12 : img.height) - 14, hc = e.side === 'A' ? (e.hero ? PP.gold : PP.green) : PP.red; if (M.hpBar) M.hpBar(ctx, x - bw / 2, top, bw, 6, e, { hp: e.hp, max: e.max, col: hc, T }); else { ctx.fillStyle = '#000'; ctx.fillRect(x - bw / 2 - 2, top - 2, bw + 4, 10); ctx.fillStyle = hc; ctx.fillRect(x - bw / 2, top, bw * clamp(e.hp / e.max, 0, 1), 6); } }
       if (e.hero && e.alive) lights.push({ x: e.x, y: e.y - 40, r: 160, c: '#ffe6b0', f: 1 });
     });
     this.proj.forEach(p => { ctx.fillStyle = p.col; ctx.fillRect(p.x - 7, p.y - 7, 14, 14); lights.push({ x: p.x, y: p.y, r: 60, c: p.col.length === 7 ? p.col : '#ffffff', f: 1 }); });
