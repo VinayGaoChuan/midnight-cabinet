@@ -11,7 +11,7 @@
 // Stages: the city's 繁荣 level upgrades every building (Lv3 → stage 1, Lv5 → stage 2): it grows parts, trim, light.
 // Shows: rising (a pause with the ground cracking, the climb, a slam, then its own flourish) and upgrading (charge,
 // pop to the new look, its own flourish), bigger by quality and stage, each with its sound on the beats.
-// Pilot (2026-09-28): six buildings behind a switch (?pxtown=1 or M.DEV.pxtown), off until the whole town is done.
+// 2026-09-28: piloted behind a switch, then the whole town was redrawn and the switch turned on by default (?pxtown=0 = old look).
 const M = window.MC, X = M.PXR; if (!X) return;
 const { TX, n1 } = X;
 const cl = (v, a, b) => (v < a ? a : v > b ? b : v), R = Math.random;
@@ -21,7 +21,8 @@ const RM = () => !!(M.PJ && M.PJ.reduced);
 const PT = M.PXTOWN = { force: null, stageForce: null, EVERY: 0.1 };
 PT.on = function () {
   if (PT.force != null) return !!PT.force;
-  try { return !!(M.DEV && M.DEV.pxtown) || (typeof location !== 'undefined' && /[?&]pxtown=1\b/.test(location.search || '')); } catch (e) { return false; }
+  // on by default since 2026-09-28 (the whole town is done); ?pxtown=0 or M.DEV.pxtown === false shows the old vector town to compare
+  try { return !(M.DEV && M.DEV.pxtown === false) && !(typeof location !== 'undefined' && /[?&]pxtown=0\b/.test(location.search || '')); } catch (e) { return true; }
 };
 // the city's level → each building's stage (0 plain · 1 grown · 2 finest)
 const stageOf = PT.stageOf = (m) => { if (PT.stageForce != null) return PT.stageForce; const lv = m && M.prosLv ? M.prosLv(m) : 1; return lv >= 5 ? 2 : lv >= 3 ? 1 : 0; };
