@@ -33,7 +33,6 @@ const W = M.WONDERS = {
   bigben:     { n: '大本钟', style: 'steam', kind: 'base', d: '每 5 天多来一个来访者。' },
   potala:     { n: '布达拉宫', style: 'magic', kind: 'base', d: '信仰值获得翻倍。', part: 'shrine' },
 };
-const KIND_N = { night: '守夜', run: '出征', base: '基地' };
 // wonders have no ranks between them: all of them wear 不朽's dark gold (2026-09-27: 「繁荣度带来的奇观，是不是没有高下之分，如果没有，
 // 那他们的颜色应该统一……都可以是不朽品质的颜色」); the kind tag says what it is for, in plain cream
 const WC = () => ((M.QUALITY && M.QUALITY[6]) || { c: '#c9a24a' }).c;
@@ -85,8 +84,10 @@ G.view = function () {
   v.dirOn = !!P && this.screen === 'base';
   if (v.dirOn) {
     const ready = now() - P.at > 500;
-    v.dp = { title: '繁荣度 Lv' + P.lv, line: '选一座奇观', cards: P.ks.map((k, i) => { const w = W[k], st = M.tagIc ? M.tagIc('style', w.style) : null;
-      return { n: w.n, c: WC(), t: w.d, tags: [{ img: '', n: KIND_N[w.kind], c: '#e8dcc4', tip: '' }].concat(st ? [{ img: st.img, n: st.n + '风格', c: st.c, tip: st.tip }] : []), hasTags: true, hasHave: false, have: '', blds: [], sub: '', hasSub: false, img: M.wonderPic(k), op: ready ? 1 : 0.6, onPick: () => this.dirTake(k), fx: 'dir' + i }; }) };
+    v.dp = { title: '繁荣度 Lv' + P.lv, line: '选一座奇观', cards: P.ks.map((k, i) => { const w = W[k];
+      // no kind or style tags (2026-09-27: 「奇观不应该再用功能的风格的分类。因为奇观自身不会受到任何其他加成等因素的影响」): a wonder
+      // is its picture, its name and what it does; its style only picks how the town looks, out of sight
+      return { n: w.n, c: WC(), t: w.d, tags: [], hasTags: false, hasHave: false, have: '', blds: [], sub: '', hasSub: false, img: M.wonderPic(k), op: ready ? 1 : 0.6, onPick: () => this.dirTake(k), fx: 'dir' + i }; }) };
   }
   return v;
 };
