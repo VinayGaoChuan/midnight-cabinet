@@ -797,6 +797,9 @@ const BOSSV = {
   throw: (t, w, p) => { nz(t, .3, 'bandpass', 500, 1.5, .08 + .06 * w, { to: 2200, pan: p }); tone(t, 'sine', 220, .25, .04, { to: 620, pan: p }); },
   thud: (t, w, p) => { thud(t, 100, 42, .22, .18 + .12 * w, { pan: p }); nz(t, .1, 'lowpass', 700, .7, .06, { pan: p }); },
   sink: (t, w, p) => { rumble(t, 2.4, .2 + .1 * w, { f: 120 }); tone(t, 'sine', 62, 2.2, .12, { to: 28, pan: p }); for (let i = 0; i < 6; i++) nz(t + i * .3, .2, 'bandpass', rnd(300, 900), 1.5, .04, { pan: p }); },
+  lavaGather: (t, w, p) => { rumble(t, .9, .1 + .06 * w, { f: 130 }); nz(t, .9, 'bandpass', 300, 1.2, .06 + .04 * w, { to: 1400, pan: p }); for (let i = 0; i < 5; i++) crackle(t + i * .16, .1, 1800, .04, { pan: p }); },
+  lavaRise: (t, w, p) => { rumble(t, 2.2, .18 + .1 * w, { f: 110 }); for (let i = 0; i < 9; i++) { nz(t + i * .22, .14, 'bandpass', rnd(200, 520), 2, .07, { pan: p }); tone(t + i * .22 + .05, 'sine', rnd(90, 150), .12, .05, { to: 60, pan: p }); } tone(t + 1.6, 'sawtooth', 70, .7, .06, { to: 110, lp: 600, pan: p }); },
+  demonDie: (t, w, p) => { tone(t, 'sawtooth', 150, 1.4, .1 + .05 * w, { to: 48, vib: [5, 70, .1], lp: 1000, pan: p, rev: .7 }); tone(t + .05, 'sawtooth', 226, 1.2, .06, { to: 70, vib: [7, 80, .1], lp: 1300, pan: p, rev: .7 }); rumble(t, 1.6, .18, { f: 150 }); },
   fade: (t, w, p) => { tone(t, 'sine', 420, .9, .05 + .03 * w, { to: 140, vib: [6, 40, .2], pan: p, rev: .7 }); nz(t, .8, 'bandpass', 1400, 3, .03, { to: 500, pan: p, rev: .5 }); },
 };
 def('charFx', 0, (t, ev, o) => {

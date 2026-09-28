@@ -94,4 +94,64 @@ if (BP) {
     return oFx ? oFx.apply(this, arguments) : false;
   };
 }
+
+// ───────── final boss in battle ─────────
+// One engine per boss, driven by its state; drawn one step bigger than units (1 art pixel = 6 field pixels). The rise plays the
+// module's climb out of the lava, each kit move its own charge (cut to the game's) → release on the hit, the second-phase show
+// its transformation (heartbeat, hunch, roar with wings spread; drawn over the dimmed screen), death its agony and sinking.
+const KF = 6, FMV = { meteor: 'meteor', meteor2: 'meteor2', dSlam: 'dSlam', poke: 'poke' }, NOSFX = { step: 1, hurt: 1 };
+function fbEng(b, e, a) {
+  const mt = PCD.meta(a) || {}, c = { b, e };
+  const g = PCD.createEngine({ game: true, W: mt.W, H: mt.H, out: {
+    sfx: (ev, x) => { const S = M.Sfx; if (NOSFX[ev] || !S || !S.charFx) return; try { S.charFx(ev, Object.assign({}, x, { pan: S.panX ? S.panX(e.x) : 0 })); } catch (err) { /* sound */ } },
+    shake: (t, amp) => { if (c.b) c.b.shake = Math.max(c.b.shake || 0, amp * 5); } } });
+  g.load(a); g.enter('idle');
+  const cv = document.createElement('canvas'); cv.width = g.W; cv.height = g.H; const cx = cv.getContext('2d'), im = cx.createImageData(g.W, g.H);
+  return { g, c, cv: M.asPx(cv, KF), cx, im, px: new Uint32Array(im.data.buffer), cur: 'idle', t: null, p2t: 0, hurt: -9 };
+}
+function fbDrive(b, e, f) {
+  const A = e.ai || {}, g = f.g, T = b.t, P2 = b.p2 && b.p2.e === e ? b.p2 : null;
+  let dt; if (P2) { dt = P2.t - f.p2t; f.p2t = P2.t; } else { f.p2t = 0; dt = f.t == null ? 0 : T - f.t; } f.t = T; dt = Math.max(0, Math.min(0.1, dt));
+  const go = (cur, mv, st, skip) => { f.cur = cur; if (mv) g.move(mv); g.enter(st); if (skip > 0) g.skip(skip); };
+  if ((e.bk && e.bk.rage) || A.phase === 2) g.move('hot1');
+  if (A.st === 'dead' || !e.alive) { if (f.cur !== 'dead') go('dead', null, 'death', 0.3); }
+  else if (A.st === 'rise') { if (f.cur !== 'rise') go('rise', 'rise', 'charge', Math.max(0, T - (A.t0 || T))); }
+  else if (A.st === 'roar' || P2) { if (f.cur !== 'p2') go('p2', 'p2', 'charge', 0); }
+  else if (e.casting && e.casting.bk) {
+    if (f.cast !== e.casting) { f.cast = e.casting; const wind = e.casting.until - e.casting.t0; g.move(FMV[e.casting.bk.id] || 'poke'); go('mv', null, 'charge', Math.max(0, g.dur[3] - wind) + Math.max(0, T - e.casting.t0)); }
+  } else if (f.cur === 'mv' && g.state === 'charge') g.enter('cast');   // the game fired: the release frame is the hit
+  else if (f.cur === 'idle' && e.kb != null && T - e.kb < 0.06 && T - f.hurt > 3) { f.hurt = T; go('hurt', null, 'hurt', 0); }
+  if (f.cur !== 'idle' && f.cur !== 'dead' && g.done) go('idle', null, 'idle', 0);
+  if (dt > 0) g.step(dt, 1);
+}
+function fbCanvas(f) {
+  const g = f.g, fb = g.render(), lut = g.lut, px = f.px, n = g.W * g.H; px.fill(0);
+  for (let i = 0; i < n; i++) { const v = fb[i]; if (v !== 255) px[i] = lut[v]; }
+  f.cx.putImageData(f.im, 0, 0);
+  const cv = f.cv, P = g.C.P; cv.cx = g.HX * KF; cv.footY = g.HY * KF; cv.focus = [(P.gx || 0) * KF, (P.gy || -40) * KF]; cv.S = 70 * KF; return cv;
+}
+if (BP && HAS_DOM) {
+  const oSp2 = BP.spawnEnemy;
+  BP.spawnEnemy = function (s) {
+    const e = oSp2.apply(this, arguments), a = e && e.fb && FINAL[s.type] && artOf(s.type);
+    if (a) { e._fg = fbEng(this, e, a); e._fgB = this; e.pxBoss = a; }
+    return e;
+  };
+  const P16 = M.P16, oEnt = P16 && P16.entImg;
+  if (oEnt) P16.entImg = function (e, T) {
+    const f = e && e._fg; if (!f || !e._fgB) return oEnt.apply(this, arguments);
+    fbDrive(e._fgB, e, f); const c = fbCanvas(f); e._fr = c; return c;
+  };
+  // the second-phase show dims the screen: the boss is drawn again over the dim, so its transformation is seen
+  const GP = M.Game && M.Game.prototype, oTick = GP && GP.tick;
+  if (oTick) GP.tick = function () {
+    const r = oTick.apply(this, arguments), b = this.battle, P = b && b.p2, e = P && P.e;
+    if (!e || !e._fg || !e._fr || this.screen !== 'battle' || !this.camField) return r;
+    const fc = this.ui && this.ui.cv && this.ui.cv('fx'); if (!fc) return r;
+    const g = fc.getContext('2d'), z = (this.bcam && this.bcam.z) || 1, p = this.camField(e.x + (e.drawDX || 0), e.y + (e.drawDY || 0)), img = e._fr, face = M.faceOf ? M.faceOf(e) : -1;
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false; g.globalAlpha = Math.min(1, P.t / 0.2) * Math.min(1, Math.max(0, (2.9 - P.t) / 0.35));
+    g.translate(Math.round(p.x), Math.round(p.y + 180)); g.scale(z * (face < 0 ? -1 : 1), z); g.drawImage(img, -img.cx, -img.footY); g.restore();
+    return r;
+  };
+}
 })();
