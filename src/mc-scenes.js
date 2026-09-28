@@ -142,7 +142,9 @@ M.genMap2 = function (run, meta) {
 const oLv = M.levelAt;
 M.levelAt = (run, node) => oLv(run, node) + (run.colOff || 0) * (run.lvlStep || 0);
 // a run from a waypoint gets gold for the army it would have bought on the way (called at the end of newRun3, mc-danger.js)
-M.CHAPTER_GRANT = 0.33;
+// 2026-09-27: 0.33 → 0.15 (「挑战中难度（守墓人），结果一进场，送了我970计分，这一下不就没难度了吗」: at 0.33 the points alone matched
+// the area's boss, three times the first fight); now a waypoint start is about 1.5 times its first fight and grows into the boss
+M.CHAPTER_GRANT = 0.15;
 M.chapterGrant = function (run) {
   if (!run || !run.chap || !run.chap.from) return 0; let g = 0;
   for (let c = 1; c < run.colOff + 2; c++) g += M.budgetAt(run.lvl0 + c * run.lvlStep);

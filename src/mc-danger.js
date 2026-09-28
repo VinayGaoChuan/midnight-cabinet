@@ -72,7 +72,7 @@ M.sideE = function (run) { const s = oSE.apply(this, arguments); const k = M.run
 const AVG = (() => { let hp = 0, dps = 0, n = 0; M.SHOP_POOL.filter(k => DB[k].q === 0 && DB[k].cost >= 15 && DB[k].cost <= 60 && DB[k].ranged !== 2).forEach(k => { hp += DB[k].hp; dps += DB[k].atk * (DB[k].as || 100) / 100; n++; }); return n ? { hp: hp / n, dps: dps / n } : { hp: 300, dps: 20 }; })();
 const wcache = new Map();
 M.worldOdds = M.worldDanger = function (m, k) {
-  const b = M.bestLeader(m), t = M.tierOf(m, k), sc = M.sceneOf ? M.sceneOf(m, k) : null, key = [k, m.day, t, m.diff || 0, sc ? sc.start : 0, b ? b.id + ':' + b.lv + ':' + Math.round(b.hp) : '-'].join('|'); if (wcache.has(key)) return wcache.get(key);
+  const b = M.bestLeader(m), t = M.tierOf(m, k), sc = M.sceneOf ? M.sceneOf(m, k) : null, bank = Math.round(M.baseMods(m).startWallet || 0), key = [k, m.day, t, m.diff || 0, sc ? sc.start : 0, bank, b ? b.id + ':' + b.lv + ':' + Math.round(b.hp) : '-'].join('|'); if (wcache.has(key)) return wcache.get(key);
   // the run this stele starts, as newRun3 would build it: the chapter's climb, from the stele's waypoint (mc-scenes.js)
   const W = M.WORLDS[k], T = TIERS[t], S = M.sceneRank(m, k), segs = M.segsOf ? M.segsOf(k) : null, full = segs ? segs.cols : 10, cap = M.diffOf ? M.diffOf(m).cap : 14;
   const lvl0 = M.lvl0For(W, m, t, S), step = Math.max(0.12, (Math.min(cap, 2.6 + 1.25 * S + M.CHAPTER_REF * 0.16 + T.lv) - lvl0) / Math.max(1, full - 1)), from = sc ? sc.start : 0;
@@ -81,7 +81,10 @@ M.worldOdds = M.worldDanger = function (m, k) {
   let mine = 0; if (b) { const H = M.HEROES[b.cls]; mine = M.powerOf({ hp: 3 * AVG.hp + b.hp, dps: 3 * AVG.dps + M.heroAtk(b, m) / (H.cd || 1) }); }
   const seg = segs ? segs[from] : null, bn = seg ? { col: (from > 0 ? 2 : 1) + seg.mids + 1, type: 'boss', seg: from, fb: seg.fb, final: from === segs.length - 1 } : { col: 9, type: 'boss' };
   const first = Math.round(avg({ col: from > 0 ? 2 : 1, type: 'normal' }) * (M.E_SHOW || 1)), boss = Math.round(avg(bn) * (bn.fb ? M.FB_SHOW || 1 : M.MB_SHOW || 1) * (M.E_SHOW || 1));
-  const o = { lv: t, n: T.n, c: T.c, mine, first, boss, par: first };
+  // the points it sets out with (路标补给 + 钱庄) are strength too (2026-09-27: 「局外显示难度的时候，应该把初始送的计分一块算进去后，再显示难度。
+  // 送我的计分也是我的实力啊」): a point buys a point of power, so they add to 你
+  const gift = (from > 0 && M.chapterGrant ? M.chapterGrant(Object.assign({}, run, { wallet: 0 })) : 0) + bank;
+  const o = { lv: t, n: T.n, c: T.c, mine: mine + gift, mine0: mine, gift, first, boss, par: first };
   wcache.set(key, o); if (wcache.size > 60) wcache.delete(wcache.keys().next().value); return o;
 };
 const oST = G.steleTip;

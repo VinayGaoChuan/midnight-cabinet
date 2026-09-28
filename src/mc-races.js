@@ -8,10 +8,12 @@
 const M = window.MC, DB = M.DB;
 const RACE_OF = {
   FootSoldier: '人类', HolyLightKnight: '人类', Ranger: '人类', Gladiator: '人类', MageApprentice: '人类',
-  BloodKnight: '亡灵', CursedSwordsman: '亡灵', Archer: '亡灵', Mage: '亡灵', DarkFang: '亡灵',
+  // 2026-09-27: three lines changed race so no race holds one vocation twice (a pool takes one line per race and vocation,
+  // mc-pool.js; 亡灵 had two 守护者 and two 祭司, 自然 two 牧师, 深海 two 战士 — 亡灵 could never field the 5 lines of its top bond)
+  BloodKnight: '亡灵', SlaveLord: '亡灵', Archer: '亡灵', Mage: '亡灵', SnakeGodMessenger: '亡灵',
   BigWildBoar: '野兽', LionHammer: '野兽', Summoner: '野兽', GreenDragon: '野兽', Chick: '野兽', JadeBeast: '野兽',
-  VoodooBeliever: '自然', LifeTree: '自然', WildMage: '自然', DesertBeliever: '自然', SnakeGodMessenger: '自然',
-  Berserker: '深海', SlaveLord: '深海', WaterWarrior: '深海', CrabWarlock: '深海', VikingPirate: '深海', WarpWing: '深海',
+  VoodooBeliever: '自然', LifeTree: '自然', WildMage: '自然', DesertBeliever: '自然', DarkFang: '自然',
+  Berserker: '深海', CursedSwordsman: '深海', WaterWarrior: '深海', CrabWarlock: '深海', VikingPirate: '深海', WarpWing: '深海',
   Skybot: '异界', YellowManeHorse: '异界', Bat: '异界', BlackSword: '异界', ShadowSwordsman: '异界', TimeMage: '异界',
 };
 M.RACE_OF = RACE_OF;

@@ -236,7 +236,7 @@ G.steleTip = function (k) {
   const lines = [H('首领')];
   bosses.forEach(b => { const r = [{ t: IN + b.n, c: '#ff8a6a', b: 1 }]; if (b.bb) { const own = M.bbOwned && M.bbOwned(m, b.bb); r.push({ t: own ? '（图纸已得）' : '（图纸未得）', c: own ? '#9cff7a' : '#8d8496' }); } lines.push({ rich: r }); });
   lines.push(H('战斗力'),
-    { rich: [{ t: IN + '你 ', c: '#e8dcc4' }, { t: '★' + D.mine, c: '#ffe08a', b: 1 }] },
+    { rich: [{ t: IN + '你 ', c: '#e8dcc4' }, { t: '★' + D.mine, c: '#ffe08a', b: 1 }].concat(D.gift ? [{ t: '（含开局积分 +' + D.gift + '）', c: '#a89ca8' }] : []) },
     { rich: [{ t: IN + '敌人 ', c: '#e8dcc4' }, { t: '★' + D.first, c: '#ff8a8a', b: 1 }] },
     { rich: [{ t: IN + '首领 ', c: '#e8dcc4' }, { t: '★' + D.boss, c: '#ff5a4a', b: 1 }] },
     { rich: [{ t: '难度 ', c: '#a89ca8' }, { t: D.n, c: D.c, b: 1 }] },

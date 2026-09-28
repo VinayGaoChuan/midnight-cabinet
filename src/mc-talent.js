@@ -191,6 +191,38 @@ G.takeTalent = function (id, i) {
   const mx0 = M.heroMaxHp(h, m); h.points--; h.taken.push(i); h.hp = Math.min(M.heroMaxHp(h, m), h.hp + Math.max(0, M.heroMaxHp(h, m) - mx0));
   this.save(); this.bump();
 };
+
+// ───────── 洗点: every point back, at the base, for some supplies ─────────
+// (2026-09-27, asked 「应该直接提供这个按钮，还是应该在机房，通过成长获得，还是通过基地建造特定建筑获得这个功能……你来做个判断」): a button on the
+// leader's own page. Points are few (one every second level, two a layer) and the tree opens a layer at a time, so the right
+// picks change as the game goes (a new layer, a new 流派) — it is a thing to use often, not to unlock or to spend land on. It
+// costs 25 supplies a learned talent so a pick still means something, only at the base (not in the middle of an expedition),
+// and it asks once more before it happens.
+M.RESPEC_K = 25;
+M.respecCost = (h) => M.RESPEC_K * ((h && Array.isArray(h.taken) ? h.taken.length : 0));
+G.respec = function (id) {
+  const m = this.meta, h = m && m.heroes.find(x => x.id === id); if (!h || !h.taken || !h.taken.length || this.screen !== 'base') return;
+  const cost = M.respecCost(h), S = M.Sfx;
+  if (m.supplies < cost) { this.deny && this.deny('物资不足', '#ff6a5a'); return; }
+  if (!(this.resArm && this.resArm.id === id && performance.now() - this.resArm.t < 4000)) { this.resArm = { id, t: performance.now() }; S.click && S.click(); this.bump(); return; }
+  this.resArm = null; const n = h.taken.length, mx0 = M.heroMaxHp(h, m);
+  this.hold && this.hold('msup', m.supplies); m.supplies -= cost; this.release && this.release('msup');
+  h.taken = []; h.points = (h.points || 0) + n; h.hp = Math.min(M.heroMaxHp(h, m), h.hp) || Math.min(mx0, h.hp);
+  this.save(); try { S.shatter ? S.shatter() : S.whoosh && S.whoosh(0.6); } catch (e) { /* a sound never blocks */ }
+  if (this.fx) { this.fx.flash && this.fx.flash('#ffe08a', 0.25); this.fx.pop && this.fx.pop(960, 420, '天赋点 +' + n, '#ffe08a', 60, { slam: 1 }); this.fx.burst && this.fx.burst(960, 440, '#ffe08a', 30, { v: 520 }); }
+  this.bump();
+};
+const oViewR = G.view;
+G.view = function () {
+  const v = oViewR.apply(this, arguments), p = this.panel, m = this.meta, pn = v.pn;
+  if (!pn || !pn.isHero || !p || !m || this.screen !== 'base') return v;
+  const h = m.heroes.find(x => x.id === p.id); if (!h || !h.taken || !h.taken.length) return v;
+  const cost = M.respecCost(h), arm = !!(this.resArm && this.resArm.id === h.id && performance.now() - this.resArm.t < 4000), ok = m.supplies >= cost;
+  Object.assign(pn, { resOn: true, resT: (arm ? '确认洗点 · ' : '洗点 · ') + cost + ' 物资', resC: arm ? '#ff6a5a' : ok ? '#ffcf4a' : '#3a3040', resTc: arm ? '#ffb0a0' : ok ? '#ffe08a' : '#6b6570',
+    onRespec: () => this.respec(h.id), resTip: this.tipFn ? this.tipFn({ title: '洗点', c: '#ffe08a', d: '退回全部天赋点，重新学。' }) : null });
+  return v;
+};
+if (M.GUIDE) M.GUIDE.push({ id: 'respec', cat: '领袖', icon: 't_skill', title: '洗点', line: '在基地里退回全部天赋点重新学，每个学过的天赋 25 物资。', scr: 'base', sel: '[data-g="respec"]' });
 })();
 
 ;
