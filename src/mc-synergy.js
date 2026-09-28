@@ -17,6 +17,10 @@ const SYN = M.SYN = {
   异界: { n: '裂隙', top: '回响', ic: 'r_rift', lv: [25, 40, 60], sk: [0, 0.15, 0.30], d: ['开战法力 +25', '法力 +40，技能伤害 +15%', '法力 +60，技能伤害 +30%'], topD: '放完技能 30% 几率 0.5 秒后免费再放一次（它的虚影）' },
 };
 M.synLevel = (n) => (n >= 5 ? 3 : n >= 3 ? 2 : n >= 2 ? 1 : 0);
+// how many lines of a race this area's pool holds, and so the highest level the army can reach here (2026-09-28: 「如果某一次选择
+// 条数，注定凑不齐5条……那么在羁绊那里面就不要显示出来，也就是能凑出几个，就显示几个」); no pool (the prologue): everything
+M.synCap = (run, r) => { const L = run && run.pool && run.pool.lines; if (!L || !L.length) return 99; return L.filter(l => M.RACE_OF[l] === r).length; };
+M.synMaxL = (run, r) => M.synLevel(M.synCap(run, r));
 // how many different lines of each race in a list of unit types
 M.synCount = function (types) { const seen = {}, out = {}; (types || []).forEach(k => { const d = DB[k]; if (!d || !d.line || !SYN[d.race] || seen[d.line]) return; seen[d.line] = 1; out[d.race] = (out[d.race] || 0) + 1; }); return out; };
 
@@ -32,7 +36,8 @@ if (M.TAG) M.TAG.race = (n) => (SYN[n] ? { kind: 'race', n, c: M.RACES[n] || '#f
 const oTip = G.tipFor;
 G.tipFor = function (key) {
   const m = /^tag-race-(.+)$/.exec(key || ''); if (m && SYN[m[1]]) { const r = m[1], s = SYN[r], n = this.run ? (M.synCount(this.run.roster.map(u => u.type))[r] || 0) : 0, lv = M.synLevel(n);
-    return { title: r + ' · ' + s.n, c: M.RACES[r], d: '同一种族的不同部队一起上场，羁绊越强。', lines: [0, 1, 2].map(i => ({ t: M.SYN_AT[i] + ' 条：' + s.d[i], c: lv > i ? M.RACES[r] : '#8d8496' })).concat([{ t: '5 条满级 · ' + s.top + '：' + s.topD, c: lv >= 3 ? '#ffcf4a' : '#8d8496' }]) }; }
+    const mx = M.synMaxL(this.run, r);   // only what this area's pool can reach
+    return { title: r + ' · ' + s.n, c: M.RACES[r], d: '同一种族的不同部队一起上场，羁绊越强。', lines: [0, 1, 2].filter(i => i < mx).map(i => ({ t: M.SYN_AT[i] + ' 条：' + s.d[i], c: lv > i ? M.RACES[r] : '#8d8496' })).concat(mx < 3 ? [] : [{ t: '5 条满级 · ' + s.top + '：' + s.topD, c: lv >= 3 ? '#ffcf4a' : '#8d8496' }]) }; }
   return oTip ? oTip.apply(this, arguments) : null;
 };
 
@@ -147,8 +152,8 @@ if (BP) {
 }
 
 // ───────── on screen: the army bar's bonds, the fight's opening chips, the shop card's +1 ─────────
-const synRows = (types) => { const c = M.synCount(types); return M.RACE6.filter(r => c[r]).map(r => { const n = c[r], L = M.synLevel(n), tg = M.tagIc ? M.tagIc('race', r) : null;
-  return { r, n, L, img: tg ? tg.img : '', c: M.RACES[r], tip: 'tag-race-' + r, t: r + ' ' + n, pips: M.SYN_AT.map((a, i) => ({ c: n >= a ? (i === 2 ? '#ffcf4a' : M.RACES[r]) : '#2b2461' })), op: L ? 1 : 0.55 }; }); };
+const synRows = (types, run) => { const c = M.synCount(types); return M.RACE6.filter(r => c[r] && M.synMaxL(run, r) > 0).map(r => { const n = c[r], L = M.synLevel(n), mx = M.synMaxL(run, r), tg = M.tagIc ? M.tagIc('race', r) : null;
+  return { r, n, L, img: tg ? tg.img : '', c: M.RACES[r], tip: 'tag-race-' + r, t: r + ' ' + n, pips: M.SYN_AT.slice(0, mx).map((a, i) => ({ c: n >= a ? (i === 2 ? '#ffcf4a' : M.RACES[r]) : '#2b2461' })), op: L ? 1 : 0.55 }; }); };
 M.synRows = synRows;
 const oBoons = M.boonsOf;
 if (oBoons) M.boonsOf = function (run) {
@@ -159,7 +164,7 @@ if (oBoons) M.boonsOf = function (run) {
 const oView = G.view;
 G.view = function () {
   const v = oView.call(this), run = this.run;
-  if (v.w && run && !run.raid) { const rows = synRows(run.roster.map(u => u.type)); v.w.synOn = rows.length > 0 && (this.screen === 'world' || this.screen === 'shop'); v.w.syn = rows;
+  if (v.w && run && !run.raid) { const rows = synRows(run.roster.map(u => u.type), run); v.w.synOn = rows.length > 0 && (this.screen === 'world' || this.screen === 'shop'); v.w.syn = rows;
     (v.w.roster || []).forEach((r, i) => { const vis = run.roster.filter(u => !this.hideU.has(u.uid)); const u = (r.uid != null && vis.find(x => x.uid === r.uid)) || vis[i], d = u && DB[u.type]; const tg = d && M.tagIc ? M.tagIc('race', d.race) : null; if (tg) { r.ri = tg; r.hasR = true; } }); }
   if (v.s && run && run.shop && this.screen === 'shop') { const c0 = M.synCount(run.roster.map(u => u.type));
     (v.s.units || []).forEach((su, i) => { const c = run.shop.units[i], d = c && DB[c.type]; if (!d) return; const tg = M.tagIc ? M.tagIc('race', d.race) : null; if (tg) { su.ri = tg; su.hasR = true; }
@@ -273,4 +278,28 @@ if (M.GUIDE) M.GUIDE.push(
   { id: 'synNature', cat: '羁绊', icon: 'r_nature', title: '自然 · 世界之树', line: SYN['自然'].topD + '。', scr: 'battle', sel: '[data-g="none"]' },
   { id: 'synSea', cat: '羁绊', icon: 'r_sea', title: '深海 · 海啸', line: SYN['深海'].topD + '。', scr: 'battle', sel: '[data-g="none"]' },
   { id: 'synRift', cat: '羁绊', icon: 'r_rift', title: '异界 · 回响', line: SYN['异界'].topD + '。', scr: 'battle', sel: '[data-g="none"]' });
+// a new area can bring a bond level within reach (more lines of a race, or a new race): said in the middle of the screen, once the
+// area's story has been told — 「XXX N层羁绊已解锁」, a new race 「新种族 XXX · N层羁绊解锁」 (2026-09-28)
+const maxAll = (run) => { const o = {}; M.RACE6.forEach(r => { o[r] = M.synMaxL(run, r); }); return o; };
+const oArrS = G.arrive;
+G.arrive = function (n) {
+  const run = this.run, had = run && run.pool && run.pool.lines && run.pool.lines.length ? maxAll(run) : null, area0 = run && run.pool ? run.pool.area : null;
+  const r = oArrS.apply(this, arguments);
+  if (had && this.run === run && run.pool && run.pool.area !== area0) {
+    const now2 = maxAll(run);
+    M.RACE6.forEach(rc => { if (now2[rc] > had[rc] && SYN[rc]) (this._synNotes = this._synNotes || []).push({ r: rc, L: now2[rc], fresh: had[rc] === 0 }); });
+  }
+  return r;
+};
+const oTickS = G.tick;
+G.tick = function (dt) {
+  const r = oTickS.apply(this, arguments), q = this._synNotes;
+  if (q && q.length && this.screen === 'world' && !this.storyFx && !(this.storyQ && this.storyQ.length) && !this.modal && !this.mini && performance.now() > (this._synNoteAt || 0)) {
+    const o = q.shift(), s = SYN[o.r]; this._synNoteAt = performance.now() + 2400;
+    this.banner && this.banner({ kind: 'win', text: (o.fresh ? '新种族 ' : '') + o.r + ' ' + o.L + '层羁绊' + (o.fresh ? '解锁' : '已解锁'), col: M.RACES[o.r] || '#ffcf4a', col2: '#1a1640', sub: o.L >= 3 ? s.top + '：' + s.topD : s.d[o.L - 1], life: 2.2, y: 440 });
+    S.up && S.up(2); this.fx && this.fx.rays && this.fx.rays(960, 440, M.RACES[o.r] || '#ffcf4a', 1.2, { r: 360 });
+  }
+  if (!this.run && this._synNotes) this._synNotes = null;
+  return r;
+};
 })();

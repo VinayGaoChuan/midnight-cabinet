@@ -118,6 +118,7 @@ mc-prosper.js
 mc-dirs.js
 mc-town.js
 mc-townlook.js
+mc-pxtown.js
 mc-siege.js
 mc-knock.js
 mc-omen.js

@@ -144,6 +144,7 @@ M.townLayout = function (m) {
 function drawFar(ctx, T, lights) {
   const vs = Object.values(T.vis || {}).filter(v => v.far).sort((a, b) => b.h * b.sc - a.h * a.sc), gc = WC();
   vs.forEach(v => {
+    if (M.PXTOWN && M.PXTOWN.draw(ctx, v, T.t, lights, null, T)) return;   // the pixel town (mc-pxtown.js, behind its switch)
     const im = M.townArt && M.townArt(v.key, 0, 0, v.dk, null); if (!im) return; const sc = v.sc || 1, H = v.h * sc, age = v.riseT != null ? T.t - v.riseT : 9, rise = age < 1.6 ? 1 - eo(cl(age / 1.4, 0, 1)) : 0;
     if (M.glow) M.glow(ctx, v.x, v.y - H * 0.55, Math.max(v.w * sc, H) * 0.75, gc, 0.2);
     ctx.save(); ctx.translate(Math.round(v.x), Math.round(v.y)); ctx.beginPath(); ctx.rect(-v.w * sc * 1.2, -H - 500, v.w * sc * 2.4, H + 504); ctx.clip(); ctx.scale(sc, sc); ctx.drawImage(im, -im.ox, -im.oy + rise * (v.h + 40)); ctx.restore();
