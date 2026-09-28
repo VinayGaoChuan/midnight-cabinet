@@ -161,3 +161,4 @@ mc-shopcard.js
 mc-report.js
 mc-tutor.js
 mc-perf.js
+mc-boot.js

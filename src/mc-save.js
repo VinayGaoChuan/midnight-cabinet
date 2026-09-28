@@ -119,29 +119,40 @@ function checkProfile(raw) {
 // cabinet pays something back. A torn game is settled as if it had ended that day, half of it, 30…300 tokens; a torn
 // cabinet profile gives back half its tokens, at most 300; both together at most 500. Design migrations (mig) are not
 // incompatibilities and keep the save. A broken settings file just goes back to the defaults, without a show.
-const rows = [], rep = { rows, wiped: false, fixed: false, comp: null };
-const addRow = (n, state, why) => rows.push({ n, state, why });
+// The check runs once every module has loaded (M.runSaveCheck, called from mc-boot.js at the end of the bundle): run while
+// this file loaded, it did not know the rooms, blueprints and relics later modules add (修缮坊, 矿车站 …) and shredded every
+// save holding one of them (found 2026-09-27: a new game's 修缮坊 blueprint shredded every save on the next load)
 const K_COMP = 'midnight-cabinet-comp';
-const snapOf = (m) => isObj(m) ? { day: isNum(m.day) ? m.day : 1, cleared: isObj(m.cleared) ? m.cleared : {}, st: isObj(m.st) ? m.st : {}, gd: intIn(m.gd, 0, 3) ? m.gd : 0, goalDone: !!m.goalDone, hard: !!m.hard, moon: m.moon || null } : null;
-const parse = (raw) => { try { return JSON.parse(raw); } catch (e) { return null; } };
-const whyOf = (r) => r.wipe || (Object.keys(r.cut).slice(0, 2).join('、') + '和当前版本对不上');
-let comp = null;
-OLD.forEach(k => { const raw = get(k); if (raw != null) { const m0 = parse(raw); del(k); addRow('旧版本存档' + (isObj(m0) && isNum(m0.day) ? ' · 第 ' + m0.day + ' 天' : ''), 'wipe', '和当前版本不兼容'); rep.wiped = true; if (!comp) comp = {}; if (!comp.game) comp.game = snapOf(m0) || { day: 1 }; } });
-const rm = get(K_META);
-if (rm != null) {
-  const r = checkMeta(rm);
-  if (r.wipe || Object.keys(r.cut).length) { const m0 = parse(rm); del(K_META); addRow('局内存档' + (isObj(m0) && isNum(m0.day) ? ' · 第 ' + m0.day + ' 天' : ''), 'wipe', whyOf(r)); rep.wiped = true; comp = comp || {}; comp.game = snapOf(m0) || { day: 1 }; }
-  else { if (r.mig) put(K_META, r.m); addRow('局内存档 · 第 ' + r.m.day + ' 天', 'ok'); }
-}
-const rp = get(K_PROF);
-if (rp != null) {
-  const r = checkProfile(rp);
-  if (r.wipe || Object.keys(r.cut).length) { const p0 = parse(rp); del(K_PROF); addRow('机台（局外）', 'wipe', whyOf(r)); rep.wiped = true; comp = comp || {}; comp.prof = isObj(p0) && isNum(p0.tokens) && p0.tokens > 0 ? p0.tokens : 0; }
-  else addRow('机台（局外）', 'ok');
-}
-const rs = get(K_SET);
-if (rs != null) { let s = null; try { s = JSON.parse(rs); } catch (e) {} if (!isObj(s)) { del(K_SET); M.settings = M.loadSettings(); } }
-if (comp) { rep.comp = comp; put(K_COMP, comp); }
+// the page may evaluate this script more than once while it boots: the first pass already repaired the save, so the
+// report is parked in storage until the shredding has been shown
+const K_REP = 'midnight-cabinet-savecheck';
+M.runSaveCheck = function () {
+  const rows = [], rep = { rows, wiped: false, fixed: false, comp: null };
+  const addRow = (n, state, why) => rows.push({ n, state, why });
+  const snapOf = (m) => isObj(m) ? { day: isNum(m.day) ? m.day : 1, cleared: isObj(m.cleared) ? m.cleared : {}, st: isObj(m.st) ? m.st : {}, gd: intIn(m.gd, 0, 3) ? m.gd : 0, goalDone: !!m.goalDone, hard: !!m.hard, moon: m.moon || null } : null;
+  const parse = (raw) => { try { return JSON.parse(raw); } catch (e) { return null; } };
+  const whyOf = (r) => r.wipe || (Object.keys(r.cut).slice(0, 2).join('、') + '和当前版本对不上');
+  let comp = null;
+  OLD.forEach(k => { const raw = get(k); if (raw != null) { const m0 = parse(raw); del(k); addRow('旧版本存档' + (isObj(m0) && isNum(m0.day) ? ' · 第 ' + m0.day + ' 天' : ''), 'wipe', '和当前版本不兼容'); rep.wiped = true; if (!comp) comp = {}; if (!comp.game) comp.game = snapOf(m0) || { day: 1 }; } });
+  const rm = get(K_META);
+  if (rm != null) {
+    const r = checkMeta(rm);
+    if (r.wipe || Object.keys(r.cut).length) { const m0 = parse(rm); del(K_META); addRow('局内存档' + (isObj(m0) && isNum(m0.day) ? ' · 第 ' + m0.day + ' 天' : ''), 'wipe', whyOf(r)); rep.wiped = true; comp = comp || {}; comp.game = snapOf(m0) || { day: 1 }; }
+    else { if (r.mig) put(K_META, r.m); addRow('局内存档 · 第 ' + r.m.day + ' 天', 'ok'); }
+  }
+  const rp = get(K_PROF);
+  if (rp != null) {
+    const r = checkProfile(rp);
+    if (r.wipe || Object.keys(r.cut).length) { const p0 = parse(rp); del(K_PROF); addRow('机台（局外）', 'wipe', whyOf(r)); rep.wiped = true; comp = comp || {}; comp.prof = isObj(p0) && isNum(p0.tokens) && p0.tokens > 0 ? p0.tokens : 0; }
+    else addRow('机台（局外）', 'ok');
+  }
+  const rs = get(K_SET);
+  if (rs != null) { let s = null; try { s = JSON.parse(rs); } catch (e) {} if (!isObj(s)) { del(K_SET); M.settings = M.loadSettings(); } }
+  if (comp) { rep.comp = comp; put(K_COMP, comp); }
+  if (rep.wiped || rep.fixed) put(K_REP, rep);
+  let parked = null; try { parked = JSON.parse(get(K_REP)); } catch (e) {}
+  M.saveReport = (rep.wiped || rep.fixed) ? rep : (parked && parked.rows ? parked : null);
+};
 // what the cabinet pays back (computed when shown: the settlement's own rules, difficulty included)
 M.saveCompN = function (c) {
   if (!c) return 0; let n = 0;
@@ -149,12 +160,6 @@ M.saveCompN = function (c) {
   if (c.prof) n += Math.min(300, Math.round(c.prof * 0.5));
   return Math.min(500, n);
 };
-// the page may evaluate this script more than once while it boots: the first pass already repaired the save, so the
-// report is parked in storage until the shredding has been shown
-const K_REP = 'midnight-cabinet-savecheck';
-if (rep.wiped || rep.fixed) put(K_REP, rep);
-let parked = null; try { parked = JSON.parse(get(K_REP)); } catch (e) {}
-M.saveReport = (rep.wiped || rep.fixed) ? rep : (parked && parked.rows ? parked : null);
 M.saveCheck = { checkMeta, checkProfile };
 
 // ───────── the shredding ─────────
