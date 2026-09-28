@@ -8,7 +8,7 @@
 //   · 天降 (rain), first phase: a string of red marks across the field (demon: meteors; druid: thorns; …), then whatever
 //     falls, falls on them.
 //   · below half its life it roars into its second phase: the string stops, and one arm sweeps a wide fan in front of it
-//     (扫臂) — everything in the fan is thrown.
+//     (扫臂) — everything in the fan is knocked flat (not thrown, 2026-09-27).
 //   A blow is only begun when someone already stands where it would land (user ruling 2026-09-26: 「否则放空技能太傻了」).
 //   Looks differ boss by boss (mc-titan.js); the moves are the same three, each dressed as that boss.
 // Small boss — the middle of a scene: one giant unit that walks and fights, with two charged blows of its own
@@ -80,7 +80,8 @@ BP.fbStrike = function (e) {
     if (M.TITAN && M.TITAN.impact) M.TITAN.impact(this, e, 'slam', x, y);
     S.impact && S.impact(); S.boom && S.boom();
   } else if (k === 'sweep') {
-    this.ents.forEach(u => { if (inFan(u, EDGE + 40, FB_Y, FBK.sweepR, FBK.sweepHalf)) hitU(u, FBK.sweep, -260 - Math.random() * 120, 180 + Math.random() * 60, 1.0); });
+    // knocked flat, not thrown (2026-09-27: 「boss的扇形攻击只击倒，不击飞了」)
+    this.ents.forEach(u => { if (!inFan(u, EDGE + 40, FB_Y, FBK.sweepR, FBK.sweepHalf) || !this.active(u) || u.side !== 'A') return; this.deal(e, u, dmg(FBK.sweep), { skill: 1, big: 1, noKb: 1, col: FOE }); if (u.alive) this.knockFlat(e, u, -420 - Math.random() * 120, (Math.random() - 0.5) * 120, 1.0); });
     this.shake = Math.max(this.shake, 24); this.hs = Math.max(this.hs || 0, 0.06); this.fxp({ k: 'fbsweep', x: EDGE + 40, y: FB_Y, r: FBK.sweepR, half: FBK.sweepHalf, life: 0.45 });
     if (M.TITAN && M.TITAN.impact) M.TITAN.impact(this, e, 'sweep', EDGE - 300, FB_Y);
     S.whoosh && S.whoosh(0.6); S.impact && S.impact();

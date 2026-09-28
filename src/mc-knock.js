@@ -136,6 +136,13 @@ BP.launch = function (tg, vx, vy, lift) {
   tg.air = { z: 0, vz: Math.min(1150, 540 + lift * 420), vx, vy, rot: 0, tilt: (vx >= 0 ? 1 : -1) * LIE, bounced: 0 }; tg.trail = []; tg.slide = null; tg.down = null;
   tg.kbLock = Math.max(tg.kbLock || 0, T + 2); this.fxp({ k: 'kbhit', x: tg.x, y: tg.y - 40 * (tg.sz || 1), r: 60, life: 0.22 });
 };
+// a boss's sweep: knocked flat where the arm catches it, sliding a little along the blow — never thrown up (2026-09-27:
+// 「boss的扇形攻击只击倒，不击飞了」)
+BP.knockFlat = function (src, tg, vx, vy, dur) {
+  if (!tg || !tg.alive || immune(tg) || tg.air) return; const T = this.t, dir = vx >= 0 ? 1 : -1, d = dur || 1;
+  tg.slide = { vx, vy, t0: T, dir }; tg.down = { rot: dir * LIE, t: T, dur: d }; tg.kbLock = Math.max(tg.kbLock || 0, T + d + RISE);
+  this.skid(tg.x, tg.y, dir); this.kbImpact(src, tg, 0.8, 1);
+};
 BP.knockDown = function (tg, dur) {
   if (!tg || !tg.alive || immune(tg) || tg.air) return; const T = this.t;
   tg.down = { rot: (Math.random() < 0.5 ? -1 : 1) * LIE, t: T, dur }; tg.kbLock = Math.max(tg.kbLock || 0, T + dur + RISE); tg.slide = null; this.dust(tg.x, tg.y, 3);
