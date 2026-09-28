@@ -11,9 +11,9 @@
 //   lucky star and terrain (晶簇) raise the odds.
 const M = window.MC, G = M.Game.prototype, DB = M.DB, P = M.PJ && M.PJ.PAL || {};
 const TIERS = [
-  { n: '低', c: '#47d6c1', lv: 0,   ek: 1,    loot: 1,   exp: 1,   bp: 1,   q: [82, 15, 2.6, 0.4] },
-  { n: '中', c: '#ffcf4a', lv: 0.6, ek: 1.05, loot: 1.4, exp: 1.3, bp: 1.3, q: [55, 32, 11, 2] },
-  { n: '高', c: '#ff4a4a', lv: 1.2, ek: 1.1,  loot: 1.9, exp: 1.7, bp: 1.7, q: [28, 38, 25, 9] },
+  { n: '低', c: '#47d6c1', lv: 0,   ek: 1,    gate: 1,   loot: 1,   exp: 1,   bp: 1,   q: [82, 15, 2.6, 0.4] },
+  { n: '中', c: '#ffcf4a', lv: 0.6, ek: 1.05, gate: 1.1, loot: 1.4, exp: 1.3, bp: 1.3, q: [55, 32, 11, 2] },
+  { n: '高', c: '#ff4a4a', lv: 1.2, ek: 1.1,  gate: 1.2, loot: 1.9, exp: 1.7, bp: 1.7, q: [28, 38, 25, 9] },
 ];
 M.DANGER = TIERS;
 const DAY_LV = 0.1, DAY_EK = 0.035, OLD_EK = 0.02;
@@ -78,13 +78,20 @@ M.worldOdds = M.worldDanger = function (m, k) {
   const lvl0 = M.lvl0For(W, m, t, S), step = Math.max(0.12, (Math.min(cap, 2.6 + 1.25 * S + M.CHAPTER_REF * 0.16 + T.lv) - lvl0) / Math.max(1, full - 1)), from = sc ? sc.start : 0;
   const run = { region: W, regionKey: k, M: m, mods: {}, field: null, lvl0, lvlStep: step, colOff: from > 0 && segs ? segs[from].col0 - 2 : 0, startSeg: from, map: null, dangerK: T.ek, sceneRank: S, scene: sc, chap: { w: k, from } };
   const avg = (node) => { let s = 0; for (let i = 0; i < 6; i++) s += M.powerOf(M.sideE(run, M.makeBattleCfg(run, node))); return Math.round(s / 6); };
-  let mine = 0; if (b) { const H = M.HEROES[b.cls]; mine = M.powerOf({ hp: 3 * AVG.hp + b.hp, dps: 3 * AVG.dps + M.heroAtk(b, m) / (H.cd || 1) }); }
   const seg = segs ? segs[from] : null, bn = seg ? { col: (from > 0 ? 2 : 1) + seg.mids + 1, type: 'boss', seg: from, fb: seg.fb, final: from === segs.length - 1 } : { col: 9, type: 'boss' };
-  const first = Math.round(avg({ col: from > 0 ? 2 : 1, type: 'normal' }) * (M.E_SHOW || 1)), boss = Math.round(avg(bn) * (bn.fb ? M.FB_SHOW || 1 : M.MB_SHOW || 1) * (M.E_SHOW || 1));
+  const first = Math.round(avg({ col: from > 0 ? 2 : 1, type: 'normal' }) * (M.E_SHOW || 1));
+  // 你 and 首领 by the same measure as the fight (2026-09-28: 「我战斗力474，敌147，首领535，结果是低难度……我战斗力559（含85），敌人224，
+  // 首领493，这个却评了中」 — 你 was the leader and three units before any market, 首领 the old chapter-sized boss): 你 is the army you
+  // reach the boss with — your own leader, three plain units, the grant and bank and what the stops before it pay — and 首领 the
+  // boss that plain army meets, made harder by the stele's danger; so 低 / 中 / 高 read the same way as the numbers
+  run.danger = t; run.grant = (from > 0 && M.chapterGrant ? M.chapterGrant(Object.assign({}, run, { wallet: 0 })) : 0);
+  const units = [0, 1, 2].map(() => ({ hp: AVG.hp, dps: AVG.dps }));
+  const mine = b ? M.parArmy(run, bn, { hero: b, units, bank }) : 0, par = b ? M.parArmy(run, bn, { cls: b.cls, units, bank }) : 0;
+  const boss = par ? Math.round(M.gateShow(run, bn, par)) : Math.round(avg(bn) * (bn.fb ? M.FB_SHOW || 1 : M.MB_SHOW || 1) * (M.E_SHOW || 1));
   // the points it sets out with (路标补给 + 钱庄) are strength too (2026-09-27: 「局外显示难度的时候，应该把初始送的计分一块算进去后，再显示难度。
   // 送我的计分也是我的实力啊」): a point buys a point of power, so they add to 你
-  const gift = (from > 0 && M.chapterGrant ? M.chapterGrant(Object.assign({}, run, { wallet: 0 })) : 0) + bank;
-  const o = { lv: t, n: T.n, c: T.c, mine: mine + gift, mine0: mine, gift, first, boss, par: first };
+  const gift = run.grant + bank;
+  const o = { lv: t, n: T.n, c: T.c, mine, mine0: mine, gift, first, boss, par: first };
   wcache.set(key, o); if (wcache.size > 60) wcache.delete(wcache.keys().next().value); return o;
 };
 const oST = G.steleTip;

@@ -52,11 +52,13 @@ M.poolUsed = function (run, line) {
 M.poolAvail = (run, line) => Math.max(0, M.stageOf(run).quota - M.poolUsed(run, line));
 // one card: a line of the pool that still has copies, then its quality from the table (never more than is left)
 // o: { shift (rows), minQ, hold {line: copies already promised in this roll}, line (a given line) }
+// the race the army holds the most lines of (the counter leans to it, 2 : 1)
+const mainRace = (run) => { const c = {}; ((run && run.roster) || []).forEach(u => { const r = DB[u.type] && M.RACE_OF[DB[u.type].line]; if (r) c[r] = (c[r] || 0) + 1; }); const k = Object.keys(c).sort((a, b) => c[b] - c[a])[0]; return k && c[k] >= 2 ? k : null; };
 M.rollUnitCard = function (run, o) {
   o = o || {}; const st = M.stageOf(run), lines = (run.pool && run.pool.lines) || [], hold = o.hold || {};
   const left = (l) => M.poolAvail(run, l) - (hold[l] || 0);
   const ok = (o.line ? [o.line] : lines).filter(l => DB[M.lineKey(l, 1)] && left(l) >= (o.q != null ? Math.pow(3, o.q) : 1) && (o.q == null || DB[M.lineKey(l, o.q + 1)])); if (!ok.length) return null;
-  const line = pick(ok), d1 = DB[M.lineKey(line, 1)], area = (run.pool && run.pool.area) || 0;
+  const main = mainRace(run), line = main ? M.wpick(ok, l => (M.RACE_OF[l] === main ? 2 : 1)) : pick(ok), d1 = DB[M.lineKey(line, 1)], area = (run.pool && run.pool.area) || 0;
   const P = st.tut ? 0 : st.L + 0.5 * area + vocRows(run.M, d1.voc) + (o.shift || 0);
   const w = M.qOdds(P, st.capQ), top = Math.min(st.capQ, Math.floor(Math.log(left(line) + 1e-9) / Math.log(3) + 1e-9));
   for (let i = w.length - 1; i > top; i--) { w[top] += w[i]; w[i] = 0; }
@@ -116,18 +118,21 @@ M.poolDedupe = function (run) {
 M.poolLines = function (run, keepArmy) {
   if (run && ((run.region && run.region.tut) || run.tut)) return TUT_LINES.filter(l => DB[M.lineKey(l, 1)]);
   const races = M.RACE6.slice(), prev = (run && run.pool && run.pool.races) || [];
-  if (!keepArmy) {   // the first area: two races, 4 + 3 lines
+  // 2026-09-28 (「有人反映，说总凑不齐5个同种族的」): a race's full bond takes 5 different lines of it, and the first area held only 4 —
+  // it could not be done there at all; later areas added at most 2 more. Now the first area has 5 + 3 lines, a later one keeps
+  // the army's lines, the whole rest of its main race and 3 of a new race; and the counter leans 2 : 1 to the main race.
+  if (!keepArmy) {   // the first area: two races, 5 + 3 lines
     const A = pick(races), Bn = pick(races.filter(r => r !== A));
-    const la = takeRace(A, 4, []), lb = takeRace(Bn, 3, la);
+    const la = takeRace(A, 5, []), lb = takeRace(Bn, 3, la);
     run._poolRaces = [A, Bn]; return la.concat(lb);
   }
-  // later areas: the army's lines stay; up to 2 more of its main race; a new race to 4 new lines in all
+  // later areas: the army's lines stay; the rest of its main race; a new race's 3 lines
   const army = []; (run.roster || []).forEach(u => { const d = DB[u.type]; if (d && d.line && !army.includes(d.line)) army.push(d.line); });
   const cnt = {}; army.forEach(l => { const r = M.RACE_OF[l]; if (r) cnt[r] = (cnt[r] || 0) + 1; });
   const main = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0] || pick(races);
-  const more = takeRace(main, 2, army), used = army.concat(more);
+  const more = takeRace(main, 6, army), used = army.concat(more);
   const fresh = races.filter(r => r !== main && !prev.includes(r)), R2 = pick(fresh.length ? fresh : races.filter(r => r !== main));
-  const extra = takeRace(R2, 4 - more.length, used);
+  const extra = takeRace(R2, 3, used);
   run._poolRaces = [main, R2]; return used.concat(extra);
 };
 const typesOf = (lines) => lines.reduce((a, l) => a.concat(M.lineTiers(l)), []);
@@ -190,7 +195,7 @@ M.gaRates = function (run) { const st = M.stageOf(run); return M.qOdds(st.tut ? 
 // ───────── joining: nothing is held back, nothing is sold; an army over its size must let one go (mc-swap.js) ─────────
 M.canAdd = () => true;
 M.downTier = (run, type) => type;
-G.sellSel = function () { this.sel = null; this.bump(); };
+// selling is back at half price (2026-09-28): the unit leaves the army, its copies return to the pool as when it is let go (mc-game-f.js G.sellSel)
 // what evolving may reach: in a run the stage's best quality; at the base (the garrison) the best stage ever finished
 M.buyCap = (m, k) => { const g = M._g, run = g && g.run; return run && run.M === m && run.pool ? M.stageOf(run).capQ + 1 : M.vocCap(m); };
 M.vocCap = (m) => Math.min(6, Math.max(M.EVO_BASE || 3, (m && m.bestCapT) || 0));
@@ -260,14 +265,14 @@ G.steleTip = function (k) {
   lines.push(H('首领'));
   bosses.forEach(b => { const r = [{ t: IN + b.n, c: '#ff8a6a', b: 1 }]; if (b.bb) { const own = M.bbOwned && M.bbOwned(m, b.bb); r.push({ t: own ? '（图纸已得）' : '（图纸未得）', c: own ? '#9cff7a' : '#8d8496' }); } const K = M.bossKit && M.bossKit(b.k); if (K && K.good) r.push({ t: '　擅长对付' + K.good, c: '#a89ca8' }); lines.push({ rich: r }); });   // what each boss is good against (mc-bosskit.js)
   lines.push(H('战斗力'),
-    { rich: [{ t: IN + '你 ', c: '#e8dcc4' }, { t: '★' + D.mine, c: '#ffe08a', b: 1 }].concat(D.gift ? [{ t: '（含开局积分 +' + D.gift + '）', c: '#a89ca8' }] : []) },
+    { rich: [{ t: IN + '你 ', c: '#e8dcc4' }, { t: '★' + D.mine, c: '#ffe08a', b: 1 }, { t: '（到首领时' + (D.gift ? '，含开局积分 +' + D.gift : '') + '）', c: '#a89ca8' }] },
     { rich: [{ t: IN + '敌人 ', c: '#e8dcc4' }, { t: '★' + D.first, c: '#ff8a8a', b: 1 }] },
     { rich: [{ t: IN + '首领 ', c: '#e8dcc4' }, { t: '★' + D.boss, c: '#ff5a4a', b: 1 }] },
     { rich: [{ t: '难度 ', c: '#a89ca8' }, { t: D.n, c: D.c, b: 1 }] },
     H('掉落'),
     { rich: [{ t: IN + '部队 ', c: '#e8dcc4' }].concat(span(uq)) },
     { rich: [{ t: IN + '图纸 ', c: '#e8dcc4' }].concat(span(bq)) });
-  return { title: t.title, c: t.c, lines };
+  return { title: t.title + (M.chClear && M.chClear(m, k) ? ' · 已通关' : ''), c: t.c, lines };
 };
 
 // 霓虹招牌 (a cabinet part) used to open the two shops with a catch; with one kind of shop it makes each shop's first refresh free

@@ -795,6 +795,21 @@ M.bossLines = (k) => { const K2 = KIT[k]; return K2 && K2.good ? [{ t: '擅长�
 // ───────── calibration: [tr, sk] per boss (.ai/sim-kit.js + .ai/kit-fit.py, random armies at shown ratios 0.5–1.8) ─────────
 // tr: the shown ratio an army needs to win half the time, folded in so that a shown 1.0 wins about half; sk: life over attack so a
 // final boss takes about 90 s and a small boss about 40 s. @CAL (rewritten by .ai/kit-cal.py)
+// 普通 / 困难: the bosses still ahead in this trip stay on the left of the map and the market, what each is good against and
+// what it fears (2026-09-28: 「局内场景中，普通和困难难度中，要在屏幕左侧，时时显示当前区域boss，擅长和怕的阵容组合，方便玩家搭配。（并且
+// 进入商店等可能需要处理部队的页面的时候，都要显示在左侧，这样，我才知道怎么选部队）」)
+const GPv = M.Game.prototype, oViewBp = GPv.view;
+GPv.view = function () {
+  const v = oViewBp.call(this), run = this.run, m = this.meta, scr = this.screen;
+  v.bkp = { on: false, rows: [] };
+  if (!run || !run.map || !run.map.nodes || (run.region && run.region.tut) || !m || (m.gd || 0) > 1 || (scr !== 'world' && scr !== 'shop') || this.storyFx || this.settle) return v;
+  const segs = M.segsOf ? M.segsOf(run.regionKey) || [] : [];
+  const rows = run.map.nodes.filter(n => n.type === 'boss' && !n.done).sort((a, b) => a.col - b.col).slice(0, 3).map(n => { const sg = segs[n.seg || 0] || {}, k = typeof n.fb === 'string' ? n.fb : sg.fb || (sg.mb && sg.mb.k), K2 = k && KIT[k]; if (!K2 || !K2.good) return null; return { n: (sg.mb && !n.fb && sg.mb.n) || (DB[k] && DB[k].n) || '首领', good: K2.good, weak: K2.weak }; }).filter(Boolean);
+  if (!rows.length) return v;
+  v.bkp = scr === 'shop' ? { on: true, rows, x: 16, y: 150, w: 320 } : { on: true, rows, x: 24, y: 330, w: 460 };
+  return v;
+};
+if (M.GUIDE) M.GUIDE.push({ id: 'bossplan', cat: '出征', icon: 'e_skull', title: '前面的首领', line: '这一趟还没打的首领，各自擅长对付和怕的阵容。', scr: ['world', 'shop'], sel: '[data-g="boss-plan"]' });
 // losing to a boss says what beats it (2026-09-28: 「每次失败的时候，假如是打Boss失败的，要说一下，要想打过这个Boss应该配置什么阵容。
 // 如果是其他情况失败的，就不用说了」): the battle is gone by the time runFail builds the fail screen, so the boss is noted first
 const GP = M.Game.prototype, oSN = GP.settleNext;
@@ -815,7 +830,7 @@ const oTF = GP.tipFor;
 GP.tipFor = function (key) { if (key === 'end-adv') { const e = this.endInfo || {}; return { title: '怕什么', c: '#b6f28a', d: e.advN ? e.advN + '怕的阵容。' : '这个首领怕的阵容。' }; } return oTF ? oTF.apply(this, arguments) : null; };
 if (M.GUIDE) M.GUIDE.push({ id: 'lostboss', cat: '出征', icon: 'e_skull', title: '怕什么', line: '输给首领时，这块牌子写着它怕的阵容。', scr: 'end', sel: '[data-tip="end-adv"]' });
 
-// 2026-09-28 (bot matrix, bosses met as a trip's first boss): 德鲁伊 won 5 of 10 at a shown ~1.5, 守钟人 11 of 15, 哨眼 0 of 2 — their tr ×1.35 / ×1.2 / ×1.3
-const CAL = { Centaur: [1.096, 0.8], Cerberus: [0.91, 1.23], ChaosButcher: [0.63, 0.9], ChaosGuardBlackKatos: [0.636, 0.8], ChaosSoldier: [0.661, 0.89], DecayingChampionRat: [1.582, 0.89], EarthDragonIron: [1.142, 1.26], EarthDragonKingGargon: [1.01, 1.22], EvilEyeDark: [0.867, 0.8], FB_bell: [1.342, 1.49], FB_captain: [1.42, 1.7], FB_clown: [2.002, 1.43], FB_colossus: [1.634, 1.16], FB_croupier: [1.316, 2.22], FB_dealer: [0.994, 1.84], FB_demon: [1.577, 2.6], FB_doll: [1.521, 0.88], FB_druid: [2.183, 0.8], FB_ferry: [1.383, 1.31], FB_foreman: [1.73, 2.6], FB_grave: [1.415, 1.59], FB_jailer: [1.208, 1.65], FB_maw: [1.589, 1.95], FB_mech: [1.705, 1.37], FB_nurse: [1.208, 1.33], FB_queen: [1.644, 2.22], FB_surgeon: [1.597, 2.12], FB_tree: [1.114, 0.8], FB_xeno: [1.758, 2.02], FourEyes: [4.059, 2.58], GhostKnight: [1.199, 0.8], HoneyBear: [1.108, 1.06], Kraken: [1.256, 0.8], LeopardEmperorSavalon: [0.499, 0.93], Mimic: [0.933, 1.72], Needler: [0.84, 1.37], OgreEnemy: [3.832, 2.6], Shaman: [0.892, 1.6], SiegeRam: [0.93, 1.42], SpiderEmperorAnazos: [0.714, 0.8], VerdantWormKing: [1.543, 0.83] };
+// 2026-09-28 (bot matrix, bosses met as a trip's first boss): 德鲁伊 won 5 of 10 at a shown ~1.5, 守钟人 11 of 15, 哨眼 0 of 2 — their tr ×1.35 / ×1.2 / ×1.3; 更夫 (the game's first boss, good against plain attackers — every day-1 army) ×1.15
+const CAL = { Centaur: [1.096, 0.8], Cerberus: [0.91, 1.23], ChaosButcher: [0.63, 0.9], ChaosGuardBlackKatos: [0.636, 0.8], ChaosSoldier: [0.661, 0.89], DecayingChampionRat: [1.582, 0.89], EarthDragonIron: [1.142, 1.26], EarthDragonKingGargon: [1.01, 1.22], EvilEyeDark: [0.867, 0.8], FB_bell: [1.342, 1.49], FB_captain: [1.42, 1.7], FB_clown: [2.002, 1.43], FB_colossus: [1.634, 1.16], FB_croupier: [1.316, 2.22], FB_dealer: [0.994, 1.84], FB_demon: [1.577, 2.6], FB_doll: [1.521, 0.88], FB_druid: [2.183, 0.8], FB_ferry: [1.383, 1.31], FB_foreman: [1.73, 2.6], FB_grave: [1.415, 1.59], FB_jailer: [1.208, 1.65], FB_maw: [1.589, 1.95], FB_mech: [1.705, 1.37], FB_nurse: [1.208, 1.33], FB_queen: [1.644, 2.22], FB_surgeon: [1.597, 2.12], FB_tree: [1.114, 0.8], FB_xeno: [1.758, 2.02], FourEyes: [4.059, 2.58], GhostKnight: [1.379, 0.8], HoneyBear: [1.108, 1.06], Kraken: [1.256, 0.8], LeopardEmperorSavalon: [0.499, 0.93], Mimic: [0.933, 1.72], Needler: [0.84, 1.37], OgreEnemy: [3.832, 2.6], Shaman: [0.892, 1.6], SiegeRam: [0.93, 1.42], SpiderEmperorAnazos: [0.714, 0.8], VerdantWormKing: [1.543, 0.83] };
 Object.keys(CAL).forEach(k => { if (KIT[k]) { KIT[k].tr = CAL[k][0]; KIT[k].sk = CAL[k][1]; } });
 })();

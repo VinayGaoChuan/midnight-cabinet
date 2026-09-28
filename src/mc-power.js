@@ -41,7 +41,7 @@ function tuneBoss(run, node, cfg) {
   // the gate: a trip's first boss cannot be gone round (撤离 only comes after it), so it is sized to the army a plain player
   // brings there, not to the chapter's level (2026-09-28: the bot matrix lost all 3 hearts by day 2–4 on every difficulty,
   // every heart at a trip's first boss — from a waypoint the chapter's level runs ~1.6× a segment ahead of what the grant buys)
-  const par = first && run.chap && M.parArmy ? M.parArmy(run, node) : 0; if (par > 0) { const D = (M.gdOf && M.gdOf(run.M)) || {}; target = par / (D.gate || M.GATE_R) / (fbN ? M.GATE_FB : 1) / ((fbN ? M.FB_SHOW : M.MB_SHOW) * (M.E_SHOW || 1)); }
+  const par = first && run.chap && run.map && M.parArmy ? M.parArmy(run, node) : 0; if (par > 0) target = M.gateShow(run, node, par) / ((fbN ? M.FB_SHOW : M.MB_SHOW) * (M.E_SHOW || 1));
   for (let k = 0; k < 18; k++) { const f = (lo + hi) / 2; bs.forEach(s => { s.hpMul = f; s.atkMul = f; }); if (M.powerOf(M.sideE(run, cfg)) > target) hi = f; else lo = f; }
   const f = +((lo + hi) / 2).toFixed(3), fb = !!(node.fb || (node.final && !run.chap)), k = M.bossSkew ? M.bossSkew(bs[0].type, fb) : fb ? M.FB_SKEW : 1;   // each boss its own life over attack (mc-bosskit.js)
   bs.forEach(s => { s.hpMul = +(f * k).toFixed(3); s.atkMul = +(f / k).toFixed(3); }); return cfg;
@@ -55,13 +55,19 @@ M.GATE_FB = 1.15;    // a final boss as the gate: the play bot won small bosses 
 M.GATE_BUY = 0.9;     // how much of the points' worth a plain player turns into power
 const cl = (v, a, b) => Math.max(a, Math.min(b, v));
 M.parLv = (day) => cl(Math.round(1.2 + 0.6 * day), 1, M.LV_MAX || 10);   // the play bot: Lv 2 on day 2, 3 on day 3, 6 on day 8
-M.parArmy = function (run, gate) {
-  const m0 = M._parMeta || (M._parMeta = M.defaultMeta3()), h = run.hero, day = (run.M && run.M.day) || 1; if (!h || !M.HEROES[h.cls] || !run.map) return 0;   // a preview without a leader keeps the chapter's own boss
-  const hx = { cls: h.cls, rarity: 0, lv: M.parLv(day), tree: [], taken: [], relics: [], hp: 1 }; let hp = M.heroMaxHp(hx, m0), dps = M.heroAtk(hx, m0) / ((M.HEROES[h.cls] || {}).cd || 1);
-  (run.roster0 || []).forEach(k => { const d = DB[k]; if (d) { hp += d.hp; dps += d.atk * (d.as || 100) / 100; } });   // the army it set out with, never what was bought since (a gate first seen late must not grow with the player)
+// o.hero: whose leader (default: a leader of the class at the day's usual level); o.units: the army it sets out with as
+// {hp, dps} (default: run.roster0). A run without a map (a stele's preview, mc-danger.js) counts one market after a waypoint,
+// one before the boss and a fight on every other stop.
+M.parArmy = function (run, gate, o) {
+  o = o || {}; const m0 = M._parMeta || (M._parMeta = M.defaultMeta3()), h = o.hero || run.hero || (o.cls && { cls: o.cls }), day = (run.M && run.M.day) || 1; if (!h || !M.HEROES[h.cls]) return 0;
+  const hx = o.hero || { cls: h.cls, rarity: 0, lv: M.parLv(day), tree: [], taken: [], relics: [], hp: 1 }, hm = o.hero ? run.M || m0 : m0; let hp = M.heroMaxHp(hx, hm), dps = M.heroAtk(hx, hm) / ((M.HEROES[hx.cls] || {}).cd || 1);
+  if (o.units) o.units.forEach(u => { hp += u.hp; dps += u.dps; });
+  else (run.roster0 || []).forEach(k => { const d = DB[k]; if (d) { hp += d.hp; dps += d.atk * (d.as || 100) / 100; } });   // the army it set out with, never what was bought since (a gate first seen late must not grow with the player)
   // points: the grant, one fight a column before the gate, the free pack at the market
-  let pts = run.grant || 0, shops = 0; const cap = M.topPrice ? M.topPrice(run) * ((M.SCORE_CAP || {}).fight || 1) : 1e9;
-  for (let c = 1; c < gate.col; c++) { const ns = run.map.nodes.filter(n => n.col === c); if (ns.some(n => n.type === 'shop')) shops++; else if (ns.some(n => n.type === 'normal' || n.type === 'elite')) pts += Math.min(cap, M.budgetAt(M.levelAt(run, { col: c, type: 'normal' })) * (M.KILL_K || 0.3)); }
+  let pts = (run.grant || 0) + (o.bank || 0), shops = 0; const cap = M.topPrice ? M.topPrice(run) * ((M.SCORE_CAP || {}).fight || 1) : 1e9;
+  const fight = (c) => { pts += Math.min(cap, M.budgetAt(M.levelAt(run, { col: c, type: 'normal' })) * (M.KILL_K || 0.3)); };
+  if (run.map && run.map.nodes) { for (let c = 1; c < gate.col; c++) { const ns = run.map.nodes.filter(n => n.col === c); if (ns.some(n => n.type === 'shop')) shops++; else if (ns.some(n => n.type === 'normal' || n.type === 'elite')) fight(c); } }
+  else { const wp = (run.startSeg || 0) > 0; for (let c = 1; c < gate.col; c++) { if ((wp && c === 1) || c === gate.col - 1) shops++; else fight(c); } }
   const capQ = M.stageOf ? M.stageOf(run).capQ : 1, pool = (M.SHOP_POOL || []).filter(k => DB[k] && DB[k].q <= capQ && DB[k].cost > 0);
   if (pool.length) { const pm = M.priceMul ? M.priceMul(run) : 1, R = M.GA_RATES || [60, 30, 10], byQ = (q) => pool.filter(k => DB[k].q === q), avg = (ks) => ks.reduce((a, k) => a + DB[k].cost, 0) / ks.length;
     const q1 = Math.min(1, capQ); let w = 0, pack = 0; for (let q = 0; q <= q1; q++) { const ks = byQ(q); if (ks.length) { w += R[q] || 0; pack += (R[q] || 0) * avg(ks); } } if (w) pts += shops * pm * pack / w;   // what the free pack is worth once the unlocked tiers cut it down
@@ -69,6 +75,9 @@ M.parArmy = function (run, gate) {
     hp += pw * shape; dps += pw / shape; }
   return Math.round(sq(hp * dps) / PK());
 };
+// the gate's shown power for a run (the same number the stele shows and the fight has): the plain army ÷ the difficulty's gate,
+// a final boss one step easier, a harder stele (中 / 高, mc-danger.js M.DANGER[].gate) one step harder
+M.gateShow = function (run, gate, par) { const D = (M.gdOf && M.gdOf(run.M)) || {}, T = (M.DANGER || [])[run.danger || 0] || {}, fbN = !!(gate.fb || (gate.final && !run.chap)); return par / (D.gate || M.GATE_R) / (fbN ? M.GATE_FB : 1) * (T.gate || 1); };
 // 撤离 comes right after a boss, so it is never easier than that boss (2026-09-27: 「撤退的难度要提高。撤退的难度由于在Boss后面，所以
 // 不能比Boss低。而且可以加一些精英」): two elites join its waves, then every enemy is scaled until the shown power is at least the
 // boss's that stands before it: 1.05–1.3 times it

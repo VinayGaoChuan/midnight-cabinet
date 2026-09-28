@@ -503,7 +503,7 @@ MINI.recruit = { title: '招募旗', img: 'e_flag', col: C.blue, text: '旗子�
     SHOW.later(mg, fly, () => { c.gone = mg.t; give(this, mg, [{ k: 'unit', type: c.k }], from); });
     endIn(this, mg, fly + [0.6, 0.9, 1.5, 2.3][tier - 1], M.DB[c.k].n + ' 跟上了你。', M.qc(M.DB[c.k].q | 0)); },
   down(mg, px, py) { let hit = false; mg.cards.forEach((c, i) => { if (Math.abs(px - c.x) < 124 && py > RBTOP - 30 && py < RBBOT + 60) { hit = true; MINI.recruit.take.call(this, mg, i); } }); if (!hit) SHOW.tap(this, mg, px, py); },
-  btns(mg) { if (mg.phase !== 'idle') return []; return mg.cards.map((c, i) => ({ t: '选 ' + M.DB[c.k].n, sub: (M.DB[c.k].voc || '') + ' · 战力 ' + M.unitPower(c.k), dis: !M.canAdd(this.run, c.k), why: '队伍满了', fn: () => MINI.recruit.take.call(this, mg, i) })).concat([{ t: '都不要', leave: 1, fn: () => { mg.cards.forEach(c => { c.dim = 1; }); S.mini('recruit', 'none'); this.miniSet('none'); SHOW.later(mg, 0.4, () => { if (this.mini === mg) this.miniFinish('旗子在风里响了一会儿。', '#8d8496'); }); } }]); },
+  btns(mg) { if (mg.phase !== 'idle') return []; return mg.cards.map((c, i) => { const tv = M.TAG.voc(M.DB[c.k].voc) || {}; return ({ t: '选 ' + M.DB[c.k].n, sub: (M.DB[c.k].voc || '') + ' · 战力 ' + M.unitPower(c.k), ic: tv.icon, subC: tv.c, /* the vocation's icon in front, in its colour (2026-09-28: 「职业icon要显示到下面选择按钮中的对应职业的前头，并且带上职业色」) */ dis: !M.canAdd(this.run, c.k), why: '队伍满了', fn: () => MINI.recruit.take.call(this, mg, i) }); }).concat([{ t: '都不要', leave: 1, fn: () => { mg.cards.forEach(c => { c.dim = 1; }); S.mini('recruit', 'none'); this.miniSet('none'); SHOW.later(mg, 0.4, () => { if (this.mini === mg) this.miniFinish('旗子在风里响了一会儿。', '#8d8496'); }); } }]); },
   tick(mg, dt) {
     mg.cards.forEach(c => { c.shake = Math.max(0, c.shake - dt * 3); c.lampK = Math.max(0, c.lampK - dt * 3);
       // 逐拍加码：灯一拍比一拍亮、剪影一拍比一拍抖，拍到升档那一拍：灯芯蹿高、帆布边烧焦
@@ -532,7 +532,7 @@ MINI.recruit = { title: '招募旗', img: 'e_flag', col: C.blue, text: '旗子�
         const fwd = sel ? Math.min(1, (t - c.stepT) / 0.2) * 24 : 0; if (sel && t - c.stepT < 0.2) { s = 'move'; fi = Math.floor(t * 12) % 8; }
         if (!M.PXR.MINI_D.cast(x, c.k, c.x + nope, RBF + fwd, s, fi, false, st2 < 0.05 ? '#ffffff' : null)) K.SP(x, c.k, c.x, RBF + fwd, 180); }
       x.restore();
-      const tv = M.TAG.voc(D.voc); K.chipC(x, D.n, c.x, RBBOT + 56, M.qc(D.q | 0), T.body); if (tv) K.IC(x, tv.icon, c.x + 96, RBBOT + 56, 40); });
+      /* the name chip and vocation icon under each figure are gone: the vocation's icon leads its button (2026-09-28) */ });
   } };
 
 // ───────── node metadata for the new events (map icon, label, blurb) ─────────

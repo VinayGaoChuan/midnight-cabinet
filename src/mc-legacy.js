@@ -63,7 +63,9 @@ const P_ = (g) => fix(g.prof);
 M.clsOpen = (p, k) => !!H[k] && !!(p && p.figs && p.figs[k]);
 const figAdd = (g, p, k, say) => { p.figs = Object.assign({}, p.figs, { [k]: 1 }); if (say && g.toast) g.toast('手办台上多了「' + H[k].n + '」', '#ffcf4a'); };
 // a feat brings its leader's figurine (told once the cabinet is open)
-G.figFeats = function () { const p = P_(this); if (!p) return; let got = 0; Object.keys(UNLOCK).forEach(k => { if (!M.clsOpen(p, k) && UNLOCK[k].ok(p)) { figAdd(this, p, k, M.unfolded(p)); got++; } }); if (got) this.saveProfile(); };
+// 2026-09-28 (「其他角色都要通过花金币购买解锁，没有其他任何解锁方式……机器房中的所有东西，只能使用代币解锁」): no feat brings a
+// figurine any more; kept as a no-op for its callers
+G.figFeats = function () {};
 // feats the unlocks and achievements read
 const oFS = G.fvStageStart;
 if (oFS) G.fvStageStart = function (key, tier) { if (tier === 3 && this.prof) { stats(this.prof).feverLegend = 1; this.saveProfile && this.saveProfile(); } return oFS.apply(this, arguments); };
@@ -75,7 +77,7 @@ M.evoMerge = function (run, three) { const nu = oEM.apply(this, arguments); cons
 G.achCheck2 = function () {
   this.figFeats();
   const p = P_(this), m = this.meta; if (!p || !m || !M.unfolded(p)) return; p.ach2 = p.ach2 || {};
-  let got = 0; ACH.forEach(a => { if (p.ach2[a.k]) return; let ok = false; try { ok = a.ok(m, p); } catch (e) {} if (!ok) return; p.ach2[a.k] = 1; p.tokens = (p.tokens || 0) + a.tok; got++; this.toast && this.toast('成就 · ' + a.n + ' · 代币 +' + a.tok, '#ffcf4a'); });
+  let got = 0; ACH.forEach(a => { if (p.ach2[a.k]) return; let ok = false; try { ok = a.ok(m, p); } catch (e) {} if (!ok) return; p.ach2[a.k] = 1; m.achTok = (m.achTok || 0) + a.tok; m.achN = (m.achN || 0) + 1; got++; this.toast && this.toast('成就 · ' + a.n + ' · 结算时代币 +' + a.tok, '#ffcf4a'); });   // tokens only at the settlement (2026-09-28: 「我好像没有结束游戏，但是代币却框框的涨……代币只能通过结算获得」; mc-parts.js adds the row)
   if (got) { S.up && S.up(2); this.saveProfile(); }
 };
 const oPD = G.passDay;
@@ -108,14 +110,22 @@ G.gameOver = function (reason) {
     (over.choices || []).forEach(c => { if (c.t === '重新开始') c.fn = () => { this.modal = null; this.lgOpen('setup'); }; });
   }
   if (snap && snap.tal.length && over && reason !== 'goal') {   // a game won leaves no fallen leader
-    const carve = (n) => {
-      p.shrine = (p.shrine || []).concat([{ id: M.rid(), cls: snap.cls, lv: snap.lv, day: snap.day, t: n, at: Date.now() }]);
-      if (p.shrine.length > M.SHRINE_MAX) p.shrine = p.shrine.slice(-M.SHRINE_MAX);
+    // the wall keeps every portrait: a new one never pushes an old one off (2026-09-28: 「遗像不要替换，现在好像新遗像会把旧遗像替换掉」);
+    // when all six places are taken, the player picks which one comes down, or keeps the wall as it is
+    const hang = (n, out) => {
+      const po = { id: M.rid(), cls: snap.cls, lv: snap.lv, day: snap.day, t: n, at: Date.now() };
+      p.shrine = (p.shrine || []).filter(x => x.id !== out).concat([po]);
       this.saveProfile(); S.up && S.up(2); this.toast && this.toast('遗像挂上了墙', '#ffcf4a');
     };
     const back = () => { this.modal = this.screen === 'menu' ? over : null; this.bump(); };
+    const carve = (n) => {
+      if ((p.shrine || []).length < M.SHRINE_MAX) { hang(n); back(); return; }
+      this.modal = { title: '墙上挂满了', text: '换下哪一张？', border: '#ffcf4a', img: 'skull', back,
+        choices: p.shrine.map(x => ({ t: '换下 Lv' + x.lv + ' ' + (H[x.cls] || H.watchman).n, sub: talOk(x.t) ? M.talName(x.t) + ' · 第 ' + x.t.L + ' 层' : '', fn: () => { hang(n, x.id); back(); } })).concat([{ t: '不刻了', fn: back }]) };
+      this.bump();
+    };
     this.modal = { title: '刻一张遗像', text: 'Lv' + snap.lv + ' ' + H[snap.cls].n + ' 倒下了。\n选一个它学会的天赋刻进遗像，下一局可以带上。', border: '#ffcf4a', img: 'skull', back,
-      choices: snap.tal.map(n => ({ t: M.talName(n) + ' · 第 ' + n.L + ' 层', sub: M.talDesc(n), gold: n.L >= 4, fn: () => { carve(n); back(); } })).concat([{ t: '不刻了', fn: back }]) };
+      choices: snap.tal.map(n => ({ t: M.talName(n) + ' · 第 ' + n.L + ' 层', sub: M.talDesc(n), gold: n.L >= 4, fn: () => carve(n) })).concat([{ t: '不刻了', fn: back }]) };
     this.bump();
   }
   return r;
@@ -157,7 +167,7 @@ const oNG = G.newGame;
 G.newGame = function () {
   // a new player: the first leader is random, its figurine a gift; without a new figurine the next game has it again
   const p0 = P_(this), fresh = p0 && !Object.keys(p0.figs || {}).length;
-  if (fresh && !M._nextCls) M._nextCls = pick(CLS);
+  if (fresh && !M._nextCls) M._nextCls = H.watchman ? 'watchman' : pick(CLS);   // every new player starts with 守夜人 (2026-09-28: 「开局只给一个守夜人英雄，玩家第一次进入游戏后，都给这个角色」)
   else if (p0 && !this._lgPick && !M._nextCls) { const own = CLS.filter(k => M.clsOpen(p0, k)); M._nextCls = own.includes(p0.lastCls) ? p0.lastCls : own[0] || null; }
   const r = oNG.apply(this, arguments), m = this.meta, p = P_(this), L = this._lgPick; M._nextCls = null; this._lgPick = null;
   const h = m && m.heroes && m.heroes[0]; if (h && p) { const st = stats(p); st.played = Object.assign({}, st.played, { [h.cls]: 1 }); if (fresh) { figAdd(this, p, h.cls, false); p.lastCls = h.cls; this.saveProfile(); } }
@@ -185,14 +195,14 @@ M.newRun3 = function (meta) {
 const oView = G.view;
 G.view = function () {
   const v = oView.call(this), p = this.prof, L = this.lg;
-  if (v.isMenu && v.mn && v.mn.on) { v.mnWall = M.unfolded(fix(p)); v.openWall = () => this.lgOpen('wall'); }
+  if (v.isMenu && v.mn && v.mn.on) { v.mnWall = M.unfolded(fix(p)); v.openWall = () => this.lgOpen('wall'); v.openAch = () => { this.lgOpen('wall'); if (this.lg) this.lg.tab = 'ach'; }; }
   v.lgOn = !!L && this.screen === 'menu';
   if (!v.lgOn) return v;
   const setup = L.mode === 'setup', kits2 = p.kits2 || {};
   // 手办台: the figurines owned stand lit; the others dark, with their price
   const leaders = CLS.map(k => { const on = M.clsOpen(p, k), sel = setup && L.cls === k, Hk = H[k], cost = FIG_COST[k], can = (p.tokens || 0) >= cost, PV = M.PASSIVE && M.PASSIVE[k];
     return { img: M.spriteURL(Hk.sprite, 6), n: Hk.n, c: on ? '#f4efe0' : '#a9a3c9', own: on, sub: Hk.skill.n, buy: !on, price: String(cost), pc: can ? '#ffcf4a' : '#e8434f', filt: on ? 'none' : 'brightness(0.3)', ring: sel ? '#ffcf4a' : on ? '#3d3a8c' : '#2b2461', op: on || can ? 1 : 0.6,
-      tipOn: this.tipFn({ title: Hk.n, c: '#ffcf4a', d: PV ? PV.n + '：' + PV.d(PV.v(1)) + '。' : '', lines: !on && UNLOCK[k] ? [{ t: UNLOCK[k].d + '，手办免费', c: '#a9a3c9' }] : [] }),
+      tipOn: this.tipFn({ title: Hk.n, c: '#ffcf4a', d: PV ? PV.n + '：' + PV.d(PV.v(1)) + '。' : '' }),
       onClick: () => { if (!on) { this.lgBuyFig(k); return; } if (!setup) return; L.cls = k; S.click && S.click(); this.bump(); } }; });
   const kits = KITS.map(K => { const own = !!kits2[K.k], sel = setup && L.kit === K.k;
     return { img: M.iconURL(K.ic, 3), n: K.n, d: K.d, c: own ? '#f4efe0' : '#a9a3c9', buy: !own, price: String(K.cost), pc: (p.tokens || 0) >= K.cost ? '#ffcf4a' : '#e8434f',
@@ -208,7 +218,7 @@ G.view = function () {
 };
 const oTip = G.tipFor;
 G.tipFor = function (key) {
-  if (key === 'lg-tok') return { title: '代币', c: '#ffcf4a', d: '每一局结束和成就换来，用来买卡带。' };
+  if (key === 'lg-tok') return { title: '代币', c: '#ffcf4a', d: '一局结束时结算，用来买手办、卡带和机台零件。' };
   return oTip.apply(this, arguments);
 };
 const oBack = G.backAction; if (oBack) G.backAction = function () { if (this.lg) { this.lgClose(); return; } return oBack.apply(this, arguments); };

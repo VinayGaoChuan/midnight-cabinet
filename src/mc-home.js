@@ -23,7 +23,10 @@ G.homeStep = function (dt) {
   }
   const c = q.cur; c.t += dt;
   const done = c.until ? (c.t > 0.25 && c.until()) : c.t >= (c.wait || 0);
-  if (done || c.t > 30) q.cur = null;
+  // a step gives up after 30 s — never while the player is still choosing (2026-09-28: 「凯旋没有倒计时，不应该因为一段时间没有选择，
+  // 自动跳过，我正思考呢，结果混沌入侵了」: the parade timed out, the night came and picked for them)
+  const asking = !!(this.parade || this.swapFx || this.garSwapFx || this.modal || this.relPick || this.dirPick || this.lvPick || this.visit || this.bpPick);
+  if (done || (c.t > 30 && !asking)) q.cur = null;
 };
 const oTick = G.tick;
 G.tick = function (dt) { const r = oTick.apply(this, arguments); this.homeStep(dt || 0); return r; };

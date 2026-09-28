@@ -32,8 +32,11 @@ G.view = function () {
   const L = this.lg, p = fix(this.prof);
   if (v.lg && L && p) {
     const tab = L.tab || 'main', can = PARTS.some(x => !(p.parts || {})[x.k] && (p.tokens || 0) >= x.cost);
-    v.lg.tabs = [{ n: L.mode === 'setup' ? '投币前' : '遗像墙', g: 'lg-tab-main' }, { n: '机台零件', g: 'lg-tab-parts', dot: can }].map((t, i) => { const sel = (i === 0) === (tab === 'main'); return Object.assign(t, { q: sel ? '#ffcf4a' : '#3d3a8c', c: sel ? '#ffcf4a' : '#a9a3c9', onClick: () => { L.tab = i ? 'parts' : 'main'; S.click && S.click(); this.bump(); } }); });
-    v.lg.tabMain = tab === 'main'; v.lg.tabParts = tab === 'parts';
+    // 成就 on a page of its own (2026-09-28: 「成就不要放在遗像墙中，而是要放在一个新的页面中，叫做成就」)
+    const TABS = ['main', 'parts', 'ach'];
+    v.lg.tabs = [{ n: L.mode === 'setup' ? '投币前' : '遗像墙', g: 'lg-tab-main' }, { n: '机台零件', g: 'lg-tab-parts', dot: can }, { n: '成就', g: 'lg-tab-ach' }].map((t, i) => { const sel = TABS[i] === tab; return Object.assign(t, { q: sel ? '#ffcf4a' : '#3d3a8c', c: sel ? '#ffcf4a' : '#a9a3c9', onClick: () => { L.tab = TABS[i]; S.click && S.click(); this.bump(); } }); });
+    v.lg.tabMain = tab === 'main'; v.lg.tabParts = tab === 'parts'; v.lg.tabAch = tab === 'ach';
+    v.lg.achLine = '每个成就只给一次代币，在那一局结算时给。';
     v.lg.partsLine = '装上的零件，每一局都有。';
     v.lg.parts = PARTS.map(x => { const own = !!(p.parts || {})[x.k], ok = (p.tokens || 0) >= x.cost;
       return { n: x.n, d: x.d, img: M.iconURL ? M.iconURL(x.ic, 3) : '', c: own ? x.c : '#a9a3c9', own, buy: !own, price: String(x.cost), pc: ok ? '#ffcf4a' : '#e8434f', filt: own ? 'none' : 'grayscale(1) brightness(0.7)', ring: own ? x.c : '#2b2461', op: own || ok ? 1 : 0.6,
@@ -95,4 +98,8 @@ G.panelView = function () {
 const oUp = G.garUp; if (oUp) G.garUp = function () { if (!on('badge')) return false; return oUp.apply(this, arguments); };
 
 if (M.GUIDE) M.GUIDE.push({ id: 'parts', cat: '机台', icon: 'u_star', title: '机台零件', line: '用代币装上，每一局都多一样玩法。', scr: 'menu', sel: '[data-g="lg-wall"]', when: (g) => M.unfolded && M.unfolded(g.prof) });
+// the achievements reached this game pay at its settlement (mc-legacy.js keeps them on the game until then); after the
+// difficulty's multiplier (mc-gdiff.js), they are paid as they are
+const oSR9 = M.settleRows;
+M.settleRows = function (m) { const S0 = oSR9.apply(this, arguments); if (m && m.achTok > 0) { S0.rows.push({ k: 'ach', n: '成就', ic: 'u_star', v: m.achN || 1, t: m.achTok }); S0.total += m.achTok; } return S0; };
 })();

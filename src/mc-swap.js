@@ -6,7 +6,7 @@
 // the army first; when the army is over its size and nothing is left to merge, the game stops for this:
 // · the card box at the army bar opens and the whole army flies out and fans into a row of cards (the new ones marked 新);
 // · the player picks one (click, or ← → and Enter) — it takes a red 离队 stamp and falls away; its copies go back to the pool
-//   (mc-pool.js), no money;
+//   (mc-pool.js), and it sells for half its price (2026-09-28; no money before);
 // · the rest fly back into the box, the lid snaps shut, and the game goes on.
 const M = window.MC, G = M.Game.prototype, DB = M.DB, S = M.Sfx, U = M.UI, P = M.PJ.PAL, Q = M.QUALITY, now = () => performance.now();
 const cl = (v, a, b) => Math.max(a, Math.min(b, v)), eo = (t) => 1 - Math.pow(1 - cl(t, 0, 1), 3);
@@ -30,9 +30,11 @@ G.swapPick = function (i) {
   F.chosen = i; F.ph = 'out'; F.t0 = F.t; S.stamp ? S.stamp() : S.click && S.click(); this.bump();
 };
 // the army leaves the table: the chosen one goes, its copies back to the pool (nothing paid)
+// — and it is sold for half its price (2026-09-28: 「在任何时候，直接替换，那么也会半价直接出售被替换掉的卡」; it paid nothing before)
 function release(g, F) {
-  const run = g.run, u = F.cards[F.chosen].u; run.roster = run.roster.filter(x => x !== u); if (g.sel === u.uid) g.sel = null;
-  g.fx && g.fx.pop && g.fx.pop(F.box.x + 60, F.box.y - 60, DB[u.type].n + ' 离队', Q[DB[u.type].q].c, 30, { rise: 40 });
+  const run = g.run, u = F.cards[F.chosen].u, v = M.sellValue ? M.sellValue(run, u) : 0; run.roster = run.roster.filter(x => x !== u); if (g.sel === u.uid) g.sel = null;
+  if (v > 0) { g.hold && g.hold('wallet', run.wallet); run.wallet += v; g.release && g.release('wallet'); }
+  g.fx && g.fx.pop && g.fx.pop(F.box.x + 60, F.box.y - 60, DB[u.type].n + ' 离队' + (v > 0 ? ' · +' + M.fmt(v) + ' 积分' : ''), Q[DB[u.type].q].c, 30, { rise: 40 });
 }
 const hit = (F, x, y) => F.cards.findIndex(c => Math.abs(x - c.x) < CW * F.sc / 2 + 6 && Math.abs(y - c.y) < CH * F.sc / 2 + 6);
 const ptr = { x: 960, y: 540 };

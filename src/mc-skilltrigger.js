@@ -10,20 +10,25 @@ const dist = (a, b) => Math.hypot(a.x - b.x, (a.y - b.y) * 1.2);
 const foesOf = (b, e) => b.foes(e);
 const need = (n, alive) => Math.max(1, Math.min(n, alive));
 const reach = (e) => (e.range || 150) + 100;
+// how far a target is the way attacks measure it (mc-battle3.js step): to the edge of a big body, along a final boss's arena edge —
+// by the centre a boss stood out of every trigger's reach and full bars waited 6 s each time (2026-09-28: 「技能要能够对Boss生效，
+// 现在有的单位，蓝条满了，结果就是不释放技能……例如咒刃学徒」)
+const nearAny = (b, e, r) => b.foes(e).some(o => far(e, o) <= r);
+const far = (e, o) => Math.hypot(o.x - e.x, (o.y - e.y) * (o.wideY || 1.2)) - ((o.sz || 1) - 1) * 30;
 const tgOf =(b, e) => (e.target && b.active(e.target) && e.target.side !== e.side ? e.target : b.nearestFoe(e, 3000));
 // trigger kinds: test(b, e) → true when the skill should fire now; d: how it reads to players (tooltips, docs)
 const T = {
   hurt: (p) => ({ d: '有友军生命低于 ' + Math.round(p * 100) + '%', test: (b, e) => b.allies(e).some(o => o.hp / o.maxHp <= p) }),
-  near: (r, n) => ({ d: n > 1 ? '身边有 ' + n + ' 个以上敌人（只剩更少时也放）' : '有敌人贴到身边（' + r + ' 以内）', test: (b, e) => { const f = foesOf(b, e); return f.filter(o => dist(o, e) <= r * (e.sz || 1)).length >= need(n, f.length); } }),
-  cluster: (r, n) => ({ d: '射程内的目标附近有 ' + n + ' 个以上敌人扎堆（只剩更少时也放）', test: (b, e) => { const tg = tgOf(b, e); if (!tg || dist(tg, e) > reach(e)) return false; const f = foesOf(b, e); return f.filter(o => dist(o, tg) <= r).length >= need(n, f.length); } }),
-  count: (n) => ({ d: '攻击范围内有 ' + n + ' 个以上敌人（只剩更少时也放）', test: (b, e) => { const f = foesOf(b, e); return f.length > 0 && f.filter(o => dist(o, e) <= reach(e)).length >= need(n, f.length); } }),
-  leap: (r) => ({ d: '最近的敌人进入 ' + r + ' 距离', test: (b, e) => !!b.nearestFoe(e, r) }),
-  engage: (m) => ({ d: '敌人进入攻击范围', test: (b, e) => !!b.nearestFoe(e, (e.range || 150) + (m || 60)) }),
-  approach: (r) => ({ d: '有敌人逼近到 ' + r + ' 以内', test: (b, e) => !!b.nearestFoe(e, r) }),
+  near: (r, n) => ({ d: n > 1 ? '身边有 ' + n + ' 个以上敌人（只剩更少时也放）' : '有敌人贴到身边（' + r + ' 以内）', test: (b, e) => { const f = foesOf(b, e); return f.filter(o => far(e, o) <= r * (e.sz || 1)).length >= need(n, f.length); } }),
+  cluster: (r, n) => ({ d: '射程内的目标附近有 ' + n + ' 个以上敌人扎堆（只剩更少时也放）', test: (b, e) => { const tg = tgOf(b, e); if (!tg || far(e, tg) > reach(e)) return false; const f = foesOf(b, e); return f.filter(o => dist(o, tg) <= r).length >= need(n, f.length); } }),
+  count: (n) => ({ d: '攻击范围内有 ' + n + ' 个以上敌人（只剩更少时也放）', test: (b, e) => { const f = foesOf(b, e); return f.length > 0 && f.filter(o => far(e, o) <= reach(e)).length >= need(n, f.length); } }),
+  leap: (r) => ({ d: '最近的敌人进入 ' + r + ' 距离', test: (b, e) => nearAny(b, e, r) }),
+  engage: (m) => ({ d: '敌人进入攻击范围', test: (b, e) => nearAny(b, e, (e.range || 150) + (m || 60)) }),
+  approach: (r) => ({ d: '有敌人逼近到 ' + r + ' 以内', test: (b, e) => nearAny(b, e, r) }),
   allyFight: () => ({ d: '攻击最高的友军开始交战', test: (b, e) => { const a = b.allies(e).filter(o => o !== e).sort((x, y) => y.atk - x.atk)[0]; return !!(a && b.nearestFoe(a, (a.range || 150) + 60)); } }),
-  bigTarget: (p) => ({ d: '射程内的目标生命还多（≥ ' + Math.round(p * 100) + '%，只剩 1 个敌人时也放）', test: (b, e) => { const tg = b.nearestFoe(e, (e.range || 150) + 200); if (!tg) return false; return tg.hp / tg.maxHp >= p || foesOf(b, e).length === 1; } }),
+  bigTarget: (p) => ({ d: '射程内的目标生命还多（≥ ' + Math.round(p * 100) + '%，只剩 1 个敌人时也放）', test: (b, e) => { const tg = tgOf(b, e); if (!tg || far(e, tg) > (e.range || 150) + 200) return false; return tg.hp / tg.maxHp >= p || foesOf(b, e).length === 1; } }),
   hurtAndSelf: (p, self) => ({ d: '有友军生命低于 ' + Math.round(p * 100) + '%，且自己生命高于 ' + Math.round(self * 100) + '%', test: (b, e) => e.hp / e.maxHp >= self && b.allies(e).some(o => o !== e && o.hp / o.maxHp <= p) }),
-  costly: (hp, r) => ({ d: '有敌人逼近到 ' + r + ' 以内，且自己生命够扣（> ' + hp * 2 + '）', test: (b, e) => e.hp > hp * 2 && !!b.nearestFoe(e, r) }),
+  costly: (hp, r) => ({ d: '有敌人逼近到 ' + r + ' 以内，且自己生命够扣（> ' + hp * 2 + '）', test: (b, e) => e.hp > hp * 2 && nearAny(b, e, r) }),
   any: () => ({ d: '场上有敌人', test: (b, e) => foesOf(b, e).length > 0 }),
 };
 // every castable skill: a unit's own mana trait, by class (without Summon…Trait)

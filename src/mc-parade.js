@@ -64,7 +64,11 @@ function card(ctx, c, i, T, F, g) {
     ico('u_star', x0); U.text(ctx, ps, x0 + IZ + GP, 80, FS, '#ffe08a', { align: 'left' }); }
   // what it does, and what the garrison already has of its kind (2026-09-27 feedback: 「别让选择只剩比战力……旁边展示基地已有
   // 阵容、缺什么职业，以及候选单位的技能」)
-  wrap(ctx, M.unitLine ? M.unitLine(u.type) : '', CW - 44, 22).slice(0, 2).forEach((ln, j) => U.text(ctx, ln, 0, 124 + j * 30, 22, P.cream));
+  wrap(ctx, M.unitLine ? M.unitLine(u.type) : '', CW - 44, 22).slice(0, 1).forEach((ln, j) => U.text(ctx, ln, 0, 124 + j * 30, 22, P.cream));
+  // how many of it, and of its line, the base already holds — picking for an evolution (2026-09-28: 「要显示这几个部队，当前基地中，有多少个
+  // 与他相同的单位，以及有多少个与他处于同一个进化链中的单位，这样，我好决定是不是选择他，为了进化」)
+  { const gar = (g.meta && M.garrisonOf ? M.garrisonOf(g.meta) : []) || [], same = gar.filter(x => x.type === u.type).length, line = d.line ? gar.filter(x => DB[x.type] && DB[x.type].line === d.line).length : same, evo = d.next && same === (M.EVO_NEED || 3) - 1;
+    U.R(ctx, -CW / 2 + 14, CH / 2 - 110, CW - 28, 42, P.ink); U.text(ctx, evo ? '带回就进化 · 同链 ' + line + ' 支' : '基地同名 ' + same + ' 支 · 同链 ' + line + ' 支', 0, CH / 2 - 89, 21, evo ? P.gold : same ? P.lavender : '#a9a3c9'); }
   const hint = garHint(g, d); if (hint) { U.R(ctx, -CW / 2 + 14, CH / 2 - 62, CW - 28, 44, P.ink); U.text(ctx, hint.t, 0, CH / 2 - 40, 22, hint.c); }
   // the card's landing: a white flash over it
   if (age < 0.18 && !still) { ctx.globalAlpha = a * 0.8 * (1 - age / 0.18); U.R(ctx, -CW / 2, -CH / 2, CW, CH, P.white); }

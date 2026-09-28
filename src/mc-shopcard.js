@@ -40,7 +40,9 @@ G.view = function () {
     su.mergeOn = !c.sold && n === (M.EVO_NEED || 3) - 1 && (!M.evoOpen || M.evoOpen(run.M, c.type)); if (su.mergeOn) su.evoOn = false;
   });
   v.s.starImg = M.iconURL('u_star', 2);
-  v.s.selOn = false;   // nothing is sold (2026-09-27: 「部队不允许卖，只允许替换」)
+  // a unit picked in the army sells for half its price (2026-09-28: 「加一个半价出售单位的功能，如果在商店，点击部队，出现出售按钮，点击出售，
+  // 就可以出售这张卡」 — it had been 「部队不允许卖，只允许替换」 since 2026-09-27)
+  if (!this.replace) { const su = run.roster.find(x => x.uid === this.sel), tut = !!((run.region && run.region.tut) || run.tut); v.s.selOn = !!su && !tut; v.s.sell = su ? '出售 ' + DB[su.type].n + ' +' + M.fmt(M.sellValue(run, su)) : ''; }
   return v;
 };
 const oTip = G.tipFor;

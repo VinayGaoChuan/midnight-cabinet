@@ -73,7 +73,7 @@ G.view = function () {
     v.rp = { close: (e) => this.repClose(e), keep: stop,
       heads: COLS.map(([k, n, c]) => ({ n: n + (P.sort === k ? (P.desc ? ' ▼' : ' ▲') : ''), c: P.sort === k ? c : '#a9a3c9', go: (e) => this.repSort(k, e) })),
       rows: rows.map(r => ({ img: r.img, n: r.n, qc: r.qc, op: r.fell ? 0.6 : 1, tipOn: this.tipFn(() => M.unitTip(r.k)), cells: COLS.map(([k, , c]) => ({ w: Math.round(200 * r[k] / mx[k]), c, v: M.fmt(r[k]) })) })) };
-  } else v.rp = { heads: [], rows: [] };
+  } else v.rp = Object.assign({ heads: [], rows: [] }, v.rp);   // v.rp is shared: the religion / 守护神 / blueprint pickers (earlier modules) fill it too — clearing it froze the game under their dark cover (2026-09-28: 「屏幕就卡住了……有层压暗」)
   return v;
 };
 // what a fight on the map brings (the plan's 「悬浮战斗节点时显示敌人特点，例如群攻、治疗、厚甲、远程」; 2026-09-27 feedback:

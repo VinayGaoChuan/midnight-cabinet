@@ -144,6 +144,11 @@ G.endBack = function () {
   }
   return r;
 };
+// three of a kind that joined any other way (recruiting, a visitor, an event) evolve as soon as the base is quiet — they used to
+// wait for the next homecoming (2026-09-28: 「我从新的一局回来后，上一轮没有进化的，结果在本轮结算后进化了」)
+const garBusy = (g) => g.homeQ || g.parade || g.evoFx || g.modal || g.panel || g.relPick || g.dirPick || g.visit || g.raid || g.raidPrep || g.night || g.rite || g.tear || g.lvFx || g.lvPick || g.garSwapFx || g.coreFx || g.coreQueue;
+const oTickE = G.tick;
+G.tick = function (dt) { const r = oTickE.apply(this, arguments), m = this.meta, t = now(); if (m && m.tutDone && this.screen === 'base' && t - (this._garEvoAt || 0) > 600) { this._garEvoAt = t; if (!garBusy(this)) this.garEvo(); } return r; };
 // start the next evolution in the garrison, if any (true: one started)
 G.garEvo = function () {
   const m = this.meta; if (!m || this.evoFx || this.screen !== 'base') return false;
@@ -406,7 +411,7 @@ G.view = function () {
     const gs = M.settings && M.settings.garSort === 'q' ? 'q' : 'voc', VO = Object.keys(M.VOC || {}), vi = (k) => { const i = VO.indexOf(DB[k].voc); return i < 0 ? 99 : i; };
     v.b.garOn = Object.keys(c).length > 0;
     v.b.garSorts = [['voc', '职业', '驻军按职业排在一起。'], ['q', '品质', '驻军按品质从高到低排。']].map(([k2, n2, d2]) => { const on = gs === k2; return { n: n2, c: on ? '#ffcf4a' : '#3a3040', tc: on ? '#ffe08a' : '#8d8496', onClick: () => { if (on) return; M.settings.garSort = k2; M.saveSettings && M.saveSettings(M.settings); M.Sfx.click && M.Sfx.click(); this.bump(); }, tipOn: this.tipFn({ title: '按' + n2 + '排列', c: '#ffe08a', d: d2 }) }; });
-    v.b.gar = Object.keys(c).sort((a, b) => (gs === 'voc' ? vi(a) - vi(b) : 0) || DB[b].q - DB[a].q || c[b] - c[a]).slice(0, 14).map(k => ({ img: M.spriteURL(k, 3), c: Q[DB[k].q].c, n: c[k], nOn: c[k] > 1, tipOn: this.tipFn(() => { const t = M.unitTip ? M.unitTip(k, null, null) : { title: DB[k].n }; return Object.assign({}, t, { title: (t.title || DB[k].n) + (c[k] > 1 ? ' ×' + c[k] : ''), c: Q[DB[k].q].c }); }) })); }
+    v.b.gar = Object.keys(c).sort((a, b) => (gs === 'voc' ? vi(a) - vi(b) : 0) || DB[b].q - DB[a].q || c[b] - c[a]).slice(0, 14).map(k => ({ img: M.spriteURL(k, 3), c: Q[DB[k].q].c, n: c[k], nOn: c[k] > 1, tipOn: this.tipFn(() => { const t = M.unitTip ? M.unitTip(k, null, null) : { title: DB[k].n }; const lock = c[k] >= M.EVO_NEED && DB[k].next && !M.evoOpen(m, k);   /* three of a kind held back by the cap (2026-09-28: 「基地如果同时出现3个同名的单位，并没有进化」) */ return Object.assign({}, t, { title: (t.title || DB[k].n) + (c[k] > 1 ? ' ×' + c[k] : ''), c: Q[DB[k].q].c }, lock ? { lines: (t.lines || []).concat([{ t: '凑齐了，打通更深的区域才能进化成' + DB[DB[k].next].n + '。', c: '#ffcf4a' }]) } : {}); }) })); }
   if (v.b && m) { const k = M.nightKind(m.day), k2 = M.nightKind(m.day + 1); v.b.raidTxt = k ? '今晚' + NK[k].n : k2 ? '明晚' + NK[k2].n : '今晚混沌来袭'; v.b.raidC = k ? NK[k].c : '#ff5a4a'; v.raidTip = this.tipFn(() => this.tipFor('b-raid')); }
   // the fight's own bar: what this night is and how many are still coming
   const b = this.battle; if (v.h && b && this.run && this.run.raid) { let left = b.cfg.list.length - b.spawnI; b.ents.forEach(e => { if (e.alive && e.side === 'E') left++; }); v.h.mode = '混沌来袭'; v.h.modeColor = '#ff5a4a'; v.h.goal = '击退怪物 · 还剩 ' + left + ' 个'; }

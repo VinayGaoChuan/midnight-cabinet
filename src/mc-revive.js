@@ -3,7 +3,7 @@
 // The base core is back (user ruling 2026-09-26): 3 hearts for the whole game. A lost expedition tears the leader's
 // card, and the core gives one heart to mend it: a keeper walks in, lights the candles and says the rite, a red heart
 // leaves the core, flies into the torn card, the halves pull together along a golden seam and the leader lives again
-// with full life. Nothing to press, nothing to skip. When the core has no heart left the rite stops short, the card
+// with full life. A click jumps to the next beat (G.riteSkip). When the core has no heart left the rite stops short, the card
 // falls apart and the base goes up (game over). Clearing a world gives a heart back (never above 3).
 const M = window.MC, G = M.Game.prototype, S = M.Sfx, U = M.UI, P = M.PJ.PAL, now = () => performance.now();
 const cl = (v, a, b) => Math.max(a, Math.min(b, v)), eo = (q) => 1 - Math.pow(1 - q, 3), eback = (q) => { const c = 1.7; return 1 + (c + 1) * Math.pow(q - 1, 3) + c * Math.pow(q - 1, 2); };
@@ -87,6 +87,13 @@ G.riteTick = function (dt) {
   this.bump();
 };
 
+// a click jumps to the next beat — the tear, each line of the rite, the heart, the seam, the end (2026-09-28: 「复活动画，点一下，
+// 往下跳一句，现在是必须看完，这个动画应允许阶段性跳」); what the skipped part does still happens on the next tick
+G.riteSkip = function () {
+  const R = this.rite; if (!R) return; const T = R.T, t = R.t;
+  const marks = [T_RIP, T_NPC].concat(Array.from({ length: T.L }, (_, i) => T_LINES + i * LINE)).concat(R.rv.after > 0 ? [T.tH, T.tWhole, T.tEnd] : [T.tL + 0.3, T.tEnd]).sort((a, b) => a - b);
+  const nx = marks.find(x => x > t + 0.05); R.t = nx != null ? nx : T.tEnd; S.click && S.click(); this.bump();
+};
 // ───────── drawing (screen space, on the fx layer) ─────────
 function heartPx(x, a, b, s, c1, c2) {
   // 7×6 pixel heart, s px per cell
@@ -182,7 +189,7 @@ FLP.draw = function (ctx, noClear) { const g = M._g, r = oD.call(this, ctx, noCl
 const oView = G.view;
 G.view = function () {
   const v = oView.call(this);
-  if (this.rite) { v.coverOn = true; v.tipOn = false; v.pnOn = false; }
+  if (this.rite) { v.coverOn = true; v.tipOn = false; v.pnOn = false; v.coverClick = () => this.riteSkip(); }
   // the bar keeps showing the heart until it lifts off
   if (v.b && this.meta) { const c = this.coreShow != null ? this.coreShow : (this.meta.core == null ? M.CORE_MAX : this.meta.core); v.b.cores = [0, 1, 2].map(i => ({ img: M.iconURL(i < c ? 't_heart' : 'r_skel', 2), op: i < c ? 1 : 0.35 })); v.b.coreC = c <= 1 ? '#ff4a4a' : '#ff8ab0'; }
   return v;
