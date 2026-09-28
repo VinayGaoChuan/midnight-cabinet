@@ -32,8 +32,10 @@ const SX = new Proxy({}, { get: (_, k) => (...a) => { try { if (M.Sfx && M.Sfx.g
 M.GA_RATES = [45, 30, 18, 5.5, 1.5];                 // 普通 优质 稀有 史诗 传说 (%)
 M.GA_PITY = 4;                                        // this many packs below 稀有 in a row: the next one is 稀有 or better
 const LADDER = [60, 90, 135, 200, 300, 450, 680, 1000, 1500];
-// the price of the next pack in this shop: 60, each pack in the same shop half again; the first pack of a trip is free
+// the price of the next pack in this shop: the first is free, then 60 and half again each (2026-09-28: 「每到1个夜市，都能获得1次免费抽卡包的机会」;
+// it used to be the first pack of a trip)
 M.gaPrice = (run) => { if (!run) return 0; if (!run.gaFreeUsed) return 0; const k = M.priceMul ? M.priceMul(run) : 1; return Math.max(5, Math.round(LADDER[Math.min(LADDER.length - 1, run.gaPulls || 0)] * k / 5) * 5); };
+{ const GP = M.Game.prototype, oOS = GP.openShop; GP.openShop = function () { const run = this.run; if (run) { run.gaFreeUsed = false; run.gaPulls = 0; } return oOS.apply(this, arguments); }; }
 // the shop's trade: the same units its shelves draw from (mc-shops.js)
 function tradePool(run) { const S = (M.SHOPS || {})[run.shopKind] || {}, pooled = !!(run.pool && M.unitPool), base = (pooled ? M.unitPool(run) : M.SHOP_POOL || []).filter(k => DB[k] && DB[k].line);
   const p = S.pool ? base.filter(S.pool) : base; return p.length ? p : base; }

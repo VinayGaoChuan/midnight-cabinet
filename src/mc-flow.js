@@ -46,7 +46,8 @@ G.startGame = function () { if (this.modal && this.modal.over) this.modal = null
 // room by room like a broken core (mc-meta-b.js), then the game's summary and everything a lost game brings (mc-legacy.js)
 G.askAbandon = function () {
   if (this.raid || this.coreFx || this.coreQueue || this.tear || this.night) return;
-  this.modal = { title: '放弃这一局？', text: '算作失败：基地爆炸，这一局结束，进入结算。', border: '#d0453c', img: 'skull', back: () => { this.modal = null; this.bump(); },
+  const tok = M.settleRows && this.meta ? M.settleRows(this.meta).total : 0;
+  this.modal = { title: '放弃这一局？', text: '算作失败：基地爆炸，这一局结束，进入结算' + (tok > 0 ? '，拿到 ' + tok + ' 代币。' : '，一个代币也拿不到。'), border: '#d0453c', img: 'skull', back: () => { this.modal = null; this.bump(); },
     choices: [{ t: '放弃', danger: 1, fn: () => { this.modal = null; this.abandon(); } }, { t: '再想想', fn: () => { this.modal = null; this.bump(); } }] };
   this.bump();
 };

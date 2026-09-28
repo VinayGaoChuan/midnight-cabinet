@@ -17,7 +17,10 @@ G.bldTip = function (key, c, r) {
   return oldBase.call(this, key, c, r);
 };
 G.unitTip = function (type) { return M.unitTip(type, null, this.run); };
-G.runP = function (node) { return Math.max(4, M.budgetAt(M.levelAt(this.run, { col: node.col, type: 'normal' })) / 12); };
+// the base of every event's and mini game's points (a ticket is 8×, a prize n×): a twelfth of the stop's budget, scaled with what a fight
+// pays (2026-09-28: 「很多局内的小游戏事件，都是需要花费计费的，看看那些花费的积分与风险和收益是否成正比」 — KILL_K went 0.7 → 0.3 and a ticket
+// had come to cost two normal fights' pay; now it is about one again, as when these were made)
+G.runP = function (node) { return Math.max(2, M.budgetAt(M.levelAt(this.run, { col: node.col, type: 'normal' })) / 12 * (M.KILL_K || 0.7) / 0.7); };
 // ───────── battle ─────────
 G.beginBattle = function (n) {
   const run = this.run, cfg = M.makeBattleCfg(run, n); this.cfg = cfg; this.node = n;

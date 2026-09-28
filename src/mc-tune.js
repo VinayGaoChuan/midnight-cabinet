@@ -18,7 +18,11 @@ const T = M.TUNE = [
   ['一场仗', 'POWER_K', '战斗力公式里的系数', 'mc-voc.js'],
   // ── bosses ──
   ['首领', 'ELITE_T', '精英战敌人倍数（检查点）', 'mc-power.js'],
-  ['首领', 'BOSS_T0', '一趟第一个小首领 = 同站精英战 ×', 'mc-power.js'],
+  ['首领', 'GATE_R', '一趟躲不开的第一个首领：普通玩家的部队 ÷ 它（各难度见 GDIFF.gate）', 'mc-power.js'],
+  ['首领', 'GATE_FB', '第一个首领是最终首领时，再让一步', 'mc-power.js'],
+  ['一趟出征', 'WP_K', '从路标出发时，章节等级只算这么多', 'mc-scenes.js'],
+  ['首领', 'GATE_BUY', '普通玩家把积分换成战斗力的比例（算「普通玩家的部队」用）', 'mc-power.js'],
+  ['首领', 'BOSS_T0', '一趟第一个首领（没有进度信息时的后备）= 同站精英战 ×', 'mc-power.js'],
   ['首领', 'BOSS_TM', '后面的小首领 = 同站精英战 ×', 'mc-power.js'],
   ['首领', 'BOSS_TF', '最终首领 = 同站精英战 ×', 'mc-power.js'],
   ['首领', 'FBK.p2As', '最终首领第二阶段出手加快', 'mc-bossfight.js'],
@@ -35,7 +39,9 @@ const T = M.TUNE = [
   ['一趟出征', 'POOL_COPIES', '部队池里每条链的份数', 'mc-evo.js'],
   ['一趟出征', 'FAIL_EXP', '失败时领袖经验的比例', 'mc-revive.js'],
   // ── one game ──
-  ['一局', 'GDIFF', '四档难度：目标夜、夜晚强度、出征敌人、心、主基地、收获、代币', 'mc-gdiff.js'],
+  ['一局', 'GDIFF', '四档难度：目标夜、夜晚强度、出征敌人、第一个首领、心、主基地、收获、代币', 'mc-gdiff.js'],
+  ['多局', 'TOK_NIGHT0', '代币：守住第 n 夜给 这个数 + n', 'mc-meta-a.js'],
+  ['多局', 'TOK_CLEAR', '代币：每通关一个区域', 'mc-meta-a.js'],
   ['一局', 'MOON_K', '血月：整夜强度倍数', 'mc-gdiff.js'],
   ['一局', 'PROS_LV', '繁荣度门槛', 'mc-rules26.js'],
   ['一局', 'PROS_Q', '房间按品质给的繁荣度', 'mc-q6.js'],
@@ -49,6 +55,8 @@ const T = M.TUNE = [
   ['一局', 'RECRUIT_SUP', '在基地招募一支部队的物资', 'mc-soul.js'],
   // ── the night ──
   ['守夜', 'RAID_CROWD', '人海：开局数量、每天加多少、上限、纵深', 'mc-night.js'],
+  ['守夜', 'NIGHT.K', '夜晚强度整体倍数（乘在按天的曲线上）', 'mc-night.js'],
+  ['守夜', 'NIGHT.KD', '夜晚强度按天再弯一下：第 10 天前 ×1.4，第 15 天 ×1.9，第 20 天 ×2.8，第 30 天 ×3.8', 'mc-night.js'],
   ['守夜', 'RAID_CURVE', '按天的怪物强度倍数', 'mc-siege.js'],
   ['守夜', 'RAID_SIZE', '怪物体型', 'mc-bastion.js'],
   ['守夜', 'RAID_SHARD', '灵魂碎片掉落概率', 'mc-bastion.js'],
@@ -67,7 +75,7 @@ M.tuneSet = function (path, v) { const ks = path.split('.'), last = ks.pop(), o 
 const show = (v) => { if (v == null) return '—'; if (typeof v === 'number') return String(+v.toFixed(4)); try { const s = JSON.stringify(v, (k, x) => (typeof x === 'number' ? +x.toFixed(3) : typeof x === 'function' ? undefined : x)); return s.length > 160 ? s.slice(0, 157) + '…' : s; } catch (e) { return String(v); } };
 M.tuneTable = function () {
   const out = ['| 层 | 名字 | 现在的值 | 管什么 | 在哪 |', '|---|---|---|---|---|'];
-  T.forEach(([layer, path, what, where]) => { let v = get(path); if (path === 'BOSS_KIT' && v) v = Object.keys(v).length + ' 个首领'; if (path === 'GDIFF' && v) v = v.map(D => D.n + ' ' + D.goal + ' 夜 · 夜晚 ×' + D.night + ' · 出征 ×' + D.foe + ' · ' + D.core + ' 心').join('；'); out.push('| ' + layer + ' | `' + path + '` | ' + show(v).replace(/\|/g, '/') + ' | ' + what + ' | ' + where + ' |'); });
+  T.forEach(([layer, path, what, where]) => { let v = get(path); if (path === 'BOSS_KIT' && v) v = Object.keys(v).length + ' 个首领'; if (path === 'GDIFF' && v) v = v.map(D => D.n + ' ' + D.goal + ' 夜 · 夜晚 ×' + D.night + ' · 出征 ×' + D.foe + ' · 首领 ÷' + D.gate + ' · ' + D.core + ' 心').join('；'); out.push('| ' + layer + ' | `' + path + '` | ' + show(v).replace(/\|/g, '/') + ' | ' + what + ' | ' + where + ' |'); });
   return out.join('\n');
 };
 })();

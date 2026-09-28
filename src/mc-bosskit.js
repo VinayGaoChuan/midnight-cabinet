@@ -523,7 +523,7 @@ MV.watchThrust = { n: '三更', cd: 0, wind: 1.2,
   fire(b, e, P) { ours(b).forEach(u => { if (onLine(u, e.x, P.y, P.x1, P.y, 100)) b.bkHit(e, u, 2.6, { flat: [(P.x1 < e.x ? -1 : 1) * 300, 0, 1] }); }); b.fxp({ k: 'beam2', x1: e.x, y1: P.y - 50, x2: P.x1, y2: P.y - 50, col: '#9fe8e0', w: 34, life: 0.35 }); e.bk.gen = 0; e.bk.watch = 0; b.shake = Math.max(b.shake, 18); } };
 MV.lantern = mbFan('提灯', 0, 380, 0.7, { cd: 9, wind: 0.8, hit: () => ({ small: 1 }), each: (b, e, u) => { u.slowAS = 0.3; u.slowT = b.t + 5; b.float(u.x, u.y - 90 * (u.sz || 1), '昏暗', '#9fe8e0', 20); } });
 // 鼠王 — no area damage: rats keep coming, and each one standing shields their king
-MV.ratTide = { n: '鼠潮', cd: 5, cd0: 1, wind: 0.6, plan: (b, e) => (b.ents.filter(u => u.alive && u.bkOwner === e && u.bkTag === 'rat').length < 20 ? { omens: [] } : null), fire(b, e) { ratsOut(b, e, 6); } };
+MV.ratTide = { n: '鼠潮', cd: 6, cd0: 2, wind: 0.6, plan: (b, e) => (b.ents.filter(u => u.alive && u.bkOwner === e && u.bkTag === 'rat').length < 16 ? { omens: [] } : null), fire(b, e) { ratsOut(b, e, 4); } };
 const ratsOut = (b, e, n) => { for (let i = 0; i < n; i++) { const r = b.bkSummon(e, 'DecayingCorpseRat', e.x + (Math.random() - 0.5) * 200, e.y + (Math.random() - 0.5) * 160, { hp: 0.015, atk: 0.2, tag: 'rat', cap: 20, nm: '老鼠', entry: 'emerge' }); if (r) r.bkOnHit = (bb, s, tg, d, o) => { if (o.auto) bb.bkPoison(tg, 1, e.atk * 0.05, e, { max: 5, life: 6 }); }; } };
 MV.plagueBite = mbOn('瘟疫咬', 1.2, 70, tgtOf, { cd: 6, each: (b, e, u) => b.bkPoison(u, 3, e.atk * 0.05, e, { max: 5, life: 6 }) });
 // 巨掌 — one tank: three blows, the third throws it back; the honey heals it unless hit hard enough to drop the jar
@@ -711,15 +711,15 @@ K('FB_dealer', { good: '人海；第二阶段是单个主力', weak: '均衡的�
 // small bosses
 K('GhostKnight', { good: '只会普攻的阵容', weak: '法师、祭司、召唤师', sk: 1.2, p1: ['watchThrust', 'lantern'], roar: '灯灭',
   init(b, e, A) { A.gen = 0; A.watch = 0; },
-  hurt: (b, e, src, amt, o) => (o.auto ? hurtMul(b, e, amt, 0.12, '#9fe8e0') : fromUs(src) ? amt * 1.3 : amt),
+  hurt: (b, e, src, amt, o) => (o.auto ? hurtMul(b, e, amt, 0.4, '#9fe8e0') : fromUs(src) ? amt * 1.3 : amt),
   onP2(b, e, A) { A.fade = b.t; },
   tick(b, e, dt, A) { if (!e.casting && (A.gen || 0) < 3) { A.watch += dt; if (A.watch >= 6) { A.watch = 0; A.gen++; b.float(e.x, e.y - 150 * (e.sz || 1), ['一更', '二更', '三更'][A.gen - 1], '#9fe8e0', 34); try { S.tick && S.tick(8); } catch (err) { /* sound */ } } }
     if (A.fade != null) { const k = (b.t - A.fade) % 15; const on = k < 4; if (on !== !!e.stealth) { e.stealth = on; if (on) b.float(e.x, e.y - 150, '灯灭', '#9fe8e0', 32); } } },
   hud: (b, e, A) => ({ t: '报更 · ' + (['还没打更', '一更', '二更', '三更'][A.gen || 0]), v: (A.gen || 0) / 3 + (A.watch || 0) / 18, col: '#9fe8e0' }) });
 K('DecayingChampionRat', { good: '没有群伤', weak: '法师、会溅射的单位', sk: 1.2, p1: ['ratTide', 'plagueBite'], roar: '钻洞',
-  hurt(b, e, src, amt) { const n = b.ents.filter(u => u.alive && u.bkOwner === e && u.bkTag === 'rat').length; return n ? hurtMul(b, e, amt, 1 - Math.min(0.8, 0.08 * n), '#8fe04a') : amt; },
+  hurt(b, e, src, amt) { const n = b.ents.filter(u => u.alive && u.bkOwner === e && u.bkTag === 'rat').length; return n ? hurtMul(b, e, amt, 1 - Math.min(0.64, 0.08 * n), '#8fe04a') : amt; },
   onP2(b, e) { b.bkHide(e, 3, 'burrow', { onEnd: (bb, me) => ratsOut(bb, me, 8) }); b.dust(e.x, e.y, 20); },
-  hud: (b, e) => { const n = b.ents.filter(u => u.alive && u.bkOwner === e && u.bkTag === 'rat').length; return { t: '老鼠 ×' + n + ' · 鼠王受伤 −' + Math.round(Math.min(0.8, 0.08 * n) * 100) + '%', col: '#8fe04a' }; } });
+  hud: (b, e) => { const n = b.ents.filter(u => u.alive && u.bkOwner === e && u.bkTag === 'rat').length; return { t: '老鼠 ×' + n + ' · 鼠王受伤 −' + Math.round(Math.min(0.64, 0.08 * n) * 100) + '%', col: '#8fe04a' }; } });
 K('HoneyBear', { good: '前排只有一两个人', weak: '两三个先锋、守护者轮着挨打；爆发', sk: 1.2, p1: ['paws', 'honey'], roar: '暴躁',
   hit: (b, e, tg, amt, o) => (o.auto && !DEFENDER.has(vocOf(tg)) ? amt * 1.6 : amt),
   onP2(b, e) { e.asB += 0.4; },
@@ -795,6 +795,27 @@ M.bossLines = (k) => { const K2 = KIT[k]; return K2 && K2.good ? [{ t: '擅长�
 // ───────── calibration: [tr, sk] per boss (.ai/sim-kit.js + .ai/kit-fit.py, random armies at shown ratios 0.5–1.8) ─────────
 // tr: the shown ratio an army needs to win half the time, folded in so that a shown 1.0 wins about half; sk: life over attack so a
 // final boss takes about 90 s and a small boss about 40 s. @CAL (rewritten by .ai/kit-cal.py)
-const CAL = { Centaur: [1.002, 0.84], Cerberus: [1.235, 1.27], ChaosButcher: [0.737, 0.94], ChaosGuardBlackKatos: [0.755, 0.8], ChaosSoldier: [0.797, 0.93], DecayingChampionRat: [1.526, 1.17], EarthDragonIron: [1.258, 1.13], EarthDragonKingGargon: [0.967, 0.85], EvilEyeDark: [0.793, 0.8], FB_bell: [1.357, 2.4], FB_captain: [1.648, 1.62], FB_clown: [2.022, 1.28], FB_colossus: [1.575, 1.08], FB_croupier: [1.504, 1.79], FB_dealer: [1.106, 1.54], FB_demon: [1.9, 2.49], FB_doll: [1.91, 0.8], FB_druid: [1.629, 0.96], FB_ferry: [1.712, 1.39], FB_foreman: [1.976, 2.36], FB_grave: [1.579, 2.26], FB_jailer: [1.355, 1.46], FB_maw: [1.615, 1.71], FB_mech: [1.586, 1.15], FB_nurse: [1.064, 1.01], FB_queen: [1.657, 2.6], FB_surgeon: [1.503, 1.63], FB_tree: [1.394, 0.8], FB_xeno: [2.113, 1.75], FourEyes: [4.137, 2.6], GhostKnight: [1.653, 0.8], HoneyBear: [0.803, 1.19], Kraken: [1.456, 0.8], LeopardEmperorSavalon: [0.606, 0.94], Mimic: [0.987, 1.8], Needler: [0.962, 1.34], OgreEnemy: [2.788, 2.6], Shaman: [0.895, 1.32], SiegeRam: [1.116, 1.46], SpiderEmperorAnazos: [0.769, 0.8], VerdantWormKing: [1.149, 1.0] };
+// losing to a boss says what beats it (2026-09-28: 「每次失败的时候，假如是打Boss失败的，要说一下，要想打过这个Boss应该配置什么阵容。
+// 如果是其他情况失败的，就不用说了」): the battle is gone by the time runFail builds the fail screen, so the boss is noted first
+const GP = M.Game.prototype, oSN = GP.settleNext;
+GP.settleNext = function () {
+  const st = this.settle, b = this.battle, bo = st && st.final === 'fail' && b && b.ents ? b.ents.find(e => e.boss && e.side !== 'A') : null;
+  const img = (k) => { try { return M.spriteURL(k, 5); } catch (e) { return ''; } };
+  this._lostTo = bo ? { k: bo.kind || bo.type, n: bo.nm || (bo.d && bo.d.n) || '首领', img: img(bo.kind || bo.type) || img('skull') } : null;
+  return oSN.apply(this, arguments);
+};
+const oRF = GP.runFail;
+GP.runFail = function () {
+  const lt = this._lostTo; this._lostTo = null;
+  const r = oRF.apply(this, arguments), e = this.endInfo, K2 = lt && KIT[lt.k];
+  if (e && K2 && K2.weak) Object.assign(e, { hasAdv: true, advN: lt.n, advW: K2.weak, advImg: lt.img || '' });
+  return r;
+};
+const oTF = GP.tipFor;
+GP.tipFor = function (key) { if (key === 'end-adv') { const e = this.endInfo || {}; return { title: '怕什么', c: '#b6f28a', d: e.advN ? e.advN + '怕的阵容。' : '这个首领怕的阵容。' }; } return oTF ? oTF.apply(this, arguments) : null; };
+if (M.GUIDE) M.GUIDE.push({ id: 'lostboss', cat: '出征', icon: 'e_skull', title: '怕什么', line: '输给首领时，这块牌子写着它怕的阵容。', scr: 'end', sel: '[data-tip="end-adv"]' });
+
+// 2026-09-28 (bot matrix, bosses met as a trip's first boss): 德鲁伊 won 5 of 10 at a shown ~1.5, 守钟人 11 of 15, 哨眼 0 of 2 — their tr ×1.35 / ×1.2 / ×1.3
+const CAL = { Centaur: [1.096, 0.8], Cerberus: [0.91, 1.23], ChaosButcher: [0.63, 0.9], ChaosGuardBlackKatos: [0.636, 0.8], ChaosSoldier: [0.661, 0.89], DecayingChampionRat: [1.582, 0.89], EarthDragonIron: [1.142, 1.26], EarthDragonKingGargon: [1.01, 1.22], EvilEyeDark: [0.867, 0.8], FB_bell: [1.342, 1.49], FB_captain: [1.42, 1.7], FB_clown: [2.002, 1.43], FB_colossus: [1.634, 1.16], FB_croupier: [1.316, 2.22], FB_dealer: [0.994, 1.84], FB_demon: [1.577, 2.6], FB_doll: [1.521, 0.88], FB_druid: [2.183, 0.8], FB_ferry: [1.383, 1.31], FB_foreman: [1.73, 2.6], FB_grave: [1.415, 1.59], FB_jailer: [1.208, 1.65], FB_maw: [1.589, 1.95], FB_mech: [1.705, 1.37], FB_nurse: [1.208, 1.33], FB_queen: [1.644, 2.22], FB_surgeon: [1.597, 2.12], FB_tree: [1.114, 0.8], FB_xeno: [1.758, 2.02], FourEyes: [4.059, 2.58], GhostKnight: [1.199, 0.8], HoneyBear: [1.108, 1.06], Kraken: [1.256, 0.8], LeopardEmperorSavalon: [0.499, 0.93], Mimic: [0.933, 1.72], Needler: [0.84, 1.37], OgreEnemy: [3.832, 2.6], Shaman: [0.892, 1.6], SiegeRam: [0.93, 1.42], SpiderEmperorAnazos: [0.714, 0.8], VerdantWormKing: [1.543, 0.83] };
 Object.keys(CAL).forEach(k => { if (KIT[k]) { KIT[k].tr = CAL[k][0]; KIT[k].sk = CAL[k][1]; } });
 })();

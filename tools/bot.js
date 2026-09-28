@@ -51,10 +51,11 @@ function botShop(g, M) {
   (run.shop.items || []).forEach((c, i) => { if (!c.sold && c.cost <= run.wallet * 0.5 && run.items.indexOf(null) >= 0) g.buy('items', i); });
 }
 window.__bot = async function (secs, opts = {}) {
-  window.__botOpts = opts;
+  window.__botOpts = opts; window.__botStop = false;   // window.__botStop: whoever drives the bot ends it at the next step (tools/botmatrix.mjs: the game is over)
   const g = window.__mcg, M = window.MC, log = [], T0 = performance.now(); const minis = {}; let builds = 0, guides = 0, games = 0, raids = 0, viewErrs = 0, talents = 0, steps = 0, battles = 0, shops = 0, events = 0, chests = 0, settles = 0, nodes = 0;
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   while (performance.now() - T0 < secs * 1000) {
+    if (window.__botStop) { log.push('stop'); break; }
     steps++;
     for (let i = 0; i < (opts.fast ? 24 : 6); i++) g.tick(1 / 30);   // opts.fast: the growth sims (tools/prog.js) — same flow, less waiting
     if (g.guide) { guides++; g.guideClose(); }   // first-time explanation cards: read and dismissed
@@ -100,6 +101,9 @@ window.__bot = async function (secs, opts = {}) {
         else if (g.reel) { g.reel.t = 99; }
         else if (g.modal) { events++; const ch = (g.modal.choices || []).find(c => !c.dis) || (g.modal.choices || [])[0]; if (ch) ch.fn(); else g.modal = null; }
         else { const w = g.walker; g.keys.up = g.keys.down = false; g.keys.right = true; if (w && !w.edge) { const outs = M.nodeAhead(g.run.map, w.node); if (outs.length && !outs.find(o => o.dir === 'right')) { g.keys.right = false; g.keys[outs[0].dir] = true; }
+          // a careful player goes round an elite whose number is red or yellow (the novice walks straight on)
+          if (outs.length > 1 && !(window.__botOpts && window.__botOpts.novice)) { const run = g.run, mine = M.runPower(run), bad = (o) => { const n = run.map.nodes[o.b]; return n && n.type === 'elite' && mine < (M.nodePower(run, n) || 0) * 1.15; };
+            const cur = outs.find(o => g.keys[o.dir]) || outs[0]; if (bad(cur)) { const alt = outs.find(o => !bad(o)); if (alt) { g.keys.right = g.keys.up = g.keys.down = false; g.keys[alt.dir] = true; } } }
           // opts.extract: leave by the 撤离 point when the next boss looks too strong (a careful player)
           const ex = opts.extract && outs.find(o => g.run.map.nodes[o.b].type === 'extract'); if (ex && botLeave(g, M)) { g.keys.right = false; g.keys.up = g.keys.down = false; g.keys[ex.dir] = true; } } }
       }
@@ -112,5 +116,5 @@ window.__bot = async function (secs, opts = {}) {
     } catch (e) { log.push('ERR ' + s + ': ' + (e.stack || e).toString().slice(0, 300)); break; }
     await sleep(opts.sleep || 5);
   }
-  return { builds, core: g.meta.core, pros: g.meta.prosLv, guides, games, raids, viewErrs, talents, tokens: g.prof && g.prof.tokens, minis, steps, battles, settles, shops, events, chests, screen: g.screen, day: g.meta.day, heroes: g.meta.heroes.length, errs: (window.__mcErrs || []).slice(0, 5), log: log.slice(0, 10) };
+  return { builds, core: g.meta.core, pros: g.meta.prosLv, guides, games, raids, viewErrs, talents, tokens: g.prof && g.prof.tokens, minis, steps, battles, settles, shops, events, chests, screen: g.screen, day: g.meta.day, heroes: g.meta.heroes.length, errs: (window.__mcErrs || []).slice(0, 5), log: log.slice(0, 6).concat(log.filter(x => /^(ERR|VIEW)/.test(x)).slice(0, 3)) };
 };

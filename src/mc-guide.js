@@ -95,7 +95,7 @@ const CONCEPTS = [
   { id: 'shop', cat: '夜市', icon: 'e_market', title: '商店', line: '卖这一带的部队；右边的卡包可以抽。', scr: 'shop', sel: '[data-g="shop-units"]' },
   { id: 'shopnums', cat: '夜市', icon: 't_sword', title: '关键数值', line: '生命和它最拿手的那一项，高一档的同种部队数字更大。', scr: 'shop', sel: '[data-g="nums"]' },
   { id: 'shopbuy', cat: '夜市', img: () => sprite('coin', 4), title: '购买', line: '买下这支部队。', scr: 'shop', sel: '[data-g="buy"]' },
-  { id: 'gacha', cat: '夜市', icon: 'g_pack', title: '午夜卡包', line: '每家夜市都有的抽卡机：一包出一支这家店卖的部队，每趟第一包免费。', scr: 'shop', sel: '[data-fx="gapull"]' },
+  { id: 'gacha', cat: '夜市', icon: 'g_pack', title: '午夜卡包', line: '每家夜市都有的抽卡机：一包出一支这家店卖的部队，每家夜市第一包免费。', scr: 'shop', sel: '[data-fx="gapull"]' },
   { id: 'garate', cat: '夜市', icon: 't_clover', title: '出货概率', line: '每包出普通、优质、稀有、史诗、传说的概率。', scr: 'shop', sel: '[data-tip="s-garate"]' },
   { id: 'gapity', cat: '夜市', icon: 't_hourglass', title: '保底灯', line: '连着没出稀有就亮一盏，亮满 4 盏的下一包必出稀有以上。', scr: 'shop', sel: '[data-tip="s-gapity"]' },
   // ── 守城 ──

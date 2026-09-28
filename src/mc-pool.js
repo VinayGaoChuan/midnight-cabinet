@@ -254,7 +254,10 @@ G.steleTip = function (k) {
   const span = (hi) => [{ t: QN(0).n, c: QN(0).c, b: 1 }, { t: ' – ', c: '#8d8496' }, { t: QN(hi).n, c: QN(hi).c, b: 1 }];
   // one thing a line (2026-09-27: 「墓碑上面的文字，排列的时候，要换行……每个Boss都要换行显示，战斗力换行显示。掉落物换行显示」)
   const H = (t) => ({ rich: [{ t, c: '#a89ca8' }] }), IN = '　';
-  const lines = [H('首领')];
+  // the scene's own specialty comes first (2026-09-28: 「现在每个碑少显示了一个东西，就是当前场景的特色，例如经验获得1.6倍之类的」)
+  const feat = (M.worldLoot ? M.worldLoot(k) : []).filter(x => !x.c);
+  const lines = feat.length ? [H('特色')].concat(feat.map(x => ({ rich: [{ t: IN + x.t, c: '#9cff7a', b: 1 }] }))) : [];
+  lines.push(H('首领'));
   bosses.forEach(b => { const r = [{ t: IN + b.n, c: '#ff8a6a', b: 1 }]; if (b.bb) { const own = M.bbOwned && M.bbOwned(m, b.bb); r.push({ t: own ? '（图纸已得）' : '（图纸未得）', c: own ? '#9cff7a' : '#8d8496' }); } const K = M.bossKit && M.bossKit(b.k); if (K && K.good) r.push({ t: '　擅长对付' + K.good, c: '#a89ca8' }); lines.push({ rich: r }); });   // what each boss is good against (mc-bosskit.js)
   lines.push(H('战斗力'),
     { rich: [{ t: IN + '你 ', c: '#e8dcc4' }, { t: '★' + D.mine, c: '#ffe08a', b: 1 }].concat(D.gift ? [{ t: '（含开局积分 +' + D.gift + '）', c: '#a89ca8' }] : []) },
@@ -300,4 +303,7 @@ G.award = function (list, from) {
   const run = this.run; if (run && run.pool && Array.isArray(list)) list = list.filter(g => { if (!g || g.k !== 'unit') return true; const k = M.poolFit(run, g.type); if (!k) return false; g.type = k; return true; });
   return oAward.call(this, list, from);
 };
+// the army a trip set out with, once every module has built it (the gate's plain army reads it, mc-power.js M.parArmy)
+const oNR9 = M.newRun3;
+M.newRun3 = function () { const run = oNR9.apply(this, arguments); if (run) run.roster0 = (run.roster || []).map(u => u.type); return run; };
 })();

@@ -60,6 +60,7 @@ G.fvStageStart = function (key, tier, b) {
   const on = (t, fn) => st.ev.push({ t, fn });
   const Ix = key === 'pillar' ? PILLAR : I[key], tc = M.TIERS[tier].c;
   st.title = { n: Ix.name, sub: Ix.tiers[tier], c: tc, ic: Ix.icon };
+  if (this.feverFx) this.feverFx.title = st.title;   // the card in the middle of the screen (mc-fever.js) says what it is
   S.whoosh && S.whoosh(0.5); S.itemUse && S.itemUse(key === 'horn' ? 'bell' : key === 'pillar' ? 'heal' : key, f);
   const g = this, foes = () => b.ents.filter(e => e.alive && e.side === 'E' && !e.boss && e.x < 1900 && (b.t >= (e.entryT || 0)));   // never a boss
   if (key === 'bolt') {
@@ -179,9 +180,7 @@ function drawStage(ctx, g, st) {
     else if (mk.kind === 'rage') { const a2 = 0.6 + 0.4 * Math.abs(Math.sin(T * 5 + e.id)); ctx.globalAlpha = a * a2; U.R(ctx, p.x - 3, y - 6, 6, 14, '#ff9a3c'); U.R(ctx, p.x - 9, y - 6, 18, 4, '#ff9a3c'); U.R(ctx, p.x - 6, y - 10, 12, 4, '#ffcf4a'); U.R(ctx, p.x - 3, y - 14, 6, 4, '#ffcf4a'); }
     else if (mk.kind === 'shield') { ctx.strokeStyle = P.gold; ctx.lineWidth = 5; ctx.beginPath(); ctx.ellipse(p.x, p.y, 48 * zoom(g), 56 * zoom(g), 0, 0, Math.PI * 2); ctx.stroke(); }
     ctx.restore(); });
-  // the title: the effect and what it does, in the tier's colour
-  const tq = cl(T / 0.25, 0, 1); ctx.globalAlpha = fade; const ty = 96 - (1 - eo(tq)) * 40;
-  U.text(ctx, st.title.n, 960, ty, 64, st.title.c, { outline: true }); U.text(ctx, st.title.sub, 960, ty + 60, 32, P.cream, { outline: true });
+  // the effect's name and what it does: the card in the middle of the screen (mc-fever.js)
   ctx.restore();
 }
 const FLP = M.FxLayer.prototype, oD = FLP.draw;

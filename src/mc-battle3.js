@@ -23,7 +23,8 @@ H.IonicForce = { tick(b, e, v, dt) { b.mana(e, v[0] * dt, true); e.asDyn += Math
 H.ManaScaling = { tick(b, e, v) { e.asDyn += Math.floor(e.mana / 10) * v[1] / 100; } };
 H.Dominion = { init(b, e, v) { e.def += v[0] / 100; }, tick(b, e, v) { const n = b.allies(e).filter(o => o !== e && dist(o, e) < RX * 1.3 && o.pw >= e.pw).length; e.atkDyn -= n * v[2] / 100; e.defDyn -= n * v[2] / 100; e.st.dn = n; } };
 H.Entourage = { tick(b, e, v) { const n = b.allies(e).filter(o => o !== e && dist(o, e) < RS && o.pw > e.pw).length; e.atkDyn += n * v[0] / 100; e.defDyn += n * v[0] / 100; if (n && Math.random() < 0.02) b.link(e, b.allies(e).find(o => o !== e && dist(o, e) < RS && o.pw > e.pw), '#ffcc33'); } };
-H.ChainHeal = { tick: manaT(0), full(b, e, v) { let cur = b.lowest(e), done = new Set(), prev = e; for (let i = 0; i <= v[2] && cur; i++) { done.add(cur); b.heal(cur, e.atk * v[1] / 100, '#7fff9a'); b.fxp({ k: 'arc', x1: prev.x, y1: prev.y - 40, x2: cur.x, y2: cur.y - 40, col: '#7fff9a', life: 0.35 }); prev = cur; cur = b.allies(e).filter(o => !done.has(o) && o.hp < o.maxHp && dist(o, prev) < RM * 1.4).sort((a, c) => dist(a, prev) - dist(c, prev))[0]; } Sfx.heal(); } };
+H.ChainHeal = { tick: manaT(0), full(b, e, v) { let cur = b.lowest(e), done = new Set(), prev = e; const hv = v.length > 3 ? v[2] : v[1], nb = v.length > 3 ? v[3] : v[2];   // [mana, 1 ally, heal, bounces] (it read the "1" as the heal: 1% — 2026-09-28)
+  for (let i = 0; i <= nb && cur; i++) { done.add(cur); b.heal(cur, e.atk * hv / 100, '#7fff9a'); b.fxp({ k: 'arc', x1: prev.x, y1: prev.y - 40, x2: cur.x, y2: cur.y - 40, col: '#7fff9a', life: 0.35 }); prev = cur; cur = b.allies(e).filter(o => !done.has(o) && o.hp < o.maxHp && dist(o, prev) < RM * 1.4).sort((a, c) => dist(a, prev) - dist(c, prev))[0]; } Sfx.heal(); } };
 H.TreatmentChain = { start(b, e, v) { const t = b.allies(e).sort((a, c) => c.maxHp - a.maxHp)[0]; if (!t) return; const add = v[0] * 0.6; t.maxHp += add; t.hp += add; b.fxp({ k: 'dome', ent: t, col: '#9cff7a', life: 1.2 }); b.float(t.x, t.y - 110, '盖亚之盾 +' + fmt(add), '#9cff7a', 30); b.fxp({ k: 'arc', x1: e.x, y1: e.y - 40, x2: t.x, y2: t.y - 40, col: '#9cff7a', life: 0.5 }); Sfx.heal(); } };
 H.ChargeAttackNew = { start(b, e, v) { const tg = b.nearestFoe(e, 2000); if (!tg) return; e.leap = { x0: e.x, y0: e.y, x1: tg.x - 60, y1: tg.y, t0: b.t, dur: 0.5 }; e.stun = 0.55; b.later(0.5, () => { e.x = tg.x - 60; e.y = tg.y; e.leap = null; b.aoe(e, e.x + 30, e.y, RM, e.maxHp * v[0] / 100 * 4, '#ffb060'); b.fxp({ k: 'boom', x: e.x + 30, y: e.y - 10, life: 0.45 }); b.ring(e.x + 30, e.y - 10, 20, RM, '#ffd080', 12, 0.4); b.shake = Math.max(b.shake, 18); Sfx.impact(); b.dust(e.x, e.y, 20); }); Sfx.whoosh(0.4); } };
 H.JuniorFisherman = { near(b, e, vic, v) { if (dist(e, vic) < RS * 1.4) b.mana(e, v[0] * 4); }, full(b, e) { b.evolve(e); }, post(b, e, v, u) { if (u && u.battles >= v[1]) b.evolveU(u); }, noAuto: 1 };
@@ -45,7 +46,7 @@ H.Stoneskin = { hurt(b, e, s, d, v) { if (Math.random() < 0.25) b.burst(e.x, e.y
 H.Summon = { tick(b, e, v, dt, T) { if (!/每次攻击/.test(T.d)) b.mana(e, v[0] * dt, true); }, dealt(b, e, tg, d, v, c, T) { if (c.auto && /每次攻击/.test(T.d)) b.mana(e, v[0]); }, full(b, e, v, T) { const s = eng(T.d), n = /召唤2/.test(T.d) ? 2 : 1, life = v[v.length - 1] || 40; b.fxp({ k: 'circle', x: e.x + 70, y: e.y + 6, col: RCOL[e.d.race] || '#c890ff', life: 1.1 }); for (let i = 0; i < n; i++) b.later(0.35 + i * 0.15, () => b.summon(s[0], e.side, e.x + 70, e.y + (i ? 40 : 0), life, e)); Sfx.portal(); } };
 H.DimensionalRift = { tick: manaT(0), full(b, e, v, T) { const s = eng(T.d); e.hp = Math.max(1, e.hp - v[1]); b.fxp({ k: 'rift', x: e.x + 80, y: e.y - 40, life: 1.4 }); s.forEach((k, i) => b.later(0.4 + i * 0.2, () => b.summon(k, e.side, e.x + 80, e.y + (i ? 40 : -20), v[v.length - 1] || 60, e))); Sfx.portal(); } };
 H.Leech = { aura: { r: RM, col: '#ff4a5a', ally: 1, fn(b, e, o, v) { o.au.leech = Math.max(o.au.leech, v[0] / 100); } } };
-H.SkullStew = { tick: manaT(0), full(b, e, v) { const t = b.lowest(e); if (t) { b.heal(t, t.maxHp * v[1] / 100, '#b8ff80'); b.orb(e, t, '#b8ff80'); } } };
+H.SkullStew = { tick: manaT(0), full(b, e, v) { const t = b.lowest(e); if (t) { b.heal(t, t.maxHp * (v.length > 2 ? v[2] : v[1]) / 100, '#b8ff80');   /* [mana, 1 ally, % life]: it healed 1% (2026-09-28) */ b.orb(e, t, '#b8ff80'); } } };
 H.Fatality = { dealt(b, e, tg, d, v, c) { if (c.auto) { e.atk += v[0]; e.st.fat = (e.st.fat || 0) + v[0]; } }, end(b, e) { if (e.unit && e.st.fat) e.unit.bAtk += Math.round(e.st.fat * 0.15); } };
 H.EnergyRegenOnKill = { kill(b, e, vic, v) { b.mana(e, v[0]); b.soul(vic, e); } };
 H.Necromancy = { near(b, e, vic, v) { if (dist(e, vic) < RL) { b.mana(e, v[0]); b.soul(vic, e); } } };
@@ -87,8 +88,8 @@ H.WintryTouch = { aura: { r: RL, col: '#bfe8ff', foe: 1, fn(b, e, o, v, dt) { o.
 H.NimbleFeet = { init(b, e, v) { e.dodge += v[0] / 100; } };
 H.UnyieldingSpirit = { init(b, e, v) { e.dodge += v[0] / 100; }, dodged(b, e, v) { const k = e.unit && e.unit.battles >= 11 ? 2 : 1; e.maxHp += v[1] * k; e.hp += v[1] * k; e.atk += v[2] * k; if (e.unit) { e.unit.bHp += v[1] * k; e.unit.bAtk += v[2] * k; } b.float(e.x + 20, e.y - 90, '+' + v[1] * k, '#7fff9a', 20); } };
 H.Blooming = { post(b, e, v, u) { if (!u) return; const k = u.battles >= 11 ? 3 : 1; u.bHp += v[0] * k; u.bAtk += v[1] * k; u.lv++; b.growLog.push(DB[u.type].n + ' 绽放：生命 +' + v[0] * k + '，攻击 +' + v[1] * k); } };
-H.LifeBindVow = { tick: manaT(0), full(b, e, v) { const t = b.allies(e).filter(o => o !== e && !o.traits.some(x => x.cls === 'LifeBindVow') && o.hp < o.maxHp).sort((a, c) => a.hp / a.maxHp - c.hp / c.maxHp)[0]; if (!t) { e.mana = 90; return; } e.hp = Math.max(1, e.hp - e.atk * v[1] / 100); b.fxp({ k: 'beam2', x1: e.x, y1: e.y - 40, x2: t.x, y2: t.y - 40, col: '#ff7a9a', life: 0.45, w: 10 }); b.heal(t, e.atk * v[2] / 100, '#ff9ab0'); Sfx.heal(); } };
-H.IronHail = { tick: manaT(0), full(b, e, v) { const tg = e.target || b.nearestFoe(e, 900); if (!tg) return; const x = tg.x, y = tg.y; b.fxp({ k: 'rain', x, y, life: 0.9 }); [0.25, 0.55].forEach(t => b.later(t, () => { b.aoe(e, x, y, RS, e.atk * v[1] / 100, '#d8e0ea', o => { o.dmgDown = Math.min((o.dmgDown || 0) + v[3] * 10, v[5] * v[3] * 10); o.dmgDownT = b.t + v[4]; }); Sfx.hit(); })); } };
+H.LifeBindVow = { tick: manaT(0), full(b, e, v) { const t = b.allies(e).filter(o => o !== e && !o.traits.some(x => x.cls === 'LifeBindVow') && o.hp < o.maxHp).sort((a, c) => a.hp / a.maxHp - c.hp / c.maxHp)[0]; if (!t) { e.mana = 90; return; } e.hp = Math.max(1, e.hp - e.atk * v[1] / 100); b.fxp({ k: 'beam2', x1: e.x, y1: e.y - 40, x2: t.x, y2: t.y - 40, col: '#ff7a9a', life: 0.45, w: 10 }); b.heal(t, e.atk * (v.length > 3 ? v[3] : v[2]) / 100, '#ff9ab0'); Sfx.heal(); } };   // [mana, life spent, 1 ally, heal]: the heal is the fourth number (it read the "1" and healed 1% — 2026-09-28)
+H.IronHail = { tick: manaT(0), full(b, e, v) { const tg = e.target || b.nearestFoe(e, 900); if (!tg) return; const x = tg.x, y = tg.y; b.fxp({ k: 'rain', x, y, life: 0.9 }); [0.25, 0.55].forEach(t => b.later(t, () => { b.aoe(e, x, y, RS, e.atk * v[1] / 100, '#d8e0ea', o => { o.dmgDownP = Math.min((o.dmgDownP || 0) + v[3], v[5] * v[3]); o.dmgDownT = b.t + v[4]; }   /* a share of each blow now (it was v[3] × 10 points off every blow: −200 at 10 stacks, 2026-09-28) */); Sfx.hit(); })); } };
 H.ShadowBreeder = { dealt(b, e, tg, d, v, c, T) { if (!c.auto) return; e.st.sb = (e.st.sb || 0) + 1; if (e.st.sb >= v[0]) { e.st.sb = 0; const k = /超级/.test(T.d) ? 'ShadowKnightReplicator' : 'ShadowSwordsmanReplicator'; b.fxp({ k: 'circle', x: e.x - 40, y: e.y + 6, col: '#6a4a9a', life: 0.8 }); b.later(0.2, () => b.summon(k, e.side, e.x - 40, e.y, v[1], e)); } } };
 H.Exuberance = { init(b, e, v) { const n = e.unit ? e.unit.battles : 0, p = Math.max(0, v[0] - v[1] * n) / 100; e.atk *= 1 + p; e.def += p; if (p > 0) e.st.ex = p; }, start(b, e) { if (e.st.ex) b.float(e.x, e.y - 110, '繁茂 +' + Math.round(e.st.ex * 100) + '%', '#b8ff80', 26); } };
 H.Devotion = { tick(b, e, v, dt) { e.st.dv = (e.st.dv || 0) + dt; if (e.st.dv < 1) return; e.st.dv = 0; const t = pick(b.allies(e).filter(o => dist(o, e) < RS * 1.4 && o.hp < o.maxHp)); if (t) { b.heal(t, (t.maxHp - t.hp) * v[0] / 100, '#fff2a0'); b.orb(e, t, '#fff2a0'); } } };
@@ -239,7 +240,7 @@ class B3 extends M.Battle2 {
       if (e.lifeEnd && T > e.lifeEnd) { e.alive = false; this.burst(e.x, e.y - 30, '#8d8496', 6); continue; }
       e.buffs = e.buffs.filter(b => b.until > T);
       Object.keys(e.debuf).forEach(k => { if (e.debuf[k].until < T) delete e.debuf[k]; });
-      if (e.slowT < T) e.slowAS = 0; if (e.dmgDownT && e.dmgDownT < T) e.dmgDown = 0;
+      if (e.slowT < T) e.slowAS = 0; if (e.dmgDownT && e.dmgDownT < T) { e.dmgDown = 0; e.dmgDownP = 0; }
       if (e.au.regen) this.regen(e, (e.maxHp - e.hp) * e.au.regen * dt, '#7fff9a');
       if (e.au.hps) this.regen(e, e.au.hps * dt, '#7fff9a');
       e.buffs.forEach(b => { if (b.regen) this.regen(e, b.regen * dt); });
@@ -313,6 +314,7 @@ class B3 extends M.Battle2 {
     if (o.auto && tg.dodge && Math.random() < tg.dodge) { this.float(tg.x, tg.y - 80 * tg.sz, '闪避', '#b8f0ff', 24); tg.dodgeFx = this.t; Sfx.dodge(Sfx.panX(tg.x)); for (const t of tg.traits) { const h = H[t.cls]; if (h && h.dodged) h.dodged(this, tg, t.v); } return 0; }
     let d = amt;
     if (src && src.dmgDown) d = Math.max(d * 0.2, d - src.dmgDown);
+    if (src && src.dmgDownP) d *= Math.max(0.2, 1 - src.dmgDownP / 100);
     if (src && src.plasma) d *= 1 - src.plasma * 0.02;
     let def = tg.def + tg.defDyn + (tg.au.def || 0) + tg.buffs.reduce((a, b) => a + (b.def || 0), 0);
     Object.values(tg.debuf).forEach(D => def -= D.v * D.n);
@@ -457,7 +459,7 @@ function drawBars(ctx, e, T, b) {
   U.R(ctx, x - 2, top - 2, w + 4, e.hasMana ? 16 : 10, PL.ink);
   M.hpBar(ctx, x, top, w, 6, e, { hp: e.hp, max: e.maxHp, col: hc, hi: hh, lo: hl, T, frame: false });   // two layers and ticks (mc-hpbar.js)
   if (e.shield > 0) U.R(ctx, x, top, w * clamp(e.shield / e.maxHp, 0, 1), 2, PL.ice);
-  if (e.hasMana) { const ch = b.skillCharge ? b.skillCharge(e) : e.mana, ready = ch >= 100 && !e.casting && e.alive;
+  if (e.hasMana) { const ch = b.skillCharge ? b.skillCharge(e) : e.mana, ready = ch >= 100 && !e.casting && e.alive && (!b.canSkill || b.canSkill(e, true));   // only a castable skill blinks (火焰箭 spends its mana blow by blow)
     if (ready) { ctx.save(); ctx.globalAlpha *= 0.5 + 0.5 * Math.sin(T * 4 * Math.PI); U.R(ctx, x - 2, top + 6, w + 4, 8, PL.butter); U.R(ctx, x, top + 8, w, 4, PL.ink); ctx.restore(); }   // a ready skill waiting for its trigger: the bar's frame blinks
     const mw = w * clamp(ch / 100, 0, 1); if (mw > 0) { U.R(ctx, x, top + 8, mw, 4, PL.teal); U.R(ctx, x, top + 8, mw, 2, PL.ice); } }
   // 品质菱形：品质色像素菱形，墨色大一圈垫底，顶格亮一阶

@@ -27,7 +27,7 @@ M.worldDanger = function (m, k) {
 const LOOT = {
   sup: (v) => ({ ic: 'sack', t: '物资 ×' + v }), exp: (v) => ({ ic: 'orb', t: '经验 ×' + v }), wallet: (v) => ({ ic: 'coin', t: '积分 ×' + v }),
   item: () => ({ ic: 'bell', t: '战后常掉支援道具' }), tile: () => ({ ic: 'gem', t: '会掉地脉结晶' }), rbp: () => ({ ic: 'g_scroll', t: '常掉宝物图纸' }),
-  heal: (v) => ({ ic: 't_heal', t: '每场战斗后领袖回复 ' + Math.round(v * 100) + '% 生命' }), bpq: () => ({ ic: 'u_star', t: '图纸品质更高' }), shards: () => ({ ic: 'shard', t: '每场战斗得灵魂碎片' }),
+  heal: (v) => ({ ic: 't_heal', t: '每场战斗后领袖回复 ' + Math.round(v * 100) + '% 生命' }), bpq: () => ({ ic: 'u_star', t: '图纸品质更高' }), shards: () => ({ ic: 'shard', t: '每场战斗得灵魂碎片' }), fever: (v) => ({ ic: 't_mult', t: 'FEVER 槽涨得快 ' + Math.round(v * 100) + '%' }),
 };
 M.worldLoot = function (k) {
   const th = M.WTHEME && M.WTHEME[k]; if (!th) return [];

@@ -339,7 +339,7 @@ MINI.roulette = { title: '午夜转盘', img: 'e_wheel', col: C.red, text: '荷�
   },
   btns(mg) { if (mg.phase !== 'idle') return []; const left = mg.max - mg.spins, poor = this.run.wallet < mg.pay, over = left <= 0;
     const b = (t, k, sub) => ({ t, sub: mg.pay + ' 积分 · 中了 ' + sub, dis: poor || over, why: over ? '荷官收起了转盘' : '积分不够', fn: () => MINI.roulette.spin.call(this, mg, k) });
-    return [b('押红', 'r', '×2'), b('押黑', 'b', '×2'), b('押金', 'g', '×10'), { t: '离开', leave: 1, sub: '还能转 ' + left + ' 次', gold: over, fn: () => this.miniFinish(mg.net > 0 ? '你赢走了 ' + M.fmt(mg.net) + ' 积分。荷官的笑容僵住了。' : mg.net < 0 ? '转盘吃掉了你 ' + M.fmt(-mg.net) + ' 积分。' : '你看了一会儿，没有下注。', mg.net > 0 ? '#ffcc33' : '#8d8496') }]; },
+    return [b('押红', 'r', '×2.2'), b('押黑', 'b', '×2.2'), b('押金', 'g', '×13'), { t: '离开', leave: 1, sub: '还能转 ' + left + ' 次', gold: over, fn: () => this.miniFinish(mg.net > 0 ? '你赢走了 ' + M.fmt(mg.net) + ' 积分。荷官的笑容僵住了。' : mg.net < 0 ? '转盘吃掉了你 ' + M.fmt(-mg.net) + ' 积分。' : '你看了一会儿，没有下注。', mg.net > 0 ? '#ffcc33' : '#8d8496') }]; },
   // 直接点桌面上的下注位也能下注（和按键一样）；点别处交给框架
   down(mg, x, y, src) {
     const k = src === 'key' ? null : spotAt(x, y); if (!k) return src === 'key' ? undefined : false;
@@ -371,10 +371,10 @@ MINI.roulette = { title: '午夜转盘', img: 'e_wheel', col: C.red, text: '荷�
     if (mg.reachLv && !mg.reached && pt > mg.TA - 0.5) { mg.reached = true; const b = ballXY(mg); SHW.reach(this, mg, { x: b.x, y: b.y, r: 110, lv: mg.reachLv, label: mg.reachLv >= 2 ? '金格！' : '听牌！', col: mg.reachLv >= 2 ? C.gold : C.red }); if (mg.reachLv >= 2) mg.cro = { st: 'charge', t0: mg.t }; }
     if (mg.sh && mg.sh.tense) { const b = ballXY(mg); mg.sh.tense.x = b.x; mg.sh.tense.y = b.y; }
     const sec = Math.floor(phi / st); if (sec !== mg.lastSec) { mg.lastSec = sec; if (p > 0.85) S.mini('roulette', 'click'); }
-    if (pt >= mg.dur) { mg.ang = mg.af; mg.spins++; const r0 = RSEC[mg.tg]; mg.hist.push(r0); mg.histT = 0; mg.glowSec = mg.tg; const win = r0 === mg.bet ? (r0 === 'g' ? 10 : 2) : 0, b = ballXY(mg);
-      if (win) { const v = mg.pay * win; mg.net += v; mg.winT = mg.t; SHW.win(this, mg, r0 === 'g' ? 4 : 1, { x: b.x, y: b.y, v, col: r0 === 'g' ? C.gold : C.red, label: r0 === 'g' ? '×10' : '×2' });
+    if (pt >= mg.dur) { mg.ang = mg.af; mg.spins++; const r0 = RSEC[mg.tg]; mg.hist.push(r0); mg.histT = 0; mg.glowSec = mg.tg; const win = r0 === mg.bet ? (r0 === 'g' ? 13 : 2.2) : 0, b = ballXY(mg);
+      if (win) { const v = M.nice(mg.pay * win); mg.net += v; mg.winT = mg.t; SHW.win(this, mg, r0 === 'g' ? 4 : 1, { x: b.x, y: b.y, v, col: r0 === 'g' ? C.gold : C.red, label: r0 === 'g' ? '×13' : '×2.2' });
         mg.cro = { st: r0 === 'g' ? 'death' : 'hurt', t0: mg.t };   // 荷官输钱一抖；押金中了，他的脸裂开
-        SHW.later(mg, r0 === 'g' ? 0.7 : 0.1, () => this.award([{ k: 'wallet', v }], { x: K.lx(RLP().spots[mg.bet][0]), y: K.ly(RLP().spots[mg.bet][1]) })); SHW.later(mg, r0 === 'g' ? 0.8 : 0, () => this.miniSay(r0 === 'g' ? '金色！×10！' : '中了！×2', '#ffcc33', r0 === 'g')); if (r0 === 'g') S.mini('roulette', 'gold'); else S.mini('roulette', 'win');
+        SHW.later(mg, r0 === 'g' ? 0.7 : 0.1, () => this.award([{ k: 'wallet', v }], { x: K.lx(RLP().spots[mg.bet][0]), y: K.ly(RLP().spots[mg.bet][1]) })); SHW.later(mg, r0 === 'g' ? 0.8 : 0, () => this.miniSay(r0 === 'g' ? '金色！×13！' : '中了！×2.2', '#ffcc33', r0 === 'g')); if (r0 === 'g') S.mini('roulette', 'gold'); else S.mini('roulette', 'win');
         SHW.later(mg, 0.3, () => { if (mg.stack) mg.stack.n = Math.min(12, mg.stack.n * win); }); }
       else if (r0 === 'x') { this.heroHurt(0.05); SHW.lose(this, mg); this.miniSay('骷髅格：庄家通吃，还咬了你一口', '#ff5a4a'); S.mini('roulette', 'skull'); mg.skullT = mg.t; mg.cro = { st: 'recover', t0: mg.t }; if (mg.stack) mg.rake = { t: 0, x0: mg.stack.x, y0: mg.stack.y }; SHW.shake(mg, 6); }
       else if (mg.near) { SHW.near(this, mg, b.x, b.y, '擦过金格！'); this.miniSay('就差一格', '#8d8496'); S.mini('roulette', 'miss'); if (mg.stack) mg.rake = { t: 0, x0: mg.stack.x, y0: mg.stack.y }; }
@@ -403,7 +403,7 @@ const SW8 = [30, 26, 18, 12, 6, 8], STRIP = M.FRUIT_STRIP = [0, 1, 2, 0, 3, 1, 4
 const FRP = () => M.FRUIT_PX, fReelX = (i) => K.lx((FRP().RW[i][0] + FRP().RW[i][1]) / 2), fLineY = () => K.ly(FRP().line);
 const fKnob = (mg) => { const P = FRP(), la = 0.18 + (mg.lever || 0) * 2.2; return { x: K.lx(P.lever[0] + Math.sin(la) * 34), y: K.ly(P.lever[1] - Math.cos(la) * 34) }; };
 // the pay board's rows: 7 ×25 · BAR ×10 · 铃铛 ×6 · 三连水果 ×4 · 两颗樱桃 ×2 · 骷髅 伤身
-const PAYT = ['×25', '×10', '×6', '×4', '2个 ×2', '伤身'];
+const PAYT = ['×40', '×15', '×9', '×6', '2个 ×3', '伤身'];
 const payRow = (r) => { const same = r[0] === r[1] && r[1] === r[2]; if (same) return r[0] === 4 ? 0 : r[0] === 3 ? 1 : r[0] === 2 ? 2 : r[0] === 5 ? 5 : 3; if (r.filter(v => v === 0).length >= 2) return 4; if (r.filter(v => v === 5).length === 2) return 5; return null; };
 MINI.fruit = { title: '水果机', img: 'e_fruit', col: C.magenta, text: '一台还插着电的老虎机。投币口旁边刻着：三个七，带你回家。',
   init(mg) { mg.reels = [0, 1, 2].map(() => ({ pos: Math.floor(rnd() * 12), f: 0, s0: 0, done: true, bt: 9, sf: 0 })); mg.pulls = 0; mg.max = 5; mg.lever = 0; mg.win = 0; mg.flash = 0; mg.gogo = 0; mg.winT = -1; mg.winK = []; mg.drops = []; mg.pile = 0; mg.dark = 0; mg.ins = null; mg.payHit = null; },
@@ -470,7 +470,7 @@ MINI.fruit = { title: '水果机', img: 'e_fruit', col: C.magenta, text: '一台
     if (mg.stopped >= 3 && !mg.resolved) {
       mg.resolved = true;
       const r = mg.res, c = (k) => r.filter(v => v === k).length, same = r[0] === r[1] && r[1] === r[2], P = mg.pay, X0 = K.lx(150), wy = fLineY(); let v = 0, bp = false, text = '', tier = 0, win = [];
-      if (same && r[0] === 4) { v = P * 25; bp = true; text = '777！大奖！'; tier = 4; } else if (same && r[0] === 3) { v = P * 10; text = '三个 BAR ×10'; tier = 3; } else if (same && r[0] === 2) { v = P * 6; text = '三个铃铛 ×6'; tier = 2; } else if (same && r[0] < 2) { v = P * 4; text = '三连水果 ×4'; tier = 2; } else if (same && r[0] === 5) { this.heroHurt(0.15); text = '三个骷髅……'; S.mini('fruit', 'skulls'); } else if (c(0) >= 2) { v = P * 2; text = '两颗樱桃 ×2'; tier = 1; } else if (c(5) === 2) { this.heroHurt(0.06); text = '两个骷髅，机器电了你一下'; S.mini('fruit', 'skulls'); } else { text = '没中'; S.mini('fruit', 'nomatch'); }
+      if (same && r[0] === 4) { v = P * 40; bp = true; text = '777！大奖！'; tier = 4; } else if (same && r[0] === 3) { v = P * 15; text = '三个 BAR ×15'; tier = 3; } else if (same && r[0] === 2) { v = P * 9; text = '三个铃铛 ×9'; tier = 2; } else if (same && r[0] < 2) { v = P * 6; text = '三连水果 ×6'; tier = 2; } else if (same && r[0] === 5) { this.heroHurt(0.15); text = '三个骷髅……'; S.mini('fruit', 'skulls'); } else if (c(0) >= 2) { v = P * 3; text = '两颗樱桃 ×3'; tier = 1; } else if (c(5) === 2) { this.heroHurt(0.06); text = '两个骷髅，机器电了你一下'; S.mini('fruit', 'skulls'); } else { text = '没中'; S.mini('fruit', 'nomatch'); }
       if (same) win = [0, 1, 2]; else if (tier === 1) win = [0, 1, 2].filter(i => r[i] === 0);
       mg.payHit = payRow(r);
       if (v) { mg.total = (mg.total || 0) + v; mg.winT = mg.t; mg.winK = win; mg.flash = 1.2 + tier * 0.4;
@@ -515,6 +515,8 @@ MINI.claw = { title: '抓娃娃机', img: 'e_claw', col: C.pink, text: '玻璃�
   init(mg) { const run = this.run, seen = new Set(); mg.prizes = []; for (let i = 0; i < 24 && mg.prizes.length < 6; i++) { const t = M.pickUnitQ(run); if (seen.has(t)) continue; seen.add(t); mg.prizes.push({ type: t, q: M.DB[t].q, x: 0, y: 0, rot: (rnd() - 0.5) * 0.5, vy: 0, ph: rnd() * 3 }); }
     const L = SX + 380, Rr = SX + SW - 120; mg.prizes.forEach((p, i) => { p.x = L + 40 + (i % 3) * ((Rr - L - 80) / 2) + (rnd() - 0.5) * 40 + (i >= 3 ? 70 : 0); p.y = FLOOR - 10 - (i >= 3 ? 70 : 0); });
     mg.prizes.sort((a, b) => a.y - b.y);
+    // the ticket follows what is in the cabinet (2026-09-28): three quarters of the prizes' average price, not the stop's base — a good grab (85%) is a little better than buying it, an average one a little worse
+    if (mg.prizes.length) mg.pay = M.nice(Math.max(8, mg.prizes.reduce((a, p) => a + ((M.DB[p.type] && M.DB[p.type].cost) || 40), 0) / mg.prizes.length * 0.75));
     mg.tries = 0; mg.max = 3; mg.cx = CX; mg.cy = SY + 130; mg.open = 1; mg.hold = -1; mg.got = []; mg.sw = 0; mg.swv = 0; mg.vx = 0; mg.press = 0; mg.door = 0; mg.pop = null; },
   box: { L: SX + 360, R: SX + SW - 80, T: SY + 110 },
   drop(mg) { if (!this.miniPay(mg.pay)) return; mg.tries++; const dx = mg.cx; let best = -1, bd = 999; mg.prizes.forEach((p, i) => { if (p.gone) return; const d = Math.abs(p.x - dx) + Math.max(0, (FLOOR - p.y) - 60) * 0.3; if (d < bd) { bd = d; best = i; } });

@@ -257,19 +257,21 @@ G.achCheck = function () {
 };
 
 // ═════════════════════ game over → tokens ═════════════════════
+// Tokens pay for how far a game got, and more the further it got (2026-09-28: 「现在我发现一种刷代币对方法，就是开始一局，然后只打第一个
+// boss，然后就放弃，就给80个代币。而且我普通难度达到了第15章，然后放弃，结果给了1000多个代币……否则游戏寿命就会急速缩短」). The old rows
+// paid for starting (投币 20) and for everything done along the way (each boss, elite, building, blueprint, event), so a
+// restart after the first boss paid better per minute than playing on. Now only milestones count, each only once a game:
+// · the n-th night held pays TOK_NIGHT0 + n (night 1 → 5, night 10 → 14, night 15 → 19): nothing for starting, and every
+//   night held is worth more than the one before, so playing on always beats starting over;
+// · each area cleared (its final boss beaten) TOK_CLEAR; holding the goal night a prize (mc-gdiff.js); the difficulty multiplies.
+// 普通 won (15 nights, a few areas) ≈ 300～400; lost around night 8 ≈ 70～100; given up on day 1 = 0. Everything the tokens buy
+// (零件 780, 手办 1200, 卡带 1420) takes about ten games with the achievements (docs/design.md §4).
+M.TOK_NIGHT0 = 4; M.TOK_CLEAR = 30;
 M.settleRows = function (m) {
-  const st = m.st || {}, rows = [
-    { k: 'coin', n: '投币参与', ic: 'e_coin', v: 1, per: 20 },
-    { k: 'day', n: '存活天数', ic: 'u_star', v: m.day, per: 5 },
-    { k: 'clears', n: '通关世界', ic: 'r_hero', v: Object.keys(m.cleared).length, per: 40 },
-    { k: 'boss', n: '击败首领', ic: 'r_demon', v: st.boss || 0, per: 15 },
-    { k: 'elite', n: '击败精英', ic: 't_claw', v: st.elite || 0, per: 6 },
-    { k: 'raids', n: '守住混沌来袭', ic: 'f_defense', v: st.raidsWon || 0, per: 12 },
-    { k: 'built', n: '建成建筑', ic: 'u_hammer', v: st.built || 0, per: 5 },
-    { k: 'bp', n: '带回图纸', ic: 'scroll', v: st.bp || 0, per: 4 },
-    { k: 'minis', n: '完成奇遇', ic: 'e_card', v: st.minis || 0, per: 2 },
-    { k: 'recruits', n: '招募领袖', ic: 'e_flag', v: st.recruits || 0, per: 4 }];
-  rows.forEach(r => r.t = r.v * r.per);
+  const st = m.st || {}, n = st.raidsWon || 0, rows = [
+    { k: 'nights', n: '守住的夜晚', ic: 'f_defense', v: n, t: M.TOK_NIGHT0 * n + n * (n + 1) / 2 },
+    { k: 'clears', n: '通关区域', ic: 'r_hero', v: Object.keys(m.cleared || {}).length, per: M.TOK_CLEAR }];
+  rows.forEach(r => { if (r.t == null) r.t = r.v * r.per; });
   let mul = 1; if (m.hard) mul *= 1.6; if (m.moon === 'blood') mul *= 1.3;
   const sum = rows.reduce((a, r) => a + r.t, 0), total = Math.round(sum * mul);
   return { rows, sum, mul, total };

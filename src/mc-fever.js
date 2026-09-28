@@ -15,7 +15,7 @@
 const M = window.MC, G = M.Game.prototype, BP = M.Battle3 && M.Battle3.prototype, S = M.Sfx, U = M.UI, P = M.PJ.PAL, DB = M.DB, now = () => performance.now();
 const cl = (v, a, b) => Math.max(a, Math.min(b, v)), eo = (q) => 1 - Math.pow(1 - q, 3), eback = (q) => { const c = 1.7; return 1 + (c + 1) * Math.pow(q - 1, 3) + c * Math.pow(q - 1, 2); };
 const RM = () => !!(M.PJ && M.PJ.reduced);
-const FEVER_T = 8, RAIN = [P.red, P.gold, P.lime, P.teal, P.violet], WORD = ['F', 'E', 'V', 'E', 'R'];
+const FEVER_CARD = 1.3, FEVER_T = 8, RAIN = [P.red, P.gold, P.lime, P.teal, P.violet], WORD = ['F', 'E', 'V', 'E', 'R'];
 M.FEVER = { T: FEVER_T, AS: 0.3,
   // what fills the gauge (points out of 100, before the army's rate)
   G: { hit: 0.9, archer: 1.1, mage: 0.55, crit: 1, front: 0.5, kill: 6, assassin: 4, merchant: 3, elite: 10, heal: 8, summon: 3, aura: 0.8, boss: 150 } };
@@ -148,13 +148,22 @@ M.drawFever = function (x, g) {
     });
     if (t > 0.75 && !X.rolled) U.text(x, '!!', 960 + 2.8 * size * 0.78, cy, size, P.white, { num: true, outline: true, u: 5 });
   }
-  // who set it off: 「FEVER!」 and the effect's name over that unit, a gold ring under it (1.6 s)
-  if (X && X.quick && t < 1.6) {
-    const e = X.who, I = M.ITEMS[X.key], a = cl((1.6 - t) / 0.3, 0, 1), up = eo(cl(t / 0.25, 0, 1));
-    const p = e && M.feverBody ? M.feverBody(g, e) : { x: 960, y: 420 };
+  // who set it off: a gold flare and 「FEVER!」 over that unit (1 s); what it does: one short card in the middle of the screen
+  // (2026-09-28: 「fever触发的时候，会有一个闪电风暴或者恢复光柱的提示，这个提示需要在屏幕中间，醒目一些，保证玩家能看到，但是持续时间很短」)
+  if (X && X.quick && t < 1.0 && X.who) {
+    const e = X.who, a = cl((1.0 - t) / 0.25, 0, 1), up = eo(cl(t / 0.25, 0, 1)), p = M.feverBody ? M.feverBody(g, e) : { x: 960, y: 420 };
     x.save(); x.globalAlpha = a; M.glow && M.glow(x, p.x, p.y, 150, P.gold, 0.5);
-    U.text(x, 'FEVER!', p.x, p.y - 110 - up * 30, 56, P.gold, { num: true, outline: true, u: 4 });
-    U.text(x, (X.key === 'pillar' ? '天降光柱' : I ? I.name : '') + ' · ' + M.TIERS[X.tier].n, p.x, p.y - 58 - up * 30, 30, M.TIERS[X.tier].c, { outline: true });
+    U.text(x, 'FEVER!', p.x, p.y - 100 - up * 30, 44, P.gold, { num: true, outline: true, u: 4 });
+    x.restore();
+  }
+  if (X && X.quick && t < FEVER_CARD) {
+    const I = M.ITEMS[X.key], Tt = X.title || { n: X.key === 'pillar' ? '天降光柱' : I ? I.name : '', sub: '', c: M.TIERS[X.tier].c };
+    const a = Math.min(cl(t / 0.1, 0, 1), cl((FEVER_CARD - t) / 0.3, 0, 1)), q = cl(t / 0.22, 0, 1), sc = RM() ? 1 : 1.8 - 0.8 * eback(q), cy = 450;
+    x.save(); x.globalAlpha = a * 0.86; U.R(x, 0, cy - 96, W, 192, P.ink); x.globalAlpha = a; U.R(x, 0, cy - 102, W, 6, Tt.c); U.R(x, 0, cy + 96, W, 6, Tt.c);
+    M.glow && M.glow(x, 960, cy, 360, Tt.c, 0.35);
+    U.text(x, 'FEVER · ' + M.TIERS[X.tier].n, 960, cy - 62, 36, P.gold, { outline: true });
+    x.save(); x.translate(960, cy + 4); x.scale(sc, sc); U.text(x, Tt.n, 0, 0, 100, Tt.c, { outline: true, u: 5 }); x.restore();
+    if (Tt.sub) U.text(x, Tt.sub, 960, cy + 66, 34, P.cream, { outline: true });
     x.restore();
   }
   // FEVER TIME: the word small at the top, a bar that runs out

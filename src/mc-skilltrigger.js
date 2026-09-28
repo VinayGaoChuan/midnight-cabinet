@@ -36,17 +36,25 @@ const TRIG = {
   WaterSpoutNew: T.bigTarget(0.4), Asteroid: T.bigTarget(0.4), EnergySurge: T.bigTarget(0.4),
   HoundSummoning: T.approach(600), Hellhound: T.approach(600), Dragon: T.approach(600), Thanatos: T.approach(600), SummonCrabling: T.approach(600), SummonPincer: T.approach(600), SlimePropagation: T.approach(600), SummonFroggo: T.approach(600),
   DimensionalRift: T.costly(400, 600), DimensionalChasm: T.costly(1040, 600),
+  // by the handler's class too (2026-09-28): a skill whose trait is named differently from its handler (生命交换 / 灵魂转移 run on
+  // LifeBindVow, 召唤猎犬 / 召唤巨龙 … on Summon) never found its trigger and fired on the default — 幼龙's line healing at 1 life
+  LifeBindVow: { d: '有友军生命低于 60%，且自己的生命扣完还剩四分之一以上', heal: 1, test: (b, e) => { const t = e.traits.find(x => x.cls === 'LifeBindVow'), cost = t ? e.atk * (t.v[1] || 0) / 100 : 0; return e.hp - cost >= e.maxHp * 0.25 && b.allies(e).some(o => o !== e && !o.traits.some(x => x.cls === 'LifeBindVow') && o.hp / o.maxHp <= 0.6); } },
+  Summon: T.approach(600),
 };
+['ChainHeal', 'SkullStew', 'LifeExchange', 'SoulTransfer'].forEach(k => { if (TRIG[k]) TRIG[k].heal = 1; });
 const DEF = T.engage();
+M.SKILL_WAIT = 6;   // seconds a ready damage skill waits for its best moment, then fires anyway
 M.SKILL_TRIG = TRIG;
 const H = M.TRAIT_H, GROWTH = new Set(['JuniorFisherman', 'EliteFisherman', 'SpiritOffering']);
-const castKey = (e) => { const t = e.traits.find(x => H[x.cls] && H[x.cls].full); return t ? t.cls.replace(/^Summon|Trait$/g, '') : null; };
-M.skillTrig = (e) => TRIG[castKey(e)] || DEF;
+// the castable trait: its handler's class, and its own name (a line tier's copy drops the __L… suffix, mc-lines.js)
+const castT = (e) => e.traits.find(x => H[x.cls] && H[x.cls].full);
+const nameKey = (k) => String(k || '').replace(/^Summon/, '').replace(/Trait(__L\d+)?$/, '');
+M.skillTrig = (e) => { const t = castT(e); return (t && (TRIG[t.cls.replace(/^Summon|Trait$/g, '')] || TRIG[nameKey(t.key)])) || DEF; };
 // the same trigger by unit key (tooltips, docs): the first castable trait of the unit
 M.unitTrigger = function (k) {
   const s = M.unitSkill && M.unitSkill(k); if (!s) return null;
-  const t = (M.DB[k].tr || []).find(x => (M.TDB[x] || {}).n === s.n), key = t && t.replace(/^Summon|Trait$/g, '');
-  return (key && TRIG[key]) || DEF;
+  const t = (M.DB[k].tr || []).find(x => (M.TDB[x] || {}).n === s.n), cls = t && M.TDB[t] && M.TDB[t].cls.replace(/^Summon|Trait$/g, '');
+  return (cls && TRIG[cls]) || (t && TRIG[nameKey(t)]) || DEF;
 };
 
 // a ready skill fires only while its trigger holds (checked a few times a second)
@@ -54,7 +62,10 @@ const oCan = P.canSkill;
 P.canSkill = function (e, ignoreTrigger) {
   if (!oCan.call(this, e)) return false; if (ignoreTrigger) return true;
   if (e._trT != null && this.t - e._trT < 0.1) return e._trV;
-  e._trT = this.t; e._trV = !!M.skillTrig(e).test(this, e); return e._trV;
+  // a damage or summoning skill that has waited 6 s on a full bar goes off at whatever is there (2026-09-28: 「有的角色，蓝条满了，
+  // 却没释放技能，蓝条一直在闪烁」); a heal still waits for someone hurt
+  const tr = M.skillTrig(e); if ((e.mana || 0) < 100) e._fullAt = null; else if (e._fullAt == null) e._fullAt = this.t;
+  e._trT = this.t; e._trV = !!tr.test(this, e) || (!tr.heal && e._fullAt != null && this.t - e._fullAt > M.SKILL_WAIT && this.foes(e).length > 0); return e._trV;
 };
 // ───────── leaders: personal skills wait for their moment too ─────────
 // leaders: on the field their skill fires only when it can hit — see M.psReady in mc-pskill.js

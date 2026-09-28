@@ -1,7 +1,7 @@
 // The bot matrix (docs/design.md §15.4): whole games by the play bot, several at once in headless Chrome, each from a fresh
 // save and a fixed random seed, per difficulty and play style; one JSON per game in the out folder, then a report against
 // the target bands of §15.6 / §7.7 (node tools/botreport.mjs <out>).
-// usage: node tools/botmatrix.mjs --out .ai/matrix/base --diffs 0,1,2,3 --games 3 --styles smart,novice --secs 3600 --par 8 --seed 1
+// usage: node tools/botmatrix.mjs --out .ai/matrix/base --diffs 0,1,2,3 --games 3 --styles smart,novice --secs 3600 --par 8 --seed 1 [--set '{"NIGHT.K":2}' --tag -k2 --port 9600]
 //   env CHROME: the Chrome / Chromium to use (default: the usual install path for this system)
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
@@ -12,6 +12,7 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
 const OUT = path.resolve(arg('out', path.join(ROOT, '.ai', 'matrix', 'run'))), DIFFS = arg('diffs', '0,1,2,3').split(',').map(Number), GAMES = +arg('games', 2);
 const STYLES = arg('styles', 'smart').split(','), SECS = +arg('secs', 3600), PAR = +arg('par', Math.max(1, os.cpus().length - 2)), SEED0 = +arg('seed', 1), MAXDAY = +arg('maxday', 31);
+const SET = JSON.parse(arg('set', '{}')), TAG = arg('tag', ''), PORT0 = +arg('port', 9500);   // --set '{"NIGHT.K":2}': numbers to try (M.tuneSet), --tag: added to each game's name
 const CHROME = process.env.CHROME || (process.platform === 'win32' ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' : process.platform === 'darwin' ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' : 'google-chrome');
 fs.mkdirSync(OUT, { recursive: true });
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
@@ -19,10 +20,12 @@ const url = 'file://' + path.join(ROOT, 'index.html').replace(/\\/g, '/').replac
 // the whole game, in the page: difficulty and style set, the bot plays until the game is over, day MAXDAY, or SECS
 const GAME = (gd, style, secs) => `(async () => {
   const g = __mcg, M = MC, P = M.Game.prototype, over = [];
+  Object.entries(${JSON.stringify(SET)}).forEach(([k, v]) => M.tuneSet(k, v));
   const oNG = P.newGame; P.newGame = function () { M._nextGd = ${gd}; if (this.prof) this.prof.gdMax = 3; const r = oNG.apply(this, arguments); try { this.meta.gd = ${gd}; this.meta.core = M.GDIFF[${gd}].core; this.meta.portal.hp = M.portalMax(this.meta); } catch (e) {} return r; };
-  const oGo = P.go; P.go = function (s) { try { if (s === 'over' && this.meta) over.push({ day: this.meta.day, core: this.meta.core, why: this.meta.portal && this.meta.portal.hp <= 0 ? 'portal' : 'core' }); } catch (e) {} return oGo.apply(this, arguments); };
+  // the game ends here (hearts gone, main base fallen, cashed out after the goal): note it and stop the bot, or it walks into the next game
+  const oGO = P.gameOver; P.gameOver = function (reason) { try { if (!over.length) over.push({ day: this.meta.day, core: this.meta.core, why: reason || (this.meta.portal && this.meta.portal.hp <= 0 ? 'portal' : 'core') }); } catch (e) {} window.__botStop = true; return oGO.apply(this, arguments); };
   if (g.prof) g.prof.gdMax = 3; g.newGame();
-  const stop = setInterval(() => { if (g.meta && g.meta.day > ${MAXDAY}) { g.screen = 'over'; } }, 1000);
+  const stop = setInterval(() => { if (g.meta && g.meta.day > ${MAXDAY}) window.__botStop = true; }, 1000);
   const t0 = performance.now(); let res;
   try { res = JSON.parse(await __prog(${secs}, { pick: 'smart', bot: { novice: ${style === 'novice' ? 1 : 0} } })); } finally { clearInterval(stop); }
   const m = g.meta;
@@ -52,8 +55,8 @@ async function one(job, port) {
   finally { try { ws && ws.close(); } catch (e) { /* closed */ } chrome.kill('SIGKILL'); await wait(300); fs.rmSync(prof, { recursive: true, force: true }); }
 }
 const jobs = []; let s = SEED0;
-for (const style of STYLES) for (const gd of DIFFS) for (let i = 0; i < GAMES; i++) jobs.push({ gd, style, seed: s++, name: style + '-d' + gd + '-' + i });
+for (const style of STYLES) for (const gd of DIFFS) for (let i = 0; i < GAMES; i++) jobs.push({ gd, style, seed: s++, name: style + '-d' + gd + '-' + i + TAG });
 console.log(jobs.length, 'games,', PAR, 'at a time →', OUT);
-let next = 0; const port0 = 9500;
+let next = 0; const port0 = PORT0;   // two matrices at once need different --port (and so different profiles)
 await Promise.all(Array.from({ length: Math.min(PAR, jobs.length) }, (_, w) => (async () => { while (next < jobs.length) { const j = jobs[next++]; if (fs.existsSync(path.join(OUT, j.name + '.json'))) continue; await one(j, port0 + w); } })()));
 console.log('done');

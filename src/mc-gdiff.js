@@ -10,11 +10,12 @@
 // · The chapters' own 普通 / 噩梦 / 地狱 (mc-scenes.js) are gone: a game never gets through nine chapters anyway.
 const M = window.MC, G = M.Game.prototype, BP = M.Battle3.prototype, S = M.Sfx, now = () => performance.now();
 // foe: expeditions ×0.7 / 0.85 / 0.95 / 1.05 since 2026-09-27 (普通 at 0.85 lost 2 of 8 bot games by day 5, all to chapter-1 expeditions)
+// gate: a trip's first boss is the plain army ÷ this (mc-power.js M.parArmy, 2026-09-28): 普通 1.4 wins ~85–90%, 地狱 1.05 about half
 const GD = M.GDIFF = [
-  { n: '普通', c: '#cfd8e3', goal: 15, night: 0.8, foe: 0.7, strong: 0, boss: 0, moon: 0, p2: 0, fast: 0, core: 3, portal: 1.3, plague: 0, loot: 1, tok: 1, bb: 0.05, elite: [1, 1, 1], eliteK: 1, d: '夜里只有混沌来袭。' },
-  { n: '困难', c: '#ffcf4a', goal: 20, night: 1, foe: 0.85, strong: 1, boss: 0, moon: 0, p2: 1, fast: 0, core: 3, portal: 1, plague: 2, loot: 1.25, tok: 1.25, bb: 0.08, elite: [1, 1, 1], eliteK: 1, d: '每 5 天强敌来袭，最终首领有第二阶段。' },
-  { n: '噩梦', c: '#b86bff', goal: 25, night: 1.15, foe: 0.95, strong: 1, boss: 1, moon: 0, p2: 1, fast: 0, core: 3, portal: 1, plague: 2, loot: 1.5, tok: 1.5, bb: 0.12, elite: [0.5, 1, 1.5], eliteK: 1, d: '再加每 10 天首领来袭，精英更多。' },
-  { n: '地狱', c: '#e8434f', goal: 30, night: 1.3, foe: 1.05, strong: 1, boss: 1, moon: 1, p2: 1, fast: 0.75, core: 2, portal: 0.8, plague: 4, loot: 2, tok: 2, bb: 0.18, elite: [0.5, 1, 1.5], eliteK: 1.25, d: '强敌和首领之夜是血月，基地核心只有 2 颗心。' },
+  { n: '普通', c: '#cfd8e3', goal: 15, night: 0.8, gate: 1.4, foe: 0.7, strong: 0, boss: 0, moon: 0, p2: 0, fast: 0, core: 3, portal: 1.3, plague: 0, loot: 1, tok: 1, bb: 0.05, elite: [1, 1, 1], eliteK: 1, d: '夜里只有混沌来袭。' },
+  { n: '困难', c: '#ffcf4a', goal: 20, night: 1, gate: 1.25, foe: 0.85, strong: 1, boss: 0, moon: 0, p2: 1, fast: 0, core: 3, portal: 1, plague: 2, loot: 1.25, tok: 1.25, bb: 0.08, elite: [1, 1, 1], eliteK: 1, d: '每 5 天强敌来袭，最终首领有第二阶段。' },
+  { n: '噩梦', c: '#b86bff', goal: 25, night: 1.15, gate: 1.15, foe: 0.95, strong: 1, boss: 1, moon: 0, p2: 1, fast: 0, core: 3, portal: 1, plague: 2, loot: 1.5, tok: 1.5, bb: 0.12, elite: [0.5, 1, 1.5], eliteK: 1, d: '再加每 10 天首领来袭，精英更多。' },
+  { n: '地狱', c: '#e8434f', goal: 30, night: 1.3, gate: 1.05, foe: 1.05, strong: 1, boss: 1, moon: 1, p2: 1, fast: 0.75, core: 2, portal: 0.8, plague: 4, loot: 2, tok: 2, bb: 0.18, elite: [0.5, 1, 1.5], eliteK: 1.25, d: '强敌和首领之夜是血月，基地核心只有 2 颗心。' },
 ];
 const gi = (m) => Math.max(0, Math.min(GD.length - 1, (m && m.gd) || 0));
 const gdOf = M.gdOf = (m) => GD[gi(m)];
@@ -59,6 +60,10 @@ const oEk = M.runEk;
 if (oEk) M.runEk = (run) => oEk(run) * (run && run.M && !(run.region && run.region.tut) ? gdOf(run.M).foe : 1);
 const oGen = M.genMap2;
 M.genMap2 = function (run) { if (run && run.len && !(run.region && run.region.tut) && run.M) run.len = Object.assign({}, run.len, { elite: gdOf(run.M).elite }); return oGen.apply(this, arguments); };
+// no elite before a trip's first market (2026-09-28, bot matrix: 噩梦 / 地狱 put elites at the second or third stop of day 1,
+// met by the three starting units at 0.65–0.77 — two of the six hearts lost on those difficulties)
+const oGen2 = M.genMap2;
+M.genMap2 = function (run) { const res = oGen2.apply(this, arguments), map = res && res.nodes ? res : run && run.map; if (map && map.nodes && run && !(run.region && run.region.tut)) { const shop = map.nodes.filter(n => n.type === 'shop').reduce((a, n) => Math.min(a, n.col), 99); map.nodes.forEach(n => { if (n.type === 'elite' && n.col < shop) n.type = 'normal'; }); } return res; };
 const oSpawn = BP.spawnEnemy;
 BP.spawnEnemy = function () { const e = oSpawn.apply(this, arguments), k = this.run && this.run.M ? gdOf(this.run.M).eliteK : 1; if (e && e.elite && !e.boss && k !== 1) { e.hp *= k; e.maxHp *= k; e.atk *= k; } return e; };
 const oInit = BP.init;

@@ -36,11 +36,39 @@ function tuneBoss(run, node, cfg) {
   const bs = cfg.list.filter(s => s.boss); if (!bs.length || run.region.tut) return cfg;
   let el = 0; for (let i = 0; i < 4; i++) el += M.powerOf(M.sideE(run, oCfg.call(M, run, { col: node.col, type: 'elite' }))); el /= 4;
   // the first segment's boss meets an army of ~5 bought at one shop: it is only as strong as an elite there
-  const first = (node.seg || 0) === (run.startSeg || 0), target = el * (node.fb || (node.final && !run.chap) ? M.BOSS_TF : first ? M.BOSS_T0 : M.BOSS_TM); let lo = 0.02, hi = 40;   /* the first boss of a run meets an army of one shop */   // a boss fights alone (2026-09-26): its scale can run far from its table values
+  const first = (node.seg || 0) === (run.startSeg || 0), fbN = !!(node.fb || (node.final && !run.chap));
+  let target = el * (fbN ? M.BOSS_TF : first ? M.BOSS_T0 : M.BOSS_TM), lo = 0.02, hi = 40;   /* the first boss of a run meets an army of one shop */   // a boss fights alone (2026-09-26): its scale can run far from its table values
+  // the gate: a trip's first boss cannot be gone round (撤离 only comes after it), so it is sized to the army a plain player
+  // brings there, not to the chapter's level (2026-09-28: the bot matrix lost all 3 hearts by day 2–4 on every difficulty,
+  // every heart at a trip's first boss — from a waypoint the chapter's level runs ~1.6× a segment ahead of what the grant buys)
+  const par = first && run.chap && M.parArmy ? M.parArmy(run, node) : 0; if (par > 0) { const D = (M.gdOf && M.gdOf(run.M)) || {}; target = par / (D.gate || M.GATE_R) / (fbN ? M.GATE_FB : 1) / ((fbN ? M.FB_SHOW : M.MB_SHOW) * (M.E_SHOW || 1)); }
   for (let k = 0; k < 18; k++) { const f = (lo + hi) / 2; bs.forEach(s => { s.hpMul = f; s.atkMul = f; }); if (M.powerOf(M.sideE(run, cfg)) > target) hi = f; else lo = f; }
   const f = +((lo + hi) / 2).toFixed(3), fb = !!(node.fb || (node.final && !run.chap)), k = M.bossSkew ? M.bossSkew(bs[0].type, fb) : fb ? M.FB_SKEW : 1;   // each boss its own life over attack (mc-bosskit.js)
   bs.forEach(s => { s.hpMul = +(f * k).toFixed(3); s.atkMul = +(f / k).toFixed(3); }); return cfg;
 }
+// The plain army at a trip's gate (§15.6): the trip's starting roster, a leader at the level a player usually has by this day
+// (no talents, no relics, none of the base's bonuses — those are the player's own growth), and the units bought with the
+// waypoint's grant, the fights before the gate and the market's free pack, at the market's prices. .ai/sim-trip.js buys
+// shop by shop like the play bot; this is its expected value, so the gate is the same fight for everyone on that day.
+M.GATE_R = 1.4;       // the plain army ÷ the gate's shown power when a difficulty has no own (M.GDIFF[].gate: 1.4 / 1.25 / 1.15 / 1.05; the map's green starts at 1.25)
+M.GATE_FB = 1.15;    // a final boss as the gate: the play bot won small bosses there 26 of 26 but final bosses 14 of 20 at the same shown 1.3–1.7
+M.GATE_BUY = 0.9;     // how much of the points' worth a plain player turns into power
+const cl = (v, a, b) => Math.max(a, Math.min(b, v));
+M.parLv = (day) => cl(Math.round(1.2 + 0.6 * day), 1, M.LV_MAX || 10);   // the play bot: Lv 2 on day 2, 3 on day 3, 6 on day 8
+M.parArmy = function (run, gate) {
+  const m0 = M._parMeta || (M._parMeta = M.defaultMeta3()), h = run.hero, day = (run.M && run.M.day) || 1; if (!h || !M.HEROES[h.cls] || !run.map) return 0;   // a preview without a leader keeps the chapter's own boss
+  const hx = { cls: h.cls, rarity: 0, lv: M.parLv(day), tree: [], taken: [], relics: [], hp: 1 }; let hp = M.heroMaxHp(hx, m0), dps = M.heroAtk(hx, m0) / ((M.HEROES[h.cls] || {}).cd || 1);
+  (run.roster0 || []).forEach(k => { const d = DB[k]; if (d) { hp += d.hp; dps += d.atk * (d.as || 100) / 100; } });   // the army it set out with, never what was bought since (a gate first seen late must not grow with the player)
+  // points: the grant, one fight a column before the gate, the free pack at the market
+  let pts = run.grant || 0, shops = 0; const cap = M.topPrice ? M.topPrice(run) * ((M.SCORE_CAP || {}).fight || 1) : 1e9;
+  for (let c = 1; c < gate.col; c++) { const ns = run.map.nodes.filter(n => n.col === c); if (ns.some(n => n.type === 'shop')) shops++; else if (ns.some(n => n.type === 'normal' || n.type === 'elite')) pts += Math.min(cap, M.budgetAt(M.levelAt(run, { col: c, type: 'normal' })) * (M.KILL_K || 0.3)); }
+  const capQ = M.stageOf ? M.stageOf(run).capQ : 1, pool = (M.SHOP_POOL || []).filter(k => DB[k] && DB[k].q <= capQ && DB[k].cost > 0);
+  if (pool.length) { const pm = M.priceMul ? M.priceMul(run) : 1, R = M.GA_RATES || [60, 30, 10], byQ = (q) => pool.filter(k => DB[k].q === q), avg = (ks) => ks.reduce((a, k) => a + DB[k].cost, 0) / ks.length;
+    const q1 = Math.min(1, capQ); let w = 0, pack = 0; for (let q = 0; q <= q1; q++) { const ks = byQ(q); if (ks.length) { w += R[q] || 0; pack += (R[q] || 0) * avg(ks); } } if (w) pts += shops * pm * pack / w;   // what the free pack is worth once the unlocked tiers cut it down
+    const shape = pool.reduce((a, k) => a + Math.sqrt(DB[k].hp / Math.max(0.1, DB[k].atk * (DB[k].as || 100) / 100)), 0) / pool.length, pw = pts / pm * M.GATE_BUY * PK();
+    hp += pw * shape; dps += pw / shape; }
+  return Math.round(sq(hp * dps) / PK());
+};
 // 撤离 comes right after a boss, so it is never easier than that boss (2026-09-27: 「撤退的难度要提高。撤退的难度由于在Boss后面，所以
 // 不能比Boss低。而且可以加一些精英」): two elites join its waves, then every enemy is scaled until the shown power is at least the
 // boss's that stands before it: 1.05–1.3 times it

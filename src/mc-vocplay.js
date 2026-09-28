@@ -8,7 +8,7 @@
 // · 祭司 is the aura vocation: every priest carries an aura that strengthens allies or weakens enemies (mc-voc.js).
 const M = window.MC, BP = M.Battle3 && M.Battle3.prototype; if (!BP) return;
 const RCOL = M.RACES || {};
-const SPLASH = M.MAGE_SPLASH = { k: 0.25, r: 110 };
+const SPLASH = M.MAGE_SPLASH = { k: 0.18, r: 110 };   // 2026-09-28: 0.25 → 0.18 (both ranged 法师 lines topped every tier, .ai/sim-units.js)
 const dist = (a, b) => Math.hypot(a.x - b.x, (a.y - b.y) * 1.2);
 const voc = (e) => e && e.d && e.d.voc;
 

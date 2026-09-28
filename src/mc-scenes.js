@@ -140,7 +140,10 @@ M.genMap2 = function (run, meta) {
   return res;
 };
 const oLv = M.levelAt;
-M.levelAt = (run, node) => oLv(run, node) + (run.colOff || 0) * (run.lvlStep || 0);
+// a waypoint start keeps only part of the chapter's climb (2026-09-28, bot matrix: from the fourth waypoint the plain fights
+// before the first boss stood at 1.0–1.2 — the army is what the grant buys at the market, not what a whole trip builds)
+M.WP_K = 0.45;
+M.levelAt = (run, node) => oLv(run, node) + (run.colOff || 0) * (run.lvlStep || 0) * M.WP_K;
 // a run from a waypoint gets gold for the army it would have bought on the way (called at the end of newRun3, mc-danger.js)
 // 2026-09-27: 0.33 → 0.15 (「挑战中难度（守墓人），结果一进场，送了我970计分，这一下不就没难度了吗」: at 0.33 the points alone matched
 // the area's boss, three times the first fight); now a waypoint start is about 1.5 times its first fight and grows into the boss
