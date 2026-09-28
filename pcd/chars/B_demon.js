@@ -26,22 +26,22 @@ PCD.define('B_demon', (E) => {
   const P = {};
   const FIELDS = ['st', 'by', 'lean', 'hd', 'jaw', 'nx', 'ny', 'fx2', 'fy2', 'fist', 'ws', 'wf', 'glow', 'eyes', 'orb', 'ox', 'oy', 'orb2', 'flash', 'dq', 'hot', 'drip', 'breath'];
   const K = {
-    idle: { nx: 31, ny: 1, fx2: -30, fy2: 1, lean: 0, hd: 0, ws: 0.75, wf: 0 },
-    raise1: { nx: 22, ny: -80, fx2: -30, fy2: 0, lean: -0.06, hd: -0.12, ws: 1, wf: 0.4 },
-    back1: { nx: 12, ny: -84, fx2: -31, fy2: 0, lean: -0.12, hd: -0.18, ws: 1, wf: 0.7 },
-    throw1: { nx: 44, ny: -40, fx2: -30, fy2: 2, lean: 0.14, hd: 0.1, ws: 0.9, wf: -0.5 },
-    raise2: { nx: 22, ny: -80, fx2: -20, fy2: -80, lean: -0.1, hd: -0.2, ws: 1, wf: 0.6 },
-    throw2: { nx: 44, ny: -40, fx2: -8, fy2: -42, lean: 0.14, hd: 0.1, ws: 0.9, wf: -0.5 },
-    overhead: { nx: 8, ny: -88, fx2: -4, fy2: -88, lean: -0.12, hd: -0.15, ws: 1, wf: 0.8 },
-    slam: { nx: 36, ny: 2, fx2: 24, fy2: 3, lean: 0.26, hd: 0.15, ws: 0.95, wf: -0.8 },
-    claw: { nx: 26, ny: -72, fx2: -30, fy2: 1, lean: -0.08, hd: -0.1, ws: 0.95, wf: 0.4 },
-    poke: { nx: 40, ny: 2, fx2: -30, fy2: 2, lean: 0.2, hd: 0.12, ws: 0.9, wf: -0.6 },
+    idle: { nx: 31, ny: 1, fx2: -30, fy2: 1, lean: 0, hd: 0, ws: 0.8, wf: 0 },
+    raise1: { nx: 20, ny: -86, fx2: -32, fy2: -2, lean: -0.18, hd: -0.2, ws: 1, wf: 0.8 },          // 陨石：单手高举，后仰，翼往上翻
+    back1: { nx: 8, ny: -88, fx2: -34, fy2: -4, lean: -0.26, hd: -0.26, ws: 1, wf: 1 },
+    throw1: { nx: 52, ny: -30, fx2: -30, fy2: 2, lean: 0.32, hd: 0.16, ws: 0.9, wf: -0.7 },
+    raise2: { nx: 42, ny: -84, fx2: -40, fy2: -84, lean: -0.24, hd: -0.36, ws: 1, wf: 1 },       // 陨石雨：双臂张成 V、仰头吼
+    throw2: { nx: 48, ny: -34, fx2: 22, fy2: -30, lean: 0.3, hd: 0.14, ws: 0.9, wf: -0.7 },
+    overhead: { nx: 10, ny: -94, fx2: -2, fy2: -94, lean: -0.2, hd: -0.08, ws: 0.4, wf: 0.9 },    // 震击：双拳合抱举过头，翼半收
+    slam: { nx: 40, ny: 4, fx2: 24, fy2: 4, lean: 0.42, hd: 0.3, ws: 0.6, wf: -1 },
+    claw: { nx: 12, ny: -58, fx2: -34, fy2: -10, lean: -0.12, hd: 0.02, ws: 0.7, wf: 0.2 },       // 重击：单爪往后拉
+    poke: { nx: 56, ny: -4, fx2: -30, fy2: 2, lean: 0.36, hd: 0.2, ws: 0.8, wf: -0.6 },
     hunch: { nx: 8, ny: -28, fx2: -4, fy2: -30, lean: 0.35, hd: 0.35, ws: 0.3, wf: -0.2 },
-    wide: { nx: 46, ny: -58, fx2: -44, fy2: -58, lean: -0.16, hd: -0.32, ws: 1, wf: 1 },
+    wide: { nx: 50, ny: -62, fx2: -48, fy2: -62, lean: -0.16, hd: -0.32, ws: 1, wf: 1 },
     climbA: { nx: 32, ny: -14, fx2: -28, fy2: 2, lean: 0.3, hd: 0.3, ws: 0.15, wf: 0 },
     climbB: { nx: 30, ny: 2, fx2: -30, fy2: -14, lean: 0.3, hd: 0.3, ws: 0.15, wf: 0 },
-    swipeW: { nx: 30, ny: -64, fx2: -30, fy2: 1, lean: -0.08, hd: -0.08, ws: 0.9, wf: 0.3 },
-    swipe: { nx: 46, ny: -18, fx2: -30, fy2: 1, lean: 0.2, hd: 0.1, ws: 0.9, wf: -0.4 },
+    swipeW: { nx: -4, ny: -50, fx2: -30, fy2: 1, lean: -0.1, hd: -0.08, ws: 0.9, wf: 0.3 },     // 普攻：爪收到胸前 → 横扫出去
+    swipe: { nx: 52, ny: -28, fx2: -30, fy2: 1, lean: 0.24, hd: 0.1, ws: 0.9, wf: -0.4 },
     agony: { nx: 30, ny: -84, fx2: -28, fy2: -80, lean: -0.2, hd: -0.38, ws: 1, wf: 0.9 },
     limp: { nx: 26, ny: 6, fx2: -24, fy2: 6, lean: 0.45, hd: 0.5, ws: 0.1, wf: -1 },
   };
@@ -51,7 +51,7 @@ PCD.define('B_demon', (E) => {
 
   function poseAt(st, t, T) {
     base(); P.st = st; const tq = q12(t), f12 = f12of(T), TT = f12 / 12;
-    const idle = (tt) => { const b = Math.floor(TT * 2.5) & 1; P.breath = b; P.by = -b; P.wf = [0, 0.15, 0.3, 0.15, 0, -0.15][Math.floor(tt / 0.4) % 6]; P.glow = 1 + ((f12 >> 2) & 1); P.drip = f12 % 6;
+    const idle = (tt) => { const b = Math.floor(TT * 2.5) & 1; P.breath = b; P.by = -b; P.wf = [0, 0.15, 0.3, 0.15, 0, -0.15][Math.floor(tt / 0.4) % 6]; P.glow = 1 + ((f12 >> 2) & 1); P.drip = f12 % 6; P.eyes = (f12 % 7 === 0 || f12 % 11 === 0) ? 1 : 2;   // 眼里的光一跳一跳
       const lp = tt % DUR[IDLE]; if (lp >= 1.5 && lp < 2.0) { P.hd = -0.1; P.jaw = lp < 1.75 ? 1 : 0; P.fist = 1; } };   // 待机个性：抬头从鼻孔里喷一口烟
     if (st === IDLE) idle(tq);
     else if (st === MOVE) { const f = Math.floor(tq * 6) & 3; pose(f < 2 ? K.climbA : K.climbB, f < 2 ? K.climbA : K.climbB); P.by = [2, 0, 2, 0][f]; P.glow = 1; P.drip = f12 % 6; }
@@ -86,7 +86,7 @@ PCD.define('B_demon', (E) => {
         else if (q < 0.6) { pose(R, K.back1, ease.inOut((q - 0.45) / 0.15)); P.orb = 3 + (f12 & 1); if (two) { P.fx2 = K.raise2.fx2 - 4; P.fy2 = K.raise2.fy2 - 4; } }
         else if (q < 0.68) { pose(K.back1, TH, ease.in((q - 0.6) / 0.08)); P.orb = 0; P.jaw = 2; }
         else { pose(TH, TH); P.jaw = 1; P.fist = 0; }
-        if (two) P.orb2 = P.orb;
+        if (two) P.orb2 = P.orb; P.by = -Math.round((two ? 6 : 4) * clamp01(q / 0.45)) + (q >= 0.6 ? 3 : 0);
         P.glow = q < 0.3 ? 2 : 3; P.eyes = 2;
       } else if (st === CAST) { pose(TH, TH); P.fist = 1; P.jaw = 2; P.glow = 3; P.eyes = 2; P.lean += 0.04; }
       else pose(TH, K.idle, ease.inOut(clamp01(tq / 0.6)));
@@ -108,12 +108,12 @@ PCD.define('B_demon', (E) => {
 
   // ───── 几何 ─────
   const L = {};
-  const SHN = [19, -38], SHF = [-18, -38], NECK = [3, -44], WRN = [9, -40], WRF = [-9, -40];
+  const SHN = [19, -38], SHF = [-18, -38], NECK = [3, -46], WRN = [9, -40], WRF = [-9, -40];
   function torsoXf() { B.reset(); B.move(0, P.by); B.rot(0, 0, P.lean); }
-  function headXf() { torsoXf(); B.rot(NECK[0], NECK[1], P.hd); }
+  function headXf() { torsoXf(); B.rot(NECK[0], NECK[1], P.hd * 0.45 - P.lean * 0.55); }   // 头大了、角长了：转头幅度收一半，角不会扫过脸
   function geo() {
     torsoXf(); L.shN = B.at(SHN[0], SHN[1]); L.shF = B.at(SHF[0], SHF[1]); L.core = B.at(-2, -29); L.wrN = B.at(WRN[0], WRN[1]); L.wrF = B.at(WRF[0], WRF[1]);
-    headXf(); L.eye = B.at(5, -53); L.mouth = B.at(6, -45 + P.jaw);
+    headXf(); L.eye = B.at(6, -62); L.mouth = B.at(7, -52 + P.jaw * 1.5);
     L.hN = [P.nx, P.ny + P.by]; L.hF = [P.fx2, P.fy2 + P.by];
     L.elN = B.ik(L.shN, L.hN, 17, 18, -1); L.elF = B.ik(L.shF, L.hF, 17, 18, 1);
     L.orb = [L.hN[0] + 1, L.hN[1] - 8 - P.orb]; L.orb2 = [L.hF[0] - 1, L.hF[1] - 8 - P.orb2];
@@ -125,8 +125,8 @@ PCD.define('B_demon', (E) => {
   // 翼：肩胛 → 腕 → 四根指骨，骨间的膜下缘是一道道弧（远侧那扇暗、小一圈）
   function wing(side) {
     const far = side < 0, root = far ? L.wrF : L.wrN, s = 0.25 + 0.75 * P.ws, k = far ? 0.9 : 1, f = P.wf * 6;
-    const wr = [root[0] + side * (16 + 24 * s) * k, root[1] - (18 + 14 * s) * k - f];
-    const tips = [[side * 34, 4 - f * 0.4], [side * 32, 22 - f * 0.2], [side * 22, 36], [side * 8, 42]].map(([dx, dy]) => [wr[0] + dx * s * k, wr[1] + dy * (0.55 + 0.45 * s) * k]);
+    const wr = [root[0] + side * (20 + 30 * s) * k, root[1] - (22 + 18 * s) * k - f];   // 张得更开：剪影压过来
+    const tips = [[side * 40, 2 - f * 0.4], [side * 38, 24 - f * 0.2], [side * 26, 40], [side * 9, 46]].map(([dx, dy]) => [wr[0] + dx * s * k, wr[1] + dy * (0.55 + 0.45 * s) * k]);
     const base = [root[0] + side * 2, root[1] + 26];
     const mem = [root, wr, tips[0]]; for (let i = 0; i < 3; i++) { const a = tips[i], b = tips[i + 1], m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; mem.push([m[0] + (wr[0] - m[0]) * 0.22, m[1] + (wr[1] - m[1]) * 0.22], b); }
     { const a = tips[3], m = [(a[0] + base[0]) / 2, (a[1] + base[1]) / 2]; mem.push([m[0] + (wr[0] - m[0]) * 0.15, m[1] + (wr[1] - m[1]) * 0.15], base); }
@@ -165,31 +165,38 @@ PCD.define('B_demon', (E) => {
     part(); B.ell(E, -2, -29, 4, 4.4, 0, MAG1); B.ell(E, -2, -29, 2.6, 3, 0, P.glow >= 2 ? MAG3 : MAG2); if (P.glow >= 3) B.px(E, -3, -30, MAG3);   // 熔岩心
   }
   function collar() {
-    part(); torsoXf(); for (const [x, h] of [[-12, 9], [-7, 12], [-2, 13], [4, 13], [9, 12], [14, 9]]) B.cap(E, x, -42, x * 1.25, -42 - h, 2.4, 0.5, OBS);   // 后颈的黑曜石骨刺
+    part(); torsoXf(); for (const [x, h] of [[-13, 6], [-8, 8], [13, 8], [17, 6]]) B.cap(E, x, -41, x * 1.3, -41 - h, 2.2, 0.5, OBS);   // 后颈的黑曜石骨刺
   }
   function pauldron(side) {
-    part(); torsoXf(); const far = side < 0, c = far ? [-19, -41] : [20, -41], m = OBS;
+    part(); torsoXf(); const far = side < 0, c = far ? [-21, -39] : [22, -39], m = OBS;
     B.ell(E, c[0], c[1], 9, 6.5, side * 0.3, m); B.ln(E, c[0] - 7, c[1] + 3, c[0] + 7, c[1] + 3, m, 3); B.ln(E, c[0] - 6, c[1] - 3, c[0] + 5, c[1] - 5, m, 8);
-    for (const [dx, h, a] of [[-5, 9, -0.3], [0, 12, 0], [5, 9, 0.35]]) B.cap(E, c[0] + dx * side, c[1] - 4, c[0] + (dx + Math.sin(a) * h) * side, c[1] - 4 - Math.cos(a) * h, 2.2, 0.4, m, 6);
+    for (const [dx, h, a] of [[0, 6, 0.5], [4, 8, 0.9], [7, 6, 1.3]]) B.cap(E, c[0] + dx * side, c[1] - 3, c[0] + (dx + Math.sin(a) * h) * side, c[1] - 3 - Math.cos(a) * h, 2, 0.4, m, 6);
   }
-  function head() {
-    part(); headXf(); const j = P.jaw;
-    B.ell(E, 4, -53, 8, 7.5, 0, HIDE); B.poly(E, [[-3, -50], [12, -50], [12, -45 + j], [9, -42 + j], [0, -42 + j], [-3, -46]], HIDE);   // 颅、下颌
-    B.ln(E, -2, -55, 11, -55, HIDE, 2); B.ln(E, -1, -56, 10, -56, HIDE, 7);                                     // 眉骨
-    B.px(E, 5, -51, HIDE, 8); B.ln(E, 4, -49, 7, -49, HIDE, 3); B.px(E, 4, -48, HIDE, 10); B.px(E, 7, -48, HIDE, 10);   // 鼻梁、鼻孔
-    const eye = P.eyes >= 2 ? MAG3 : P.eyes === 1 ? MAG2 : HIDE;
-    B.ln(E, 0, -53, 3, -53, eye, P.eyes ? 0 : 10); B.ln(E, 7, -53, 10, -53, eye, P.eyes ? 0 : 10); if (P.eyes >= 2) { B.px(E, 1, -54, MAG2); B.px(E, 8, -54, MAG2); }
-    if (j) { B.poly(E, [[1, -46], [11, -46], [10, -45 + j], [2, -45 + j]], j >= 2 ? MAG2 : MAG1); }                // 张嘴：嘴里是火
-    B.ln(E, 1, -46, 11, -46, HIDE, 10);
-    for (const x of [2, 9]) { B.px(E, x, -45, HORN, 8); B.px(E, x, -44, HORN, 6); } if (j) for (const x of [3, 8]) B.px(E, x, -44 + j, HORN, 7);   // 獠牙
-    for (const [x, y] of [[1, -60], [4, -61], [7, -60]]) B.cap(E, x, y + 2, x, y - 2, 1.2, 0.3, OBS, 7);         // 头顶的短刺
+  function head() {   // 大一圈的头（约 1.5 倍）：粗脖子、压低的眉骨、两道斜着发光的眼、獠牙大嘴（张嘴里面是火）
+    part(); headXf(); const J = Math.round(P.jaw * 1.5);
+    B.cap(E, 1, -40, 3, -52, 8, 7, HIDE); B.ln(E, -3, -44, -1, -52, HIDE, 3); B.ln(E, 6, -43, 8, -51, HIDE, 3);                   // 脖子和筋
+    part(); headXf();
+    B.ell(E, 4, -63, 11, 9.5, 0, HIDE); B.poly(E, [[-7, -62], [16, -62], [17, -55], [15, -50 + J], [11, -46 + J], [-1, -46 + J], [-5, -50 + J], [-7, -56]], HIDE);   // 颅、宽下颌
+    B.ell(E, 0, -58, 3, 2, 0.3, HIDE, 7); B.ell(E, 11, -58, 3, 2, -0.3, HIDE, 7);                                              // 颧骨高光
+    B.poly(E, [[-8, -68], [17, -68], [18, -64], [5, -62], [-8, -64]], HIDE, 3); B.ln(E, -7, -69, 16, -69, HIDE, 8);          // 眉骨：一整条压下来
+    B.ln(E, 4, -67, 5, -71, HIDE, 3); B.ln(E, 5, -71, 4, -74, HIDE, 3);                                                       // 额头中间的皱
+    const eye = P.eyes >= 2 ? MAG3 : P.eyes === 1 ? MAG2 : HIDE, et = P.eyes ? 0 : 10;
+    B.ln(E, -5, -63, 1, -61, eye, et); B.ln(E, -5, -62, 1, -60, P.eyes ? MAG1 : HIDE, et);                                    // 远眼（斜）
+    B.ln(E, 8, -61, 14, -63, eye, et); B.ln(E, 8, -60, 14, -62, P.eyes ? MAG1 : HIDE, et);                                    // 近眼
+    if (P.eyes >= 2) { B.px(E, -6, -64, MAG2); B.px(E, 15, -64, MAG2); B.px(E, -1, -62, MAG3); B.px(E, 11, -62, MAG3); }       // 眼角拖出来的光
+    B.ln(E, 5, -60, 6, -55, HIDE, 3); B.px(E, 4, -55, HIDE, 10); B.px(E, 8, -55, HIDE, 10); B.ln(E, 3, -56, 9, -56, HIDE, 7); // 鼻梁、鼻孔
+    if (J) { B.poly(E, [[-2, -52], [14, -52], [13, -51 + J], [-1, -51 + J]], MAG1); if (J >= 2) B.poly(E, [[2, -51], [10, -51], [9, -52 + J], [3, -52 + J]], J >= 4 ? MAG3 : MAG2); B.ln(E, -1, -51 + J, 13, -51 + J, HIDE, 10); }   // 张嘴：暗红的喉咙，里面一团火
+    B.ln(E, -3, -52, 15, -52, HIDE, 10);
+    for (const x of [0, 11]) { B.ln(E, x, -52, x + (x ? -0.5 : 0.5), -48, HORN, 8); B.px(E, x, -51, HORN, 6); }             // 上獠牙（长）
+    if (J) { for (const x of [3, 6, 9]) B.px(E, x, -51, HORN, 5); for (const x of [2, 9]) B.ln(E, x, -51 + J, x, -53 + J, HORN, 7); }   // 牙排、下獠牙
+    for (const [x, y] of [[0, -46], [5, -45], [10, -46]]) B.cap(E, x, y + J, x + 0.5, y + 3 + J, 1.2, 0.3, OBS, 6);            // 下巴的骨刺
   }
-  function horn(side) {
-    part(); headXf(); const far = side < 0, m = far ? HORND : HORN, o = far ? -4 : 11;
-    const pts = [[o, -57], [o + side * 6, -62], [o + side * 11, -60], [o + side * 12, -53], [o + side * 8, -49], [o + side * 5, -51]];
-    B.strand(E, pts, far ? 3.2 : 3.6, 1, m);
-    for (let i = 1; i < pts.length - 1; i++) B.px(E, (pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2 - 1, m, 3);   // 角上的环纹
-    B.px(E, pts[1][0], pts[1][1] - 2, m, 8);
+  function horn(side) {   // 额头两侧的大角：先往外上方扫，再向前卷回来，角尖朝前
+    part(); headXf(); const far = side < 0, m = far ? HORND : HORN, o = far ? -5 : 13;
+    const pts = [[o, -67], [o + side * 7, -75], [o + side * 15, -80], [o + side * 23, -80], [o + side * 28, -75], [o + side * 28, -68], [o + side * 24, -64]];
+    B.strand(E, pts, far ? 4.4 : 5, 1, m);
+    for (let i = 1; i < pts.length - 2; i++) B.ln(E, (pts[i][0] + pts[i + 1][0]) / 2 - side, (pts[i][1] + pts[i + 1][1]) / 2 - 3, (pts[i][0] + pts[i + 1][0]) / 2 + side, (pts[i][1] + pts[i + 1][1]) / 2 + 3, m, 3);   // 角上的环纹
+    B.ln(E, pts[1][0], pts[1][1] - 3, pts[3][0], pts[3][1] - 4, m, 8);                                                         // 角背的高光
   }
   function orb(c, n) {   // 手上聚起来的熔岩火球
     part(); const r = 1.5 + n * 1.3; dot(c[0], c[1], r + 1, MAG1); dot(c[0], c[1], r, MAG2); dot(c[0] - 0.5, c[1] - 0.5, Math.max(0.6, r - 1.6), MAG3);

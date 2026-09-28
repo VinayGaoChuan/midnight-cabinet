@@ -140,6 +140,10 @@ if (BP && HAS_DOM) {
     if (a) { e._fg = fbEng(this, e, a); e._fgB = this; e.pxBoss = a; }
     return e;
   };
+  // it stands deeper in its arena than the old picture (the head and horns stay clear of the top of the field): drawn SINK
+  // field pixels lower, clipped at the arena's surface
+  const SINK = 18 * KF, oFbT = BP.fbTick;
+  if (oFbT) BP.fbTick = function (e) { const r = oFbT.apply(this, arguments); if (e && e._fg) { e.drawDY = (e.drawDY || 0) + SINK; e.clipY = -e.drawDY + 4; } return r; };
   const P16 = M.P16, oEnt = P16 && P16.entImg;
   if (oEnt) P16.entImg = function (e, T) {
     const f = e && e._fg; if (!f || !e._fgB) return oEnt.apply(this, arguments);
@@ -153,7 +157,7 @@ if (BP && HAS_DOM) {
     const fc = this.ui && this.ui.cv && this.ui.cv('fx'); if (!fc) return r;
     const g = fc.getContext('2d'), z = (this.bcam && this.bcam.z) || 1, p = this.camField(e.x + (e.drawDX || 0), e.y + (e.drawDY || 0)), img = e._fr, face = M.faceOf ? M.faceOf(e) : -1;
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false; g.globalAlpha = Math.min(1, P.t / 0.2) * Math.min(1, Math.max(0, (2.9 - P.t) / 0.35));
-    g.translate(Math.round(p.x), Math.round(p.y + 180)); g.scale(z * (face < 0 ? -1 : 1), z); g.drawImage(img, -img.cx, -img.footY); g.restore();
+    g.translate(Math.round(p.x), Math.round(p.y + 180)); g.scale(z * (face < 0 ? -1 : 1), z); if (e.clipY != null) { g.beginPath(); g.rect(-4000, -4000, 8000, 4000 + e.clipY); g.clip(); } g.drawImage(img, -img.cx, -img.footY); g.restore();
     return r;
   };
 }
