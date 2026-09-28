@@ -24,4 +24,6 @@ const chunk = (ty, d) => { const l = Buffer.alloc(4); l.writeUInt32BE(d.length);
 const ih = Buffer.alloc(13); ih.writeUInt32BE(W, 0); ih.writeUInt32BE(H, 4); ih[8] = 8; ih[9] = 2;
 fs.writeFileSync(out, Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ih), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]));
 const cs = new Set(); frames.forEach((f) => f.px.forEach((c) => c !== 255 && cs.add(c)));
-console.log(out, W, H, frames.length, 'frames', cs.size, 'colors');
+// the game draws through render() (hero blitted onto the stage with its effects): it must show something
+g.enter('idle'); g.step(0.2, 1); const rb = g.render(); let op = 0; for (const v of rb) if (v !== 255) op++;
+console.log(out, W, H, frames.length, 'frames', cs.size, 'colors', 'render', op ? 'ok ' + op : 'EMPTY (the game would show nothing: check P.mx / P.flip in base())');

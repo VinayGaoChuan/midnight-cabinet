@@ -3,7 +3,7 @@ export default async ({ ev, shot, wait, log, ROOT }) => {
   const D = process.env.OUT || (ROOT + '/.ai'), tag = (process.env.FB || 'FB_demon') + '-' + (process.env.OLD ? 'old' : 'new'), S1 = { scale: 0.5 };
   await ev(fs.readFileSync(ROOT + '/tools/bot.js', 'utf8') + ';true');
   await ev(`(async()=>{ const g=__mcg; const p=__bot(60,{}); for(let i=0;i<200;i++){ await new Promise(r=>setTimeout(r,200)); if(g.run&&g.run.map&&g.screen==='world'){ window.__botStop=true; break; } } await p; })()`);
-  await ev(`(()=>{ ${process.env.OLD ? 'MC.BOSSART.OFF["' + (process.env.FB || 'FB_demon') + '"]=1;' : ''} const g=__mcg, run=g.run; run.region=Object.assign({}, run.region, {tut:false}); const n=run.map.nodes.find(n=>n.type==='boss'); g.beginBattle(Object.assign({}, n, {fb:'${process.env.FB || 'FB_demon'}', final:false})); g.paused=false; })()`);
+  await ev(`(()=>{ ${process.env.OLD ? 'MC.BOSSART.OFF["' + (process.env.FB || 'FB_demon') + '"]=1;' : ''} const g=__mcg, run=g.run; run.region=Object.assign({}, run.region, {tut:false}); const n=run.map.nodes.find(n=>n.type==='boss'); g.beginBattle(Object.assign({}, n, {fb:'${process.env.FB || 'FB_demon'}', final:false})); g.storyFx=null; g.paused=false; })()`); await wait(300); await ev(`(()=>{ __mcg.storyFx=null; })()`);
   const S = `(()=>{ const b=__mcg.battle; const e=b&&b.ents.find(x=>x.fb); if(!e) return 'noe'; const f=e._fg; return 't='+b.t.toFixed(1)+' st='+(e.ai&&e.ai.st)+' ph='+(e.ai&&e.ai.phase)+' hp='+Math.round(e.hp/e.maxHp*100)+'% cast='+(e.casting&&e.casting.bk?e.casting.bk.id:'')+' eng='+(f?f.cur+':'+f.g.state+':'+f.g.stT.toFixed(2):'-')+' p2='+(b.p2?b.p2.t.toFixed(2):''); })()`;
   await wait(900); log(await ev(S)); await shot(D + '/d-' + tag + '-rise.png', S1);
   let got = {};

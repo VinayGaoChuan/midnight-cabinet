@@ -641,7 +641,7 @@ function render() {
     if (dfStun) for (let k = 0; k < 3; k++) { const a = f12 * 0.52 + k * 2.094, x = Math.round(DUMMY_X + Math.cos(a) * 6), y = Math.round(HY - 33 + sk + Math.sin(a) * 2), c = FXR[FXI.coin][k === 0 ? 0 : 1]; put(x, y, c); put(x - 1, y, FXR[FXI.coin][2]); put(x + 1, y, FXR[FXI.coin][2]); put(x, y - 1, FXR[FXI.coin][2]); put(x, y + 1, FXR[FXI.coin][2]); }
   } else blit(dummy, DUMMY_X, HY, 0);
   if (C.fxMid) C.fxMid(f12); drawFx(1, f12);
-  if (DK.on) drawDeath(); else blit(C.hero, HX + P.mx, HY, P.flip);
+  if (DK.on) drawDeath(); else blit(C.hero, HX + (P.mx || 0), HY, P.flip);   // a module that never sets mx still shows
   if (C.fxFront) C.fxFront(f12); drawFx(2, f12);
   for (let k = 0; k < RN; k++) { const t = rgT[k], life = rgBig[k] ? 0.22 : 0.16; if (t >= life) continue; const R = FXR[rgRamp[k]], r = 2 + t * (rgBig[k] ? 62 : 48), c = t < life * 0.3 ? R[0] : t < life * 0.65 ? R[1] : R[2], n = Math.ceil(r * 6.3); for (let i = 0; i < n; i++) { if (((i + f12) & 3) === 3 && t > life * 0.5) continue; const a = i / n * 6.2832; put(Math.round(rgX[k] + Math.cos(a) * r), Math.round(rgY[k] + Math.sin(a) * r * 0.8), c); } }
   for (let i = 0; i < PN; i++) {
@@ -781,7 +781,7 @@ function renderGame() {
   const f12 = Math.floor(simT * 12);
   if (C.fxBack) C.fxBack(f12); drawFx(0, f12);
   if (C.fxMid) C.fxMid(f12); drawFx(1, f12);
-  if (DK.on) drawDeath(); else blit(C.hero, HX + P.mx, HY, P.flip);
+  if (DK.on) drawDeath(); else blit(C.hero, HX + (P.mx || 0), HY, P.flip);   // a module that never sets mx still shows
   if (C.fxFront) C.fxFront(f12); drawFx(2, f12);
   for (let k = 0; k < RN; k++) { const t = rgT[k], life = rgBig[k] ? 0.22 : 0.16; if (t >= life) continue; const R = FXR[rgRamp[k]], r = 2 + t * (rgBig[k] ? 62 : 48), c = t < life * 0.3 ? R[0] : t < life * 0.65 ? R[1] : R[2], n = Math.ceil(r * 6.3); for (let i = 0; i < n; i++) { if (((i + f12) & 3) === 3 && t > life * 0.5) continue; const a = i / n * 6.2832; put(Math.round(rgX[k] + Math.cos(a) * r), Math.round(rgY[k] + Math.sin(a) * r * 0.8), c); } }
   for (let i = 0; i < PN; i++) {
