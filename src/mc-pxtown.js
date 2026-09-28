@@ -109,14 +109,14 @@ function ensure(key, sc, dk, stage) {
   const A = ART[key]; if (A.prep) A.prep(); const f = M.townFoot(key), w = Math.round(f.w * sc / 2), h = Math.round(f.h * sc / 2), pt = PADT + (A.padt || 0);
   const W = w + PADX * 2, H = h + pt + PADB, G = { key, st: stage === 'site' ? 0 : stage, w, h, W, H, cx: W >> 1, gy: H - PADB, dk, s: sc };
   G.L = G.cx - (w >> 1); G.R = G.L + w;
-  DIM[id] = G;
+  DIM[id] = G; const hz = A.wonder ? dk * 0.4 : dk;   // the wonders keep their stone pale in the haze: they are the skyline's show
   X.def(id, {
-    size: [W, H], fy: H, clear: 1, noFrame: 1, noFloor: 1, amb: [0.34 * (1 - dk * 0.9), 0.3 * (1 - dk)], town: 1,
+    size: [W, H], fy: H, clear: 1, noFrame: 1, noFloor: 1, amb: [0.34 * (1 - hz * 0.9), 0.3 * (1 - hz)], town: 1,
     paint(S, sc2) {
       const l0 = sc2.light; sc2.light = (o) => l0(Object.assign(o, { i: (o.i || 1) * (1 - dk * 1.1) }));
       if (stage === 'site') paintSite(S, sc2, G, A); else A.paint(S, sc2, G);
       // the back streets lie in the night haze: every step a little darker, down toward the night indigo
-      if (dk) Object.keys(S.L).forEach(k => { const Y = S.L[k]; for (let p = 0; p < W * H; p++) if (Y.m[p] && Y.e[p] !== 255) Y.t[p] = Math.max(0, Y.t[p] - dk * 5); });
+      if (hz) Object.keys(S.L).forEach(k => { const Y = S.L[k]; for (let p = 0; p < W * H; p++) if (Y.m[p] && Y.e[p] !== 255) Y.t[p] = Math.max(0, Y.t[p] - hz * 5); });
     },
     anim(D, t, s, o) { if (stage === 'site') animSite(D, t, s, o, G, A); else { A.anim(D, t, s, o, G); if (o.show && A.show) A.show(s, o, G); } },
   });
