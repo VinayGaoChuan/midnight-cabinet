@@ -139,6 +139,7 @@ mc-pxtown-r10.js
 mc-pxtown-w1.js
 mc-pxtown-w2.js
 mc-pxtown-w3.js
+mc-pxtown-w4.js
 mc-pxtown-top.js
 mc-siege.js
 mc-knock.js
