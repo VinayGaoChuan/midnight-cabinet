@@ -802,6 +802,9 @@ const BOSSV = {
   demonDie: (t, w, p) => { tone(t, 'sawtooth', 150, 1.4, .1 + .05 * w, { to: 48, vib: [5, 70, .1], lp: 1000, pan: p, rev: .7 }); tone(t + .05, 'sawtooth', 226, 1.2, .06, { to: 70, vib: [7, 80, .1], lp: 1300, pan: p, rev: .7 }); rumble(t, 1.6, .18, { f: 150 }); },
   fade: (t, w, p) => { tone(t, 'sine', 420, .9, .05 + .03 * w, { to: 140, vib: [6, 40, .2], pan: p, rev: .7 }); nz(t, .8, 'bandpass', 1400, 3, .03, { to: 500, pan: p, rev: .5 }); },
 };
+// a boss module brings its own voices (VOICES: { name: (syn, t, w, pan) => … }, registered by mc-bossart.js); syn = the synth kit
+const SYN = { tone, nz, fm, ring, thud, whoosh, riser, crackle, blip, bell, rumble, brass, choir, timp, cymbal, coins, step, rnd, pick, hz, thunder };
+S.bossVoice = (k, fn) => { BOSSV[k] = (t, w, p) => fn(SYN, t, w, p); };
 def('charFx', 0, (t, ev, o) => {
   o = o || {}; const w = Math.max(0, Math.min(1, o.w == null ? .5 : o.w)), p = o.pan || 0;
   switch (ev) {

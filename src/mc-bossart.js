@@ -12,8 +12,13 @@ const M = window.MC, PCD = window.PCD, G = M && M.PCDG; if (!PCD || !G) return;
 const HAS_DOM = typeof document !== 'undefined' && !!document.createElement;
 const MINI = { Centaur: 'B_centaur' }, FINAL = { FB_demon: 'B_demon' };
 const MOVES = { B_centaur: { charge: 'charge', trample: 'trample' } };
-const artOf = (k) => { const a = MINI[k] || FINAL[k]; return a && PCD.has(a) ? a : null; };
-M.BOSSART = { MINI, FINAL, artOf };
+// a final boss FB_x is redrawn as soon as its module B_x exists (pcd/chars/B_x.js); small bosses are listed in MINI
+const OFF = {};   // OFF[k] = 1: show the old picture (before / after shots)
+const artOf = (k) => { if (OFF[k]) return null; const a = MINI[k] || FINAL[k] || (/^FB_/.test(k || '') ? 'B_' + k.slice(3) : null); return a && PCD.has(a) ? a : null; };
+// a module's own voices go to the synth (charFx('boss', { k }))
+const voiced = {};
+function voices(a) { if (voiced[a]) return; voiced[a] = 1; const S = M.Sfx; try { const g = PCD.createEngine({ game: true, W: (PCD.meta(a) || {}).W, H: (PCD.meta(a) || {}).H }); g.load(a); const V = g.C.VOICES; if (V && S && S.bossVoice) for (const k in V) S.bossVoice(k, V[k]); } catch (err) { /* no voices */ } }
+M.BOSSART = { MINI, FINAL, OFF, artOf };
 
 // ───────── portraits ─────────
 const pcache = {};
@@ -136,7 +141,7 @@ function fbEng(b, e, a) {
   const g = PCD.createEngine({ game: true, W: mt.W, H: mt.H, out: {
     sfx: (ev, x) => { const S = M.Sfx; if (NOSFX[ev] || !S || !S.charFx) return; try { S.charFx(ev, Object.assign({}, x, { pan: S.panX ? S.panX(e.x) : 0 })); } catch (err) { /* sound */ } },
     shake: (t, amp) => { if (c.b) c.b.shake = Math.max(c.b.shake || 0, amp * 5); } } });
-  g.load(a); g.enter('idle');
+  g.load(a); g.enter('idle'); voices(a);
   const cv = document.createElement('canvas'); cv.width = g.W; cv.height = g.H; const cx = cv.getContext('2d'), im = cx.createImageData(g.W, g.H);
   return { g, c, cv: M.asPx(cv, KF), cx, im, px: new Uint32Array(im.data.buffer), cur: 'idle', t: null, p2t: 0, hurt: -9 };
 }
@@ -149,7 +154,7 @@ function fbDrive(b, e, f) {
   else if (A.st === 'rise') { if (f.cur !== 'rise') go('rise', 'rise', 'charge', Math.max(0, T - (A.t0 || T))); }
   else if (A.st === 'roar' || P2) { if (f.cur !== 'p2') go('p2', 'p2', 'charge', 0); }
   else if (e.casting && e.casting.bk) {
-    if (f.cast !== e.casting) { f.cast = e.casting; const wind = e.casting.until - e.casting.t0; g.move(FMV[e.casting.bk.id] || 'poke'); go('mv', null, 'charge', Math.max(0, g.dur[3] - wind) + Math.max(0, T - e.casting.t0)); }
+    if (f.cast !== e.casting) { f.cast = e.casting; const wind = e.casting.until - e.casting.t0, id = e.casting.bk.id, mvs = g.C.MOVES || []; g.move(mvs.includes(id) ? id : FMV[id] || 'poke'); /* the module names its moves after the kit's */ go('mv', null, 'charge', Math.max(0, g.dur[3] - wind) + Math.max(0, T - e.casting.t0)); }
   } else if (f.cur === 'mv' && g.state === 'charge') g.enter('cast');   // the game fired: the release frame is the hit
   else if (f.cur === 'idle' && e.kb != null && T - e.kb < 0.06 && T - f.hurt > 3) { f.hurt = T; go('hurt', null, 'hurt', 0); }
   if (f.cur !== 'idle' && f.cur !== 'dead' && g.done) go('idle', null, 'idle', 0);
@@ -164,14 +169,14 @@ function fbCanvas(f) {
 if (BP && HAS_DOM) {
   const oSp2 = BP.spawnEnemy;
   BP.spawnEnemy = function (s) {
-    const e = oSp2.apply(this, arguments), a = e && e.fb && FINAL[s.type] && artOf(s.type);
+    const e = oSp2.apply(this, arguments), a = e && e.fb && artOf(s.type);
     if (a) { e._fg = fbEng(this, e, a); e._fgB = this; e.pxBoss = a; }
     return e;
   };
   // it stands deeper in its arena than the old picture (the head and horns stay clear of the top of the field): drawn SINK
   // field pixels lower, clipped at the arena's surface
   const SINK = 18 * KF, oFbT = BP.fbTick;
-  if (oFbT) BP.fbTick = function (e) { const r = oFbT.apply(this, arguments); if (e && e._fg) { e.drawDY = (e.drawDY || 0) + SINK; e.clipY = -e.drawDY + 4; } return r; };
+  if (oFbT) BP.fbTick = function (e) { const r = oFbT.apply(this, arguments); if (e && e._fg) { e.drawDY = (e.drawDY || 0) + (e._fg.g.C.SINK != null ? e._fg.g.C.SINK * KF : SINK); e.clipY = -e.drawDY + 4; } return r; };
   const P16 = M.P16, oEnt = P16 && P16.entImg;
   if (oEnt) P16.entImg = function (e, T) {
     const f = e && e._fg; if (!f || !e._fgB) return oEnt.apply(this, arguments);
