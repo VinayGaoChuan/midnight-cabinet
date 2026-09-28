@@ -44,7 +44,7 @@ try {
   if (MODE === 'stages') {
     // one image for a group: every building a row of its three stages on the near street (wonders: far, in their haze), two buildings a row
     await open('?pxtown=1');
-    const url = await ev(`(() => { const M = MC, PT = M.PXTOWN, SC = 3, keys = ${JSON.stringify(KEYS)}.filter(k => PT.ART[k]); let n = 0;
+    const url = await ev(`(() => { const M = MC, PT = M.PXTOWN, SC = 3, keys = ${JSON.stringify(KEYS)}.filter(k => PT.ART[k] || (PT.auto && PT.auto(k))); let n = 0;
       const cell = (key, st) => { const far = !!(M.WONDER_Y && M.townRole && !M.BUILDINGS[key]) || key === 'lighthouse' || (PT.ART[key] && PT.ART[key].wonder), sc = far ? 1.4 : 0.84, f = M.townFoot(key), CW = Math.round(f.w * sc / 2) + 44, CH = Math.round(f.h * sc / 2) + 50, cv = document.createElement('canvas'); cv.width = CW; cv.height = CH; const x = cv.getContext('2d'), T1 = 20 + (++n) * 9;
         PT.stageForce = st; const v = { key, k: 'st' + n, x: 0, y: 0, sc, dk: far ? 0.26 : 0.06, B: { q: 1 }, w: f.w, h: f.h, pxSt: st };
         for (let t = T1 - 1.5; t <= T1 + 1e-6; t += 1 / 30) { x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = '#12132e'; x.fillRect(0, 0, CW, CH); x.fillStyle = '#1a1d45'; x.fillRect(0, CH - 10, CW, 10); x.setTransform(0.5, 0, 0, 0.5, CW / 2, CH - 10); x.imageSmoothingEnabled = false; PT.draw(x, v, t, null, null); }

@@ -123,7 +123,7 @@ function ensure(key, sc, dk, stage) {
   return id;
 }
 PT.ensure = ensure; PT.dims = (id) => DIM[id];
-PT.has = (key) => !!ART[key];
+PT.has = (key) => !!(ART[key] || (PT.auto && PT.auto(key)));
 
 // ───────── sounds, on the show's beats (seconds from the start of the show) ─────────
 const S_ = () => M.Sfx;
@@ -206,7 +206,7 @@ PT.beam = function (ctx, lx, ly, t, show, dk, grow) {
 // ───────── drawing (called by mc-town.js / mc-wonders.js in place of the old art) ─────────
 const zoomOf = () => (M._g && M._g.bv && M._g.bv.z) || 0.6;
 PT.draw = function (ctx, v, t, lights, meta) {
-  const A = ART[v.key]; if (!A || !PT.on()) return false; if (A.prep) A.prep();
+  if (!PT.on()) return false; const A = ART[v.key] || (PT.auto && PT.auto(v.key)); if (!A) return false; if (A.prep) A.prep();
   const m = meta || (M._g && M._g.meta), sc = v.sc || 1, dk = v.dk || 0, q = Math.min(3, (v.B && v.B.q) || 0), st = stageOf(m);
   const age = v.riseT != null ? t - v.riseT : 99, rising = age >= 0 && age < RISE;
   // a new stage: the upgrade show, the nearest to the main base first
@@ -251,7 +251,7 @@ PT.draw = function (ctx, v, t, lights, meta) {
 };
 // a demolished building sinks back into the ground
 PT.gone = function (ctx, gv, t) {
-  const A = ART[gv.key]; if (!A || !PT.on()) return false;
+  if (!PT.on()) return false; const A = ART[gv.key] || (PT.auto && PT.auto(gv.key)); if (!A) return false;
   const st = gv.pxSt != null ? gv.pxSt : 0, id = ensure(gv.key, gv.sc || 1, gv.dk || 0, gv.site ? 'site' : st), G = DIM[id], q = (t - gv.goneT) / 1.4, X0 = gv.x - G.cx * 2, Y0 = gv.y - G.gy * 2;
   ctx.save(); ctx.beginPath(); ctx.rect(X0 - 20, Y0 - 200, G.W * 2 + 40, G.gy * 2 + 200); ctx.clip(); ctx.translate(RM() ? 0 : Math.round((R() - 0.5) * 3) * 2, q * q * (G.h + 20) * 2);
   X.draw(ctx, X0, Y0, id, t, {}, 'tw:' + (gv.k || gv.key) + ':' + (gv.site ? 'site' : st), zoomOf()); ctx.restore(); return true;

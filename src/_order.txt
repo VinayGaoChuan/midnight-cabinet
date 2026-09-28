@@ -124,6 +124,7 @@ mc-pxtown-props.js
 mc-pxtown-a.js
 mc-pxtown-b.js
 mc-pxtown-w.js
+mc-pxtown-s.js
 mc-siege.js
 mc-knock.js
 mc-omen.js
