@@ -317,6 +317,7 @@ function drawNpc(ctx, n, t, lights, v) {
   if (n.pop && t - n.pop < 0.8) { const q = (t - n.pop) / 0.8; ctx.save(); ctx.globalAlpha = 1 - q; U.text(ctx, '+', n.x, y - 96 - q * 30, 30, P.gold, { outline: true }); ctx.restore(); }
 }
 function drawBuilding(ctx, v, t, lights, raid, meta, T) {
+  if (M.PXTOWN && M.PXTOWN.draw(ctx, v, t, lights, meta, T)) { if (v.demo) drawDemo(ctx, v, t); return; }   // the pixel town (mc-pxtown.js, behind its switch)
   const age = t - (v.riseT != null ? v.riseT : -9), rising = age >= 0 && age < 1.25, look = v.site ? 3 : v.ruin ? 2 : 0;
   const x0 = v.fight && raid && raid.bld && raid.bld[v.k], dead = x0 && x0.hp <= 0, skin = M.dirTop ? M.dirTop(meta) : null;
   const im = artOf(v.key, dead ? 2 : look, v.site ? v.prog : 0, v.dk, skin), y0 = v.y, sc = v.sc || 1;
@@ -347,9 +348,12 @@ function drawBuilding(ctx, v, t, lights, raid, meta, T) {
   // 加固: gold chevrons on the building's foot, one per level; a flash when it goes up a level
   if (v.fight && v.fort && !v.site && !dead) { for (let i = 0; i < v.fort; i++) { const cx = v.x - (v.fort - 1) * 11 + i * 22, cy = y0 - 18; ctx.fillStyle = P.ink; ctx.beginPath(); ctx.moveTo(cx - 11, cy - 3); ctx.lineTo(cx, cy - 13); ctx.lineTo(cx + 11, cy - 3); ctx.lineTo(cx + 11, cy + 5); ctx.lineTo(cx, cy - 5); ctx.lineTo(cx - 11, cy + 5); ctx.fill(); ctx.fillStyle = P.gold; ctx.beginPath(); ctx.moveTo(cx - 8, cy - 2); ctx.lineTo(cx, cy - 9); ctx.lineTo(cx + 8, cy - 2); ctx.lineTo(cx + 8, cy + 2); ctx.lineTo(cx, cy - 4); ctx.lineTo(cx - 8, cy + 2); ctx.fill(); }
     if (v.fortFx != null && t - v.fortFx < 0.8) { const q = (t - v.fortFx) / 0.8; ctx.save(); ctx.globalAlpha = 1 - q; ctx.strokeStyle = P.gold; ctx.lineWidth = 6; ctx.strokeRect(v.x - v.w * sc / 2 - q * 30, y0 - v.h * sc - q * 30, v.w * sc + q * 60, v.h * sc + q * 30); ctx.restore(); if (lights) lights.push({ x: v.x, y: y0 - v.h * sc * 0.5, r: 300, c: '#ffcf4a', f: 1 - q }); } }
-  if (v.demo && !dead) { const cy = y0 - v.h * sc * 0.6; ctx.save(); ctx.globalAlpha = 0.5 + 0.2 * Math.sin(t * 6); ctx.strokeStyle = P.red; ctx.lineWidth = 8 * sc; ctx.beginPath(); ctx.moveTo(v.x - 30 * sc, cy - 30 * sc); ctx.lineTo(v.x + 30 * sc, cy + 30 * sc); ctx.moveTo(v.x + 30 * sc, cy - 30 * sc); ctx.lineTo(v.x - 30 * sc, cy + 30 * sc); ctx.stroke(); ctx.restore(); }
+  if (v.demo && !dead) drawDemo(ctx, v, t);
 }
+// a room being demolished: a red cross pulsing over its building
+function drawDemo(ctx, v, t) { const sc = v.sc || 1, y0 = v.y; const cy = y0 - v.h * sc * 0.6; ctx.save(); ctx.globalAlpha = 0.5 + 0.2 * Math.sin(t * 6); ctx.strokeStyle = P.red; ctx.lineWidth = 8 * sc; ctx.beginPath(); ctx.moveTo(v.x - 30 * sc, cy - 30 * sc); ctx.lineTo(v.x + 30 * sc, cy + 30 * sc); ctx.moveTo(v.x + 30 * sc, cy - 30 * sc); ctx.lineTo(v.x - 30 * sc, cy + 30 * sc); ctx.stroke(); ctx.restore(); }
 function drawGone(ctx, gv, t) {
+  if (M.PXTOWN && M.PXTOWN.gone(ctx, gv, t)) return;
   const q = (t - gv.goneT) / 1.4, sc = gv.sc || 1; ctx.save(); ctx.beginPath(); ctx.rect(gv.x - gv.w * sc, gv.y - (gv.h + 60) * sc, gv.w * 2 * sc, (gv.h + 62) * sc); ctx.clip();
   const im = artOf(gv.key, gv.ruin ? 2 : 0, 0, gv.dk); ctx.translate(gv.x + (RM() ? 0 : (Math.random() - 0.5) * 6), gv.y + q * q * (gv.h + 40) * sc); ctx.scale(sc, sc); ctx.drawImage(im, -im.ox, -im.oy); ctx.restore();
 }
