@@ -44,15 +44,18 @@ try {
   if (MODE === 'stages') {
     // one image for a group: every building a row of its three stages on the near street (wonders: far, in their haze), two buildings a row
     await open('?pxtown=1');
-    const url = await ev(`(() => { const M = MC, PT = M.PXTOWN, SC = 3, keys = ${JSON.stringify(KEYS)}.filter(k => PT.ART[k] || (PT.auto && PT.auto(k))); let n = 0;
+    const url = await ev(`(() => { const M = MC, PT = M.PXTOWN, SC = +'${arg('sc', '3')}', keys = ${JSON.stringify(KEYS)}.filter(k => PT.ART[k] || (PT.auto && PT.auto(k))); let n = 0;
       const cell = (key, st) => { const far = !!(M.WONDER_Y && M.townRole && !M.BUILDINGS[key]) || key === 'lighthouse' || (PT.ART[key] && PT.ART[key].wonder), sc = far ? 1.4 : 0.84, f = M.townFoot(key), CW = Math.round(f.w * sc / 2) + 44, CH = Math.round(f.h * sc / 2) + 50, cv = document.createElement('canvas'); cv.width = CW; cv.height = CH; const x = cv.getContext('2d'), T1 = 20 + (++n) * 9;
         PT.stageForce = st; const v = { key, k: 'st' + n, x: 0, y: 0, sc, dk: far ? 0.26 : 0.06, B: { q: 1 }, w: f.w, h: f.h, pxSt: st };
         for (let t = T1 - 1.5; t <= T1 + 1e-6; t += 1 / 30) { x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = '#12132e'; x.fillRect(0, 0, CW, CH); x.fillStyle = '#1a1d45'; x.fillRect(0, CH - 10, CW, 10); x.setTransform(0.5, 0, 0, 0.5, CW / 2, CH - 10); x.imageSmoothingEnabled = false; PT.draw(x, v, t, null, null); }
         PT.stageForce = null; return cv; };
-      const cells = keys.map(k => [0, 1, 2].map(st => cell(k, st))), fw = Math.max(...cells.flat().map(c => c.width)), fh = Math.max(...cells.flat().map(c => c.height)), gp = 4, per = 2, rows = Math.ceil(cells.length / per);
-      const cv = document.createElement('canvas'); cv.width = (fw * SC + gp) * 3 * per + gp * per; cv.height = (fh * SC + gp) * rows + gp; const x = cv.getContext('2d'); x.imageSmoothingEnabled = false; x.fillStyle = '#07060f'; x.fillRect(0, 0, cv.width, cv.height);
-      cells.forEach((r, i) => r.forEach((c, j) => { const ox = gp + (i % per) * ((fw * SC + gp) * 3 + gp) + j * (fw * SC + gp), oy = gp + Math.floor(i / per) * (fh * SC + gp); x.drawImage(c, ox + (fw - c.width) * SC / 2, oy + (fh - c.height) * SC, c.width * SC, c.height * SC); }));
-      x.font = '20px monospace'; x.fillStyle = '#ffd06a'; keys.forEach((k, i) => x.fillText(k + ' · ' + ((M.BUILDINGS[k] || {}).n || k), gp + (i % per) * ((fw * SC + gp) * 3 + gp) + 8, gp + Math.floor(i / per) * (fh * SC + gp) + 24));
+      // a fourth cell: the silhouette of stage 2 (everything that is not background, in one flat colour) — outlines must all differ
+      const sil = (c) => { const o = document.createElement('canvas'); o.width = c.width; o.height = c.height; const ox = o.getContext('2d'); ox.drawImage(c, 0, 0); const im = ox.getImageData(0, 0, c.width, c.height), d = im.data;
+        for (let i = 0; i < d.length; i += 4) { const bg = (d[i] === 0x12 && d[i + 1] === 0x13 && d[i + 2] === 0x2e) || (d[i] === 0x1a && d[i + 1] === 0x1d && d[i + 2] === 0x45); d[i] = d[i + 1] = d[i + 2] = bg ? 18 : 230; } ox.putImageData(im, 0, 0); return o; };
+      const cells = keys.map(k => { const r = [0, 1, 2].map(st => cell(k, st)); r.push(sil(r[2])); return r; }), fw = Math.max(...cells.flat().map(c => c.width)), fh = Math.max(...cells.flat().map(c => c.height)), gp = 4, per = 2, rows = Math.ceil(cells.length / per);
+      const cv = document.createElement('canvas'); cv.width = (fw * SC + gp) * 4 * per + gp * per; cv.height = (fh * SC + gp) * rows + gp; const x = cv.getContext('2d'); x.imageSmoothingEnabled = false; x.fillStyle = '#07060f'; x.fillRect(0, 0, cv.width, cv.height);
+      cells.forEach((r, i) => r.forEach((c, j) => { const ox = gp + (i % per) * ((fw * SC + gp) * 4 + gp) + j * (fw * SC + gp), oy = gp + Math.floor(i / per) * (fh * SC + gp); x.drawImage(c, ox + (fw - c.width) * SC / 2, oy + (fh - c.height) * SC, c.width * SC, c.height * SC); }));
+      x.font = '20px monospace'; x.fillStyle = '#ffd06a'; keys.forEach((k, i) => x.fillText(k + ' · ' + ((M.BUILDINGS[k] || {}).n || k), gp + (i % per) * ((fw * SC + gp) * 4 + gp) + 8, gp + Math.floor(i / per) * (fh * SC + gp) + 24));
       return cv.toDataURL('image/png'); })()`);
     if (typeof url !== 'string' || !url.startsWith('data:')) console.log('ERR', String(url).slice(0, 600)); else console.log(saveUrl(path.join(OUT, 'stages-' + arg('name', 'group') + '.png'), url));
   } else if (MODE === 'sheet') {
