@@ -30,11 +30,14 @@ function portraitCanvas(k) {
 // the portrait scaled by a whole number to fit w × h (0 = no limit); bust: only the top part (small slots)
 M.bossPortrait = function (k, w, h, o) {
   o = o || {}; const src = portraitCanvas(k); if (!src) return null;
-  const sh = o.bust ? Math.round(src.height * o.bust) : src.height, s = Math.max(1, Math.floor(Math.min(w ? w / src.width : 9, h ? h / sh : 9)));
-  const cv = document.createElement('canvas'); cv.width = src.width * s; cv.height = sh * s; const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
-  g.drawImage(src, 0, 0, src.width, sh, 0, 0, src.width * s, sh * s); return cv;
+  const sh = o.bust ? Math.round(src.height * o.bust) : src.height, f = Math.min(w ? w / src.width : 9, h ? h / sh : 9), s = f >= 1 ? Math.floor(f) : 1 / Math.ceil(1 / f);   // whole multiples up, whole fractions down (½, ⅓): pixels stay square
+  const cv = document.createElement('canvas'); cv.width = Math.round(src.width * s); cv.height = Math.round(sh * s); const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
+  g.drawImage(src, 0, 0, src.width, sh, 0, 0, cv.width, cv.height); return cv;
 };
 const purl = {};
+// { src, w, h } for the DOM (tooltips, boards)
+const pinfo = {};
+M.bossPortraitInfo = function (k, w, h) { const key = k + '|' + w + '|' + h; if (pinfo[key] !== undefined) return pinfo[key]; const c = M.bossPortrait(k, w, h); return (pinfo[key] = c ? { src: c.toDataURL('image/png'), w: c.width, h: c.height } : null); };
 M.bossPortraitURL = function (k, w, h, o) { const key = k + '|' + w + '|' + h + '|' + ((o && o.bust) || 0); if (purl[key] !== undefined) return purl[key]; const c = M.bossPortrait(k, w, h, o); return (purl[key] = c ? c.toDataURL('image/png') : null); };
 
 // ───────── small boss in battle ─────────
@@ -151,6 +154,50 @@ if (BP && HAS_DOM) {
     const g = fc.getContext('2d'), z = (this.bcam && this.bcam.z) || 1, p = this.camField(e.x + (e.drawDX || 0), e.y + (e.drawDY || 0)), img = e._fr, face = M.faceOf ? M.faceOf(e) : -1;
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false; g.globalAlpha = Math.min(1, P.t / 0.2) * Math.min(1, Math.max(0, (2.9 - P.t) / 0.35));
     g.translate(Math.round(p.x), Math.round(p.y + 180)); g.scale(z * (face < 0 ? -1 : 1), z); g.drawImage(img, -img.cx, -img.footY); g.restore();
+    return r;
+  };
+}
+
+// ───────── portraits where the map shows a boss ─────────
+// the boss node's tooltip, the stele's tooltip (each redrawn boss of that world), the board of bosses still ahead, the fight's
+// announcement (slides in beside 首领战), the story shows (mc-story.js) and the defeat board (mc-bosskit.js)
+const GM = M.Game && M.Game.prototype;
+if (GM && HAS_DOM) {
+  const bossKeyOf = (run, n) => { if (!n || n.type !== 'boss') return null; if (typeof n.fb === 'string') return n.fb; const mb = M.miniOf && M.miniOf(run, n); return mb ? mb.k : null; };
+  const oWM = GM.worldMove;
+  if (oWM) GM.worldMove = function () {
+    const r = oWM.apply(this, arguments), n = M._tipNode, run = this.run;
+    if (n && run && this.tipData && n.seen && !(run.region && run.region.tut)) { const k = bossKeyOf(run, n), pi = k && artOf(k) && M.bossPortraitInfo(k, 420, 240); if (pi && !this.tipData.ports) this.tipData = Object.assign({}, this.tipData, { ports: [pi] }); }
+    return r;
+  };
+  const oST = GM.steleTip;
+  if (oST) GM.steleTip = function (k) {
+    const t = oST.apply(this, arguments); if (!t) return t;
+    const segs = (M.segsOf && M.segsOf(k)) || [], sc = M.sceneOf && this.meta ? M.sceneOf(this.meta, k) : null;
+    const ports = segs.slice(sc ? sc.start || 0 : 0).map(s => s.fb || (s.mb && s.mb.k)).filter(b => b && artOf(b)).map(b => M.bossPortraitInfo(b, 300, 170)).filter(Boolean);
+    if (ports.length) t.ports = ports; return t;
+  };
+  const oView = GM.view;
+  GM.view = function () {
+    const v = oView.apply(this, arguments), tip = this.tipData;
+    if (v.tip) { const ps = tip && tip.ports; v.tip.hasPort = !!(ps && ps.length); v.tip.ports = ps || []; }
+    if (v.bkp && v.bkp.rows) v.bkp.rows.forEach(br => { const pi = br && br.k && artOf(br.k) && M.bossPortraitInfo(br.k, v.bkp.w - 40, 110); br.hasImg = !!pi; br.img = pi ? pi.src : ''; br.iw = pi ? pi.w : 0; br.ih = pi ? pi.h : 0; });
+    return v;
+  };
+  const oBB = GM.beginBattle;
+  GM.beginBattle = function (n) {
+    const r = oBB.apply(this, arguments), B = this.introBanner, cfg = this.cfg;
+    if (B && n && n.type === 'boss' && cfg) { const b = cfg.list && cfg.list.find(x => x.boss), k = cfg.fb || (b && b.type); if (k && artOf(k)) B.bk = k; }
+    return r;
+  };
+  const oDB = M.drawBanner;
+  if (oDB) M.drawBanner = function (ctx, b) {
+    const r = oDB.apply(this, arguments);
+    if (b && b.kind === 'intro' && b.bk) { const img = M.bossPortrait(b.bk, 720, 520); if (img) {
+      const t = b.t, q = Math.min(1, t / 0.22), out = Math.max(0, Math.min(1, (b.life - t) / 0.35)), x = Math.round(1560 + (1 - q * q) * 520 - img.width / 2), y = Math.round((b.y || 520) + 150 - img.height);
+      ctx.save(); ctx.imageSmoothingEnabled = false; ctx.globalAlpha = out; ctx.drawImage(img, x, y);
+      if (t < 0.3) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = out * (1 - t / 0.3) * 0.8; ctx.drawImage(img, x, y); }   // a white-hot flash as it lands
+      ctx.restore(); } }
     return r;
   };
 }

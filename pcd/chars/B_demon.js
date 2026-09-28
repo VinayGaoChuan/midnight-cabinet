@@ -215,7 +215,10 @@ PCD.define('B_demon', (E) => {
     bake(spr, RIM);
   }
   const PSPR = new Sprite(hero.w * 2, hero.h * 2, hero.ox * 2, hero.oy * 2);
-  function portrait() { const mv = MV, hot = HOT; MV = 'p2'; HOT = 1; poseAt(CAST, 3 / 12, 0); drawHero(PSPR, 2); bakeHero(PSPR, 2); MV = mv; HOT = hot; return PSPR; }   // 立绘：第二阶段那一声怒吼
+  function portrait() {   // 立绘：正面压低头、张嘴露火、双爪半张、双翼全开，裂纹全亮（第二阶段的样子）
+    const hot = HOT; HOT = 1; poseAt(IDLE, 0, 0); pose(K.idle, K.wide, 0.3); P.hd = 0.08; P.jaw = 2; P.eyes = 2; P.glow = 3; P.hot = 1; P.ws = 1; P.wf = 0.35; P.by = 0; P.breath = 0; P.drip = 2;
+    P.k1 = (P.k1 + 7) >>> 0; geo(); drawHero(PSPR, 2); bakeHero(PSPR, 2); HOT = hot; return PSPR;
+  }
 
   // ───── 特效（舞台坐标；游戏里只画身边的，砸在部队身上的由游戏画）─────
   const sx = (x) => scrX(x), sy = (y) => HY + y;
