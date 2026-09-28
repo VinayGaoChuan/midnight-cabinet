@@ -26,6 +26,8 @@ const ROOMS = {
   wardrum:    { art: 'shaolin', n: '战鼓楼', cat: 'fort', q: 2, style: 'fantasy', cost: 200, days: 2, fx: { roofAs: 0.4 }, d: '领袖守城的攻速 +40%。' },
   citadel:    { art: 'potala', n: '要塞', cat: 'fort', q: 3, style: 'medieval', cost: 300, days: 3, fx: { portalHp: 0.6, roofDmg: 0.3, garCap: 4 }, d: '主基地耐久 +60%，领袖守城的伤害 +30%，驻军上限 +4。' },
   barrack:    { art: 'colosseum', n: '营房', cat: 'fort', q: 0, style: 'medieval', cost: 100, days: 1, fx: { garCap: 4 }, d: '驻军上限 +4。' },
+  // 暴兵流: more hands than one a homecoming (2026-09-27: 「除了每天能够带回1个部队外，应该还有其他获得部队的手段」)
+  levyhall:   { art: 'angkor', n: '募兵所', cat: 'fort', q: 1, style: 'medieval', cost: 150, days: 2, fx: { levy: 1 }, d: '每两天招来一支驻军已有部队的普通新兵。' },
   // 军需流: supplies into strength (2026-09-27: 「如果物资充分，如何转化成战斗力，例如直接用物资给部队升品之类的……这又是一个新流派」)
   quarter:    { art: 'library', n: '军需处', cat: 'train', q: 1, style: 'steam', cost: 150, days: 1, supUp: 1, d: '花物资给驻军升档。' },
 };
@@ -41,6 +43,8 @@ const S_ = (b) => ({ v: (t) => Math.round(b * TIER[t] * 1000) / 1000 });
 Object.assign(T_, {
   roofShot:  { n: '屋顶箭术', sc: 'self', lean: 'fort', ic: 'v_archer', ...S_(0.3), d: (v) => '混沌来袭时，本领袖在屋顶的伤害 +' + pct(v) + '。', m: (v) => ({ roofDmg: v }) },
   roofRapid: { n: '连射', sc: 'self', lean: 'fort', ic: 'e_bolt', ...S_(0.2), d: (v) => '混沌来袭时，本领袖在屋顶的攻速 +' + pct(v) + '。', m: (v) => ({ roofAs: v }) },
+  // 暴兵流: a bigger garrison
+  levy:      { n: '征召术', sc: 'base', ic: 't_shield', v: (t) => [0, 1, 2, 3, 4, 5, 6][t], d: (v) => '驻军上限 +' + v + '。', m: (v) => ({ garCap: v }) },
 });
 if (T_.bulwark) T_.bulwark.lean = 'fort';
 if (T_.ballistics) T_.ballistics.lean = 'fort';
@@ -139,9 +143,11 @@ if (M.GUIDE) M.GUIDE.push(
   { id: 'roof', cat: '基地', icon: 'v_archer', title: '屋顶的领袖', line: '混沌来袭时，领袖跳上主基地的塔顶，用自己的攻击射向敌群。', scr: 'base' });
 // ───────── how many can garrison (2026-09-27: 「驻军上限，可以最多是30个，但是不应该开局就30个，应该跟据繁荣度，难易度，房间建设（或者奇迹
 // 建筑）等有关，而不是固定写死30个」) ─────────
-// 6 at the start, +2 a prosperity level (Lv9: 22), the difficulty +0 / 2 / 4 / 6, 营房 +4 and 要塞 +4, never above 30. A homecoming past
-// the cap sends the weakest away for a third of its price in supplies (mc-parade.js).
-M.GAR = { base: 6, perLv: 2, gd: [0, 2, 4, 6], max: 30 };
+// 6 at the start, +2 a prosperity level (Lv9: 22), the difficulty +0 / 2 / 4 / 6, 营房 +4, 要塞 +4, 征召术 +1…6, never above 40. A
+// homecoming past the cap asks the player who leaves (mc-garswap.js).
+// 2026-09-27 (later: 「驻军上限30是否合适……如果走暴兵流，上限30是否合适」): the ceiling is 40 — a garrison left to itself stays at 22–28
+// (prosperity and difficulty); only a base built for numbers (营房, 要塞, 征召术, 募兵所 feeding it) climbs to 40
+M.GAR = { base: 6, perLv: 2, gd: [0, 2, 4, 6], max: 40 };
 M.garCap = function (m) {
   if (!m) return M.GAR.max; const G_ = M.GAR, lv = Math.max(1, m.prosLv || 1), gd = G_.gd[Math.max(0, Math.min(3, m.gd || 0))] || 0;
   return Math.min(G_.max, G_.base + G_.perLv * (lv - 1) + gd + Math.round(M.baseMods(m).garCap || 0));
@@ -169,5 +175,16 @@ G.supUp = function () {
       repairBtn: u ? '升档 · ' + cost + ' 物资' : '没有能升档的部队', repairOp: u && m.supplies >= cost ? 1 : 0.45, onRepair: () => this.supUp() });
     return v;
   }; }
-if (M.GUIDE) M.GUIDE.push({ id: 'garcap', cat: '基地', icon: 't_shield', title: '驻军上限', line: '繁荣度、难度、营房和要塞让它变多，最多 30。', scr: 'base', sel: '[data-fx="mgar"]' });
+if (M.GUIDE) M.GUIDE.push({ id: 'garcap', cat: '基地', icon: 't_shield', title: '驻军上限', line: '繁荣度、难度、营房、要塞和征召术让它变多，最多 40。', scr: 'base', sel: '[data-fx="mgar"]' });
+// ───────── 募兵所: every second day a common recruit of a line the garrison already has ─────────
+// (so it feeds the garrison's 3-in-1 merges); nothing comes while the garrison is at its cap
+{ const oADl = M.advanceDay;
+  M.advanceDay = function (m) {
+    const logs = oADl.apply(this, arguments);
+    if (!m || !(M.baseMods(m).levy > 0) || (m.day || 1) % 2) return logs;
+    const gar = M.garrisonOf ? M.garrisonOf(m) : []; if (!gar.length || gar.length >= M.garCap(m)) return logs;
+    const lines = [...new Set(gar.map(u => DB[u.type] && DB[u.type].line).filter(Boolean))], line = lines[Math.floor(Math.random() * lines.length)], k = line && M.lineKey(line, 1);
+    if (k && DB[k]) { gar.push({ uid: M.rid(), type: k, star: 1, bAtk: 0, bHp: 0, lv: 1, battles: 0, kills: 0, mana: 0 }); if (Array.isArray(logs)) logs.push({ t: '募兵所招来 ' + DB[k].n }); }
+    return logs;
+  }; }
 })();

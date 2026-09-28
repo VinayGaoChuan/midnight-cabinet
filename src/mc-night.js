@@ -136,7 +136,9 @@ G.endBack = function () {
   const r = oEB.apply(this, arguments), m = this.meta;
   if (gi && m) {
     const steps = [{ run: () => { if (!(this.paradeStart && this.paradeStart(gi))) { const best = gi.units.slice().sort((a, b) => M.unitPower(b.type, b) - M.unitPower(a.type, a))[0]; if (best) garOf(m).push(Object.assign({}, best, { uid: M.rid(), mana: 0 })); this.pulse.mgar = now(); } }, until: () => !this.parade },
-      { run: () => this.garEvo(), until: () => !this.evoFx && !this.garEvo() }];
+      { run: () => this.garEvo(), until: () => !this.evoFx && !this.garEvo() },
+      // past the cap: the player picks who leaves before the night (mc-garswap.js)
+      { run: () => { if (M.garOver && M.garOver(m) && this.garSwapStart) this.garSwapStart(); }, until: () => { if (this.garSwapFx) return false; if (M.garOver && M.garOver(m) && this.garSwapStart) { this.garSwapStart(); return false; } return true; } }];
     const q = this.homeQ;
     if (q && q.m === m) { const i = q.steps.findIndex(s => s && s._day); if (i >= 0) q.steps.splice(i, 0, ...steps); else q.steps.push(...steps); } else this.homeQueue(steps);
   }
@@ -393,7 +395,12 @@ G.view = function () {
   }
   // the garrison beside the leader's card (user ruling 2026-09-26: 「现在基地中有哪些部队，要跟英雄头像显示在一排」): one tile a kind, best first
   if (v.b && m && m.tutDone) { const c = {}; garOf(m).forEach(u => { c[u.type] = (c[u.type] || 0) + 1; });
-    v.b.gar = Object.keys(c).sort((a, b) => DB[b].q - DB[a].q || c[b] - c[a]).slice(0, 16).map(k => ({ img: M.spriteURL(k, 3), c: Q[DB[k].q].c, n: c[k], nOn: c[k] > 1, tipOn: this.tipFn(() => { const t = M.unitTip ? M.unitTip(k, null, null) : { title: DB[k].n }; return Object.assign({}, t, { title: (t.title || DB[k].n) + (c[k] > 1 ? ' ×' + c[k] : ''), c: Q[DB[k].q].c }); }) })); }
+    // sorted by vocation (default) or by quality (2026-09-27: 「局外的部队排序有两个按钮，一个是职业，一个是品质，默认是按照职业排序的」); one row,
+    // at most 14 kinds, so a full garrison never climbs over the rooms (the 驻军 chip's tip lists them all)
+    const gs = M.settings && M.settings.garSort === 'q' ? 'q' : 'voc', VO = Object.keys(M.VOC || {}), vi = (k) => { const i = VO.indexOf(DB[k].voc); return i < 0 ? 99 : i; };
+    v.b.garOn = Object.keys(c).length > 0;
+    v.b.garSorts = [['voc', '职业', '驻军按职业排在一起。'], ['q', '品质', '驻军按品质从高到低排。']].map(([k2, n2, d2]) => { const on = gs === k2; return { n: n2, c: on ? '#ffcf4a' : '#3a3040', tc: on ? '#ffe08a' : '#8d8496', onClick: () => { if (on) return; M.settings.garSort = k2; M.saveSettings && M.saveSettings(M.settings); M.Sfx.click && M.Sfx.click(); this.bump(); }, tipOn: this.tipFn({ title: '按' + n2 + '排列', c: '#ffe08a', d: d2 }) }; });
+    v.b.gar = Object.keys(c).sort((a, b) => (gs === 'voc' ? vi(a) - vi(b) : 0) || DB[b].q - DB[a].q || c[b] - c[a]).slice(0, 14).map(k => ({ img: M.spriteURL(k, 3), c: Q[DB[k].q].c, n: c[k], nOn: c[k] > 1, tipOn: this.tipFn(() => { const t = M.unitTip ? M.unitTip(k, null, null) : { title: DB[k].n }; return Object.assign({}, t, { title: (t.title || DB[k].n) + (c[k] > 1 ? ' ×' + c[k] : ''), c: Q[DB[k].q].c }); }) })); }
   if (v.b && m) { const k = M.nightKind(m.day), k2 = M.nightKind(m.day + 1); v.b.raidTxt = k ? '今晚' + NK[k].n : k2 ? '明晚' + NK[k2].n : '今晚混沌来袭'; v.b.raidC = k ? NK[k].c : '#ff5a4a'; v.raidTip = this.tipFn(() => this.tipFor('b-raid')); }
   // the fight's own bar: what this night is and how many are still coming
   const b = this.battle; if (v.h && b && this.run && this.run.raid) { let left = b.cfg.list.length - b.spawnI; b.ents.forEach(e => { if (e.alive && e.side === 'E') left++; }); v.h.mode = '混沌来袭'; v.h.modeColor = '#ff5a4a'; v.h.goal = '击退怪物 · 还剩 ' + left + ' 个'; }
