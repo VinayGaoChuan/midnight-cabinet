@@ -9,7 +9,10 @@ const rnd = (i) => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return 
 const BAL = M.BAL = { MANA_MUL: 2.0, ALLY_FLOOR: 5, ENEMY_K: 1.9 };
 // the score (2026-09-26, 积分倍率 removed): a kill gives 0.7 × the enemy's price (was 0.9 and then multiplied); a boss gives
 // 1.6 × the fight's budget instead of its own huge price (a first-chapter boss paid 2 340, ten normal fights)
-M.KILL_K = 0.7; M.BOSS_SCORE = 1.6;   // 2026-09-26 (evolution lines): 1.6 → 1.9, growth sims won 58 of 59 runs at 2.5–3 times the enemy (target ~2.2, a run lost now and then)   // 2026-09-26: 1.8 → 1.6, the leader lost its field skill and a lost run costs a core heart   // batch G/H rebalance: a shopping player won everything at 1.15; 1.6 → 1.8 with the layered talent trees and levelled leaders (2026-09-25)
+// 2026-09-28: 0.7 → 0.3 (「现在部队又不会永久死亡，战斗结束后是满血复活的。你这个给，跟你的难度曲线成正比吗？理论上，玩家的成长曲线一定是低于
+// 难度曲线的，只有玩家合理的build，或者好运气，才能让玩家的成长，超过这个阶段的敌人实力」): the army never dies for good, so what a fight pays
+// adds up — at 0.7 of every fight's enemies the income ran to ~4× the enemy in front; at 0.3 points are scarce and the shops are a choice
+M.KILL_K = 0.3; M.BOSS_SCORE = 1.6;   // 2026-09-26 (evolution lines): 1.6 → 1.9, growth sims won 58 of 59 runs at 2.5–3 times the enemy (target ~2.2, a run lost now and then)   // 2026-09-26: 1.8 → 1.6, the leader lost its field skill and a lost run costs a core heart   // batch G/H rebalance: a shopping player won everything at 1.15; 1.6 → 1.8 with the layered talent trees and levelled leaders (2026-09-25)
 let { MANA_MUL, ALLY_FLOOR } = BAL;
 M.setBal = (o) => { Object.assign(BAL, o); ({ MANA_MUL, ALLY_FLOOR } = BAL); };
 // enemies are a little tougher outside the tutorial

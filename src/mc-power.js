@@ -56,7 +56,8 @@ function tuneExtract(run, node, cfg) {
   let lo = 0.15, hi = 12; for (let k = 0; k < 18; k++) { const f = (lo + hi) / 2; cfg.list.forEach(s => { s.hpMul = f; s.atkMul = f; }); if (shown(cfg) > target) hi = f; else lo = f; }
   const f = +hi.toFixed(3); cfg.list.forEach(s => { s.hpMul = f; s.atkMul = f; }); cfg.xk = f; return cfg;
 }
-const rollCfg = (run, node) => { const cfg = oCfg.call(M, run, node); return node && node.type === 'boss' ? tuneBoss(run, node, cfg) : node && node.type === 'extract' ? tuneExtract(run, node, cfg) : cfg; };
+const eliteUp = (run, cfg) => { const k = run && !(run.region && run.region.tut) ? M.ELITE_T || 1 : 1; if (k !== 1) cfg.list.forEach(s => { s.hpMul = +((s.hpMul || 1) * k).toFixed(3); s.atkMul = +((s.atkMul || 1) * k).toFixed(3); }); return cfg; };
+const rollCfg = (run, node) => { const cfg = oCfg.call(M, run, node); return node && node.type === 'boss' ? tuneBoss(run, node, cfg) : node && node.type === 'extract' ? tuneExtract(run, node, cfg) : node && node.type === 'elite' ? eliteUp(run, cfg) : cfg; };
 // a fight on the map is rolled once, the first time anything looks at it: the number shown is the fight you get
 M.makeBattleCfg = function (run, node) {
   if (node && node.id != null && run && run.map && run.map.nodes && run.map.nodes[node.id] === node) { if (!node._cfg) node._cfg = rollCfg(run, node); return JSON.parse(JSON.stringify(node._cfg)); }
@@ -73,7 +74,11 @@ M.BOSS_SHOW = 1.05;
 M.MB_SHOW = 1.26; M.FB_SHOW = 0.6;
 // how strong a boss is, against the elite fight at the same stop (2026-09-26 growth sims, tools/prog.js): the first small
 // boss 0.75× (the army has seen one shop), later small bosses 1.0×, the final boss 1.15×
-M.BOSS_T0 = 0.75; M.BOSS_TM = 1.1; M.BOSS_TF = 2.15;   // 2026-09-26 (evolution lines): bosses were beaten at 2–3 times their strength; 1.0 / 1.25 → 1.1 / 1.4 on top of ENEMY_K 1.9
+// 2026-09-28 (same ruling as KILL_K): an average army (the play bot) met elites at ~1.9× and small bosses at ~1.8× and won them all; the
+// checkpoints now sit just under what an average army has — elites ×1.45 (M.ELITE_T) and small bosses with them (0.75 → 1.1, 1.1 → 1.6), so an
+// average army meets them at ~1.3× and a final boss at ~1.0× (it wins about half): only a good build or luck is safely above the curve
+M.ELITE_T = 1.45;
+M.BOSS_T0 = 1.1; M.BOSS_TM = 1.6; M.BOSS_TF = 2.15;   // 2026-09-26 (evolution lines): bosses were beaten at 2–3 times their strength; 1.0 / 1.25 → 1.1 / 1.4 on top of ENEMY_K 1.9
 // a final boss had too much life for what it hits (2026-09-27 playtest: median 62 s, a third over 90 s, up to 4 minutes,
 // and still won almost every time): the same power, less life and harder blows (power = √(life × damage) is kept)
 M.FB_SKEW = 1.8;   // 2026-09-26 (user ruling: 「大boss血量要加厚……boss攻击力可以不用这么高，但是打得时间要长，这才像个boss」): from 0.45 (short, hard blows) to 1.8
