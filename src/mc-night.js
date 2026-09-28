@@ -163,7 +163,7 @@ G.garEvo = function () {
 // 「每5天一个强敌来袭，每10天1个boss来袭，并且要加预警」. Such a night is stronger as a whole and the foe carries a share of
 // it; the calendar marks it, the morning before and the morning of show a warning. A lost night costs three in ten of
 // the fallen (half made one loss snowball into the next: 2026-09-26 growth sims).
-M.NIGHT = { K: 1, KD: [[10, 1.4], [15, 1.9], [20, 2.8], [30, 3.8]], HIT: 0.6, LOSS: 0.3, T_MAX: 240, STRONG: 1.25, BOSS: 1.45, SHARE: { strong: [0.3, 0.1], boss: [0.4, 0.1] }, SLAM: 2.5, SLAM_R: 190, SLAM_CD: 7, SLAM_WIND: 1.3,
+M.NIGHT = { K: 1, KD: [[10, 1.4], [15, 1.65], [20, 2.5], [30, 3.6]], HIT: 0.6, LOSS: 0.3, T_MAX: 240, STRONG: 1.25, BOSS: 1.45, SHARE: { strong: [0.3, 0.1], boss: [0.4, 0.1] }, SLAM: 2.5, SLAM_R: 190, SLAM_CD: 7, SLAM_WIND: 1.3,
   CURVE: [[1, 120], [2, 210], [3, 340], [4, 460], [5, 720], [8, 1560], [10, 2200], [15, 4200], [20, 6600], [30, 11200]] };   // provisional ×0.4 (one unit a homecoming), fitted below   // 2026-09-26 on the base map: the battle-screen curve ×1.3 held 31 nights without a scratch, ×2.2 broke the main base by night 2–5
 M.nightKind = (d) => (d > 0 && d % 10 === 0 ? 'boss' : d > 0 && d % 5 === 0 ? 'strong' : null);
 M.bloodMoon = (d) => !!M.nightKind(d);   // older callers: "is this night a special one"
@@ -185,7 +185,8 @@ M.nightFoe = function (m, d) {
 // NIGHT.KD: the curve bent by the day (2026-09-28, bot matrix with the night skills on): at ×1 the base was untouched until the
 // garrison evolved and then out-grew the nights fourfold (day 18); ×1.6 all along broke a 普通 base on night 12 with every heart
 // kept; ×3 and ×5 broke small towns on nights 3–6. Early nights stay near the old strength, late ones climb past what evolving
-// brings (the next round, with the heals working and bases still at 61–84% at worst: ×1.4 / 1.9 / 2.8 / 3.8). NIGHT.K: the whole curve at once (the bot matrix tries values with it)
+// brings (the next round, with the heals working and bases still at 61–84% at worst: ×1.4 / 1.9 / 2.8 / 3.8; then the 90-minute games: days 10–15 grew
+// the night ×2.6 and broke 1 of 3 普通 and 2 of 3 困难 bases on days 12–14 with every heart kept — ×1.4 / 1.65 / 2.5 / 3.6). NIGHT.K: the whole curve at once (the bot matrix tries values with it)
 const kd = (d) => { const C = M.NIGHT.KD; if (d <= C[0][0]) return C[0][1]; for (let i = 1; i < C.length; i++) if (d <= C[i][0]) { const [d0, k0] = C[i - 1], [d1, k1] = C[i]; return k0 + (k1 - k0) * (d - d0) / (d1 - d0); } return C[C.length - 1][1]; };
 M.nightBase = (day) => M.NIGHT.K * kd(day) * nightB(day);
 const nightB = (day) => { const C = M.NIGHT.CURVE; if (day <= C[0][0]) return C[0][1]; for (let i = 1; i < C.length; i++) if (day <= C[i][0]) { const [d0, p0] = C[i - 1], [d1, p1] = C[i]; return p0 + (p1 - p0) * (day - d0) / (d1 - d0); } const L = C[C.length - 1]; return L[1] + (day - L[0]) * 900; };
