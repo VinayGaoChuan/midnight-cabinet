@@ -163,6 +163,7 @@ mc-report.js
 mc-bastion.js
 mc-hpbar.js
 mc-nightskill.js
+mc-nightfx.js
 mc-garswap.js
 mc-tutor.js
 mc-perf.js

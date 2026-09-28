@@ -345,7 +345,7 @@ P16.gallery = function () {
   };
   raf = requestAnimationFrame(draw);
 };
-M.PCDG = { body, bodyFrame, startAction, stopAction, has };
+M.PCDG = { body, bodyFrame, startAction, stopAction, has, stage: stageCanvas, bodyState, giveBack, ART };   // stage / bodyState / giveBack: the night's fight draws the same way (mc-nightfx.js)
 function BP() { return M.Battle3 && M.Battle3.prototype; }
 })();
 
