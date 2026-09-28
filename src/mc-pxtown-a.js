@@ -65,7 +65,7 @@ spec('temple', { icon: 'sun', act: 'staff', look: 'mage', sig(S, sc, G, B) { S.l
 spec('bank', { icon: 'coin', act: 'read', look: 'keeper', sig(S, sc, G, B) { P.vaultdoor(S, mid(B), B.gy - 6, 4); P.coins(S, far(B, G), B.gy, 3 + B.st * 3); P.clockface(S, sc, G, B.cx, B.top - 5, B.st ? 3 : 2); G.fx = { x: B.cx, y: B.top - 6 }; } });
 // 修理铺: the anvil, gears, a crane
 spec('mender', { icon: 'gear', act: 'wrench', look: 'worker', kind: 'forge', sig(S, sc, G, B) { P.anvil(S, mid(B), B.gy); if (B.st >= 1) P.crane(S, G, far(B, G) + 1, B.gy, 18, B.sd); if (B.st === 2) P.wheel(S, sc, G, B.cx, B.gy - B.sh - 5, 3); } });
-// 城垛: a crenellated wall in the yard, merlons along the roof
+// 城墙: a crenellated wall in the yard, merlons along the roof
 spec('rampart', { icon: 'shield', act: 'guard', look: 'keeper', roof: 'flat', sig(S, sc, G, B) { S.lay('back'); PT.K.wall(S, B.side[0], B.gy - 10, B.side[1] - B.side[0], 10, ['stone', 5, 'ashlar']); P.merlons(S, B.side[0], B.side[1], B.gy - 10, 'stone', 6, B.st === 2); P.merlons(S, B.mx0, B.mx1, B.top - 3, 'stone', 6, B.st === 2); G.fx = { x: mid(B), y: B.gy - 14 }; if (B.st >= 1) P.brazier(S, sc, G, far(B, G) + 2, B.gy); } });
 // 箭塔: a tall stone tower with slits, a ballista on top at 2
 spec('arrowtower', { icon: 'arrow', act: 'guard', look: 'keeper', sig(S, sc, G, B) { const x = far(B, G) - 2, h = B.gy - B.rtop + 2; S.lay('back'); PT.K.wall(S, x - 4, B.gy - h, 9, h, ['stone', 6, 'ashlar']); S.beg(); for (let y = B.gy - h + 4; y < B.gy - 6; y += 7) S.rect(x, y, 1, 4, 'ink', 1); S.end(); P.merlons(S, x - 5, x + 6, B.gy - h, 'stone', 7, B.st === 2); P.target(S, mid(B), B.gy); if (B.st === 2) P.ballista(S, G, B.cx, B.rtop + 3, true); } });
@@ -77,7 +77,7 @@ spec('citadel', { icon: 'shield', act: 'guard', look: 'keeper', roof: 'flat', fl
 spec('barrack', { icon: 'sword', act: 'guard', look: 'keeper', sig(S, sc, G, B) { P.tent(S, B.side[0], B.gy, Math.min(11, B.side[1] - B.side[0] + 2), 7, 'sand'); P.dummy(S, far(B, G) + 3, B.gy); } });
 // 征兵厅: banners, a drum, a rack
 spec('levyhall', { icon: 'drum', act: 'guard', look: 'keeper', sig(S, sc, G, B) { P.drum(S, mid(B), B.gy); P.rack(S, far(B, G) + 3, B.gy); if (B.st === 2) PT.K.flag(S, G, B.side[1] + 1, B.gy, 20, 'gold'); } });
-// 宿舍区: pipes and a stack, crates, a line of washing
+// 军需处: pipes and a stack, crates, a line of washing
 spec('quarter', { icon: 'gear', act: 'sweep', look: 'worker', kind: 'war', sig(S, sc, G, B) { PT.K.crate(S, mid(B) - 3, B.gy); S.lay('back'); S.beg(); S.line(B.side[0], B.gy - 12, B.side[1], B.gy - 11, 'ink', 3); for (let x = B.side[0] + 1; x < B.side[1] - 1; x += 3) S.rect(x, B.gy - 11, 2, 3, ['linen', 'tile', 'crimson'][x % 3], 7); S.end(); if (B.st >= 1) P.stack(S, sc, G, far(B, G), B.top + 2, B.top - B.rtop + 8); } });
 // (the pilot's 招魂台 is gone from the game: nothing to draw)
 })();

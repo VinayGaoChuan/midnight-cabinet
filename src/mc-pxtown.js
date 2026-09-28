@@ -106,7 +106,7 @@ function animSite(D, t, s, o, G, A) {
 const PADX = 10, PADT = 16, PADB = 3, DIM = {};
 function ensure(key, sc, dk, stage) {
   const id = '_tw:' + key + ':' + Math.round(sc * 100) + ':' + Math.round(dk * 100) + ':' + stage; if (X.has(id)) return id;
-  const A = ART[key], f = M.townFoot(key), w = Math.round(f.w * sc / 2), h = Math.round(f.h * sc / 2), pt = PADT + (A.padt || 0);
+  const A = ART[key]; if (A.prep) A.prep(); const f = M.townFoot(key), w = Math.round(f.w * sc / 2), h = Math.round(f.h * sc / 2), pt = PADT + (A.padt || 0);
   const W = w + PADX * 2, H = h + pt + PADB, G = { key, st: stage === 'site' ? 0 : stage, w, h, W, H, cx: W >> 1, gy: H - PADB, dk, s: sc };
   G.L = G.cx - (w >> 1); G.R = G.L + w;
   DIM[id] = G;
@@ -206,7 +206,7 @@ PT.beam = function (ctx, lx, ly, t, show, dk, grow) {
 // ───────── drawing (called by mc-town.js / mc-wonders.js in place of the old art) ─────────
 const zoomOf = () => (M._g && M._g.bv && M._g.bv.z) || 0.6;
 PT.draw = function (ctx, v, t, lights, meta) {
-  const A = ART[v.key]; if (!A || !PT.on()) return false;
+  const A = ART[v.key]; if (!A || !PT.on()) return false; if (A.prep) A.prep();
   const m = meta || (M._g && M._g.meta), sc = v.sc || 1, dk = v.dk || 0, q = Math.min(3, (v.B && v.B.q) || 0), st = stageOf(m);
   const age = v.riseT != null ? t - v.riseT : 99, rising = age >= 0 && age < RISE;
   // a new stage: the upgrade show, the nearest to the main base first

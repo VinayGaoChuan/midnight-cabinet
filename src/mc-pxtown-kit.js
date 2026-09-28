@@ -260,11 +260,13 @@ K.kindOf = (key) => { const B = M.BUILDINGS[key] || {}; return B.cat === 'defens
 // PT.spec(key, spec): a kit building. spec: style (default: the room's), kind, icon, col, wing, sig(S, sc, G, B), act, look …
 const ROOF_ALT = { medieval: [['brick', 5], ['tile', 5], ['wood', 5], ['moss', 5], ['iron', 6], ['crimson', 5]], steam: [['iron', 5], ['copper', 6], ['tile', 4], ['brick', 4]], magic: [['magic', 7], ['dusk', 6], ['arcane', 4]], nature: [['moss', 6], ['leaf', 5], ['wood', 5]], water: [['tile', 6], ['linen', 8], ['teal', 5]], fantasy: [['tile', 7], ['sand', 7], ['gold', 6]], cartoon: [['red', 6], ['pink', 7], ['candy', 6]], scifi: [['linen', 8], ['scifi', 6]] };
 const BAN = ['crimson', 'tile', 'leaf', 'magic', 'brass', 'teal'];
-PT.spec = function (key, P) {
-  const B = M.BUILDINGS[key] || {}, hs = M.townHash ? M.townHash(key) : key.length * 7; P = Object.assign({ style: B.style || 'medieval' }, P);
-  const ra = ROOF_ALT[P.style] || ROOF_ALT.medieval; if (!P.roofM) P.roofM = ra[hs % ra.length]; if (!P.wing) P.wing = (hs >> 3) % 2 ? 'l' : 'r'; if (!P.bannerM) P.bannerM = BAN[(hs >> 5) % BAN.length]; P.kind = P.kind || K.kindOf(key); P.col = P.col || COL[P.kind];
-  PT.ART[key] = { mat: (K.tier(P.style, 1).base || K.tier(P.style, 1).wall)[0], icon: P.icon, col: P.col, kind: P.kind, beam: P.beam,
-    paint: (S, sc, G) => K.build(S, sc, G, P), anim: K.anim, show: (s, o, G) => { if (P.show) P.show(s, o, G, o.show.q); SHOW[P.kind](s, o, G, o.show.q); }, sfx: (d, q) => { SFX[P.kind](d, q); if (P.sfx) P.sfx(d, q); } };
-  return PT.ART[key];
+PT.spec = function (key, P0) {
+  // resolved on first use: evolution buildings get their style and category later in the load (mc-night.js)
+  const A = PT.ART[key] = { icon: P0.icon, beam: P0.beam, prep() {
+    if (A.P) return; const B = M.BUILDINGS[key] || {}, hs = M.townHash ? M.townHash(key) : key.length * 7, P = A.P = Object.assign({ style: B.style || 'medieval' }, P0);
+    const ra = ROOF_ALT[P.style] || ROOF_ALT.medieval; if (!P.roofM) P.roofM = ra[hs % ra.length]; if (!P.wing) P.wing = (hs >> 3) % 2 ? 'l' : 'r'; if (!P.bannerM) P.bannerM = BAN[(hs >> 5) % BAN.length];
+    P.kind = P.kind || K.kindOf(key); P.col = P.col || COL[P.kind]; A.col = P.col; A.kind = P.kind; A.mat = (K.tier(P.style, 1).base || K.tier(P.style, 1).wall)[0]; },
+    paint: (S, sc, G) => K.build(S, sc, G, A.P), anim: K.anim, show: (s, o, G) => { if (A.P.show) A.P.show(s, o, G, o.show.q); SHOW[A.P.kind](s, o, G, o.show.q); }, sfx: (d, q) => { SFX[A.P.kind](d, q); if (A.P.sfx) A.P.sfx(d, q); } };
+  return A;
 };
 })();
