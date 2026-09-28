@@ -177,7 +177,7 @@ G.newGame = function () {
     if (m.kit2 === 'build') { const ks = Object.keys(B).filter(k => !B[k].fixed && !B[k].boss && !B[k].gone && B[k].q >= 2 && B[k].q <= 3 && k !== 'core'); for (let i = 0; i < 2 && ks.length; i++) M.invAdd(m, 'bbp:' + ks.splice(Math.floor(rnd() * ks.length), 1)[0], 1); }
     if (m.kit2 === 'arms') { const w = wsBp(); if (w) M.invAdd(m, w, 1); const rs = M.relicPool ? M.relicPool() : []; if (rs.length) M.invAdd(m, 'rbp:' + pick(rs), 1); }
     const pi = (p.shrine || []).findIndex(x => x.id === L.pid);
-    if (pi >= 0 && h) { const po = p.shrine[pi]; if (talOk(po.t)) h.inh = { f: po.t.f, L: po.t.L, voc: po.t.voc }; if (po.cls === h.cls) h.points = (h.points || 0) + 1; p.shrine.splice(pi, 1); }
+    if (pi >= 0 && h) { const po = p.shrine[pi]; if (talOk(po.t)) h.inh = { f: po.t.f, L: po.t.L, voc: po.t.voc }; if (po.cls === h.cls) h.points = (h.points || 0) + 1; }   // it stays on the wall (2026-09-28: 「带进去用了也不要消失」)
     this.saveProfile(); this.save && this.save();
   }
   return r;
