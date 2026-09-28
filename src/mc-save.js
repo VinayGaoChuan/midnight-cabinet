@@ -30,6 +30,9 @@ function checkMeta(raw) {
   ['raidWeak', 'freeRecruit', 'bonusPw', 'nextKit', 'buildBoost'].forEach(k => { if (m[k] != null && (!isNum(m[k]) || m[k] < 0)) { delete m[k]; note('带回的效果'); } });
   // the base grid
   const cells = m.base && m.base.cells, BR = M.BROWS, BC = M.BCOLS;
+  // the rock lost its two bottom rows (2026-09-27, 5 → 3 rows): what stood or was being built there goes back to the inventory as its
+  // blueprint — a design migration, not damage
+  while (Array.isArray(cells) && cells.length > BR && cells.length <= 5) { const gone = cells.pop(); (Array.isArray(gone) ? gone : []).forEach(x => { if (!isObj(x)) return; const k = x.b && x.b !== 'core' ? x.b : isObj(x.job) && x.job.kind === 'build' ? x.job.key : null; if (k && M.BUILDINGS[k] && !M.BUILDINGS[k].fixed) { m.inv = isObj(m.inv) ? m.inv : {}; m.inv['bbp:' + k] = (m.inv['bbp:' + k] | 0) + 1; } }); mig = true; }
   if (!Array.isArray(cells) || cells.length !== BR || cells.some(row => !Array.isArray(row) || row.length !== BC)) { m.base = D.base; note('基地布局'); }
   else for (let r = 0; r < BR; r++) for (let c = 0; c < BC; c++) {
     let x = cells[r][c]; if (!isObj(x)) { cells[r][c] = x = { dug: false, tile: null, b: null, job: null }; note('基地房间'); }

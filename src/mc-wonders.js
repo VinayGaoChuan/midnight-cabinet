@@ -11,7 +11,7 @@
 //   which now only says how the city looks). The blueprint pick of a level is gone too (mc-roster.js).
 // · The main base on the surface is smaller, so the wonders stand out.
 const M = window.MC, G = M.Game.prototype, S = M.Sfx, U = M.UI, P = M.PJ.PAL, B = M.BUILDINGS, DB = M.DB, now = () => performance.now();
-const cl = (v, a, b) => Math.max(a, Math.min(b, v)), rnd = Math.random;
+const cl = (v, a, b) => Math.max(a, Math.min(b, v)), rnd = Math.random, eo = (q) => 1 - Math.pow(1 - q, 3);
 const GEO = M.BASE_GEO, DOOR_X = GEO.DOOR_X, MB = M.MAIN_BASE;
 // key = the landmark's art on the surface (mc-town.js) · style → the city's look · kind: night / run / base · need: part, or difficulty
 const W = M.WONDERS = {
@@ -59,7 +59,7 @@ G.dirTake = function (k) {
   m.wonders = wl(m).concat([k]); look(m, k); m.dirOwe = Math.max(0, (m.dirOwe || 1) - 1); this.dirPick = null; this.save();
   // it rises beside the main base (mc-town.js brings a new building up out of the ground); the camera goes to see it
   this.dirFx = { k: STYLE_DIR[W[k].style] || 'city', lv: 1, t0: now(), wonder: k }; if (this.town) { this.town.lookFx = { k: this.dirFx.k, from, t: 0 }; }
-  if (this.bv) { this.bv.keepFree && this.bv.keepFree(); this.bv.sel = null; this.bv.tx = DOOR_X; this.bv.ty = -200; this.bv.tz = Math.max(0.5, Math.min(0.62, 1920 / ((M.townSpan || 1600) + 700))); }
+  if (this.bv) { this.bv.keepFree && this.bv.keepFree(); this.bv.sel = null; this.bv.tx = DOOR_X; this.bv.ty = -300; this.bv.tz = Math.max(0.45, Math.min(0.58, 1920 / ((M.townSpan || 1600) + 1100))); }
   this.banner && this.banner({ kind: 'win', text: '奇观 · ' + W[k].n, col: WC(), col2: '#4a3410', sub: W[k].d, life: 2.6, y: 300 });
   S.up && S.up(3); S.fanfare && S.fanfare(); this.fx && this.fx.kick && this.fx.kick(14);
   try { M.T && M.T.ev('wonder', { k, lv: M.prosLv(m) }); } catch (e) {}
@@ -100,8 +100,8 @@ G.tipFor = function (key) {
 if (M.GUIDE) { const i = M.GUIDE.findIndex(x => x && x.id === 'dirs'); if (i >= 0) M.GUIDE.splice(i, 1);
   M.GUIDE.push({ id: 'wonder', cat: '基地', icon: 't_pros', title: '奇观', line: '繁荣度每升一级，两座奇观选一座，当场建在地面上。', scr: 'base', sel: '[data-tip="b-pros"]', when: (g) => wl(g.meta).length > 0 && !g.dirFx }); }
 
-// ───────── prosperity comes from holding the nights and beating bosses too (a bad run of blueprints no longer stalls it) ─────────
-M.PROS_NIGHT = 15; M.PROS_BOSS = 20;
+// ───────── prosperity: a little for every night held too, so a bad run of blueprints never stops it for good (bosses give none, 2026-09-27) ─────────
+M.PROS_NIGHT = 5; M.PROS_BOSS = 0;
 const oPros = M.prosperity;
 M.prosperity = function (m) { const p = oPros.apply(this, arguments), st = (m && m.st) || {}; return p + (st.raidsWon || 0) * M.PROS_NIGHT + (st.boss || 0) * M.PROS_BOSS; };
 
@@ -114,17 +114,32 @@ if (M.PXR && M.PXR.mainBase) {
   const oAR = M.PXR.archRows; let AR = null;
   if (oAR) M.PXR.archRows = function () { if (AR) return AR; AR = oAR.apply(this, arguments).map(r => ({ y: Math.round(r.y * MB_K), x0: Math.round(r.x0 * MB_K), x1: Math.round(r.x1 * MB_K) })); return AR; };
 }
-const WK = 1.2;   // a wonder is drawn bigger than the same landmark ever was as a room
+// the wonders stand far off, on the horizon behind the town (2026-09-27: 「奇迹建筑……直接挡在了所有建筑前面把景深的效果也盖住了，不好。
+// 我觉得，奇迹建筑，应该是建在远方，而且大小，高矮是根据各自建筑相关的。例如马丘比丘，怎么可能跟大本钟一样高。但是所有奇迹建筑，都要宏伟
+// 壮观」): each keeps its own shape and proportions (M.townFoot: a mountain town wide and low, a clock tower narrow and tall), all of
+// them 1.4 times their old size, in the evening haze just behind the last street, so the streets pass in front of their feet.
+// The first stands behind the main base; the next ones go out left and right.
+const FAR_Y = M.WONDER_Y = -150, FAR_K = 1.4, FAR_DK = 0.26;
 const oLay = M.townLayout;
 M.townLayout = function (m) {
   const L = oLay.apply(this, arguments), ws = wl(m); if (!ws.length) return L;
-  const E0 = MB.w / 2, cur = { L: E0 + 100, R: E0 + 40 };   // room on the left for the god's statue (mc-gods.js)
-  ws.forEach((k, i) => { const sd = i % 2 ? 'R' : 'L', s = sd === 'L' ? -1 : 1, f = M.townFoot(k), w = f.w * WK;
-    const o = { k: 'w:' + k, c: -1, r: -1, key: k, role: 'wonder', fight: false, front: true, fort: 0, B: Object.assign({}, B[k] || { style: W[k].style }, { q: 6 }), site: false, ruin: false, demo: false, fix: false, w: f.w, h: f.h, side: s, depth: -1, ty: -4, sc: WK, dk: 0, tx: DOOR_X + s * (cur[sd] + w / 2), wonder: 1 };
-    cur[sd] += w + 36; L.items.push(o); });
-  ['L', 'R'].forEach(sd => { const s = sd === 'L' ? -1 : 1, e = DOOR_X + s * (cur[sd] + 20); if (s < 0 ? e < L.edge.L : e > L.edge.R) { L.edge[sd] = e; L.guard[sd] = e + s * 24; } });
-  L.span = L.edge.R - L.edge.L; return L;
+  const cur = { L: 0, R: 0 };
+  ws.forEach((k, i) => { const f = M.townFoot(k), w = f.w * FAR_K; let s = 0, x = DOOR_X;
+    if (i === 0) { cur.L = cur.R = w / 2 + 30; } else { const sd = i % 2 ? 'R' : 'L'; s = sd === 'L' ? -1 : 1; x = DOOR_X + s * (cur[sd] + w / 2); cur[sd] += w + 30; }
+    L.items.push({ k: 'w:' + k, c: -1, r: -1, key: k, role: 'wonder', fight: false, front: false, far: 1, fort: 0, B: Object.assign({}, B[k] || { style: W[k].style }, { q: 6 }), site: false, ruin: false, demo: false, fix: false, w: f.w, h: f.h, side: s, depth: 99, ty: FAR_Y, sc: FAR_K, dk: FAR_DK, tx: x, wonder: 1 }); });
+  return L;
 };
+// drawn right after the town's skyline (M.TOWN_LOOK.back), before its streets: tallest at the back, a warm glow behind each, lit
+function drawFar(ctx, T, lights) {
+  const vs = Object.values(T.vis || {}).filter(v => v.far).sort((a, b) => b.h * b.sc - a.h * a.sc), gc = WC();
+  vs.forEach(v => {
+    const im = M.townArt && M.townArt(v.key, 0, 0, v.dk, null); if (!im) return; const sc = v.sc || 1, H = v.h * sc, age = v.riseT != null ? T.t - v.riseT : 9, rise = age < 1.6 ? 1 - eo(cl(age / 1.4, 0, 1)) : 0;
+    if (M.glow) M.glow(ctx, v.x, v.y - H * 0.55, Math.max(v.w * sc, H) * 0.75, gc, 0.2);
+    ctx.save(); ctx.translate(Math.round(v.x), Math.round(v.y)); ctx.beginPath(); ctx.rect(-v.w * sc * 1.2, -H - 500, v.w * sc * 2.4, H + 504); ctx.clip(); ctx.scale(sc, sc); ctx.drawImage(im, -im.ox, -im.oy + rise * (v.h + 40)); ctx.restore();
+    if (lights) lights.push({ x: v.x, y: v.y - H * 0.6, r: Math.max(220, v.w * sc * 0.8), c: '#ffe6b0', f: 0.45 });
+  });
+}
+{ const LK = M.TOWN_LOOK; if (LK && LK.back) { const oBack = LK.back; LK.back = function (ctx, T, m, t, lights) { const r = oBack.apply(this, arguments); try { drawFar(ctx, T, lights); } catch (e) { (window.__mcErrs = window.__mcErrs || []).push('far wonders: ' + e.message); } return r; }; } }
 // where a wonder stands now (for its night deeds)
 const wPos = (k) => { const T = M._g && M._g.town, v = T && T.vis && T.vis['w:' + k]; return v ? { x: v.x, y: v.y, h: v.h * (v.sc || 1) } : { x: DOOR_X + 500, y: 0, h: 260 }; };
 

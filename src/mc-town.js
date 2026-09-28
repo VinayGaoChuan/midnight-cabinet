@@ -441,7 +441,7 @@ BVP.pick = function (sx, sy) {
 };
 // the resting view widens with the town so both ends stay on screen
 const oHome = BVP.home;
-BVP.home = function () { oHome.apply(this, arguments); if (!this.sel && !this.free && M.townSpan) { const z = cl(1920 / (M.townSpan + 500), 0.5, 0.64); if (z < this.tz) { this.tz = z; this.ty = 380 + (0.64 - z) * 300; } } };
+BVP.home = function () { oHome.apply(this, arguments); if (!this.sel && !this.free && M.townSpan) { const z = cl(1920 / (M.townSpan + 500), 0.5, 0.7); if (z < this.tz) { this.tz = z; this.ty = M.baseHomeY ? M.baseHomeY(z) : 380; } } };
 const oNG = G.newGame;
 if (oNG) G.newGame = function () { this.town = null; return oNG.apply(this, arguments); };
 

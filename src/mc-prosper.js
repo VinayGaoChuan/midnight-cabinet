@@ -2,7 +2,7 @@
 (function () {
 // Prosperity on screen (rules in mc-rules26.js; user ruling 2026-09-26). The top bar shows 繁荣 LvN and how far the
 // next level is. Rock the base has not opened is pure black and says only which level opens it. When a level is
-// reached the next ring opens in one piece of theatre: a gold wave leaves the lift and runs out to the new ring, then
+// reached its few new cells (2026-09-27: a few a level, not a ring, mc-rules26.js) open in one piece of theatre: a gold wave leaves the lift and runs out to the new ring, then
 // the black cells crack along glowing seams and burst into shards one after another, nearest the lift first, each
 // showing the rock or the terrain it hid (terrain gets its colour and its name), and the banner says the new level.
 const M = window.MC, G = M.Game.prototype, S = M.Sfx, U = M.UI, P = M.PJ.PAL, now = () => performance.now();
@@ -29,8 +29,9 @@ G.expandStart = function (up) {
   cells.sort((a, b) => a.d - b.d);
   const at = {}, W0 = 0.8, STEP = RM() ? 0.05 : 0.11; cells.forEach((o, i) => { o.at = W0 + 0.45 + i * STEP; at[o.c + ',' + o.r] = o.at; o.seed = (o.c * 7 + o.r * 13) % 11; });
   const tEnd = (cells.length ? cells[cells.length - 1].at : W0) + 1.7;
-  this.expand = { m, t: 0, up, cells, at, shards: [], W0, tEnd, fired: {}, t0: now() };
-  if (this.bv) { this.bv.sel = null; this.bv.free = null; this.bv.tx = 1050; this.bv.ty = 470; this.bv.tz = 0.58; }
+  const far = cells.reduce((a2, o) => Math.max(a2, Math.abs(o.c - M.CORE.c), o.r), 1);   // how far out the wave runs (cells, not levels)
+  this.expand = { m, t: 0, up, cells, at, shards: [], W0, tEnd, fired: {}, t0: now(), far };
+  if (this.bv) { this.bv.sel = null; this.bv.free = null; this.bv.tx = 1050; this.bv.ty = 300; this.bv.tz = 0.62; }
   S.creak && S.creak(); this.fx.kick(4); this.bump();
 };
 const once = (E, k, fn) => { if (!E.fired[k]) { E.fired[k] = 1; fn(); } };
@@ -51,7 +52,7 @@ G.expandTick = function (dt) {
   const last = E.cells.length ? E.cells[E.cells.length - 1].at : E.W0;
   if (t >= last + 0.6) once(E, 'banner', () => {
     S.fanfare(); this.fx.flash(P.butter, 0.25); const p = this.cellPos(M.CORE.c, M.CORE.r); this.fx.rays(p.x, p.y - 60, P.gold, 1.8, { r: 460 });
-    this.banner({ kind: 'win', text: '繁荣度 Lv' + E.up.to, col: '#ffcf4a', col2: '#5a3a08', sub: E.up.to > (M.PROS_RINGS || 4) ? '选一项强化' : E.up.to === (M.PROS_RINGS || 4) ? '所有地块都解锁了' : '地块向外扩了一圈', life: 2.2, y: 440 }); this.pulse.pros = now();
+    this.banner({ kind: 'win', text: '繁荣度 Lv' + E.up.to, col: '#ffcf4a', col2: '#5a3a08', sub: E.cells.length ? '新开了 ' + E.cells.length + ' 块地' : '选一座奇观', life: 2.2, y: 440 }); this.pulse.pros = now();
   });
   E.shards = E.shards.filter(s => t - s.t0 < 1.6);
   if (t >= E.tEnd) { this.expand = null; if (this.bv) this.bv.home(); }
@@ -75,7 +76,7 @@ M.BASE_HOOKS.push(function (ctx, meta, bv, lights, phase) {
   // the wave: a gold box ring leaves the lift and runs out to the edge of the new ring
   const wq = cl((t - 0.1) / (E.W0 + 0.3), 0, 1);
   if (wq > 0 && wq < 1) {
-    const R = E.up.from + (E.up.to - E.up.from) * eo(wq) + 0.5, x0 = lc.x + CW / 2 - R * CW, x1 = lc.x + CW / 2 + R * CW, y1 = TOP + (R + 0.5) * CH;
+    const R = 0.5 + E.far * eo(wq), x0 = lc.x + CW / 2 - R * CW, x1 = lc.x + CW / 2 + R * CW, y1 = TOP + (R + 0.5) * CH;
     ctx.save(); ctx.globalAlpha = 1 - wq * 0.6; ctx.strokeStyle = P.gold; ctx.lineWidth = 16; ctx.strokeRect(x0, TOP - 8, x1 - x0, y1 - TOP + 8); ctx.strokeStyle = P.white; ctx.lineWidth = 5; ctx.strokeRect(x0, TOP - 8, x1 - x0, y1 - TOP + 8); ctx.restore();
     if (lights) lights.push({ x: lc.x + CW / 2, y: TOP + CH, r: R * CW * 1.4, c: '#ffcf4a', f: 1 - wq });
   }
@@ -125,7 +126,7 @@ G.view = function () {
 // words: the level and what it does, nothing about points
 const oTip = G.tipFor;
 G.tipFor = function (key) {
-  if (key === 'b-pros') { const m = this.meta, lv = M.prosLv(m); return { title: '繁荣度 Lv' + lv, c: '#ffcf4a', icon: 't_pros', d: '造的建筑品质越高，繁荣度涨得越多；每升一级选一项强化' + (lv < (M.PROS_RINGS || 4) ? '，地块向外扩一圈。' : '。') }; }
+  if (key === 'b-pros') { const m = this.meta, lv = M.prosLv(m); return { title: '繁荣度 Lv' + lv, c: '#ffcf4a', icon: 't_pros', d: '房间的品质越高，繁荣度涨得越多；每升一级多开几块地、选一座奇观。' }; }
   return oTip.apply(this, arguments);
 };
 const oCT = G.cellTip;

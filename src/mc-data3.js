@@ -135,7 +135,7 @@ const TILES = {
   crystal:{ n:'晶簇', c:'#7fe0ff', d:'建在这里的建筑不耗电', mod:(B) => B.pw < 0 ? { pw:-B.pw } : null },
   fossil:{ n:'化石层', c:'#d8c8a0', d:'任何建筑每天额外产出 10 物资', mod:() => ({ supplyDaily:10 }) },
 };
-const BCOLS = 7, BROWS = 5, CORE = { c: 3, r: 0 };
+const BCOLS = 7, BROWS = 3, CORE = { c: 3, r: 0 };   // 2026-09-27: three rows, not five — 20 cells of land (mc-rules26.js), the view two rows higher (mc-base.js)
 
 // ───────── worlds ─────────
 const WORLDS = {

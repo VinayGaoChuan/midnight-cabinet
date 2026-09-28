@@ -53,7 +53,7 @@ const CONCEPTS = [
   { id: 'sup', cat: '基地', img: () => sprite('sack'), title: '物资', line: '挖岩层、建房间、打造宝物都花它。出征带回来，守住夜晚也有。', scr: 'base', sel: '[data-fx="msup"]' },
   { id: 'shard', cat: '基地', img: () => sprite('shard'), title: '灵魂碎片', line: '高端材料：建史诗 / 传说建筑、精铸宝物时要用。夜里击退怪物得到。', scr: 'base', sel: '[data-fx="msh"]' },
   { id: 'core', cat: '基地', icon: 't_heart', title: '基地核心', line: '三颗心：探索失败时献出一颗救回领袖，通关一个场景补回一颗；心用完这一局就结束。', scr: 'base', sel: '[data-tip="b-core"]' },
-  { id: 'pros', cat: '基地', icon: 't_pros', title: '繁荣度', line: '造的建筑品质越高，繁荣度涨得越多；升一级，地块向外扩一圈。', scr: 'base', sel: '[data-tip="b-pros"]' },
+  { id: 'pros', cat: '基地', icon: 't_pros', title: '繁荣度', line: '房间的品质越高，繁荣度涨得越多；每升一级多开几块地、选一座奇观。', scr: 'base', sel: '[data-tip="b-pros"]' },
   { id: 'town', cat: '基地', icon: 'f_defense', title: '地面城镇', line: '地下每建一座建筑，地面就升起一座，城市越建越大。', scr: 'base', at: (g) => townRect(g, () => true), when: (g) => !!(g.town && Object.keys(g.town.vis).length) },
   { id: 'locked', cat: '基地', icon: 't_pros', title: '未解锁的地块', line: '黑色的地块还没解锁，繁荣度升级后才能挖。', scr: 'base', at: (g) => lockedRect(g) },
   { id: 'heroes', cat: '领袖', icon: 't_command', title: '领袖', line: '你的化身：出征带队，夜里站在主基地屋顶指挥。点卡片看天赋；卡片上的黄点 = 有没用的天赋点。', scr: 'base', sel: '[data-fx="heroes"]' },

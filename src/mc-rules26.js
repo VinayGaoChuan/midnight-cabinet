@@ -8,7 +8,7 @@ const M = window.MC, B_ = M.BUILDINGS;
 // ───────── the base core: 3 hearts (mc-revive.js tells the story) ─────────
 M.CORE_MAX = 3;
 const oDM = M.defaultMeta3;
-M.defaultMeta3 = function () { const m = oDM.apply(this, arguments); m.core = M.CORE_MAX; m.prosLv = 1; m.portalV = 2; if (m.portal) m.portal.hp = M.PORTAL_BASE; M.invAdd(m, 'bbp:wall', 2); M.invAdd(m, 'bbp:ballista', 1); return m; };   // a first line of defence: the town, not the leader, holds the raids
+M.defaultMeta3 = function () { const m = oDM.apply(this, arguments); m.core = M.CORE_MAX; m.prosLv = 1; m.landV = 2; m.portalV = 2; if (m.portal) m.portal.hp = M.PORTAL_BASE; M.invAdd(m, 'bbp:wall', 2); M.invAdd(m, 'bbp:ballista', 1); return m; };   // a first line of defence: the town, not the leader, holds the raids
 M.coreFix = function (m) { if (typeof m.core !== 'number' || !(m.core >= 1)) { m.core = M.CORE_MAX; return true; } if (m.core > M.CORE_MAX) { m.core = M.CORE_MAX; return true; } return false; };
 
 // ───────── the wall (user ruling 2026-09-26: walls go to the outside of the town by themselves) ─────────
@@ -60,16 +60,23 @@ M.buildOptions = function (m) { const L = oBO.apply(this, arguments); return L.m
 // the main base holds out longer now that the town, not the leader, defends it (1000 → 2400; old saves keep their share)
 M.PORTAL_BASE = 2400;
 // …and grows with prosperity (user ruling 2026-09-26: 「基地生命值要随着繁荣度而增加，否则后面的敌人越来越强，摸一下基地就死」): +35% a level
-M.PORTAL_PROS = 0.35;
+M.PORTAL_PROS = 0.45;   // 2026-09-27: levels come slower now (0.35 → 0.45 keeps the main base as tough on the same day)
 M.portalMax = (m) => Math.round(M.PORTAL_BASE * (1 + (M.baseMods(m).portalHp || 0)) * (1 + M.PORTAL_PROS * Math.max(0, ((m && m.prosLv) || 1) - 1)));
 
 // ───────── prosperity (user ruling 2026-09-26) ─────────
 // every standing room adds by its quality (the better, the more; the numbers are never shown). Levels open the rings of
 // the base one by one: Lv1 the ring around the lift, Lv4 the whole rock.
 M.PROS_Q = [10, 25, 45, 70];
-// Lv5–9 open no more rock: each level brings a 发展方向 (user ruling 2026-09-27, mc-dirs.js)
-M.PROS_LV = [0, 40, 120, 260, 420, 620, 860, 1150, 1500];
-M.PROS_MAX = M.PROS_LV.length; M.PROS_RINGS = 4;
+// 2026-09-27 (「繁荣等级太容易提升了……直接在周围给了一圈土地，给的太多了」, then 「不要地契，每升一级，扩展几块土地。只有土地稀缺，才能让
+// 玩家思考对建筑的取舍，才有追求高品质建筑的欲望」): prosperity is the base itself — its rooms by quality, and a little for every night
+// held (so a bad run of blueprints never stops it for good) — and every level opens a few cells, never a whole ring. The
+// thresholds are set so that filling the land a level gives with the rooms of that stage of the game just about reaches the
+// next one: past that only better rooms (tear down a plain one, build a better one) move it on. Pace on 普通 (bot runs):
+// Lv2 ~day 3, Lv3 ~day 5–6, Lv4 ~day 8, Lv5 ~day 11, Lv6 ~day 14; Lv7–9 are for the long difficulties. The bot builds ~0.7
+// rooms a day (it is short of blueprints): the land a level gives stays at or under what a player can build, so it is the
+// land, not the blueprints, that runs out first as soon as the blueprints come faster.
+M.PROS_LV = [0, 30, 60, 110, 180, 260, 350, 460, 600];
+M.PROS_MAX = M.PROS_LV.length; M.PROS_RINGS = M.PROS_MAX;
 M.prosperity = function (m) {
   let p = 0; if (!m || !m.base) return 0;
   for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) { const x = m.base.cells[r][c]; if (!x.b || x.b === 'core' || (x.job && x.job.kind === 'demolish')) continue; p += M.PROS_Q[(B_[x.b] || {}).q || 0] || 0; }
@@ -80,8 +87,15 @@ M.prosLvOf = (p) => { let l = 1; M.PROS_LV.forEach((t, i) => { if (p >= t) l = i
 M.prosLv = (m) => Math.max(m.prosLv || 1, 1);
 M.prosNext = (m) => { const l = M.prosLv(m); return l >= M.PROS_MAX ? null : M.PROS_LV[l]; };
 // ring of a cell around the lift: 1 = the cells touching it
-M.ringOf = (c, r) => Math.max(Math.abs(c - M.CORE.c), r - M.CORE.r);
-M.unlocked = (m, c, r) => M.ringOf(c, r) <= M.prosLv(m);
+// the land: the 20 cells around the lift (7 × 3) open in this order, nearest first — the 5 round the lift at Lv1, then two
+// more a level (left and right), and the last one, straight under the lift, at Lv9 (every cell touches one opened before it,
+// so it can always be dug); M.ringOf is the level that opens a cell
+const LAND = [[2, 0], [4, 0], [3, 1], [2, 1], [4, 1], [1, 0], [5, 0], [2, 2], [4, 2], [1, 1], [5, 1], [0, 0], [6, 0], [1, 2], [5, 2], [0, 1], [6, 1], [0, 2], [6, 2], [3, 2]];
+const LAND_N = M.LAND_N = [0, 5, 7, 9, 11, 13, 15, 17, 19, 20];
+const LV_OF = {}; LAND.forEach(([c, r], i) => { let lv = 1; while (LAND_N[lv] <= i) lv++; LV_OF[c + ',' + r] = lv; });
+M.ringOf = (c, r) => (c === M.CORE.c && r === M.CORE.r ? 0 : LV_OF[c + ',' + r] || 99);
+// an old save keeps the cells it had already dug or built on (m.landKeep)
+M.unlocked = (m, c, r) => M.ringOf(c, r) <= M.prosLv(m) || !!(m && m.landKeep && m.landKeep[c + ',' + r]);
 M.lockedCell = (m, c, r) => !M.unlocked(m, c, r);
 
 // ───────── rock: only the unlocked rings can be dug; terrain shows as soon as its ring opens ─────────
@@ -135,8 +149,11 @@ M.advanceDay = function (m) {
 // ───────── old saves: a core, a prosperity level that keeps everything already dug in the light ─────────
 M.prosFix = function (m) {
   let ch = false, ring = 1;
-  for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) { const x = m.base.cells[r][c]; if (x.dug || x.b || x.job) ring = Math.max(ring, M.ringOf(c, r)); if (x.ruin != null && typeof x.ruin !== 'boolean') { x.ruin = !!x.ruin; ch = true; } if (x.ruin && x.b && !M.townFights(x.b)) { x.ruin = false; ch = true; } }   // only fighting buildings fall now
-  const want = Math.min(M.PROS_MAX, Math.max(ring, M.prosLvOf(M.prosperity(m))));
+  // the land v2 (2026-09-27): the level is counted again under the new rules (it may go down, once); cells already dug, built or
+  // being worked on stay open; opened but untouched ones close again until their level
+  if (m.landV !== 2) { m.landV = 2; m.landKeep = {}; m.prosLv = M.prosLvOf(M.prosperity(m)); for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) { const x = m.base.cells[r][c]; if ((x.dug || x.b || x.job) && M.ringOf(c, r) > m.prosLv) m.landKeep[c + ',' + r] = 1; } ch = true; }
+  for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) { const x = m.base.cells[r][c]; if (x.ruin != null && typeof x.ruin !== 'boolean') { x.ruin = !!x.ruin; ch = true; } if (x.ruin && x.b && !M.townFights(x.b)) { x.ruin = false; ch = true; } }   // only fighting buildings fall now
+  const want = Math.min(M.PROS_MAX, Math.max(ring, M.prosLvOf(M.prosperity(m))));   // ring stays 1: land no longer lifts the level
   if (typeof m.prosLv !== 'number' || m.prosLv < want || m.prosLv > M.PROS_MAX) { m.prosLv = want; ch = true; }
   if (m.prosUp && typeof m.prosUp !== 'object') { delete m.prosUp; ch = true; }
   if (m.portal && !m.portalV) { m.portal.hp = Math.round((m.portal.hp || 0) * M.PORTAL_BASE / 1000); m.portalV = 2; ch = true; }

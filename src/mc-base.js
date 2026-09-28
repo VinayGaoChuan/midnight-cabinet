@@ -347,12 +347,16 @@ const thumbs = {};
 M.roomThumb = function (key) { if (!thumbs[key]) { const a = document.createElement('canvas'); a.width = 150; a.height = 105; const ax = a.getContext('2d'); ax.imageSmoothingEnabled = false; if (M.PXR && M.PXR.has(key)) ax.drawImage(M.PXR.snapshot(key), 0, 0); else drawRoom(ax, 0, 0, 150, 105, key, 1.3, { noNpc: false, seed: 0.2 }); const c = document.createElement('canvas'); c.width = 450; c.height = 315; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(a, 0, 0, 450, 315); thumbs[key] = c.toDataURL(); } return thumbs[key]; };
 
 // ───────── base view / camera ─────────
+// the resting view (2026-09-27: 「现在地底的空间占用的屏幕太大了，把镜头往上面移动1-2个地格吧」): the rock is two rows shorter (3, not 5)
+// and the view a touch closer, so the surface — the town, its wonders on the horizon — gets the room; at any zoom the rock's bottom row stays on
+// the screen's bottom edge
+M.baseHomeY = (z) => TOP + BROWS * CH - 480 / z;
 M.BaseView = class {
-  constructor() { this.t = 0; this.x = 1050; this.y = 380; this.z = 0.64; this.tx = this.x; this.ty = this.y; this.tz = this.z; this.sel = null; this.hover = null; this.pulse = {}; this.free = null; this.amb = new M.Ambient('motes', 1920, 1080, 50); this.stars = [...Array(90)].map((_, i) => ({ x: rnd(i) * 2400 - 150, y: -700 + rnd(i + 40) * 560, s: rnd(i + 9) < 0.2 ? 6 : 3, p: rnd(i + 3) * 7 })); }
+  constructor() { this.t = 0; this.x = 1050; this.y = M.baseHomeY(0.7); this.z = 0.7; this.tx = this.x; this.ty = this.y; this.tz = this.z; this.sel = null; this.hover = null; this.pulse = {}; this.free = null; this.amb = new M.Ambient('motes', 1920, 1080, 50); this.stars = [...Array(90)].map((_, i) => ({ x: rnd(i) * 2400 - 150, y: -700 + rnd(i + 40) * 560, s: rnd(i + 9) < 0.2 ? 6 : 3, p: rnd(i + 3) * 7 })); }
   keepFree() { if (!this.sel && !this.free) this.free = { x: this.tx, y: this.ty, z: this.tz }; }
   focus(c, r) { this.keepFree(); const p = M.cellCenter(c, r); this.sel = { c, r }; this.tx = p.x + 190; this.ty = p.y; this.tz = 1.7; }
   focusDoor() { this.keepFree(); this.sel = { door: 1 }; this.tx = DOOR_X + 200; this.ty = -140; this.tz = 1.25; }
-  home() { const f = this.free; this.sel = null; this.free = null; if (f) { this.tx = f.x; this.ty = f.y; this.tz = f.z; } else { this.tx = 1050; this.ty = 380; this.tz = 0.64; } }   // the resting view shows the main base on the surface too (2026-09-25)
+  home() { const f = this.free; this.sel = null; this.free = null; if (f) { this.tx = f.x; this.ty = f.y; this.tz = f.z; } else { this.tx = 1050; this.ty = M.baseHomeY(0.7); this.tz = 0.7; } }   // the resting view shows the main base on the surface too (2026-09-25)
   raidCam() { this.sel = null; this.free = null; this.tx = 1050; this.ty = -30; this.tz = 1.0; }
   // keep the view over the base; a camera already outside the box is never yanked back
   lim(x, y, z) {
