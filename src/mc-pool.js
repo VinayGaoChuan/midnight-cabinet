@@ -119,11 +119,11 @@ M.poolLines = function (run, keepArmy) {
   if (run && ((run.region && run.region.tut) || run.tut)) return TUT_LINES.filter(l => DB[M.lineKey(l, 1)]);
   const races = M.RACE6.slice(), prev = (run && run.pool && run.pool.races) || [];
   // 2026-09-28 (「有人反映，说总凑不齐5个同种族的」): a race's full bond takes 5 different lines of it, and the first area held only 4 —
-  // it could not be done there at all; later areas added at most 2 more. Now the first area has 5 + 3 lines, a later one keeps
+  // it could not be done there at all; later areas added at most 2 more. Now the first area has 3 + 3 lines (the user's call), a later one keeps
   // the army's lines, the whole rest of its main race and 3 of a new race; and the counter leans 2 : 1 to the main race.
-  if (!keepArmy) {   // the first area: two races, 5 + 3 lines
+  if (!keepArmy) {   // the first area: two races, 3 + 3 lines (2026-09-28: 「初始3+3吧，我感觉4+3有点多，不好凑」)
     const A = pick(races), Bn = pick(races.filter(r => r !== A));
-    const la = takeRace(A, 5, []), lb = takeRace(Bn, 3, la);
+    const la = takeRace(A, 3, []), lb = takeRace(Bn, 3, la);
     run._poolRaces = [A, Bn]; return la.concat(lb);
   }
   // later areas: the army's lines stay; the rest of its main race; a new race's 3 lines
