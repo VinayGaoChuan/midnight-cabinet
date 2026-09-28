@@ -351,6 +351,7 @@ M.drawBanner = function (ctx, b) {
     // 通告：整条色带 + 上下跑马灯 + 果汁色带大字（墨描边）；色带分 3 格张开，字分 6 格砸下来，站稳后逐字跳
     const kind = bandOf(b), C = BAND[kind], sub = !!b.sub, out = Math.ceil(clamp((b.life - t) / 0.3, 0, 1) * 3) / 3;
     const hk = Math.min(seq([0.25, 0.6, 1], t, 0.05), out); if (hk <= 0) { ctx.restore(); return; }
+    if (b.dim) M.fxDim(ctx, b.dim * hk);   // a banner that must be seen dims what is under it (the goal, mc-gdiff.js)
     const h = Math.max(6, Math.round((sub ? 252 : 204) * hk)), top = Math.round(Y + (sub ? 2 : 0) - h / 2);
     R(ctx, 0, top - 6, 1920, h + 12, P.ink); R(ctx, 0, top, 1920, h, C[0]); R(ctx, 0, top, 1920, 6, C[1]); R(ctx, 0, top + h - 9, 1920, 9, C[2]);
     U.chase(ctx, 0, top - 18, 1920, t); U.chase(ctx, 0, top + h + 12, 1920, t, true);

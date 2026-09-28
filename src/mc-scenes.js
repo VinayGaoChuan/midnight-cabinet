@@ -191,7 +191,7 @@ G.beginBattle = function (n) {
   if (B && n && n.type === 'boss' && cfg && (cfg.fb || cfg.mb)) { const b = cfg.list.find(x => x.boss); const nm = cfg.fb ? DB[cfg.fb].n : b && (b.nm || (DB[b.type] && DB[b.type].n)); if (nm) B.sub = nm; }
   return r;
 };
-M.nodeDesc = ((o) => (n) => (!n.seen || n.type !== 'boss' ? o(n) : n.final ? '击败它就通关这一章' : n.fb ? '这个区域的最终首领：打倒它，基地核心 +1，还可能掉下它的专属建筑图纸' : '击败它才能继续前进，还会点亮一个路标'))(M.nodeDesc);
+M.nodeDesc = ((o) => (n) => (!n.seen || n.type !== 'boss' ? o(n) : n.final ? '击败它就通关这一章' : n.fb ? '这个区域的最终首领，可能掉下它的专属建筑图纸' : '击败它才能继续前进，还会点亮一个路标'))(M.nodeDesc);
 const oLabel = M.nodeLabel;
 M.nodeLabel = (n) => (n.seen && n.type === 'boss' && (n.fb || n.mbN) ? (n.fb ? DB[n.fb].n : n.mbN) : oLabel(n));
 

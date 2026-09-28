@@ -110,14 +110,6 @@ const oldBuild = G.doBuild;
 G.doBuild = function (c, r, key) { oldBuild.call(this, c, r, key); const m = this.meta; if (m.baseTut === 3 && M.cell(m, c, r).job) { m.baseTut = 4; this.save(); setTimeout(() => { this.closePanel(); setTimeout(() => this.baseTutStep(), 750); }, 900); } };
 const oldDig = G.doDig;
 G.doDig = function (c, r) { const m = this.meta, before = m.baseTut; oldDig.call(this, c, r); if (before === 4 && M.cell(m, c, r).job) { m.baseTut = 5; this.save(); setTimeout(() => { this.closePanel(); setTimeout(() => this.baseTutStep(), 750); }, 900); } };
-// ───────── raid uses the new enemies ─────────
-// raid strength for a single leader (2026-09-25): every monster ×RAID_K, the day-10+ boss ~RAID_BOSS × the day's budget
-M.RAID_K = 1.15; M.RAID_BOSS = 0.8; M.RAID_WAVE = 0.58;   // 2026-09-26: the town defends now (mc-siege.js), not the leader
-const OldRaid = M.Raid;
-M.Raid = class extends OldRaid {
-  constructor(meta) { super(meta); const bud = M.budgetAt(1 + meta.day * 0.32 + meta.raids * 0.4); this.list = []; for (let w = 0; w < 3; w++) M.pickWave(bud * M.RAID_WAVE).forEach((e, i) => this.list.push({ t: 2 + w * 9 + i * 0.6, type: e.type, side: Math.random() < 0.5 ? -1 : 1 })); if (meta.day >= 10) { const bt = meta.day >= 20 ? 'ChaosGuardBlackKatos' : 'Kraken', E = DB[bt]; this.list.push({ t: 30, type: bt, side: 1, sc: E && E.cost ? Math.min(1, bud * M.RAID_BOSS / E.cost) : 1 }); } /* one leader (2026-09-25): the raid boss is sized to the day's budget */ this.total = this.list.length; this.ents.forEach(e => { if (e.sprite === 'nail') { e.sprite = 'FootSoldier'; e.hp = e.max = DB.FootSoldier.hp * (1 + meta.day * 0.1); e.atk = DB.FootSoldier.atk * 2; } }); }
-  spawn(s) { const E = DB[s.type], boss = E.g === '不朽' || s.type === 'Kraken'; this.ents.push({ side: 'E', kind: s.type, sprite: s.type, s: boss ? 6 : 4, x: s.side < 0 ? -350 : M.BCOLS * M.BASE_GEO.CW + 350, y: -18 - Math.random() * 30, hp: E.hp * (s.sc || 1) * M.RAID_K, max: E.hp * (s.sc || 1) * M.RAID_K, atk: E.atk * (s.sc || 1) * M.RAID_K, cd: 100 / (E.as || 100), range: E.ranged === 1 ? 300 : 70, spd: (E.spd || 300) * 0.3, ranged: E.ranged === 1, t: 0, alive: true, face: -s.side, boss, elite: E.g === '史诗', slow: 0 }); }
-};
 // ───────── view ─────────
 const oldView = G.view;
 G.view = function () {

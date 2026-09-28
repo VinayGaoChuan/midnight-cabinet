@@ -123,6 +123,7 @@ mc-knock.js
 mc-omen.js
 mc-titan.js
 mc-bossfight.js
+mc-bosskit.js
 mc-vocplay.js
 mc-spend.js
 mc-tidy.js
@@ -164,4 +165,5 @@ mc-hpbar.js
 mc-garswap.js
 mc-tutor.js
 mc-perf.js
+mc-tune.js
 mc-boot.js

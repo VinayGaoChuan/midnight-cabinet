@@ -100,7 +100,7 @@ M.rollShop = function (run) {
 };
 
 // ───────── the garrison ─────────
-M.GARRISON_CAP = 30;
+// the garrison's cap: M.garCap (mc-bastion.js; the old fixed 30 is gone)
 // cleaned in place: the evolution (mc-evo.js) holds on to this very array while it plays; a fresh copy each call left it
 // merging into a stale list, and the same three evolved again and again (2026-09-26 bug: 「局外3合1的时候，好像死循环了」)
 const garOf = (m) => { if (!m) return []; if (!Array.isArray(m.garrison)) m.garrison = []; const g = m.garrison; for (let i = g.length - 1; i >= 0; i--) { const u = g[i]; if (!(u && typeof u === 'object' && DB[u.type])) g.splice(i, 1); } return g; };
@@ -391,7 +391,7 @@ G.view = function () {
   const v = oView.call(this), m = this.meta;
   if (v.b && v.b.res && m && m.tutDone) {
     const g = garOf(m);
-    v.b.res.push({ img: M.iconURL ? M.iconURL('t_shield', 2) : M.spriteURL('sack', 4), v: this.tv('mgar', g.length), c: '#ffcf4a', fx: 'mgar', sc: this.ps('mgar'), hasSub: true, sub: '/' + (M.garCap ? M.garCap(m) : M.GARRISON_CAP), tipOn: this.tipFn(() => this.tipFor('b-gar')) });
+    v.b.res.push({ img: M.iconURL ? M.iconURL('t_shield', 2) : M.spriteURL('sack', 4), v: this.tv('mgar', g.length), c: '#ffcf4a', fx: 'mgar', sc: this.ps('mgar'), hasSub: true, sub: '/' + M.garCap(m), tipOn: this.tipFn(() => this.tipFor('b-gar')) });
   }
   // the garrison beside the leader's card (user ruling 2026-09-26: 「现在基地中有哪些部队，要跟英雄头像显示在一排」): one tile a kind, best first
   if (v.b && m && m.tutDone) { const c = {}; garOf(m).forEach(u => { c[u.type] = (c[u.type] || 0) + 1; });
@@ -413,7 +413,7 @@ G.tipFor = function (key) {
   if (key === 'b-raid' && m) { const f = M.nightFoe(m, m.day); return { title: f ? '今晚' + f.title : '混沌来袭', c: f ? f.c : '#ff6a5a', d: f ? f.who + '「' + f.n + '」今晚带着怪物攻城。' : '每天夜里怪物攻打主基地，驻军迎敌。', lines: [M.raidOddsLine(m), { t: '主基地耐久 ' + Math.round(m.portal.hp) + ' / ' + M.portalMax(m), c: '#e8dcc4' }] }; }
   if (key === 'b-gar' && m) {
     const g = garOf(m), c = {}; g.forEach(u => { c[u.type] = (c[u.type] || 0) + 1; }); const ks = Object.keys(c).sort((a, b) => DB[b].q - DB[a].q || c[b] - c[a]);
-    return { title: '驻军 ' + g.length + ' / ' + (M.garCap ? M.garCap(m) : M.GARRISON_CAP) + ' · ★' + M.garrisonPower(m), c: '#ffcf4a', d: g.length ? '出征带回来的部队，每天夜里守城。' : '出征回来的部队会留下守城。',
+    return { title: '驻军 ' + g.length + ' / ' + M.garCap(m) + ' · ★' + M.garrisonPower(m), c: '#ffcf4a', d: g.length ? '出征带回来的部队，每天夜里守城。' : '出征回来的部队会留下守城。',
       lines: ks.slice(0, 10).map(k => ({ rich: [{ t: DB[k].n + (c[k] > 1 ? ' ×' + c[k] : ''), c: Q[DB[k].q].c, b: 1 }] })).concat(ks.length > 10 ? [{ t: '还有 ' + (ks.length - 10) + ' 种', c: '#a9a3c9' }] : []) };
   }
   return oTip.apply(this, arguments);

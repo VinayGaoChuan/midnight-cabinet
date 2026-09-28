@@ -117,6 +117,39 @@ G.tipFor = function (key) {
   if (key === 'b-goal' && m) { const D = gdOf(m); return { title: D.n + ' · ' + (m.goalDone ? '已通关' : '目标第 ' + D.goal + ' 夜'), c: D.c, d: D.d }; }
   return oTip.apply(this, arguments);
 };
+// ───────── the goal, shown once when a game begins ─────────
+// 2026-09-28: 「游戏开始的时候，我并不清楚目标……开局需要有一个显示目标的效果，显示完就收起来，效果要明显，保证玩家能看到」. The first time
+// the base is quiet in a game: the base dims, a bell tolls, a gold band slams 「守过第 N 夜」 down with the difficulty under it and
+// holds; then it folds away and a star flies into the goal cell of the top bar (「7/15」), which pops. A click cuts it short.
+// The new-player guide waits for it (mc-tutor.js). Old saves see it once too.
+M.GOAL_SHOW = 2.6;
+const oTickGoal = G.tick;
+G.tick = function (dt) {
+  const r = oTickGoal.apply(this, arguments), m = this.meta;
+  if (this.goalFx) { if (this.screen !== 'base' || now() - this.goalFx.t0 > M.GOAL_SHOW * 1000) this.goalEnd(); }
+  else if (m && m.tutDone && !m.goalShown && !m.goalDone && this.screen === 'base' && !this.modal && !this.panel && !this.raid && !this.night && !(this.baseBusy && this.baseBusy())) this.goalShow();
+  return r;
+};
+G.goalShow = function () {
+  const m = this.meta, D = gdOf(m);
+  this.goalFx = { t0: now() };
+  this.banners = this.banners.filter(b => b.kind !== 'goal');
+  this.banners.push({ kind: 'goal', text: '守过第 ' + D.goal + ' 夜', sub: '目标 · ' + D.n, band: 'gold', dim: 0.55, life: M.GOAL_SHOW + 0.35, y: 470, t: 0 });
+  try { S.introToll ? S.introToll() : S.waveHorn && S.waveHorn(); setTimeout(() => { S.stamp && S.stamp(); }, 180); } catch (e) { /* a sound never stops the show */ }
+  this.fx && this.fx.kick && this.fx.kick(10);
+  this.bump();
+};
+G.goalEnd = function () {
+  const f = this.goalFx, m = this.meta; if (!f) return; this.goalFx = null;
+  this.banners.forEach(b => { if (b.kind === 'goal') b.t = Math.max(b.t, b.life - 0.3); });
+  if (m) { m.goalShown = 1; this.save && this.save(); }
+  if (this.screen === 'base' && this.fly) this.fly('u_star', { x: 960, y: 470 }, 'mgoal', gdOf(m).c, () => { this.pulse && (this.pulse.mgoal = now()); try { S.up && S.up(2); } catch (e) {} this.bump(); });
+  this.bump();
+};
+const oBusyGoal = G.baseBusy; if (oBusyGoal) G.baseBusy = function () { return (!!this.goalFx && this.screen === 'base') || oBusyGoal.apply(this, arguments); };
+const oHurryGoal = G.hurry; G.hurry = function () { if (this.goalFx) { this.goalEnd(); return true; } return oHurryGoal ? oHurryGoal.apply(this, arguments) : false; };
+const oLongGoal = G.longShow; if (oLongGoal) G.longShow = function () { return !!this.goalFx || oLongGoal.apply(this, arguments); };
+
 if (M.GUIDE) M.GUIDE.forEach(c => { if (c && c.id === 'diff') Object.assign(c, { title: '游戏难度', line: '普通、困难、噩梦、地狱：越往上敌人越强、收获越好。' }); if (c && c.id === 'danger') c.title = '碑的难度'; });
 if (M.GUIDE) M.GUIDE.push(
   { id: 'gdiff', cat: '基地', icon: 'u_star', title: '通关目标', line: '守过这个难度的目标夜就通关，开启下一个难度。', scr: 'base', sel: '[data-fx="mgoal"]' });

@@ -208,7 +208,7 @@ G.view = function () {
 };
 const oTipFor = G.tipFor;
 G.tipFor = function (key) {
-  if (key === 'b-core') { const m = this.meta, c = m.core == null ? 3 : m.core; return { title: '基地核心 ' + c + '/3', c: '#ff8ab0', icon: 't_heart', d: '领袖死亡 -1，通关世界 +1', lines: [{ t: '为 0 时游戏结束', c: '#ff8a8a' }] }; }
+  if (key === 'b-core') { const m = this.meta, c = m.core == null ? 3 : m.core; return { title: '基地核心 ' + c + '/' + (M.CORE_MAX || 3), c: '#ff8ab0', icon: 't_heart', d: '出征失败 -1', lines: [{ t: '为 0 时游戏结束', c: '#ff8a8a' }] }; }
   if (key === 'r-tokens') return { title: '机台代币 ' + this.prof.tokens, c: '#ffcc33', d: '一局结束时按表现结算。用来解锁和升级房间里的家具，每件家具都会改变机台里的规则。', icon: 'e_coin' };
   return oTipFor.call(this, key);
 };

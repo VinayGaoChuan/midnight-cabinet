@@ -38,7 +38,7 @@ function tuneBoss(run, node, cfg) {
   // the first segment's boss meets an army of ~5 bought at one shop: it is only as strong as an elite there
   const first = (node.seg || 0) === (run.startSeg || 0), target = el * (node.fb || (node.final && !run.chap) ? M.BOSS_TF : first ? M.BOSS_T0 : M.BOSS_TM); let lo = 0.02, hi = 40;   /* the first boss of a run meets an army of one shop */   // a boss fights alone (2026-09-26): its scale can run far from its table values
   for (let k = 0; k < 18; k++) { const f = (lo + hi) / 2; bs.forEach(s => { s.hpMul = f; s.atkMul = f; }); if (M.powerOf(M.sideE(run, cfg)) > target) hi = f; else lo = f; }
-  const f = +((lo + hi) / 2).toFixed(3), fb = !!(node.fb || (node.final && !run.chap)), k = fb ? M.FB_SKEW : 1;
+  const f = +((lo + hi) / 2).toFixed(3), fb = !!(node.fb || (node.final && !run.chap)), k = M.bossSkew ? M.bossSkew(bs[0].type, fb) : fb ? M.FB_SKEW : 1;   // each boss its own life over attack (mc-bosskit.js)
   bs.forEach(s => { s.hpMul = +(f * k).toFixed(3); s.atkMul = +(f / k).toFixed(3); }); return cfg;
 }
 // 撤离 comes right after a boss, so it is never easier than that boss (2026-09-27: 「撤退的难度要提高。撤退的难度由于在Boss后面，所以

@@ -249,13 +249,13 @@ const oST = G.steleTip;
 G.steleTip = function (k) {
   const t = oST.apply(this, arguments), m = this.meta; if (!t || !m || !M.worldDanger) return t;
   const D = M.worldDanger(m, k), sc = M.sceneOf ? M.sceneOf(m, k) : null, segs = (M.segsOf && M.segsOf(k)) || [], from = sc ? sc.start || 0 : 0;
-  const bosses = segs.slice(from).map(s => (s.fb ? { n: (DB[s.fb] && DB[s.fb].n) || '首领', bb: M.BOSS_BLD && M.BOSS_BLD[s.fb] } : s.mb ? { n: s.mb.n } : null)).filter(Boolean);
+  const bosses = segs.slice(from).map(s => (s.fb ? { n: (DB[s.fb] && DB[s.fb].n) || '首领', bb: M.BOSS_BLD && M.BOSS_BLD[s.fb], k: s.fb } : s.mb ? { n: s.mb.n, k: s.mb.k } : null)).filter(Boolean);
   const ci = Math.max(1, (M.CHAPTER_ORDER || []).indexOf(k) + 1), L = ci + gdIdx(m) + cl(M.tierOf ? M.tierOf(m, k) : 0, 0, 2), uq = LQ(L), bq = Math.min(3, LQ(L + 2));
   const span = (hi) => [{ t: QN(0).n, c: QN(0).c, b: 1 }, { t: ' – ', c: '#8d8496' }, { t: QN(hi).n, c: QN(hi).c, b: 1 }];
   // one thing a line (2026-09-27: 「墓碑上面的文字，排列的时候，要换行……每个Boss都要换行显示，战斗力换行显示。掉落物换行显示」)
   const H = (t) => ({ rich: [{ t, c: '#a89ca8' }] }), IN = '　';
   const lines = [H('首领')];
-  bosses.forEach(b => { const r = [{ t: IN + b.n, c: '#ff8a6a', b: 1 }]; if (b.bb) { const own = M.bbOwned && M.bbOwned(m, b.bb); r.push({ t: own ? '（图纸已得）' : '（图纸未得）', c: own ? '#9cff7a' : '#8d8496' }); } lines.push({ rich: r }); });
+  bosses.forEach(b => { const r = [{ t: IN + b.n, c: '#ff8a6a', b: 1 }]; if (b.bb) { const own = M.bbOwned && M.bbOwned(m, b.bb); r.push({ t: own ? '（图纸已得）' : '（图纸未得）', c: own ? '#9cff7a' : '#8d8496' }); } const K = M.bossKit && M.bossKit(b.k); if (K && K.good) r.push({ t: '　擅长对付' + K.good, c: '#a89ca8' }); lines.push({ rich: r }); });   // what each boss is good against (mc-bosskit.js)
   lines.push(H('战斗力'),
     { rich: [{ t: IN + '你 ', c: '#e8dcc4' }, { t: '★' + D.mine, c: '#ffe08a', b: 1 }].concat(D.gift ? [{ t: '（含开局积分 +' + D.gift + '）', c: '#a89ca8' }] : []) },
     { rich: [{ t: IN + '敌人 ', c: '#e8dcc4' }, { t: '★' + D.first, c: '#ff8a8a', b: 1 }] },

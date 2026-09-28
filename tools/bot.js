@@ -35,10 +35,11 @@ function botShop(g, M) {
   if (g.gachaPull && M.gaPrice && M.gaPrice(run) === 0) { g.gachaPull(); if (g.gaActive && g.gaActive()) g.gachaSkip(); if (g.replace && g.replace.zone === 'gacha') g.sellSel(); }
   while (n++ < 12) {
     const def = run.roster.filter(u => M.isDefVoc && M.isDefVoc(M.DB[u.type].voc)).length, wantDef = def < Math.ceil((run.roster.length + 1) / 3);
-    const c = run.shop.units.map((c, i) => ({ c, i })).filter(o => !o.c.sold && o.c.cost <= run.wallet && M.canAdd(run, o.c.type))
-      .sort((a, b) => ((wantDef && M.isDefVoc(M.DB[b.c.type].voc) ? 1e6 : 0) + M.unitPower(b.c.type) / b.c.cost) - ((wantDef && M.isDefVoc(M.DB[a.c.type].voc) ? 1e6 : 0) + M.unitPower(a.c.type) / a.c.cost))[0];
+    const nov = window.__botOpts && window.__botOpts.novice;   // a new player (tools/botmatrix.mjs): whatever it can afford, in no order
+    const c = run.shop.units.map((c, i) => ({ c, i, r: Math.random() })).filter(o => !o.c.sold && o.c.cost <= run.wallet && M.canAdd(run, o.c.type))
+      .sort(nov ? (a, b) => a.r - b.r : (a, b) => ((wantDef && M.isDefVoc(M.DB[b.c.type].voc) ? 1e6 : 0) + M.unitPower(b.c.type) / b.c.cost) - ((wantDef && M.isDefVoc(M.DB[a.c.type].voc) ? 1e6 : 0) + M.unitPower(a.c.type) / a.c.cost))[0];
     if (!c) {
-      if (M.canAdd(run) || !run.roster.length) break;
+      if (nov || M.canAdd(run) || !run.roster.length) break;
       const weak = run.roster.slice().sort((a, b) => M.unitPower(a.type, a) - M.unitPower(b.type, b))[0], sv = M.sellValue(run, weak);
       const up = run.shop.units.map((c, i) => ({ c, i })).filter(o => !o.c.sold && o.c.cost <= run.wallet + sv && M.unitPower(o.c.type) > 1.6 * M.unitPower(weak.type, weak) && (!M.isDefVoc(M.DB[weak.type].voc) || M.isDefVoc(M.DB[o.c.type].voc)))
         .sort((a, b) => M.unitPower(b.c.type) - M.unitPower(a.c.type))[0];
@@ -50,6 +51,7 @@ function botShop(g, M) {
   (run.shop.items || []).forEach((c, i) => { if (!c.sold && c.cost <= run.wallet * 0.5 && run.items.indexOf(null) >= 0) g.buy('items', i); });
 }
 window.__bot = async function (secs, opts = {}) {
+  window.__botOpts = opts;
   const g = window.__mcg, M = window.MC, log = [], T0 = performance.now(); const minis = {}; let builds = 0, guides = 0, games = 0, raids = 0, viewErrs = 0, talents = 0, steps = 0, battles = 0, shops = 0, events = 0, chests = 0, settles = 0, nodes = 0;
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   while (performance.now() - T0 < secs * 1000) {

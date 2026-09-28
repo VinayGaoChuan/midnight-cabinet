@@ -97,6 +97,7 @@
 | A48 | 战报详情 | 打赢的结算页，点「继续前进」右边的柱状图键 | 压暗 + 面板：每支部队一行（像、品质色名字），输出红 / 承伤青 / 治疗绿三列进度条和数字；点列名排序（▼ / ▲），倒下的半透明；✕ 或点外面关 | `mc-report.js` |
 | A49 | 领袖跳进传送门 | 基地里按「出发」 | 平时领袖站在主基地拱门右边（插红旗）；出发时一跃划弧跳进传送门，边飞边缩小、淡出（0.7 秒）；混沌来袭时领袖不在画面上（在主基地里，箭从窗户射出），打完从门口走回原位 | `mc-town.js` `drawLeader` |
 | A50 | 删除存档 | 标题菜单点「删除存档」并确认 | 红框确认窗「删除存档？」；确认后一声盖章，页面重新载入，从开场演出开始 | `mc-flow.js` `askWipe` |
+| A51 | 开局目标 | 每一局第一次在基地上安静下来（新玩家是序章打完回到基地） | 基地压暗，一声钟响，金色横幅「守过第 N 夜」砸下、逐字跳，副标题「目标 · 普通」；2.6 秒后横幅收起，一颗星从屏幕中间飞进顶栏的目标格，那一格弹一下；点一下提前收起 | `mc-gdiff.js` `goalShow` / `goalEnd` |
 
 ## B · 基地
 
@@ -279,6 +280,23 @@
 | 深渊魔王 | 弯角、发光的眼、獠牙 | 肌肉、胸口一点火光 | 蝠翼 | 利爪 |
 | 荷官 | 油头、绿色遮光帽、小胡子 | 礼服、领结 | 扇形的大纸牌 | 一手牌 |
 | 庄家 | 高礼帽、纸牌面具（红方块）、咧嘴 | 礼服、领结 | 筹码堆 | 手杖 |
+
+### 首领的招式与状态（2026-09-28 每个首领一套，`mc-bosskit.js`；每个首领有哪些招见 design.md 附录 G、G2）
+
+| 编号 | 效果 | 什么时候出现 | 现在的样子 | 代码位置 |
+|---|---|---|---|---|
+| T01 | 招式蓄力与警示 | 每个首领每一招 | 招名红字飘在首领头上；地上亮红色警示——圈（落在单位头上的会跟着那个单位走，还有一条点线连回首领）、扇形（最终首领的从身体里扫出来）、直线（冲锋、月牙斩、钩子、枪阵先亮出路线）；填满就落下 | `mc-bosskit.js` `bkBegin`、`mc-omen.js` |
+| T02 | 砸下来的东西 | 最终首领落在单位头上的招 | 各是各的：铜钟、地里伸出的手、荆棘、果子、星光、木马、炮弹、铁水、针、光束、锁链、陨石、纸牌、金币（首领自己的颜色炸开） | `mc-titan.js` `drop` / `impact` |
+| T03 | 地上的区域 | 铁水、血咒、墨汁、毒雾、熔岩、蛛网、转圈 | 一片像素椭圆，边一圈亮色、里面半透明，冒泡的会有小方块往上冒；跟着首领走的（毒雾、熔岩、蛛网、灼烧）套在它脚下 | `mc-bosskit.js` `drawKbFloor` |
+| T04 | 锁链 / 缝合 / 触手 | 狱卒的锁链、院长的缝合、克拉肯的触手 | 两个单位之间一串垂下来的像素链节，跟着单位走，时间到或一方倒下就断 | `bkLink` |
+| T05 | 气球 | 小丑王第二阶段 | 被吊起的单位飘在半空，头上一个红气球，4 秒后落回 | `bkBalloon` |
+| T06 | 射线 | 灯眼的四道光 / 一道光、哨眼的锁定 | 从首领眼睛到目标一条发亮的线（叠加发光、白芯、微微抖） | `bkBeam` |
+| T07 | 蛛网 | 虫王吐丝、蛛皇大网 / 结茧 | 单位身上一张白色蛛网（辐条加一圈圈的丝） | `bkWeb` |
+| T08 | 蜜罐 | 巨掌偷蜜 | 熊身边一个冒光的蜜罐，蜜罐打翻时消失、头上「蜜罐打翻了」 | `bkPot` |
+| T09 | 被吞 / 被埋 / 吐出 | 深海巨口的吞噬、守墓人的掘墓 | 单位从场上消失（坟头立一块墓碑、地里伸出手），时间到或被打吐出来时从地里 / 嘴边冒出，带一团尘土和一行字（「被吞下」「被埋了」「爬出来了」「吐出来了」） | `bkHide` / `bkUnhide` |
+| T10 | 冲锋、撞门、飞扑、俯冲 | 奔雷、破门锤、豹帝、哨眼 | 首领沿亮出的路线高速冲过去、身后扬尘，撞到的单位被撞开；被先锋 / 守护者拦下时「拦下了」+ 震屏 | `bkDashStep` |
+| T11 | 隐身 / 悬空 / 钻地 | 更夫灯灭、哨眼、虫王和鼠王钻地 | 灯灭时半透明闪烁；哨眼飘在影子上方，落地时贴地；钻地时整只沉下去、在警示圈的位置翻土钻出 | `mc-bosskit.js` |
+| T12 | 首领计量 | 有自己计量的首领 | 大血条下面一行：一条细计量条（报更、怒气、倒计时）和一行字（「老鼠 ×6 · 鼠王受伤 −48%」「深渊之怒 · 35 秒」「悬空 · 近战够不着」……） | `drawBattleHudPx` |
 
 ## U · 单位与主动技能（生成）
 
@@ -968,28 +986,28 @@
 | V012 | `Sfx.guideCard` | 界面 | 0 |
 | V013 | `Sfx.bookOpen` | 界面 | 0 |
 | V014 | `Sfx.typeBlip` | 界面 | 0 |
-| V015 | `Sfx.tick` | 界面 | 14 |
+| V015 | `Sfx.tick` | 界面 | 15 |
 | V016 | `Sfx.numTick` | 界面 | 1 |
 | V017 | `Sfx.coin` | 界面 | 7 |
 | V018 | `Sfx.land` | 界面 | 11 |
 | V019 | `Sfx.fly` | 界面 | 0 |
 | V020 | `Sfx.bump` | 界面 | 0 |
-| V021 | `Sfx.stamp` | 界面 | 13 |
+| V021 | `Sfx.stamp` | 界面 | 14 |
 | V022 | `Sfx.pop` | 界面 | 1 |
 | V023 | `Sfx.toggle` | 界面 | 0 |
-| V024 | `Sfx.whoosh` | 通用 | 30 |
+| V024 | `Sfx.whoosh` | 通用 | 34 |
 | V025 | `Sfx.sparkle` | 通用 | 4 |
-| V026 | `Sfx.up` | 通用 | 39 |
+| V026 | `Sfx.up` | 通用 | 40 |
 | V027 | `Sfx.mult` | 通用 | 4 |
 | V028 | `Sfx.heal` | 通用 | 14 |
-| V029 | `Sfx.boom` | 通用 | 29 |
-| V030 | `Sfx.impact` | 通用 | 26 |
+| V029 | `Sfx.boom` | 通用 | 31 |
+| V030 | `Sfx.impact` | 通用 | 31 |
 | V031 | `Sfx.heart` | 通用 | 8 |
 | V032 | `Sfx.alarm` | 通用 | 6 |
 | V033 | `Sfx.portal` | 通用 | 4 |
 | V034 | `Sfx.shatter` | 通用 | 8 |
 | V035 | `Sfx.creak` | 通用 | 1 |
-| V036 | `Sfx.lever` | 通用 | 2 |
+| V036 | `Sfx.lever` | 通用 | 3 |
 | V037 | `Sfx.reelStop` | 通用 | 2 |
 | V038 | `Sfx.chest` | 通用 | 0 |
 | V039 | `Sfx.dig` | 基地 | 2 |
@@ -1001,12 +1019,12 @@
 | V045 | `Sfx.lose` | 通用 | 9 |
 | V046 | `Sfx.die` | 通用 | 5 |
 | V047 | `Sfx.kill` | 通用 | 3 |
-| V048 | `Sfx.hit` | 通用 | 15 |
+| V048 | `Sfx.hit` | 通用 | 16 |
 | V049 | `Sfx.crit` | 通用 | 3 |
 | V050 | `Sfx.shoot` | 通用 | 6 |
-| V051 | `Sfx.rip` | 通用 | 4 |
+| V051 | `Sfx.rip` | 通用 | 5 |
 | V052 | `Sfx.charge` | 通用 | 1 |
-| V053 | `Sfx.boing` | 通用 | 1 |
+| V053 | `Sfx.boing` | 通用 | 2 |
 | V054 | `Sfx.roomAmb` | 开场与菜单 | 0 |
 | V055 | `Sfx.cabinetOn` | 开场与菜单 | 1 |
 | V056 | `Sfx.coinInsert` | 开场与菜单 | 1 |
@@ -1067,7 +1085,7 @@
 | V111 | `Sfx.killAt` | 战斗 | 1 |
 | V112 | `Sfx.armorHit` | 战斗 | 1 |
 | V113 | `Sfx.dodge` | 战斗 | 1 |
-| V114 | `Sfx.summonIn` | 战斗 | 2 |
+| V114 | `Sfx.summonIn` | 战斗 | 4 |
 | V115 | `Sfx.allyDie` | 战斗 | 1 |
 | V116 | `Sfx.tomb` | 战斗 | 0 |
 | V117 | `Sfx.soul` | 战斗 | 0 |
@@ -1081,10 +1099,10 @@
 | V125 | `Sfx.pause` | 战斗 | 0 |
 | V126 | `Sfx.speed` | 战斗 | 0 |
 | V127 | `Sfx.holdTick` | 战斗 | 0 |
-| V128 | `Sfx.waveHorn` | 战斗 | 0 |
+| V128 | `Sfx.waveHorn` | 战斗 | 1 |
 | V129 | `Sfx.settleTick` | 战斗 | 0 |
 | V130 | `Sfx.settleTotal` | 战斗 | 1 |
-| V131 | `Sfx.skillFx` | 技能 | 5 |
+| V131 | `Sfx.skillFx` | 技能 | 8 |
 | V132 | `Sfx.skill` | 技能 | 0 |
 | V133 | `Sfx.charFx` | 角色关键帧 | 2 |
 | V134 | `Sfx.itemUse` | 支援道具 | 6 |
@@ -1094,13 +1112,13 @@
 | V138 | `Sfx.rankStamp` | 守城 | 0 |
 | V139 | `Sfx.portalCollapse` | 守城 | 1 |
 | V140 | `Sfx.mini` | 小游戏 | 276 |
-| V141 | `Sfx.introToll` | 开场演出 | 0 |
+| V141 | `Sfx.introToll` | 开场演出 | 2 |
 | V142 | `Sfx.coinRoll` | 开场演出 | 1 |
 | V143 | `Sfx.spook` | 开场演出 | 0 |
 | V144 | `Sfx.musicBox` | 开场演出 | 0 |
 | V145 | `Sfx.reelSpin` | 开场演出 | 0 |
 | V146 | `Sfx.glitch` | 开场演出 | 1 |
-| V147 | `Sfx.jackpot` | 开场演出 | 0 |
+| V147 | `Sfx.jackpot` | 开场演出 | 1 |
 
 小游戏各自的一组（`Sfx.mini(小游戏, 事件)`）：`mine` pick / loosen / gem / cavein；`roulette` spin / click / bet / gold / win / skull / miss；`fruit` gogo / lever / spin / stop / jackpot / win / skulls / nomatch / drop / zap；`claw` move / drop / grab / lift / prize / slip / empty / bounce；`pachinko` pour / reach / tulip / payout / out / off / launch / peg / slot / edge；`tree` ripe / snap / splat / bloom / chime / swing / rustle / curse / pick / water / cut / grow / fruit；`tarot` hover / omen / leave / lift / shuffle / flip / good / bad；`eggs` hammer / swing / burst / empty / tap / leave / crack / prize / snake；`dice` chips / slam / bounce / tap / leave / shake / roll / clack / win / lose / tie；`fate` cost / spin / click / stop / drip / flow / rune / creak / slip / back / gold / eye；`musician` note / metro / miss / pluck / tick / cross / great / ok / poor / snap；`granny` stitch / miss / done / snip / thread / light / whole；`well` charge / flick / rise / toss / splash / great / ok / miss；`child` step / crunch / wrong / lost / found；`grave` lid / dig / break / candle / coffin / hand / out / treasure；`clinic` pick / drink / good / bad / mult / hover / pop / crack / fizz / omen；`mirror` tone / wrong / pass；`altar` pour / rune / flicker / out / win；`peddler` shuffle / bell / lift / win / lose；`spring` zone / bubble / tick / good / hot / cool / plunge / drop / clamp / geyser；`trap` step / num / boom / box / hop / nope / click / rattle / reveal / fireworks；`cat` wave / coin / bar / bomb / miss / flick / spill / weigh / bell / clink；`market` grab / swing / stamp / deal / miss / bell / cackle / slapScroll / seal / fade / tap / chain / coinbag；`trainer` bell / punch / done / whistle / windup / finisher / snap；`statue` eyes / turn / align / wake / fail / snuff；`arena` ko / open / roar / cheer / bet / hit / win / lose / gong / gate / hush / ooh / toss / boo；`camp` fire / rest / sharpen / clang / scrape / pop；`recruit` curtain / reveal / full / lamp / flare / salute / none；`chest` in / spot / land / lift / rattle / unlock / lockfall / riser / snap / slit / boom / fire / pop / drop / last / roll / wave2 / itemTap / rush / claim / close / mimic / fight。
 

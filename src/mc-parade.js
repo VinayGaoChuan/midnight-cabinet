@@ -89,7 +89,7 @@ function join(g, u) {
   // past the cap (by prosperity, difficulty and rooms, mc-bastion.js) nobody is sent away by itself any more (2026-09-27: 「如果超过上限，
   // 不能直接替换，而是应该玩家自己选择，替换哪个」): one has to leave, the player picks (mc-garswap.js); a garrison already past the cap
   // (an old save, a pulled-down 营房) keeps its size
-  const cap = M.garCap ? M.garCap(m) : M.GARRISON_CAP, nu = gar[gar.length - 1];
+  const cap = M.garCap(m), nu = gar[gar.length - 1];
   if (gar.length > cap) { m.garOut = (m.garOut || 0) + 1; (m.garNewIds = m.garNewIds || []).push(nu.uid); }
   g.save && g.save();
 }

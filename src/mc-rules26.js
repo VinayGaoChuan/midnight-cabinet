@@ -71,7 +71,6 @@ M.portalMax = (m) => Math.round(M.PORTAL_BASE * (1 + (M.baseMods(m).portalHp || 
 // ───────── prosperity (user ruling 2026-09-26) ─────────
 // every standing room adds by its quality (the better, the more; the numbers are never shown). Levels open the rings of
 // the base one by one: Lv1 the ring around the lift, Lv4 the whole rock.
-M.PROS_Q = [10, 25, 45, 70];
 // 2026-09-27 (「繁荣等级太容易提升了……直接在周围给了一圈土地，给的太多了」, then 「不要地契，每升一级，扩展几块土地。只有土地稀缺，才能让
 // 玩家思考对建筑的取舍，才有追求高品质建筑的欲望」): prosperity is the base itself — its rooms by quality, and a little for every night
 // held (so a bad run of blueprints never stops it for good) — and every level opens a few cells, never a whole ring. The

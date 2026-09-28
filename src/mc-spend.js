@@ -26,6 +26,6 @@ G.view = function () { const v = oView0.call(this); if (v.w && this.run) { v.w.s
 
 // ───────── small bosses whose body fights harder than its power says (M.BOSS_TRUE, mc-scenes.js) ─────────
 const oSideE = M.sideE;
-if (oSideE) M.sideE = function (run, cfg) { const s = oSideE.apply(this, arguments), b = cfg && cfg.mb && cfg.list && cfg.list.find(x => x.boss), k = b && M.BOSS_TRUE && M.BOSS_TRUE[b.type]; if (k && s) { s.hp *= k; s.dps *= k; } return s; };
+if (oSideE) M.sideE = function (run, cfg) { const s = oSideE.apply(this, arguments), b = cfg && (cfg.mb || cfg.fb) && cfg.list && cfg.list.find(x => x.boss), k = b && (M.bossTrue ? M.bossTrue(b.type) : M.BOSS_TRUE && M.BOSS_TRUE[b.type]); if (k && k !== 1 && s) { s.hp *= k; s.dps *= k; } return s; };   // each boss's own kit (mc-bosskit.js): how much harder it fights than its power says
 
 })();
