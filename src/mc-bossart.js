@@ -59,7 +59,7 @@ if (BP) {
   const oP2 = BP.bkPhase2;
   if (oP2) BP.bkPhase2 = function (e) {
     const r = oP2.apply(this, arguments);
-    if (e.pxBoss && !e.fb && e.alive && HAS_DOM && !(e.bk && e.bk.dash)) G.startAction(this, e, 'skill', { move: 'roar', at: 'cast', dist: 60 });
+    if (e.pxBoss && !e.fb && e.alive && HAS_DOM && !(e.bk && e.bk.dash)) { e.bk.next = Math.max(e.bk.next || 0, this.t + 1.0); G.startAction(this, e, 'skill', { move: 'roar', at: 'cast', dist: 60 }); }   // the next move waits out the roar
     return r;
   };
   // the charge across the field: the launch plays out, then a fast gallop with a lightning trail; at the far end it skids to a stop
@@ -79,6 +79,9 @@ if (BP) {
     }
     return r;
   };
+  // death: the module's own (kneel, collapse), where it stood; not the game's generic body tip-over (mc-knock.js)
+  const oDie = M.kbDie;
+  if (oDie) M.kbDie = function (b, e) { if (e && e.pxBoss && !e.fb) { b.shake = Math.max(b.shake || 0, 14); return; } return oDie.apply(this, arguments); };
   // a short jagged bolt left along the charge's path
   const oFx = M.drawFxPx;
   M.drawFxPx = function (ctx, f, T, b) {
