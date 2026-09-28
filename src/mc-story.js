@@ -38,7 +38,7 @@ G.startSettle = function () {
 };
 // ───────── the show ─────────
 const X0 = 360, Y0 = 170, W = 1200, H = 560, CPS = 20;
-const framed = (fb) => { try { const T = M.TITAN; return T && T.frame ? T.frame(fb, 'idle', 0) : null; } catch (e) { return null; } };
+const framed = (fb) => { try { const T = M.TITAN, P = M.bossPortrait && M.bossPortrait(fb, 700, 460); return P || (T && T.frame ? T.frame(fb, 'idle', 0) : null); } catch (e) { return null; } };   // a redrawn boss: its portrait (mc-bossart.js)
 // the figure darkened on its own canvas, so the sky around it stays as it is
 function shade(F, im, bw, bh, lit) {
   const c = F.sh || (F.sh = document.createElement('canvas')); c.width = bw; c.height = bh; const g = c.getContext('2d');

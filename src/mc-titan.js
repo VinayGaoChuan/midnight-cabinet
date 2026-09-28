@@ -468,12 +468,19 @@ M.TITAN.lip = function (ctx, b, T) {
 // falling things come from the sky slightly behind (towards the boss); rising things (thorns, hands, water) crack the
 // ground first and burst out on the hit
 const ERUPT = new Set(['thorn', 'hand', 'spout']);
+const col0 = (kind) => ({ acid: '#6ec820', cannon: '#8a8698', coin: '#f0c040', fruit: '#f0cc40', drop: '#f47a1c', skull: '#ff9a2a' }[kind] || '#ff7418');
 M.TITAN.drop = function (ctx, kind, x, y, q, T) {
   const P = (px, py, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(Math.round(px / AR) * AR, Math.round(py / AR) * AR, w, h); };
   if (ERUPT.has(kind)) { const n = Math.floor(q * 6); ctx.globalAlpha = 0.9; for (let i = 0; i < n; i++) { const a = i * 1.05 + 0.3; P(x + Math.cos(a) * (10 + q * 50), y + Math.sin(a) * (6 + q * 24), 8, 4, kind === 'spout' ? '#8ae0f4' : kind === 'thorn' ? '#56aa3c' : '#b8c888'); } ctx.globalAlpha = 1; return; }
-  const k = 1 - q, fx = x + k * 220, fy = y - k * 760, trail = (col, n, w) => { for (let i = 1; i <= n; i++) { ctx.globalAlpha = 0.7 - i * (0.6 / n); P(fx + i * 12 * 0.29, fy - i * 12, w, w, col); } ctx.globalAlpha = 1; };
+  const k = 1 - q, fx = x + k * 220, fy = y - k * 760, TR = ['#fff6c8', '#ffc040', col0(kind), '#c83a10', '#3a2a2e'];
+  const trail = (col, n, w) => { for (let i = 1; i <= n + 4; i++) { const c = i < 2 ? TR[0] : i < 4 ? TR[1] : i <= n ? col : TR[4], ww = Math.max(AR, w - i * 1.2); ctx.globalAlpha = Math.max(0.1, 0.85 - i * (0.7 / (n + 4))); P(fx + i * 12 * 0.29 - ww / 2 + w / 2, fy - i * 12, ww, ww, c); } ctx.globalAlpha = 1; };
+  // the shadow on the ground grows as it comes down
+  ctx.globalAlpha = 0.35 + 0.4 * q; ctx.fillStyle = '#07060f'; for (let j = -2; j <= 2; j++) { const hw = Math.round(q * 46 * Math.sqrt(1 - (j / 2.5) * (j / 2.5)) / AR) * AR; ctx.fillRect(Math.round(x / AR) * AR - hw, Math.round((y + j * 4) / AR) * AR, hw * 2, AR); } ctx.globalAlpha = 1;
   switch (kind) {
-    case 'meteor': trail('#ff9a2a', 10, 16); P(fx - 18, fy - 18, 36, 36, '#5a1406'); P(fx - 14, fy - 14, 28, 28, '#c83a10'); P(fx - 10, fy - 14, 16, 12, '#ffc040'); P(fx - 6, fy - 12, 8, 6, '#fff6b0'); break;
+    case 'meteor': { trail('#ff9a2a', 12, 20);   // a rock with lava cracks and a burning front
+      const R2 = 22; for (let j = -R2; j <= R2; j += AR) { const hw = Math.sqrt(R2 * R2 - j * j); P(fx - hw, fy + j, hw * 2, AR, j < -8 ? '#8a2a14' : j < 8 ? '#5a1a10' : '#2e0e0a'); }
+      P(fx - 16, fy - 16, 12, 8, '#ffc040'); P(fx - 12, fy - 20, 8, 4, '#fff6c8'); P(fx - 4, fy - 4, 16, 4, '#ff7418'); P(fx + 8, fy - 8, 4, 12, '#ff7418'); P(fx - 12, fy + 6, 12, 4, '#c83a10');
+      if ((T * 12 | 0) % 2) { P(fx - 26, fy - 22, 8, 8, '#ffc040'); P(fx + 18, fy - 26, 4, 4, '#fff6c8'); } break; }
     case 'bell': P(fx - 20, fy - 30, 40, 8, '#946224'); P(fx - 26, fy - 22, 52, 26, '#c89640'); P(fx - 30, fy + 4, 60, 8, '#946224'); P(fx - 18, fy - 18, 12, 14, '#ecd08a'); P(fx - 4, fy + 12, 8, 8, '#5a3a14'); break;
     case 'fruit': trail('#fff098', 6, 8); P(fx - 14, fy - 12, 28, 26, '#f0cc40'); P(fx - 10, fy - 10, 10, 8, '#fff098'); P(fx - 2, fy - 20, 4, 8, '#46291a'); P(fx + 2, fy - 20, 10, 6, '#56aa3c'); break;
     case 'star': for (let i = 0; i < 8; i++) P(fx - 4 + i * 3, fy - 60 - i * 26, 8, 26, i ? '#98ccff' : '#ffffff'); P(fx - 10, fy - 10, 20, 20, '#ffffff'); break;
@@ -499,10 +506,51 @@ M.TITAN.impact = function (b, e, what, x, y) {
   const n = what === 'die' ? 90 : what === 'slam' ? 60 : what === 'roar' ? 50 : 28;
   for (let i = 0; i < n; i++) { const a = -Math.PI * Math.random(), v = 260 + Math.random() * (what === 'die' ? 900 : 620); Pz.add(1, x + (Math.random() - 0.5) * 60, y - 10, Math.cos(a) * v, Math.sin(a) * v, 0.5 + Math.random() * 0.6, ramp, { sz: Math.random() < 0.3 ? 3 : 2 }); }
   if (what === 'rain' && ERUPT.has(L.rain)) b.fxp({ k: 'fberupt', kind: L.rain, x, y, life: 0.7 });
+  // where it lands on the army: a pixel explosion, two shock rings, debris that falls and stays, a scorched crater with glowing
+  // cracks and embers — all in the boss's own arena colours; a short stop and a flash by strength
+  if (what === 'rain' || what === 'slam' || what === 'sweep') {
+    const pal = themeOf(L.arena || (b.arena && b.arena.kind)), big = what !== 'rain';
+    b.fxp({ k: 'fbhit', x, y, r: what === 'rain' ? 100 : what === 'slam' ? 160 : 140, pal, big, life: 2.8, seed: Math.random() * 1000 });
+    b.hs = Math.max(b.hs || 0, big ? 0.09 : 0.05); b.flash = Math.max(b.flash || 0, big ? 0.16 : 0.08); b.flashCol = pal[1];
+  }
   if (what === 'die') for (let i = 0; i < 6; i++) b.later(0.2 + i * 0.3, () => { b.fxp({ k: 'boom', x: x + (Math.random() - 0.5) * 300, y: y + (Math.random() - 0.5) * 200, life: 0.5, col: (ARENAS[L.arena] || ARENAS.lava).glow }); b.shake = Math.max(b.shake, 20); M.Sfx.boom && M.Sfx.boom(); });
 };
+// an arena's colours for its hits: white, light, glow, mid, deep, ink
+const themeOf = (kind) => { const A = ARENAS[kind] || ARENAS.lava; return ['#ffffff', A.rim[0], A.glow, A.rim[1], A.rim[2], '#07060f']; };
+M.TITAN.themeOf = themeOf;
+function drawHit(ctx, f, T) {
+  const t = T - f.t0, q = t / f.life; if (q >= 1) return true;
+  const pal = f.pal, R = f.r, x0 = f.x, y0 = f.y, S = (v) => Math.round(v / AR) * AR, P = (px, py, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(S(px), S(py), w, h); };
+  const rn = (i) => { const v = Math.sin(f.seed + i * 12.9898) * 43758.5453; return v - Math.floor(v); };
+  const fade = Math.min(1, (f.life - t) / 1.0);
+  ctx.save();
+  // the crater: a flat scorched ellipse, darker in the middle, its rim lit while it is hot
+  const rx = R * 0.5 * Math.min(1, t / 0.08 + 0.3), ry = Math.max(8, R * 0.13);
+  for (let j = -3; j <= 3; j++) { const k = 1 - (j / 3.6) * (j / 3.6), hw = S(rx * Math.sqrt(Math.max(0, k))); ctx.globalAlpha = 0.8 * fade; P(x0 - hw, y0 + j * ry / 3, hw * 2, AR * 2, Math.abs(j) <= 1 ? pal[5] : pal[4]); }
+  if (t < 1.4) { ctx.globalAlpha = fade * (1 - t / 1.4); M.pxRing(ctx, x0, y0, rx, ry, pal[t < 0.4 ? 1 : 2], { w: 1, dense: 1.2 }); }
+  // glowing cracks out of it: white-hot, then the arena's glow, then dark
+  const cl = R * 0.95 * Math.min(1, t / 0.15), cc = t < 0.3 ? pal[0] : t < 1.0 ? pal[1] : t < 1.8 ? pal[2] : pal[3];
+  for (let i = 0; i < 7; i++) { let a = i / 7 * Math.PI * 2 + rn(i) * 0.6, cx = x0, cy = y0; ctx.globalAlpha = fade;
+    for (let d = 0; d < cl; d += AR * 2) { a += (rn(i * 7 + d) - 0.5) * 0.5; cx += Math.cos(a) * AR * 2; cy += Math.sin(a) * AR * 0.8; P(cx, cy, AR, AR, d < cl * 0.5 ? cc : pal[3]); } }
+  // embers rising off it
+  if (t > 0.2 && t < f.life - 0.5) for (let i = 0; i < 10; i++) { const ph = (t * 0.9 + rn(i + 40)) % 1; ctx.globalAlpha = (1 - ph) * fade; P(x0 + (rn(i + 50) - 0.5) * R, y0 - ph * 90 - rn(i + 60) * 10, AR, AR, ph < 0.3 ? pal[1] : pal[2]); }
+  // the explosion: a white disc and an eight-point star for the first frames
+  if (t < 0.16) { const k = t / 0.16, rr = R * (0.2 + 0.35 * k); ctx.globalAlpha = 1;
+    for (let j = -Math.ceil(rr); j <= rr; j += AR) { const hw = Math.sqrt(Math.max(0, rr * rr - j * j)); P(x0 - hw, y0 - R * 0.25 + j * 0.8, hw * 2, AR, k < 0.45 ? pal[0] : pal[1]); }
+    for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2, L2 = R * (0.5 + 0.9 * k) * (i % 2 ? 0.6 : 1); for (let d = rr * 0.6; d < L2; d += AR) P(x0 + Math.cos(a) * d, y0 - R * 0.25 + Math.sin(a) * d * 0.8, AR * (i % 2 ? 1 : 2), AR * (i % 2 ? 1 : 2), d < L2 * 0.6 ? pal[0] : pal[2]); } }
+  // shock rings: a thick fast one and a thin slow one, cooling as they spread
+  for (const [dl, w, sp] of [[0, 3, 0.4], [0.07, 1, 0.6]]) { const s2 = (t - dl) / sp; if (s2 <= 0 || s2 >= 1) continue; const rr = R * (0.3 + (f.big ? 1.4 : 1.0) * s2);
+    ctx.globalAlpha = 1 - s2; M.pxRing(ctx, x0, y0, rr, rr * 0.42, s2 < 0.3 ? pal[0] : s2 < 0.6 ? pal[1] : pal[2], { w, dense: 1.1 }); }
+  // debris: chunks thrown up, hot while flying, dark once down; they stay on the ground
+  const g = 1500;
+  for (let i = 0; i < (f.big ? 16 : 11); i++) { const a = Math.PI * (0.15 + 0.7 * rn(i + 5)), v = 280 + rn(i + 9) * 380, vx = Math.cos(a) * v * (rn(i + 11) < 0.5 ? -1 : 1) * 0.8, vy = Math.sin(a) * v, tl = 2 * vy / g, tt = Math.min(t, tl);
+    const px = x0 + vx * tt, py = y0 - (vy * tt - g * tt * tt / 2) + (rn(i + 13) - 0.5) * 20, sz = rn(i + 17) < 0.4 ? AR * 3 : AR * 2, fl = t < tl;
+    ctx.globalAlpha = fade; P(px, py, sz, sz, fl ? pal[3] : pal[4]); if (fl) { P(px, py, AR, AR, pal[1]); ctx.globalAlpha = 0.5 * fade; P(px - vx * 0.02, py + (vy - g * tt) * 0.02, AR, AR, pal[2]); } }
+  ctx.restore(); return true;
+}
 const oFxT = M.drawFxPx;
 M.drawFxPx = function (ctx, f, T, b) {
+  if (f.k === 'fbhit') return drawHit(ctx, f, T);
   if (f.k === 'fberupt') {
     const q = (T - f.t0) / f.life; if (q >= 1) return true; const h = Math.sin(Math.min(1, q * 2.2) * Math.PI / 2) * (1 - Math.max(0, q - 0.6) / 0.4), P = (px, py, w, hh, col) => { ctx.fillStyle = col; ctx.fillRect(Math.round(px / AR) * AR, Math.round(py / AR) * AR, w, hh); };
     for (let i = 0; i < 7; i++) { const ox = (i - 3) * 26, ht = (120 + (i % 3) * 40) * h, x = f.x + ox, y = f.y + (i % 2) * 10;

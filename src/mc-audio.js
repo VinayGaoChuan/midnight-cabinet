@@ -784,6 +784,27 @@ const BODY = {
   beast: (t, w, p) => { thud(t, 130 - 40 * w, 60, .12, .16 + .1 * w, { pan: p }); tone(t, 'sawtooth', 160 - 60 * w, .18, .03, { to: 90, lp: 900, pan: p }); },
   machine: (t, w, p) => { ring(t, 900, .2, .05, { parts: [[1, 1], [2.9, .4]], pan: p }); tone(t, 'square', 120, .1, .03, { crush: 1, pan: p }); },
 };
+// boss voices (charFx('boss', {k})): the redrawn bosses' own sounds on their keyframes (pcd/chars/B_*.js)
+const BOSSV = {
+  snort: (t, w, p) => { for (let i = 0; i < 2; i++) nz(t + i * .09, .08, 'bandpass', 700 - i * 150, 1.2, .1 + .08 * w, { pan: p }); thud(t, 90, 50, .1, .06 * w, { pan: p }); },
+  neigh: (t, w, p) => { tone(t, 'sawtooth', 620, .7, .05 + .04 * w, { to: 1150, slide: .18, vib: [14, 70, .1], lp: 2600, pan: p, rev: .4 }); tone(t + .2, 'sawtooth', 1100, .5, .04 + .03 * w, { to: 420, vib: [16, 90, .05], lp: 2200, pan: p, rev: .4 }); nz(t, .6, 'bandpass', 1800, 2, .04, { pan: p }); },
+  thunder: (t, w, p) => { thunder(t, 1 + w); rumble(t + .1, 1.2, .14 + .1 * w, { f: 110 }); },
+  bolt: (t, w, p) => { crackle(t, .18, 2600, .08 + .06 * w, { pan: p }); nz(t, .12, 'highpass', 4000, .6, .07 * w, { to: 1200, pan: p }); },
+  roar: (t, w, p) => { tone(t, 'sawtooth', 120, 1.3, .1 + .06 * w, { to: 72, vib: [7, 45, .15], lp: 900, pan: p, rev: .5 }); tone(t + .03, 'sawtooth', 181, 1.2, .06 + .04 * w, { to: 104, vib: [9, 60, .2], lp: 1200, pan: p, rev: .5 }); rumble(t, 1.4, .16 + .1 * w, { f: 180 }); nz(t, 1, 'bandpass', 500, 1.5, .06, { to: 260, pan: p }); },
+  growl: (t, w, p) => { tone(t, 'sawtooth', 78, .7, .06 + .05 * w, { to: 62, vib: [11, 60, .05], lp: 520, pan: p }); rumble(t, .7, .08 + .06 * w, { f: 140 }); },
+  heartbeat: (t, w, p) => { thud(t, 70, 38, .16, .2 + .1 * w, { pan: p }); thud(t + .24, 64, 36, .18, .16 + .08 * w, { pan: p }); },
+  slam: (t, w, p) => { thud(t, 95, 32, .45, .3 + .15 * w, { pan: p }); rumble(t, .9, .2 + .1 * w, { f: 150 }); for (let i = 0; i < 4; i++) nz(t + i * .03, .05, 'bandpass', rnd(900, 2400), 2, .06, { pan: p }); },
+  throw: (t, w, p) => { nz(t, .3, 'bandpass', 500, 1.5, .08 + .06 * w, { to: 2200, pan: p }); tone(t, 'sine', 220, .25, .04, { to: 620, pan: p }); },
+  thud: (t, w, p) => { thud(t, 100, 42, .22, .18 + .12 * w, { pan: p }); nz(t, .1, 'lowpass', 700, .7, .06, { pan: p }); },
+  sink: (t, w, p) => { rumble(t, 2.4, .2 + .1 * w, { f: 120 }); tone(t, 'sine', 62, 2.2, .12, { to: 28, pan: p }); for (let i = 0; i < 6; i++) nz(t + i * .3, .2, 'bandpass', rnd(300, 900), 1.5, .04, { pan: p }); },
+  lavaGather: (t, w, p) => { rumble(t, .9, .1 + .06 * w, { f: 130 }); nz(t, .9, 'bandpass', 300, 1.2, .06 + .04 * w, { to: 1400, pan: p }); for (let i = 0; i < 5; i++) crackle(t + i * .16, .1, 1800, .04, { pan: p }); },
+  lavaRise: (t, w, p) => { rumble(t, 2.2, .18 + .1 * w, { f: 110 }); for (let i = 0; i < 9; i++) { nz(t + i * .22, .14, 'bandpass', rnd(200, 520), 2, .07, { pan: p }); tone(t + i * .22 + .05, 'sine', rnd(90, 150), .12, .05, { to: 60, pan: p }); } tone(t + 1.6, 'sawtooth', 70, .7, .06, { to: 110, lp: 600, pan: p }); },
+  demonDie: (t, w, p) => { tone(t, 'sawtooth', 150, 1.4, .1 + .05 * w, { to: 48, vib: [5, 70, .1], lp: 1000, pan: p, rev: .7 }); tone(t + .05, 'sawtooth', 226, 1.2, .06, { to: 70, vib: [7, 80, .1], lp: 1300, pan: p, rev: .7 }); rumble(t, 1.6, .18, { f: 150 }); },
+  fade: (t, w, p) => { tone(t, 'sine', 420, .9, .05 + .03 * w, { to: 140, vib: [6, 40, .2], pan: p, rev: .7 }); nz(t, .8, 'bandpass', 1400, 3, .03, { to: 500, pan: p, rev: .5 }); },
+};
+// a boss module brings its own voices (VOICES: { name: (syn, t, w, pan) => … }, registered by mc-bossart.js); syn = the synth kit
+const SYN = { tone, nz, fm, ring, thud, whoosh, riser, crackle, blip, bell, rumble, brass, choir, timp, cymbal, coins, step, rnd, pick, hz, thunder };
+S.bossVoice = (k, fn) => { BOSSV[k] = (t, w, p) => fn(SYN, t, w, p); };
 def('charFx', 0, (t, ev, o) => {
   o = o || {}; const w = Math.max(0, Math.min(1, o.w == null ? .5 : o.w)), p = o.pan || 0;
   switch (ev) {
@@ -796,6 +817,7 @@ def('charFx', 0, (t, ev, o) => {
     case 'impact': tex(t, palOf(o.pal).mat, .6 + .6 * w, palOf(o.pal).d, p); thud(t, 110, 45, .25, .15 + .2 * w, { pan: p }); break;
     case 'hurt': (BODY[o.body] || BODY.flesh)(t, w, p); break;
     case 'death': ({ shatter: () => S.shatter(), dissolve: () => S.soul(p), explode: () => S.boom() }[o.how] || (() => kill(t, .8, p)))(); break;
+    case 'boss': (BOSSV[o.k] || BOSSV.growl)(t, w, p); break;
     case 'fall': thud(t, 110 - 40 * w, 45, .2, .12 + .15 * w, { pan: p }); nz(t, .12, 'lowpass', 900, .7, .06 + .06 * w, { pan: p }); break;
   }
 });

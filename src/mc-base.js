@@ -631,12 +631,16 @@ M.Raid = class {
       // the drawn height follows the unit's own size (2026-09-27: 「我方部队的体型和敌人的体型都应该大一些……不同单位，也要拉开体型差距」,
       // M.raidUnitH in mc-bastion.js); dk fine-scales the integer-scaled picture to exactly that height
       if (e.hH == null) e.hH = (ps && M.raidUnitH && M.raidUnitH(e)) || 0;
-      const img = ps ? M.P16.img(e.sprite, ps[0], ps[1], e.flash && T - e.flash < 0.08 ? '#ffffff' : !e.alive ? '#3a2c48' : null, e.hH || e.s * 13 * 0.8) : spriteCanvas(e.sprite, e.s, e.flash && T - e.flash < 0.08 ? '#ffffff' : !e.alive ? '#3a3440' : null);
-      const dk = ps && e.hH && img.S ? e.hH / img.S : 1, SH = img.S ? img.S * dk : img.height;
+      // the redrawn pixel cast (mc-nightfx.js): the expedition's own pictures — same fixed scale, poses and actions
+      const pc = M.nightImg ? M.nightImg(e, T, this) : null;
+      const img = pc || (ps ? M.P16.img(e.sprite, ps[0], ps[1], e.flash && T - e.flash < 0.08 ? '#ffffff' : !e.alive ? '#3a2c48' : null, e.hH || e.s * 13 * 0.8) : spriteCanvas(e.sprite, e.s, e.flash && T - e.flash < 0.08 ? '#ffffff' : !e.alive ? '#3a3440' : null));
+      const dk = pc ? 1 : ps && e.hH && img.S ? e.hH / img.S : 1, SH = img.S ? img.S * dk : img.height;
       let x = e.x; if (e.lunge != null && T - e.lunge < 0.15) x += e.face * 14 * dk * Math.sin((T - e.lunge) / 0.15 * Math.PI);
-      const bob = ps ? 0 : e.alive ? Math.abs(Math.sin((e.walk || 0) / 30)) * 5 : 0;
+      if (e.kb != null && T - e.kb < 0.12) x += (e.kbDir || 1) * 7 * (1 - (T - e.kb) / 0.12);   /* knocked back a step, as in an expedition */
+      if (pc) x = M.P16.snap(x);
+      const bob = ps || pc ? 0 : e.alive ? Math.abs(Math.sin((e.walk || 0) / 30)) * 5 : 0;
       { const rx = img.S ? SH * 0.42 : img.width * 0.35; ctx.drawImage(M.ellSprite('rgba(0,0,0,0.5)'), e.x - rx, e.y - 6, rx * 2, 10 * Math.max(1, dk * 0.8)); }   /* stamped shadow (2026-09-27) */
-      ctx.save(); ctx.translate(x, e.y - bob); if (ps) { ctx.scale((e.face || 1) < 0 ? -dk : dk, dk); ctx.drawImage(img, -img.cx, -img.footY); } else { if (!e.alive) ctx.rotate(-Math.PI / 2 * (e.face || 1)); const need = (SPF(e.sprite) === 'R') !== (e.face > 0); if (need) ctx.scale(-1, 1); ctx.drawImage(img, -img.width / 2, -img.height); } ctx.restore();
+      ctx.save(); ctx.translate(x, e.y - bob); if (ps || pc) { ctx.scale((e.face || 1) < 0 ? -dk : dk, dk); ctx.drawImage(img, -img.cx, -img.footY); } else { if (!e.alive) ctx.rotate(-Math.PI / 2 * (e.face || 1)); const need = (SPF(e.sprite) === 'R') !== (e.face > 0); if (need) ctx.scale(-1, 1); ctx.drawImage(img, -img.width / 2, -img.height); } ctx.restore();
       // 血条：墨框硬边小条（领袖金、民兵绿、敌人红）；人海里没受伤的小怪不挂血条
       const barOn = e.side === 'E' ? e.hp < e.max || e.elite || e.champ : !M.LOW_FX || e.hero || e.hp < e.max;
       if (e.alive && barOn) { const bw = Math.max(40, img.S ? SH * 0.7 : img.width * 0.7),   /* phones: no bar on the unhurt (2026-09-27) */ top = e.y - (img.S ? SH * 1.12 : img.height) - 14, hc = e.side === 'A' ? (e.hero ? PP.gold : PP.green) : PP.red; e._barTop = top; e._barW = bw; e._barX = x - bw / 2;   /* the mana bar goes under it (mc-nightskill.js) */ if (M.hpBar) M.hpBar(ctx, x - bw / 2, top, bw, 6, e, { hp: e.hp, max: e.max, col: hc, T }); else { ctx.fillStyle = '#000'; ctx.fillRect(x - bw / 2 - 2, top - 2, bw + 4, 10); ctx.fillStyle = hc; ctx.fillRect(x - bw / 2, top, bw * clamp(e.hp / e.max, 0, 1), 6); } }

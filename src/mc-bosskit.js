@@ -804,7 +804,7 @@ GPv.view = function () {
   v.bkp = { on: false, rows: [] };
   if (!run || !run.map || !run.map.nodes || (run.region && run.region.tut) || !m || (m.gd || 0) > 1 || (scr !== 'world' && scr !== 'shop') || this.storyFx || this.settle || (this.banners && this.banners.length)) return v;   // a banner in the middle of the screen goes first
   const segs = M.segsOf ? M.segsOf(run.regionKey) || [] : [];
-  const rows = run.map.nodes.filter(n => n.type === 'boss' && !n.done).sort((a, b) => a.col - b.col).slice(0, 3).map(n => { const sg = segs[n.seg || 0] || {}, k = typeof n.fb === 'string' ? n.fb : sg.fb || (sg.mb && sg.mb.k), K2 = k && KIT[k]; if (!K2 || !K2.good) return null; return { n: (sg.mb && !n.fb && sg.mb.n) || (DB[k] && DB[k].n) || '首领', good: K2.good, weak: K2.weak }; }).filter(Boolean);
+  const rows = run.map.nodes.filter(n => n.type === 'boss' && !n.done).sort((a, b) => a.col - b.col).slice(0, 3).map(n => { const sg = segs[n.seg || 0] || {}, k = typeof n.fb === 'string' ? n.fb : sg.fb || (sg.mb && sg.mb.k), K2 = k && KIT[k]; if (!K2 || !K2.good) return null; return { k, n: (sg.mb && !n.fb && sg.mb.n) || (DB[k] && DB[k].n) || '首领', good: K2.good, weak: K2.weak }; }).filter(Boolean);
   if (!rows.length) return v;
   v.bkp = scr === 'shop' ? { on: true, rows, x: 16, y: 150, w: 320 } : { on: true, rows, x: 24, y: 330, w: 460 };
   return v;
@@ -815,7 +815,7 @@ if (M.GUIDE) M.GUIDE.push({ id: 'bossplan', cat: '出征', icon: 'e_skull', titl
 const GP = M.Game.prototype, oSN = GP.settleNext;
 GP.settleNext = function () {
   const st = this.settle, b = this.battle, bo = st && st.final === 'fail' && b && b.ents ? b.ents.find(e => e.boss && e.side !== 'A') : null;
-  const img = (k) => { try { return M.spriteURL(k, 5); } catch (e) { return ''; } };
+  const img = (k) => { try { return (M.bossPortraitURL && M.bossPortraitURL(k, 130, 130)) || M.spriteURL(k, 5); } catch (e) { return ''; } };   // a redrawn boss: its portrait (mc-bossart.js)
   this._lostTo = bo ? { k: bo.kind || bo.type, n: bo.nm || (bo.d && bo.d.n) || '首领', img: img(bo.kind || bo.type) || img('skull') } : null;
   return oSN.apply(this, arguments);
 };
