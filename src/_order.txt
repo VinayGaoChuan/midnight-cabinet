@@ -169,4 +169,5 @@ mc-garswap.js
 mc-tutor.js
 mc-perf.js
 mc-tune.js
+mc-bossart.js
 mc-boot.js

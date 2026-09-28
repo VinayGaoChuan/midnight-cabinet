@@ -1109,7 +1109,7 @@
 | V130 | `Sfx.settleTotal` | 战斗 | 1 |
 | V131 | `Sfx.skillFx` | 技能 | 8 |
 | V132 | `Sfx.skill` | 技能 | 0 |
-| V133 | `Sfx.charFx` | 角色关键帧 | 2 |
+| V133 | `Sfx.charFx` | 角色关键帧 | 3 |
 | V134 | `Sfx.itemUse` | 支援道具 | 6 |
 | V135 | `Sfx.weapon` | 守城 | 1 |
 | V136 | `Sfx.wallHit` | 守城 | 1 |
