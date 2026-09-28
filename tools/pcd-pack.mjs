@@ -39,7 +39,7 @@ function strip(src) {
   return out.split('\n').filter((l) => l.trim()).join('\n');
 }
 
-const files = [path.join(PCD, 'lib', 'pcd.js'), path.join(PCD, 'lib', 'parts.js'), path.join(PCD, 'lib', 'parts-beast.js')];
+const files = [path.join(PCD, 'lib', 'pcd.js'), path.join(PCD, 'lib', 'parts.js'), path.join(PCD, 'lib', 'parts-beast.js'), path.join(PCD, 'lib', 'parts-boss.js')];
 const chars = fs.readdirSync(path.join(PCD, 'chars')).filter((f) => f.endsWith('.js') && !f.startsWith('_') && f !== 'star-wizard.js').sort();
 for (const f of chars) files.push(path.join(PCD, 'chars', f));
 let body = '', raw = 0;

@@ -27,7 +27,8 @@ function body(key) {
   let b = bodies.get(key); if (b) return b;
   // the strike time comes from the module's own swing / shoot / hit event: simulate the attack once (cheap: 0.75 s at 60 Hz)
   let strike = null;
-  const eng = PCD.createEngine({ game: true, out: { sfx: (ev, x) => { if (strike == null && (ev === 'swing' || ev === 'shoot' || ev === 'hit')) strike = x.t; } } });
+  const mt = PCD.meta ? PCD.meta(key) || {} : {};   // a boss module asks for a taller stage (PCD.define's meta)
+  const eng = PCD.createEngine({ game: true, H: mt.H, out: { sfx: (ev, x) => { if (strike == null && (ev === 'swing' || ev === 'shoot' || ev === 'hit')) strike = x.t; } } });
   eng.load(key);
   b = { key, eng, HX: eng.HX, dur: eng.dur.slice(), cache: new Map(), strike: 2 / 12, top: 24, w: 20 };
   try { eng.enter('attack'); eng.skip(b.dur[2] || 0.75); if (strike != null) b.strike = Math.max(1 / 12, strike); } catch (err) { /* keep the default strike frame */ }
@@ -86,27 +87,34 @@ P16.frame = function (key, st, f, o) {
 };
 
 // ───────── actions: borrow an engine, load the module at the real target distance ─────────
-const pool = [];
+const pools = {};
 const STAGE_W = 400;
-function borrow() {
+// one pool per stage height: ordinary characters share the 96-high stage, a boss module (PCD.define meta H) gets its own
+function borrow(key) {
+  const H = ((PCD.meta && PCD.meta(key)) || {}).H || 96, pool = pools[H] || (pools[H] = []);
   let g = pool.pop(); if (g) return g;
   const c = {};
-  g = PCD.createEngine({ game: true, W: STAGE_W, out: { sfx: (ev, x) => onSfx(c, ev, x), shake: (t, a) => onShake(c, t, a), allies: () => alliesOf(c) } });
-  g._c = c; g._cv = {}; return g;
+  g = PCD.createEngine({ game: true, W: STAGE_W, H, out: { sfx: (ev, x) => onSfx(c, ev, x), shake: (t, a) => onShake(c, t, a), allies: () => alliesOf(c) } });
+  g._c = c; g._cv = {}; g._H = H; return g;
 }
-function giveBack(g) { g._c.b = g._c.e = null; if (pool.length < 48) pool.push(g); }
+function giveBack(g) { g._c.b = g._c.e = null; const pool = pools[g._H || 96] || (pools[g._H || 96] = []); if (pool.length < 48) pool.push(g); }
 function startAction(b, e, kind, o) {
   o = o || {}; const key = keyOf(e), bd = body(key);
   stopAction(e);
-  const g = borrow(), c = g._c; c.b = b; c.e = e; c.kind = kind;
+  const g = borrow(key), c = g._c; c.b = b; c.e = e; c.kind = kind;
   const tg = o.tg || (e.target && e.target.alive ? e.target : null);
   const dist = tg ? Math.abs(tg.x - e.x) / ART : o.dist != null ? o.dist : 64;
   g.load(key, { dummyX: bd.HX + Math.max(8, Math.min(STAGE_W - bd.HX - 40, Math.round(dist))) });
+  if (o.move) g.move(o.move);   // a boss's own move (its module's setMove): the charge length comes with it
   g.enter(kind === 'skill' ? 'charge' : kind);
-  if (o.skip) g.skip(o.skip);
-  e._pa = { g, kind, speed: o.speed || 1, big: (e.sz || 1) >= 1.6 ? 2 : 1 };
+  // o.wind: the game's charge time, the module's charge is cut to it; o.at 'cast' / 'recover': start a skill from there
+  const skip = o.wind != null ? Math.max(0, g.dur[3] - o.wind) + (o.skip || 0) : o.at === 'cast' ? g.dur[3] : o.at === 'recover' ? g.dur[3] + g.dur[4] : o.skip;
+  if (skip) g.skip(skip);
+  e._pa = { g, kind, move: o.move, speed: o.speed || 1, big: bigOf(e) };
   return e._pa;
 }
+// art pixels per game pixel ÷ ART: 2 for giant units (their old sprites were small); a boss module drawn at unit size says so (e.pxBig)
+function bigOf(e) { return e.pxBig || ((e.sz || 1) >= 1.6 ? 2 : 1); }
 function stopAction(e) { if (e && e._pa) { giveBack(e._pa.g); e._pa = null; } }
 // stage -> canvas: only the used width (dummy x + 40) is converted; each engine keeps one canvas per scale
 function stageCanvas(pa) {
@@ -126,10 +134,10 @@ function stageCanvas(pa) {
 }
 
 // sound: the action engine's keyframe events -> M.Sfx.charFx (hit and hurt sounds stay with the game so nothing doubles)
-const SFX_PASS = { swing: 1, shoot: 1, charge: 1, release: 1, impact: 1, fall: 1 };
+const SFX_PASS = { swing: 1, shoot: 1, charge: 1, release: 1, impact: 1, fall: 1, boss: 1 };
 function onSfx(c, ev, x) {
   const S = M.Sfx; if (!S || !S.charFx || !c.e) return;
-  if (!SFX_PASS[ev] && !(ev === 'step' && c.e.isHero)) return;
+  if (!SFX_PASS[ev] && !(ev === 'step' && (c.e.isHero || c.e.pxBoss))) return;
   try { S.charFx(ev, Object.assign({}, x, { pan: S.panX ? S.panX(c.e.x) : 0 })); } catch (err) { /* a sound error never breaks the picture */ }
 }
 // screen shake only for skills and the leader's off-field skill (plain attacks would shake all the time)
@@ -137,13 +145,14 @@ function onShake(c, t, a) { if (c.b && (c.kind === 'skill' || c.kind === 'off'))
 // allies in stage coordinates (targets of aura links, heals, shield marks); an enemy's stage is mirrored
 function alliesOf(c) {
   const b = c.b, e = c.e; if (!b || !e) return [];
-  const dir = e.side === 'E' ? -1 : 1, HX = c.e._pa ? c.e._pa.g.HX : 34, HY = 79;
+  const dir = e.side === 'E' ? -1 : 1, HX = c.e._pa ? c.e._pa.g.HX : 34, HY = c.e._pa ? c.e._pa.g.HY : 79;
   return b.ents.filter((o) => o !== e && o.alive && o.side === e.side && !o.bench).map((o) => ({ o, d: Math.hypot(o.x - e.x, o.y - e.y) })).filter((a) => a.d < 520).sort((a, b2) => a.d - b2.d).slice(0, 3)
     .map(({ o }) => { const x = Math.round(HX + (o.x - e.x) / ART * dir), y = Math.round(HY + (o.y - e.y) / ART), t = has(keyOf(o)) ? body(keyOf(o)).top : Math.round(22 * (o.sz || 1)); return { x, y, top: y - t, mid: y - Math.round(t / 2) }; });
 }
 
 // ───────── battle ─────────
 function bodyState(e, T, b) {
+  if (e.bk && e.bk.dash) return ['move', Math.floor(T * 18) % 8];   // a boss's charge across the field: a fast gallop
   if (e.casting) return ['charge', 8 + (Math.floor(T * 6) & 1) * 3];
   if (!e.alive) return ['hurt', 6];
   if (e.stun > 0 || (e.kbLock && e.kbLock > T)) return ['hurt', 5];
@@ -156,7 +165,7 @@ function bodyState(e, T, b) {
 const oEnt = P16.entImg;
 P16.entImg = function (e, T) {
   const key = keyOf(e); if (!has(key) || !HAS_DOM) return oEnt.apply(this, arguments);
-  const big = (e.sz || 1) >= 1.6 ? 2 : 1;
+  const big = bigOf(e);
   let c;
   if (e._pa && e.alive) c = stageCanvas(e._pa);
   else { const b = body(key), [st, fi] = bodyState(e, T, b); c = bodyFrame(key, st, fi, e.flash > 0 ? '#ffffff' : e.raging && Math.floor(T * 8) % 2 ? '#ff4a4a' : '', ART * big); }

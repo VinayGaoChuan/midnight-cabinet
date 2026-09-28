@@ -6,17 +6,20 @@
 const PCD = window.PCD = window.PCD || {};
 // 角色模块注册表和部件库全局共用；引擎本体可以开多份（createEngine），查看页开一份，游戏里每个在动作的单位各一份
 const defs = PCD._defs = PCD._defs || {};
-PCD.define = (key, factory) => { defs[key] = factory; };
+// meta（可选）：{ W, H } 查看页和游戏给这个角色开多大的舞台（首领）
+const metas = PCD._meta = PCD._meta || {};
+PCD.define = (key, factory, meta) => { defs[key] = factory; if (meta) metas[key] = meta; };
+PCD.meta = (key) => metas[key] || null;
 PCD.parts = PCD.parts || {};
 PCD.has = (key) => !!defs[key];
 PCD.keys = () => Object.keys(defs).filter((k) => k[0] !== '_');
 
-// opts：{ W 舞台宽（默认 128）, game 1 = 游戏模式（不画舞台、假人、来袭敌弹、受击火花，背景透明，震屏 / 闪白 / 音效 / 假人反应交给 out 回调）,
+// opts：{ W 舞台宽（默认 128）, H 舞台高（默认 96；首领这类大精灵加高，地面线跟着下移，脚下留 17 格）, game 1 = 游戏模式（不画舞台、假人、来袭敌弹、受击火花，背景透明，震屏 / 闪白 / 音效 / 假人反应交给 out 回调）,
 //   out: { sfx(ev, e), shake(t, amp), flash(t), hit(big, dir), dummyFx(o), allies() → [{ x, y, top, mid }]（舞台坐标） } }
 function createEngine(opts) {
 opts = opts || {};
 const GAME = !!opts.game, OUT = opts.out || {};
-const W = opts.W || 128, H = 96, DT = 1 / 60;
+const W = opts.W || 128, H = opts.H || 96, TOP = H - 96, DT = 1 / 60;
 
 // ═════════════════════════ 1. 色板：全部角色共用，屏幕上每个像素都来自这里 ═════════════════════════
 const PAL = [
@@ -58,6 +61,22 @@ const FX = {
   earth: [5, 62, 61, 19, 20], steel: [21, 31, 30, 29, 28], curse: [43, 24, 42, 25, 52],
 };
 const FXR = [], FXI = {}; for (const k of Object.keys(FX)) { FXI[k] = FXR.length; FXR.push(FX[k]); }
+// 深色阶（首领这类大精灵用，defDeep）：[勾线, 最暗 → 最亮]，每级只差一小步，打光后是一条条硬边色带。颜色并进共享色板（在 BASE_PAL 之前），全部角色都能用
+const DRAMP = {
+  hellhide: ['#12060c', '#240a14', '#3a0f1c', '#551424', '#701a2a', '#8c2230', '#a82e34', '#c4443a', '#dc6446', '#f08c5a', '#ffb884'],   // 魔物红皮（深渊魔王）
+  obsidian: ['#07060c', '#120f1c', '#1c1828', '#282236', '#352d46', '#453a58', '#58496c', '#6e5c84', '#8a78a0', '#b0a0c4'],               // 黑曜石甲 / 角质板
+  ivory: ['#140c08', '#2a1a10', '#402818', '#5a3a22', '#76502e', '#94683c', '#b0844e', '#caa266', '#e0c088', '#f4e2b8'],                  // 角、骨、爪
+  membrane: ['#0c0610', '#1e0c1c', '#2e1226', '#421830', '#58203a', '#702a44', '#8a3650', '#a8465c', '#c45e6c'],                          // 蝠翼膜
+  magma: ['#2a0604', '#4a0804', '#7c1006', '#b82408', '#e84410', '#ff7418', '#ffa830', '#ffd860', '#fff4b0', '#ffffff'],                   // 熔岩（发光体、裂纹）
+  stormcoat: ['#0a0a14', '#161a28', '#20263a', '#2c344c', '#3a4460', '#4a5674', '#5c6a8a', '#7282a2', '#8c9cbc', '#aab8d4', '#cad6ea'],     // 雷云灰马皮（奔雷）
+  tan: ['#1a0c08', '#3a1e14', '#55301e', '#704228', '#8c5634', '#a86c42', '#c28654', '#d8a06a', '#ecc08c', '#f8dcb0'],                    // 晒黑的人皮
+  stormmane: ['#0c1024', '#18234a', '#223a6e', '#2e5294', '#4270b8', '#6a98d8', '#9cc4f0', '#d0ecff'],                                     // 带电的鬃毛
+  hide: ['#140a06', '#2a160c', '#422414', '#5a321c', '#744428', '#8e5a36', '#aa7448', '#c69260'],                                          // 皮革、皮带
+  bladesteel: ['#0a0c12', '#1c2230', '#2c3446', '#3e4860', '#525e7a', '#6a7894', '#8694b0', '#a6b2ca', '#c8d2e2', '#eef2fa'],              // 斧刃、甲片
+  brass: ['#1a1004', '#3a2208', '#5a360c', '#7c4e12', '#a0681a', '#c48624', '#e0a838', '#f4cc60', '#fff0a0'],                              // 黄铜 / 金饰
+};
+const CORE_PAL = PAL.length;   // near() 只在最初的 64 色里找（深色阶的颜色不参与就近取色，已有角色的颜色不变）
+for (const k of Object.keys(DRAMP)) DRAMP[k] = DRAMP[k].map((c) => { const i = PAL.indexOf(c); if (i >= 0) return i; PAL.push(c); return PAL.length - 1; });
 const BASE_PAL = PAL.length;                                   // 共享色板长度；之后的是本页角色模块追加的专属色
 let LUT, LUTF, LUTD;
 function buildLUT() {
@@ -76,14 +95,21 @@ function color(hex) {
   hex = hex.toLowerCase(); const i = PAL.indexOf(hex); if (i >= 0) return i;
   if (PAL.length >= 255) throw new Error('色板已满 255 色：' + hex); PAL.push(hex); return PAL.length - 1;
 }
-function near(hex, d) { let best = 1e9, bi = -1; for (let i = 0; i < BASE_PAL; i++) { const q = cdist(hex, PAL[i]); if (q < best) { best = q; bi = i; } } return best <= (d == null ? 18 : d) ? bi : color(hex); }
+function near(hex, d) { let best = 1e9, bi = -1; for (let i = 0; i < CORE_PAL; i++) { const q = cdist(hex, PAL[i]); if (q < best) { best = q; bi = i; } } return best <= (d == null ? 18 : d) ? bi : color(hex); }
 const ramp = (a) => a.map((c) => (typeof c === 'number' ? c : color(c)));
 function fxRamp(name, a) { const r = ramp(a); if (FXI[name] != null) { FXR[FXI[name]] = r; return FXI[name]; } FXI[name] = FXR.length; FXR.push(r); FX[name] = r; return FXI[name]; }
 
 // ═════════════════════════ 2. 材质缓冲 → 分部明暗 → 分界线 → 选择性勾线 → 轮廓光 → 闪白 → 消散 ═════════════════════════
-const MRAMP = [0, 0, 0, 0], MBAND = [0], MFLAT = [0];
+const MRAMP = [0, 0, 0, 0], MBAND = [0], MFLAT = [0], MDEEP = [null];
 // dark 1 = 远侧暗一级：[勾线, 暗, 暗, 基]（远侧腿、远侧臂、远翼）
-function defMat(r, band, flat, dark) { if (typeof r === 'string') r = RAMP[r]; if (dark) r = [r[0], r[1], r[1], r[2]]; MRAMP.push(r[0], r[1], r[2], r[3]); MBAND.push(band || 1); MFLAT.push(flat ? 1 : 0); return MBAND.length - 1; }
+function defMat(r, band, flat, dark) { if (typeof r === 'string') r = RAMP[r]; if (dark) r = [r[0], r[1], r[1], r[2]]; MRAMP.push(r[0], r[1], r[2], r[3]); MBAND.push(band || 1); MFLAT.push(flat ? 1 : 0); MDEEP.push(null); return MBAND.length - 1; }
+// 深色阶材质（首领这类大精灵）：r = [勾线, 最暗 … 最亮]（6～12 级，DRAMP 的名字或下标 / #hex）。明暗不再是两色，而是按部件剪影算出的体积（离部件边缘越远越鼓）
+// 对左上的光源打光，量化成硬边色带（不抖动）。o：{ depth 鼓起的格数（默认 6，越大越圆润）, amb 暗部下限 0–1（默认 0.14）, dark 整体压暗几级（true = 2，远侧肢体） }
+// 手画的明暗 t（sp / run / brush 的最后一个参数）在深色阶材质上是「在算出来的色带上加减几级」：5 = 不变，1–4 压暗 4–1 级（肌肉沟、褶），6–9 提亮 1–4 级（高光），10 = 勾线色
+function defDeep(r, o) {
+  o = o || {}; if (typeof r === 'string') r = DRAMP[r]; r = ramp(r); const n = r.length - 1;
+  MRAMP.push(r[0], r[1], r[Math.round(n / 2)], r[n]); MBAND.push(1); MFLAT.push(0); MDEEP.push({ r, n, depth: o.depth || 6, amb: o.amb == null ? 0.14 : o.amb, dark: o.dark === true ? 2 : o.dark || 0 }); return MBAND.length - 1;
+}
 class Sprite { constructor(w, h, ox, oy) { this.w = w; this.h = h; this.ox = ox; this.oy = oy; const n = w * h; this.mat = new Uint8Array(n); this.tone = new Uint8Array(n); this.part = new Uint8Array(n); this.out = new Uint8Array(n); this.k1 = -1; this.k2 = -1; } }
 let S = null, cPart = 0, dX = 0, dY = 0, shear = 0;
 let clipL = Infinity;
@@ -114,10 +140,37 @@ const B8 = new Float32Array(64);
 for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) { let v = 0; for (let b = 0; b < 3; b++) { const xb = (x >> b) & 1, yb = (y >> b) & 1; v = v * 4 + 2 * (xb ^ yb) + yb; } B8[y * 8 + x] = (v + 0.5) / 64; }
 // o: { rim 0–3, rx, ry（光源在缓冲里的坐标）, rimR[], rimRamp, flash 0/1, dq 0–1（上升：从头顶消失；下降：从脚下显形），
 //      skip 不受轮廓光的材质（下标 → 1，例如握发光体的手、面纱），rimAll 1 = 光源在剪影内部（眼、胸口核心）：半径内所有外沿都打光，不看朝向 }
+// 深色阶材质的体积：每个部件的剪影做一次距离场（离另一部件或空白多远），鼓起 = 圆弧剖面，法线 = 剖面的梯度
+let DF = new Float32Array(0), DH = new Float32Array(0);
+const LN = Math.hypot(0.5, 0.62, 0.45), LX = -0.5 / LN, LY = -0.62 / LN, LZ = 0.45 / LN;   // 光从左上、略偏向镜头（平的正面落在中间色，受光边亮、背光边暗）
+function deepField(s) {
+  const w = s.w, h = s.h, n = w * h, M = s.mat, G = s.part; if (DF.length < n) { DF = new Float32Array(n); DH = new Float32Array(n); }
+  const same = (x, y, g) => x >= 0 && y >= 0 && x < w && y < h && M[y * w + x] !== 0 && G[y * w + x] === g;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = y * w + x; if (!M[i]) { DF[i] = 0; continue; } const g = G[i]; DF[i] = same(x - 1, y, g) && same(x + 1, y, g) && same(x, y - 1, g) && same(x, y + 1, g) ? 99 : 1; }
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = y * w + x; if (DF[i] <= 1) continue; const g = G[i]; let d = DF[i];
+    if (same(x - 1, y, g)) d = Math.min(d, DF[i - 1] + 1); if (same(x, y - 1, g)) d = Math.min(d, DF[i - w] + 1); if (same(x - 1, y - 1, g)) d = Math.min(d, DF[i - w - 1] + 1.41); if (same(x + 1, y - 1, g)) d = Math.min(d, DF[i - w + 1] + 1.41); DF[i] = d; }
+  for (let y = h - 1; y >= 0; y--) for (let x = w - 1; x >= 0; x--) { const i = y * w + x; if (DF[i] <= 1) continue; const g = G[i]; let d = DF[i];
+    if (same(x + 1, y, g)) d = Math.min(d, DF[i + 1] + 1); if (same(x, y + 1, g)) d = Math.min(d, DF[i + w] + 1); if (same(x + 1, y + 1, g)) d = Math.min(d, DF[i + w + 1] + 1.41); if (same(x - 1, y + 1, g)) d = Math.min(d, DF[i + w - 1] + 1.41); DF[i] = d; }
+}
+// o.depthK：立绘按两倍分辨率画时，鼓起的格数跟着乘
+// 深色阶像素的色带：体积打光 + 手画加减 + 彩色光源（o.lights：[{ x, y 缓冲坐标, r 半径, ramp [亮, 中, 弱] 色板下标, k 强度 }]，魔法源 / 岩浆的映光，也是硬边三档）
+function deepTone(s, x, y, D, tn, front, o) {
+  const w = s.w, h = s.h, i = y * w + x, dep = D.depth * (o.depthK || 1), prof = (j, xx, yy) => { if (xx < 0 || yy < 0 || xx >= w || yy >= h || s.part[j] !== s.part[i] || !s.mat[j]) return 0; const q = Math.min(DF[j], dep) / dep; return Math.sqrt(1 - (1 - q) * (1 - q)); };
+  const gx = (prof(i + 1, x + 1, y) - prof(i - 1, x - 1, y)) * 0.5 * dep * 0.9, gy = (prof(i + w, x, y + 1) - prof(i - w, x, y - 1)) * 0.5 * dep * 0.9;
+  let nx = -gx, ny = -gy, nz = 1; const nl = Math.hypot(nx, ny, nz); nx /= nl; ny /= nl; nz /= nl;
+  const lam = Math.max(0, nx * LX + ny * LY + nz * LZ), v = D.amb + (1 - D.amb) * lam;
+  let lv = Math.floor(v * D.n); if (tn === 10) return D.r[0]; if (tn) lv += tn - 5; if (front) lv = Math.min(lv, 0); lv -= D.dark;
+  lv = lv < 0 ? 0 : lv >= D.n ? D.n - 1 : lv;
+  if (o.lights) for (const L of o.lights) { const dx = L.x - x, dy = L.y - y, dd = Math.hypot(dx, dy); if (dd > L.r) continue; const f = (1 - dd / L.r) * (L.k || 1) * Math.max(0, (nx * dx + ny * dy) / (dd || 1) * 0.8 + nz * 0.35); if (f > 0.62) return L.ramp[0]; if (f > 0.4) return L.ramp[1]; if (f > 0.22) return L.ramp[2]; }
+  return D.r[1 + lv];
+}
 function bake(s, o) {
   const w = s.w, h = s.h, M = s.mat, T = s.tone, G = s.part, out = s.out; out.fill(255);
+  let deep = false; for (let i = 0; i < w * h && !deep; i++) if (M[i] && MDEEP[M[i]]) deep = true;
+  if (deep) deepField(s);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const i = y * w + x, m = M[i]; if (!m) continue; const g = G[i]; let tn = T[i];
+    if (MDEEP[m]) { out[i] = deepTone(s, x, y, MDEEP[m], tn, front(s, x + 1, y, g) || front(s, x - 1, y, g) || front(s, x, y + 1, g) || front(s, x, y - 1, g), o); continue; }
     if (!tn) {
       if (MFLAT[m]) tn = 3;
       else { const lit = oth(s, x - 1, y, m, g) || oth(s, x, y - 1, m, g); let dark = oth(s, x + 1, y + 1, m, g); for (let k = 1; k <= MBAND[m] && !dark; k++) dark = oth(s, x + k, y, m, g) || oth(s, x, y + k, m, g); tn = lit && dark ? 3 : lit ? 4 : dark ? 2 : 3; }
@@ -376,21 +429,21 @@ function stepAsh(dt) {
 const fb = new Uint8Array(W * H), bg = new Uint8Array(W * H);
 let seed = 1337; const rnd = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5], bayer = (x, y) => (BAYER[(y & 3) * 4 + (x & 3)] + 0.5) / 16;
-const HORIZON = 72, FLOOR = 80, HY = 79, MX = 70, MY = 17, MR = 8.5;
+const HORIZON = 72 + TOP, FLOOR = 80 + TOP, HY = 79 + TOP, MX = 70, MY = 17 + TOP, MR = 8.5;
 let DUMMY_X = 98;
 let HX = 34;
 function paintBackground() {
   const SKY = [1, 2, 3, 4];
   for (let y = 0; y < FLOOR; y++) for (let x = 0; x < W; x++) { const v = Math.pow(Math.min(1, y / HORIZON), 1.35) * 3, b = Math.floor(v) + (v - Math.floor(v) > bayer(x, y) ? 1 : 0); bg[y * W + x] = SKY[Math.min(3, b)]; }
-  for (let y = 0; y < 40; y++) for (let x = 44; x < 100; x++) { const d = Math.hypot(x - MX, y - MY), i = y * W + x; if (d > MR && d < MR + 4.5 && ((x + y) & 1) === 0 && bg[i] < 3) bg[i] = d < MR + 2.5 ? 3 : bg[i] + 1; if (d <= MR) { let c = 6; if (Math.hypot(x - MX + 2.5, y - MY + 2.5) < MR - 2.2) c = 5; if ((x - MX) + (y - MY) > MR * 0.95) c = 7; bg[i] = c; } }
+  for (let y = TOP; y < TOP + 40; y++) for (let x = 44; x < 100; x++) { const d = Math.hypot(x - MX, y - MY), i = y * W + x; if (d > MR && d < MR + 4.5 && ((x + y) & 1) === 0 && bg[i] < 3) bg[i] = d < MR + 2.5 ? 3 : bg[i] + 1; if (d <= MR) { let c = 6; if (Math.hypot(x - MX + 2.5, y - MY + 2.5) < MR - 2.2) c = 5; if ((x - MX) + (y - MY) > MR * 0.95) c = 7; bg[i] = c; } }
   [[2, -1], [3, -1], [-3, 3], [1, 4], [2, 4], [-1, -4]].forEach(([dx, dy]) => { bg[(MY + dy) * W + MX + dx] = 7; });
-  for (let x = 0; x < W; x++) { const h1 = Math.round(69 + 3 * Math.sin(x * 0.07 + 1) + 2 * Math.sin(x * 0.19)), h2 = Math.round(74 + 2 * Math.sin(x * 0.11 + 3) + 1.5 * Math.sin(x * 0.29)); for (let y = h1; y < FLOOR; y++) bg[y * W + x] = 2; for (let y = h2; y < FLOOR; y++) bg[y * W + x] = 1; }
+  for (let x = 0; x < W; x++) { const h1 = Math.round(69 + TOP + 3 * Math.sin(x * 0.07 + 1) + 2 * Math.sin(x * 0.19)), h2 = Math.round(74 + TOP + 2 * Math.sin(x * 0.11 + 3) + 1.5 * Math.sin(x * 0.29)); for (let y = h1; y < FLOOR; y++) bg[y * W + x] = 2; for (let y = h2; y < FLOOR; y++) bg[y * W + x] = 1; }
   for (let y = FLOOR; y < H; y++) for (let x = 0; x < W; x++) { const r = y - FLOOR, row = r >> 2, ox = (row & 1) * 4 + (row * 3 & 7), lx = (x + ox) & 7, ly = r & 3; let c = 9; if (lx === 0 || ly === 3) c = 8; else if (ly === 0 || lx === 1) c = 10; if (c === 9 && ((x * 7 + y * 13) % 11) === 0) c = 8; const fade = (y - FLOOR - 6) / 10; if (fade > bayer(x, y)) c = c === 10 ? 9 : 8; if (fade - 0.6 > bayer(x, y)) c = 0; bg[y * W + x] = c; }
   for (let x = 0; x < W; x++) bg[FLOOR * W + x] = ((x & 7) === 0) ? 9 : 10;
   for (const cx of [HX, DUMMY_X]) { for (let x = cx - 8; x <= cx + 8; x++) bg[FLOOR * W + x] = Math.abs(x - cx) < 7 ? 8 : 9; for (let x = cx - 5; x <= cx + 6; x++) bg[(FLOOR + 1) * W + x] = 8; }
 }
 const NS = 34, starX = new Uint8Array(NS), starY = new Uint8Array(NS), starPh = new Float32Array(NS), starSp = new Float32Array(NS), starBig = new Uint8Array(NS);
-for (let i = 0; i < NS; i++) { let x, y; do { x = 2 + Math.floor(rnd() * 124); y = 2 + Math.floor(rnd() * 56); } while (Math.hypot(x - MX, y - MY) < MR + 6); starX[i] = x; starY[i] = y; starPh[i] = rnd() * 6.28; starSp[i] = 0.25 + rnd() * 0.6; starBig[i] = rnd() < 0.18 ? 1 : 0; }
+for (let i = 0; i < NS; i++) { let x, y; do { x = 2 + Math.floor(rnd() * 124); y = 2 + TOP + Math.floor(rnd() * 56); } while (Math.hypot(x - MX, y - MY) < MR + 6); starX[i] = x; starY[i] = y; starPh[i] = rnd() * 6.28; starSp[i] = 0.25 + rnd() * 0.6; starBig[i] = rnd() < 0.18 ? 1 : 0; }
 const D_WOOD = defMat('wood'), D_SACK = defMat([20, 7, 6, 5], 1), D_STRAW = defMat('gold'), D_RED = defMat('crimson'), D_INK = defMat('ink', 1, 1);
 const dummy = new Sprite(28, 36, 14, 33);
 const DUM = { rim: 0, rx: 0, ry: 0, rimR: [0, 0, 0, 0], rimRamp: FX.magic, flash: 0, dq: 0 };
@@ -610,17 +663,20 @@ const SHEET_DEFAULT = () => [[IDLE, [0, 0.4, 0.8, 1.2, 1.7, 1.85]], [MOVE, [0, 1
 function buildSheet() {
   const box = document.getElementById('sheet'); box.textContent = ''; const s = C.hero;
   const fr = new Uint8ClampedArray(s.w * s.h * 4), tmp = new ImageData(fr, s.w, s.h);
-  for (const [st, spec] of (C.SHEET || SHEET_DEFAULT())) {
+  const K3 = C.SHEET_K || 3;
+  for (const [st, spec, mv] of (C.SHEET || SHEET_DEFAULT())) {
+    if (C.setMove) { const d = C.setMove(mv || null); if (d) for (const k in d) DUR[k] = d[k]; }
     let ts = []; if (Array.isArray(spec)) ts = spec; else { const step = spec === 'step2' ? 2 : 1, i0 = spec === 'hurt' ? Math.round(INCOMING * 12) : 0; for (let i = i0; i / 12 < DUR[st] - 1e-6; i += step) ts.push(i / 12); }
-    const h = document.createElement('h2'); h.textContent = NAMES[st] + ' · ' + ts.length + ' 帧 · ' + DUR[st].toFixed(2) + ' 秒'; box.appendChild(h);
+    const h = document.createElement('h2'); h.textContent = NAMES[st] + (mv && C.MOVE_NAMES ? ' · ' + (C.MOVE_NAMES[mv] || mv) : '') + ' · ' + ts.length + ' 帧 · ' + DUR[st].toFixed(2) + ' 秒'; box.appendChild(h);
     const row = document.createElement('div'); row.className = 'frames'; box.appendChild(row);
     for (const t of ts) {
       C.poseAt(st, t, t); C.drawHero(); C.bakeHero();
       for (let i = 0; i < s.w * s.h; i++) { const c = s.out[i]; const v = LUT[c === 255 ? (Math.floor(i / s.w) === s.oy + 1 ? 10 : 2) : c]; fr[i * 4] = v & 255; fr[i * 4 + 1] = (v >> 8) & 255; fr[i * 4 + 2] = (v >> 16) & 255; fr[i * 4 + 3] = 255; }
-      const cv = document.createElement('canvas'); cv.width = s.w; cv.height = s.h; cv.style.width = s.w * 3 + 'px'; cv.style.height = s.h * 3 + 'px'; cv.title = t.toFixed(2) + 's'; cv.getContext('2d').putImageData(tmp, 0, 0); row.appendChild(cv);
+      const cv = document.createElement('canvas'); cv.width = s.w; cv.height = s.h; cv.style.width = s.w * K3 + 'px'; cv.style.height = s.h * K3 + 'px'; cv.title = t.toFixed(2) + 's'; cv.getContext('2d').putImageData(tmp, 0, 0); row.appendChild(cv);
     }
   }
   if (C.deathKit) { const p = document.createElement('p'); p.textContent = '死亡：' + C.deathKit.mode + '（死亡套件，从第 ' + C.deathKit.at + ' 秒开始，动作表里看不到碎片，请在画面里按 6 查看）'; box.appendChild(p); }
+  if (C.setMove) { const d = C.setMove(null); if (d) for (const k in d) DUR[k] = d[k]; }
   C.hero.k1 = C.hero.k2 = -1; C.poseAt(state, stT, simT);
 }
 function toggleSheet(on) { const box = document.getElementById('sheet'); const show = on == null ? box.hidden : on; if (show) buildSheet(); box.hidden = !show; }
@@ -642,7 +698,7 @@ function audit() {
   res.idle = { w: b.x1 - b.x0 + 1, h: b.y1 - b.y0 + 1, pixels: b.n };
   const hMax = C.MAX_H || 48;   // 模块可以用 MAX_H 放宽上限（小游戏里按设定特别高的 NPC，例如荷官）
   if (res.idle.h < 12 || res.idle.h > hMax) res.problems.push('待机高度 ' + res.idle.h + ' 格，超出 12–' + hMax);
-  res.ownColors = PAL.length - BASE_PAL; if (res.ownColors > 24) res.problems.push('专属色 ' + res.ownColors + ' 个，超过 24（和共用色接近的改用 near()）');
+  res.ownColors = PAL.length - BASE_PAL; if (res.ownColors > (C.OWN_MAX || 24)) res.problems.push('专属色 ' + res.ownColors + ' 个，超过 24（和共用色接近的改用 near()）');
   if (C.deathKit) res.deathKit = C.deathKit;
   if (C.SFX) {   // 声明了音效的模块：检查关键事件都有
     const tl = sfxTimeline(), has = (ch, ev) => tl.some((e) => e.chain === ch && e.ev === ev);
@@ -692,7 +748,7 @@ const E = {
   get DUMMY_X() { return DUMMY_X; },
   IDLE, MOVE, ATTACK, CHARGE, CAST, RECOVER, HURT, DEATH, REVIVE, NAMES, DEFAULT_DUR,
   K_SPIRAL, K_ORBIT, K_BURST, K_TRAIL, K_EMBER, K_RISE, K_DUST, K_SPIRAL_PT, K_FALL, K_STILL, K_PHYS, K_ORBIT_PT,
-  defMat, Sprite, begin, part, sp, run, rect, line, brush, ellipse, bake, copySprite, setShear,
+  defMat, defDeep, DRAMP, Sprite, begin, part, sp, run, rect, line, brush, ellipse, bake, copySprite, setShear, get DUR() { return DUR; }, TOP,
   ease, clamp01, keys, mix, hash, q12, f12of, gait, walkDemo, keyer,
   spawn, spawnX, burst, releaseOrbit, clearOrbit, fall, shoot, ring, shake, flash, dim, fx, groundShadow, bayer,
   allies: (v) => { allyForce = v; }, allyPoints, allyFx, outlineSprite, death: { start: deathStart, get active() { return !!DK.on; } },
@@ -708,7 +764,7 @@ const BASE_MAT = MBAND.length, BASE_FXN = FXR.length, BASE_FXK = Object.keys(FXI
 function loadModule(key, o) {
   const f = defs[key]; if (!f) throw new Error('没有这个角色模块：' + key);
   o = o || {};
-  PAL.length = BASE_PAL; MRAMP.length = BASE_MAT * 4; MBAND.length = BASE_MAT; MFLAT.length = BASE_MAT;
+  PAL.length = BASE_PAL; MRAMP.length = BASE_MAT * 4; MBAND.length = BASE_MAT; MFLAT.length = BASE_MAT; MDEEP.length = BASE_MAT;
   FXR.length = BASE_FXN; for (const k of Object.keys(FXI)) if (!BASE_FXK.includes(k)) { delete FXI[k]; delete FX[k]; }
   TINTMAP.length = 0; FILLMAP.length = 0;
   DUMMY_X = o.dummyX != null ? o.dummyX : 98;
@@ -741,6 +797,7 @@ function renderGame() {
 const STATE_BY_NAME = { idle: IDLE, move: MOVE, attack: ATTACK, charge: CHARGE, skill: CHARGE, cast: CAST, recover: RECOVER, hurt: HURT, death: DEATH, revive: REVIVE };
 let gAcc = 0;
 // 查看页：原来的 PCD.start
+let mvI = 0;
 function page(key) {
   loadModule(key); bakeAllies();
   document.title = C.name || key;
@@ -756,10 +813,12 @@ function page(key) {
     else if (k === 'KeyS') slow = !slow;
     else if (k === 'KeyA') { auto = !auto; if (auto) { reelI = 0; enter(REEL[0]); } }
     else if (k === 'KeyT') toggleSheet();
+    else if (k === 'KeyM' && C.MOVES) { mvI = (mvI + 1) % (C.MOVES.length + 1); setMv(C.MOVES[mvI - 1] || null); const h = document.getElementById('state'); if (h) h.dataset.mv = C.MOVES[mvI - 1] || ''; play(CHARGE); }
     else if (k === 'Digit1') play(IDLE); else if (k === 'Digit2') play(MOVE); else if (k === 'Digit3') play(ATTACK); else if (k === 'Digit4') play(CHARGE); else if (k === 'Digit5') play(HURT); else if (k === 'Digit6') play(DEATH); else if (k === 'Digit7') playOff();
   });
   disp.addEventListener('click', () => { paused = !paused; });
-  window.__pc = { play: (n) => (n === 'off' ? playOff() : play(STATE_OF[n])), at, off: playOff, offAt: playOffAt, resume: () => { paused = false; }, sheet: toggleSheet, audit, exportData, paletteCheck, sfxTimeline, get state() { return NAMES[state]; } };
+  const setMv = (mv) => { if (!C.setMove) return; const d = C.setMove(mv || null); if (d) for (const k in d) DUR[k] = d[k]; C.hero.k1 = C.hero.k2 = -1; };
+  window.__pc = { move: setMv, moves: () => C.MOVES || [], play: (n) => (n === 'off' ? playOff() : play(STATE_OF[n])), at, off: playOff, offAt: playOffAt, resume: () => { paused = false; }, sheet: toggleSheet, audit, exportData, paletteCheck, sfxTimeline, get state() { return NAMES[state]; } };
   if (C.offField) { const h = document.getElementById('hint'); if (h) h.textContent = h.textContent.replace(' · A 自动', ' · 7 场外 · A 自动'); }
   C.poseAt(IDLE, 0, 0); last = performance.now(); requestAnimationFrame(frame);
 }
@@ -770,6 +829,10 @@ return {
   load: loadModule,
   // 进入状态（名字：idle move attack charge/skill cast recover hurt death revive）；off = 领袖场外效果
   enter(name) { done = false; if (name === 'off') { enter(IDLE); if (C.offField) C.offField(); return; } const s = STATE_BY_NAME[name]; if (s != null) enter(s); },
+  // 首领的立绘：模块用同一套形状按两倍分辨率画的静帧（烘焙好的精灵），没有就是 null
+  portrait() { const s = C.portrait ? C.portrait() : null; if (C.hero) C.hero.k1 = C.hero.k2 = -1; return s; },
+  // 多招式的角色（首领）：先选招式再进状态；模块的 setMove(id) 可以返回各状态的新时长 { 3: 蓄力秒数, … }
+  move(id) { if (!C.setMove) return; const d = C.setMove(id); if (d) for (const k in d) DUR[k] = d[k]; C.hero.k1 = C.hero.k2 = -1; },
   skip(t) { const n = Math.round(t / DT); for (let i = 0; i < n; i++) update(); },
   // 按真实时间推进（固定 60Hz 步长），speed 用来压缩蓄力
   step(dt, speed) { gAcc += dt * (speed || 1); let n = 0; while (gAcc >= DT && n < 30) { update(); gAcc -= DT; n++; } if (n === 30) gAcc = 0; },
@@ -782,5 +845,5 @@ return {
 };
 }
 PCD.createEngine = createEngine;
-PCD.start = function (key) { const eng = createEngine({}); PCD.PAL = eng.pal; eng.page(key); return eng; };
+PCD.start = function (key) { const mt = PCD.meta(key) || {}, eng = createEngine({ W: mt.W, H: mt.H }); PCD.PAL = eng.pal; eng.page(key); return eng; };
 })();
