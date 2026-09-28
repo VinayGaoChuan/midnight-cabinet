@@ -23,7 +23,8 @@ G.runFail = function () {
   if (byFaith) m.faith -= fc;
   m.core = after; h.hp = after > 0 ? mx : 1; h.relics = []; h.runs = (h.runs || 0) + 1; m.runs++;
   m.st = m.st || {}; m.st.fails = (m.st.fails || 0) + 1; if (!tut) m.st.deaths = (m.st.deaths || 0) + 1;
-  if (!tut) this.pendingDay = true;
+  // the day is kept (2026-09-27: 「失败的话，实际上是会消耗基地核心的……所以这就是代价……先改成失败不会推进时间。否则，每次失败，玩家的
+  // 第一个想法就是重开吧」): back home it is still the same morning and the expedition can go out again
   this.save(); S.lose && S.lose();
   const card = { name: M.heroN(h), cls: h.cls, lv: h.lv, rarity: h.rarity, region: run.region.n };
   this.endInfo = { title: '探索失败', color: '#ff4a4a', sub: after > 0 ? M.heroN(h) + ' 倒在了' + run.region.n + '，这一趟的收获丢了，经验留下一半。' : '基地核心的最后一颗心保不住了。',
@@ -42,12 +43,13 @@ G.endBack = function () {
 // 0 dim · card flies in, strains, tears · the keeper walks in, six candles light · four lines of the rite ·
 // a heart leaves the core and flies into the tear · three beats stitch the halves along a golden seam · flash, 复活 ·
 // the card flies home. With no heart left: the third line is the last, the card falls apart, the base goes up.
-const T_IN = 0.8, T_RIP = 2.1, T_NPC = 3.0, T_LINES = 4.2, LINE = 1.45, CX = 960, CY = 500;
+const T_IN = 0.8, T_RIP = 2.1, T_NPC = 3.0, T_LINES = 4.2, LINE = 1.9, CX = 960, CY = 500;   // a line long enough to be read (was 1.45)
+// the keeper's words (2026-09-27: 「现在的这个话，听着很傻。写一段听着很神圣，很能引起共情的话」): each line lights one candle
 const lines = (rv) => {
   const cls = M.HEROES[rv.card.cls].n;
-  if (rv.after <= 0) return ['长夜还没有结束，灯还亮着。', '机台记得每一个没有回来的人。', '……核心里，已经没有心了。'];
-  if (rv.faith) return ['长夜还没有结束，灯还亮着。', '机台记得每一个没有回来的人。', '以 ' + rv.faith + ' 点信仰，缝好你的名字。', '醒来吧，' + cls + '。'];
-  return ['长夜还没有结束，灯还亮着。', '机台记得每一个没有回来的人。', rv.after === 1 ? '这是核心的最后一颗心。' : '以核心的一颗心，缝好你的名字。', '醒来吧，' + cls + '。'];
+  if (rv.after <= 0) return ['走了这么远的路，你一定很累了吧。', '城里的灯，还一盏一盏为你亮着……', '可是核心里，已经没有心了。'];
+  const third = rv.faith ? '以 ' + rv.faith + ' 点信仰，把你的名字重新缝好。' : rv.after === 1 ? '这是核心最后一颗心了。它替我们所有人，再信你一次。' : '核心把一颗心交给你——那是所有等你回来的人，一起在跳。';
+  return ['走了这么远的路，你一定很累了吧。', '别怕。城里的灯，一盏都没有熄。', third, '醒来吧，' + cls + '。长夜还长，我们一起走完。'];
 };
 const timing = (rv) => { const L = lines(rv).length, tL = T_LINES + L * LINE, tH = tL + 0.2, tHit = tH + 1.2, tWhole = tHit + 2.1, tEnd = rv.after > 0 ? tWhole + 2.2 : tL + 2.6; return { L, tL, tH, tHit, tWhole, tEnd }; };
 G.reviveStart = function (rv) {
@@ -64,7 +66,7 @@ G.riteTick = function (dt) {
   if (t >= T_RIP) once(R, 'rip', () => { S.rip && S.rip(); S.shatter(); this.fx.kick(24); this.fx.flash(P.white, 0.3); for (let i = 0; i < 3; i++) this.fx.spark(CX, CY - 120 + i * 120, i % 2 ? P.cream : P.violet, 16, { dir: i % 2 ? Math.PI : 0, spread: 2.4, v: 800 }); });
   // the keeper and the candles
   if (t >= T_NPC) once(R, 'npc', () => { S.whoosh && S.whoosh(0.3); });
-  const lit = Math.floor(cl((t - T_NPC - 0.5) / 0.14, 0, 6)); if (lit > R.lit) { R.lit = lit; S.tick && S.tick(lit); }
+  const lit = t >= T_LINES ? Math.min(T.L, Math.floor((t - T_LINES) / LINE) + 1) : 0; if (lit > R.lit) { R.lit = lit; S.tick && S.tick(lit); }   // 「每说一句话，点燃一根蜡烛」
   // the rite, line by line
   const li = Math.floor((t - T_LINES) / LINE); if (t >= T_LINES && li < T.L && li !== R.line) { R.line = li; S.cast && S.cast(); }
   if (rv.after > 0) {
@@ -109,9 +111,9 @@ M.drawRite = function (x, g) {
   x.save(); x.setTransform(1, 0, 0, 1, 0, 0);
   const dim = t < T.tEnd - 0.6 ? cl(t / 0.5, 0, 1) : cl((T.tEnd - t) / 0.6, 0, 1);
   M.fxDim(x, 0.9 * dim);
-  // floor of the rite: a dark altar strip, six candles, the rune ring behind the card
+  // floor of the rite: a dark altar strip, a candle for each line, the rune ring behind the card
   const aA = cl((t - T_NPC) / 0.6, 0, 1) * dim;
-  if (aA > 0) { x.save(); x.globalAlpha = aA; U.R(x, 360, 800, 1200, 12, P.ink); U.R(x, 360, 800, 1200, 3, P.dusk); [-3, -2, -1, 1, 2, 3].forEach((k, i) => candle(x, CX + k * 150 + (k > 0 ? -50 : 50), 800, i < R.lit, t, i)); x.restore(); }
+  if (aA > 0) { x.save(); x.globalAlpha = aA; U.R(x, 360, 800, 1200, 12, P.ink); U.R(x, 360, 800, 1200, 3, P.dusk); { const nC = R.T.L, sp = nC > 3 ? 230 : 280; for (let i = 0; i < nC; i++) { const k = i - (nC - 1) / 2; candle(x, CX + k * sp + (Math.abs(k) < 0.6 ? 0 : Math.sign(k) * 60), 800, i < R.lit, t, i); } } x.restore(); }
   const whole = rv.after > 0 && t >= T.tWhole, mend = rv.after > 0 ? cl((t - T.tHit) / (T.tWhole - T.tHit), 0, 1) : 0;
   runeRing(x, t, 300, cl((t - T_LINES + 0.4) / 0.8, 0, 1) * dim * (whole ? 0 : 1), mend > 0 ? P.red : P.violet);
   // the card
@@ -193,7 +195,7 @@ const oNG = G.newGame;
 if (oNG) G.newGame = function () { this.rite = null; this.coreShow = null; return oNG.apply(this, arguments); };
 const oTip = G.tipFor;
 G.tipFor = function (key) {
-  if (key === 'b-core') { const m = this.meta, c = m.core == null ? M.CORE_MAX : m.core; return { title: '基地核心 ' + c + '/' + M.CORE_MAX, c: '#ff8ab0', icon: 't_heart', d: '探索失败时献出一颗心救回领袖；通关一个场景补回一颗。', lines: [{ t: '一颗都不剩时游戏结束', c: '#ff8a8a' }] }; }
+  if (key === 'b-core') { const m = this.meta, c = m.core == null ? M.CORE_MAX : m.core; return { title: '基地核心 ' + c + '/' + M.CORE_MAX, c: '#ff8ab0', icon: 't_heart', d: '探索失败时献出一颗心救回领袖。', lines: [{ t: '一颗都不剩时游戏结束', c: '#ff8a8a' }] }; }
   return oTip.apply(this, arguments);
 };
 })();

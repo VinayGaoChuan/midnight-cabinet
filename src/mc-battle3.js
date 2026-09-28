@@ -341,7 +341,7 @@ class B3 extends M.Battle2 {
     this.ents.forEach(o => { if (o !== e && this.active(o) && o.side !== e.side) this.call(o, 'near', e); });
     if (e.side === 'E') {
       this.kills++;
-      const base = Math.max(1, Math.round(e.base * (M.KILL_K || 0.9) * (1 + (this.mods.baseScore || 0) + (this.scoreK || 0)) * (this.t < this.allin ? 1 + (this.allinV || 0.1) * 10 : 1)));   // scoreK: 玉石共鸣; allin: 梭哈
+      const base = Math.max(1, Math.round(e.base * (M.KILL_K || 0.9) * (e.boss ? this.scoreFB || 1 : this.scoreF || 1) * (1 + (this.mods.baseScore || 0) + (this.scoreK || 0)) * (this.t < this.allin ? 1 + (this.allinV || 0.1) * 10 : 1)));   // scoreF / scoreFB: the stage's cap (mc-pool.js)   // scoreK: 玉石共鸣; allin: 梭哈
       this.base += base; this.float(e.x, e.y - hgt - 10, '+' + fmt(base), PL.cream, 24, true);
       if (e.boss) { this.shake = 30; this.flash = 0.6; this.flashCol = '#ffffff'; this.slow = 0.8; Sfx.impact(); } else if (e.elite) { this.shake = Math.max(this.shake, 14); this.slow = Math.max(this.slow || 0, 0.25); }
       if (src && src.side === 'A' && (e.elite || e.boss) && this.mods.eliteHeal && this.hero.alive) this.heal(this.hero, this.hero.maxHp * this.mods.eliteHeal);

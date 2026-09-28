@@ -348,9 +348,11 @@ M.roomThumb = function (key) { if (!thumbs[key]) { const a = document.createElem
 
 // ───────── base view / camera ─────────
 // the resting view (2026-09-27: 「现在地底的空间占用的屏幕太大了，把镜头往上面移动1-2个地格吧」): the rock is two rows shorter (3, not 5)
-// and the view a touch closer, so the surface — the town, its wonders on the horizon — gets the room; at any zoom the rock's bottom row stays on
-// the screen's bottom edge
-M.baseHomeY = (z) => TOP + BROWS * CH - 480 / z;
+// and the view a touch closer, so the surface — the town, its wonders on the horizon — gets the room; at any zoom the rock's bottom edge sits at
+// screen y 880, over the leader card and the garrison row in the bottom-left corner (2026-09-27: 「基地最底下的建筑，被UI栏中，基地的部队挡住了，
+// 导致鼠标悬停后，触发不了显示……要保证30个部队满了之后，也不会导致遮挡」: that row is one line even full, 16 cells of kinds)
+M.BASE_UI_H = 200;
+M.baseHomeY = (z) => TOP + BROWS * CH - (540 - M.BASE_UI_H) / z;
 M.BaseView = class {
   constructor() { this.t = 0; this.x = 1050; this.y = M.baseHomeY(0.7); this.z = 0.7; this.tx = this.x; this.ty = this.y; this.tz = this.z; this.sel = null; this.hover = null; this.pulse = {}; this.free = null; this.amb = new M.Ambient('motes', 1920, 1080, 50); this.stars = [...Array(90)].map((_, i) => ({ x: rnd(i) * 2400 - 150, y: -700 + rnd(i + 40) * 560, s: rnd(i + 9) < 0.2 ? 6 : 3, p: rnd(i + 3) * 7 })); }
   keepFree() { if (!this.sel && !this.free) this.free = { x: this.tx, y: this.ty, z: this.tz }; }

@@ -51,6 +51,10 @@ const GIFTS = {
     apply(g, m) { m.raidWeak = Math.min(0.6, (m.raidWeak || 0) + 0.3); return ok('下一次混沌来袭的怪物 -' + Math.round(m.raidWeak * 100) + '%', { door: 1 }); } },
   letter: { n: '引荐信', ic: 'g_letter', c: '#f5ead4', w: 8, d: '下一次招募免费，而且至少为「稀有」。',
     apply(g, m) { m.freeRecruit = (m.freeRecruit || 0) + 1; return ok('下一次招募免费，至少「稀有」'); } },
+  // a heart back, rare (2026-09-27: 「也可以恢复，但是肯定是很稀有，很难」): weight 2 of about 80, only while the core misses one,
+  // and lost with everything else if the leader falls on the way
+  heart:  { n: '心之余烬', ic: 't_heart', c: '#ff8ab0', q: 5, w: 2, d: '基地核心补回一颗心。',
+    apply(g, m) { const before = m.core == null ? M.CORE_MAX : m.core; m.core = Math.min(M.CORE_MAX || 3, before + 1); if (g) { g.coreShow = null; if (g.pulse) g.pulse.core = now(); } return ok(m.core > before ? '基地核心 +1 · ' + m.core + ' / ' + (M.CORE_MAX || 3) : '核心本来就是满的'); } },
   cell:   { n: '补给箱', ic: 'g_battery', c: '#9cff7a', w: 7, d: '物资 +120。',
     apply(g, m) { m.supplies += 120; return ok('物资 +120'); } },
   kit:    { n: '行军包', ic: 'g_pack', c: '#caa84a', w: 9, d: '下次出征开局多带 1 个支援道具。',
@@ -64,6 +68,7 @@ const USEFUL = {
   portal: (m) => m.portal && m.portal.hp < M.portalMax(m) - 50,
   temper: (m) => (m.relics || []).some(x => x.q < 5),
   calm: (m) => hurt(m),
+  heart: (m) => (m.core == null ? M.CORE_MAX : m.core) < (M.CORE_MAX || 3),
 };
 M.giftUseful = (m, k) => !!GIFTS[k] && GIFTS[k].w > 0 && (!USEFUL[k] || !m || USEFUL[k](m));
 M.dropGift = (m) => { m = m || (M._g && M._g.meta); const ks = Object.keys(GIFTS).filter(k => M.giftUseful(m, k)); return 'gift:' + M.wpick(ks.length ? ks : ['cell'], k => GIFTS[k].w || 1); };

@@ -205,7 +205,7 @@ G.startSettle = function () {
   run.bossN = (run.bossN || 0) + 1;
   if (!n.final) { if ((p.wp[w] || 0) < n.seg + 1 && !M.chClear(m, w)) { p.wp[w] = n.seg + 1; put('路标点亮：下次可以从这里出发', '#5fd0c0', 'up'); } put('连战 ×' + (1 + M.STREAK * run.bossN).toFixed(2) + '：撤离时带回的物资和经验', '#ffcf4a', 'up'); }
   if (n.fb) {
-    if (!n.final) { const before = m.core == null ? M.CORE_MAX : m.core; m.core = Math.min(M.CORE_MAX || 3, before + 1); if (m.core > before) put('基地核心 +1', '#ff8ab0', 'up'); }
+    // no heart back for an area's boss any more (2026-09-27): a heart comes back only with the rare 心之余烬 (mc-bring.js)
     // the boss's own building: its blueprint, now and then, until you have it (mc-bossbld.js)
     const D = M.diffOf(m), bk = M.BOSS_BLD && M.BOSS_BLD[n.fb], ch = D.bb * (run.chap.mod === 'veteran' ? 2 : 1);
     if (bk && !M.bbOwned(m, bk) && !run.loot.bp.includes('bbp:' + bk) && Math.random() < ch) { const k = 'bbp:' + bk; run.loot.bp.push(k); const I = M.itemInfo(k); put('掉落：' + I.n + '（首领建筑）', '#ffb13a', I.icon); if (st.tiles) st.tiles.push({ icon: I.icon, v: 1, c: '#ffb13a', to: 'rbp', n: I.n, key: k }); }

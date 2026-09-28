@@ -924,6 +924,8 @@
 | R065 | 箭楼 | 优质 | 秦陵大厅里，三排陶俑站在夯土台上持矛列队，中间是将军俑，前排两俑之间露出一匹陶马；两侧青铜连枝灯烛光摇曳，右边铜鼎里火焰翻滚、火星上飘，墙上铜盘里一条蟠龙绕着玉眼盘成一圈，不时闪过一道光；守陵人来回踱步，隔一会儿敲响铜锣，金光从左到右扫过军阵，陶俑眼睛一个个亮起、抖落尘土、长矛齐齐一斜 | — |
 | R066 | 战鼓楼 | 稀有 | 夕阳落进山谷，少林寺大殿两层屋檐、彩绘横梁，牌匾上金字写着「少林寺」，格子门里透出金光；红灯笼随风轻摆，香炉冒着青烟，松针不时飘落；四个穿深橙僧衣的武僧整齐地出拳、踢腿，师父在旁边看着；每隔一阵撞钟的僧人拉开木桩撞响大钟，钟声在钟亭边一圈圈荡开、满院一亮，屋脊上的白鸽飞走又飞回，武僧一齐跳起飞踢 | — |
 | R067 | 要塞 | 史诗 | 雪山日出：太阳刚从右边山脊后露出一角，光芒向天上散开，天空从夜蓝变成玫瑰色和金色；第一缕阳光把雪峰顶染成粉金色，最先照亮布达拉宫的金顶，下面的白宫和红宫还在清晨的蓝影里，窗里亮着灯，最高的雪峰顶上飘着一缕雪雾；一串经幡横过天空飘；左边香炉冒烟和火星；右边僧人推着大转经筒，每转一圈铃响一声、紫色经文升起；朝圣者摇着手转经筒走过；一阵风来，天上划过两道风线，经幡被吹得拉平，香炉的烟压成一条横线，五色风马纸从经幡绳上卷起飞上天，风最大时太阳一亮、光芒大盛，金顶全部闪一下 | — |
+| R068 | 营房 | 普通 | 月夜的斗兽场，弧形看台一层层坐满观众、一直升到拱廊和月光下的顶边，皇帝包厢挂着紫帘、立着鹰旗，铁栅门后有一双发光的眼睛；两边火盆熊熊燃烧；戴盔持盾的角斗士和肩戴护板、手拿三叉戟、身后拖着渔网的角斗士你来我往，每次交锋火花四溅、场中一亮；每隔一阵三叉戟被打飞、转着圈插进两人前面的空沙地，胜者高举短剑，火盆一齐腾起、看台一亮，全场观众跳起来举手欢呼，输的一方退了几步，弯腰握住杆子，把三叉戟从沙里拔出来 | — |
+| R069 | 军需处 | 优质 | 卷轴格从地面一直排到拱顶，有些卷轴发着紫光；大拱窗外，海岛上的法罗斯灯塔燃着火、光束来回扫过夜空，月光斜落到地上；金色浑天仪的圆环慢慢转动，几本书像鸟一样在空中飞，管理员爬梯子取卷轴，老学者在讲台前读书，油灯摇晃；每隔一阵讲台上的大书哗哗翻页，发光的字盘旋升起，一道光波扫过所有卷轴格，飞书打着转 | — |
 
 <!-- /gen:rooms -->
 
@@ -967,7 +969,7 @@
 | V014 | `Sfx.typeBlip` | 界面 | 0 |
 | V015 | `Sfx.tick` | 界面 | 14 |
 | V016 | `Sfx.numTick` | 界面 | 1 |
-| V017 | `Sfx.coin` | 界面 | 6 |
+| V017 | `Sfx.coin` | 界面 | 7 |
 | V018 | `Sfx.land` | 界面 | 10 |
 | V019 | `Sfx.fly` | 界面 | 0 |
 | V020 | `Sfx.bump` | 界面 | 0 |
@@ -976,7 +978,7 @@
 | V023 | `Sfx.toggle` | 界面 | 0 |
 | V024 | `Sfx.whoosh` | 通用 | 28 |
 | V025 | `Sfx.sparkle` | 通用 | 4 |
-| V026 | `Sfx.up` | 通用 | 37 |
+| V026 | `Sfx.up` | 通用 | 39 |
 | V027 | `Sfx.mult` | 通用 | 4 |
 | V028 | `Sfx.heal` | 通用 | 14 |
 | V029 | `Sfx.boom` | 通用 | 29 |
@@ -994,7 +996,7 @@
 | V041 | `Sfx.cast` | 通用 | 3 |
 | V042 | `Sfx.bolt` | 通用 | 7 |
 | V043 | `Sfx.win` | 通用 | 0 |
-| V044 | `Sfx.fanfare` | 通用 | 25 |
+| V044 | `Sfx.fanfare` | 通用 | 24 |
 | V045 | `Sfx.lose` | 通用 | 9 |
 | V046 | `Sfx.die` | 通用 | 5 |
 | V047 | `Sfx.kill` | 通用 | 3 |
@@ -1097,7 +1099,7 @@
 | V144 | `Sfx.musicBox` | 开场演出 | 0 |
 | V145 | `Sfx.reelSpin` | 开场演出 | 0 |
 | V146 | `Sfx.glitch` | 开场演出 | 1 |
-| V147 | `Sfx.jackpot` | 开场演出 | 1 |
+| V147 | `Sfx.jackpot` | 开场演出 | 0 |
 
 小游戏各自的一组（`Sfx.mini(小游戏, 事件)`）：`mine` pick / loosen / gem / cavein；`roulette` spin / click / bet / gold / win / skull / miss；`fruit` gogo / lever / spin / stop / jackpot / win / skulls / nomatch / drop / zap；`claw` move / drop / grab / lift / prize / slip / empty / bounce；`pachinko` pour / reach / tulip / payout / out / off / launch / peg / slot / edge；`tree` ripe / snap / splat / bloom / chime / swing / rustle / curse / pick / water / cut / grow / fruit；`tarot` hover / omen / leave / lift / shuffle / flip / good / bad；`eggs` hammer / swing / burst / empty / tap / leave / crack / prize / snake；`dice` chips / slam / bounce / tap / leave / shake / roll / clack / win / lose / tie；`fate` cost / spin / click / stop / drip / flow / rune / creak / slip / back / gold / eye；`musician` note / metro / miss / pluck / tick / cross / great / ok / poor / snap；`granny` stitch / miss / done / snip / thread / light / whole；`well` charge / flick / rise / toss / splash / great / ok / miss；`child` step / crunch / wrong / lost / found；`grave` lid / dig / break / candle / coffin / hand / out / treasure；`clinic` pick / drink / good / bad / mult / hover / pop / crack / fizz / omen；`mirror` tone / wrong / pass；`altar` pour / rune / flicker / out / win；`peddler` shuffle / bell / lift / win / lose；`spring` zone / bubble / tick / good / hot / cool / plunge / drop / clamp / geyser；`trap` step / num / boom / box / hop / nope / click / rattle / reveal / fireworks；`cat` wave / coin / bar / bomb / miss / flick / spill / weigh / bell / clink；`market` grab / swing / stamp / deal / miss / bell / cackle / slapScroll / seal / fade / tap / chain / coinbag；`trainer` bell / punch / done / whistle / windup / finisher / snap；`statue` eyes / turn / align / wake / fail / snuff；`arena` ko / open / roar / cheer / bet / hit / win / lose / gong / gate / hush / ooh / toss / boo；`camp` fire / rest / sharpen / clang / scrape / pop；`recruit` curtain / reveal / full / lamp / flare / salute / none；`chest` in / spot / land / lift / rattle / unlock / lockfall / riser / snap / slit / boom / fire / pop / drop / last / roll / wave2 / itemTap / rush / claim / close / mimic / fight。
 

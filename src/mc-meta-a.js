@@ -242,7 +242,7 @@ G.runWin = function (kind) {
   const m = this.meta, run = this.run, L = run && run.loot, bps = L ? L.bp.length : 0, sup = L ? L.supplies : 0;
   oWin.call(this, kind); m.st = m.st || {};
   if (!run.region.tut) { m.st.bp = (m.st.bp || 0) + bps; m.st.bestHaul = Math.max(m.st.bestHaul || 0, sup); if (kind === 'extract') m.st.extract = (m.st.extract || 0) + 1; }
-  if (kind === 'clear' && !run.region.tut) { m.st.clears = (m.st.clears || 0) + 1; this.prof.stats.clears = (this.prof.stats.clears || 0) + 1; const before = m.core == null ? 3 : m.core; m.core = Math.min(3, before + 1); if (this.endInfo && m.core > before) { this.endInfo.coreHeal = true; this.endInfo.lines = (this.endInfo.lines || []).concat([{ k: '基地核心', v: '恢复 1 点 · ' + m.core + ' / 3', c: '#9cff7a' }]); } }
+  if (kind === 'clear' && !run.region.tut) { m.st.clears = (m.st.clears || 0) + 1; this.prof.stats.clears = (this.prof.stats.clears || 0) + 1; }   // a cleared scene no longer gives a heart back (2026-09-27)
   this.save(); this.achCheck();
 };
 const oRaidEnd = G.raidEnd;

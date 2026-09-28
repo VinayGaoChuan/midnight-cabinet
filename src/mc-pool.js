@@ -68,6 +68,26 @@ M.rollUnitCard = function (run, o) {
   return { type: k, line, q };
 };
 
+// ───────── what a fight pays, at most (2026-09-27: 「我打德鲁伊的时候，德鲁伊死后，给了7000多个积费……我拿着7000多计费，去商店都没法花，
+// 而且后面的Boss不就平推了吗。数值到底怎么搞得」) ─────────
+// A fight pays its enemies' price (the budget, ×1.34 a level: a chapter climbs from level ~4 to ~15, so the late fights paid 25
+// times the early ones) while the shops only ever sell up to the stage's quality (its price ×3.3 a quality). At the 守墓人 the
+// top card cost ~495 and a plain fight paid 771, its boss 2165. Now a fight pays at most the price of one card of the stage's
+// best quality, a boss fight at most two; the early fights (under the cap) pay as before.
+M.SCORE_CAP = { fight: 1, boss: 2 };
+M.topPrice = (run) => { const st = M.stageOf(run), ls = (run && run.pool && run.pool.lines) || [], ps = ls.map(l => DB[M.lineKey(l, st.capQ + 1)]).filter(Boolean).map(d => d.cost || 0); return ps.length ? Math.round(ps.reduce((a, b) => a + b, 0) / ps.length) : Math.round(40 * Math.pow(3.3, st.capQ)); };
+{ const BP3 = M.Battle3 && M.Battle3.prototype, oInitS = BP3 && BP3.init;
+  if (oInitS) BP3.init = function (run) {
+    const r = oInitS.apply(this, arguments); this.scoreF = 1; this.scoreFB = 1;
+    if (!run || run.raid || (run.region && run.region.tut) || !this.cfg) return r;
+    const top = M.topPrice(run), C = M.SCORE_CAP, K = M.KILL_K || 0.7;
+    const plain = (this.cfg.list || []).filter(x => !x.boss).reduce((a, x) => a + ((DB[x.type] && DB[x.type].cost) || 10) * (x.elite ? 1.3 : 1), 0) * K;
+    if (plain > C.fight * top) this.scoreF = C.fight * top / plain;
+    const bossPay = (this.cfg.budget || 100) * (M.BOSS_SCORE || 1.6) * K;
+    if ((this.cfg.list || []).some(x => x.boss) && bossPay > C.boss * top) this.scoreFB = C.boss * top / bossPay;
+    return r;
+  }; }
+
 // ───────── the area's pool: lines by race ─────────
 const FRONT = { 先锋: 1, 守护者: 1, 战士: 1, 圣骑士: 1 };
 const lineVoc = (l) => { const d = DB[M.lineKey(l, 1)]; return d ? d.voc : ''; };

@@ -24,13 +24,16 @@ const ROOMS = {
   rampart:    { art: 'michel', n: '城墙', cat: 'fort', q: 0, style: 'medieval', cost: 90, days: 1, fx: { portalHp: 0.3 }, d: '主基地耐久 +30%。' },
   arrowtower: { art: 'terracotta', n: '箭楼', cat: 'fort', q: 1, style: 'medieval', cost: 150, days: 1, fx: { roofDmg: 0.4 }, d: '领袖守城的伤害 +40%。' },
   wardrum:    { art: 'shaolin', n: '战鼓楼', cat: 'fort', q: 2, style: 'fantasy', cost: 200, days: 2, fx: { roofAs: 0.4 }, d: '领袖守城的攻速 +40%。' },
-  citadel:    { art: 'potala', n: '要塞', cat: 'fort', q: 3, style: 'medieval', cost: 300, days: 3, fx: { portalHp: 0.6, roofDmg: 0.3 }, d: '主基地耐久 +60%，领袖守城的伤害 +30%。' },
+  citadel:    { art: 'potala', n: '要塞', cat: 'fort', q: 3, style: 'medieval', cost: 300, days: 3, fx: { portalHp: 0.6, roofDmg: 0.3, garCap: 4 }, d: '主基地耐久 +60%，领袖守城的伤害 +30%，驻军上限 +4。' },
+  barrack:    { art: 'colosseum', n: '营房', cat: 'fort', q: 0, style: 'medieval', cost: 100, days: 1, fx: { garCap: 4 }, d: '驻军上限 +4。' },
+  // 军需流: supplies into strength (2026-09-27: 「如果物资充分，如何转化成战斗力，例如直接用物资给部队升品之类的……这又是一个新流派」)
+  quarter:    { art: 'library', n: '军需处', cat: 'train', q: 1, style: 'steam', cost: 150, days: 1, supUp: 1, d: '花物资给驻军升档。' },
 };
 Object.keys(ROOMS).forEach(k => { const o = ROOMS[k]; B[k] = Object.assign({ pw: 0 }, B[k], o); delete B[k].art; delete B[k].gone;
   if (M.PXR && M.PXR.defs && M.PXR.defs[o.art] && !M.PXR.has(k)) M.PXR.def(k, Object.assign({}, M.PXR.defs[o.art]));
   if (M.ROOM_D && M.ROOM_D[o.art] && !M.ROOM_D[k]) M.ROOM_D[k] = M.ROOM_D[o.art]; });
 if (B.mender) B.mender.cat = 'fort';
-M.FORT_ROOMS = Object.keys(ROOMS).concat(['mender']);
+M.FORT_ROOMS = Object.keys(ROOMS).filter(k => ROOMS[k].cat === 'fort').concat(['mender']);
 
 // ───────── talents for the roof, and who leans to them ─────────
 const TIER = M.TAL_TIER || [0, 0.7, 1, 1.35, 1.75, 2.2, 2.7], pct = (v) => Math.round(Math.abs(v) * 100) + '%';
@@ -134,4 +137,37 @@ if (oMB) M.PXR.mainBase = function (ctx) {
 if (M.GUIDE) M.GUIDE.push(
   { id: 'fort', cat: '基地', icon: 'f_defense', title: '城防', line: '这一类建筑让主基地更结实、领袖守城打得更狠。', scr: 'base' },
   { id: 'roof', cat: '基地', icon: 'v_archer', title: '屋顶的领袖', line: '混沌来袭时，领袖跳上主基地的塔顶，用自己的攻击射向敌群。', scr: 'base' });
+// ───────── how many can garrison (2026-09-27: 「驻军上限，可以最多是30个，但是不应该开局就30个，应该跟据繁荣度，难易度，房间建设（或者奇迹
+// 建筑）等有关，而不是固定写死30个」) ─────────
+// 6 at the start, +2 a prosperity level (Lv9: 22), the difficulty +0 / 2 / 4 / 6, 营房 +4 and 要塞 +4, never above 30. A homecoming past
+// the cap sends the weakest away for a third of its price in supplies (mc-parade.js).
+M.GAR = { base: 6, perLv: 2, gd: [0, 2, 4, 6], max: 30 };
+M.garCap = function (m) {
+  if (!m) return M.GAR.max; const G_ = M.GAR, lv = Math.max(1, m.prosLv || 1), gd = G_.gd[Math.max(0, Math.min(3, m.gd || 0))] || 0;
+  return Math.min(G_.max, G_.base + G_.perLv * (lv - 1) + gd + Math.round(M.baseMods(m).garCap || 0));
+};
+// ───────── 军需处: supplies buy a garrison unit its next tier ─────────
+// no daily limit, as far as the garrison's quality cap goes (the same as the soul-shard 升档 of the evolution halls); the price is
+// 1.2 times the two tiers' price gap (普通→优质 about 110, 稀有→史诗 about 1190), so supplies turn into power about 1 : 0.8
+M.SUP_UP = 1.2;
+M.supUpPick = (m) => (M.garrisonOf ? M.garrisonOf(m) : []).filter(u => { const d = DB[u.type]; return d && d.next && DB[d.next] && M.evoOpen(m, u.type); }).sort((a, b) => (DB[a.type].tier || 0) - (DB[b.type].tier || 0) || M.unitPower(b.type, b) - M.unitPower(a.type, a))[0] || null;
+M.supUpCost = (u) => { const d = u && DB[u.type], n = d && DB[d.next]; return n ? Math.max(20, Math.round(((n.cost || 0) - (d.cost || 0)) * M.SUP_UP / 5) * 5) : 0; };
+G.supUp = function () {
+  const m = this.meta; if (!m) return false; const u = M.supUpPick(m); if (!u) { this.deny && this.deny('驻军里没有能升档的部队', '#8d8496'); return false; }
+  const cost = M.supUpCost(u); if (m.supplies < cost) { this.deny && this.deny('物资不足', '#d0453c'); return false; }
+  const from = u.type, to = DB[from].next; this.hold && this.hold('msup', m.supplies); m.supplies -= cost; this.release && this.release('msup');
+  u.type = to; u.evo = (u.evo || 0) + 1; this.save && this.save();
+  const Q = M.QUALITY || [], qc = (Q[DB[to].q] || {}).c || '#ffe08a', p = this.panel && this.panel.c != null && this.cellPos ? this.cellPos(this.panel.c, this.panel.r) : { x: 960, y: 500 };
+  this.fx && this.fx.rays && this.fx.rays(p.x, p.y, qc, 1.2, { r: 240 }); this.fx && this.fx.pop(p.x, p.y - 50, DB[from].n + ' → ' + DB[to].n, qc, 40, { slam: 1 }); M.Sfx.up && M.Sfx.up(3); if (this.pulse) this.pulse.mgar = now(); this.bump();
+  return true;
+};
+{ const oPVq = G.panelView;
+  G.panelView = function () {
+    const v = oPVq.apply(this, arguments), p = this.panel, m = this.meta, pn = v && v.pn; if (!pn || !p || p.kind !== 'room' || !m || !B[p.key] || !B[p.key].supUp) return v;
+    const u = M.supUpPick(m), to = u && DB[DB[u.type].next], cost = u ? M.supUpCost(u) : 0;
+    Object.assign(pn, { ruinOn: true, ruinC: '#e8dcc4', ruinTxt: u ? '驻军里的' + DB[u.type].n + '可以升成' + to.n + '。' : '驻军里没有能升档的部队。',
+      repairBtn: u ? '升档 · ' + cost + ' 物资' : '没有能升档的部队', repairOp: u && m.supplies >= cost ? 1 : 0.45, onRepair: () => this.supUp() });
+    return v;
+  }; }
+if (M.GUIDE) M.GUIDE.push({ id: 'garcap', cat: '基地', icon: 't_shield', title: '驻军上限', line: '繁荣度、难度、营房和要塞让它变多，最多 30。', scr: 'base', sel: '[data-fx="mgar"]' });
 })();

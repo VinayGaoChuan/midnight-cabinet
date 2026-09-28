@@ -86,7 +86,10 @@ function draw(ctx, g, F) {
 function join(g, u) {
   const m = g.meta; if (!m || !M.garrisonOf) return; const gar = M.garrisonOf(m);
   gar.push(Object.assign({}, u, { uid: M.rid(), mana: 0 }));
-  if (gar.length > M.GARRISON_CAP) { gar.sort((a, b) => pw(b) - pw(a)); const gone = gar.splice(M.GARRISON_CAP), sup = gone.reduce((a, x) => a + Math.round(((DB[x.type] && DB[x.type].cost) || 10) * 0.3), 0); m.supplies += sup; g.toast && g.toast('驻军满了：' + gone.map(x => DB[x.type].n).join('、') + ' 离开，物资 +' + sup, '#caa84a'); }
+  // by prosperity, difficulty and rooms (mc-bastion.js); a garrison already past it (an old save, a pulled-down 营房) never shrinks — each
+  // newcomer then takes the weakest one's place
+  const cap = Math.max(M.garCap ? M.garCap(m) : M.GARRISON_CAP, gar.length - 1);
+  if (gar.length > cap) { gar.sort((a, b) => pw(b) - pw(a)); const gone = gar.splice(cap), sup = gone.reduce((a, x) => a + Math.round(((DB[x.type] && DB[x.type].cost) || 10) * 0.3), 0); m.supplies += sup; g.toast && g.toast('驻军满了：' + gone.map(x => DB[x.type].n).join('、') + ' 离开，物资 +' + sup, '#caa84a'); }
   g.save && g.save();
 }
 function finish(g, F) {

@@ -52,7 +52,7 @@ const CONCEPTS = [
   { id: 'raid', cat: '基地', icon: 't_sword', title: '时间轴', line: '这 5 天和下 5 天：哪天混沌来袭，哪天有别的事件。', scr: 'base', sel: '[data-g="timeline"]' },
   { id: 'sup', cat: '基地', img: () => sprite('sack'), title: '物资', line: '挖岩层、建房间、打造宝物都花它。出征带回来，守住夜晚也有。', scr: 'base', sel: '[data-fx="msup"]' },
   { id: 'shard', cat: '基地', img: () => sprite('shard'), title: '灵魂碎片', line: '高端材料：建史诗 / 传说建筑、精铸宝物时要用。夜里击退怪物得到。', scr: 'base', sel: '[data-fx="msh"]' },
-  { id: 'core', cat: '基地', icon: 't_heart', title: '基地核心', line: '三颗心：探索失败时献出一颗救回领袖，通关一个场景补回一颗；心用完这一局就结束。', scr: 'base', sel: '[data-tip="b-core"]' },
+  { id: 'core', cat: '基地', icon: 't_heart', title: '基地核心', line: '三颗心：探索失败时献出一颗救回领袖，心用完这一局就结束。', scr: 'base', sel: '[data-tip="b-core"]' },
   { id: 'pros', cat: '基地', icon: 't_pros', title: '繁荣度', line: '房间的品质越高，繁荣度涨得越多；每升一级多开几块地、选一座奇观。', scr: 'base', sel: '[data-tip="b-pros"]' },
   { id: 'town', cat: '基地', icon: 'f_defense', title: '地面城镇', line: '地下每建一座建筑，地面就升起一座，城市越建越大。', scr: 'base', at: (g) => townRect(g, () => true), when: (g) => !!(g.town && Object.keys(g.town.vis).length) },
   { id: 'locked', cat: '基地', icon: 't_pros', title: '未解锁的地块', line: '黑色的地块还没解锁，繁荣度升级后才能挖。', scr: 'base', at: (g) => lockedRect(g) },
@@ -222,6 +222,14 @@ G.view = function () {
   }
   return v;
 };
+// the three icons under 放弃 (2026-09-27: 「屏幕右下角说明，设置，声音，都可以做成图标，放到右上角，放弃按钮下面」)
+{ const oTipI = G.tipFor;
+  G.tipFor = function (key) {
+    if (key === 'ui-help') return { title: '说明', c: '#e8dcc4', d: '游戏里每样东西是什么。' };
+    if (key === 'ui-set') return { title: '设置', c: '#e8dcc4', d: '画面、声音和操作。' };
+    if (key === 'ui-snd') return { title: M.Sfx.muted ? '声音：关' : '声音：开', c: '#e8dcc4', d: '点一下开关声音。' };
+    return oTipI.apply(this, arguments);
+  }; }
 })();
 
 ;
