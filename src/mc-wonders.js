@@ -21,7 +21,7 @@ const W = M.WONDERS = {
   terracotta: { n: '兵马俑', style: 'fantasy', kind: 'night', d: '每晚城门前站出 8 个陶俑兵一起守城。' },
   liberty:    { n: '自由女神像', style: 'water', kind: 'night', d: '主基地每晚第一次掉到一半以下时，火炬点亮，耐久回满。' },
   stonehenge: { n: '巨石阵', style: 'nature', kind: 'night', d: '强敌和首领一出场就被定住 6 秒。', gd: 1 },
-  colosseum:  { n: '罗马斗兽场', style: 'medieval', kind: 'run', d: '出征上场人数 +2。' },
+  colosseum:  { n: '罗马斗兽场', style: 'medieval', kind: 'run', d: '出征上场人数 +1。' },
   lighthouse: { n: '亚历山大灯塔', style: 'water', kind: 'run', d: '出征地图一开始全亮。' },
   taj:        { n: '泰姬陵', style: 'fantasy', kind: 'run', d: '出征失败时，这一趟的收获照样带回。' },
   machu:      { n: '马丘比丘', style: 'nature', kind: 'run', d: '夜市每家店多摆 2 张卡。' },
@@ -43,7 +43,18 @@ const hasW = M.hasWonder = (m, k) => wl(m).includes(k);
 const curM = () => (M._g && M._g.meta) || null;
 const hasNow = (k) => hasW(curM(), k);
 const eligible = (m, k) => { const w = W[k]; if (!w || hasW(m, k)) return false; if (w.part && M.hasPart && !M.hasPart(w.part)) return false; if (w.gd && M.gdOf && !(M.gdOf(m) && (m.gd || 0) >= w.gd)) return false; return true; };
-M.wonderOffer = function (m) { const pool = Object.keys(W).filter(k => eligible(m, k)), out = []; for (let i = 0; i < 2 && pool.length; i++) out.push(pool.splice(Math.floor(rnd() * pool.length), 1)[0]); return out; };
+// the two cards weigh the same (asked 2026-09-27: 「有一些奇迹建筑，效果非常好，例如出征部队上限+2，和胜利时，可以带回2个部队。如果遇到这种，就会
+// 必然选这种，这是否正常」 — no: a pick with one sure card is no pick). The wonders that make every run and every night stronger
+// are 重; the rest help in one place (the map, the shops, the building, the nights' one trick) and are 轻. The odd levels
+// (Lv3, 5, 7, 9) offer two 重, the even ones two 轻, so the strong ones compete with each other — more men or a bigger garrison,
+// better odds or more talents — and never sit next to a card nobody would take. Short of two in the group, the other fills in.
+const HEAVY = M.WONDER_HEAVY = ['colosseum', 'gardens', 'zeus', 'library', 'terracotta', 'taj'];
+M.wonderOffer = function (m) {
+  const lv = wl(m).length + 2, heavy = lv % 2 === 1, all = Object.keys(W).filter(k => eligible(m, k));
+  const pool = all.filter(k => HEAVY.includes(k) === heavy), rest = all.filter(k => HEAVY.includes(k) !== heavy), out = [];
+  for (let i = 0; i < 2; i++) { const from = pool.length ? pool : rest; if (!from.length) break; out.push(from.splice(Math.floor(rnd() * from.length), 1)[0]); }
+  return out;
+};
 
 // ───────── the direction machinery becomes the wonder pick ─────────
 const D = M.DIRS || {};
@@ -146,7 +157,7 @@ const wPos = (k) => { const T = M._g && M._g.town, v = T && T.vis && T.vis['w:' 
 // ───────── their deeds ─────────
 // 罗马斗兽场 · 宙斯 · 亚历山大灯塔 · 马丘比丘 · 悉尼歌剧院
 const oCap = M.rosterCap;
-if (oCap) M.rosterCap = function (run) { const c = oCap.apply(this, arguments); return run && run.M && !(run.region && run.region.tut) && hasW(run.M, 'colosseum') && c < 90 ? c + 2 : c; };
+if (oCap) M.rosterCap = function (run) { const c = oCap.apply(this, arguments); return run && run.M && !(run.region && run.region.tut) && hasW(run.M, 'colosseum') && c < 90 ? c + 1 : c; };   // +1 like 军械库 (2026-09-27: +2 made it the one card anyone would take)
 const oVC = M.vocCap;
 M.vocCap = function (m, voc) { return Math.min(6, oVC.apply(this, arguments) + (hasW(m, 'zeus') ? 1 : 0)); };
 const oGen = M.genMap2;

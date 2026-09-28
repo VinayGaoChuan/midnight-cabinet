@@ -61,6 +61,9 @@ M.buildOptions = function (m) { const L = oBO.apply(this, arguments); return L.m
 M.PORTAL_BASE = 2400;
 // …and grows with prosperity (user ruling 2026-09-26: 「基地生命值要随着繁荣度而增加，否则后面的敌人越来越强，摸一下基地就死」): +35% a level
 M.PORTAL_PROS = 0.45;   // 2026-09-27: levels come slower now (0.35 → 0.45 keeps the main base as tough on the same day)
+// Only a prosperity level raises the max, and only the max (user ruling 2026-09-27: 「繁荣升级后，血量不要自动布满，每天回血应该是
+// 建筑的特性，而不是默认机制……如果基地本来就没血了，那一碰就死很正常」「只有繁荣度升级，才会增加最大血量，通过1天，不应该增加最大血量」):
+// what is lost stays lost until a 修缮坊 (mc-roomset.js), a 修门石 or the torch of 自由女神像 mends it
 M.portalMax = (m) => Math.round(M.PORTAL_BASE * (1 + (M.baseMods(m).portalHp || 0)) * (1 + M.PORTAL_PROS * Math.max(0, ((m && m.prosLv) || 1) - 1)));
 
 // ───────── prosperity (user ruling 2026-09-26) ─────────
@@ -92,10 +95,15 @@ M.prosNext = (m) => { const l = M.prosLv(m); return l >= M.PROS_MAX ? null : M.P
 // so it can always be dug); M.ringOf is the level that opens a cell
 const LAND = [[2, 0], [4, 0], [3, 1], [2, 1], [4, 1], [1, 0], [5, 0], [2, 2], [4, 2], [1, 1], [5, 1], [0, 0], [6, 0], [1, 2], [5, 2], [0, 1], [6, 1], [0, 2], [6, 2], [3, 2]];
 const LAND_N = M.LAND_N = [0, 5, 7, 9, 11, 13, 15, 17, 19, 20];
-const LV_OF = {}; LAND.forEach(([c, r], i) => { let lv = 1; while (LAND_N[lv] <= i) lv++; LV_OF[c + ',' + r] = lv; });
+const LV_OF = {}, IDX = {}; LAND.forEach(([c, r], i) => { let lv = 1; while (LAND_N[lv] <= i) lv++; LV_OF[c + ',' + r] = lv; IDX[c + ',' + r] = i; });
 M.ringOf = (c, r) => (c === M.CORE.c && r === M.CORE.r ? 0 : LV_OF[c + ',' + r] || 99);
+// how much of it a game can ever open grows with the difficulty (2026-09-27: 「土地数量随着难度提高而提高，最低难度15可以，最高20」):
+// 普通 15 · 困难 17 · 噩梦 19 · 地狱 20 — the land Lv6 / 7 / 8 / 9 opens, about where each difficulty's last night falls
+M.LAND_MAX = [15, 17, 19, 20];
+M.landCap = (m) => M.LAND_MAX[Math.max(0, Math.min(M.LAND_MAX.length - 1, (m && m.gd) | 0))];
+M.landReach = (m, c, r) => (c === M.CORE.c && r === M.CORE.r) || (IDX[c + ',' + r] != null && IDX[c + ',' + r] < M.landCap(m));
 // an old save keeps the cells it had already dug or built on (m.landKeep)
-M.unlocked = (m, c, r) => M.ringOf(c, r) <= M.prosLv(m) || !!(m && m.landKeep && m.landKeep[c + ',' + r]);
+M.unlocked = (m, c, r) => (M.ringOf(c, r) <= M.prosLv(m) && M.landReach(m, c, r)) || !!(m && m.landKeep && m.landKeep[c + ',' + r]);
 M.lockedCell = (m, c, r) => !M.unlocked(m, c, r);
 
 // ───────── rock: only the unlocked rings can be dug; terrain shows as soon as its ring opens ─────────

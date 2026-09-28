@@ -114,7 +114,7 @@ G.endBack = function () {
 G.passDay = function () {
   if (this.raidPrep) { this.deny('混沌来袭：先选好守城的领袖', '#ff6a5a'); return []; }
   const m = this.meta, from = m.day, logs = M.advanceDay(m);
-  m.portal.hp = Math.min(M.portalMax(m), m.portal.hp + M.portalMax(m) * 0.15); this.save();
+  this.save();   // the main base heals only through a room that does it (修缮坊), never by itself (user ruling 2026-09-27)
   const ups = m._lvUps || []; m._lvUps = null; const steps = [];
   ups.forEach(u => steps.push({ run: () => { const h = m.heroes.find(x => x.id === u.id); if (!h) return; try { M.T && M.T.ev('lvup', { src: 'daily', lv: h.lv }); } catch (e) {} this.lvUpFx(h, u.lv0, h.lv, u.p0, M.heroPower(h, m)); }, until: () => !this.lvFx }));
   // finished rooms pop one after another in a single beat (was a full second each: 2026-09-27 playtest)

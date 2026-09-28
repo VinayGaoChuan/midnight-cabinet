@@ -26,17 +26,28 @@ const NEW = {
   scaffold:   { art: 'venice', n: '脚手架厂', cat: 'eng', q: 2, style: 'steam', cost: 220, days: 2, fx: { buildDays: -1 }, d: '所有建造少花 1 天（最少 1 天）。' },
   temple:     { art: 'artemis', n: '神殿', cat: 'faith', q: 2, style: 'fantasy', cost: 220, days: 2, fx: { faithDaily: 5 }, d: '每天产出 5 信仰值。' },
   bank:       { art: 'forbidden', n: '钱庄', cat: 'store', q: 1, style: 'steam', cost: 160, days: 1, fx: { startWallet: 60 }, d: '每次出征开局多带 60 积分。' },
+  // the main base mends only here (user ruling 2026-09-27: 「每天回血应该是建筑的特性，而不是默认机制」); 15% a day, what the base
+  // used to get for free, now for a cell of land
+  mender:     { art: 'amundsen', n: '修缮坊', cat: 'eng', q: 0, style: 'steam', cost: 80, days: 1, fx: { portalRegen: 0.15 }, d: '主基地每天回复 15% 耐久。' },
 };
 Object.keys(NEW).forEach(k => { const o = NEW[k]; B[k] = Object.assign({ pw: 0 }, B[k], o); delete B[k].art; delete B[k].gone;
   if (M.PXR && M.PXR.defs && M.PXR.defs[o.art] && !M.PXR.has(k)) M.PXR.def(k, Object.assign({}, M.PXR.defs[o.art]));
   if (M.ROOM_D && M.ROOM_D[o.art] && !M.ROOM_D[k]) M.ROOM_D[k] = M.ROOM_D[o.art]; });
 M.ROOM_NEW = Object.keys(NEW);
+// 修缮坊 at work: each morning the main base gets back its share, up to the max
+const oAD = M.advanceDay;
+M.advanceDay = function (m) { const logs = oAD.apply(this, arguments);
+  const rg = m && m.portal ? M.baseMods(m).portalRegen || 0 : 0;
+  if (rg > 0) { const mx = M.portalMax(m), v = Math.round(Math.min(mx - m.portal.hp, mx * rg)); if (v > 0) { m.portal.hp += v; if (Array.isArray(logs)) logs.push({ t: '主基地耐久 +' + v }); } }
+  return logs; };
+// every base starts with a blueprint of it (old saves get theirs once)
+const mendBp = (m) => { if (m && m.inv && !m.mendV) { M.invAdd(m, 'bbp:mender', 1); m.mendV = 1; return true; } return false; };
 // 钱庄: the expedition sets out with points in hand (the answer to 「是不是应该有天赋或者建筑能够增加这个初始积分」)
 const oNR = M.newRun3;
 M.newRun3 = function (meta) { const run = oNR.apply(this, arguments); if (run && meta && !(run.region && run.region.tut)) { const w = Math.round(M.baseMods(meta).startWallet || 0); if (w > 0) { run.wallet += w; run.startGift = w; } } return run; };
 // a new game's stock holds no blueprint for a room that is gone
 const oNG = G.newGame;
-G.newGame = function () { const r = oNG.apply(this, arguments), m = this.meta; if (m && m.inv) { Object.keys(m.inv).forEach(k => { if (k.startsWith('bbp:') && B[k.slice(4)] && B[k.slice(4)].gone && !B[k.slice(4)].boss) delete m.inv[k]; }); m.roomV = 1; m.wonderV = 1; m.wonders = []; } return r; };
+G.newGame = function () { const r = oNG.apply(this, arguments), m = this.meta; mendBp(m); if (m && m.inv) { Object.keys(m.inv).forEach(k => { if (k.startsWith('bbp:') && B[k.slice(4)] && B[k.slice(4)].gone && !B[k.slice(4)].boss) delete m.inv[k]; }); m.roomV = 1; m.wonderV = 1; m.wonders = []; } return r; };
 // old saves: a landmark room standing becomes its wonder on the surface; any other room that is gone is paid back, and so
 // are its blueprints and its building sites
 M.roomFix = function (m) {
@@ -51,5 +62,5 @@ M.roomFix = function (m) {
   return true;
 };
 const oTick = G.tick;
-G.tick = function (dt) { const m = this.meta; if (m && m.base && m.roomV !== 1 && M.roomFix(m)) { this.save && this.save(); if (this.townSync) this.townSync(true); } return oTick.apply(this, arguments); };
+G.tick = function (dt) { const m = this.meta; if (m && m.base && m.roomV !== 1 && M.roomFix(m)) { this.save && this.save(); if (this.townSync) this.townSync(true); } if (m && m.base && !m.mendV && mendBp(m)) this.save && this.save(); return oTick.apply(this, arguments); };
 })();

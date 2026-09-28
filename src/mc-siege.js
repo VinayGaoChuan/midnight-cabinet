@@ -221,7 +221,7 @@ function oddsStep(g) {
   if (od.done >= ODDS.n) return;
   const quiet = M.Sfx.muted; M.Sfx.muted = true;
   try {
-    if (!od.run) { const c = JSON.parse(JSON.stringify(m)), day = M.nextRaid(m), mx = M.portalMax(c); c.day = day; c.portal.hp = Math.min(mx, c.portal.hp + mx * 0.15 * Math.max(0, day - m.day)); od.run = new M.Raid(c); od.k = 0; }
+    if (!od.run) { const c = JSON.parse(JSON.stringify(m)), day = M.nextRaid(m), mx = M.portalMax(c); c.day = day; c.portal.hp = Math.min(mx, c.portal.hp + mx * (M.baseMods(m).portalRegen || 0) * Math.max(0, day - m.day)); od.run = new M.Raid(c); od.k = 0; }
     const R = od.run, t0 = now(); while (!R.over && od.k < 30 * 300 && now() - t0 < ODDS.ms) { for (let i = 0; i < 20 && !R.over; i++) { R.step(1 / 30); od.k++; } }
     if (R.over || od.k >= 30 * 300) { od.done++; if (R.over === 'lose') od.lose++; od.run = null; }
   } catch (e) { od.done = ODDS.n; od.run = null; } finally { M.Sfx.muted = quiet; }

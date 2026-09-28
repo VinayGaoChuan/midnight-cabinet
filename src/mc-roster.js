@@ -112,9 +112,6 @@ const oChance = M.bpChance; if (oChance) M.bpChance = function () { return oChan
 // (mc-wonders.js), not a blueprint pick
 const oInfo = M.itemInfo;
 M.itemInfo = function (key) { if (key === PICK) return { n: '图纸三选一', icon: 'scroll', c: '#ffcf4a', q: 3, kind: '建筑图纸', d: '回到基地后，从三张建筑图纸里选一张。', sub: '三选一' }; return oInfo.apply(this, arguments); };
-// a prosperity level brings one too
-const oAD = M.advanceDay;
-M.advanceDay = function (m) { const l0 = m ? M.prosLv(m) : 0, x0 = m ? M.portalMax(m) : 0, r = oAD.apply(this, arguments); if (m && M.prosLv(m) > l0) { m.portal.hp = Math.min(M.portalMax(m), m.portal.hp + Math.max(0, M.portalMax(m) - x0)); } return r; };   // a level also adds the main base's new life
 const pickOpts = (m) => { const out = []; for (let i = 0; i < 40 && out.length < 3; i++) { const k = M.dropBp(1); if (k && k.startsWith('bbp:') && !out.includes(k) && (!M.bpUseful || M.bpUseful(m, k))) out.push(k); } return out; };
 G.bpOpen = function () {
   const m = this.meta, opts = pickOpts(m);

@@ -4,9 +4,9 @@
 // 伤亡是否恢复、谁输出高、谁扛伤、治疗多少」). Each fighter counts the life it took from foes (its summons count for it), the
 // life it lost, and the life it gave back to its own side (the fighter whose trait, attack or skill was running when the heal
 // came). The page shows the best of each among the army's own units, and how many fell — in a won fight every one of them is
-// back for the next (checked in the settlement code: nobody is taken off the roster). Hovering a unit shows what it is; the
-// 「倒下 N 支 · 下一仗全部归队」 line is gone (2026-09-27: 「这个文字删掉」).
-const M = window.MC, G = M.Game.prototype, BP = M.Battle3.prototype, DB = M.DB;
+// back for the next (checked in the settlement code: nobody is taken off the roster). The page shows one MVP with a stamp; the
+// numbers of every unit are in the panel behind the chart button.
+const M = window.MC, G = M.Game.prototype, BP = M.Battle3.prototype, DB = M.DB, S = M.Sfx;
 const who = (e) => (e && e.owner ? e.owner : e);
 const acting = (name) => { const o = BP[name]; if (!o) return; BP[name] = function (e) { const p = this._actor; this._actor = e; try { return o.apply(this, arguments); } finally { this._actor = p; } }; };
 ['call', 'attack', 'strike', 'sigTick'].forEach(acting);
@@ -27,11 +27,15 @@ BP.summon = function (key, side, x, y, life, src) { const e = oSum.apply(this, a
 M.battleReport = function (b) {
   if (!b || !b.ents) return null;
   const us = b.ents.filter(e => e.side === 'A' && !e.isHero && !e.summon && DB[e.kind]);
-  const row = (k, lab, col) => { const e = us.filter(x => (x[k] || 0) >= 1).sort((a, c) => c[k] - a[k])[0]; return e ? { lab, col, k: e.kind, n: DB[e.kind].n, qc: M.qc(DB[e.kind].q | 0), v: M.fmt(Math.round(e[k])), img: M.spriteURL(e.kind, 4) } : null; };
-  const rows = [row('stDmg', '输出最高', '#ff8a6a'), row('stTaken', '承伤最高', '#6fd0ff'), row('stHeal', '治疗最多', '#9cff7a')].filter(Boolean);
+  // the MVP (2026-09-27: 「不要列这些，因为已经有战报面板了……而是应该给一个MVP单位，并且要一个跟盖章一样的伟大的MVP效果」): the most done in
+  // the fight — damage dealt and life given back count in full, damage taken for the others counts half; its line is its own biggest
+  const sc = (e) => (e.stDmg || 0) + (e.stHeal || 0) + 0.5 * (e.stTaken || 0), best = us.filter(e => sc(e) >= 1).sort((a, c) => sc(c) - sc(a))[0];
+  let mvp = null;
+  if (best) { const parts = [['输出', best.stDmg || 0, '#ff8a6a'], ['治疗', best.stHeal || 0, '#9cff7a'], ['承伤', 0.5 * (best.stTaken || 0), '#6fd0ff']].sort((a, c) => c[1] - a[1]), top = parts[0], raw = top[0] === '承伤' ? best.stTaken : top[1];
+    mvp = { k: best.kind, n: DB[best.kind].n, qc: M.qc(DB[best.kind].q | 0), img: M.spriteURL(best.kind, 6), stat: top[0] + ' ' + M.fmt(Math.round(raw)), sc: top[2] }; }
   // every unit's numbers, for the panel behind the chart button
   const all = us.map(e => ({ k: e.kind, n: DB[e.kind].n, qc: M.qc(DB[e.kind].q | 0), img: M.spriteURL(e.kind, 4), dmg: Math.round(e.stDmg || 0), taken: Math.round(e.stTaken || 0), heal: Math.round(e.stHeal || 0), fell: !e.alive }));
-  return rows.length ? { rows, all } : null;
+  return mvp ? { mvp, all } : null;
 };
 const oSS = G.startSettle;
 G.startSettle = function () { const rep = M.battleReport(this.battle), r = oSS.apply(this, arguments); this.repPanel = null; if (this.settle && rep && this.settle.good) this.settle.rep = rep; return r; };
@@ -44,10 +48,24 @@ const stop = (e) => { if (e && e.stopPropagation) e.stopPropagation(); };
 G.repOpen = function (e) { stop(e); const st = this.settle; if (!st || !st.rep) return; this.repPanel = { sort: 'dmg', desc: true }; M.Sfx.click && M.Sfx.click(); this.tipData = null; this.bump(); };
 G.repClose = function (e) { stop(e); this.repPanel = null; M.Sfx.click && M.Sfx.click(); this.bump(); };
 G.repSort = function (k, e) { stop(e); const P = this.repPanel; if (!P) return; if (P.sort === k) P.desc = !P.desc; else { P.sort = k; P.desc = true; } M.Sfx.click && M.Sfx.click(); this.bump(); };
+const MVP_HIT = 740;   // ms after the card shows: the stamp's CSS fall (template: mvpSlam, 0.52 s delay) lands here
+const oTickM = G.tick;
+G.tick = function (dt) {
+  const r = oTickM.apply(this, arguments), st = this.settle;
+  if (st && st.mvpT != null && !st.mvpHit && performance.now() - st.mvpT > MVP_HIT) { st.mvpHit = 1;
+    const R = this.guideRect ? this.guideRect({ sel: '[data-g="mvp-stamp"]' }) : null, x = R ? R.x + R.w / 2 : 1100, y = R ? R.y + R.h / 2 : 820;
+    S.stamp && S.stamp(); S.impact && S.impact(); this.fx.kick && this.fx.kick(16); this.fx.flash && this.fx.flash('#ffe6d8', 0.25);
+    if (this.fx.ring) { this.fx.ring(x, y, 20, 260, '#e8434f', 14, 0.45); this.fx.ring(x, y, 10, 180, '#ffcf4a', 8, 0.35, 0.06); }
+    if (this.fx.burst) { this.fx.burst(x, y, '#e8434f', 26); this.fx.burst(x, y, '#ffcf4a', 16); }
+    if (this.fx.rays) this.fx.rays(x, y, '#ffcf4a', 1.2, { r: 360 }); }
+  return r;
+};
 const oView = G.view;
 G.view = function () {
   const v = oView.call(this), st = this.settle;
-  if (v.st && st) { const rep = st.rep; v.st.repOn = !!(rep && v.st.btnOn); v.st.rep = rep ? rep.rows.map(r => Object.assign({}, r, { tipOn: this.tipFn(() => M.unitTip(r.k)) })) : []; v.st.repIc = M.iconURL('u_bars', 2); v.st.repGo = (e) => this.repOpen(e); }
+  if (v.st && st) { const rep = st.rep; v.st.repOn = !!(rep && v.st.btnOn); v.st.repIc = M.iconURL('u_bars', 2); v.st.repGo = (e) => this.repOpen(e);
+    v.st.mvp = rep ? Object.assign({}, rep.mvp, { tipOn: this.tipFn(() => M.unitTip(rep.mvp.k)) }) : { n: '', img: '', qc: '#fff', stat: '', sc: '#fff' };
+    if (v.st.repOn && st.mvpT == null) st.mvpT = performance.now(); }
   const P = this.repPanel, rep = st && st.rep; v.rpOn = !!(P && rep);
   if (v.rpOn) {
     const mx = {}; COLS.forEach(([k]) => { mx[k] = Math.max(1, ...rep.all.map(r => r[k])); });
@@ -73,5 +91,5 @@ G.worldMove = function () { const r = oWM.apply(this, arguments), n = M._tipNode
   if (n && run && this.tipData && n.seen && FIGHT[n.type] && !(run.region && run.region.tut)) { const ks = M.foeKinds(run, n); if (ks.length) this.tipData = Object.assign({}, this.tipData, { lines: (this.tipData.lines || []).concat([{ t: '敌人：' + ks.join(' · '), c: '#ff9a8a' }]) }); }
   return r; };
 const oTip = G.tipFor;
-G.tipFor = function (key) { if (key === 'st-report') return { title: '战报', c: '#ffe08a', d: '这一仗谁出力最多。' }; if (key === 'st-stats') return { title: '战报详情', c: '#ffe08a', d: '每支部队的输出、承伤和治疗。' }; return oTip ? oTip.apply(this, arguments) : null; };
+G.tipFor = function (key) { if (key === 'st-report') return { title: 'MVP', c: '#ffe08a', d: '这一仗出力最多的部队。' }; if (key === 'st-stats') return { title: '战报详情', c: '#ffe08a', d: '每支部队的输出、承伤和治疗。' }; return oTip ? oTip.apply(this, arguments) : null; };
 })();

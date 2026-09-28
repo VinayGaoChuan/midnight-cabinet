@@ -25,7 +25,7 @@ M.lockedCell = function (m, c, r) {
 // ───────── the opening ─────────
 G.expandStart = function (up) {
   const m = this.meta, cells = [];
-  for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) { const R = M.ringOf(c, r); if (R > up.from && R <= up.to) cells.push({ c, r, d: Math.abs(c - M.CORE.c) + r * 1.05 + (c < M.CORE.c ? 0 : 0.01) }); }
+  for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) { const R = M.ringOf(c, r); if (R > up.from && R <= up.to && (!M.landReach || M.landReach(m, c, r))) cells.push({ c, r, d: Math.abs(c - M.CORE.c) + r * 1.05 + (c < M.CORE.c ? 0 : 0.01) }); }
   cells.sort((a, b) => a.d - b.d);
   const at = {}, W0 = 0.8, STEP = RM() ? 0.05 : 0.11; cells.forEach((o, i) => { o.at = W0 + 0.45 + i * STEP; at[o.c + ',' + o.r] = o.at; o.seed = (o.c * 7 + o.r * 13) % 11; });
   const tEnd = (cells.length ? cells[cells.length - 1].at : W0) + 1.7;
@@ -130,12 +130,13 @@ G.tipFor = function (key) {
   return oTip.apply(this, arguments);
 };
 const oCT = G.cellTip;
-G.cellTip = function (p) { const m = this.meta; if (p && !p.door && p.c != null && M.lockedCell(m, p.c, p.r)) return { title: '未解锁', c: '#8d8496', d: '繁荣度升到 Lv' + M.ringOf(p.c, p.r) + ' 解锁。' }; return oCT.apply(this, arguments); };
+const lockWhy = (m, c, r) => (M.landReach && !M.landReach(m, c, r) ? '更高的难度才开得到这块地。' : '繁荣度升到 Lv' + M.ringOf(c, r) + ' 解锁。');
+G.cellTip = function (p) { const m = this.meta; if (p && !p.door && p.c != null && M.lockedCell(m, p.c, p.r)) return { title: '未解锁', c: '#8d8496', d: lockWhy(m, p.c, p.r) }; return oCT.apply(this, arguments); };
 const oBC = G.baseClick;
 G.baseClick = function (sx, sy) {
   if (this.expand) return;
   const p = !this.raid && this.bv && this.bv.pick(sx, sy), m = this.meta;
-  if (p && !p.door && p.c != null && M.lockedCell(m, p.c, p.r)) { M.Sfx.click(); this.closePanel(); this.toast('繁荣度升到 Lv' + M.ringOf(p.c, p.r) + ' 解锁', '#8d8496'); return; }
+  if (p && !p.door && p.c != null && M.lockedCell(m, p.c, p.r)) { M.Sfx.click(); this.closePanel(); this.toast(lockWhy(m, p.c, p.r).replace(/。$/, ''), '#8d8496'); return; }
   return oBC.apply(this, arguments);
 };
 const oNG = G.newGame;
