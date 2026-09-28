@@ -128,6 +128,7 @@ mc-pxtown-s.js
 mc-pxtown-look.js
 mc-pxtown-r1.js
 mc-pxtown-r2.js
+mc-pxtown-r3.js
 mc-siege.js
 mc-knock.js
 mc-omen.js
