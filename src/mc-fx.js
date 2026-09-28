@@ -178,7 +178,7 @@ M.FxLayer = class {
       const d = this.t - it.t0; if (d < 0) return true;
       if (it.k === 'fly') {
         const p = d / it.life;
-        if (p >= 1 && !it.landed) { it.landed = true; this.burst(it.to.x, it.to.y, it.col, 12, { v: 300, s: 9, life: 0.5 }); this.spark(it.to.x, it.to.y, it.col, 10, { v: 520, w: 3, life: 0.3, g: 200 }); this.flare(it.to.x, it.to.y, 90, it.col, 0.2); this.ring(it.to.x, it.to.y, 10, 80, it.col, 6, 0.35); this.kick(1.2); M.Sfx.land(it.li || 0); it.onLand && it.onLand(); return false; }
+        if (p >= 1 && !it.landed) { it.landed = true; this.burst(it.to.x, it.to.y, it.col, 12, { v: 300, s: 9, life: 0.5 }); this.spark(it.to.x, it.to.y, it.col, 10, { v: 520, w: 3, life: 0.3, g: 200 }); this.flare(it.to.x, it.to.y, 90, it.col, 0.2); this.ring(it.to.x, it.to.y, 10, 80, it.col, 6, 0.35); this.kick(1.2); M.Sfx.land(it.li || 0); it.onLand && it.onLand(); M.onFlyLand && M.onFlyLand(it.to); return false; }   // M.onFlyLand: the room it lands in bounces (mc-bastion.js)
         return true;
       }
       return d < it.life;

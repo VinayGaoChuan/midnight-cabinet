@@ -363,21 +363,38 @@ function drawCrew(ctx, v, n, t, raid) {
   ctx.save(); ctx.translate(Math.round(v.x + v.side * 4), v.y + top + 6); if (v.side < 0) ctx.scale(-1, 1); ctx.drawImage(im, -im.cx, -im.footY); ctx.restore();
 }
 // the leader guards the portal: it stands on the ground beside the arch (2026-09-27: 「英雄，平时不要站在基地的房顶，而是要站在传送门旁边，
-// 表示守卫传送门，选好场景进入的时候，英雄会跳入传送门中。混沌战斗开始的时候，英雄会进入基地房间中，不再出现。战斗结束后，再出来」):
-// setting off, it leaps into the portal; while a raid is on it is inside the main base (its arrows come out of a window), and when
-// the fight is over it steps back out of the door
+// 表示守卫传送门，选好场景进入的时候，英雄会跳入传送门中」); setting off, it leaps into the portal
+// 混沌来袭 (2026-09-27, replacing 「混沌战斗开始的时候，英雄会进入基地房间中，不再出现」: 「改成英雄跳上基地顶部，然后体型变大，播放攻击
+// 动画，进行攻击，攻击力就是英雄的伤害」): it leaps onto the lookout on top of the clock tower, grows big there and shoots with its own
+// attack (the shot: mc-night.js, its stats: mc-bastion.js); when the fight is over it leaps back down beside the portal
+M.ROOF_SPOT = { x: DOOR_X, y: -232, k: 1.75 };   // feet on the lookout over the clock tower's tip (the main base's art tops out at y −221), size against the leader on the ground
+function drawLookout(ctx, t, lights) {
+  const R = M.ROOF_SPOT, x = R.x, y = R.y;
+  ctx.fillStyle = P.ink; ctx.fillRect(x - 64, y - 4, 128, 30); ctx.fillStyle = '#6a6278'; ctx.fillRect(x - 60, y, 120, 22); ctx.fillStyle = '#8a8298'; ctx.fillRect(x - 60, y, 120, 5);
+  for (let i = 0; i < 4; i++) { ctx.fillStyle = P.ink; ctx.fillRect(x - 64 + i * 36, y - 20, 22, 18); ctx.fillStyle = '#7a7288'; ctx.fillRect(x - 61 + i * 36, y - 17, 16, 13); }
+  ctx.fillStyle = P.ink; ctx.fillRect(x - 20, y + 22, 40, 24); ctx.fillStyle = '#5a5268'; ctx.fillRect(x - 16, y + 22, 32, 20);
+  const wv = RM() ? 0 : Math.sin(t * 5) * 3; ctx.fillStyle = P.ink; ctx.fillRect(x + 70, y - 150, 5, 150); ctx.fillStyle = P.red; ctx.fillRect(x + 75, y - 150 + wv, 50, 28); ctx.fillStyle = P.gold; ctx.fillRect(x + 75, y - 150 + wv, 50, 5);
+  if (lights) lights.push({ x, y: y - 60, r: 260, c: '#ffe6b0', f: 1 });
+}
 function drawLeader(ctx, g, t, raid, lights) {
   const h = g.meta.heroes[0]; if (!h) return; const H = M.HEROES[h.cls]; if (!H) return;
-  if (raid && !raid.over) return;
-  const now = performance.now(), leap = g.leapT != null ? (now - g.leapT) / 700 : -1; if (leap >= 1) return;
-  const X0 = DOOR_X + 150, Y0 = -8, out = raid && raid.over ? Math.min(1, (raid.overT || 0) / 0.6) : 1;
-  let x = DOOR_X + (X0 - DOOR_X) * out, y = Y0, k = 1, a = out < 1 ? out : 1;
-  if (leap >= 0) { const q = Math.min(1, leap), e = q * q; x = X0 + (DOOR_X - X0) * q; y = Y0 + (-125 - Y0) * e - Math.sin(q * Math.PI) * 120; k = 1 - 0.8 * e; a = 1 - Math.max(0, (q - 0.7) / 0.3); }
-  const st = leap >= 0 ? 'move' : 'idle', f = Math.floor(t * (leap >= 0 ? 10 : 2.5));
+  const X0 = DOOR_X + 150, Y0 = -8, R = M.ROOF_SPOT, RF = raid && raid.roof;
+  if (raid) drawLookout(ctx, t, lights);
+  let x = X0, y = Y0, k = 1, a = 1, st = 'idle', f = Math.floor(t * 2.5), face = 1;
+  const arc = (q, xa, ya, xb, yb, hh) => ({ x: xa + (xb - xa) * q, y: ya + (yb - ya) * q - Math.sin(q * Math.PI) * hh });
+  if (raid) {
+    const up = cl((raid.t || 0) / 0.7, 0, 1), down = raid.over ? cl(((raid.overT || 0) - 0.3) / 0.6, 0, 1) : 0;
+    if (down > 0) { const p = arc(eo(down), R.x, R.y, X0, Y0, 170); x = p.x; y = p.y; k = R.k + (1 - R.k) * down; if (down < 1) { st = 'move'; f = Math.floor(t * 10); } }
+    else if (up < 1) { const p = arc(eo(up), X0, Y0, R.x, R.y, 200); x = p.x; y = p.y; k = 1 + (R.k - 1) * up; st = 'move'; f = Math.floor(t * 10); }
+    else { x = R.x; y = R.y; k = R.k; face = (RF && RF.face) || 1; const q = RF && RF.fireT != null ? raid.t - RF.fireT : 9; if (q < 0.3) { st = 'atk'; f = q < 0.075 ? 0 : q < 0.18 ? 1 : 2; } }
+  } else {
+    const now = performance.now(), leap = g.leapT != null ? (now - g.leapT) / 700 : -1; if (leap >= 1) return;
+    if (leap >= 0) { const q = Math.min(1, leap), e = q * q; x = X0 + (DOOR_X - X0) * q; y = Y0 + (-125 - Y0) * e - Math.sin(q * Math.PI) * 120; k = 1 - 0.8 * e; a = 1 - Math.max(0, (q - 0.7) / 0.3); st = 'move'; f = Math.floor(t * 10); }
+  }
   const im = M.P16 && M.P16.img(H.sprite, st, f, null, 96); if (!im) return;
-  ctx.save(); ctx.globalAlpha *= a; ctx.translate(x, y); ctx.scale(k, k); ctx.drawImage(im, -im.cx, -im.footY); ctx.restore();
-  if (leap < 0) { ctx.fillStyle = P.ink; ctx.fillRect(x + 40, y - 150, 5, 150); ctx.fillStyle = P.red; const wv = RM() ? 0 : Math.sin(t * 5) * 3; ctx.fillRect(x + 45, y - 150 + wv, 44, 26); ctx.fillStyle = P.gold; ctx.fillRect(x + 45, y - 150 + wv, 44, 5); }
-  if (lights) lights.push({ x, y: y - 50, r: 180, c: '#ffe6b0', f: 1 });
+  ctx.save(); ctx.globalAlpha *= a; ctx.translate(x, y); ctx.scale(k * face, k); ctx.drawImage(im, -im.cx, -im.footY); ctx.restore();
+  if (!raid && !(g.leapT != null)) { ctx.fillStyle = P.ink; ctx.fillRect(x + 40, y - 150, 5, 150); ctx.fillStyle = P.red; const wv = RM() ? 0 : Math.sin(t * 5) * 3; ctx.fillRect(x + 45, y - 150 + wv, 44, 26); ctx.fillStyle = P.gold; ctx.fillRect(x + 45, y - 150 + wv, 44, 5); }
+  if (lights) lights.push({ x, y: y - 50 * k, r: 180 * k, c: '#ffe6b0', f: 1 });
 }
 { const oLaunch = G.launch; G.launch = function () { const r = oLaunch.apply(this, arguments); if (!this.panel) this.leapT = performance.now(); return r; };
   const oGo = G.go; G.go = function (s) { if (s !== 'base') this.leapT = null; return oGo.apply(this, arguments); }; }

@@ -159,6 +159,7 @@ mc-swap.js
 mc-synergy.js
 mc-shopcard.js
 mc-report.js
+mc-bastion.js
 mc-tutor.js
 mc-perf.js
 mc-boot.js

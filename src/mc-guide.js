@@ -56,7 +56,7 @@ const CONCEPTS = [
   { id: 'pros', cat: '基地', icon: 't_pros', title: '繁荣度', line: '房间的品质越高，繁荣度涨得越多；每升一级多开几块地、选一座奇观。', scr: 'base', sel: '[data-tip="b-pros"]' },
   { id: 'town', cat: '基地', icon: 'f_defense', title: '地面城镇', line: '地下每建一座建筑，地面就升起一座，城市越建越大。', scr: 'base', at: (g) => townRect(g, () => true), when: (g) => !!(g.town && Object.keys(g.town.vis).length) },
   { id: 'locked', cat: '基地', icon: 't_pros', title: '未解锁的地块', line: '黑色的地块还没解锁，繁荣度升级后才能挖。', scr: 'base', at: (g) => lockedRect(g) },
-  { id: 'heroes', cat: '领袖', icon: 't_command', title: '领袖', line: '你的化身：出征带队，夜里站在主基地屋顶指挥。点卡片看天赋；卡片上的黄点 = 有没用的天赋点。', scr: 'base', sel: '[data-fx="heroes"]' },
+  { id: 'heroes', cat: '领袖', icon: 't_command', title: '领袖', line: '你的化身：出征带队，夜里跳上主基地塔顶射向敌群。点卡片看天赋；卡片上的黄点 = 有没用的天赋点。', scr: 'base', sel: '[data-fx="heroes"]' },
   { id: 'rock', cat: '基地', icon: 'u_pick', title: '挖掘', line: '点和房间相邻的岩层，花物资和天数挖开，挖通才能建房间。', scr: 'base', sel: '[data-g="dig"]' },
   { id: 'bp', cat: '基地', icon: 'g_scroll', title: '建筑图纸', line: '列表里只有你有图纸的建筑，×2 就是有 2 张。图纸靠出征拿。', scr: 'base', sel: '[data-g="bld"]' },
   { id: 'portal', cat: '出征', icon: 'g_gate', title: '传送门', line: '通往今天能去的世界；每一趟最后只带回一支部队守夜。', scr: 'base', at: (g) => { if (g.panel || !g.bv || !M.BASE_GEO) return null; const p = g.bv.toScreen(M.BASE_GEO.DOOR_X, -130); return { x: p.x - 100, y: p.y - 110, w: 200, h: 230 }; } },

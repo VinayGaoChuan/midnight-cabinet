@@ -60,7 +60,9 @@ M.buildOptions = function (m) { const L = oBO.apply(this, arguments); return L.m
 // the main base holds out longer now that the town, not the leader, defends it (1000 → 2400; old saves keep their share)
 M.PORTAL_BASE = 2400;
 // …and grows with prosperity (user ruling 2026-09-26: 「基地生命值要随着繁荣度而增加，否则后面的敌人越来越强，摸一下基地就死」): +35% a level
-M.PORTAL_PROS = 0.45;   // 2026-09-27: levels come slower now (0.35 → 0.45 keeps the main base as tough on the same day)
+// 2026-09-27 later: +15% a level only (「繁荣度增长时带来的基地的血量提升也不能太大，玩家如果想要把基地打造成堡垒一样的血牛应该建造对应的建筑，
+// 例如城墙之类的」): the fortress is built with the 城防 rooms and talents (mc-bastion.js)
+M.PORTAL_PROS = 0.15;
 // Only a prosperity level raises the max, and only the max (user ruling 2026-09-27: 「繁荣升级后，血量不要自动布满，每天回血应该是
 // 建筑的特性，而不是默认机制……如果基地本来就没血了，那一碰就死很正常」「只有繁荣度升级，才会增加最大血量，通过1天，不应该增加最大血量」):
 // what is lost stays lost until a 修缮坊 (mc-roomset.js), a 修门石 or the torch of 自由女神像 mends it

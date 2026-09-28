@@ -95,7 +95,7 @@ M.talentTree = function (rarity) {
   const give = (i, pred) => {
     const n = nodes[i], near = nodes.filter((x, j) => j !== i && x.f && (x.p === n.p || j === n.p || x.p === i)).map(x => x.f);
     const c = famFor(n.L).filter(k => !near.includes(k) && (!pred || pred(T[k]))); if (!c.length) return false;
-    n.f = M.wpick(c, k => (T[k].strat ? 2 : T[k].sc === 'base' ? 2 : 3)); if (T[n.f].voc) n.voc = pick(Object.keys(VK)); else delete n.voc; return true;
+    n.f = M.wpick(c, k => (T[k].strat ? 2 : T[k].sc === 'base' ? 2 : 3) * (M._talLean && T[k].lean === M._talLean ? 4 : 1)); if (T[n.f].voc) n.voc = pick(Object.keys(VK)); else delete n.voc; return true;   // M._talLean: the leader's leaning (流派, mc-bastion.js) grows more of its talents
   };
   nodes.forEach((n, i) => give(i));
   // every tree has something that changes how a run is played, and something for the base

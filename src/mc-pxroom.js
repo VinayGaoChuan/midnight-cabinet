@@ -584,9 +584,12 @@ PXR.draw = function (ctx, X, Y, key, t, o, id, zoom) {
   const skip = s.fn > 0 && (lo ? stale < (raid ? 5 : 2) && (FB.n >= 1 || t - (FB.lo || -9) < gapLo || stale < 0.1 * every) : stale < 0.2 && ((every > 1 && (s.fn + (hstr(id) % every)) % every !== 0) || FB.ms > PXR.BUDGET));
   if (skip) s.fn++; else { const t0 = performance.now(); render(s, t, o || NO); s.cx.putImageData(s.img, 0, 0); s.lr = t; FB.ms += performance.now() - t0; FB.n++; FB.lo = t; }
   const sel = s.ev.sel != null ? Math.max(0, 1 - (t - s.ev.sel) / 0.45) : 0, bt = s.ev.built != null ? t - s.ev.built : 9;
-  const pop = 1 + 0.035 * Math.sin(sel * Math.PI) + (bt < 0.5 ? 0.05 * Math.sin(bt / 0.5 * Math.PI) : 0), ww = W * 2, wh = H * 2, cw = ww * pop, ch = wh * pop;
+  // 'land': something flew in (a blueprint into the 仓库 …) — the room squashes and springs back (2026-09-27: 「如果有东西飞到房间中……
+  // 那么对应的房间要弹动」), standing on its floor
+  const lt = s.ev.land != null ? t - s.ev.land : 9, lq = lt < 0.55 ? lt / 0.55 : 1, sq = lq < 1 ? Math.sin(lq * Math.PI * 2.5) * (1 - lq) * 0.09 : 0;
+  const pop = 1 + 0.035 * Math.sin(sel * Math.PI) + (bt < 0.5 ? 0.05 * Math.sin(bt / 0.5 * Math.PI) : 0), ww = W * 2, wh = H * 2, cw = ww * pop * (1 + sq * 0.6), ch = wh * pop * (1 - sq);
   const shake = bt < 2.4 && bt > 2.1 ? Math.round(Math.sin(bt * 90) * 2) : 0;
-  const sm = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = (zoom || 1) < 0.9; ctx.drawImage(s.cv, 0, 0, W, H, X + (ww - cw) / 2 + shake, Y + (wh - ch) / 2, cw, ch); ctx.imageSmoothingEnabled = sm;
+  const sm = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = (zoom || 1) < 0.9; ctx.drawImage(s.cv, 0, 0, W, H, X + (ww - cw) / 2 + shake, Y + (wh - wh * pop) / 2 + (wh * pop - ch), cw, ch); ctx.imageSmoothingEnabled = sm;
 };
 // room events from the game: 'sel' (clicked), 'built' (finished: lights come on one by one), 'hit'
 PXR.poke = function (id, kind) { const s = SLOTS[id]; if (!s) return; use(s.key); s.ev[kind] = s.lt == null ? 0 : s.lt; if (kind === 'built') { s.P.a.length = 0; for (let i = 0; i < 26; i++) s.P.burst('dust', 10 + Math.random() * 130, 6 + Math.random() * 6, 1, { life: 2.4, sp: 4 }); } if (kind === 'sel') { const B = BAKED[s.key]; if (B) B.lights.forEach(l => s.P.burst('glint', l.x, l.y, 3, { sp: 30, life: 0.5, w: 8, h: 8 })); } };

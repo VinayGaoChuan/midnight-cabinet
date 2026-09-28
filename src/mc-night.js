@@ -177,18 +177,28 @@ M.nightFoe = function (m, d) {
 };
 M.nightBase = (day) => { const C = M.NIGHT.CURVE; if (day <= C[0][0]) return C[0][1]; for (let i = 1; i < C.length; i++) if (day <= C[i][0]) { const [d0, p0] = C[i - 1], [d1, p1] = C[i]; return p0 + (p1 - p0) * (day - d0) / (d1 - d0); } const L = C[C.length - 1]; return L[1] + (day - L[0]) * 900; };
 M.nightPower = (m) => { const d = Math.max(1, (m && m.day) || 1), k = M.nightKind(d); return Math.round(M.nightBase(d) * (k === 'boss' ? M.NIGHT.BOSS : k === 'strong' ? M.NIGHT.STRONG : 1) * (1 - ((m && m.raidWeak) || 0))); };
-M.raidWaves = (m) => Math.min(4, 2 + Math.floor((((m && m.day) || 1) - 1) / 5));
 const sideOf = (list) => list.reduce((s, x) => { const d = DB[x.type]; if (!d) return s; const k = x.elite ? 1.15 : 1; s.hp += d.hp * k * (x.hpMul || 1); s.dps += d.atk * k * (x.atkMul || 1) * (d.as || 100) / 100; return s; }, { hp: 0, dps: 0 });
+// The night comes as one crowd (user ruling 2026-09-27: 「守城的时候，敌人数量太少了……敌人是要一次性一起出现的，而不是分波出现的。
+// 守城时，要有那种，人山人海的感觉，这种感觉应该从第1天就开始，敌人可以弱，但数量不能少」): 40 monsters on the first night, 5 more
+// every night, at most 140 (70 on phones). A few kinds of small monsters make the crowd, one bigger kind walks in it, and from
+// night 4 some of the bigger ones are elites. Everyone sets off at once from beyond both ends of the town, spread out in depth;
+// the night's strength (the power curve) is shared out over all of them, so each one is weak and the whole is as strong as before.
+M.RAID_CROWD = { n0: 40, perDay: 5, max: 140, maxLow: 70, deep: 760 };
+M.raidCount = (m) => { const C = M.RAID_CROWD, d = Math.max(1, (m && m.day) || 1); return Math.min(M.LOW_FX ? C.maxLow : C.max, C.n0 + C.perDay * (d - 1)); };
 M.makeRaidCfg = function (m) {
-  const day = (m && m.day) || 1, target = M.nightPower(m), waves = M.raidWaves(m), list = [], foe = M.nightFoe(m, day);
+  const day = (m && m.day) || 1, target = M.nightPower(m), N = M.raidCount(m), list = [], foe = M.nightFoe(m, day), C = M.RAID_CROWD;
   // the foe's share of the night's life and of its blows: a lot of the life, less of the blows (2026-09-26 night sims: a boss
   // with 40% of a day-20 night's damage broke every garrison, even one 1.3 times as strong as the night)
-  const [hs, ds] = foe ? M.NIGHT.SHARE[foe.k] : [0, 0], rest = Math.sqrt((1 - hs) * (1 - ds));
-  for (let i = 0; i < waves; i++) M.pickWave(Math.max(60, target * rest / waves), { elite: i === waves - 1 && day >= 4 }).forEach((e, j) => list.push(Object.assign(e, { spawn: i === 0 ? 0.1 + j * 0.05 : 1.6 + i * 11 + j * 0.35, y: 90 + rnd() * 540 })));
-  const f = Math.max(0.05, target * rest / Math.max(1, M.powerOf(sideOf(list)))); list.forEach(s => { s.hpMul = +f.toFixed(3); s.atkMul = +f.toFixed(3); });
+  const [hs, ds] = foe ? M.NIGHT.SHARE[foe.k] : [0, 0], rest = Math.sqrt((1 - hs) * (1 - ds)); mbNames();
+  const pool = (M.ENEMY_POOL || []).filter(k => DB[k] && !DB[k].boss && DB[k].g !== '不朽' && !MB_NAME[k] && DB[k].type === 'Enemy').sort((a, b) => (DB[a].cost || 0) - (DB[b].cost || 0));
+  const small = pool.slice(0, Math.max(3, Math.round(pool.length * 0.35))), mid = pool.slice(Math.round(pool.length * 0.35), Math.round(pool.length * 0.75));
+  const pickN = (a, n) => { const c = a.slice(), o = []; while (c.length && o.length < n) o.push(c.splice(Math.floor(rnd() * c.length), 1)[0]); return o; };
+  const kinds = pickN(small, 3), big = pickN(mid.length ? mid : small, 1)[0] || kinds[0], nE = day >= 4 ? Math.min(6, 1 + Math.floor((day - 4) / 5)) : 0;
+  for (let i = 0; i < N; i++) { const bigOne = i % 6 === 5; list.push({ type: bigOne ? big : kinds[i % kinds.length], elite: bigOne && i < 6 * nE, side: i % 2 ? 1 : -1, dx: rnd() * C.deep, y: -6 - rnd() * 70, spawn: rnd() * 0.6 }); }
+  const f = Math.max(0.002, target * rest / Math.max(1, M.powerOf(sideOf(list)))); list.forEach(s => { s.hpMul = +f.toFixed(4); s.atkMul = +f.toFixed(4); });
   if (foe) {
     const all = sideOf(list), d = DB[foe.type], dps = d.atk * 1.15 * (d.as || 100) / 100;
-    list.push({ type: foe.type, elite: true, champ: foe.k, nm: foe.n, spawn: 1.6 + (waves - 1) * 11 + 3, y: 390, hpMul: +(all.hp * hs / (1 - hs) / (d.hp * 1.15)).toFixed(3), atkMul: +(all.dps * ds / (1 - ds) / dps).toFixed(3) });
+    list.push({ type: foe.type, elite: true, champ: foe.k, nm: foe.n, spawn: 2.4, side: rnd() < 0.5 ? -1 : 1, dx: C.deep * 0.5, y: -30, hpMul: +(all.hp * hs / (1 - hs) / (d.hp * 1.15)).toFixed(3), atkMul: +(all.dps * ds / (1 - ds) / dps).toFixed(3) });
   }
   list.sort((a, b) => a.spawn - b.spawn);
   return { mode: 'hold', w: 1 + day * 0.4, type: 'raid', list, dur: 9999, budget: target, raid: 1, night: target, foe };
@@ -253,7 +263,7 @@ M.NightRaid = class extends Siege {
     this.roof = h && H ? { x: DOOR_X + 120, y: MB.top + 90,   // the leader is inside the main base: its arrows leave a window (mc-town.js)
        dmg: M.heroAtk(h, meta) * M.NIGHT.ROOF, cd: H.cd || 1, range: M.NIGHT.ROOF_R, t: 0.6 } : null;
     const cfg = M.makeRaidCfg(meta);
-    this.list = cfg.list.map((x, i) => ({ t: 1 + x.spawn * 1.2, type: x.type, elite: x.elite, champ: x.champ, nm: x.nm, hpMul: x.hpMul, atkMul: x.atkMul, side: x.champ ? (rnd() < 0.5 ? -1 : 1) : i % 2 ? 1 : -1 })).sort((a, b) => a.t - b.t);
+    this.list = cfg.list.map((x, i) => ({ t: 1 + x.spawn * 1.2, type: x.type, elite: x.elite, champ: x.champ, nm: x.nm, hpMul: x.hpMul, atkMul: x.atkMul, side: x.side != null ? x.side : x.champ ? (rnd() < 0.5 ? -1 : 1) : i % 2 ? 1 : -1, dx: x.dx, y: x.y })).sort((a, b) => a.t - b.t);
     this.spawnI = 0; this.total = this.list.length; this.target = cfg.night; this.foe = cfg.foe; this.zones = [];
   }
   // the garrison sees the whole field (user ruling 2026-09-26: 「每个单位的警戒范围……应该都是全屏才对」): the nearest monster on
@@ -265,8 +275,8 @@ M.NightRaid = class extends Siege {
   }
   spawn(x) {
     const d = DB[x.type]; if (!d) return; const k = x.elite ? 1.15 : 1, hp = d.hp * k * (x.hpMul || 1), boss = x.champ === 'boss';
-    const e = { side: 'E', kind: x.type, sprite: x.type, s: boss ? 8 : x.champ ? 6.5 : x.elite ? 5 : 4, x: x.side < 0 ? this.edgeL - 420 - Math.random() * 80 : this.edgeR + 420 + Math.random() * 80, y: x.champ ? -12 : -18 - Math.random() * 16,
-      hp, max: hp, atk: d.atk * k * (x.atkMul || 1), cd: 100 / Math.max(20, d.as || 100), range: d.ranged === 1 ? 260 : boss ? 110 : 80, spd: x.champ ? 80 : 95 + Math.random() * 30, ranged: d.ranged === 1 && !boss, t: Math.random(), alive: true, face: -x.side, elite: !!x.elite };
+    const dx = x.dx != null ? x.dx : Math.random() * 80, e = { side: 'E', kind: x.type, sprite: x.type, s: boss ? 8 : x.champ ? 6.5 : x.elite ? 5 : 4, x: x.side < 0 ? this.edgeL - 420 - dx : this.edgeR + 420 + dx, y: x.y != null ? x.y : x.champ ? -12 : -18 - Math.random() * 16,
+      hp, max: hp, atk: d.atk * k * (x.atkMul || 1), cd: 100 / Math.max(20, d.as || 100), range: d.ranged === 1 ? 260 : boss ? 110 : 80, spd: x.champ ? 80 : 88 + Math.random() * 40, ranged: d.ranged === 1 && !boss, t: Math.random(), alive: true, face: -x.side, elite: !!x.elite };
     if (x.champ) {
       Object.assign(e, { champ: x.champ, boss, nm: x.nm || d.n, slamAt: this.t + 4 });
       const K = NK[x.champ]; this.champ = e; this.shake = Math.max(this.shake, boss ? 22 : 14); S.alarm && S.alarm(); S.impact && S.impact();
@@ -305,7 +315,7 @@ M.NightRaid = class extends Siege {
     const R = this.roof; if (!R || this.over) return;
     R.t -= dt; if (R.t > 0) return;
     const tg = this.ents.filter(o => o.alive && o.side === 'E' && Math.abs(o.x - R.x) <= R.range).sort((a, b) => Math.abs(a.x - DOOR_X) - Math.abs(b.x - DOOR_X))[0];
-    if (!tg) return; R.t = R.cd; R.fireT = this.t; this.proj.push({ k: 'bolt', x: R.x, y: R.y, tg, dmg: R.dmg, col: '#ffcf4a', speed: 1600 }); S.shoot && S.shoot();
+    if (!tg) return; R.t = R.cd; R.fireT = this.t; R.face = Math.sign(tg.x - R.x) || R.face || 1; this.proj.push({ k: 'bolt', x: R.x + (R.face || 1) * (R.hx || 0), y: R.y, tg, dmg: R.dmg, col: R.col || '#ffcf4a', speed: 1600, xs: R.xs }); S.shoot && S.shoot();
   }
   // the boss's marks on the ground, under everything
   draw(ctx, lights) {
@@ -332,7 +342,8 @@ BP.init = function (run) {
   return r;
 };
 // the leader's shot from the roof hits like a heavy crossbow; its reach covers the ground in front of the town
-Object.assign(M.NIGHT, { ROOF: 1.5, ROOF_R: 1000 });
+// 2026-09-27: 「攻击力就是英雄的伤害」— ×1, and it reaches the crowd far out (buildings and talents raise it: mc-bastion.js)
+Object.assign(M.NIGHT, { ROOF: 1, ROOF_R: 1700 });
 // monsters that reach the main base hit it at half strength: a night lost to a thin garrison hurts, it does not end the
 // game at once (2026-09-26 sims: the base fell in 40 s on night 2 with three units out)
 if (M.SIEGE_K) M.SIEGE_K.bldAtk = 0.5;
@@ -351,9 +362,9 @@ G.raidEnd = function () {
   const m = this.meta, N = this.night || (this.night = { t: 0, day: m.day }), won = r.over === 'win';
   r.done = true; m.portal.hp = Math.max(0, Math.round(r.portal.hp)); m.lastRaid = m.day; m.raids = (m.raids || 0) + 1; m.raidWeak = 0; m.st = m.st || {};
   const fell = r.ents.filter(e => e.side === 'A' && e.gar && !e.alive).length;
-  let sup = 0; const sh = Math.round((r.kills || 0) * 1.2);
+  let sup = 0; const live = r.shGot != null, sh = live ? r.shGot : Math.round((r.kills || 0) * 1.2);   // live: already added kill by kill (mc-bastion.js)
   if (won) { m.st.raidsWon = (m.st.raidsWon || 0) + 1; sup = Math.round(30 + m.day * 10); m.supplies += sup; if (m.day >= 15 && this.prof) { (this.prof.stats || (this.prof.stats = {})).raid15 = 1; this.saveProfile && this.saveProfile(); } this.achCheck2 && this.achCheck2(); }
-  m.shards += sh;
+  if (!live) m.shards += sh;
   N.res = { won, dmg: Math.round(r.portal.max - r.portal.hp), portal: +(Math.max(0, r.portal.hp) / Math.max(1, r.portal.max)).toFixed(2), sup, sh, kills: r.kills || 0, fell, secs: Math.round(r.t) };
   this.save();
   try { M.T && M.T.ev('night', { day: m.day, won, kills: r.kills || 0, fell, gar: garOf(m).length, portal: N.res.portal, secs: N.res.secs }); } catch (e) {}
