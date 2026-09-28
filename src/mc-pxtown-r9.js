@@ -9,19 +9,21 @@ const near = (G) => G.s >= 0.8, worker = (G, x, dir, act) => { if (near(G)) G.wo
 // ───────── 影刃密室 ev_ass2: a narrow dark house leaning to one side, eaves jutting, a crow on the roof, a grapple rope, violet lanterns ─────────
 BS('ev_ass2', { kind: 'arcane', col: '#b070ff', look: 'mage', icon: 'sword', paint(S, sc, G, st) {
   const { L, R, cx, gy, w, h } = G;
-  const hw = Math.round(w * 0.34), hh = Math.round(h * [0, 0.8, 0.95, 1.05][st]), lean = 0.12, x0 = cx - (hw >> 1);
-  // the leaning tower-house: storeys of dark planks, each shifted a little, jutting eaves between them
-  const floors = st >= 2 ? 4 : 3, fh = Math.round(hh / floors); for (let f = 0; f < floors; f++) { const y1 = gy - f * fh, sx = x0 + Math.round(f * fh * lean); K.wall(S, sx, y1 - fh + 2, hw, fh - 2, ['magic', 3, 'vplanks']); S.beg(); S.poly([[sx - 3, y1 - fh + 2], [sx + hw + 3, y1 - fh + 2], [sx + hw + 1, y1 - fh + 4], [sx - 1, y1 - fh + 4]], 'ink', 2); S.end();
-    const lw = sc.light({ x: sx + hw / 2, y: y1 - fh / 2, z: 6, r: 10, i: 0.6, c: '#b070ff', fl: 'candle', ph: f, tint: 0.5 }); S.beg(); S.rect(sx + (hw >> 1) - 1, y1 - fh + 6, 3, 4, 'arcane', f % 2 ? 7 : 9, { e: lw + 1 }); S.end(); }
-  const tx = x0 + Math.round(floors * fh * lean), tt = gy - hh; K.roof(S, tx - 3, tt + 2, hw + 6, Math.round(hw * 0.7), 'cone', 'ink', 2);
-  // the crow on the ridge (flies off in a show), the grapple rope down the side, the dagger sign
-  G.an.push((D, t, s) => { const gone = s.st.cheer ? 1 : 0, x = tx + (hw >> 1) + (gone ? Math.round(t * 20 % 30) : 0), y = tt - Math.round(hw * 0.7) + 1 - (gone ? Math.round(t * 12 % 20) : 0), hop = Math.sin(t * 2) > 0.95 ? 1 : 0; D.lay('front'); D.rect(x - 1, y - 2 - hop, 3, 2, 'ink', 2); D.px(x + 2, y - 3 - hop, 'ink', 2); D.px(x + 3, y - 3 - hop, 'gold', 8); D.px(x - 2, y - 1 - hop, 'ink', 2); });
-  S.lay('front'); S.beg(); S.line(tx + hw + 2, tt + 4, tx + hw + 1, gy - 6, 'leather', 5); S.px(tx + hw + 2, tt + 3, 'iron', 9); S.px(tx + hw + 3, tt + 2, 'iron', 9); S.px(tx + hw + 1, tt + 2, 'iron', 9); S.end();
-  S.lay('back'); S.beg(); S.hl(x0 - 6, gy - fh + 2, 6, 'iron', 5); S.box(x0 - 7, gy - fh + 3, 5, 7, 'ink', 2); S.vl(x0 - 5, gy - fh + 4, 5, 'iron', 10); S.hl(x0 - 6, gy - fh + 7, 3, 'brass', 8); S.end();
-  // violet paper lanterns on a line; the door low and dark
-  [x0 - 4, x0 + hw + 5].forEach((x, i) => K.lantern(S, sc, x, gy - Math.round(fh * 1.4), { c: '#b070ff', m: 'arcane' })); S.beg(); S.rect(x0 + 2, gy - 7, 4, 7, 'ink', 1); S.end();
-  if (st >= 3) { const lm = sc.light({ x: tx + hw + 12, y: tt - 6, z: 20, r: 30, i: 0.6, c: '#c090ff', tint: 0.3 }); S.lay('back'); S.beg(); S.ell(tx + hw + 12.5, tt - 6, 6, 6, 'arcane', 9, { e: lm + 1 }); S.ell(tx + hw + 14.5, tt - 7, 5, 5, 'night', 1); S.end(); G.an.push((D, t) => { D.lay('front'); for (let i = 0; i < 3; i++) { const a = t * 0.8 + i * 2.1; D.px(cx + Math.round(Math.cos(a) * w * 0.4), gy - Math.round(h * 0.5) + Math.round(Math.sin(a * 1.3) * 6), 'magic', 4); D.px(cx + Math.round(Math.cos(a) * w * 0.4) + 1, gy - Math.round(h * 0.5) + Math.round(Math.sin(a * 1.3) * 6), 'arcane', 10, { e: 255 }); } }); }
-  worker(G, R + 4, -1, 'guard'); G.fx = { x: tx + (hw >> 1), y: tt };
+  // two narrow dark towers leaning away from each other, a rope bridge slung between their tops; a crow; violet lanterns
+  const tower = (x, th, tw, lean, id) => { const floors = st >= 2 ? 3 : 2, fh = Math.round(th / floors); let top = { x, y: gy }; for (let f = 0; f < floors; f++) { const y1 = gy - f * fh, sx = x + Math.round(f * fh * lean); K.wall(S, sx, y1 - fh + 2, tw, fh - 2, ['magic', 3, 'vplanks']); S.beg(); S.poly([[sx - 3, y1 - fh + 2], [sx + tw + 3, y1 - fh + 2], [sx + tw + 1, y1 - fh + 4], [sx - 1, y1 - fh + 4]], 'ink', 2); S.end();
+      const lw = sc.light({ x: sx + tw / 2, y: y1 - fh / 2, z: 6, r: 10, i: 0.6, c: '#b070ff', fl: 'candle', ph: f + id * 3, tint: 0.5 }); S.beg(); S.rect(sx + (tw >> 1) - 1, y1 - fh + 6, 2, 3, 'arcane', f % 2 ? 7 : 9, { e: lw + 1 }); S.end(); top = { x: sx + (tw >> 1), y: y1 - fh + 2 }; }
+    K.roof(S, top.x - (tw >> 1) - 3, top.y, tw + 6, Math.round(tw * 0.9), 'cone', 'ink', 2); return top; };
+  const tw = Math.round(w * 0.2), th1 = Math.round(h * [0, 0.8, 0.95, 1.05][st]), th2 = Math.round(th1 * 0.82);
+  const a = tower(L + 2, th1, tw, -0.1, 0), b = tower(R - tw - 2, th2, tw, 0.1, 1);
+  // the rope bridge: two ropes sagging, planks hung from them
+  S.lay('mid'); S.beg(); for (let i = 0; i <= 20; i++) { const q = i / 20, x = Math.round(a.x + (b.x - a.x) * q), y = Math.round(a.y + 4 + (b.y - a.y) * q + Math.sin(q * Math.PI) * 6); S.px(x, y, 'leather', 5); S.px(x, y - 3, 'leather', 6); if (i % 2) { S.px(x, y + 1, 'wood', 6); S.vl(x, y - 2, 2, 'leather', 4); } } S.end();
+  // the crow on the taller roof (flies off in a show), a grapple rope down the side, the dagger sign, lanterns, the door
+  G.an.push((D, t, s) => { const gone = s.st.cheer ? 1 : 0, x = a.x + (gone ? Math.round(t * 20 % 30) : 0), y = a.y - Math.round(tw * 0.9) + 1 - (gone ? Math.round(t * 12 % 20) : 0), hop = Math.sin(t * 2) > 0.95 ? 1 : 0; D.lay('front'); D.rect(x - 1, y - 2 - hop, 3, 2, 'ink', 2); D.px(x + 2, y - 3 - hop, 'ink', 2); D.px(x + 3, y - 3 - hop, 'gold', 8); D.px(x - 2, y - 1 - hop, 'ink', 2); });
+  S.lay('front'); S.beg(); S.line(b.x + (tw >> 1) + 2, b.y + 4, b.x + (tw >> 1) + 1, gy - 6, 'leather', 5); S.px(b.x + (tw >> 1) + 2, b.y + 3, 'iron', 9); S.end();
+  S.lay('back'); S.beg(); S.hl(cx - 3, gy - 18, 6, 'iron', 5); S.box(cx - 3, gy - 17, 6, 8, 'ink', 2); S.vl(cx, gy - 16, 6, 'iron', 10); S.hl(cx - 1, gy - 12, 3, 'brass', 8); S.end();
+  [cx - 8, cx + 8].forEach(x => K.lantern(S, sc, x, gy - 22, { c: '#b070ff', m: 'arcane' })); S.lay('wall'); S.beg(); S.rect(L + 4, gy - 7, 4, 7, 'ink', 1); S.rect(R - tw + 1, gy - 7, 4, 7, 'ink', 1); S.end();
+  if (st >= 3) { const lm = sc.light({ x: cx, y: Math.min(a.y, b.y) - 16, z: 20, r: 30, i: 0.6, c: '#c090ff', tint: 0.3 }); S.lay('back'); S.beg(); S.ell(cx + 0.5, Math.min(a.y, b.y) - 16, 7, 7, 'arcane', 9, { e: lm + 1 }); S.ell(cx + 3.5, Math.min(a.y, b.y) - 17, 6, 6, 'night', 1); S.end(); G.an.push((D, t) => { D.lay('front'); for (let i = 0; i < 3; i++) { const q = steps(t * 0.4 + i / 3, 1), x = Math.round(a.x + (b.x - a.x) * q), y = Math.round(a.y + 1 + (b.y - a.y) * q + Math.sin(q * Math.PI) * 6); D.px(x, y - 4, 'magic', 4); D.px(x, y - 3, 'arcane', 10, { e: 255 }); } }); }
+  worker(G, cx, -1, 'guard'); G.fx = { x: cx, y: Math.min(a.y, b.y) };
 }, show(s, o) { if (once(s, o, 'crow', 0.1)) s.st.cheer = 2; } });
 
 // ───────── 法师塔 ev_mag2: a crooked tall tower under a bent pointed hat, round windows aglow, books flying round it, coloured smoke ─────────

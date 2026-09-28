@@ -91,6 +91,17 @@ try {
       await ev(`(async () => { const g = __mcg, b = g.bv, X = MC.BASE_GEO.DOOR_X; b.x = b.tx = X + 380; b.y = b.ty = -150; b.z = b.tz = 1.5; if (b.keepFree) b.keepFree(); await new Promise(r => setTimeout(r, 1500)); return 1; })()`);
       console.log(await shot(path.join(OUT, 'city-' + name + '-close.png')));
     }
+  } else if (MODE === 'sil') {
+    // every building's outline at one stage, side by side, labelled: no two may look alike
+    await open('?pxtown=1'); const st = +arg('st', 1);
+    const url = await ev(`(() => { const M = MC, PT = M.PXTOWN, keys = ${JSON.stringify(KEYS)}.filter(k => PT.ART[k] || (PT.auto && PT.auto(k))), SC = 2, per = 10, CW = 90, CH = 110; let n = 0;
+      const cv = document.createElement('canvas'); cv.width = CW * SC * per; cv.height = CH * SC * Math.ceil(keys.length / per); const x = cv.getContext('2d'); x.fillStyle = '#101018'; x.fillRect(0, 0, cv.width, cv.height);
+      keys.forEach((key, i) => { const c = document.createElement('canvas'); c.width = CW; c.height = CH; const cx = c.getContext('2d'), f = M.townFoot(key), T1 = 20 + (++n) * 9; PT.stageForce = ${st};
+        const v = { key, k: 'sil' + n, x: 0, y: 0, sc: 0.84, dk: 0.06, B: { q: 1 }, w: f.w, h: f.h, pxSt: ${st} }; for (let t = T1 - 0.6; t <= T1; t += 1 / 30) { cx.setTransform(1, 0, 0, 1, 0, 0); cx.clearRect(0, 0, CW, CH); cx.setTransform(0.5, 0, 0, 0.5, CW / 2, CH - 8); PT.draw(cx, v, t, null, null); } PT.stageForce = null;
+        const im = cx.getImageData(0, 0, CW, CH), d = im.data; for (let p = 0; p < d.length; p += 4) { const on = d[p + 3] > 20; d[p] = d[p + 1] = d[p + 2] = on ? 225 : 16; d[p + 3] = 255; } cx.putImageData(im, 0, 0);
+        x.imageSmoothingEnabled = false; x.drawImage(c, (i % per) * CW * SC, Math.floor(i / per) * CH * SC, CW * SC, CH * SC); x.font = '16px monospace'; x.fillStyle = '#ff9a3c'; x.fillText(key, (i % per) * CW * SC + 6, Math.floor(i / per) * CH * SC + 18); });
+      return cv.toDataURL('image/png'); })()`);
+    if (typeof url !== 'string' || !url.startsWith('data:')) console.log('ERR', String(url).slice(0, 600)); else console.log(saveUrl(path.join(OUT, 'sil-' + arg('name', 'all') + '.png'), url));
   } else if (MODE === 'dirs') {
     // every 发展方向 (the city's look): the same city and camera, switch off and on → dir-<name>-<old|new>.png (the town band)
     const DIRS = arg('dirs', 'none,city,fort,market,industry,army,pastoral,holy,arcane,future,fun').split(','), which = arg('which', 'old,new').split(',');
