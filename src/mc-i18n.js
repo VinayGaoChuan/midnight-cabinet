@@ -104,8 +104,12 @@ function tr(s) {
     if (!CJKP[I.lang]) r = r.replace(/ {2,}/g, ' ').replace(/ ([,.:;!?)\]”])/g, '$1').trim();
     if (CJK.test(r)) note(core, true);   // still Chinese somewhere: the whole string is what a translator needs
   }
+  if (I.lang === 'en') r = one(r);
   r = lead + r + tail; CACHE.set(s, r); return r;
 }
+// English after a number: one of a thing is singular (the dictionary writes the plural: 「{0} 天」→「{0} days」)
+const ONE = /(^|[^\d.,])1 (day|night|unit|second|stop|point|blueprint|relic|level|time|heart|leader|wave|cell|plot|room|chest|minute|kill|bottle|battle|stack|lamp|run|shard|orb|encounter|tier|building|wonder|achievement|cartridge|figurine|item|card|pack|visitor|project|guard|monk|soldier|wraith|imp|bolt|strike|chain|coin|token|talent point|support item|Soul Shard|EXP orb)s\b/g;
+const one = (t) => (t.indexOf('1 ') < 0 ? t : t.replace(ONE, (m, a, w) => a + '1 ' + w).replace(/(^|[^\d.,])1 enemies\b/g, (m, a) => a + '1 enemy'));
 M.tr = tr;
 M.trOn = () => I.on;
 // word-aware line breaking for translated text (the game's own wrappers break Chinese between any two characters)

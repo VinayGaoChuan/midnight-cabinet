@@ -17,6 +17,8 @@ const oView = G.view;
 G.view = function () {
   const v = oView.call(this);
   v.langOn = !!(this.langPick && this.settingsOpen);
+  // the base's top bar: in another language 「结束白天」「放弃」 grow into the timeline — held to the Chinese width, the words shrink to fit
+  v.topMaxR = I.on ? '210px' : 'none'; v.topMaxA = I.on ? '110px' : 'none';
   if (this.langPick) v.lp = { close: () => { S.click && S.click(); this.langPick = false; this.bump(); },
     list: I.ready().map(([code, name]) => ({ n: I.keep(name), on: code === I.lang, bg: code === I.lang ? '#47d6c1' : 'transparent', c: code === I.lang ? '#07060f' : '#bff7f0',
       pick: () => { S.click && S.click(); I.set(code, true); this.langPick = false; this.bump(); } })) };

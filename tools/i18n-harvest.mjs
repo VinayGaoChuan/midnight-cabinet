@@ -58,6 +58,12 @@ const tour = `(async () => { const g = __mcg, w = (ms) => new Promise(r => setTi
     try { g.openSettings(); await w(400); g.langPick = true; g.bump(); await w(400); g.closeSettings(); } catch (e) {}
     try { if (g.openRules) { g.openRules(); await w(400); } else { g.rulesOpen = true; g.bump(); await w(400); } g.rulesOpen = false; g.bump(); } catch (e) {}
     try { for (const k of Object.keys(MC.GUIDE || [])) { const c = MC.GUIDE[k]; if (c) { MC.tr(c.title); MC.tr(c.line); } } } catch (e) {}
+    // every base panel the save has (rock to dig, an empty room, a job, each room): what its buttons and lines say
+    try { const M = MC, m = g.meta, sc = g.screen, seen = new Set();
+      const walk = (v, d) => { if (d > 7 || v == null || seen.has(v)) return; if (typeof v === 'string') { M.tr(v); return; } if (typeof v !== 'object') return; seen.add(v); if (Array.isArray(v)) v.forEach(x => walk(x, d + 1)); else for (const k in v) if (k !== 'img' && k !== 'thumb') walk(v[k], d + 1); };
+      g.screen = 'base';
+      for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) { const x = M.cell(m, c, r), kind = x.b ? 'room' : x.job ? 'job' : x.dug ? 'build' : M.canDig(m, c, r) ? 'dig' : null; if (!kind) continue; g.panel = { kind, c, r, key: x.b, at: 0 }; try { walk(g.view(), 0); } catch (e) {} }
+      g.panel = null; g.screen = sc; } catch (e) {}
     return true; })()`;
   await ev(tour);
   // every description the game can write, whether or not the bot gets to see it: units, skills, buildings, relics, tiles, tags,

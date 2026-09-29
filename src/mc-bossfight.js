@@ -254,7 +254,10 @@ if (G) {
       if (T > 0.7) for (let k = 0; k < 3; k++) { const q = (T - 0.7 - k * 0.12) / 0.8; if (q <= 0 || q >= 1) continue; g.globalAlpha = fade * (1 - q); g.strokeStyle = k === 1 ? '#ffffff' : '#ff4a3a'; g.lineWidth = 14 - k * 3; g.beginPath(); g.ellipse(c.x, c.y, 40 + q * 1100, 30 + q * 620, 0, 0, 7); g.stroke(); }
       if (T > 0.7 && T < 0.9) { g.globalAlpha = (0.9 - T) / 0.2 * 0.7; g.fillStyle = '#ffe6d8'; g.fillRect(0, 0, 1920, 1080); }
       // 第二阶段, letter by letter, and the boss's own roar under it
-      if (T > 0.9 && U) { const w = '第二阶段', n = w.length; for (let i = 0; i < n; i++) { const q = (T - 0.9 - i * 0.1) / 0.18; if (q <= 0) continue; const k = q < 1 ? 1 + 1.4 * (1 - q) : 1; g.globalAlpha = fade * Math.min(1, q * 2); g.save(); g.translate(960 + (i - (n - 1) / 2) * 130, 420); g.scale(k, k); U.text(g, w[i], 0, 0, 120, '#ff4a3a', { outline: true }); g.restore(); }
+      if (T > 0.9 && U) { const w = [...(M.tr ? M.tr('第二阶段') : '第二阶段')], n = w.length;
+        // another language (src/mc-i18n.js): a CJK word still lands letter by letter; a word in letters lands whole
+        if (n > 6) { const q = (T - 0.9) / 0.3, k = q < 1 ? 1 + 1.4 * (1 - q) : 1; g.globalAlpha = fade * Math.min(1, q * 2); g.save(); g.translate(960, 420); g.scale(k, k); U.text(g, w.join(''), 0, 0, Math.min(120, Math.floor(2600 / n)), '#ff4a3a', { outline: true }); g.restore(); }
+        else for (let i = 0; i < n; i++) { const q = (T - 0.9 - i * 0.1) / 0.18; if (q <= 0) continue; const k = q < 1 ? 1 + 1.4 * (1 - q) : 1; g.globalAlpha = fade * Math.min(1, q * 2); g.save(); g.translate(960 + (i - (n - 1) / 2) * 130, 420); g.scale(k, k); U.text(g, w[i], 0, 0, 120, '#ff4a3a', { outline: true }); g.restore(); }
         if (T > 1.4) { g.globalAlpha = fade * Math.min(1, (T - 1.4) / 0.3); U.text(g, (P.e.fb && P.e.fb.names && P.e.fb.names.roar) || '狂暴', 960, 540, 44, '#ffe08a', { outline: true }); } }
       g.restore(); }
     if (P.t >= P2_LEN) { b.p2 = null; const A = P.e.ai; if (A) { A.st = 'idle'; A.t = b.t + 0.3; } }

@@ -87,14 +87,20 @@ def extract():
     print('static keys', len(out), 'CJK chars', sum(len(CJK.findall(k)) for k in out))
 
 
+UNITS = ['{0} ' + u for u in '天 支 秒 个 次 级 张 件 名 座 夜 层 格 颗 只 块 场 局 点 瓶 条 道 项 盏 倍'.split()] + [
+    '还需 {0} 天', '还需 {0} 天。', '第 {0} 天', '第 {0} 夜', '{0} 天后', '{0} 物资 · {1} 天']
+
+
 def merge():
     st = json.loads((AI / 'static.json').read_text(encoding='utf-8'))
     seen = {}
     for p in sorted(AI.glob('harvest*.json')):
         for k, n in json.loads(p.read_text(encoding='utf-8')):
             k = k.strip()
-            # a single character is a piece of a title drawn one character at a time: the drawing code translates the whole title
-            if k and len(CJK.findall(k)) >= 2: seen[k] = seen.get(k, 0) + n
+            # a single character is a piece of a title drawn one character at a time: the drawing code translates the whole title;
+            # one character around a number is a unit, not a piece (「{0} 天」「{0} 支」)
+            c = len(CJK.findall(k))
+            if k and (c >= 2 or (c == 1 and '{' in k)): seen[k] = seen.get(k, 0) + n
     # a line typed one character at a time left every prefix of itself: keep only the whole line
     ks = sorted(seen); pre = set()
     for i, k in enumerate(ks):
@@ -112,6 +118,9 @@ def merge():
     LEGACY = {'mc-db.js'}
     for k, where in st.items():
         if k not in keys and not set(where) <= LEGACY: keys[k] = {'n': 0, 'src': ','.join(where[:3])}
+    # a number and its unit, built in code by joining strings (「o.days + ' 天'」): the split fallback in src/mc-i18n.js needs these
+    for k in UNITS:
+        if k not in keys: keys[k] = {'n': 0, 'src': 'unit'}
     order = sorted(keys, key=lambda k: (-keys[k]['n'], k))
     (AI / 'keys.json').write_text(json.dumps([[k, keys[k]['n'], keys[k]['src']] for k in order], ensure_ascii=False, indent=0), encoding='utf-8')
     print('keys', len(order), '· seen on screen', len(seen), '· static only', len(order) - len([k for k in order if keys[k]['n']]), '· CJK chars', sum(len(CJK.findall(k)) for k in order))

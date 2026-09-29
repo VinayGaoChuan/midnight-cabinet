@@ -73,6 +73,8 @@ const names = () => {
 };
 const segC = new Map(), CJK = /[一-鿿]/;
 M.nameSegs = function (text, base) {
+  // in another language (src/mc-i18n.js) the sentence is translated whole: cut into coloured names first, it would be translated in pieces
+  if (M.trOn && M.trOn()) return null;
   const s = String(text == null ? '' : text); if (s.length < 2 || !CJK.test(s)) return null; names(); if (!NRE) return null;
   const key = s + '\u0001' + (base || ''); if (segC.has(key)) return segC.get(key);
   const out = []; let last = 0, m; NRE.lastIndex = 0;
