@@ -91,7 +91,11 @@ M.worldOdds = M.worldDanger = function (m, k) {
   // the points it sets out with (路标补给 + 钱庄) are strength too (2026-09-27: 「局外显示难度的时候，应该把初始送的计分一块算进去后，再显示难度。
   // 送我的计分也是我的实力啊」): a point buys a point of power, so they add to 你
   const gift = run.grant + bank;
-  const o = { lv: t, n: T.n, c: T.c, mine, mine0: mine, gift, first, boss, par: first };
+  // the word on the stele is the gap between the two numbers under it, for this player now (2026-09-28: 「低中高，是反映的当前场景，对
+  // 玩家当前实力的难度……这个文字是对这一事实的缩略显示，能让玩家一目了然，去判断，自己应该挑战哪个」): 你 ÷ 首领 ≥ 1.25 低、1.0～1.25 中、
+  // 低于 1.0 高 — the map's own colour steps (M.oddsCol). The stele's tier (t) still sets its enemies and its pay.
+  const rt = mine > 0 && boss > 0 ? mine / boss : 0, Wd = !rt ? T : rt >= 1.25 ? TIERS[0] : rt >= 1 ? TIERS[1] : TIERS[2];
+  const o = { lv: t, n: Wd.n, c: Wd.c, ratio: rt, mine, mine0: mine, gift, first, boss, par: first };
   wcache.set(key, o); if (wcache.size > 60) wcache.delete(wcache.keys().next().value); return o;
 };
 const oST = G.steleTip;

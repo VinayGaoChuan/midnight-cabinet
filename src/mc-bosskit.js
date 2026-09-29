@@ -795,8 +795,8 @@ M.bossLines = (k) => { const K2 = KIT[k]; return K2 && K2.good ? [{ t: '擅长�
 // ───────── calibration: [tr, sk] per boss (.ai/sim-kit.js + .ai/kit-fit.py, random armies at shown ratios 0.5–1.8) ─────────
 // tr: the shown ratio an army needs to win half the time, folded in so that a shown 1.0 wins about half; sk: life over attack so a
 // final boss takes about 90 s and a small boss about 40 s. @CAL (rewritten by .ai/kit-cal.py)
-// 普通 / 困难: the bosses still ahead in this trip stay on the left of the map and the market, what each is good against and
-// what it fears (2026-09-28: 「局内场景中，普通和困难难度中，要在屏幕左侧，时时显示当前区域boss，擅长和怕的阵容组合，方便玩家搭配。（并且
+// 普通 / 困难: the next boss of this trip (small ones too) stays on the left of the map and the market, what it is good against
+// and what it fears (2026-09-28: 「局内场景中，普通和困难难度中，要在屏幕左侧，时时显示当前区域boss，擅长和怕的阵容组合，方便玩家搭配。（并且
 // 进入商店等可能需要处理部队的页面的时候，都要显示在左侧，这样，我才知道怎么选部队）」)
 const GPv = M.Game.prototype, oViewBp = GPv.view;
 GPv.view = function () {
@@ -804,12 +804,13 @@ GPv.view = function () {
   v.bkp = { on: false, rows: [] };
   if (!run || !run.map || !run.map.nodes || (run.region && run.region.tut) || !m || (m.gd || 0) > 1 || (scr !== 'world' && scr !== 'shop') || this.storyFx || this.settle || (this.banners && this.banners.length)) return v;   // a banner in the middle of the screen goes first
   const segs = M.segsOf ? M.segsOf(run.regionKey) || [] : [];
-  const rows = run.map.nodes.filter(n => n.type === 'boss' && !n.done).sort((a, b) => a.col - b.col).slice(0, 3).map(n => { const sg = segs[n.seg || 0] || {}, k = typeof n.fb === 'string' ? n.fb : sg.fb || (sg.mb && sg.mb.k), K2 = k && KIT[k]; if (!K2 || !K2.good) return null; return { k, n: (sg.mb && !n.fb && sg.mb.n) || (DB[k] && DB[k].n) || '首领', good: K2.good, weak: K2.weak }; }).filter(Boolean);
+  // only the next one, small bosses included, and said so (2026-09-28: 「只应该展示最近的boss的信息，小boss也是boss。而且要讲清楚，下一个Boss：XXX」)
+  const rows = run.map.nodes.filter(n => n.type === 'boss' && !n.done).sort((a, b) => a.col - b.col).slice(0, 1).map(n => { const sg = segs[n.seg || 0] || {}, k = typeof n.fb === 'string' ? n.fb : sg.fb || (sg.mb && sg.mb.k), K2 = k && KIT[k]; if (!K2 || !K2.good) return null; return { k, n: '下一个首领：' + ((sg.mb && !n.fb && sg.mb.n) || (DB[k] && DB[k].n) || '首领'), good: K2.good, weak: K2.weak }; }).filter(Boolean);
   if (!rows.length) return v;
   v.bkp = scr === 'shop' ? { on: true, rows, x: 16, y: 150, w: 320 } : { on: true, rows, x: 24, y: 330, w: 460 };
   return v;
 };
-if (M.GUIDE) M.GUIDE.push({ id: 'bossplan', cat: '出征', icon: 'e_skull', title: '前面的首领', line: '这一趟还没打的首领，各自擅长对付和怕的阵容。', scr: ['world', 'shop'], sel: '[data-g="boss-plan"]' });
+if (M.GUIDE) M.GUIDE.push({ id: 'bossplan', cat: '出征', icon: 'e_skull', title: '下一个首领', line: '这一趟下一个要打的首领，它擅长对付和怕的阵容。', scr: ['world', 'shop'], sel: '[data-g="boss-plan"]' });
 // losing to a boss says what beats it (2026-09-28: 「每次失败的时候，假如是打Boss失败的，要说一下，要想打过这个Boss应该配置什么阵容。
 // 如果是其他情况失败的，就不用说了」): the battle is gone by the time runFail builds the fail screen, so the boss is noted first
 const GP = M.Game.prototype, oSN = GP.settleNext;
