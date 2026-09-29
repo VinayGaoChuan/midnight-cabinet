@@ -9,6 +9,7 @@ const M = window.MC, P = M.PJ.PAL, U = M.UI, DOOR_X = M.BASE_GEO.DOOR_X, now = (
 const cl = (v, a, b) => Math.max(a, Math.min(b, v)), RM = () => !!M.PJ.reduced;
 const rnd = (i) => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 const kitOf = (x) => M.townKit(x);
+const PXH = () => !!(M.PXTOWN && M.PXTOWN.on && M.PXTOWN.on() && M.PXTOWN.pixelize);   // the pixel town (mc-pxtown-look.js, behind its switch)
 const WAVE_V = 1100;   // how fast the wave runs out (world units a second)
 const PH = 150, GY = 0, SKY_Y = -144;   // the city's ground: from the fighting line (y 0) back to y −150; the skyline stands on its far edge
 
@@ -86,7 +87,7 @@ function pic(key, w, h, paint, dk) {
 
 // ───────── the ground of the city and the skyline behind it ─────────
 function plazaPic(dk, x0, x1) {
-  const L = lookOf(dk), W = Math.ceil(x1 - x0), key = 'plaza|' + dk + '|' + Math.round(x0) + '|' + W; if (cache[key]) return cache[key];
+  const L = lookOf(dk), W = Math.ceil(x1 - x0), key = 'plaza|' + dk + '|' + Math.round(x0) + '|' + W + (PXH() ? '|px' : ''); if (cache[key]) return cache[key];
   const c = document.createElement('canvas'); c.width = W; c.height = PH; const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
   const R = (a, b, w, h, col) => { x.fillStyle = col; x.fillRect(Math.round(a), Math.round(b), Math.round(w), Math.round(h)); };
   // a trapezoid: the far edge a little shorter, the ends slope down into the grass; lighter towards the back (moonlit)
@@ -96,11 +97,11 @@ function plazaPic(dk, x0, x1) {
   [[138, 12], [98, 12], [58, 10]].forEach(([y, h], j) => { for (let px = 0; px < W; px += 2) { const e = Math.min(px, W - px); if (topAt(e) > y) continue; for (let yy = y; yy < y + h; yy += 2) { const k = (px + (yy % 4 ? 6 : 0)) % 14; R(px, yy, 2, 2, k < 2 ? M.shade(L.g[1], -0.3) : ((px * 7 + yy * 3) % 11 < 2 ? L.g[2] : L.g[1])); } } });
   if (L.rail) [142, 146].forEach(y => R(0, y, W, 2, L.g[2]));
   for (let i = 0; i < W / 12; i++) { const a = rnd(i * 3 + 1) * W, b = 24 + rnd(i * 5 + 2) * (PH - 28); R(a, b, 4, 2, M.shade(L.g[0], rnd(i) < 0.5 ? 0.18 : -0.2)); }
-  c.x0 = x0; cache[key] = c; return c;
+  c.x0 = x0; const cc = PXH() ? M.PXTOWN.pixelize(c, L.g) : c; cache[key] = cc; return cc;
 }
 function skyPic(dk, lv, x0, x1) {
-  const L = lookOf(dk); if (!L.sky) return null; const W = Math.ceil(x1 - x0), H = 300, key = 'sky|' + dk + '|' + lv + '|' + Math.round(x0) + '|' + W; if (cache[key]) return cache[key];
-  const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
+  const L = lookOf(dk); if (!L.sky) return null; const W = Math.ceil(x1 - x0), H = 300, key = 'sky|' + dk + '|' + lv + '|' + Math.round(x0) + '|' + W + (PXH() ? '|px' : ''); if (cache[key]) return cache[key];
+  let c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
   const [sil, rim, lit] = L.sky, R = (a, b, w, h, col) => { x.fillStyle = col; x.fillRect(Math.round(a), Math.round(b), Math.round(w), Math.round(h)); };
   const tri = (a, b, w, h, col) => { x.fillStyle = col; x.beginPath(); x.moveTo(a, b); x.lineTo(a + w / 2, b - h); x.lineTo(a + w, b); x.fill(); };
   const dome = (cx, b, r, col) => { x.fillStyle = col; x.beginPath(); x.arc(cx, b, r, Math.PI, 0); x.fill(); };
@@ -119,6 +120,7 @@ function skyPic(dk, lv, x0, x1) {
     else if (dk === 'future') { R(a, b - hh, w * 0.6, hh, sil); R(a, b - hh, w * 0.6, 3, lit); R(a + w * 0.3, b - hh - 40, 3, 40, sil); if (i % 2) dome(a + w * 0.9, b, w / 2.5, rim); for (let j = 0; j < hh / 24; j++) R(a + 6, b - hh + 14 + j * 22, w * 0.6 - 12, 2, j % 2 ? lit : rim); }
     else if (dk === 'fun') { if (i % 5 === 0) { x.strokeStyle = rim; x.lineWidth = 6; x.beginPath(); x.arc(a, b - 110, 90, 0, Math.PI * 2); x.stroke(); R(a - 3, b - 110, 6, 110, sil); } else { R(a, b - hh * 0.5, w, hh * 0.5, sil); for (let j = 0; j < 4; j++) R(a + j * w / 4, b - hh * 0.5, w / 8, hh * 0.5, rim); tri(a - 6, b - hh * 0.5, w + 12, 30, sil); } }
   }
+  if (PXH()) c = M.PXTOWN.pixelize(c, [sil, rim, lit]);
   cache[key] = c; return c;
 }
 // the moving parts of a skyline: chimney smoke, blinking lights, the windmill, the ferris wheel, light beams
@@ -140,8 +142,8 @@ M.DIR_PAL = { city: ['#2a2638', '#4b4f78', '#ffcf6a'], fort: ['#2a2622', '#7a6a5
   pastoral: ['#1e2a14', '#c9a050', '#ffe08a'], holy: ['#2a2830', '#e8c060', '#ffe8a0'], arcane: ['#24163a', '#7a3fd0', '#d8a0ff'], future: ['#0e1628', '#2aa8b8', '#8ff6ff'], fun: ['#3a2a4a', '#ff7ab0', '#ffe07a'] };
 // one long thing that runs through the whole city behind its last street: a rampart, a palisade, pipes, a hedge, a colonnade, a monorail …
 function wallPic(dk, lv, x0, x1) {
-  if (!dk || !lv) return null; const W = Math.ceil(x1 - x0), H = 120, key = 'wall|' + dk + '|' + lv + '|' + Math.round(x0) + '|' + W; if (key in cache) return cache[key];
-  const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.translate(0, H); const k = kitOf(x), pal = M.DIR_PAL[dk];
+  if (!dk || !lv) return null; const W = Math.ceil(x1 - x0), H = 120, key = 'wall|' + dk + '|' + lv + '|' + Math.round(x0) + '|' + W + (PXH() ? '|px' : ''); if (key in cache) return cache[key];
+  let c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.translate(0, H); const k = kitOf(x), pal = M.DIR_PAL[dk];
   const span = (step, fn) => { for (let a = 150; a < W - 150; a += step) fn(a); };
   if (dk === 'fort') { k.Bk(140, -52, W - 280, 52, '#5a524c'); span(28, a => k.Bk(a, -66, 16, 14, '#5a524c')); span(420, a => { k.Bk(a, -100, 50, 100, '#6a625a'); k.T([[a - 6, -100], [a + 25, -130], [a + 56, -100]], '#4a3a3a'); k.R(a + 20, -80, 8, 16, P.ink); }); }
   else if (dk === 'army') { span(14, a => k.Bk(a, -44 - (a % 3) * 4, 10, 44 + (a % 3) * 4, '#6a4a2a')); span(360, a => { k.R(a, -110, 5, 110, P.ink); k.R(a + 5, -108, 34, 20, P.red); }); }
@@ -153,6 +155,7 @@ function wallPic(dk, lv, x0, x1) {
   else if (dk === 'city') { span(160, a => { k.R(a - 2, -80, 4, 80, P.ink); k.R(a - 1, -78, 2, 76, P.slate); k.Bk(a - 8, -92, 16, 14, P.slate); k.R(a - 5, -89, 10, 8, P.butter); }); k.Bk(140, -16, W - 280, 16, '#3a3650'); }
   else if (dk === 'market') { span(130, a => { const cs = [[P.red, P.cream], [P.teal, P.cream], [P.gold, P.brown]][Math.floor(a / 130) % 3]; k.Bk(a - 40, -34, 80, 34, '#6a4a3a'); for (let i = 0; i < 5; i++) k.R(a - 44 + i * 18, -52, 18, 16, cs[i % 2]); }); }
   else if (dk === 'fun') { span(300, a => { k.R(a - 3, -120, 6, 120, P.ink); k.T([[a - 30, -120], [a, -150], [a + 30, -120]], P.pink); }); }
+  if (PXH()) c = M.PXTOWN.pixelize(c, pal.concat(['#5a524c', '#e8e0d0', '#6a4a2a', '#3a4658']));
   cache[key] = c; return c;
 }
 // its moving parts: a monorail car, a pipe's steam, the pastoral fireflies, the arcane runes' glow
@@ -187,9 +190,9 @@ TL.over = function (ctx, T, m, t, lights) { if (!T.L || !T.L.edge) return; taken
 // a townsfolk's house of the city's direction (a quarter of them from another direction taken)
 TL.filler = function (ctx, T, f, m, t, lights) {
   const top = M.dirTop ? M.dirTop(m) : null, alt = rnd(f.seed + 5) < 0.25 ? dirFor(m, f.seed) : null, dk = alt || top || 'none', v = f.seed % 97, F = T.lookFx;
-  const h = 70 + rnd(f.seed + 9) * 60, w = Math.round(f.w / 8) * 8, house = (d) => { const L = lookOf(d); return pic('h|' + d + '|' + v % 6 + '|' + w + '|' + Math.round(h / 10), w, h + 60, (k) => L.house(k, w, h, v), f.dk); };
+  const h = 70 + rnd(f.seed + 9) * 60, w = Math.round(f.w / 8) * 8, house = (d) => { const L = lookOf(d); if (PXH()) { const hp = M.PXTOWN.housePic(d, v, w, h, f, m); if (hp) return hp; } return pic('h|' + d + '|' + v % 6 + '|' + w + '|' + Math.round(h / 10), w, h + 60, (k) => L.house(k, w, h, v), f.dk); };
   const born = f.bornT != null ? cl((T.t - f.bornT) / 0.6, 0, 1) : 1, rv = revealed(T, f.x, dk), L = lookOf(dk); if (born <= 0) return;
-  const put = (im, sy) => { ctx.save(); ctx.translate(Math.round(f.x), f.y); ctx.scale(f.sc, f.sc * sy); ctx.drawImage(im, -im.ox, -im.oy); ctx.restore(); };
+  const put = (im, sy) => { ctx.save(); ctx.translate(Math.round(f.x), f.y); ctx.scale(f.sc, f.sc * sy); if (im.k) { const sm = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = false; ctx.drawImage(im, -im.ox, -im.oy, im.width * im.k, im.height * im.k); ctx.imageSmoothingEnabled = sm; } else ctx.drawImage(im, -im.ox, -im.oy); ctx.restore(); };
   if (rv < 1) put(house(F.from && !alt ? F.from : 'none'), 1);   // the old house until the wave comes, then the new one grows over it
   if (rv > 0) put(house(dk), (born < 1 ? 1 - Math.pow(1 - born, 3) : 1) * (rv < 1 ? rv : 1));
   if (lights && L.lit && f.depth < 2 && rnd(f.seed + 2) < 0.5) lights.push({ x: f.x, y: f.y - h * f.sc * 0.5, r: 90 * f.sc, c: (L.sky || [0, 0, '#ffb060'])[2], f: 0.5 });
@@ -198,6 +201,7 @@ TL.filler = function (ctx, T, f, m, t, lights) {
 TL.prop = function (ctx, T, p, m, t, lights) {
   const dk = dirFor(m, p.seed); if (!dk) { if (rnd(p.seed) > 0.28) return; } else if (rnd(p.seed + 7) > density(m)) return;
   const L = lookOf(dk), i = Math.floor(rnd(p.seed + 11) * L.props.length), rv = revealed(T, p.x, dk); if (rv <= 0) return;
+  if (PXH() && rv >= 1 && M.PXTOWN.prop(ctx, dk || 'none', i, p.x, p.y, p.sc, p.far ? 0.2 : 0.06, p.seed, t, lights)) return;
   const s = p.seed % 13, sc = p.sc * (rv < 1 ? 0.3 + 0.7 * rv : 1) * (p.side < 0 ? -1 : 1);
   ctx.save(); ctx.translate(Math.round(p.x), p.y); ctx.scale(sc, Math.abs(sc)); if (p.far) ctx.globalAlpha = 0.85; L.props[i](kitOf(ctx), s, t); ctx.restore();
   if (lights && (L.glow || L.lit) && rnd(p.seed + 3) < 0.6) lights.push({ x: p.x, y: p.y - 60 * p.sc, r: 110 * p.sc, c: L.glow || (L.sky || [0, 0, '#ffb060'])[2], f: 0.55 + 0.1 * Math.sin(t * 3 + s) });

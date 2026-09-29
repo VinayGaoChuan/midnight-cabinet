@@ -60,7 +60,7 @@ const CONCEPTS = [
   { id: 'rock', cat: '基地', icon: 'u_pick', title: '挖掘', line: '点和房间相邻的岩层，花物资和天数挖开，挖通才能建房间。', scr: 'base', sel: '[data-g="dig"]' },
   { id: 'bp', cat: '基地', icon: 'g_scroll', title: '建筑图纸', line: '列表里只有你有图纸的建筑，×2 就是有 2 张。图纸靠出征拿。', scr: 'base', sel: '[data-g="bld"]' },
   { id: 'portal', cat: '出征', icon: 'g_gate', title: '传送门', line: '通往今天能去的世界；每一趟最后只带回一支部队守夜。', scr: 'base', at: (g) => { if (g.panel || !g.bv || !M.BASE_GEO) return null; const p = g.bv.toScreen(M.BASE_GEO.DOOR_X, -130); return { x: p.x - 100, y: p.y - 110, w: 200, h: 230 }; } },
-  { id: 'danger', cat: '出征', img: () => sprite('skull'), title: '难度', line: '碑上的低 / 中 / 高：越难收获越多，图纸越好。', scr: 'base', at: (g) => M.STELE_AT && M.STELE_AT.danger(g) },
+  { id: 'danger', cat: '出征', img: () => sprite('skull'), title: '难度', line: '碑上的低 / 中 / 高：走到首领时你和它的战斗力差距，低是稳，高是危险。', scr: 'base', at: (g) => M.STELE_AT && M.STELE_AT.danger(g) },
   { id: 'loot', cat: '出征', img: () => sprite('sack'), title: '世界特产', line: '碑下方的图标：这个世界多给的东西。悬浮看详情。', scr: 'base', at: (g) => M.STELE_AT && M.STELE_AT.loot(g) },
   { id: 'relic', cat: '领袖', icon: 't_eye', title: '宝物', line: '出征时带在身上的装备，出征失败也不会丢。', scr: 'base', sel: '[data-g="relics"]' },
   { id: 'talent', cat: '领袖', icon: 't_clover', title: '天赋树', line: '每名领袖一棵自己的树，每三级长出一层，越往上越强。', scr: 'base', sel: '[data-tip^="tal-"]:not([data-tip="tal-root"])' },
