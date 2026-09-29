@@ -1198,6 +1198,7 @@
 </div></sc-if>
 <sc-if value="{{isBattle}}" hint-placeholder-val="{{false}}">
   <canvas ref="{{fieldRef}}" width="1920" height="720" style="position:absolute;left:0;top:180px;width:1920px;height:720px"></canvas>
+  <sc-if value="{{bb.on}}" hint-placeholder-val="{{false}}"><div data-g="bbar" style="position:absolute;left:24px;top:196px;max-width:500px;display:flex;flex-wrap:wrap;gap:8px;z-index:30;pointer-events:auto"><sc-for list="{{bb.items}}" as="bi" hint-placeholder-count="0"><div sc-camel-on-mouse-enter="{{bi.tipOn}}" sc-camel-on-mouse-leave="{{tipOff}}" data-pj="ink" style="--q:{{bi.c}};width:48px;height:48px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;opacity:{{bi.op}};filter:{{bi.flt}}"><m-img src="{{bi.img}}" data-fit="1" style="max-width:34px;max-height:34px;image-rendering:pixelated"></m-img></div></sc-for></div></sc-if>
   <div style="position:absolute;left:0;top:0;width:1920px;height:180px;box-sizing:border-box;display:flex;align-items:center;padding:0 50px 9px;gap:50px;background:#1a1640;box-shadow:inset 0 -6px 0 0 #07060f,inset 0 -9px 0 0 #3d3a8c,inset 0 3px 0 0 #2b2461">
     <div data-tip="b-mode" style="width:330px;display:flex;flex-direction:column;gap:10px">
       <div style="font-size:52px;line-height:1;color:{{h.modeColor}};text-shadow:3px 0px 0 #07060f,-3px 0px 0 #07060f,0px 3px 0 #07060f,0px -3px 0 #07060f,3px 3px 0 #07060f,-3px 3px 0 #07060f,3px -3px 0 #07060f,-3px -3px 0 #07060f,0 6px 0 #07060f,3px 6px 0 #07060f,-3px 6px 0 #07060f"><mc-wave t="{{h.mode}}"></mc-wave></div>

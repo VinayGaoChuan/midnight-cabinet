@@ -759,22 +759,35 @@ function sceneC(wc, w, T, menu) {
 function camC(w) { const q = eIO(seg(w, 5.8, 7.4)); return { x: 240, y: lerp(125, MENU.y, q), z: lerp(1.25, MENU.z, q) }; }
 function shakeC(w) { let a = 0; STOP.forEach((t, i) => { if (w >= t && w < t + 0.18) a = Math.max(a, i === 2 ? 2.5 : 1.2); }); if (w >= 5.2 && w < 5.8) a = Math.max(a, 4 * (1 - seg(w, 5.2, 5.8))); if (w >= 2.9 && w < 3.05) a = Math.max(a, 1); return a; }
 // 标题：中奖时一个字一个字砸在屏幕中间，随后跟着镜头退到屏幕上方（菜单的位置）
+const TITLE_AS = { ja: '午夜機台' };   // Japanese reads the kanji logo (with 機, as in Japan)
 function title(ctx, cam, w, T, menu) {
   if (!menu && w < 5.25) return;
   const k = menu ? 1 : eIO(seg(w, 5.8, 7.4)), wy = lerp(SCRN.y + 34, SCRN.y + 19.5, k), per = lerp(88, 54, k);
-  const P = w2s(cam, 240, wy), size = Math.max(24, Math.round(per * cam.z / 4) * 4), ch = [...'午夜机台'], gap = Math.round(size * 0.08);
-  const cw = ch.map((c) => XU.measure(ctx, c, size)); let px = P[0] - (cw.reduce((a, b) => a + b, 0) + gap * (ch.length - 1)) / 2;
-  ch.forEach((c, i) => {
-    const a0 = 5.25 + i * 0.09, q = menu ? 1 : seg(w, a0, a0 + 0.16);
-    if (q > 0) {
-      const land = menu ? 9 : w - a0 - 0.16, dy = q < 1 ? -(1 - eOut(q)) * 180 : land < 0.12 ? Math.round(Math.sin(land / 0.12 * Math.PI) * size * 0.12) : 0;
-      const ph = ((T * 1.25 + (ch.length - i) * 0.12) % 1), wave = still() || !(menu || w > 6.5) ? 0 : [0, -0.1, 0, 0.04][Math.floor(ph * 4)] * size;
-      const sz = q < 1 ? Math.round(size * (1 + (1 - q) * 0.6) / 4) * 4 : size;
-      XU.text(ctx, c, px + cw[i] / 2, P[1] + dy + wave, sz, q < 1 || land < 0.06 ? PAL[21] : PAL[14], { ramp: q >= 1 && land >= 0.06, outline: true });
-    }
-    px += cw[i] + gap;
+  // the game's name in the player's language (src/mc-i18n.js). A name in letters is set in capitals on up to two lines, each fitted
+  // to the Chinese title's width, and lands just as fast; the kanji logo stays for Japanese; the small MIDNIGHT CABINET line is
+  // left out when the title already says it
+  const nm = TITLE_AS[M.I18N && M.I18N.on && M.I18N.lang] || (M.tr ? M.tr('午夜机台') : '午夜机台'), letters = !/[\u3400-\u9fff\u3040-\u30ff\uac00-\ud7a3]/.test(nm);
+  const P = w2s(cam, 240, wy), size0 = Math.max(24, Math.round(per * cam.z / 4) * 4), wide = (sz, cs) => cs.reduce((a, c) => a + XU.measure(ctx, c, sz), 0) + Math.round(sz * 0.08) * (cs.length - 1);
+  const ws = nm.toUpperCase().split(/\s+/), half = Math.ceil(ws.length / 2), lines = letters && ws.length > 1 ? [ws.slice(0, half).join(' '), ws.slice(half).join(' ')] : [letters ? nm.toUpperCase() : nm];
+  const room = wide(size0, [...'午夜机台']) * 1.15, w0 = Math.max(...lines.map(l => wide(size0, [...l]))), fit = w0 > room ? room / w0 : 1;
+  const size = Math.max(20, Math.round(size0 * fit / 2) * 2), gap = Math.round(size * 0.08), n = lines.reduce((a, l) => a + [...l].length, 0), step = Math.min(0.09, 0.36 / n);
+  let k0 = 0;
+  lines.forEach((ln, li) => {
+    const ch = [...ln], cw = ch.map((c) => XU.measure(ctx, c, size)), ly = P[1] + (li - (lines.length - 1) / 2) * size * 1.02 - (lines.length > 1 ? size * 0.12 : 0);
+    let px = P[0] - (cw.reduce((a, b) => a + b, 0) + gap * (ch.length - 1)) / 2;
+    ch.forEach((c, j) => {
+      const i = k0 + j, a0 = 5.25 + i * step, q = menu ? 1 : seg(w, a0, a0 + 0.16);
+      if (q > 0) {
+        const land = menu ? 9 : w - a0 - 0.16, dy = q < 1 ? -(1 - eOut(q)) * 180 : land < 0.12 ? Math.round(Math.sin(land / 0.12 * Math.PI) * size * 0.12) : 0;
+        const ph = ((T * 1.25 + (n - i) * 0.12) % 1), wave = still() || !(menu || w > 6.5) ? 0 : [0, -0.1, 0, 0.04][Math.floor(ph * 4)] * size;
+        const sz = q < 1 ? Math.round(size * (1 + (1 - q) * 0.6) / 4) * 4 : size;
+        XU.text(ctx, c, px + cw[j] / 2, ly + dy + wave, sz, q < 1 || land < 0.06 ? PAL[21] : PAL[14], { ramp: q >= 1 && land >= 0.06, outline: true });
+      }
+      px += cw[j] + gap;
+    });
+    k0 += ch.length;
   });
-  const sa = menu ? 1 : seg(w, 5.75, 6.1); if (sa > 0) { ctx.globalAlpha = sa; spaced(ctx, 'MIDNIGHT CABINET', P[0], P[1] + size * 0.78, Math.max(18, Math.round(16 * cam.z / 2) * 2), 63, 3); ctx.globalAlpha = 1; }
+  const sa = menu ? 1 : seg(w, 5.75, 6.1); if (sa > 0 && !letters) { ctx.globalAlpha = sa; spaced(ctx, 'MIDNIGHT CABINET', P[0], P[1] + size0 * 0.78, Math.max(18, Math.round(16 * cam.z / 2) * 2), 63, 3); ctx.globalAlpha = 1; }
 }
 function screenText(ctx, cam, w, T) {
   if (w >= 2.0 && w < 2.5 && Math.floor(T * 3) % 2 === 0) { const P = w2s(cam, 240, SCRN.y + SCRN.h / 2); spaced(ctx, 'INSERT COIN', P[0], P[1], 28, 22, 4); }

@@ -78,7 +78,11 @@ M.unitAw = function (k) { const d = DB[k]; if (!d) return null; const t = (d.tr 
 // ───────── the tooltip and the shop card ─────────
 M.unitTip = function (k, u) {
   const d = DB[k]; if (!d) return null; const q = M.QUALITY[d.q] || M.QUALITY[0], vi = d.voc && M.tagIc('voc', d.voc);
-  const row = []; if (vi) row.push({ img: vi.img, t: d.voc, c: vi.c, fs: 22, is: 28 }); row.push({ img: M.iconURL('u_star', 2), t: String(M.unitPower(k, u)), c: '#ffe08a', fs: 22, is: 26 });
+  const row = []; if (vi) row.push({ img: vi.img, t: d.voc, c: vi.c, fs: 22, is: 28 });
+  // every tag of the unit (user ruling 2026-09-29): class and race inside a game; in the cabinet room (局外) race has no use, class only
+  const g = window.__mcg, meta = !g || g.screen === 'room' || g.screen === 'menu' || g.screen === 'intro', ri = !meta && d.race && M.tagIc('race', d.race);
+  if (ri) row.push({ img: ri.img, t: d.race, c: ri.c, fs: 22, is: 28 });
+  row.push({ img: M.iconURL('u_star', 2), t: String(M.unitPower(k, u)), c: '#ffe08a', fs: 22, is: 26 });
   return { title: d.n, c: q.c, brief: [row], d: M.unitLine(k) };
 };
 // a race-count trait would be invisible now that cards show no race: 宝玉兽 counts merchants instead

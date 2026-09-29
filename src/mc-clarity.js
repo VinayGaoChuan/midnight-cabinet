@@ -78,11 +78,11 @@ const oBoons = M.boonsOf;
 if (oBoons) M.boonsOf = function (run) {
   const out = oBoons.apply(this, arguments), m = run && run.M; if (!m || (run.region && run.region.tut)) return out;
   const W = M.WONDERS || {}, ws = (m.wonders || []).filter(k => W[k] && W[k].kind === (run.raid ? 'night' : 'run'));
-  if (ws.length) out.push({ n: '奇观 ×' + ws.length, ic: 'u_star', c: '#ffd970', t: ws.slice(0, 3).map(k => W[k].n).join('、') });
+  if (ws.length) out.push({ n: '奇观 ×' + ws.length, ic: 't_pros', c: '#ffd970', t: ws.map(k => W[k].n).join('、') });
   const god = M.GODS && m.god && M.GODS[m.god], lv = m.godLv || 0;
   if (god && lv > 0) out.push({ n: god.n + ' Lv' + lv, ic: 'f_faith', c: god.c || '#ffe6a0', t: String((god.lv[lv - 1] || {}).t || '').replace(/。$/, '') });
   const tt = M.tripLines(run);
-  if (tt.length && !run.raid) out.push({ n: '这一趟途中', ic: 'e_path', c: '#5fd0c0', t: tt.slice(0, 3).join('、') });
-  return out.slice(0, 7);
+  if (tt.length && !run.raid) out.push({ n: '这一趟途中', ic: 'e_path', c: '#5fd0c0', t: tt.join('、') });
+  return out;
 };
 })();

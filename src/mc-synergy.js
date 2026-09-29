@@ -158,8 +158,8 @@ M.synRows = synRows;
 const oBoons = M.boonsOf;
 if (oBoons) M.boonsOf = function (run) {
   const out = oBoons.apply(this, arguments); const g = M._g, b = g && g.battle; if (!b || !b.syn) return out;
-  Object.keys(b.syn).forEach(r => { const L = b.syn[r], s = SYN[r]; out.unshift({ n: r + ' · ' + (L >= 3 ? s.top : s.n), ic: s.ic, c: L >= 3 ? '#ffcf4a' : M.RACES[r], t: L >= 3 ? s.topD : s.d[L - 1] }); });
-  return out.slice(0, 8);
+  Object.keys(b.syn).forEach(r => { const L = b.syn[r], s = SYN[r]; out.unshift({ n: r + ' · ' + (L >= 3 ? s.top : s.n), ic: s.ic, c: L >= 3 ? '#ffcf4a' : M.RACES[r], t: L >= 3 ? s.topD : s.d[L - 1], syn: r }); });
+  return out;
 };
 const oView = G.view;
 G.view = function () {

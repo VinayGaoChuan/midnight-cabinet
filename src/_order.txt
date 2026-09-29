@@ -183,6 +183,7 @@ mc-clarity.js
 mc-pool.js
 mc-swap.js
 mc-synergy.js
+mc-bbar.js
 mc-shopcard.js
 mc-report.js
 mc-bastion.js

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """商店页预览：把 商店文案.md 里的简短描述和「关于这款游戏」（BBCode）排成一页，图文和动图放在一起看效果。
 
-  python3 preview.py <交付文件夹>     → <交付文件夹>/商店页预览.html（引用同文件夹里的 封面/正式版、封面/试玩版、截图/（png/ 原画）、动图/、预告片/，离线打开）
+  python3 preview.py <交付文件夹> [en]   → <交付文件夹>/商店页预览.html（en：商店页预览-English.html，英文文案和英文素材）（引用同文件夹里的 封面/正式版、封面/试玩版、截图/（png/ 原画）、动图/、预告片/，离线打开）
 """
 import html, pathlib, re, sys
 
@@ -9,7 +9,10 @@ HERE = pathlib.Path(__file__).resolve().parent
 OUT = pathlib.Path(sys.argv[1])
 md = (HERE.parent / '商店文案.md').read_text(encoding='utf-8')
 blocks = re.findall(r"```\n(.*?)\n```", md, re.S)
-short_zh, short_demo, about_zh, demo_zh = blocks[0], blocks[1], blocks[4], blocks[6]
+# en: the English page — English copy, 截图-English / 动图-English and the English trailer, → 商店页预览-English.html
+EN = len(sys.argv) > 2 and sys.argv[2] == 'en'
+SUF, SHOTS, ANIM = ('-English', '截图-English', '动图-English') if EN else ('', '截图', '动图')
+short_zh, short_demo, about_zh, demo_zh = (blocks[2], blocks[3], blocks[5], blocks[7]) if EN else (blocks[0], blocks[1], blocks[4], blocks[6])
 
 
 def bb(s):
@@ -20,8 +23,8 @@ def bb(s):
         if m:
             name = m.group(1)
             mp4 = name.rsplit('.', 1)[0] + '.mp4'   # the page shows the MP4 Steam will play (same clip as the GIF)
-            if (OUT / '动图' / mp4).exists(): out.append(f'<figure><video src="动图/{html.escape(mp4)}" autoplay loop muted playsinline></video></figure>')
-            else: out.append(f'<figure><img src="动图/{html.escape(name)}" alt="" loading="lazy"></figure>')
+            if (OUT / ANIM / mp4).exists(): out.append(f'<figure><video src="{ANIM}/{html.escape(mp4)}" autoplay loop muted playsinline></video></figure>')
+            else: out.append(f'<figure><img src="{ANIM}/{html.escape(name)}" alt="" loading="lazy"></figure>')
             continue
         t = re.sub(r"\[h2\](.*?)\[/h2\]", r"<h2>\1</h2>", t)
         t = re.sub(r"\[b\](.*?)\[/b\]", r"<strong>\1</strong>", t)
@@ -32,11 +35,11 @@ def bb(s):
     return '\n'.join(out)
 
 
-shots = sorted(p.name for p in (OUT / '截图').glob('*.jpg'))
-thumbs = '\n'.join(f'<a href="截图/png/{html.escape(n[:-4])}.png"><img src="截图/{html.escape(n)}" alt=""></a>' for n in shots)
-trailer = next((p.name for p in sorted((OUT / '预告片').glob('*.mp4'))), '')
-page = f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>午夜机台 · 商店页预览</title>
+shots = sorted(p.name for p in (OUT / SHOTS).glob('*.jpg'))
+thumbs = '\n'.join(f'<a href="{SHOTS}/png/{html.escape(n[:-4])}.png"><img src="{SHOTS}/{html.escape(n)}" alt=""></a>' for n in shots)
+trailer = next((p.name for p in sorted((OUT / '预告片').glob('*.mp4')) if ('Midnight' in p.name) == EN), '')
+page = f"""<!doctype html><html lang="{'en' if EN else 'zh-CN'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{'Midnight Cabinet · Store Page Preview' if EN else '午夜机台 · 商店页预览'}</title>
 <style>
 :root {{ --bg: #14111f; --panel: #1d1830; --ink: #e9e4ff; --dim: #a39cc4; --gold: #ffcf4a; --wine: #8c2340; }}
 * {{ box-sizing: border-box; }}
@@ -61,15 +64,15 @@ body {{ margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.7 -app
 .caps figcaption {{ color: var(--dim); font-size: 12px; margin-top: 6px; }}
 @media (max-width: 760px) {{ .top, .cols {{ grid-template-columns: 1fr; }} }}
 </style></head><body><div class="wrap">
-<p class="note">本地预览，只用来看图文和动图排在一起的效果；上传时照 商店文案.md 在 Steamworks 后台逐栏填写。</p>
+<p class="note">{'Local preview of how the text and clips sit together; fill in Steamworks from 商店文案.md.' if EN else '本地预览，只用来看图文和动图排在一起的效果；上传时照 商店文案.md 在 Steamworks 后台逐栏填写。'}</p>
 <div class="top">
-  <video src="预告片/{html.escape(trailer)}" controls muted playsinline poster="截图/{html.escape(shots[0]) if shots else ''}"></video>
+  <video src="预告片/{html.escape(trailer)}" controls muted playsinline poster="{SHOTS}/{html.escape(shots[0]) if shots else ''}"></video>
   <div class="side"><img src="封面/正式版/header_capsule.png" alt=""><p>{html.escape(short_zh)}</p></div>
 </div>
 <div class="strip">{thumbs}</div>
 <div class="cols">
   <div class="about">{bb(about_zh)}</div>
-  <div><div class="demo"><strong>试玩版</strong><p>{html.escape(short_demo)}</p>{bb(demo_zh)}</div></div>
+  <div><div class="demo"><strong>{'Demo' if EN else '试玩版'}</strong><p>{html.escape(short_demo)}</p>{bb(demo_zh)}</div></div>
 </div>
 <div class="caps">
 {''.join(f'<figure><img src="封面/{n}.png" alt=""><figcaption>{c}</figcaption></figure>' for n, c in [
@@ -78,5 +81,5 @@ body {{ margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.7 -app
     ('试玩版/header_capsule', '试玩版 · 顶部横幅'), ('试玩版/main_capsule', '试玩版 · 主封面'), ('试玩版/library_capsule', '试玩版 · 资料库封面'), ('试玩版/library_logo', '试玩版 · 资料库标志')])}
 </div>
 </div></body></html>"""
-(OUT / '商店页预览.html').write_text(page, encoding='utf-8')
-print('wrote', OUT / '商店页预览.html')
+(OUT / f'商店页预览{SUF}.html').write_text(page, encoding='utf-8')
+print('wrote', OUT / f'商店页预览{SUF}.html')
