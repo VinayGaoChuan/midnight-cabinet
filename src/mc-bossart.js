@@ -124,6 +124,7 @@ if (BP) {
   // a short jagged bolt left along the charge's path
   const oFx = M.drawFxPx;
   M.drawFxPx = function (ctx, f, T, b) {
+    if (f.k === 'bkPot' && f.ent && f.ent.pxBoss) return true;   // 巨掌's module hugs its own hive; the game's pot block is not drawn over it
     if (f.k === 'bkBolt') {
       const q = (T - f.t0) / f.life; if (q >= 1) return true; const A = 4;
       ctx.save(); ctx.globalAlpha = 1 - q * 0.6; let x = f.x, y = f.y;
