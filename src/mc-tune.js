@@ -56,7 +56,7 @@ const T = M.TUNE = [
   // ── the night ──
   ['守夜', 'RAID_CROWD', '人海：开局数量、每天加多少、上限、纵深', 'mc-night.js'],
   ['守夜', 'NIGHT.K', '夜晚强度整体倍数（乘在按天的曲线上）', 'mc-night.js'],
-  ['守夜', 'NIGHT.KD', '夜晚强度按天再弯一下：第 10 天前 ×1.4，第 15 天 ×1.9，第 20 天 ×2.8，第 30 天 ×3.8', 'mc-night.js'],
+  ['守夜', 'NIGHT.KD', '夜晚强度按天再弯一下：第 10 天前 ×1.4，第 15 天 ×1.65，第 20 天 ×2.5，第 30 天 ×3.6', 'mc-night.js'],
   ['守夜', 'RAID_CURVE', '按天的怪物强度倍数', 'mc-siege.js'],
   ['守夜', 'RAID_SIZE', '怪物体型', 'mc-bastion.js'],
   ['守夜', 'RAID_SHARD', '灵魂碎片掉落概率', 'mc-bastion.js'],
