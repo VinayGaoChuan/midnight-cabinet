@@ -6,6 +6,8 @@
 //   node rec.mjs rec --html <游戏包.html> [--save <存档.json>] --secs <秒> --out <文件夹> [--opts '<JSON>'] [--png <每几帧一张>] [--hide 点击跳过,…]
 //        从存档（或全新开始）录 N 秒：<文件夹>/video.mp4（无声）、audio.wav、final.mp4（有声）、png/（原画截图）、log.jsonl（每帧在干什么）
 //   node rec.mjs stills --at <秒,秒,…> --out <文件夹> [--save …] [--dsf 2] [--hide 点击跳过,…]
+//   （rec / stills 都可以加 --lang en 等：用哪种语言录，默认简体中文）
+//   （rec 可以加 --play <脚本.js>：按脚本演一段指定的操作，不用机器人；例：plays/base.js 挖岩层、建房间、过一天）
 //        同样的玩法，只在给定的时刻各截一张 PNG（--dsf 2 = 3840×2160，给封面裁图用）
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
@@ -24,6 +26,8 @@ const PORT = +arg('port', 9610), W = 1920, H = 1080, FPS = 30;
 const CHROME = CHROME_BIN();
 const FFMPEG = process.env.FFMPEG || 'ffmpeg';
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
+// a port someone else's Chrome already has would hand this recorder their page: refuse
+try { await fetch('http://127.0.0.1:' + PORT + '/json', { signal: AbortSignal.timeout(800) }); console.log('port ' + PORT + ' is taken: use --port with a free one'); process.exit(1); } catch (e) {}
 const prof = path.join(os.tmpdir(), 'mc-rec-profile-' + PORT);
 fs.rmSync(prof, { recursive: true, force: true });
 const chrome = spawn(CHROME, ['--headless=new', '--hide-scrollbars', '--mute-audio', '--user-data-dir=' + prof, '--remote-debugging-port=' + PORT,
@@ -68,8 +72,10 @@ async function open(seed) {
   const cfg = { audioSecs: MODE === 'rec' ? +arg('secs', 60) + 30 : 0 };
   let pre = 'window.__VT_CFG = ' + JSON.stringify(cfg) + ';\n';
   // the save to start from goes in before the game reads it (once: a reload by the game itself keeps what it wrote)
-  if (seed) pre += `try { if (!sessionStorage.getItem('__seeded')) { localStorage.clear(); const S = ${JSON.stringify(seed)}; for (const k in S) localStorage.setItem(k, S[k]); sessionStorage.setItem('__seeded', '1'); } } catch (e) {}\n`;
-  else pre += `try { if (!sessionStorage.getItem('__seeded')) { localStorage.clear(); sessionStorage.setItem('__seeded', '1'); } } catch (e) {}\n`;
+  // --lang: the game's language for the recording (src/mc-i18n.js; default Chinese — the browser's own language would otherwise pick)
+  const LANG = arg('lang', 'zh-CN'), SET = JSON.stringify({ lang: LANG });
+  if (seed) pre += `try { if (!sessionStorage.getItem('__seeded')) { localStorage.clear(); const S = ${JSON.stringify(seed)}; for (const k in S) localStorage.setItem(k, S[k]); localStorage.setItem('midnight-cabinet-settings-v1', ${JSON.stringify(SET)}); sessionStorage.setItem('__seeded', '1'); } } catch (e) {}\n`;
+  else pre += `try { if (!sessionStorage.getItem('__seeded')) { localStorage.clear(); localStorage.setItem('midnight-cabinet-settings-v1', ${JSON.stringify(SET)}); sessionStorage.setItem('__seeded', '1'); } } catch (e) {}\n`;
   if (arg('seed')) pre += `(() => { let s = ${+arg('seed')} >>> 0; Math.random = () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; })();\n`;
   await send('Page.addScriptToEvaluateOnNewDocument', { source: pre + fs.readFileSync(path.join(HERE, 'vclock.js'), 'utf8') });
   await send('Page.navigate', { url: pathToFileURL(HTML).href });
@@ -104,15 +110,17 @@ async function rec() {
   const opts = Object.assign({ sleep: 50, buy: true, extract: true }, JSON.parse(arg('opts', '{}')));
   const dwell = Object.assign({}, DWELL, JSON.parse(arg('dwell', '{}')));
   // from here on the game's time moves only frame by frame
+  // --play <脚本.js>: a scripted scene instead of the bot (the script defines window.__play(secs, opts); it may hand over to window.__bot)
+  if (arg('play')) await ev(fs.readFileSync(path.resolve(arg('play')), 'utf8') + ';\ntrue');
   const t0 = await ev(`window.__vt.setManual(true)`);
-  await ev(`window.__botReal = true; window.__DWELL = ${JSON.stringify(dwell)}; window.__botStop = false; window.__recRes = null; window.__bot(1e6, ${JSON.stringify(opts)}).then(r => window.__recRes = r, e => window.__recRes = { err: String(e) }); true`);
+  await ev(`window.__botReal = true; window.__DWELL = ${JSON.stringify(dwell)}; window.__botStop = false; window.__recRes = null; (window.__play || window.__bot)(1e6, ${JSON.stringify(opts)}).then(r => window.__recRes = r, e => window.__recRes = { err: String(e) }); true`);
   const ff = spawn(FFMPEG, ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-',
     '-c:v', 'libx264', '-preset', 'medium', '-crf', '12', '-pix_fmt', 'yuv420p', '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-movflags', '+faststart', path.join(out, 'video.mp4')], { stdio: ['pipe', 'inherit', 'inherit'] });
   const log = fs.createWriteStream(path.join(out, 'log.jsonl'));
   const settle = `new Promise(r => { const c = new MessageChannel(); c.port1.onmessage = () => { const d = new MessageChannel(); d.port1.onmessage = () => r(window.__recState()); d.port2.postMessage(0); }; c.port2.postMessage(0); })`;
   let rate = 1, tr = Date.now(), last = '';
   for (let f = 0; f < N; f++) {
-    let st; try { st = await ev(`window.__vt.step(1000 / ${FPS}); ${settle}`, 30000); } catch (e) { console.log('STOP at frame', f, e.message); break; }
+    let st; try { st = await ev(`(async () => { window.__vt.step(1000 / ${FPS}); if (window.__vt.audioSync) await window.__vt.audioSync(); return await ${settle}; })()`, 30000); } catch (e) { console.log('STOP at frame', f, e.message); break; }
     if (arg('hide') && f % 5 === 0) await ev(HIDE());
     const shot = await send('Page.captureScreenshot', { format: 'jpeg', quality: 94, captureBeyondViewport: false });
     const buf = Buffer.from(shot.data, 'base64');

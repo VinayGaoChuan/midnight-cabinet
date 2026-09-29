@@ -169,7 +169,7 @@ M.drawRite = function (x, g) {
   }
   // the rite: typed line by line under the card
   if (t >= T_LINES && dim > 0) {
-    const L = lines(rv), li = Math.min(L.length - 1, Math.floor((t - T_LINES) / LINE)), u = t - T_LINES - li * LINE, s = L[li], n = Math.min(s.length, Math.floor(u / 0.05));
+    const L = lines(rv), li = Math.min(L.length - 1, Math.floor((t - T_LINES) / LINE)), u = t - T_LINES - li * LINE, s = M.tr ? M.tr(L[li]) : L[li], n = Math.min(s.length, Math.floor(u / 0.05));
     const a = cl((T.tH + 0.8 - t) / 0.5, 0, 1) * (rv.after > 0 ? 1 : cl((T.tEnd - 0.4 - t) / 0.5, 0, 1));
     if (a > 0) { x.save(); x.globalAlpha = a; U.plate(x, 560, 850, 800, 110, { ring: rv.after > 0 ? P.red : P.haze }); U.text(x, s.slice(0, n), CX, 905, 40, li === L.length - 1 ? (rv.after > 0 ? P.butter : P.pink) : P.cream, { outline: true }); x.restore(); }
   }

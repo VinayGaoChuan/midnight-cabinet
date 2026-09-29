@@ -12,7 +12,13 @@ STORE = next((int(a.split('=', 1)[1]) for a in sys.argv[1:] if a.startswith('--s
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SRC, BUILD = ROOT / 'src', ROOT / 'build'
-order = [l.strip() for l in (SRC / '_order.txt').read_text(encoding='utf-8').splitlines() if l.strip()]
+order = []
+for l in (SRC / '_order.txt').read_text(encoding='utf-8').splitlines():
+    l = l.strip()
+    if not l: continue
+    # a glob (i18n/*.js: every language's dictionary) takes whatever files are there, in name order
+    if '*' in l: order += sorted(str(p.relative_to(SRC)).replace('\\', '/') for p in SRC.glob(l))
+    else: order.append(l)
 BUILD.mkdir(exist_ok=True)
 # a // comment put in front of code on the same line swallows that code without any error: refuse to build
 import re

@@ -19,7 +19,7 @@ const PK = {}; PARTS.forEach(p => { PK[p.k] = p; });
 const prof = () => (M._g && M._g.prof) || null;
 const fix = (p) => { if (!p || p.partsV === 1) return p; p.parts = Object.assign({}, p.parts); if (p.stats && p.stats.games > 0) PARTS.forEach(x => { p.parts[x.k] = 1; }); p.partsV = 1; return p; };
 M.hasPart = (k, p) => { p = fix(p || prof()); return !p || !!(p.parts && p.parts[k]); };   // no profile (sims, tools): everything on
-const on = M.hasPart;
+const on = (k, p) => M.hasPart(k, p);   // looked up at each call: the Steam demo (src/mc-demo.js) fits its parts by wrapping M.hasPart
 
 // ───────── FEVER ─────────
 const oInit = BP.init;

@@ -366,7 +366,8 @@ defineEl('mc-wave', class extends HTMLElement {
   connectedCallback() { this.style.display = 'inline-flex'; this.style.whiteSpace = 'pre'; this.render(); }
   attributeChangedCallback() { if (this.isConnected) this.render(); }
   render() {
-    const t = this.getAttribute('t') || ''; if (t === this._t) return; this._t = t; this.textContent = '';
+    const t0 = this.getAttribute('t') || '', tr = window.MC && window.MC.tr; if (t0 === this._t) return; this._t = t0; this.textContent = '';
+    const t = tr ? tr(t0) : t0;   // translated whole (src/mc-i18n.js), then letter by letter
     const ramp = this.getAttribute('ramp') === '1', chars = [...t];
     chars.forEach((ch, i) => {
       const s = document.createElement('span'); s.textContent = ch;

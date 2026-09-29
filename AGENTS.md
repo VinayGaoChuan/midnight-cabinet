@@ -7,3 +7,4 @@
 5. **表现效果清单**：`docs/effects.md` 列出所有有表现效果的单元（给打磨的同学用）。加减单位、技能、小游戏、建筑、道具、音效后运行 `node tools/gen-effects.js`；新增全屏演出或动效时手动补进对应小节。
 6. **构建与验证**：`python3 tools/mk.py` 生成 `index.html`；浏览器里跑 `tools/bot.js`（`viewErrs` 必须为 0）；加载 `tools/designcheck.js` 后 `await __designCheck()` 必须 `ok: true`。
 7. **存档与日志**：存档只在玩家自己的设备上（浏览器 localStorage / Steam 用户数据目录），永远不提交到 git；导出的日志、遥测数据放 `.ai/`。
+8. **多语言**：界面文字照常写中文；改了或加了文字，跑 `python3 tools/i18n.py extract && python3 tools/i18n.py merge`，按 `docs/design.md` §17 和 `src/i18n/README.md` 给各语言补译后 `python3 tools/i18n.py pack`。`src/i18n/*.js` 是生成文件，不要手改。按字画字、打字机、切行的地方先 `M.tr` 整句翻译。

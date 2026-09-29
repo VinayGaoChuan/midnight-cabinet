@@ -59,6 +59,8 @@ mc-game-e.js
 mc-game-f.js
 mc-game-g.js
 mc-game-h.js
+i18n/*.js
+mc-i18n.js
 mc-game-i.js
 mc-game-j.js
 mc-game-k.js
@@ -192,5 +194,6 @@ mc-tutor.js
 mc-perf.js
 mc-tune.js
 mc-bossart.js
+mc-lang.js
 mc-boot.js
 mc-demo.js

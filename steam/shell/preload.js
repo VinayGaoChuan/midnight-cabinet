@@ -5,7 +5,8 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 // 给页面一个导出日志的入口（测试版角标用）
-contextBridge.exposeInMainWorld('__wgpNative', { exportLogs: () => ipcRenderer.send('wgp:export-logs'), openStore: () => ipcRenderer.send('wgp:open-store') });
+// steamLanguage：Steam 客户端给这款游戏设的语言（api 名，如 schinese / english），游戏第一次打开时用它选语言
+contextBridge.exposeInMainWorld('__wgpNative', { exportLogs: () => ipcRenderer.send('wgp:export-logs'), openStore: () => ipcRenderer.send('wgp:open-store'), steamLanguage: () => ipcRenderer.sendSync('wgp:steam-language') });
 
 const STAMP = '__mc_saved_at';
 let lastExported = null;

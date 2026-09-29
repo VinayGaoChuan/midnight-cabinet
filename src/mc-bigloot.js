@@ -38,7 +38,7 @@ function card(ctx, x, y, sc, o, front, T) {
   if (o.d) { const lines = wrap(ctx, o.d, CW - 50, 24).slice(0, 3); lines.forEach((ln, i) => U.text(ctx, ln, 0, 176 + i * 32, 24, P.cream)); }
   ctx.restore();
 }
-function wrap(ctx, s, max, size) { ctx.save(); ctx.font = U.font ? U.font(size) : size + 'px sans-serif'; const out = []; let line = ''; for (const ch of String(s)) { if (ctx.measureText(line + ch).width > max && line) { out.push(line); line = ch; } else line += ch; } if (line) out.push(line); ctx.restore(); return out; }
+function wrap(ctx, s, max, size) { ctx.save(); ctx.font = U.font ? U.font(size) : size + 'px sans-serif'; const tw = M.trWrap && M.trWrap(ctx, s, max); if (tw) { ctx.restore(); return tw; } const out = []; let line = ''; for (const ch of String(s)) { if (ctx.measureText(line + ch).width > max && line) { out.push(line); line = ch; } else line += ch; } if (line) out.push(line); ctx.restore(); return out; }
 function draw(ctx, F) {
   const T = F.t, o = F.o, qc = Q[o.q].c, still = RM(), cx = 960, cy = 560; ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
   const out = F.out != null ? cl((T - F.out) / 0.35, 0, 1) : 0;

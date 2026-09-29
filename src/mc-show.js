@@ -177,7 +177,7 @@ SH.win = function (g, mg, tier, o) {
     // 黑场 0.2 秒 → 聚光 → 「大」「奖」逐字砸下 → 金币雨、彩纸 → 计数器越滚越快
     s.black = 1; snd('win4'); fx.kick(4);
     later(mg, 0.2, () => { s.black = 0; SH.reveal(g, mg, 3, { x, y, id: o.id, col: o.col }); s.lamp = { t: 2.8, col, strobe: 1, sp: 6 }; });
-    const word = [...(o.label || '大奖')];
+    const word = [...(M.tr ? M.tr(o.label || '大奖') : (o.label || '大奖'))];
     word.forEach((ch, i) => later(mg, 0.32 + i * 0.2, () => { SH.stamp(mg, ch, K.CX + (i - (word.length - 1) / 2) * 150, K.SY + 250, C.gold, 150, 2.4 - i * 0.2); snd('stamp'); fx.kick(10); SH.shake(mg, 8); SH.burst(mg, K.CX + (i - (word.length - 1) / 2) * 150, K.SY + 250, 16, { col: C.gold, sp: [150, 400] }); }));
     later(mg, 0.5, () => { fx.confetti(180); fx.coins(x, y, 60, { v: 1500, spread: 1.9, spreadT: 0.9 }); });
     if (o.v) later(mg, 0.6, () => SH.roll(mg, o.v, K.CX, K.SY + 430, col, rollDur));

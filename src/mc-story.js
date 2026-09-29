@@ -82,14 +82,14 @@ function draw(ctx, F) {
   if (o.title) U.text(ctx, o.title, X0 + 24, Y0 - 34, 34, P.gold, { outline: true, align: 'left' });
   if (o.sub) U.text(ctx, o.sub, X0 + W - 24, Y0 - 34, 34, P.cream, { outline: true, align: 'right' });
   // the lines, typed
-  const all = o.lines.join('\n'), n = Math.floor(Math.max(0, T - 0.6) * CPS); let shown = all.slice(0, n), y = Y0 + H + 70;
+  const all = (M.tr ? o.lines.map(M.tr) : o.lines).join('\n'), n = Math.floor(Math.max(0, T - 0.6) * CPS); let shown = all.slice(0, n), y = Y0 + H + 70;
   shown.split('\n').forEach((ln) => { wrap(ctx, ln, W - 40, 32).forEach(t => { U.text(ctx, t, 960, y, 32, P.cream, { outline: true }); y += 46; }); });
   const done = n >= all.length; F.done = done;
   const hint = done && T > F.doneAt + 0.6 ? '点击继续' : F.skip ? '点击跳过' : '';
   if (hint) { ctx.globalAlpha = (1 - out) * (0.55 + 0.45 * Math.abs(Math.sin(T * 3))); U.text(ctx, hint, 960, 1040, 26, P.lavender || '#a9a3c9', { outline: true }); }
   ctx.restore();
 }
-function wrap(ctx, s, max, size) { ctx.save(); ctx.font = U.font ? U.font(size) : size + 'px sans-serif'; const out = []; let line = ''; for (const ch of String(s)) { if (ctx.measureText(line + ch).width > max && line) { out.push(line); line = ch; } else line += ch; } if (line) out.push(line); ctx.restore(); return out; }
+function wrap(ctx, s, max, size) { ctx.save(); ctx.font = U.font ? U.font(size) : size + 'px sans-serif'; const tw = M.trWrap && M.trWrap(ctx, s, max); if (tw) { ctx.restore(); return tw; } const out = []; let line = ''; for (const ch of String(s)) { if (ctx.measureText(line + ch).width > max && line) { out.push(line); line = ch; } else line += ch; } if (line) out.push(line); ctx.restore(); return out; }
 const ok = (g) => ['world', 'end', 'base'].includes(g.screen) && !g.settle && !g.bigFx && !g.parade && !g.modal && !g.evoFx && !g.mini && !g.trans && !g.reel;
 const oTick = G.tick;
 G.tick = function (dt) {

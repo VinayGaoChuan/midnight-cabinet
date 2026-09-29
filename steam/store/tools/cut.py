@@ -6,13 +6,13 @@
 剪辑表：
   "src":    { "A": "<录像文件夹>", ... }            每个文件夹里有 final.mp4（有声）/ video.mp4、png/（每 N 帧一张原画）
   "shots":  [ { "n": "01_boss", "src": "C", "f": 帧号 } ]          → 截图/<n>.png（1920×1080 原画）+ <n>.jpg
-  "anims":  [ { "n": "02_merge", "src": "A", "t": 秒, "d": 秒, "crop": [x, y, w, h]? } ]
+  "anims":  [ { "n": "02_merge", "src": "A", "t": 秒, "d": 秒, "crop": [x, y, w, h]? } ]   （或 "parts": [[秒, 秒], …] 几段接在一起）
                                                    → 动图/<n>.gif（616 宽）+ <n>.mp4（1170 宽，无声，≤12 秒）
   "trailer": { "out": "午夜机台-预告片.mp4", "cards": "<字幕卡文件夹>",
                "parts": [ { "src": "O", "t": 秒, "d": 秒, "card": "c1"? }, …, { "end": "end_demo", "d": 5, "src": "O", "t": 秒 } ] }
                                                    → 预告片/<out>（1920×1080，30 帧，H.264 + AAC）
 Steam 的要求（2026-09-28 核对 partner.steamgames.com）：截图至少 5 张、1920×1080、只放实机画面；「关于这款游戏」里的
-动图可以是 GIF / MP4 / WEBM，推荐 1170 宽、最长 12 秒，截图加动图整页 15 MB 以内；预告片最高 1920×1080、30 或 60 帧、5000 kbps 以上。
+动图可以是 GIF / MP4 / WEBM，推荐 1170 宽、最长 12 秒；每个文件小于 5 MB，「关于」里的图加起来 15 MB 以内（剪辑表 "mp4mb" 是每段 MP4 的额度，默认 1.6）；预告片最高 1920×1080、30 或 60 帧、5000 kbps 以上。
 """
 import json, os, subprocess, sys, pathlib
 
@@ -50,18 +50,26 @@ if spec.get('shots'):
 if spec.get('anims'):
     d = OUT / '动图'; d.mkdir(parents=True, exist_ok=True)
     for a in spec['anims']:
-        dur = min(12, a['d']); crop = a.get('crop'); pre = f"crop={crop[2]}:{crop[3]}:{crop[0]}:{crop[1]}," if crop else ''
+        # one stretch ("t", "d") or several joined back to back ("parts": [[秒, 秒], …], e.g. the start of a build and the room finishing)
+        segs = a.get('parts') or [[a['t'], a['d']]]; dur = min(12, sum(x[1] for x in segs))
+        crop = a.get('crop'); pre = f"crop={crop[2]}:{crop[3]}:{crop[0]}:{crop[1]}," if crop else ''
+        ins = [v for t, sd in segs for v in ('-ss', t, '-t', sd, '-i', media(a.get('src')))]
+        cat = ''.join(f'[{i}:v]' for i in range(len(segs))) + f'concat=n={len(segs)}:v=1:a=0,' if len(segs) > 1 else ''
+        vin = '' if len(segs) > 1 else '[0:v]'
+        # the eight clips of 「关于」 share Steam's 15 MB: each MP4 is squeezed (higher CRF) until it fits its share
         mp4 = d / (a['n'] + '.mp4')
-        run(['-ss', a['t'], '-t', dur, '-i', media(a['src']), '-an', '-vf', pre + 'scale=1170:-2:flags=lanczos', '-c:v', 'libx264', '-preset', 'slow', '-crf', a.get('crf', 21),
-             '-pix_fmt', 'yuv420p', *BT709, '-movflags', '+faststart', mp4])
-        fps, colors = a.get('fps', 15), a.get('colors', 128)
-        for _ in range(4):   # a GIF over 3 MB loads slowly: fewer frames and colours until it fits
+        for crf in [a.get('crf', 21), 24, 27, 30, 33]:
+            run(ins + ['-an', '-filter_complex', vin + cat + pre + f'trim=duration={dur},scale=1170:-2:flags=lanczos[v]', '-map', '[v]', '-c:v', 'libx264', '-preset', 'slow', '-crf', crf,
+                 '-pix_fmt', 'yuv420p', *BT709, '-movflags', '+faststart', mp4])
+            if mb(mp4) <= a.get('mp4mb', spec.get('mp4mb', 1.6)): break
+        # a GIF over 3 MB loads slowly (and Steam refuses files of 5 MB and more): fewer frames, colours, then pixels until it fits
+        steps = [(15, 128, 616), (13, 96, 616), (11, 64, 616), (10, 48, 616), (10, 48, 540), (10, 48, 480), (8, 40, 480)]
+        for fps, colors, gw in steps:
             gif = d / (a['n'] + '.gif')
-            run(['-ss', a['t'], '-t', dur, '-i', media(a['src']), '-vf',
-                 pre + f"fps={fps},scale=616:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors={colors}:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle", '-loop', '0', gif])
+            run(ins + ['-filter_complex',
+                 vin + cat + pre + f"trim=duration={dur},fps={fps},scale={gw}:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors={colors}:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle", '-loop', '0', gif])
             if mb(gif) <= a.get('maxmb', 3.0): break
-            fps, colors = max(10, fps - 2), max(64, colors - 32)
-        print('anim', a['n'], dur, 's ·', mb(gif), 'MB gif @', fps, 'fps /', mb(mp4), 'MB mp4')
+        print('anim', a['n'], dur, 's ·', mb(gif), 'MB gif @', fps, 'fps', gw, 'px /', mb(mp4), 'MB mp4 crf', crf)
 
 # ── 预告片：一段段实机画面（带游戏自己的声音），字幕卡淡入淡出，片尾卡 ──
 if spec.get('trailer'):

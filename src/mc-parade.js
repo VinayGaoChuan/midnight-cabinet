@@ -37,7 +37,7 @@ function garHint(g, d) {
   if (FRONT[d.voc] && !front) return { t: '驻军缺前排', c: P.lime };
   return n ? { t: '驻军里已有 ' + n + ' 支' + d.voc, c: P.lavender } : { t: '驻军里还没有' + d.voc, c: P.lime };
 }
-function wrap(ctx, s, max, size) { ctx.save(); ctx.font = U.font(size); const out = []; let line = ''; for (const ch of String(s)) { if (ctx.measureText(line + ch).width > max && line) { out.push(line); line = ch; } else line += ch; } if (line) out.push(line); ctx.restore(); return out; }
+function wrap(ctx, s, max, size) { ctx.save(); ctx.font = U.font(size); const tw = M.trWrap && M.trWrap(ctx, s, max); if (tw) { ctx.restore(); return tw; } const out = []; let line = ''; for (const ch of String(s)) { if (ctx.measureText(line + ch).width > max && line) { out.push(line); line = ch; } else line += ch; } if (line) out.push(line); ctx.restore(); return out; }
 function card(ctx, c, i, T, F, g) {
   const d = DB[c.u.type], qc = Q[c.q].c, u = c.u, age = T - c.at, still = RM(), open = F.chosen == null && T >= F.allAt, hov = open && F.hov === i;
   let x = c.x, y = c.y, k = (still ? 1 : eb(age / 0.4)) * (hov ? 1.07 : 1), a = 1;

@@ -260,6 +260,14 @@ function exportLogs(win) {
 }
 
 ipcMain.on('wgp:export-logs', (event) => exportLogs(BrowserWindow.fromWebContents(event.sender)));
+ipcMain.on('wgp:steam-language', (event) => {
+  let lang = '';
+  try {
+    const c = runtime.steam && runtime.steam.client;
+    lang = (c && c.apps && c.apps.currentGameLanguage && c.apps.currentGameLanguage()) || '';
+  } catch (err) { log.warn('steam', '读取 Steam 语言失败', { message: String(err && err.message || err) }); }
+  event.returnValue = lang;
+});
 // a demo's 「加入愿望单」: the full game's store page — in the Steam overlay when Steam is running, else the Steam client or the browser
 ipcMain.on('wgp:open-store', () => {
   const id = Number(CONFIG.steam && CONFIG.steam.storeAppId) || 0;

@@ -242,7 +242,7 @@ function drawInspect(g) {
     g.save(); g.font = '36px "Fusion Pixel 12px Proportional SC"'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = INK; g.fillText('收下', kb.x + kb.w / 2, yy + kb.h / 2 - 2); g.restore(); g.globalAlpha = 1; }
   g.restore();
 }
-function wrapLines(g, s, maxW, size) { g.save(); g.font = size + 'px "Fusion Pixel 12px Proportional SC"'; const out = []; let cur = ''; for (const ch of s) { if (g.measureText(cur + ch).width > maxW && cur) { out.push(cur); cur = ch; } else cur += ch; } if (cur) out.push(cur); g.restore(); return out; }
+function wrapLines(g, s, maxW, size) { g.save(); g.font = size + 'px "Fusion Pixel 12px Proportional SC"'; const tw = M.trWrap && M.trWrap(g, s, maxW); if (tw) { g.restore(); return tw; } const out = []; let cur = ''; for (const ch of s) { if (g.measureText(cur + ch).width > maxW && cur) { out.push(cur); cur = ch; } else cur += ch; } if (cur) out.push(cur); g.restore(); return out; }
 
 // ───────── the reveal's world: each quality has its own pixel world that slams in behind the card ─────────
 // 普通 moonlit meadow · 优质 firefly wood at dusk · 稀有 aurora over snow peaks · 史诗 the star abyss with floating isles ·
@@ -581,7 +581,7 @@ function drawReveal(g) {
       if (q >= 4) RAIN.forEach((c, i) => { g.fillStyle = c; g.fillRect(-1000, -62 + i * 2, 2000, 2); g.fillRect(-1000, 48 + i * 2, 2000, 2); });
       for (let x = -1000; x < 1000; x += 40) { const on = ((x / 40 + Math.floor(t * 10)) % 3 + 3) % 3 === 0; g.fillStyle = on ? WHITE : C.c; g.fillRect(x + 14, -58, 12, 8); g.fillRect(x + 14, 50, 12, 8); }
       g.restore();
-    const word = (Q[q].n + (q ? '！' : '')).split(''); word.forEach((ch, i) => { const at = P.title + i * 0.08, k = clamp((t - at) / 0.14, 0, 1); if (k <= 0) return; const land = clamp((t - at - 0.14) / 0.25, 0, 1), sc = k < 1 ? lerp(3.2, 1, eo(k)) : 1 + 0.18 * Math.sin(land * Math.PI) * (1 - land), x = 960 + (i - (word.length - 1) / 2) * 150, y = 200 - (1 - k) * 60 + Math.sin(t * 3 + i) * 3 * land;
+    const word = [...(M.tr ? M.tr(Q[q].n + (q ? '！' : '')) : Q[q].n + (q ? '！' : ''))]; word.forEach((ch, i) => { const at = P.title + i * 0.08, k = clamp((t - at) / 0.14, 0, 1); if (k <= 0) return; const land = clamp((t - at - 0.14) / 0.25, 0, 1), sc = k < 1 ? lerp(3.2, 1, eo(k)) : 1 + 0.18 * Math.sin(land * Math.PI) * (1 - land), x = 960 + (i - (word.length - 1) / 2) * 150, y = 200 - (1 - k) * 60 + Math.sin(t * 3 + i) * 3 * land;
       g.save(); g.translate(x, y); g.scale(sc, 1 / Math.max(0.8, sc > 1 ? 1 + (sc - 1) * 0.5 : sc)); g.globalAlpha = (1 - lv) * (1 - ik) * Math.min(1, k * 3); drawText(g, ch, 0, 0, 150, C.c, q >= 4 ? { bands: RAIN.slice(1, 6) } : q >= 3 ? { bands: [WHITE, C.lt, C.c, C.c2] } : { bands: [WHITE, C.lt, C.c] }); g.restore(); });
     const nk = clamp((t - P.stats + 0.2) / 0.25, 0, 1); if (nk > 0) { g.globalAlpha = (1 - lv) * (1 - ik) * nk; drawText(g, R.d.n, 960, 800 + (1 - nk) * 20, 56, C.c);
       const pw = Math.round(R.d.cost * eo(clamp((t - P.stats) / 0.5, 0, 1))); drawText(g, R.d.voc + ' · 战斗力 ' + pw, 960, 856, 32, '#f4efe0'); drawText(g, R.d.line, 960, 904, 26, '#c9c3e6'); }

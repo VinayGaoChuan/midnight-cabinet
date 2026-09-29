@@ -72,7 +72,7 @@ function drawIntro(ctx, b) {
 // the word is drawn on its own canvas first so a shine can cross just the letters
 let VC = null;
 function drawVictory(ctx, b) {
-  const t = b.t, X = 960, txt = [...String(b.text)], gold = b.col || '#ffd970';
+  const t = b.t, X = 960, txt = [...(M.tr ? M.tr(String(b.text)) : String(b.text))], gold = b.col || '#ffd970';
   // the settle panel takes the stage: the word glides up to the top and stays until the panel closes
   if (b.stay && b.alive && !b.alive() && !b._end) { b._end = 1; b.life = t + 0.3; }
   const out = cl((b.life - t) / 0.3, 0, 1), k = b.stay ? eio((t - 1.05) / 0.45) : 0, Y = 420 - 170 * k, tsc = 1 - 0.28 * k + (k >= 1 ? 0.015 * Math.sin((t - 1.5) * 2.4) : 0);

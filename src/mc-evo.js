@@ -121,7 +121,7 @@ G.evoStart = function (three, to, host) {
 function beat(F, k, at, fn) { if (F.t >= at && !F.s[k]) { F.s[k] = 1; try { fn(); } catch (e) {} } }
 function drawImgAt(ctx, im, x, y, sc) { if (!im) return; ctx.save(); ctx.imageSmoothingEnabled = false; ctx.translate(Math.round(x), Math.round(y)); ctx.scale(sc, sc); ctx.drawImage(im, -im.width / 2, -im.height / 2); ctx.restore(); }
 function diamond(ctx, x, y, r, col) { ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 4); U.R(ctx, -r - 3, -r - 3, r * 2 + 6, r * 2 + 6, P.ink); U.R(ctx, -r, -r, r * 2, r * 2, col); U.R(ctx, -r, -r, r * 2, 3, P.white); ctx.restore(); }
-function wrap(ctx, s, max, size) { ctx.save(); ctx.font = U.font(size); const out = []; let line = ''; for (const ch of String(s)) { if (ctx.measureText(line + ch).width > max && line) { out.push(line); line = ch; } else line += ch; } if (line) out.push(line); ctx.restore(); return out; }
+function wrap(ctx, s, max, size) { ctx.save(); ctx.font = U.font(size); const tw = M.trWrap && M.trWrap(ctx, s, max); if (tw) { ctx.restore(); return tw; } const out = []; let line = ''; for (const ch of String(s)) { if (ctx.measureText(line + ch).width > max && line) { out.push(line); line = ch; } else line += ch; } if (line) out.push(line); ctx.restore(); return out; }
 // the new unit's card: marks, the unit, name, vocation and power, its one line
 const CW = 400, CH = 520;
 function drawCard(ctx, x, y, sc, F) {

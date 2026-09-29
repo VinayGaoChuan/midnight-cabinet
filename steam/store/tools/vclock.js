@@ -44,13 +44,26 @@
       Object.defineProperty(oc, 'baseLatency', { get: () => 0 });
       Object.defineProperty(oc, 'outputLatency', { get: () => 0 });
       oc.resume = () => Promise.resolve(); oc.suspend = () => Promise.resolve(); oc.close = () => Promise.resolve();
-      V.ac = oc; return oc;
+      V.ac = oc; V.acDone = 0; V.acStarted = false; return oc;
+    };
+    // the sound is rendered frame by frame, in step with the picture: the recorder awaits __vt.audioSync() after every step. Rendered
+    // all at once at the end, every node the game made in minutes of play would be alive from the first sample (25× slower than real
+    // time); in step, the ones that have played are let go as in a real context.
+    const PR = OfflineAudioContext.prototype, Q = 128 / SR;
+    V.audioSync = async () => {
+      const oc = V.ac; if (!oc) return;
+      const t = Math.ceil(((V.t - V.acT0) / 1000) / Q) * Q;
+      if (t <= V.acDone || t >= oc.length / SR) return;
+      const p = oc.suspend(t);
+      if (!V.acStarted) { V.acStarted = true; V.acBuf = PR.startRendering.call(oc); } else PR.resume.call(oc);
+      await p; V.acDone = t;
     };
     W.AudioContext = W.webkitAudioContext = Fake;
     // the recorder calls this at the end: 16-bit stereo WAV, base64
     V.renderWav = async () => {
       const oc = V.ac; if (!oc) return null;
-      const buf = await oc.startRendering(), n = buf.length, L = buf.getChannelData(0), R = buf.getChannelData(1);
+      let buf; if (V.acStarted) { PR.resume.call(oc); buf = await V.acBuf; } else buf = await PR.startRendering.call(oc);
+      const n = buf.length, L = buf.getChannelData(0), R = buf.getChannelData(1);
       const out = new DataView(new ArrayBuffer(44 + n * 4)); const w = (o, s) => { for (let i = 0; i < s.length; i++) out.setUint8(o + i, s.charCodeAt(i)); };
       w(0, 'RIFF'); out.setUint32(4, 36 + n * 4, true); w(8, 'WAVE'); w(12, 'fmt '); out.setUint32(16, 16, true); out.setUint16(20, 1, true); out.setUint16(22, 2, true);
       out.setUint32(24, SR, true); out.setUint32(28, SR * 4, true); out.setUint16(32, 4, true); out.setUint16(34, 16, true); w(36, 'data'); out.setUint32(40, n * 4, true);
