@@ -14,7 +14,10 @@ const MINI = { Centaur: 'B_centaur' }, FINAL = { FB_demon: 'B_demon' };
 const MOVES = { B_centaur: { charge: 'charge', trample: 'trample' } };
 // a final boss FB_x is redrawn as soon as its module B_x exists (pcd/chars/B_x.js); small bosses are listed in MINI
 const OFF = {};   // OFF[k] = 1: show the old picture (before / after shots)
-const artOf = (k) => { if (OFF[k]) return null; const a = MINI[k] || FINAL[k] || (/^FB_/.test(k || '') ? 'B_' + k.slice(3) : null); return a && PCD.has(a) ? a : null; };
+// a small boss (unit key K) as soon as B_K exists
+const artOf = (k) => { if (OFF[k] || !k) return null; const a = MINI[k] || FINAL[k] || (/^FB_/.test(k) ? 'B_' + k.slice(3) : 'B_' + k); return a && PCD.has(a) ? a : null; };
+const mcache = {};
+const modMoves = (a) => { if (mcache[a]) return mcache[a]; let l = []; try { const g = PCD.createEngine({ game: true, W: (PCD.meta(a) || {}).W, H: (PCD.meta(a) || {}).H }); g.load(a); l = g.C.MOVES || []; } catch (err) { /* none */ } return (mcache[a] = l); };
 // a module's own voices go to the synth (charFx('boss', { k }))
 const voiced = {};
 function voices(a) { if (voiced[a]) return; voiced[a] = 1; const S = M.Sfx; try { const g = PCD.createEngine({ game: true, W: (PCD.meta(a) || {}).W, H: (PCD.meta(a) || {}).H }); g.load(a); const V = g.C.VOICES; if (V && S && S.bossVoice) for (const k in V) S.bossVoice(k, V[k]); } catch (err) { /* no voices */ } }
@@ -79,15 +82,15 @@ if (BP) {
   const oSpawn = BP.spawnEnemy;
   BP.spawnEnemy = function (s) {
     const e = oSpawn.apply(this, arguments);
-    const a = e && e.mbAi && MINI[s.type] && artOf(s.type);
-    if (a) { e.hd = Object.assign({}, e.hd, { key: a }); e.pxBig = 1; e.pxBoss = a; }
+    const a = e && e.mbAi && artOf(s.type);
+    if (a) { e.hd = Object.assign({}, e.hd, { key: a }); e.pxBig = 1; e.pxBoss = a; if (HAS_DOM) voices(a); }
     return e;
   };
   // a kit move starts charging: the module's own move, its charge cut to the game's so the release lands on the hit
   const oBegin = BP.bkBegin;
   if (oBegin) BP.bkBegin = function (e, id, P) {
     const r = oBegin.apply(this, arguments);
-    const mv = e.pxBoss && MOVES[e.pxBoss] && MOVES[e.pxBoss][id];
+    const mv = e.pxBoss && !e.fb && ((MOVES[e.pxBoss] && MOVES[e.pxBoss][id]) || (modMoves(e.pxBoss).includes(id) ? id : null));   // the module names its moves after the kit's
     if (mv && e.casting && HAS_DOM) G.startAction(this, e, 'skill', { move: mv, wind: e.casting.until - e.casting.t0, dist: 60 });
     return r;
   };
@@ -108,9 +111,9 @@ if (BP) {
       if (dash) {
         if (e._pa && e._pa.kind === 'skill' && e._pa.g.state === 'recover') G.stopAction(e);
         const Pz = M.P16 && M.P16.Pool && (this.p16 || (this.p16 = new M.P16.Pool()));
-        if (Pz && dt > 0) for (let i = 0; i < 3; i++) Pz.add(1, e.x + (Math.random() - 0.5) * 60, e.y - Math.random() * 12, (Math.random() - 0.5) * 80, -40 - Math.random() * 90, 0.3 + Math.random() * 0.3, i ? 'cream' : 'frost', { sz: i ? 3 : 2 });
-        if (Math.random() < 0.35) this.fxp && this.fxp({ k: 'bkBolt', x: e.x, y: e.y - 30 - Math.random() * 60, life: 0.16, s: Math.random() });
-      } else if (e._pxDash) G.startAction(this, e, 'skill', { move: 'charge', at: 'recover', dist: 60 });
+        if (Pz && dt > 0) for (let i = 0; i < 3; i++) Pz.add(1, e.x + (Math.random() - 0.5) * 60, e.y - Math.random() * 12, (Math.random() - 0.5) * 80, -40 - Math.random() * 90, 0.3 + Math.random() * 0.3, i ? 'cream' : (e.pxBoss === 'B_centaur' ? 'frost' : 'cream'), { sz: i ? 3 : 2 });
+        if (e.pxBoss === 'B_centaur' && Math.random() < 0.35) this.fxp && this.fxp({ k: 'bkBolt', x: e.x, y: e.y - 30 - Math.random() * 60, life: 0.16, s: Math.random() });
+      } else if (e._pxDash && modMoves(e.pxBoss).includes('charge')) G.startAction(this, e, 'skill', { move: 'charge', at: 'recover', dist: 60 });
       e._pxDash = dash;
     }
     return r;
@@ -121,6 +124,7 @@ if (BP) {
   // a short jagged bolt left along the charge's path
   const oFx = M.drawFxPx;
   M.drawFxPx = function (ctx, f, T, b) {
+    if (f.k === 'bkPot' && f.ent && f.ent.pxBoss) return true;   // 巨掌's module hugs its own hive; the game's pot block is not drawn over it
     if (f.k === 'bkBolt') {
       const q = (T - f.t0) / f.life; if (q >= 1) return true; const A = 4;
       ctx.save(); ctx.globalAlpha = 1 - q * 0.6; let x = f.x, y = f.y;
