@@ -2,8 +2,13 @@
 """src/* -> build/* -> index.html (every script syntax-checked with node first).
 
 Usage: python3 tools/mk.py [out.html]      (default: index.html in the repo root)
+       python3 tools/mk.py --demo [--store-app=APPID] out.html    the Steam demo (src/mc-demo.js turns on; the store page
+                                                                     its 「加入愿望单」 opens is the full game's APPID)
 """
-import pathlib, subprocess, sys
+import pathlib, subprocess, sys, json
+ARGS = [a for a in sys.argv[1:] if not a.startswith('--')]
+DEMO = '--demo' in sys.argv[1:]
+STORE = next((int(a.split('=', 1)[1]) for a in sys.argv[1:] if a.startswith('--store-app=')), 0)
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SRC, BUILD = ROOT / 'src', ROOT / 'build'
@@ -28,6 +33,8 @@ if bad:
     print('code after a // comment on the same line (it never runs); use /* */ or move the comment:\n  ' + '\n  '.join(bad)); sys.exit(1)
 import hashlib
 code = ''.join((SRC / n).read_text(encoding='utf-8') for n in order)
+# the demo: one line before the game's code (the full build never has it, so src/mc-demo.js does nothing there)
+if DEMO: code = 'window.MC_DEMO = ' + json.dumps({'storeAppId': STORE}) + ';\n' + code
 tpl_text = (SRC / 'template.html').read_text(encoding='utf-8')
 fonts_css = (SRC / 'fonts.css').read_text(encoding='utf-8')
 # build id = content hash of the sources: identical sources always give an identical index.html
@@ -44,5 +51,6 @@ for f in ('game.js', 'mimg.js'):
     r = subprocess.run(['node', '--check', str(BUILD / f)], capture_output=True, text=True)
     if r.returncode:
         print(r.stderr); sys.exit(1)
-out = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / 'index.html'
+out = pathlib.Path(ARGS[0]) if ARGS else ROOT / 'index.html'
+if DEMO and out.resolve() == (ROOT / 'index.html').resolve(): print('the demo never overwrites index.html: give it its own out.html'); sys.exit(1)
 subprocess.run([sys.executable, str(ROOT / 'tools' / 'build.py'), str(ROOT / 'tools' / 'shell.html'), str(out)], check=True)

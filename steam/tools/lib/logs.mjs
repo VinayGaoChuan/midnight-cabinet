@@ -3,9 +3,9 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { PATHS, ROOT, readText, writeText } from './common.mjs';
+import { PATHS, PROJECT, ROOT, readText, writeText } from './common.mjs';
 
-export const FEEDBACK_DIR = path.join(ROOT, '收到的日志');
+export const FEEDBACK_DIR = path.join(PROJECT, '收到的日志');
 const LOG_EXT = /\.(txt|log|jsonl)$/i;
 
 export function skillLogDir(cfg) {

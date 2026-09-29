@@ -260,6 +260,16 @@ function exportLogs(win) {
 }
 
 ipcMain.on('wgp:export-logs', (event) => exportLogs(BrowserWindow.fromWebContents(event.sender)));
+// a demo's 「加入愿望单」: the full game's store page — in the Steam overlay when Steam is running, else the Steam client or the browser
+ipcMain.on('wgp:open-store', () => {
+  const id = Number(CONFIG.steam && CONFIG.steam.storeAppId) || 0;
+  if (!id) return;
+  const c = runtime.steam && runtime.steam.client;
+  try {
+    if (c && c.overlay && c.overlay.activateToStore) { c.overlay.activateToStore(id, 0); log.info('steam', `打开商店页（浮层）：${id}`); return; }
+  } catch (err) { log.warn('steam', '浮层打开商店页失败', { message: String(err && err.message || err) }); }
+  shell.openExternal(`steam://store/${id}`).catch(() => shell.openExternal(`https://store.steampowered.com/app/${id}/`));
+});
 
 // 测试版：角落显示版本号（点击即导出日志），每 5 秒记录帧率、内存
 const MARK_JS = (text) => `(() => { if (document.getElementById('__wgp_mark') || !document.body) return;

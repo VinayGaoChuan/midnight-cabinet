@@ -23,7 +23,7 @@ const DEFAULTS = {
   smoke: { bootSeconds: 5, clicks: 2, stepSeconds: 4, timeoutSeconds: 90 },
   electronMirror: '',
   android: { packageId: '', orientation: 'landscape', outputs: ['apk', 'aab'], smokeTest: true, smokeDevice: 'emulator', keepEmulator: false },
-  steam: { appId: 0, requireSteam: true, upload: false, buildAccount: '', depots: { windows: 0, mac: 0 }, branch: 'beta', steamcmdPath: '' },
+  steam: { appId: 0, storeAppId: 0, requireSteam: true, upload: false, buildAccount: '', depots: { windows: 0, mac: 0 }, branch: 'beta', steamcmdPath: '' },
 };
 
 export function loadConfig(ctx) {
@@ -54,6 +54,7 @@ export function loadConfig(ctx) {
   cfg.android.outputs = (cfg.android.outputs || []).filter((o) => ['apk', 'aab'].includes(o));
   if (cfg.platforms.includes('android') && !cfg.android.outputs.length) throw new Error('android.outputs 至少要包含 "apk" 或 "aab"');
   cfg.steam.appId = Number(cfg.steam.appId) || 0;
+  cfg.steam.storeAppId = Number(cfg.steam.storeAppId) || 0;   // a demo: the full game's App ID (its 「加入愿望单」 opens that store page)
   ctx.note(`游戏：${cfg.gameName} ${cfg.version}　程序名：${cfg.executableName}　平台：${cfg.platforms.join('、')}`);
   ctx.note(`代码混淆：${cfg.obfuscate ? '开' : '关'}　自动试跑：${cfg.smokeTest ? '开' : '关'}　Steam App ID：${cfg.steam.appId || '未填'}`);
   return cfg;

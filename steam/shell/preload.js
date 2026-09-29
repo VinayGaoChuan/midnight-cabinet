@@ -5,7 +5,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 // 给页面一个导出日志的入口（测试版角标用）
-contextBridge.exposeInMainWorld('__wgpNative', { exportLogs: () => ipcRenderer.send('wgp:export-logs') });
+contextBridge.exposeInMainWorld('__wgpNative', { exportLogs: () => ipcRenderer.send('wgp:export-logs'), openStore: () => ipcRenderer.send('wgp:open-store') });
 
 const STAMP = '__mc_saved_at';
 let lastExported = null;

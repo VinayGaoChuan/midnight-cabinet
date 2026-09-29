@@ -6,13 +6,16 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+// the product being packed: its config, its game package, its build and report. Default: this folder; a second product (the
+// Steam demo, steam/demo/) sets WGP_PROJECT and packs with the same tools and shell
+export const PROJECT = process.env.WGP_PROJECT ? path.resolve(process.env.WGP_PROJECT) : ROOT;
 export const PATHS = {
-  config: path.join(ROOT, '配置.jsonc'),
-  input: path.join(ROOT, '放游戏包'),
-  output: path.join(ROOT, '输出'),
-  assets: path.join(ROOT, '输出', '报告素材'),
-  build: path.join(ROOT, 'build'),
-  work: path.join(ROOT, 'build', 'work'),
+  config: path.join(PROJECT, '配置.jsonc'),
+  input: path.join(PROJECT, '放游戏包'),
+  output: path.join(PROJECT, '输出'),
+  assets: path.join(PROJECT, '输出', '报告素材'),
+  build: path.join(PROJECT, 'build'),
+  work: path.join(PROJECT, 'build', 'work'),
   shell: path.join(ROOT, 'shell'),
   tools: path.join(ROOT, 'tools'),
 };

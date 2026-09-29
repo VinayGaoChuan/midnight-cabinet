@@ -36,7 +36,7 @@ export function assembleApp(ctx, cfg, processed, buildId, smokeKey) {
     debugLog: cfg.debugLog,
     bot: cfg.bot,
     smokeKeyHash: crypto.createHash('sha256').update(smokeKey).digest('hex'),
-    steam: { appId: cfg.steam.appId, requireSteam: cfg.steam.requireSteam },
+    steam: { appId: cfg.steam.appId, requireSteam: cfg.steam.requireSteam, storeAppId: Number(cfg.steam.storeAppId) || 0 },
   }, null, 2));
   ctx.note(`程序目录已组装：外壳 + 游戏（${formatBytes(dirSize(path.join(appDir, 'game')))}）+ Steam 组件`);
   return appDir;

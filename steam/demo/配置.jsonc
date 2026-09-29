@@ -1,0 +1,59 @@
+// 午夜机台 · Steam 试玩版（demo）打包配置。和正式版用同一套打包工具（上一级的 tools/ 和 shell/），
+// 自己的游戏包、配置、产物和报告都在这个文件夹里。改完保存，再双击本文件夹的「一键打包」。
+{
+  // 游戏名：窗口标题、报告里显示
+  "gameName": "午夜机台 试玩版",
+
+  // 程序文件名：只用英文字母和数字。Steam 后台（demo 那个 App）「启动选项」里填的就是它
+  "executableName": "MidnightCabinetDemo",
+
+  // 版本号：每次发版前加一点
+  "version": "0.1.0",
+
+  "company": "",
+
+  // demo 只上电脑版：Windows 和 Mac
+  "platforms": ["windows", "mac"],
+
+  "window": { "fullscreen": true, "width": 1600, "height": 900 },
+
+  // 图标：留空 = 用游戏包里自带的缩略图
+  "icon": "",
+
+  "keepLocales": ["en-US", "zh-CN", "zh-TW"],
+  "obfuscate": true,
+
+  // 正式发布：false（只记录报错和崩溃）
+  "debugLog": false,
+
+  "bot": {
+    "enabled": true,
+    "seconds": 60,
+    "seed": 1,
+    "prefer": ["开始", "继续", "确定", "下一", "出发", "进入", "前进", "选择", "购买", "领取", "跳过", "结算", "返回", "好的", "知道了", "start", "next", "ok", "continue", "play"],
+    "avoid": ["重置", "删除", "清空", "清除", "退出", "愿望单", "reset", "delete", "clear", "quit", "exit"]
+  },
+
+  "smokeTest": true,
+  "smoke": { "bootSeconds": 5, "clicks": 2, "stepSeconds": 4, "timeoutSeconds": 90 },
+  "electronMirror": "",
+
+  "android": { "packageId": "com.indie.midnightcabinet.demo", "orientation": "landscape", "outputs": ["apk"], "smokeTest": false, "smokeDevice": "emulator", "keepEmulator": false },
+
+  "steam": {
+    // demo 在 Steamworks 里是一个单独的 App（正式版 App 下面「创建试玩版」得到的）。拿到后填这里；0 = 还没有
+    "appId": 0,
+
+    // 正式版的 App ID：试玩结束和输掉时的「加入愿望单」打开它的商店页（Steam 里用浮层打开）。0 = 还没有，按钮只提示「即将上线」
+    "storeAppId": 0,
+
+    // 正版校验：demo 免费，从 Steam 启动才能玩（填了 appId 才生效）
+    "requireSteam": true,
+
+    "upload": false,
+    "buildAccount": "",
+    "depots": { "windows": 0, "mac": 0 },
+    "branch": "beta",
+    "steamcmdPath": ""
+  }
+}

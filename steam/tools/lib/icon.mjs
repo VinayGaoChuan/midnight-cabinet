@@ -1,7 +1,7 @@
 // 图标：配置里的 PNG，或游戏包自带的缩略图 → Windows .ico + Mac .icns
 import fs from 'node:fs';
 import path from 'node:path';
-import { PATHS, ROOT, resetDir, run } from './common.mjs';
+import { PATHS, PROJECT, resetDir, run } from './common.mjs';
 import { electronBinary } from './setup.mjs';
 
 function buildIco(pngs) {
@@ -35,7 +35,7 @@ export async function makeIcons(ctx, cfg, processed) {
   resetDir(dir);
   let source = null;
   if (cfg.icon) {
-    source = path.isAbsolute(cfg.icon) ? cfg.icon : path.join(ROOT, cfg.icon);
+    source = path.isAbsolute(cfg.icon) ? cfg.icon : path.join(PROJECT, cfg.icon);
     if (!fs.existsSync(source)) throw new Error(`配置的图标文件不存在：${source}`);
     ctx.note(`图标来源：${path.basename(source)}`);
   } else if (processed.stats.thumbnailSvg) {
