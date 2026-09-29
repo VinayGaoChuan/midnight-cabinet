@@ -65,11 +65,26 @@ M.TRAIT_AW = TR;
 // what the no-trait units are for, by vocation
 const VOC_LINE = { 先锋: '站在前排扛伤害', 守护者: '站在前排保护友军', 战士: '近战输出', 圣骑士: '站在前排给友军回血', 射手: '远程输出', 刺客: '爆发输出', 法师: '法术输出', 牧师: '给友军回血', 祭司: '支援友军', 召唤师: '召唤帮手', 商人: '能赚积分' };
 const names = (s) => s.replace(/[A-Z][A-Za-z]+/g, (w) => (DB[w] ? DB[w].n : w));
+// a summon says how often it comes, not how fast the mana fills (QA 2026-09-29: 「小蟹巫技能出现Crabling；只写每秒回蓝2.5」; user:
+// 「不应该写回蓝2.5，应该直接写多少秒召唤1只就行，玩家不关心回蓝多少，只关心多长时间召唤1只」). Mana runs 0 → 100 and the skill
+// fires when it is full: a rate of r a second is one call every 100 / r seconds, r an attack every ⌈100 / r⌉ attacks.
+// The battle keeps reading the old text (the summoned unit's key and count are in it); this is only what the player reads.
+const secs = (r) => { const s = 100 / r; return String(s >= 10 ? Math.round(s) : Math.round(s * 10) / 10); };
+function summonD(T, short) {
+  const m = T && /^(每秒|每次攻击时)恢复(\d+(?:\.\d+)?)%法力值，法力值满后，(?:损失(\d+)点生命值，)?召唤(.+?)，持续(\d+)秒/.exec(T.d || ''); if (!m) return null;
+  const nm = (w) => (DB[w] ? DB[w].n : w), cnt = (c) => (c === '一' ? 1 : +c);
+  const one = /^(一|\d+)[只个]([A-Za-z]+)$/.exec(m[4]), two = /^(一|\d+)[只个]([A-Za-z]+)和(一|\d+)[只个]([A-Za-z]+)$/.exec(m[4]);
+  const who = one ? cnt(one[1]) + ' 只' + nm(one[2]) : two ? cnt(two[1]) + ' 只' + nm(two[2]) + '和 ' + cnt(two[3]) + ' 只' + nm(two[4]) : null; if (!who) return null;
+  const s = (m[1] === '每秒' ? '每 ' + secs(+m[2]) + ' 秒' : '每攻击 ' + Math.ceil(100 / +m[2]) + ' 次') + '召唤 ' + who;
+  return short ? s : s + '，留场 ' + m[5] + ' 秒' + (m[3] ? '，自己损失 ' + m[3] + ' 点生命' : '') + '。';
+}
+// what a skill says to the player: summons by their timing, unit keys by their names
+M.traitD = function (t) { const T = TDB[t]; if (!T) return ''; return summonD(T) || names(T.d || ''); };
 // the one sentence: the unit's first two traits, or what its vocation does
 M.unitLine = function (k) {
   const d = DB[k]; if (!d) return ''; const tr = (d.tr || []).filter(t => TR[t]);
   if (!tr.length) return (d.hp >= 2000 && d.voc === '先锋' ? '重装单位，非常耐打' : VOC_LINE[d.voc] || '普通单位') + '。';
-  const parts = []; tr.forEach(t => { const s = names(TR[t][1]); if (parts.length < 2 && !parts.includes(s)) parts.push(s); });
+  const parts = []; tr.forEach(t => { const s = summonD(TDB[t], true) || names(TR[t][1]); if (parts.length < 2 && !parts.includes(s)) parts.push(s); });
   return parts.join('，') + '。';
 };
 // the trait a unit wears over its head

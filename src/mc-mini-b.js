@@ -66,14 +66,10 @@ MINI.pachinko = { title: '弹珠台', img: 'e_pachinko', col: C.gold, text: '钢
   btns(mg) { if (mg.phase === 'leave') return []; const busy = mg.queue > 0 || mg.rail.length > 0 || mg.balls.length > 0 || mg.pend > 0, over = mg.buys >= 2; const c3 = mg.pay, c8 = M.nice(mg.pay * 2.2);
     return [{ t: '投 3 颗', sub: c3 + ' 积分', dis: busy || over || this.run.wallet < c3, why: busy ? '钢珠还在跑' : over ? '台子关了' : '积分不够', fn: () => MINI.pachinko.buy.call(this, mg, 3, c3) }, { t: '投 8 颗', sub: c8 + ' 积分', gold: !busy && !over, dis: busy || over || this.run.wallet < c8, why: busy ? '钢珠还在跑' : over ? '台子关了' : '积分不够', fn: () => MINI.pachinko.buy.call(this, mg, 8, c8) },
       { t: '离开', leave: 1, dis: busy, why: '等钢珠落完', fn: () => { this.miniSet('leave'); MINI.pachinko.lamps(mg, 'off'); MINI.pachinko.lcd(mg, 'off'); S.mini('pachinko', 'off'); SHOW.ambient(mg, null); } }]; },
-  // the settlement in one line (user ruling 2026-09-26: 「把相同的合并一下再显示，例如赚了还是赔了多少积分」): what went in, what came
-  // back, won or lost on the score, then the other things counted by kind
-  sum(mg) {
-    const net = mg.gW - mg.spent, n = {}; mg.won.forEach(w => { n[w] = (n[w] || 0) + 1; });
-    const rest = Object.keys(n).map(k => k + (n[k] > 1 ? ' ×' + n[k] : '')), parts = ['投了 ' + mg.spent + ' 积分，赢回 ' + mg.gW + ' 积分，' + (net >= 0 ? '净赚 ' + net : '净赔 ' + -net)];
-    if (mg.gS) parts.push('物资 +' + mg.gS); if (rest.length) parts.push('还有 ' + rest.join('、'));
-    return { t: parts.join('；') + '。', c: net >= 0 || rest.length ? '#ffcc33' : '#8d8496' };
-  },
+  // the settlement: the numbers — what went in, what came back, won or lost, supplies with their bonus, the rest counted by kind
+  // (user ruling 2026-09-26: 「把相同的合并一下再显示，例如赚了还是赔了多少积分」) — are the result's ledger line (mc-ledger.js), read
+  // off the counters themselves; this line only closes the game
+  sum(mg) { const net = mg.gW - mg.spent; return { t: '钢珠都落完了。', c: net >= 0 || mg.won.length ? '#ffcc33' : '#8d8496' }; },
   land(mg, i, b) {
     const s = SLOTS[i], run = this.run, sw = (PB.R - PB.L) / SLOTS.length, from = { x: PB.L + (i + 0.5) * sw, y: PB.B - 40 }, reached = mg.reachB === b; mg.slotF[i] = 1; mg.slotP[i] = 0; let g = null;
     if (reached) { mg.reachB = null; SHOW.slowmo(mg, 1, 0); }

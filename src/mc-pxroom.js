@@ -566,7 +566,7 @@ function frame(out, s, t, o, hovK) {
 }
 
 // ───────── drawing into the base ─────────
-const FB = { t: -1, ms: 0 }; PXR.BUDGET = 4;
+const FB = { ms: 0 }; PXR.BUDGET = 4; PXR._fb = FB;
 // o: { seed, fireT, noNpc, par (camera offset −1…1), hov, sel } — called from mc-base.js drawRoomPx for every built room
 PXR.draw = function (ctx, X, Y, key, t, o, id, zoom) {
   // off screen: nothing to paint (the whole grid is walked every frame)
@@ -575,14 +575,25 @@ PXR.draw = function (ctx, X, Y, key, t, o, id, zoom) {
   const s = slot(id, key);
   // on screen small (zoomed out), a room refreshes every few frames, staggered; close up, every frame. On top, a per-frame
   // budget: once rooms have used BUDGET ms this frame the rest keep last frame's picture (none waits more than 0.2 s)
-  if (t !== FB.t) { FB.t = t; FB.ms = 0; FB.n = 0; }
+  // a new frame: the budget follows the machine (2026-09-29: 「电脑上运行的时候不是60帧，尤其是在基地升到比较高级的时候」). The
+  // rooms' per-pixel light is the base's biggest cost and grows with every room built; a slow PC ran it past the frame. The
+  // frame-to-frame wall time (smoothed) drives it: over 17.5 ms the budget shrinks toward 1.5 ms and a room may wait up to
+  // 0.5 s; back under 16.9 ms it grows again to PXR.BUDGET. At most one room a frame is drawn past the budget.
+  // (one frame = one animation-frame timestamp: the rooms underground and the town on the surface pass different times `t`, and
+  // taking each change of `t` for a new frame had reset the budget several times a frame — it never held)
+  const ft = document.timeline ? document.timeline.currentTime : performance.now();
+  if (ft !== FB.ft) { const gap = FB.ft != null ? ft - FB.ft : 16.7; FB.ft = ft; if (gap < 250) FB.ema = FB.ema == null ? gap : FB.ema * 0.9 + gap * 0.1;
+    FB.bud = FB.bud == null ? PXR.BUDGET : FB.ema > 17.5 ? Math.max(1.5, FB.bud * 0.92) : FB.ema < 16.9 ? Math.min(PXR.BUDGET, FB.bud + 0.05) : FB.bud;
+    FB.ms = 0; FB.n = 0; FB.over = 0; }
   // phones (M.LOW_FX, 2026-09-27, the S9+ pass: a room costs 1–4 ms there, and the 0.2 s refresh floor alone made a built-up
   // base re-render four or five rooms a frame): at most 30 room pictures a second in all (10 while a night raid is on, when
   // the eyes are on the fight), one a frame; a room that has waited 2 s (5 s in a raid) goes regardless
   const lo = !!M.LOW_FX, every = (zoom || 1) < 0.7 ? 4 : (zoom || 1) < 0.9 ? 3 : (zoom || 1) < 1.3 ? 2 : 1, stale = s.lr == null ? 9 : t - s.lr;
   const raid = lo && M._g && M._g.raid, gapLo = raid ? 0.1 : 1 / 30;
-  const skip = s.fn > 0 && (lo ? stale < (raid ? 5 : 2) && (FB.n >= 1 || t - (FB.lo || -9) < gapLo || stale < 0.1 * every) : stale < 0.2 && ((every > 1 && (s.fn + (hstr(id) % every)) % every !== 0) || FB.ms > PXR.BUDGET));
-  if (skip) s.fn++; else { const t0 = performance.now(); render(s, t, o || NO); s.cx.putImageData(s.img, 0, 0); s.lr = t; FB.ms += performance.now() - t0; FB.n++; FB.lo = t; }
+  const slow = FB.bud < PXR.BUDGET - 0.5, floor = slow ? 0.5 : 0.2, spent = FB.ms > FB.bud;
+  const skip = s.fn > 0 && (lo ? stale < (raid ? 5 : 2) && (FB.n >= 1 || t - (FB.lo || -9) < gapLo || stale < 0.1 * every)
+    : (stale < floor && ((every > 1 && (s.fn + (hstr(id) % every)) % every !== 0) || spent)) || (stale >= floor && spent && FB.over >= 1));
+  if (skip) s.fn++; else { const t0 = performance.now(); if (!lo && spent) FB.over++; render(s, t, o || NO); s.cx.putImageData(s.img, 0, 0); s.lr = t; FB.ms += performance.now() - t0; FB.n++; FB.lo = t; }
   const sel = s.ev.sel != null ? Math.max(0, 1 - (t - s.ev.sel) / 0.45) : 0, bt = s.ev.built != null ? t - s.ev.built : 9;
   // 'land': something flew in (a blueprint into the 仓库 …) — the room squashes and springs back (2026-09-27: 「如果有东西飞到房间中……
   // 那么对应的房间要弹动」), standing on its floor

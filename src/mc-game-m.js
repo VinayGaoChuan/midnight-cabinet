@@ -47,11 +47,14 @@ G.battleTick = function (dt) {
   // (the clock stops just short of the moment the first opening skill is due)
   if (this.introBanner && !this.banners.includes(this.introBanner)) this.introBanner = null;
   let bd = dt * this.speed * (this.reel ? 0.03 : 1); if (this.introBanner) bd = Math.max(0, Math.min(bd, b.entryEnd - 0.005 - b.t));
-  if (!this.paused && !this.settle && bd > 0) b.step(bd);
+  // the help and settings panels hold the fight while they are open (QA 2026-09-29: 精英战中打开帮助，阅读期间战斗继续); the player's own
+  // pause is its own switch, so a fight paused by hand stays paused when the panel closes
+  const held = this.paused || this.rulesOpen || this.settingsOpen;
+  if (!held && !this.settle && bd > 0) b.step(bd);
   if (b.cutin && b.cutin !== this.lastCut) { this.lastCut = b.cutin; this.banner({ kind: 'skill', text: b.cutin.text, sub: b.cutin.sub, col: b.cutin.col, img: M.spriteCanvas(b.cutin.sprite, 22), life: 1.25, y: 470 }); }
   if (this.settle) this.settleTick(dt); else if (b.over && b.overT > 1.0) this.startSettle();
   const c = this.ui.cv('field'); if (!c) return;
-  const cam = this.camStep(b, this.paused ? 0 : dt);
+  const cam = this.camStep(b, held ? 0 : dt);
   if (!M.pixelMode) return M.pxRender(c, FW, FH, (x) => b.render(x, { slow: this.reel ? 1 : 0 }), 'field');
   const L = M.pxLayer('field', FW, FH), lx = L.getContext('2d'); lx.setTransform(1, 0, 0, 1, 0, 0); lx.globalAlpha = 1; lx.globalCompositeOperation = 'source-over'; lx.filter = 'none';
   M._camPass = 'world'; M._hudFx = []; const meter = b.meter; b.meter = null;

@@ -26,7 +26,7 @@ const GROWTH = new Set(['JuniorFisherman', 'EliteFisherman', 'SpiritOffering']);
 const growth = (e) => e.traits.some(t => GROWTH.has(t.cls) && H[t.cls] && H[t.cls].full);
 const BIGT = new Set(['WaterSpoutNew', 'LightningStrike', 'EnergySurge', 'DimensionalRift', 'FinalJudgment', 'ForbiddenFruit', 'JuniorFisherman', 'SpiritOffering']);
 const SKCOL = { ChainHeal: '#7fff9a', ShellShock: '#ffa040', Invigorate: '#ff6a4a', Summon: '#c890ff', DimensionalRift: '#c890ff', SkullStew: '#b8ff80', MindWarp: '#c890ff', SolarFlare: '#ffd060', FinalJudgment: '#fff2a0', LightningStrike: '#bfe8ff', WaterSpoutNew: '#6fe0ff', EnergySurge: '#b0a0ff', LifeBindVow: '#ff7a9a', IronHail: '#d8e0ea', RapidFire: '#ffd060', ForbiddenFruit: '#ff5a6a', JuniorFisherman: '#ffcc33', SpiritOffering: '#c890ff', SummonFroggo: '#9cff7a' };
-M.unitSkill = function (k) { const d = DB[k]; if (!d) return null; const T = M.traitsOf(k).find(t => { const h = H[t.cls.replace(/^Summon|Trait$/g, '')]; return h && h.full; }); return T ? { n: T.n, d: T.d, own: 1 } : null; };
+M.unitSkill = function (k) { const d = DB[k]; if (!d) return null; const T = M.traitsOf(k).find(t => { const h = H[t.cls.replace(/^Summon|Trait$/g, '')]; return h && h.full; }); return T ? { n: T.n, d: M.traitD ? M.traitD(T.key) : T.d, own: 1 } : null; };
 
 const oldStats = P.unitStats;
 P.unitStats = function (key, side, x, y, o = {}) {

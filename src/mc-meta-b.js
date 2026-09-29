@@ -214,6 +214,11 @@ G.tipFor = function (key) {
 };
 
 // ═════════════════════ core hit & base explosion (inside the machine) ═════════════════════
+// the base shakes a little and briefly (2026-09-29: 「现在基地很多效果抖动太严重了，而且抖动时间过长了，看着都晕了……游戏失败，
+// 基地爆炸，一直抖，太抖了，小抖就行，别让人看晕了」): on the base screen every kick is a third as strong and the shake never
+// builds past a small one; the fights keep theirs
+{ const FP = M.FxLayer && M.FxLayer.prototype, oKick = FP && FP.kick;
+  if (oKick) FP.kick = function (v) { const g = M._g; if (g && g.screen === 'base' && !g.battle) { if (this.trauma >= 0.3) return; v = Math.min(v * 0.35, (0.3 - this.trauma) * 34); } return oKick.call(this, v); }; }
 const oEB = G.endBack;
 G.endBack = function () {
   const info = this.endInfo || {}, m = this.meta;
@@ -228,7 +233,7 @@ G.coreTick = function (dt) {
   if (F.hp > 0 && F.t > 2.4) { this.coreFx = null; this.bv.home(); this.toast(F.hp === 1 ? '基地核心只剩最后 1 点了' : '基地核心还剩 ' + F.hp + ' 点', F.hp === 1 ? '#ff4a4a' : '#ff8ab0'); if (F.pd) setTimeout(() => { this.passDay(); setTimeout(() => this.checkRaid(), 1600); }, 300); return; }
   if (F.hp <= 0) {
     if (!F.boom && F.t > 1.6) { F.boom = true; S.alarm(); this.bv.tx = 1050; this.bv.ty = 320; this.bv.tz = 0.62; const m = this.meta, cells = []; for (let r = 0; r < M.BROWS; r++) for (let c = 0; c < M.BCOLS; c++) { const x = m.base.cells[r][c]; if (x.dug || x.b) cells.push([c, r, Math.hypot(c - M.CORE.c, r - M.CORE.r)]); } cells.sort((a, b) => a[2] - b[2]); F.cells = cells; }
-    if (F.boom) { const i = Math.floor((F.t - 1.8) / 0.12); (F.cells || []).forEach((cc, k) => { if (k === i && !cc[3]) { cc[3] = 1; const p = this.cellPos(cc[0], cc[1]); this.fx.explode(p.x, p.y, k % 2 ? '#ff7a2a' : '#ffcc33', 1.3); S.boom(); this.fx.kick(18); const cell = M.cell(this.meta, cc[0], cc[1]); if (cell) { cell.b = null; cell.job = null; cell.dug = true; } } }); }
+    if (F.boom) { const i = Math.floor((F.t - 1.8) / 0.12); (F.cells || []).forEach((cc, k) => { if (k === i && !cc[3]) { cc[3] = 1; const p = this.cellPos(cc[0], cc[1]); this.fx.explode(p.x, p.y, k % 2 ? '#ff7a2a' : '#ffcc33', 1.3); S.boom(); if (!k) this.fx.kick(10); const cell = M.cell(this.meta, cc[0], cc[1]); if (cell) { cell.b = null; cell.job = null; cell.dug = true; } } }); }
     if (F.t > 1.8 + (F.cells || []).length * 0.12 + 0.6 && !F.white) { F.white = true; this.fx.flash('#ffffff', 1); S.impact(); this.banner({ kind: 'win', text: '基地爆炸', col: '#ff4a4a', col2: '#3a0000', sub: this.abandoning ? '放弃了。这一局结束了。' : '核心碎了。这一局结束了。', life: 2.4, y: 440 }); }
     if (F.white && F.t > 1.8 + (F.cells || []).length * 0.12 + 3.0) { this.coreFx = null; const ab = this.abandoning; this.abandoning = false; this.gameOver(ab ? 'abandon' : 'core'); }
   }

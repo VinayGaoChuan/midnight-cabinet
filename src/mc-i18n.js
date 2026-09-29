@@ -77,7 +77,7 @@ function look(s, deep) {
 // separators a composed string is cut at when it has no key of its own
 const SEP = /(\n|\s*[·•｜|／/→←↑↓×]\s*|[：:，,、；;。！!？?…～~]+\s*|[（）()「」『』【】《》〈〉“”"]\s*|\s{2,})/;
 const PUN = { '，': ', ', '。': '. ', '：': ': ', '、': ', ', '；': '; ', '！': '! ', '？': '? ', '（': ' (', '）': ') ', '「': '“', '」': '”', '『': '“', '』': '”', '【': '[', '】': ']', '《': '“', '》': '”', '〈': '‹', '〉': '›', '～': '~' };
-function punct(p) { if (CJKP[I.lang]) return p; return p.replace(/[，。：、；！？（）「」『』【】《》〈〉～]/g, (c) => PUN[c]); }
+function punct(p) { if (CJKP[I.lang]) return I.lang === 'ja' ? p.replace(/，/g, '、') : p; return p.replace(/[，。：、；！？（）「」『』【】《》〈〉～]/g, (c) => PUN[c]); }
 let QUIET = false;
 function note(s, force) { if ((!I.harvest && !I.on) || (QUIET && !force)) return; const [k] = tmpl(s.trim()); if (!k || !CJK.test(k)) return; const n = I.miss.get(k) || 0; I.miss.set(k, n + 1); }
 // text marked with U+2063 (invisible) is never translated: a language's own name in the language list
@@ -99,6 +99,9 @@ function tr(s) {
       // still nothing: Chinese puts a space between a name and what it does (「守夜人 带着收获回到了基地」) — the words one by one
       if (t == null && /\s/.test(q)) { const ws = q.split(/(\s+)/), out = ws.map(w => (!CJK.test(w) ? w : look(w.trim()))); if (out.every(x => x != null)) t = out.join(''); }
       if (t == null) { note(q); return p; }
+      // a clause after a comma goes on the sentence: its capital goes (「…every 17s, restores mana on kill」), a name keeps it
+      // (「Grey Wolf」: the next word is capitalised too); German capitalises its nouns, so it keeps them all
+      if (i > 1 && !CJKP[I.lang] && I.lang !== 'de' && /^[，；,;]\s*$/.test(parts[i - 1]) && /^\p{Lu}\p{Ll}*\s+\p{Ll}/u.test(t)) t = t[0].toLocaleLowerCase(I.lang) + t.slice(1);
       return p.replace(q, t);
     }).join('');
     if (!CJKP[I.lang]) r = r.replace(/ {2,}/g, ' ').replace(/ ([,.:;!?)\]”])/g, '$1').trim();

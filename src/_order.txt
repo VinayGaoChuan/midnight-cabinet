@@ -195,6 +195,8 @@ mc-tutor.js
 mc-perf.js
 mc-tune.js
 mc-bossart.js
+mc-ledger.js
+mc-resume.js
 mc-lang.js
 mc-boot.js
 mc-demo.js

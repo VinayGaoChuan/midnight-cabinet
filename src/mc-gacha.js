@@ -57,7 +57,7 @@ M.gaRoll = function (run) {
 // what the card shows: the game's own name, vocation, power (= price), one line, art, traits, evolution line
 function unitInfo(k) { const d = DB[k], art = M.artOf ? M.artOf(k) : k, V = (M.VOC || {})[d.voc] || {};
   const base = String(k).replace(/_T\d$/, ''), chain = [1, 2, 3, 4, 5, 6].map(i => { const x = DB[base + '_T' + i]; return x ? x.n : ''; });
-  const TD = M.TDB || {}, tr = (d.tr || []).map(t => TD[t] ? [TD[t].n || '', (TD[t].d || '').replace(/。?$/, '。')] : null).filter(x => x && x[0]).slice(0, 2);
+  const TD = M.TDB || {}, tr = (d.tr || []).map(t => TD[t] ? [TD[t].n || '', (M.traitD ? M.traitD(t) : TD[t].d || '').replace(/。?$/, '。')] : null).filter(x => x && x[0]).slice(0, 2);
   const vd = V.d || '', m = /擅长(.+?)(，.*)?。$/.exec(vd) || [];
   return { n: d.n, voc: d.voc, q: Math.min(4, d.q | 0), cost: M.unitPower ? M.unitPower(k) : d.cost, art, line: M.unitLine ? M.unitLine(k) : '', chain, tr, vk: m[1] || '', vr: m[2] || '', vc: V.c || '#c4ccd9' }; }
 

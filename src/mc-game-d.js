@@ -11,7 +11,8 @@ Object.assign(G, {
   relicBpTip(key, owned) { const R = M.RELICS[key]; return { title: R.n, c: owned ? '#ffe8b0' : '#8d8496', kind: owned ? '图纸 × ' + owned : '没有图纸', d: R.d, lines: R.lines.map((l, i) => ({ t: M.QUALITY[i].n + '：' + M.statText(l.k, l.v), c: M.QUALITY[i].c })) }; },
   heroTip(h) { const m = this.meta, H = M.HEROES[h.cls]; return { title: 'Lv' + h.lv + ' ' + H.n, c: M.RARITY[h.rarity].c, kind: '生命 ' + Math.round(h.hp) + '/' + M.heroMaxHp(h, m), d: '技能「' + H.skill.n + '」' + M.skillDesc(h) + '，冷却 ' + M.skillNodeCd(h, m) + ' 个节点。', lines: h.points ? [{ t: '有 ' + h.points + ' 个天赋点可用', c: '#f2c14e' }] : [] }; },
   tv(k, real) { const g = this.held[k] != null ? this.held[k] : real; this.twT[k] = g; return Math.round(this.tw[k] == null ? g : this.tw[k]); },
-  ps(k) { const p = this.pulse[k]; if (!p) return 1; const t = (now() - p) / 1000; if (t > 0.7) return 1; return 1 + 0.35 * Math.exp(-t * 7) * Math.cos(t * 26); },
+  // one small bump, not a wobble (2026-09-29: 「回弹很多效果，其中有一个黄条的效果，太抖了，抖一下就行了」)
+  ps(k) { const p = this.pulse[k]; if (!p) return 1; const t = (now() - p) / 1000; if (t > 0.28) return 1; return 1 + 0.12 * Math.sin(Math.PI * t / 0.28); },
   view() {
     const s = this.screen, run = this.run, m = this.meta, v = {};
     const t0 = now();
