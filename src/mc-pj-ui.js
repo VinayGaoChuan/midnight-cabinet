@@ -112,7 +112,7 @@ U.chase = (x, a, b, w, t, rev) => { const off = Math.floor((t || 0) * 8) % 4 * 6
 // 招牌灯箱：酒红底 + 上下跑马灯 + 果汁色带大字（逐字跳）
 U.marquee = (x, s, cx, cy, o = {}) => {
   const tr = window.MC && window.MC.tr; if (tr) s = tr(String(s));   // the whole title translated (src/mc-i18n.js), then lit letter by letter
-  const size = o.size || T.hero, t = o.t || 0, chars = [...String(s)], gap = 4, cw = chars.map(ch => U.measure(x, ch, size)), tw = cw.reduce((p, c) => p + c, 0) + gap * (chars.length - 1);
+  const size = o.size || T.hero, t = o.t || 0, chars = PJ.units ? PJ.units(s) : [...String(s)], gap = 4, cw = chars.map(ch => U.measure(x, ch, size)), tw = cw.reduce((p, c) => p + c, 0) + gap * (chars.length - 1);
   const w = Math.max(o.minW || 0, tw + 68), h = Math.round(size * 1.3) + 12, X = cx - w / 2, Y = cy - h / 2;
   U.box(x, X, Y, w, h, P.wine); R(x, X, Y, w, 6, P.red); R(x, X, Y + h - 6, w, 6, P.umber);
   U.chase(x, X + 9, Y - 12, w - 18, t); U.chase(x, X + 9, Y + h + 6, w - 18, t, true);

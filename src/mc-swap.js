@@ -66,7 +66,8 @@ function card(g, c, x, y, k, a, hot, chosen) {
   U.text(g, d.n, 0, 40, 26, qc, { outline: true });
   const tg = d.race && M.tagIc ? M.tagIc('race', d.race) : null; U.text(g, (d.race || '') + ' · ' + (d.voc || ''), 0, 74, 18, tg ? tg.c : P.cream);
   U.text(g, '★ ' + M.unitPower(c.u.type, c.u), 0, 100, 20, P.butter);
-  if (c.isNew) { U.R(g, -CW / 2, -CH / 2 - 14, 58, 30, P.gold); U.text(g, '新', -CW / 2 + 29, -CH / 2 + 1, 22, P.ink, { shadow: false }); }
+  // the tab is as wide as its word: 「新」 in Chinese, longer in other languages (src/mc-i18n.js)
+  if (c.isNew) { const lb = M.tr ? M.tr('新') : '新', tw = Math.max(58, Math.ceil(U.measure(g, lb, 22)) + 20); U.R(g, -CW / 2, -CH / 2 - 14, tw, 30, P.gold); U.text(g, lb, -CW / 2 + tw / 2, -CH / 2 + 1, 22, P.ink, { shadow: false }); }
   if (chosen) { g.save(); g.rotate(-0.25); U.R(g, -70, -28, 140, 56, P.ink); U.box(g, -66, -24, 132, 48, P.red); U.text(g, '离队', 0, 0, 34, P.cream, { outline: true }); g.restore(); }
   g.restore();
 }

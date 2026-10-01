@@ -53,7 +53,8 @@ function card(g, c, x, y, k, a, hot, chosen) {
   U.text(g, d.n, 0, 34, 22, qc, { outline: true });
   U.text(g, (d.voc || ''), 0, 62, 18, P.cream);
   U.text(g, '★ ' + M.unitPower(c.u.type, c.u), 0, 86, 18, P.butter);
-  if (c.isNew) { U.R(g, -CW / 2, -CH / 2 - 14, 52, 28, P.gold); U.text(g, '新', -CW / 2 + 26, -CH / 2, 20, P.ink, { shadow: false }); }
+  // the tab is as wide as its word: 「新」 in Chinese, longer in other languages (src/mc-i18n.js)
+  if (c.isNew) { const lb = M.tr ? M.tr('新') : '新', tw = Math.max(52, Math.ceil(U.measure(g, lb, 20)) + 18); U.R(g, -CW / 2, -CH / 2 - 14, tw, 28, P.gold); U.text(g, lb, -CW / 2 + tw / 2, -CH / 2, 20, P.ink, { shadow: false }); }
   if (chosen) { g.save(); g.rotate(-0.25); U.R(g, -64, -26, 128, 52, P.ink); U.box(g, -60, -22, 120, 44, P.red); U.text(g, '离开', 0, 0, 30, P.cream, { outline: true }); g.restore(); }
   g.restore();
 }

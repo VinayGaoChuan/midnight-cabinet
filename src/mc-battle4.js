@@ -114,7 +114,7 @@ function drawTitle(ctx, f, T, p) {
   ctx.save(); ctx.globalAlpha *= a;
   if (big) {
     // 招牌横条：我方酒红（上沿红、下沿棕）、敌方红底（上沿粉、下沿酒红），4px 墨框，上下跑马灯；字逐个跳，我方果汁色带、敌方奶油色
-    const y = 96, S = f.tier >= 3 ? 72 : 48, foe = f.side === 'E', size = g2(S * pop), chars = [...(M.tr ? M.tr(String(f.text)) : String(f.text))];
+    const y = 96, S = f.tier >= 3 ? 72 : 48, foe = f.side === 'E', size = g2(S * pop), chars = (M.PJ && M.PJ.units ? M.PJ.units : (s) => [...s])(M.tr ? M.tr(String(f.text)) : String(f.text));
     const glyph = (ch, sz) => (foe ? M.pxTextCanvas(ch, sz, PL.butter, { ink: PL.ink }) : rampChar(ch, sz));
     const tw = chars.reduce((w, ch) => w + glyph(ch, S).width, 0), pw = g2((tw + S) * pop), ph = g2(S + 28), X = g2(960 - pw / 2), Y = g2(y - ph / 2);
     const [bg, hi, lo, rule] = foe ? [PL.red, PL.pink, PL.wine, PL.red] : [PL.wine, PL.red, PL.umber, PL.gold], sk = U.hx(f.col);

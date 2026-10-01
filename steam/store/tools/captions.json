@@ -1,0 +1,365 @@
+{
+  "cards": [
+    {
+      "n": "c1",
+      "zh-CN": "午夜零点",
+      "zh-TW": "午夜零點",
+      "ja": "午前零時",
+      "en": "Midnight",
+      "es": "Medianoche",
+      "es-419": "Medianoche",
+      "it": "Mezzanotte",
+      "sv": "Midnatt",
+      "da": "Midnat",
+      "no": "Midnatt",
+      "ko": "자정",
+      "th": "เที่ยงคืน",
+      "vi": "Nửa đêm",
+      "ru": "Полночь",
+      "uk": "Опівніч",
+      "bg": "Полунощ",
+      "pt-BR": "Meia-noite",
+      "pt": "Meia-noite",
+      "ro": "Miezul nopții",
+      "id": "Tengah Malam",
+      "ms": "Tengah Malam",
+      "ar": "منتصف الليل",
+      "pl": "Północ",
+      "cs": "Půlnoc",
+      "hu": "Éjfél",
+      "fr": "Minuit",
+      "de": "Mitternacht",
+      "nl": "Middernacht",
+      "tr": "Gece yarısı",
+      "el": "Μεσάνυχτα",
+      "fi": "Keskiyö"
+    },
+    {
+      "n": "c2",
+      "zh-CN": "投一枚硬币",
+      "zh-TW": "投一枚硬幣",
+      "ja": "コインを一枚",
+      "en": "Insert a coin",
+      "es": "Mete una moneda",
+      "es-419": "Inserta una moneda",
+      "it": "Inserisci una moneta",
+      "sv": "Stoppa i ett mynt",
+      "da": "Put en mønt i",
+      "no": "Putt på en mynt",
+      "ko": "동전 하나를 넣고",
+      "th": "หยอดเหรียญ",
+      "vi": "Bỏ một đồng xu",
+      "ru": "Опустите монету",
+      "uk": "Вкиньте монету",
+      "bg": "Пусни монета",
+      "pt-BR": "Insira uma moeda",
+      "pt": "Insere uma moeda",
+      "ro": "Bagă o fisă",
+      "id": "Masukkan koin",
+      "ms": "Masukkan syiling",
+      "ar": "أدخل عملة",
+      "pl": "Wrzuć monetę",
+      "cs": "Vhoď minci",
+      "hu": "Dobj be egy érmét",
+      "fr": "Insérez une pièce",
+      "de": "Wirf eine Münze ein",
+      "nl": "Gooi een munt in",
+      "tr": "Jeton at",
+      "el": "Ρίξε κέρμα",
+      "fi": "Syötä kolikko"
+    },
+    {
+      "n": "c3",
+      "zh-CN": "白天，出征异世界",
+      "zh-TW": "白天，出征異世界",
+      "ja": "昼は、異世界へ遠征",
+      "en": "By day, march into other worlds",
+      "es": "De día, parte a otros mundos",
+      "es-419": "De día, parte a otros mundos",
+      "it": "Di giorno, verso altri mondi",
+      "sv": "Om dagen: ut i andra världar",
+      "da": "Om dagen: ind i andre verdener",
+      "no": "Om dagen: inn i andre verdener",
+      "ko": "낮에는, 이세계로 원정",
+      "th": "กลางวัน สำรวจต่างโลก",
+      "vi": "Ban ngày, viễn chinh dị giới",
+      "ru": "Днём — поход в иные миры",
+      "uk": "Удень — похід в інші світи",
+      "bg": "Денем — поход в други светове",
+      "pt-BR": "De dia, parta para outros mundos",
+      "pt": "De dia, parte para outros mundos",
+      "ro": "Ziua, pornește spre alte lumi",
+      "id": "Siang hari, ke dunia lain",
+      "ms": "Siang hari, mara ke dunia lain",
+      "ar": "نهارًا، انطلق إلى عوالم أخرى",
+      "pl": "Za dnia — wyprawa w inne światy",
+      "cs": "Ve dne — výprava do jiných světů",
+      "hu": "Nappal — más világokba",
+      "fr": "Le jour, partez en expédition",
+      "de": "Tagsüber in andere Welten",
+      "nl": "Overdag naar andere werelden",
+      "tr": "Gündüz başka dünyalara sefer",
+      "el": "Τη μέρα, σε άλλους κόσμους",
+      "fi": "Päivisin muihin maailmoihin"
+    },
+    {
+      "n": "c4",
+      "zh-CN": "三支合一，进化",
+      "zh-TW": "三支合一，進化",
+      "ja": "三体そろえて、進化",
+      "en": "Three become one",
+      "es": "Tres se convierten en una",
+      "es-419": "Tres se convierten en una",
+      "it": "Tre diventano uno",
+      "sv": "Tre blir en",
+      "da": "Tre bliver til én",
+      "no": "Tre blir til én",
+      "ko": "셋이 모여 하나로",
+      "th": "สามรวมเป็นหนึ่ง",
+      "vi": "Ba hợp thành một",
+      "ru": "Три становятся одним",
+      "uk": "Троє стають одним",
+      "bg": "Три стават един",
+      "pt-BR": "Três viram um",
+      "pt": "Três tornam-se um",
+      "ro": "Trei devin una",
+      "id": "Tiga jadi satu",
+      "ms": "Tiga menjadi satu",
+      "ar": "ثلاثة تصبح واحدًا",
+      "pl": "Trzy w jedną",
+      "cs": "Tři v jednu",
+      "hu": "Háromból egy",
+      "fr": "Trois ne font qu'un",
+      "de": "Aus drei wird eins",
+      "nl": "Drie worden één",
+      "tr": "Üçü bir olur",
+      "el": "Τρία γίνονται ένα",
+      "fi": "Kolmesta tulee yksi"
+    },
+    {
+      "n": "c5",
+      "zh-CN": "打倒首领",
+      "zh-TW": "打倒首領",
+      "ja": "ボスを倒せ",
+      "en": "Topple the bosses",
+      "es": "Derriba a los jefes",
+      "es-419": "Derriba a los jefes",
+      "it": "Abbatti i boss",
+      "sv": "Fäll bossarna",
+      "da": "Fæld bosserne",
+      "no": "Fell bossene",
+      "ko": "보스를 쓰러뜨려라",
+      "th": "โค่นบอส",
+      "vi": "Hạ gục trùm",
+      "ru": "Свергните боссов",
+      "uk": "Поваліть босів",
+      "bg": "Събори босовете",
+      "pt-BR": "Derrube os chefes",
+      "pt": "Derruba os chefes",
+      "ro": "Doboară șefii",
+      "id": "Tumbangkan para bos",
+      "ms": "Tumbangkan para bos",
+      "ar": "أسقط الزعماء",
+      "pl": "Obal bossów",
+      "cs": "Porážej bosse",
+      "hu": "Döntsd meg a bossokat",
+      "fr": "Terrassez les boss",
+      "de": "Stürze die Bosse",
+      "nl": "Vel de bazen",
+      "tr": "Boss'ları devir",
+      "el": "Ρίξε τα Αφεντικά",
+      "fi": "Kaada pomot"
+    },
+    {
+      "n": "c6",
+      "zh-CN": "夜里，守住你的城",
+      "zh-TW": "夜裡，守住你的城",
+      "ja": "夜は、町を守り抜け",
+      "en": "By night, hold the town",
+      "es": "De noche, defiende el pueblo",
+      "es-419": "De noche, defiende el pueblo",
+      "it": "Di notte, difendi la città",
+      "sv": "Om natten: håll staden",
+      "da": "Om natten: forsvar byen",
+      "no": "Om natten: forsvar byen",
+      "ko": "밤에는, 마을을 지켜라",
+      "th": "กลางคืน ปกป้องเมือง",
+      "vi": "Ban đêm, giữ vững thị trấn",
+      "ru": "Ночью — удержите город",
+      "uk": "Уночі — утримайте місто",
+      "bg": "Нощем — удръж града",
+      "pt-BR": "À noite, defenda a cidade",
+      "pt": "À noite, defende a cidade",
+      "ro": "Noaptea, apără orașul",
+      "id": "Malam hari, jaga kotamu",
+      "ms": "Malam hari, pertahankan pekan",
+      "ar": "ليلًا، احمِ بلدتك",
+      "pl": "Nocą — obroń miasto",
+      "cs": "V noci — ubraň město",
+      "hu": "Éjjel — védd meg a várost",
+      "fr": "La nuit, défendez la ville",
+      "de": "Nachts hältst du die Stadt",
+      "nl": "'s Nachts verdedig je de stad",
+      "tr": "Gece kasabayı koru",
+      "el": "Τη νύχτα, κράτα την πόλη",
+      "fi": "Öisin pidä kaupunki"
+    }
+  ],
+  "end": {
+    "zh-CN": {
+      "demo": "免费试玩版 现已推出",
+      "wish": "加入愿望单",
+      "sub": "WISHLIST ON STEAM"
+    },
+    "zh-TW": {
+      "demo": "免費試玩版 現已推出",
+      "wish": "加入願望清單",
+      "sub": "WISHLIST ON STEAM"
+    },
+    "ja": {
+      "demo": "無料体験版 配信中",
+      "wish": "ウィッシュリストに追加",
+      "sub": "WISHLIST ON STEAM"
+    },
+    "en": {
+      "demo": "Free demo out now",
+      "wish": "Wishlist now",
+      "sub": "WISHLIST ON STEAM"
+    },
+    "es": {
+      "demo": "Demo gratuita ya disponible",
+      "wish": "Añadir a deseados",
+      "sub": "LISTA DE DESEADOS EN STEAM"
+    },
+    "es-419": {
+      "demo": "Demo gratis ya disponible",
+      "wish": "Agregar a deseados",
+      "sub": "LISTA DE DESEADOS EN STEAM"
+    },
+    "it": {
+      "demo": "Demo gratuita già disponibile",
+      "wish": "Aggiungi ai desideri",
+      "sub": "LISTA DEI DESIDERI SU STEAM"
+    },
+    "sv": {
+      "demo": "Gratis demo ute nu",
+      "wish": "Lägg på önskelistan",
+      "sub": "ÖNSKELISTA PÅ STEAM"
+    },
+    "da": {
+      "demo": "Gratis demo ude nu",
+      "wish": "Sæt på ønskelisten",
+      "sub": "ØNSKELISTE PÅ STEAM"
+    },
+    "no": {
+      "demo": "Gratis demo ute nå",
+      "wish": "Legg på ønskelisten",
+      "sub": "ØNSKELISTE PÅ STEAM"
+    },
+    "ko": {
+      "demo": "무료 체험판 공개 중",
+      "wish": "위시리스트에 추가",
+      "sub": "STEAM 위시리스트"
+    },
+    "th": {
+      "demo": "เดโมฟรี เล่นได้แล้ว",
+      "wish": "เพิ่มในรายการที่อยากได้",
+      "sub": "รายการที่อยากได้บน STEAM"
+    },
+    "vi": {
+      "demo": "Bản dùng thử miễn phí đã ra mắt",
+      "wish": "Thêm vào danh sách mong muốn",
+      "sub": "DANH SÁCH MONG MUỐN TRÊN STEAM"
+    },
+    "ru": {
+      "demo": "Бесплатная демоверсия уже вышла",
+      "wish": "В желаемое",
+      "sub": "ДОБАВЬТЕ В ЖЕЛАЕМОЕ В STEAM"
+    },
+    "uk": {
+      "demo": "Безкоштовне демо вже вийшло",
+      "wish": "До бажаного",
+      "sub": "ДОДАЙТЕ ДО БАЖАНОГО В STEAM"
+    },
+    "bg": {
+      "demo": "Безплатното демо вече излезе",
+      "wish": "В желани",
+      "sub": "ДОБАВИ В ЖЕЛАНИ В STEAM"
+    },
+    "pt-BR": {
+      "demo": "Demo gratuita já disponível",
+      "wish": "Lista de desejos",
+      "sub": "LISTA DE DESEJOS NA STEAM"
+    },
+    "pt": {
+      "demo": "Demo gratuita já disponível",
+      "wish": "Lista de desejos",
+      "sub": "LISTA DE DESEJOS NO STEAM"
+    },
+    "ro": {
+      "demo": "Demo gratuit, disponibil acum",
+      "wish": "Listă de dorințe",
+      "sub": "LISTA DE DORINȚE PE STEAM"
+    },
+    "id": {
+      "demo": "Demo gratis sudah tersedia",
+      "wish": "Tambah ke Daftar Keinginan",
+      "sub": "DAFTAR KEINGINAN DI STEAM"
+    },
+    "ms": {
+      "demo": "Demo percuma kini tersedia",
+      "wish": "Tambah ke Senarai Hajat",
+      "sub": "SENARAI HAJAT DI STEAM"
+    },
+    "ar": {
+      "demo": "النسخة التجريبية متاحة مجانًا",
+      "wish": "أضف إلى قائمة الأمنيات",
+      "sub": "قائمة الأمنيات على Steam"
+    },
+    "pl": {
+      "demo": "Darmowe demo już dostępne",
+      "wish": "Na listę życzeń",
+      "sub": "DODAJ DO LISTY ŻYCZEŃ NA STEAM"
+    },
+    "cs": {
+      "demo": "Bezplatné demo je venku",
+      "wish": "Na seznam přání",
+      "sub": "PŘIDEJ NA SEZNAM PŘÁNÍ NA STEAMU"
+    },
+    "hu": {
+      "demo": "Az ingyenes demó már elérhető",
+      "wish": "Kívánságlistára",
+      "sub": "TEDD KÍVÁNSÁGLISTÁRA A STEAMEN"
+    },
+    "fr": {
+      "demo": "Démo gratuite disponible",
+      "wish": "Ajouter aux souhaits",
+      "sub": "LISTE DE SOUHAITS SUR STEAM"
+    },
+    "de": {
+      "demo": "Kostenlose Demo verfügbar",
+      "wish": "Auf die Wunschliste",
+      "sub": "AUF DIE STEAM-WUNSCHLISTE"
+    },
+    "nl": {
+      "demo": "Gratis demo nu beschikbaar",
+      "wish": "Op de verlanglijst",
+      "sub": "OP JE STEAM-VERLANGLIJST"
+    },
+    "tr": {
+      "demo": "Ücretsiz demo yayında",
+      "wish": "İstek listene ekle",
+      "sub": "STEAM'DE İSTEK LİSTENE EKLE"
+    },
+    "el": {
+      "demo": "Δωρεάν demo τώρα",
+      "wish": "Στη λίστα επιθυμιών",
+      "sub": "ΛΙΣΤΑ ΕΠΙΘΥΜΙΩΝ ΣΤΟ STEAM"
+    },
+    "fi": {
+      "demo": "Ilmainen demo nyt saatavilla",
+      "wish": "Toivelistalle",
+      "sub": "LISÄÄ STEAMIN TOIVELISTALLE"
+    }
+  }
+}

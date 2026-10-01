@@ -176,12 +176,14 @@ function nz(t, dur, type, f, q, pk, o) {
   out(g, o, t, t + dur);
   return t + dur;
 }
+// a frequency stays under the Nyquist limit (the browser clamps it anyway; clamping here keeps the warning out of the log)
+const nyq = (v) => Math.min(ac.sampleRate / 2 - 1, v);
 // FM：铃、玻璃、电钢琴、金属片都靠它；r 是调制比，i 是调制深度（乘以频率）
 function fm(t, f, dur, pk, o) {
   o = o || {};
   const c = ac.createOscillator(), m = ac.createOscillator(), mg = ac.createGain(), g = ac.createGain();
-  c.frequency.value = f; m.frequency.value = f * (o.r || 3.5);
-  if (o.to) { c.frequency.exponentialRampToValueAtTime(o.to, t + (o.slide || dur)); m.frequency.exponentialRampToValueAtTime(o.to * (o.r || 3.5), t + (o.slide || dur)); }
+  c.frequency.value = nyq(f); m.frequency.value = nyq(f * (o.r || 3.5));
+  if (o.to) { c.frequency.exponentialRampToValueAtTime(nyq(o.to), t + (o.slide || dur)); m.frequency.exponentialRampToValueAtTime(nyq(o.to * (o.r || 3.5)), t + (o.slide || dur)); }
   const I = f * (o.i == null ? 1.2 : o.i);
   mg.gain.setValueAtTime(I, t); mg.gain.setTargetAtTime(I * (o.iEnd || .04), t, o.itau || .2);
   m.connect(mg); mg.connect(c.frequency);
@@ -197,7 +199,7 @@ function ring(t, f, dur, pk, o) {
   const parts = o.parts || [[1, 1], [2.76, .5], [5.4, .3], [8.93, .18]];
   const sum = ac.createGain();
   parts.forEach(([r, a], i) => {
-    const os = ac.createOscillator(), g = ac.createGain(); os.frequency.value = f * r * (1 + rnd(-.002, .002));
+    const os = ac.createOscillator(), g = ac.createGain(); os.frequency.value = nyq(f * r * (1 + rnd(-.002, .002)));
     const d = dur / (1 + i * .8);
     g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(pk * a, t + .002); g.gain.exponentialRampToValueAtTime(.0001, t + d);
     os.connect(g); g.connect(sum); os.start(t); os.stop(t + d + .05);

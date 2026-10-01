@@ -1,5 +1,6 @@
 // 标题字（透明底 PNG）：用游戏自己画标题的那一套——像素字体、金色色带、墨色八向描边（src/mc-pj-ui.js 的 M.UI.text），
 // 和开场菜单里的「午夜机台 / MIDNIGHT CABINET」一模一样，只是画得更大。
+//   LOGO_LANG=tw | ja | en node logo.mjs …：繁中「午夜機台 / 試玩版」、日文「午夜機台 / 体験版」、字母版（MIDNIGHT / CABINET 两行，给其余语言的商店页）；默认简体
 //   node logo.mjs <输出文件夹>   → logo.png（1280×720，Steam 资料库标志）、logo_demo.png（带「试玩版」牌子）、
 //                                  title_wide.png / title_wide_demo.png（裁掉空白的横版，给封面叠字用）、
 //                                  library_logo.png / library_logo_demo.png（裁掉空白，约 1280 宽：Steam 资料库标志）
@@ -19,21 +20,26 @@ let ws, id = 0; const pend = new Map();
 const send = (method, params = {}) => new Promise(res => { const i = ++id; pend.set(i, res); ws.send(JSON.stringify({ id: i, method, params })); });
 const ev = async (expr) => { const r = await send('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true }); if (r.exceptionDetails) throw new Error(JSON.stringify(r.exceptionDetails).slice(0, 600)); return r.result.value; };
 
+const LL = process.env.LOGO_LANG || 'zh';
 const DRAW = `(async () => {
+  const LL = ${JSON.stringify(LL)}, PLATE = { zh: '试玩版 · DEMO', tw: '試玩版 · DEMO', ja: '体験版 · DEMO', en: 'DEMO' }[LL] || 'DEMO';
   await document.fonts.ready;
   const U = MC.UI, E = PCD.createEngine({ game: true }).E, PAL = E.PAL;
   // one title: 午夜机台 in the game's gold ramp, MIDNIGHT CABINET spaced under it, an optional 试玩版 plate
   const title = (w, h, size, demo, trim) => {
     const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
-    const ch = [...'午夜机台'], gap = Math.round(size * 0.08), u = Math.max(3, Math.round(size / 26));
-    const cw = ch.map(s => U.measure(x, s, size)); const tw = cw.reduce((a, b) => a + b, 0) + gap * (ch.length - 1);
-    const cy = h / 2 - size * (demo ? 0.36 : 0.2); let px = w / 2 - tw / 2;
-    ch.forEach((s, i) => { U.text(x, s, px + cw[i] / 2, cy, size, null, { ramp: true, outline: true, u }); px += cw[i] + gap; });
+    const gap = Math.round(size * 0.08), u = Math.max(3, Math.round(size / 26));
+    // the letters version: MIDNIGHT / CABINET on two lines, each as wide as the Chinese title at most (as the game's opening sets it)
+    const lines = LL === 'en' ? ['MIDNIGHT', 'CABINET'] : [LL === 'zh' ? '午夜机台' : '午夜機台'], wide = (sz, l) => [...l].reduce((a, c) => a + U.measure(x, c, sz), 0) + Math.round(sz * 0.08) * ([...l].length - 1);
+    const room = wide(size, '午夜机台') * 1.02, fit = Math.min(1, room / Math.max(...lines.map(l => wide(size, l)))), fs = Math.round(size * fit / 2) * 2, fg = Math.round(fs * 0.08);
+    const cy = h / 2 - size * (demo ? 0.36 : 0.2) - (lines.length > 1 ? fs * 0.5 : 0);
+    lines.forEach((ln, li) => { const ch = [...ln], cw = ch.map(s => U.measure(x, s, fs)); let px = w / 2 - (cw.reduce((a, b) => a + b, 0) + fg * (ch.length - 1)) / 2;
+      ch.forEach((s, i) => { U.text(x, s, px + cw[i] / 2, cy + li * fs * 1.02, fs, null, { ramp: true, outline: true, u }); px += cw[i] + fg; }); });
     const ss = Math.max(18, Math.round(size * 0.2 / 2) * 2), sg = Math.round(ss * 0.35), sc = [...'MIDNIGHT CABINET'], sw = sc.map(s => U.measure(x, s, ss, true));
-    let qx = w / 2 - (sw.reduce((a, b) => a + b, 0) + sg * (sc.length - 1)) / 2; const sy = cy + size * 0.78;
-    sc.forEach((s, i) => { U.text(x, s, qx + sw[i] / 2, sy, ss, PAL[63], { num: true, outline: true, u: Math.max(2, Math.round(u * 0.6)) }); qx += sw[i] + sg; });
+    let qx = w / 2 - (sw.reduce((a, b) => a + b, 0) + sg * (sc.length - 1)) / 2; const sy = cy + (lines.length - 1) * fs * 1.02 + size * (lines.length > 1 ? 0.5 : 0.78);
+    if (LL !== 'en') sc.forEach((s, i) => { U.text(x, s, qx + sw[i] / 2, sy, ss, PAL[63], { num: true, outline: true, u: Math.max(2, Math.round(u * 0.6)) }); qx += sw[i] + sg; });   // the letters version already says it
     // the demo's plate: the game's own wine-red sign (M.UI.tab), as on its panels
-    if (demo) { const ts = Math.round(size * 0.3 / 2) * 2; x.save(); x.translate(0, 0); U.tab(x, '试玩版 · DEMO', w / 2, sy + ss * 0.95, { kind: 'wine', size: ts, align: 'center' }); x.restore(); }
+    if (demo) { const ts = Math.round(size * 0.3 / 2) * 2; x.save(); x.translate(0, 0); U.tab(x, PLATE, w / 2, sy + ss * 0.95, { kind: 'wine', size: ts, align: 'center' }); x.restore(); }
     if (!trim) return c.toDataURL('image/png');
     const d = x.getImageData(0, 0, w, h).data; let x0 = w, y0 = h, x1 = 0, y1 = 0;
     for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) if (d[(yy * w + xx) * 4 + 3] > 8) { if (xx < x0) x0 = xx; if (xx > x1) x1 = xx; if (yy < y0) y0 = yy; if (yy > y1) y1 = yy; }

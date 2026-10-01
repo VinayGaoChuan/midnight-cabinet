@@ -1,6 +1,9 @@
 // Steam 封面与资料库图：全部取自游戏开场的实机画面（rec.mjs stills 以 3840×2160 渲染），按每种尺寸裁切，
 // 标题用游戏自己的标题字（logo.mjs 的同一套画法），试玩版加游戏里的酒红牌子「试玩版 · DEMO」。
 //   node capsules.mjs <开场截图文件夹> <输出文件夹>
+//   LOGO_DIR=<logo.mjs 的输出> PLATE='試玩版 · DEMO' node capsules.mjs …：别的语言的标题字和试玩版牌子（默认 <输出>/../logo、「试玩版 · DEMO」）
+//   CAPS_OVR='{"small_capsule":{"box":[x,y,w,h]}}'：按名字改某几张的裁切框 / 牌子位置（字母版的片名是两行，小图要框得更高）
+//     字母版（2026-09-30 定稿）：CAPS_OVR='{"small_capsule":{"box":[606,262,708,266.7]},"demo_small_capsule":{"box":[548,270,832,313.3],"plate":{"x":960,"y":552,"size":22}}}' LOGO_DIR=<LOGO_LANG=en 的输出> PLATE='DEMO'
 // 截图文件夹里要有 t016.00.png（屏幕上咧嘴笑的恶魔脸）和 t020.25.png（中奖：标题砸在屏幕上）。
 // 尺寸按 Steamworks 文档（2026-09-28 核对）：https://partner.steamgames.com/doc/store/assets/standard 、…/libraryassets
 import { spawn } from 'node:child_process';
@@ -11,7 +14,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { CHROME_BIN } from './chrome.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url)), REPO = path.resolve(HERE, '..', '..', '..');
-const SRC = path.resolve(process.argv[2]), OUT = path.resolve(process.argv[3]), PORT = 9621;
+const SRC = path.resolve(process.argv[2]), OUT = path.resolve(process.argv[3]), PORT = 9621, LOGO_DIR = path.resolve(process.env.LOGO_DIR || path.join(OUT, '..', 'logo'));
 const prof = path.join(os.tmpdir(), 'mc-caps-' + PORT); fs.rmSync(prof, { recursive: true, force: true });
 const chrome = spawn(CHROME_BIN(), ['--headless=new', '--user-data-dir=' + prof, '--remote-debugging-port=' + PORT, '--allow-file-access-from-files', 'about:blank'], { stdio: 'ignore' });
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
@@ -45,6 +48,8 @@ const DEMO = [
   { n: 'demo_library_capsule', w: 600, h: 900, src: 'grin', box: [470, 0, 980, 1080], logo: { y: 0.03, w: 0.8, demo: true }, top: 315 },
   { n: 'demo_library_header', w: 920, h: 430, src: 'jack', box: [260, 40, 1400, 654], plate: { x: 960, y: 548, size: 34 } },
 ];
+// per-language changes to a few boxes (CAPS_OVR): the letters title takes two lines
+const OVR = JSON.parse(process.env.CAPS_OVR || '{}'); [JOBS, DEMO].forEach(L => L.forEach(j => { if (OVR[j.n]) Object.assign(j, OVR[j.n]); }));
 
 const DRAW = (jobs, imgs) => `(async () => {
   await document.fonts.ready;
@@ -56,7 +61,7 @@ const DRAW = (jobs, imgs) => `(async () => {
     x.fillStyle = '#0d0a1c'; x.fillRect(0, 0, j.w, j.h);
     // the still, twice the view's size: plates go on it first, in view coordinates, so they scale with the picture
     const src = I[j.src], S = document.createElement('canvas'); S.width = src.width; S.height = src.height; const sx = S.getContext('2d'); sx.drawImage(src, 0, 0);
-    if (j.plate) { sx.save(); sx.scale(2, 2); U.tab(sx, '试玩版 · DEMO', j.plate.x, j.plate.y, { kind: 'wine', size: j.plate.size, align: 'center' }); sx.restore(); }
+    if (j.plate) { sx.save(); sx.scale(2, 2); U.tab(sx, ${JSON.stringify(process.env.PLATE || '试玩版 · DEMO')}, j.plate.x, j.plate.y, { kind: 'wine', size: j.plate.size, align: 'center' }); sx.restore(); }
     const [bx, by, bw, bh] = j.box, top = j.top || 0, dh = j.h - top, k = Math.max(j.w / bw, dh / bh);
     x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
     const w2 = bw * k, h2 = bh * k;
@@ -75,7 +80,7 @@ try {
   ws.addEventListener('message', (m) => { const d = JSON.parse(m.data); if (d.id && pend.has(d.id)) { pend.get(d.id)(d.result || d); pend.delete(d.id); } });
   await send('Page.enable'); await send('Page.navigate', { url: pathToFileURL(path.join(REPO, 'index.html')).href });
   for (let i = 0; i < 240; i++) { await wait(500); try { if (await ev('!!(window.MC && window.MC.UI && window.MC_ALL_READY)')) break; } catch (e) {} }
-  const imgs = { jack: b64(path.join(SRC, 't020.25.png')), grin: b64(path.join(SRC, 't016.00.png')), logo: b64(path.join(OUT, '..', 'logo', 'title_wide.png')), logoDemo: b64(path.join(OUT, '..', 'logo', 'title_wide_demo.png')) };
+  const imgs = { jack: b64(path.join(SRC, 't020.25.png')), grin: b64(path.join(SRC, 't016.00.png')), logo: b64(path.join(LOGO_DIR, 'title_wide.png')), logoDemo: b64(path.join(LOGO_DIR, 'title_wide_demo.png')) };
   fs.mkdirSync(OUT, { recursive: true });
   for (const set of [JOBS, DEMO]) {
     const r = await ev(DRAW(set, imgs));

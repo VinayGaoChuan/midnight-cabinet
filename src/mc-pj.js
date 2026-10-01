@@ -104,6 +104,10 @@ function mapFontFamily(v) {
 }
 
 const PJ = M.PJ = { __loaded: true, on: true, PAL, FIX, mapCss, mapOne, palHex, parseColor, pixelBoxShadow, pixelTextShadow, outlineShadow, flatGradient, mapFontFamily, RAMP, inkFilter, FONT_PX, FONT_NUM, noBlur: true };
+// the pieces a title is lit up in, one by one: Arabic letters join, so an Arabic title stays whole; Thai (and any script with marks
+// over or under its letters) goes by whole characters with their marks, so a mark never ends up on a box of its own
+const SEG = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
+PJ.units = (s) => { s = String(s); if (/[\u0590-\u08FF]/.test(s)) return [s]; return SEG ? [...SEG.segment(s)].map(g => g.segment) : [...s]; };
 try { if (W.localStorage && W.localStorage.getItem('mc-pj-off') === '1') PJ.on = false; } catch (e) {}
 
 // ───────── JS 视图里的颜色（稀有度、按钮底色、发光）也过一遍调色板 ─────────
@@ -368,10 +372,12 @@ defineEl('mc-wave', class extends HTMLElement {
   render() {
     const t0 = this.getAttribute('t') || '', tr = window.MC && window.MC.tr; if (t0 === this._t) return; this._t = t0; this.textContent = '';
     const t = tr ? tr(t0) : t0;   // translated whole (src/mc-i18n.js), then letter by letter
-    const ramp = this.getAttribute('ramp') === '1', chars = [...t];
+    const ramp = this.getAttribute('ramp') === '1', chars = PJ.units(t);
     chars.forEach((ch, i) => {
       const s = document.createElement('span'); s.textContent = ch;
       s.style.cssText = 'display:inline-block;' + (ch.trim() && PJ.on && !PJ.reduced ? `animation:pjWave 1.2s ease-in-out infinite;animation-delay:${-(chars.length - i) * 0.12}s;` : '') + (ramp ? `background:${RAMP_STOPS};-webkit-background-clip:text;background-clip:text;color:transparent;` : '');
+      // an Arabic title is one piece whose letters reach past its box (the tail of a final ي): the gradient paints only inside the box, so the box grows and the margin gives the room back
+      if (ramp && /[\u0590-\u08FF]/.test(ch)) { s.style.padding = '0.1em 0.35em 0.35em'; s.style.margin = '-0.1em -0.35em -0.35em'; }
       this.appendChild(s);
     });
   }

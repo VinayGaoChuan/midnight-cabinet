@@ -358,7 +358,7 @@ M.drawBanner = function (ctx, b) {
     const w0 = U.measure(ctx, b.text, 128), size = w0 > 1680 ? Math.max(64, Math.floor(128 * 1680 / w0 / 4) * 4) : 128;
     const s = seq(SLAMB, t, 0.0733), flashW = t < 0.1 && !RM(), ramp = kind !== 'teal' && !flashW, settled = t > 0.44 && !RM();
     ctx.save(); ctx.globalAlpha = out; ctx.translate(X, sub ? Y - 26 : Y); ctx.scale(s, s);
-    const chars = [...(M.tr ? M.tr(String(b.text)) : String(b.text))], cw = chars.map(ch => U.measure(ctx, ch, size)), tw = cw.reduce((q, c) => q + c, 0) + 4 * (chars.length - 1);
+    const chars = (M.PJ && M.PJ.units ? M.PJ.units : (s) => [...s])(M.tr ? M.tr(String(b.text)) : String(b.text)), cw = chars.map(ch => U.measure(ctx, ch, size)), tw = cw.reduce((q, c) => q + c, 0) + 4 * (chars.length - 1);
     let px = -tw / 2; chars.forEach((ch, i) => { const ph = (t * 1.25 + (chars.length - i) * 0.12) % 1, dy = settled ? (-6 * Math.sin(ph * Math.PI * 2) - 3 * Math.max(0, Math.sin(ph * Math.PI * 2))) : 0; U.text(ctx, ch, px + cw[i] / 2, dy, size, flashW ? P.white : P.gold, { ramp, outline: true }); px += cw[i] + 4; });
     ctx.restore();
     if (sub && t > 0.3) { ctx.globalAlpha = (t > 0.4 ? 1 : 0.5) * out; U.text(ctx, b.sub, X, Y + 80, 40, P.butter); }

@@ -45,7 +45,11 @@ tpl_text = (SRC / 'template.html').read_text(encoding='utf-8')
 fonts_css = (SRC / 'fonts.css').read_text(encoding='utf-8')
 # build id = content hash of the sources: identical sources always give an identical index.html
 build_id = hashlib.sha1((code + tpl_text + fonts_css).encode('utf-8')).hexdigest()[:8]
-(BUILD / 'game.js').write_text('window.MC_BUILD = "' + build_id + '";\n' + code, encoding='utf-8')
+# the game runs once per page: the bundle's unpacker executes every script of the template, and the UI runtime mounts the
+# template's <helmet> scripts again — the whole game ran twice (every hook on the canvas and on React stacked twice, so a
+# language switched back to Chinese stayed translated underneath, and every module-level loop ran twice). The second run
+# is skipped; the files are all IIFEs, so the block changes no scope that matters (node --check below still checks it)
+(BUILD / 'game.js').write_text('window.MC_BUILD = "' + build_id + '";\nif (!window.__mcRan) { window.__mcRan = 1;\n' + code + '\n}\n', encoding='utf-8')
 (BUILD / 'mimg.js').write_text((SRC / 'mimg.js').read_text(encoding='utf-8'), encoding='utf-8')
 # the pixel fonts go inline (src/fonts.css from tools/fonts.py): the page loads no font from the network
 assert '/*@FONTS@*/' in tpl_text, 'src/template.html lost its /*@FONTS@*/ marker'

@@ -97,7 +97,11 @@ UNITS = ['{0} ' + u for u in '天 支 秒 个 次 级 张 件 名 座 夜 层 �
     '每 {0} 秒召唤 {1} 只月豹和 {2} 只看门犬', '每 {0} 秒召唤 {1} 只月豹和 {2} 只看门犬，留场 {3} 秒，自己损失 {4} 点生命。',
     '每 {0} 秒召唤 {1} 只魔豹和 {2} 只邪犬', '每 {0} 秒召唤 {1} 只魔豹和 {2} 只邪犬，留场 {3} 秒，自己损失 {4} 点生命。',
     # a mini-game's result line (mc-ledger.js) and the expedition going on (mc-resume.js), cut at 「·」「、」「（」 when translated
-    '花费 {0} 积分', '基础 {0}', '加成 +{0}', '净赚 {0}', '净赔 {0}', '领袖生命 +{0}', '领袖生命 -{0}', '积分 -{0}', '物资 -{0}', '第 {0} 站']
+    '花费 {0} 积分', '基础 {0}', '加成 +{0}', '净赚 {0}', '净赔 {0}', '领袖生命 +{0}', '领袖生命 -{0}', '积分 -{0}', '物资 -{0}', '第 {0} 站',
+    # sentences the game builds from pieces that read wrong piece by piece (the candle altar's blood, the beast arena's winner)
+    '你流了 {0} 点血', '{n} 赢了',
+    # one character on its own: the 「新」 tab on a unit just joined (src/mc-swap.js, src/mc-garswap.js)
+    '新']
 
 
 def merge():
