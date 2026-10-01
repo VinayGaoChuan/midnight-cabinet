@@ -12,6 +12,7 @@ blocks = re.findall(r"```\n(.*?)\n```", md, re.S)
 # en: the English page — English copy, 截图-English / 动图-English and the English trailer, → 商店页预览-English.html
 EN = len(sys.argv) > 2 and sys.argv[2] == 'en'
 SUF, SHOTS, ANIM = ('-English', '截图-English', '动图-English') if EN else ('', '截图', '动图')
+COV = '封面-English（其余语言）' if EN else '封面'   # the English page shows the letters covers (MIDNIGHT / CABINET)
 short_zh, short_demo, about_zh, demo_zh = (blocks[2], blocks[3], blocks[5], blocks[7]) if EN else (blocks[0], blocks[1], blocks[4], blocks[6])
 
 
@@ -67,7 +68,7 @@ body {{ margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.7 -app
 <p class="note">{'Local preview of how the text and clips sit together; fill in Steamworks from 商店文案.md.' if EN else '本地预览，只用来看图文和动图排在一起的效果；上传时照 商店文案.md 在 Steamworks 后台逐栏填写。'}</p>
 <div class="top">
   <video src="预告片/{html.escape(trailer)}" controls muted playsinline poster="{SHOTS}/{html.escape(shots[0]) if shots else ''}"></video>
-  <div class="side"><img src="封面/正式版/header_capsule.png" alt=""><p>{html.escape(short_zh)}</p></div>
+  <div class="side"><img src="{COV}/正式版/header_capsule.png" alt=""><p>{html.escape(short_zh)}</p></div>
 </div>
 <div class="strip">{thumbs}</div>
 <div class="cols">
@@ -75,7 +76,7 @@ body {{ margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.7 -app
   <div><div class="demo"><strong>{'Demo' if EN else '试玩版'}</strong><p>{html.escape(short_demo)}</p>{bb(demo_zh)}</div></div>
 </div>
 <div class="caps">
-{''.join(f'<figure><img src="封面/{n}.png" alt=""><figcaption>{c}</figcaption></figure>' for n, c in [
+{''.join(f'<figure><img src="{COV}/{n}.png" alt=""><figcaption>{c}</figcaption></figure>' for n, c in [
     ('正式版/header_capsule', '顶部横幅 920×430'), ('正式版/small_capsule', '小封面 462×174'), ('正式版/main_capsule', '主封面 1232×706'), ('正式版/vertical_capsule', '竖版封面 748×896'),
     ('正式版/library_capsule', '资料库封面 600×900'), ('正式版/library_hero', '资料库主图 3840×1240'), ('正式版/library_logo', '资料库标志 1280 宽，透明底'), ('正式版/page_background', '页面背景 1438×810'),
     ('试玩版/header_capsule', '试玩版 · 顶部横幅'), ('试玩版/main_capsule', '试玩版 · 主封面'), ('试玩版/library_capsule', '试玩版 · 资料库封面'), ('试玩版/library_logo', '试玩版 · 资料库标志')])}
